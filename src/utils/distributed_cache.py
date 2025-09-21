@@ -251,11 +251,12 @@ class DistributedCache:
                 try:
                     return json.loads(raw_data.decode("utf-8"))
                 except json.JSONDecodeError:
-                    # Fall back to pickle
+                    # Try secure deserialization
                     try:
-                        return pickle.loads(raw_data)
-                    except pickle.UnpicklingError:
-                        # Return as string
+                        from .secure_serialization import deserialize
+                        return deserialize(raw_data)
+                    except Exception:
+                        # Return as string as last resort
                         return raw_data.decode("utf-8")
             else:
                 # Legacy format without prefix

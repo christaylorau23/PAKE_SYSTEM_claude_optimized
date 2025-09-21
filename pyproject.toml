@@ -123,7 +123,7 @@ daphne = "^4.0.0"
 
 # ===== GEOGRAPHIC DATA PROCESSING =====
 geopy = "^2.4.1"
-pycountry = "^22.3.13"
+pycountry = "^24.6.1"
 
 [tool.poetry.group.trends.dependencies]
 # ===== LIVE TREND DATA FEED SYSTEM =====

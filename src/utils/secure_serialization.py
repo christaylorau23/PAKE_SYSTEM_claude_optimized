@@ -144,12 +144,12 @@ class SecureSerializer:
 
             # Extract checksum if present
             payload_start = format_end + 1
-            if data[payload_start : payload_start + 10] == b"CHECKSUM:":
-                checksum_end = data.find(b":", payload_start + 10)
+            if data[payload_start : payload_start + 9] == b"CHECKSUM:":
+                checksum_end = data.find(b":", payload_start + 9)
                 if checksum_end == -1:
                     raise ValueError("Invalid checksum header")
 
-                expected_checksum = data[payload_start + 10 : checksum_end].decode()
+                expected_checksum = data[payload_start + 9 : checksum_end].decode()
                 payload_start = checksum_end + 1
 
                 # Verify checksum

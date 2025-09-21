@@ -245,7 +245,7 @@ class AIMemoryQueryInterface:
                     source_id=f"conv_{conversation_id}",
                     knowledge_type="conversational",
                     metadata={
-                        **metadata or {},
+                        **(metadata or {}),
                         'source_type': 'conversation',
                         'conversation_id': conversation_id
                     }
@@ -284,7 +284,7 @@ class AIMemoryQueryInterface:
                 'feedback_score': feedback_score,
                 'interaction_type': interaction_type,
                 'learning_weight': min(1.0, abs(feedback_score)),  # Higher weight for strong feedback
-                **metadata or {}
+                **(metadata or {})
             }
             
             # Store interaction memory
