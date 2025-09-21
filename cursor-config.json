@@ -1,0 +1,21 @@
+{
+  "mcp": {
+    "servers": {
+      "graphiti": {
+        "transport": "sse",
+        "url": "http://localhost:8000/sse",
+        "headers": {
+          "X-Workspace": "cursor_ide",
+          "X-Project": "PAKE_SYSTEM"
+        }
+      }
+    }
+  },
+  "ai": {
+    "contextPersistence": {
+      "enabled": true,
+      "provider": "graphiti",
+      "projectId": "PAKE_SYSTEM"
+    }
+  }
+}

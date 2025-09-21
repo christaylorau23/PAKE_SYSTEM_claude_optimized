@@ -1,0 +1,972 @@
+# PostgreSQL Streaming Replication Setup for PAKE System
+# Implements WAL streaming replication with hot standby replicas
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-replication-config
+  namespace: database
+  labels:
+    app: postgres-replication
+data:
+  postgresql-primary.conf: |
+    # PostgreSQL Primary Configuration for Streaming Replication
+    # Connection settings
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+
+    # WAL settings for replication
+    wal_level = replica
+    max_wal_senders = 10
+    max_replication_slots = 10
+    wal_keep_size = 2GB
+
+    # Hot standby settings
+    hot_standby = on
+    hot_standby_feedback = on
+
+    # Archive settings for PITR
+    archive_mode = on
+    archive_command = 'wal-g wal-push %p'
+    archive_timeout = 300  # 5 minutes
+
+    # Synchronous replication settings
+    synchronous_standby_names = 'pake_replica_eu,pake_replica_ap'
+    synchronous_commit = on
+
+    # Checkpoint settings
+    checkpoint_completion_target = 0.9
+    checkpoint_timeout = 5min
+    max_wal_size = 4GB
+    min_wal_size = 512MB
+
+    # Logging settings
+    log_destination = 'stderr'
+    log_statement = 'mod'
+    log_replication_commands = on
+    log_min_duration_statement = 1000
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_lock_waits = on
+
+    # Performance tuning
+    shared_buffers = 4GB
+    effective_cache_size = 12GB
+    work_mem = 128MB
+    maintenance_work_mem = 1GB
+    random_page_cost = 1.1
+
+    # Background writer
+    bgwriter_delay = 200ms
+    bgwriter_lru_maxpages = 100
+    bgwriter_lru_multiplier = 2.0
+
+  postgresql-replica.conf: |
+    # PostgreSQL Replica Configuration
+    # Connection settings
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 100
+
+    # Hot standby settings
+    hot_standby = on
+    hot_standby_feedback = on
+    max_standby_streaming_delay = 30s
+    max_standby_archive_delay = 30s
+
+    # Recovery settings
+    restore_command = 'wal-g wal-fetch %f %p'
+    recovery_target_timeline = 'latest'
+
+    # Performance settings for read replicas
+    shared_buffers = 2GB
+    effective_cache_size = 6GB
+    work_mem = 64MB
+
+    # Logging
+    log_destination = 'stderr'
+    log_min_duration_statement = 1000
+    log_standby_delay_min = 1s
+
+  pg_hba.conf: |
+    # PostgreSQL Host-Based Authentication
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+    # Local connections
+    local   all             postgres                                peer
+    local   all             all                                     md5
+
+    # IPv4 connections
+    host    all             all             127.0.0.1/32            md5
+    host    all             all             10.0.0.0/8              md5
+    host    all             all             172.16.0.0/12           md5
+    host    all             all             192.168.0.0/16          md5
+
+    # Replication connections from replicas
+    host    replication     replicator      10.0.0.0/8              md5
+    host    replication     replicator      172.16.0.0/12           md5
+    host    replication     replicator      192.168.0.0/16          md5
+
+    # Cross-region replication (adjust IPs as needed)
+    host    replication     replicator      0.0.0.0/0               md5
+
+  init-replication.sql: |
+    -- Initialize replication setup
+
+    -- Create replication user
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'replicator') THEN
+            CREATE USER replicator REPLICATION LOGIN ENCRYPTED PASSWORD 'CHANGE_ME_REPLICATION_PASSWORD';
+        END IF;
+    END
+    $$;
+
+    -- Create replication slots for each replica
+    SELECT pg_create_physical_replication_slot('pake_replica_eu_slot') 
+    WHERE NOT EXISTS (
+        SELECT 1 FROM pg_replication_slots WHERE slot_name = 'pake_replica_eu_slot'
+    );
+
+    SELECT pg_create_physical_replication_slot('pake_replica_ap_slot') 
+    WHERE NOT EXISTS (
+        SELECT 1 FROM pg_replication_slots WHERE slot_name = 'pake_replica_ap_slot'
+    );
+
+    -- Grant necessary permissions
+    GRANT USAGE ON SCHEMA pg_catalog TO replicator;
+    GRANT SELECT ON pg_stat_replication TO replicator;
+    GRANT EXECUTE ON FUNCTION pg_current_wal_lsn() TO replicator;
+    GRANT EXECUTE ON FUNCTION pg_walfile_name(pg_lsn) TO replicator;
+
+---
+# PostgreSQL Primary StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pake-postgresql-primary
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: primary
+spec:
+  serviceName: pake-postgresql-primary
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pake-postgresql
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: pake-postgresql
+        role: primary
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: postgres-replication
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      initContainers:
+        - name: init-primary
+          image: postgres:15-alpine
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
+                echo "Initializing primary database..."
+                initdb -D /var/lib/postgresql/data --auth-host=md5 --auth-local=peer
+                
+                # Copy configuration files
+                cp /etc/postgresql/postgresql-primary.conf /var/lib/postgresql/data/postgresql.conf
+                cp /etc/postgresql/pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
+                
+                # Set ownership
+                chown -R postgres:postgres /var/lib/postgresql/data
+                chmod 700 /var/lib/postgresql/data
+              fi
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_DB
+              value: pake_production
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+            - name: POSTGRES_INITDB_ARGS
+              value: '--auth-host=md5 --auth-local=peer'
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pg_isready -U postgres -h 127.0.0.1 -p 5432 &&
+                  psql -U postgres -d postgres -c "SELECT 1" > /dev/null 2>&1
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 2000m
+              memory: 8Gi
+            limits:
+              cpu: 4000m
+              memory: 16Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.12.0
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              value: 'postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:5432/pake_production?sslmode=disable'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PG_EXPORTER_EXTEND_QUERY_PATH
+              value: /etc/postgres-exporter/queries.yaml
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: exporter-queries
+              mountPath: /etc/postgres-exporter
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: wal-g
+          image: wal-g/wal-g:latest
+          env:
+            - name: PGHOST
+              value: localhost
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: WALG_S3_PREFIX
+              value: 's3://pake-backups/wal-archives'
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
+            - name: AWS_REGION
+              value: 'us-east-1'
+            - name: WALG_COMPRESSION_METHOD
+              value: 'lz4'
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "WAL-G daemon started for archive management"
+              # WAL-G will be invoked by PostgreSQL archive_command
+              while true; do
+                # Cleanup old WAL files periodically
+                wal-g delete retain 7 --confirm
+                sleep 3600  # Run cleanup hourly
+              done
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+              readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: postgres-replication-config
+        - name: init-scripts
+          configMap:
+            name: postgres-replication-config
+        - name: exporter-queries
+          configMap:
+            name: postgres-exporter-queries
+      nodeSelector:
+        workload: database
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: database
+          effect: NoSchedule
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 500Gi
+
+---
+# PostgreSQL EU Replica StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pake-postgresql-replica-eu
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: replica
+    region: eu-west-1
+spec:
+  serviceName: pake-postgresql-replica-eu
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pake-postgresql
+      role: replica
+      region: eu-west-1
+  template:
+    metadata:
+      labels:
+        app: pake-postgresql
+        role: replica
+        region: eu-west-1
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+    spec:
+      serviceAccountName: postgres-replication
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      initContainers:
+        - name: init-replica
+          image: postgres:15-alpine
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
+                echo "Initializing replica from primary..."
+                
+                # Wait for primary to be ready
+                until pg_isready -h pake-postgresql-primary.database.svc.cluster.local -p 5432 -U postgres; do
+                  echo "Waiting for primary database..."
+                  sleep 5
+                done
+                
+                # Create base backup from primary
+                PGPASSWORD="process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED'" pg_basebackup \
+                  -h pake-postgresql-primary.database.svc.cluster.local \
+                  -D /var/lib/postgresql/data \
+                  -U replicator \
+                  -v -P -W -R \
+                  -S pake_replica_eu_slot
+                
+                # Override with replica configuration
+                cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
+                
+                # Set up standby.signal for PostgreSQL 12+
+                touch /var/lib/postgresql/data/standby.signal
+                
+                # Create recovery configuration
+                cat > /var/lib/postgresql/data/postgresql.auto.conf << EOF
+                primary_conninfo = 'host=pake-postgresql-primary.database.svc.cluster.local port=5432 user=replicator REDACTED_SECRET=CHANGE_ME_REPLICATION_PASSWORD application_name=pake_replica_eu'
+                primary_slot_name = 'pake_replica_eu_slot'
+                restore_command = 'wal-g wal-fetch %f %p'
+                recovery_target_timeline = 'latest'
+                EOF
+                
+                chown -R postgres:postgres /var/lib/postgresql/data
+                chmod 700 /var/lib/postgresql/data
+              fi
+          env:
+            - name: PGUSER
+              value: postgres
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pg_isready -U postgres -h 127.0.0.1 -p 5432 &&
+                  psql -U postgres -d postgres -c "SELECT pg_is_in_recovery()" | grep -q t
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 4Gi
+            limits:
+              cpu: 2000m
+              memory: 8Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.12.0
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              value: 'postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:5432/postgres?sslmode=disable'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PG_EXPORTER_EXTEND_QUERY_PATH
+              value: /etc/postgres-exporter/queries.yaml
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: exporter-queries
+              mountPath: /etc/postgres-exporter
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: postgres-replication-config
+        - name: exporter-queries
+          configMap:
+            name: postgres-exporter-queries
+      nodeSelector:
+        workload: database
+        region: eu-west-1
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: database
+          effect: NoSchedule
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 500Gi
+
+---
+# PostgreSQL AP Replica StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pake-postgresql-replica-ap
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: replica
+    region: ap-southeast-1
+spec:
+  serviceName: pake-postgresql-replica-ap
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pake-postgresql
+      role: replica
+      region: ap-southeast-1
+  template:
+    metadata:
+      labels:
+        app: pake-postgresql
+        role: replica
+        region: ap-southeast-1
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+    spec:
+      serviceAccountName: postgres-replication
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      initContainers:
+        - name: init-replica
+          image: postgres:15-alpine
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
+                echo "Initializing AP replica from primary..."
+                
+                # Wait for primary to be ready
+                until pg_isready -h pake-postgresql-primary.database.svc.cluster.local -p 5432 -U postgres; do
+                  echo "Waiting for primary database..."
+                  sleep 5
+                done
+                
+                # Create base backup from primary
+                PGPASSWORD="process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED'" pg_basebackup \
+                  -h pake-postgresql-primary.database.svc.cluster.local \
+                  -D /var/lib/postgresql/data \
+                  -U replicator \
+                  -v -P -W -R \
+                  -S pake_replica_ap_slot
+                
+                # Override with replica configuration
+                cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
+                
+                # Set up standby.signal
+                touch /var/lib/postgresql/data/standby.signal
+                
+                # Create recovery configuration
+                cat > /var/lib/postgresql/data/postgresql.auto.conf << EOF
+                primary_conninfo = 'host=pake-postgresql-primary.database.svc.cluster.local port=5432 user=replicator REDACTED_SECRET=CHANGE_ME_REPLICATION_PASSWORD application_name=pake_replica_ap'
+                primary_slot_name = 'pake_replica_ap_slot'
+                restore_command = 'wal-g wal-fetch %f %p'
+                recovery_target_timeline = 'latest'
+                EOF
+                
+                chown -R postgres:postgres /var/lib/postgresql/data
+                chmod 700 /var/lib/postgresql/data
+              fi
+          env:
+            - name: PGUSER
+              value: postgres
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pg_isready -U postgres -h 127.0.0.1 -p 5432 &&
+                  psql -U postgres -d postgres -c "SELECT pg_is_in_recovery()" | grep -q t
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 4Gi
+            limits:
+              cpu: 2000m
+              memory: 8Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: config
+              mountPath: /etc/postgresql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.12.0
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              value: 'postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:5432/postgres?sslmode=disable'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PG_EXPORTER_EXTEND_QUERY_PATH
+              value: /etc/postgres-exporter/queries.yaml
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: exporter-queries
+              mountPath: /etc/postgres-exporter
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: postgres-replication-config
+        - name: exporter-queries
+          configMap:
+            name: postgres-exporter-queries
+      nodeSelector:
+        workload: database
+        region: ap-southeast-1
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: database
+          effect: NoSchedule
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 500Gi
+
+---
+# PostgreSQL Exporter Queries
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-exporter-queries
+  namespace: database
+  labels:
+    app: postgres-exporter
+data:
+  queries.yaml: |
+    pg_replication:
+      query: "SELECT CASE WHEN pg_is_in_recovery() THEN 0 ELSE EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time())) END as uptime_seconds, CASE WHEN pg_is_in_recovery() THEN 1 ELSE 0 END as is_replica"
+      master: true
+      metrics:
+        - uptime_seconds:
+            usage: "GAUGE"
+            description: "Time since PostgreSQL started"
+        - is_replica:
+            usage: "GAUGE"
+            description: "1 if this is a replica, 0 if primary"
+
+    pg_replication_lag:
+      query: "SELECT CASE WHEN pg_is_in_recovery() THEN EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) ELSE 0 END as lag_seconds"
+      master: true
+      metrics:
+        - lag_seconds:
+            usage: "GAUGE"
+            description: "Replication lag in seconds"
+
+    pg_replication_slots:
+      query: "SELECT slot_name, active, restart_lsn, confirmed_flush_lsn, wal_status, safe_wal_size FROM pg_replication_slots"
+      master: true
+      metrics:
+        - slot_name:
+            usage: "LABEL"
+            description: "Name of the replication slot"
+        - active:
+            usage: "GAUGE"
+            description: "True if the slot is active"
+        - wal_status:
+            usage: "LABEL"
+            description: "WAL status"
+        - safe_wal_size:
+            usage: "GAUGE"
+            description: "Safe WAL size in bytes"
+
+    pg_stat_replication:
+      query: "SELECT application_name, client_addr, state, backend_start, backend_xmin, sent_lsn, write_lsn, flush_lsn, replay_lsn, write_lag, flush_lag, replay_lag, sync_state FROM pg_stat_replication"
+      master: true
+      metrics:
+        - application_name:
+            usage: "LABEL"
+            description: "Name of the application connected to this WAL sender"
+        - client_addr:
+            usage: "LABEL"
+            description: "IP address of the client connected to this WAL sender"
+        - state:
+            usage: "LABEL"
+            description: "Current WAL sender state"
+        - write_lag:
+            usage: "GAUGE"
+            description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written it"
+        - flush_lag:
+            usage: "GAUGE"
+            description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written and flushed it"
+        - replay_lag:
+            usage: "GAUGE"
+            description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written, flushed and applied it"
+        - sync_state:
+            usage: "LABEL"
+            description: "Synchronous state of this standby server"
+
+---
+# Services for PostgreSQL instances
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-postgresql-primary
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: primary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+    - port: 9187
+      targetPort: 9187
+      name: metrics
+  selector:
+    app: pake-postgresql
+    role: primary
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-postgresql-replica-eu
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: replica
+    region: eu-west-1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+    - port: 9187
+      targetPort: 9187
+      name: metrics
+  selector:
+    app: pake-postgresql
+    role: replica
+    region: eu-west-1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-postgresql-replica-ap
+  namespace: database
+  labels:
+    app: pake-postgresql
+    role: replica
+    region: ap-southeast-1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+    - port: 9187
+      targetPort: 9187
+      name: metrics
+  selector:
+    app: pake-postgresql
+    role: replica
+    region: ap-southeast-1
+
+---
+# ServiceAccount and RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-replication
+  namespace: database
+  labels:
+    app: postgres-replication
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: postgres-replication
+  namespace: database
+rules:
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['pods']
+    verbs: ['get', 'list', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgres-replication
+  namespace: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: postgres-replication
+subjects:
+  - kind: ServiceAccount
+    name: postgres-replication
+    namespace: database

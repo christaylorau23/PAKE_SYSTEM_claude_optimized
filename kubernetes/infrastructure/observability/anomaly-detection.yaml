@@ -1,0 +1,786 @@
+# Automated Anomaly Detection for PAKE System
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: anomaly-detection
+  labels:
+    name: anomaly-detection
+    istio-injection: enabled
+
+---
+# Prometheus Anomaly Detection Rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anomaly-detection-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  anomaly-rules.yml: |
+    groups:
+    - name: pake.anomaly.detection
+      interval: 60s
+      rules:
+      
+      # Traffic Pattern Anomalies
+      - alert: AnomalousTrafficSpike
+        expr: |
+          (
+            rate(pake_api_requests_total[5m]) / 
+            avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])
+          ) > 3
+        for: 2m
+        labels:
+          severity: warning
+          anomaly_type: traffic_spike
+          team: backend
+        annotations:
+          summary: "Anomalous traffic spike detected"
+          description: |
+            Traffic rate is {{ $value }}x higher than the 1-hour average.
+            Current rate: {{ with query "rate(pake_api_requests_total[5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }} req/sec
+            Average rate: {{ with query "avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }} req/sec
+            
+            Possible causes:
+            - DDoS attack or bot traffic
+            - Viral content or marketing campaign  
+            - Partner integration sending bulk requests
+            - Application retry loops
+          runbook_url: "https://wiki.pake-system.com/runbooks/traffic-anomalies"
+      
+      - alert: AnomalousTrafficDrop
+        expr: |
+          (
+            rate(pake_api_requests_total[5m]) / 
+            avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])
+          ) < 0.3
+        for: 5m
+        labels:
+          severity: warning
+          anomaly_type: traffic_drop
+          team: backend
+        annotations:
+          summary: "Anomalous traffic drop detected"
+          description: |
+            Traffic rate is {{ $value }}x lower than the 1-hour average.
+            This could indicate service issues or external problems.
+      
+      # Error Rate Anomalies
+      - alert: AnomalousErrorRateSpike
+        expr: |
+          (
+            rate(pake_api_requests_total{status=~"5.."}[5m]) /
+            avg_over_time(rate(pake_api_requests_total{status=~"5.."}[5m])[6h:5m])
+          ) > 5 and rate(pake_api_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          anomaly_type: error_spike
+          team: backend
+        annotations:
+          summary: "Anomalous error rate spike detected"
+          description: |
+            Error rate is {{ $value }}x higher than the 6-hour average.
+            Current error rate: {{ with query "rate(pake_api_requests_total{status=~\"5..\"}[5m])" }}{{ . | first | value | printf "%.3f" }}{{ end }} errors/sec
+            This indicates a potential service degradation or recent deployment issue.
+      
+      # Latency Anomalies
+      - alert: AnomalousLatencyIncrease
+        expr: |
+          (
+            histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="pake-api"}[5m])) /
+            avg_over_time(histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="pake-api"}[5m]))[1h:5m])
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          anomaly_type: latency_spike
+          team: backend
+        annotations:
+          summary: "Anomalous latency increase detected"
+          description: |
+            P95 latency is {{ $value }}x higher than the 1-hour average.
+            Current P95: {{ with query "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service=\"pake-api\"}[5m]))" }}{{ . | first | value | printf "%.3f" }}{{ end }}s
+            This may indicate performance degradation or resource constraints.
+      
+      # AI Service Anomalies
+      - alert: AnomalousAIInferenceLatency
+        expr: |
+          (
+            histogram_quantile(0.95, rate(pake_ai_inference_duration_seconds_bucket[5m])) /
+            avg_over_time(histogram_quantile(0.95, rate(pake_ai_inference_duration_seconds_bucket[5m]))[1h:5m])
+          ) > 2.5
+        for: 2m
+        labels:
+          severity: warning
+          anomaly_type: ai_latency_spike
+          team: ai-ml
+        annotations:
+          summary: "Anomalous AI inference latency detected"
+          description: |
+            AI inference latency is {{ $value }}x higher than normal.
+            This could indicate GPU resource constraints or model loading issues.
+      
+      - alert: AnomalousTokenUsage
+        expr: |
+          (
+            rate(pake_ai_tokens_total[5m]) /
+            avg_over_time(rate(pake_ai_tokens_total[5m])[1h:5m])
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          anomaly_type: token_usage_spike
+          team: ai-ml
+        annotations:
+          summary: "Anomalous AI token usage spike detected"
+          description: |
+            Token usage is {{ $value }}x higher than the 1-hour average.
+            This could indicate prompt injection attacks or misuse of AI services.
+      
+      # Resource Anomalies
+      - alert: AnomalousMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{pod=~"pake-.*"} /
+            avg_over_time(container_memory_working_set_bytes{pod=~"pake-.*"}[2h])
+          ) > 1.8
+        for: 5m
+        labels:
+          severity: warning
+          anomaly_type: memory_spike
+          team: infrastructure
+        annotations:
+          summary: "Anomalous memory usage detected"
+          description: |
+            Memory usage for {{ $labels.pod }} is {{ $value }}x higher than the 2-hour average.
+            This could indicate a memory leak or increased load.
+      
+      - alert: AnomalousCPUUsage
+        expr: |
+          (
+            rate(container_cpu_usage_seconds_total{pod=~"pake-.*"}[5m]) /
+            avg_over_time(rate(container_cpu_usage_seconds_total{pod=~"pake-.*"}[5m])[2h:5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          anomaly_type: cpu_spike
+          team: infrastructure
+        annotations:
+          summary: "Anomalous CPU usage detected"
+          description: |
+            CPU usage for {{ $labels.pod }} is {{ $value }}x higher than the 2-hour average.
+            This could indicate inefficient code or increased computational load.
+      
+      # Database Anomalies
+      - alert: AnomalousQueryLatency
+        expr: |
+          (
+            avg(pg_stat_statements_mean_time) /
+            avg_over_time(avg(pg_stat_statements_mean_time)[1h])
+          ) > 3
+        for: 3m
+        labels:
+          severity: warning
+          anomaly_type: db_latency_spike
+          team: database
+        annotations:
+          summary: "Anomalous database query latency detected"
+          description: |
+            Database query latency is {{ $value }}x higher than the 1-hour average.
+            This could indicate slow queries, lock contention, or resource constraints.
+      
+      # Security Anomalies
+      - alert: AnomalousAuthFailures
+        expr: |
+          (
+            rate(pake_security_auth_failures_total[5m]) /
+            avg_over_time(rate(pake_security_auth_failures_total[5m])[24h:5m])
+          ) > 10
+        for: 1m
+        labels:
+          severity: critical
+          anomaly_type: auth_failure_spike
+          team: security
+        annotations:
+          summary: "Anomalous authentication failure spike detected"
+          description: |
+            Authentication failures are {{ $value }}x higher than the 24-hour average.
+            This could indicate a brute force attack or credential stuffing.
+      
+      # Cost Anomalies
+      - alert: AnomalousCostIncrease
+        expr: |
+          (
+            pake:total_cost_per_hour /
+            avg_over_time(pake:total_cost_per_hour[24h])
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          anomaly_type: cost_spike
+          team: finops
+        annotations:
+          summary: "Anomalous cost increase detected"
+          description: |
+            Hourly cost is {{ $value }}x higher than the 24-hour average.
+            Current cost: ${{ with query "pake:total_cost_per_hour" }}{{ . | first | value | printf "%.2f" }}{{ end }}/hour
+            This requires investigation to prevent budget overruns.
+
+---
+# Machine Learning-based Anomaly Detection Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-anomaly-detector
+  namespace: anomaly-detection
+  labels:
+    app: ml-anomaly-detector
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ml-anomaly-detector
+  template:
+    metadata:
+      labels:
+        app: ml-anomaly-detector
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: anomaly-detector
+      containers:
+        - name: anomaly-detector
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install prometheus_client requests numpy scikit-learn pandas
+              python /app/anomaly_detector.py
+
+          env:
+            - name: PROMETHEUS_URL
+              value: 'http://prometheus.monitoring.svc.cluster.local:9090'
+            - name: ALERTMANAGER_URL
+              value: 'http://alertmanager.monitoring.svc.cluster.local:9093'
+            - name: CHECK_INTERVAL
+              value: '300' # 5 minutes
+            - name: ANOMALY_THRESHOLD
+              value: '2.5' # Standard deviations
+            - name: LEARNING_PERIOD
+              value: '168' # 7 days in hours
+
+          ports:
+            - containerPort: 8080
+              name: metrics
+
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: anomaly-detector-code
+              mountPath: /app
+            - name: models
+              mountPath: /models
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+      volumes:
+        - name: anomaly-detector-code
+          configMap:
+            name: anomaly-detector-code
+        - name: models
+          persistentVolumeClaim:
+            claimName: anomaly-models-storage
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - api-services
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: ml-anomaly-detector
+                topologyKey: kubernetes.io/hostname
+
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api-services
+          effect: NoSchedule
+
+---
+# ML Anomaly Detector Code
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anomaly-detector-code
+  namespace: anomaly-detection
+data:
+  anomaly_detector.py: |
+    import os
+    import time
+    import json
+    import requests
+    import numpy as np
+    import pandas as pd
+    from datetime import datetime, timedelta
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+    from prometheus_client import start_http_server, Counter, Histogram, Gauge
+    import logging
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    # Prometheus metrics
+    anomalies_detected = Counter('pake_anomalies_detected_total', 'Total anomalies detected', ['metric_name', 'anomaly_type'])
+    anomaly_score = Histogram('pake_anomaly_score', 'Anomaly score distribution', ['metric_name'])
+    model_training_duration = Histogram('pake_model_training_duration_seconds', 'Time spent training models')
+    last_training_time = Gauge('pake_last_training_timestamp', 'Timestamp of last model training')
+
+    class AnomalyDetector:
+        def __init__(self):
+            self.prometheus_url = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
+            self.alertmanager_url = os.getenv('ALERTMANAGER_URL', 'http://alertmanager:9093')
+            self.check_interval = int(os.getenv('CHECK_INTERVAL', '300'))
+            self.anomaly_threshold = float(os.getenv('ANOMALY_THRESHOLD', '2.5'))
+            self.learning_period = int(os.getenv('LEARNING_PERIOD', '168'))  # hours
+            
+            self.models = {}
+            self.scalers = {}
+            self.feature_names = {}
+            
+            # Metrics to monitor for anomalies
+            self.metrics_config = {
+                'api_request_rate': {
+                    'query': 'rate(pake_api_requests_total[5m])',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.05
+                },
+                'api_latency': {
+                    'query': 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="pake-api"}[5m]))',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.03
+                },
+                'error_rate': {
+                    'query': 'rate(pake_api_requests_total{status=~"5.."}[5m])',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.02
+                },
+                'ai_inference_rate': {
+                    'query': 'rate(pake_ai_inference_total[5m])',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.05
+                },
+                'memory_usage': {
+                    'query': 'avg(container_memory_working_set_bytes{pod=~"pake-.*"}) by (pod)',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.05
+                },
+                'cpu_usage': {
+                    'query': 'avg(rate(container_cpu_usage_seconds_total{pod=~"pake-.*"}[5m])) by (pod)',
+                    'features': ['value', 'hour_of_day', 'day_of_week'],
+                    'contamination': 0.05
+                }
+            }
+        
+        def query_prometheus(self, query, start_time, end_time, step='5m'):
+            """Query Prometheus for time series data"""
+            try:
+                params = {
+                    'query': query,
+                    'start': start_time.isoformat() + 'Z',
+                    'end': end_time.isoformat() + 'Z',
+                    'step': step
+                }
+                
+                response = requests.get(f"{self.prometheus_url}/api/v1/query_range", params=params)
+                response.raise_for_status()
+                
+                data = response.json()
+                if data['status'] == 'success':
+                    return data['data']['result']
+                else:
+                    logger.error(f"Prometheus query failed: {data.get('error', 'Unknown error')}")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"Error querying Prometheus: {e}")
+                return []
+        
+        def extract_features(self, time_series_data, feature_config):
+            """Extract features from time series data"""
+            features = []
+            timestamps = []
+            
+            for result in time_series_data:
+                for timestamp, value in result['values']:
+                    dt = datetime.fromtimestamp(float(timestamp))
+                    
+                    feature_row = []
+                    
+                    # Add the metric value
+                    if 'value' in feature_config:
+                        try:
+                            feature_row.append(float(value))
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    # Add temporal features
+                    if 'hour_of_day' in feature_config:
+                        feature_row.append(dt.hour)
+                    
+                    if 'day_of_week' in feature_config:
+                        feature_row.append(dt.weekday())
+                    
+                    if 'day_of_month' in feature_config:
+                        feature_row.append(dt.day)
+                    
+                    features.append(feature_row)
+                    timestamps.append(dt)
+            
+            return np.array(features), timestamps
+        
+        def train_model(self, metric_name, config):
+            """Train anomaly detection model for a specific metric"""
+            logger.info(f"Training model for {metric_name}")
+            
+            with model_training_duration.time():
+                # Get historical data for training
+                end_time = datetime.utcnow()
+                start_time = end_time - timedelta(hours=self.learning_period)
+                
+                time_series_data = self.query_prometheus(config['query'], start_time, end_time)
+                
+                if not time_series_data:
+                    logger.warning(f"No training data available for {metric_name}")
+                    return False
+                
+                # Extract features
+                features, timestamps = self.extract_features(time_series_data, config['features'])
+                
+                if len(features) < 100:  # Minimum data points required
+                    logger.warning(f"Insufficient training data for {metric_name}: {len(features)} points")
+                    return False
+                
+                # Scale features
+                scaler = StandardScaler()
+                features_scaled = scaler.fit_transform(features)
+                
+                # Train isolation forest model
+                model = IsolationForest(
+                    contamination=config.get('contamination', 0.05),
+                    random_state=42,
+                    n_jobs=-1
+                )
+                model.fit(features_scaled)
+                
+                # Store model and scaler
+                self.models[metric_name] = model
+                self.scalers[metric_name] = scaler
+                self.feature_names[metric_name] = config['features']
+                
+                logger.info(f"Model trained for {metric_name} with {len(features)} data points")
+                last_training_time.set_to_current_time()
+                
+                return True
+        
+        def detect_anomalies(self, metric_name, config):
+            """Detect anomalies in current data"""
+            if metric_name not in self.models:
+                logger.warning(f"No trained model for {metric_name}")
+                return []
+            
+            # Get recent data for detection
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(minutes=30)  # Last 30 minutes
+            
+            time_series_data = self.query_prometheus(config['query'], start_time, end_time, step='1m')
+            
+            if not time_series_data:
+                return []
+            
+            # Extract features
+            features, timestamps = self.extract_features(time_series_data, config['features'])
+            
+            if len(features) == 0:
+                return []
+            
+            # Scale features
+            features_scaled = self.scalers[metric_name].transform(features)
+            
+            # Predict anomalies
+            anomaly_scores = self.models[metric_name].decision_function(features_scaled)
+            predictions = self.models[metric_name].predict(features_scaled)
+            
+            anomalies = []
+            for i, (score, prediction, timestamp) in enumerate(zip(anomaly_scores, predictions, timestamps)):
+                # Record anomaly score
+                anomaly_score.labels(metric_name=metric_name).observe(abs(score))
+                
+                if prediction == -1:  # Anomaly detected
+                    anomaly_data = {
+                        'metric_name': metric_name,
+                        'timestamp': timestamp.isoformat(),
+                        'anomaly_score': float(score),
+                        'features': features[i].tolist() if len(features[i]) > 0 else [],
+                        'severity': 'high' if abs(score) > 0.5 else 'medium'
+                    }
+                    anomalies.append(anomaly_data)
+                    
+                    # Record anomaly detection
+                    anomalies_detected.labels(
+                        metric_name=metric_name,
+                        anomaly_type='ml_detected'
+                    ).inc()
+            
+            return anomalies
+        
+        def send_alert(self, anomalies):
+            """Send alert to Alertmanager"""
+            if not anomalies:
+                return
+            
+            for anomaly in anomalies:
+                alert = {
+                    "labels": {
+                        "alertname": "MLAnomalyDetected",
+                        "severity": anomaly['severity'],
+                        "metric_name": anomaly['metric_name'],
+                        "anomaly_type": "machine_learning",
+                        "team": "sre"
+                    },
+                    "annotations": {
+                        "summary": f"ML-based anomaly detected in {anomaly['metric_name']}",
+                        "description": f"""
+    Machine learning anomaly detection has identified unusual behavior in {anomaly['metric_name']}.
+
+    Anomaly Score: {anomaly['anomaly_score']:.3f}
+    Timestamp: {anomaly['timestamp']}
+    Severity: {anomaly['severity']}
+
+    This indicates a deviation from normal patterns that may require investigation.
+                        """,
+                        "dashboard_url": "https://grafana.pake-system.com/d/anomaly-dashboard",
+                        "runbook_url": "https://wiki.pake-system.com/runbooks/ml-anomalies"
+                    },
+                    "startsAt": anomaly['timestamp']
+                }
+                
+                try:
+                    response = requests.post(
+                        f"{self.alertmanager_url}/api/v1/alerts",
+                        json=[alert],
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    response.raise_for_status()
+                    logger.info(f"Alert sent for anomaly in {anomaly['metric_name']}")
+                except Exception as e:
+                    logger.error(f"Failed to send alert: {e}")
+        
+        def health_check(self):
+            """Health check endpoint"""
+            return {"status": "healthy", "models_trained": len(self.models)}
+        
+        def run(self):
+            """Main execution loop"""
+            logger.info("Starting ML Anomaly Detector")
+            
+            # Initial model training
+            for metric_name, config in self.metrics_config.items():
+                self.train_model(metric_name, config)
+            
+            # Retrain models daily
+            last_training = datetime.utcnow()
+            
+            while True:
+                try:
+                    # Retrain models if needed (daily)
+                    if (datetime.utcnow() - last_training).days >= 1:
+                        logger.info("Retraining models...")
+                        for metric_name, config in self.metrics_config.items():
+                            self.train_model(metric_name, config)
+                        last_training = datetime.utcnow()
+                    
+                    # Detect anomalies
+                    all_anomalies = []
+                    for metric_name, config in self.metrics_config.items():
+                        anomalies = self.detect_anomalies(metric_name, config)
+                        all_anomalies.extend(anomalies)
+                        
+                        if anomalies:
+                            logger.info(f"Detected {len(anomalies)} anomalies in {metric_name}")
+                    
+                    # Send alerts for detected anomalies
+                    if all_anomalies:
+                        self.send_alert(all_anomalies)
+                    
+                except Exception as e:
+                    logger.error(f"Error in anomaly detection loop: {e}")
+                
+                time.sleep(self.check_interval)
+
+    # Health check endpoints
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import threading
+    import json
+
+    detector = AnomalyDetector()
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/health':
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(detector.health_check()).encode())
+            elif self.path == '/ready':
+                ready = len(detector.models) > 0
+                self.send_response(200 if ready else 503)
+                self.send_header('Content-type', 'application/json') 
+                self.end_headers()
+                self.wfile.write(json.dumps({"ready": ready}).encode())
+        
+        def log_message(self, format, *args):
+            pass  # Suppress default logging
+
+    # Start health check server
+    health_server = HTTPServer(('0.0.0.0', 8080), HealthHandler)
+    health_thread = threading.Thread(target=health_server.serve_forever)
+    health_thread.daemon = True
+    health_thread.start()
+
+    # Start Prometheus metrics server
+    start_http_server(8081)
+
+    # Start anomaly detection
+    detector.run()
+
+---
+# Storage for ML models
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: anomaly-models-storage
+  namespace: anomaly-detection
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Service Account for Anomaly Detector
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: anomaly-detector
+  namespace: anomaly-detection
+
+---
+# RBAC for Anomaly Detector
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: anomaly-detector
+  namespace: anomaly-detection
+rules:
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: anomaly-detector
+  namespace: anomaly-detection
+subjects:
+  - kind: ServiceAccount
+    name: anomaly-detector
+    namespace: anomaly-detection
+roleRef:
+  kind: Role
+  name: anomaly-detector
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Service for ML Anomaly Detector
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-anomaly-detector
+  namespace: anomaly-detection
+  labels:
+    app: ml-anomaly-detector
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '8081'
+    prometheus.io/path: '/metrics'
+spec:
+  selector:
+    app: ml-anomaly-detector
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+
+---
+# ServiceMonitor for Anomaly Detection metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ml-anomaly-detector
+  namespace: anomaly-detection
+  labels:
+    app: ml-anomaly-detector
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: ml-anomaly-detector
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

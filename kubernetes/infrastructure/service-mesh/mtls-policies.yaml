@@ -1,0 +1,520 @@
+# mTLS and Traffic Management Policies for PAKE System
+
+# Global mTLS Policy - Enable strict mTLS across the mesh
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# Namespace-specific mTLS policies
+
+# PAKE System namespace
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: pake-system-mtls
+  namespace: pake-system
+spec:
+  mtls:
+    mode: STRICT
+
+# Database namespace - allow plaintext for health checks
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: database-mtls
+  namespace: database
+spec:
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    # Allow health check ports to be plaintext
+    8080:
+      mode: PERMISSIVE
+    9090:
+      mode: PERMISSIVE
+
+# Monitoring namespace
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: monitoring-mtls
+  namespace: monitoring
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# Authorization Policies
+
+# Default deny-all policy for production security
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: pake-system
+spec:
+  {}
+
+---
+# Allow ingress gateway to access services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress
+  namespace: pake-system
+spec:
+  selector:
+    matchLabels:
+      app: pake-api
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+  - to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        paths: ["/api/*", "/health/*", "/metrics"]
+
+---
+# Allow API to access database
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: api-to-database
+  namespace: database
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/pake-system/sa/pake-api"
+        - "cluster.local/ns/pake-system/sa/pake-workers"
+  - to:
+    - operation:
+        ports: ["5432"]
+
+---
+# Allow AI services to access API
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ai-to-api
+  namespace: pake-system
+spec:
+  selector:
+    matchLabels:
+      app: pake-ai
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/pake-system/sa/pake-api"
+  - to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/v1/inference/*", "/health/*"]
+
+---
+# Allow monitoring to scrape all services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-monitoring
+  namespace: pake-system
+spec:
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/monitoring/sa/prometheus"
+        - "cluster.local/ns/istio-system/sa/kiali-service-account"
+  - to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/stats/prometheus"]
+
+---
+# Traffic Management - Destination Rules
+
+# API Service destination rule with circuit breaker
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: pake-api
+  namespace: pake-system
+spec:
+  host: pake-api.pake-system.svc.cluster.local
+  trafficPolicy:
+    # Connection pool settings
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+        consecutiveGatewayErrors: 5
+        interval: 30s
+        baseEjectionTime: 30s
+        maxEjectionPercent: 50
+        minHealthPercent: 30
+    
+    # Circuit breaker
+    outlierDetection:
+      consecutiveGatewayErrors: 3
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+    
+    # Load balancing
+    loadBalancer:
+      simple: LEAST_CONN
+  
+  # Subset configuration for canary deployments
+  subsets:
+  - name: stable
+    labels:
+      version: stable
+    trafficPolicy:
+      connectionPool:
+        http:
+          maxRequestsPerConnection: 10
+  - name: canary
+    labels:
+      version: canary
+    trafficPolicy:
+      connectionPool:
+        http:
+          maxRequestsPerConnection: 5
+
+---
+# AI Service destination rule with extended timeouts
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: pake-ai
+  namespace: pake-system
+spec:
+  host: pake-ai.pake-system.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+        connectTimeout: 60s
+      http:
+        timeout: 300s  # Extended timeout for AI inference
+        http1MaxPendingRequests: 20
+        http2MaxRequests: 50
+        maxRequestsPerConnection: 5
+    
+    outlierDetection:
+      consecutiveGatewayErrors: 2
+      consecutive5xxErrors: 2
+      interval: 60s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 30
+      minHealthPercent: 50
+    
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: "x-user-id"  # Sticky sessions for AI context
+
+---
+# Database destination rule
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: postgresql
+  namespace: database
+spec:
+  host: pake-postgresql.database.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+        connectTimeout: 30s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+    
+    loadBalancer:
+      consistentHash:
+        httpCookieTtl: 300s
+        httpCookieName: "db-session"
+
+---
+# Virtual Services for traffic routing
+
+# API Service virtual service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: pake-api
+  namespace: pake-system
+spec:
+  hosts:
+  - api.pake-system.com
+  - pake-api.pake-system.svc.cluster.local
+  gateways:
+  - pake-gateway
+  - mesh
+  http:
+  # Canary routing (10% to canary, 90% to stable)
+  - match:
+    - headers:
+        x-canary-user:
+          exact: "true"
+    route:
+    - destination:
+        host: pake-api.pake-system.svc.cluster.local
+        subset: canary
+      weight: 100
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+  
+  # Production traffic routing
+  - match:
+    - uri:
+        prefix: "/api/v1/"
+    route:
+    - destination:
+        host: pake-api.pake-system.svc.cluster.local
+        subset: stable
+      weight: 90
+    - destination:
+        host: pake-api.pake-system.svc.cluster.local
+        subset: canary
+      weight: 10
+    
+    # Retry policy
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,gateway-error,connect-failure,refused-stream
+      retryRemoteLocalities: true
+    
+    # Timeout
+    timeout: 30s
+    
+    # CORS policy
+    corsPolicy:
+      allowOrigins:
+      - exact: "https://app.pake-system.com"
+      - regex: "https://.*\\.pake-system\\.com"
+      allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+      - OPTIONS
+      allowHeaders:
+      - authorization
+      - content-type
+      - x-request-id
+      - x-correlation-id
+      allowCredentials: true
+      maxAge: 86400s
+
+---
+# AI Service virtual service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: pake-ai
+  namespace: pake-system
+spec:
+  hosts:
+  - ai.pake-system.com
+  - pake-ai.pake-system.svc.cluster.local
+  gateways:
+  - pake-gateway
+  - mesh
+  http:
+  - match:
+    - uri:
+        prefix: "/v1/inference/"
+    route:
+    - destination:
+        host: pake-ai.pake-system.svc.cluster.local
+    
+    timeout: 300s  # Extended timeout for AI inference
+    
+    retries:
+      attempts: 2
+      perTryTimeout: 150s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    
+    # Rate limiting for expensive AI operations
+    match:
+    - headers:
+        x-rate-limit:
+          exact: "premium"
+    fault:
+      delay:
+        percentage:
+          value: 0
+        fixedDelay: 0s
+  
+  # Health checks and metrics (faster timeout)
+  - match:
+    - uri:
+        prefix: "/health"
+    - uri:
+        prefix: "/metrics"
+    route:
+    - destination:
+        host: pake-ai.pake-system.svc.cluster.local
+    timeout: 10s
+
+---
+# Service Entry for external AI APIs
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: openai-api
+  namespace: pake-system
+spec:
+  hosts:
+  - api.openai.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: huggingface-api
+  namespace: pake-system
+spec:
+  hosts:
+  - api-inference.huggingface.co
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# Egress traffic control
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: external-ai-apis
+  namespace: pake-system
+spec:
+  host: "*.openai.com"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        connectTimeout: 30s
+      http:
+        timeout: 60s
+        maxRequestsPerConnection: 10
+    
+    outlierDetection:
+      consecutiveGatewayErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+
+---
+# Sidecar configuration for resource optimization
+apiVersion: networking.istio.io/v1beta1
+kind: Sidecar
+metadata:
+  name: pake-api-sidecar
+  namespace: pake-system
+spec:
+  workloadSelector:
+    labels:
+      app: pake-api
+  
+  ingress:
+  - port:
+      number: 8080
+      protocol: HTTP
+      name: http
+    defaultEndpoint: 127.0.0.1:8080
+  
+  egress:
+  # Allow traffic to database
+  - hosts:
+    - "./pake-postgresql.database.svc.cluster.local"
+  # Allow traffic to Redis
+  - hosts:
+    - "./pake-redis.database.svc.cluster.local"
+  # Allow traffic to AI services
+  - hosts:
+    - "./pake-ai.pake-system.svc.cluster.local"
+  # Allow external API calls
+  - hosts:
+    - "api.openai.com"
+    - "api-inference.huggingface.co"
+  # Allow istio system traffic
+  - hosts:
+    - "istio-system/*"
+
+---
+# Network policies for additional security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: istio-mesh-policy
+  namespace: pake-system
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # Allow Istio sidecar traffic
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    - podSelector:
+        matchLabels:
+          security.istio.io/tlsMode: istio
+  
+  egress:
+  # Allow Istio control plane traffic
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS for external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443

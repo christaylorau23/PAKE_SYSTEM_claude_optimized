@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-enterprise
+  namespace: wealth-platform
+  labels:
+    app: redis-enterprise
+    component: cache
+    tier: data
+spec:
+  replicas: 3 # Redis cluster with 3 nodes for high availability
+  selector:
+    matchLabels:
+      app: redis-enterprise
+  template:
+    metadata:
+      labels:
+        app: redis-enterprise
+        component: cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - --appendonly yes
+            - --cluster-enabled yes
+            - --cluster-config-file nodes.conf
+            - --cluster-node-timeout 5000
+            - --dir /data
+            - --maxmemory 16gb
+            - --maxmemory-policy allkeys-lru
+            - --save 900 1
+            - --save 300 10
+            - --save 60 10000
+          ports:
+            - containerPort: 6379
+              name: redis
+            - containerPort: 16379
+              name: cluster
+          resources:
+            requests:
+              cpu: '2'
+              memory: '16Gi'
+            limits:
+              cpu: '4'
+              memory: '24Gi'
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: wealth-platform
+  labels:
+    app: redis-enterprise
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+    - port: 16379
+      targetPort: 16379
+      name: cluster
+  selector:
+    app: redis-enterprise
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: wealth-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi # 500GB for Redis data
+  storageClassName: fast-ssd

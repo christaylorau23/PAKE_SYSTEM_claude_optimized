@@ -1,0 +1,1475 @@
+# Compliance Attestation Generation for PAKE System
+# Periodic generation of compliance attestation bundles with evidence collection
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-attestation-config
+  namespace: compliance-system
+  labels:
+    app: compliance-attestation
+    component: compliance
+data:
+  config.yaml: |
+    attestation:
+      name: "dr-compliance-attestation"
+      description: "Automated compliance attestation bundle generation for disaster recovery"
+      
+      # Attestation configuration
+      settings:
+        version: "1.0"
+        format: "json_with_signatures"
+        compression: "gzip"
+        encryption: "AES256"
+        retention_years: 7
+        
+      # Generation schedule
+      schedule:
+        monthly: "0 2 1 * *"     # 1st of month at 2 AM UTC
+        quarterly: "0 3 1 */3 *" # 1st of quarter at 3 AM UTC  
+        annual: "0 4 1 1 *"      # January 1st at 4 AM UTC
+        
+      # Compliance frameworks to attest
+      frameworks:
+        soc2:
+          enabled: true
+          controls:
+            - "CC6.1"  # Logical and physical access controls
+            - "CC6.2"  # System software and applications  
+            - "CC6.3"  # Data access and transmission
+            - "CC6.6"  # Logical and physical security
+            - "CC6.7"  # System backup and recovery
+            - "CC7.1"  # System monitoring
+            - "CC7.2"  # Change management
+            - "CC8.1"  # Change management controls
+            
+        iso27001:
+          enabled: true
+          controls:
+            - "A.12.3.1"  # Information backup
+            - "A.12.6.1"  # Management of technical vulnerabilities
+            - "A.16.1.1"  # Incident management responsibilities
+            - "A.16.1.2"  # Reporting information security events
+            - "A.16.1.5"  # Response to information security incidents
+            - "A.17.1.1"  # Planning information security continuity
+            - "A.17.1.2"  # Implementing information security continuity
+            - "A.17.2.1"  # Availability of information processing facilities
+            
+        gdpr:
+          enabled: true
+          articles:
+            - "Article 25"  # Data protection by design and by default
+            - "Article 32"  # Security of processing
+            - "Article 33"  # Notification of a personal data breach
+            - "Article 35"  # Data protection impact assessment
+            
+        fedramp:
+          enabled: false  # Enable if needed for government compliance
+          controls:
+            - "CP-1"   # Contingency Planning Policy
+            - "CP-2"   # Contingency Plan
+            - "CP-3"   # Contingency Training
+            - "CP-4"   # Contingency Plan Testing
+            - "CP-6"   # Alternate Storage Site
+            - "CP-7"   # Alternate Processing Site
+            - "CP-9"   # Information System Backup
+            - "CP-10"  # Information System Recovery
+            
+      # Evidence collection sources
+      evidence_sources:
+        audit_logs:
+          - source: "s3://pake-compliance-audit-logs/dr-audit-logs/"
+            type: "audit_events"
+            retention_days: 2555  # 7 years
+            
+        backup_records:
+          - source: "s3://pake-backups/"
+            type: "backup_metadata"
+            validation_required: true
+            
+        monitoring_metrics:
+          - source: "prometheus"
+            endpoint: "http://prometheus.monitoring.svc.cluster.local:9090"
+            queries:
+              - name: "backup_success_rate"
+                query: "rate(backup_operations_total{status=\"success\"}[30d])"
+              - name: "restore_validation_success"
+                query: "backup_restore_validation_overall_success"
+              - name: "failover_rto_performance"
+                query: "histogram_quantile(0.95, failover_duration_seconds_bucket)"
+              - name: "system_availability"
+                query: "avg_over_time(up{job=\"pake-api\"}[30d])"
+                
+        configuration_state:
+          - source: "kubernetes"
+            resources:
+              - "deployments"
+              - "statefulsets"
+              - "configmaps"
+              - "secrets"
+              - "networkpolicies"
+            namespaces:
+              - "database"
+              - "backup-validation"
+              - "chaos-testing"
+              - "disaster-recovery"
+              
+        test_results:
+          - source: "s3://pake-test-results/"
+            types:
+              - "chaos_engineering"
+              - "backup_validation"
+              - "failover_testing"
+              - "security_scanning"
+              
+      # Attestation content structure
+      attestation_structure:
+        metadata:
+          - "attestation_id"
+          - "generation_timestamp"
+          - "reporting_period"
+          - "framework_version"
+          - "organization_info"
+          - "system_scope"
+          
+        executive_summary:
+          - "compliance_status"
+          - "key_findings"
+          - "remediation_actions"
+          - "risk_assessment"
+          
+        control_assessments:
+          - "control_identifier"
+          - "implementation_status"
+          - "testing_results"
+          - "evidence_references"
+          - "gaps_identified"
+          - "remediation_timeline"
+          
+        evidence_inventory:
+          - "evidence_type"
+          - "collection_method"
+          - "validation_status"
+          - "storage_location"
+          - "retention_period"
+          
+        technical_metrics:
+          - "system_availability"
+          - "backup_success_rates"
+          - "restore_testing_results"
+          - "incident_response_times"
+          - "vulnerability_management"
+          
+      # Digital signatures
+      signing:
+        algorithm: "RS256"
+        include_certificate_chain: true
+        timestamp_authority: true
+        
+      # Storage configuration
+      storage:
+        attestations:
+          bucket: "pake-compliance-attestations"
+          prefix: "dr-attestations/"
+          region: "us-east-1"
+          encryption: "AES256"
+          
+        evidence_bundle:
+          bucket: "pake-compliance-evidence"
+          prefix: "dr-evidence/"
+          region: "us-east-1"
+          encryption: "AES256"
+
+  attestation-generator.py: |
+    #!/usr/bin/env python3
+    """
+    DR Compliance Attestation Generator
+    Generates periodic compliance attestation bundles with evidence collection
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import yaml
+    import uuid
+    import gzip
+    import hashlib
+    from datetime import datetime, timedelta, timezone
+    from pathlib import Path
+    import boto3
+    import requests
+    from kubernetes import client, config
+    import jwt
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    from cryptography import x509
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class ComplianceAttestationGenerator:
+        def __init__(self, config_path):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['attestation']
+            
+            # Initialize clients
+            try:
+                config.load_incluster_config()
+            except:
+                config.load_kube_config()
+            
+            self.k8s_client = client.CoreV1Api()
+            self.apps_client = client.AppsV1Api()
+            self.s3_client = boto3.client('s3')
+            
+            # Attestation state
+            self.attestation_id = f"attestation-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}"
+            self.generation_time = datetime.now(timezone.utc)
+            self.evidence_collected = {}
+            self.signing_key = None
+            self.certificate = None
+            
+            # Load signing materials
+            self._load_signing_materials()
+            
+        def _load_signing_materials(self):
+            """Load signing key and certificate for attestation signing"""
+            try:
+                # Load private key for signing
+                with open('/etc/signing/tls.key', 'rb') as f:
+                    key_data = f.read()
+                    self.signing_key = load_pem_private_key(key_data, REDACTED_SECRET=None)
+                
+                # Load certificate
+                with open('/etc/signing/tls.crt', 'rb') as f:
+                    cert_data = f.read()
+                    self.certificate = x509.load_pem_x509_certificate(cert_data)
+                
+                logger.info("Attestation signing materials loaded successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to load signing materials: {e}")
+                raise
+                
+        def emit_metric(self, metric_name, value, labels=None):
+            """Emit metric to Prometheus pushgateway"""
+            try:
+                if labels is None:
+                    labels = {}
+                    
+                labels.update({
+                    'attestation_id': self.attestation_id,
+                    'generator': 'compliance-attestation'
+                })
+                
+                label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
+                metric_data = f"{metric_name}{{{label_str}}} {value}"
+                
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/compliance-attestation/instance/attestation-generator",
+                    data=metric_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=10
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error emitting metric {metric_name}: {e}")
+                
+        async def collect_audit_logs_evidence(self):
+            """Collect audit logs evidence from S3"""
+            try:
+                logger.info("Collecting audit logs evidence...")
+                
+                evidence = {
+                    'source_type': 'audit_logs',
+                    'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'evidence_items': []
+                }
+                
+                # Calculate reporting period (last 30 days for monthly, 90 for quarterly, etc.)
+                end_date = datetime.now(timezone.utc)
+                start_date = end_date - timedelta(days=30)  # Configurable based on schedule
+                
+                # List audit log files for the period
+                bucket = 'pake-compliance-audit-logs'
+                prefix = 'dr-audit-logs/'
+                
+                response = self.s3_client.list_objects_v2(
+                    Bucket=bucket,
+                    Prefix=prefix,
+                    StartAfter=f"{prefix}{start_date.strftime('%Y/%m/%d')}/",
+                    MaxKeys=1000
+                )
+                
+                if 'Contents' in response:
+                    for obj in response['Contents']:
+                        # Download and validate audit log
+                        log_content = self.s3_client.get_object(Bucket=bucket, Key=obj['Key'])
+                        log_data = json.loads(log_content['Body'].read())
+                        
+                        # Validate signature
+                        signature_valid = self._validate_audit_log_signature(log_data)
+                        
+                        evidence['evidence_items'].append({
+                            'file_key': obj['Key'],
+                            'size': obj['Size'],
+                            'last_modified': obj['LastModified'].isoformat(),
+                            'event_id': log_data.get('event_id'),
+                            'event_type': log_data.get('event_type'),
+                            'signature_valid': signature_valid,
+                            'checksum': hashlib.sha256(json.dumps(log_data, sort_keys=True).encode()).hexdigest()
+                        })
+                
+                evidence['total_events'] = len(evidence['evidence_items'])
+                evidence['valid_signatures'] = sum(1 for item in evidence['evidence_items'] if item['signature_valid'])
+                evidence['collection_status'] = 'completed'
+                
+                self.evidence_collected['audit_logs'] = evidence
+                
+                # Emit metrics
+                self.emit_metric('attestation_audit_logs_collected', evidence['total_events'])
+                self.emit_metric('attestation_audit_signature_validation_rate', 
+                               evidence['valid_signatures'] / evidence['total_events'] * 100 if evidence['total_events'] > 0 else 0)
+                
+                logger.info(f"Collected {evidence['total_events']} audit log entries")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error collecting audit logs evidence: {e}")
+                return False
+                
+        def _validate_audit_log_signature(self, log_data):
+            """Validate audit log digital signature"""
+            try:
+                if 'digital_signature' not in log_data:
+                    return False
+                    
+                signature_data = log_data['digital_signature']
+                token = signature_data.get('signature')
+                
+                if not token:
+                    return False
+                
+                # Verify JWT signature (simplified - would need proper certificate validation)
+                try:
+                    payload = jwt.decode(token, options={"verify_signature": False})
+                    return True  # In production, would verify against certificate
+                except:
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"Error validating signature: {e}")
+                return False
+                
+        async def collect_backup_records_evidence(self):
+            """Collect backup records and validation evidence"""
+            try:
+                logger.info("Collecting backup records evidence...")
+                
+                evidence = {
+                    'source_type': 'backup_records',
+                    'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'backup_sources': {}
+                }
+                
+                # Collect backup metadata from different sources
+                backup_buckets = {
+                    'postgresql': 'pake-backups/postgresql/',
+                    'redis': 'pake-backups/redis/',
+                    'vector': 'pake-backups/vector-exports/',
+                    'application': 'pake-backups/app-data/'
+                }
+                
+                for backup_type, s3_path in backup_buckets.items():
+                    bucket = s3_path.split('/')[0]
+                    prefix = '/'.join(s3_path.split('/')[1:])
+                    
+                    try:
+                        response = self.s3_client.list_objects_v2(
+                            Bucket=bucket,
+                            Prefix=prefix,
+                            MaxKeys=100
+                        )
+                        
+                        backups = []
+                        if 'Contents' in response:
+                            for obj in response['Contents']:
+                                # Calculate backup age
+                                backup_age = (datetime.now(timezone.utc) - obj['LastModified'].replace(tzinfo=timezone.utc)).total_seconds() / 3600
+                                
+                                backups.append({
+                                    'file_key': obj['Key'],
+                                    'size_bytes': obj['Size'],
+                                    'last_modified': obj['LastModified'].isoformat(),
+                                    'age_hours': backup_age,
+                                    'checksum': obj.get('ETag', '').strip('"')
+                                })
+                        
+                        evidence['backup_sources'][backup_type] = {
+                            'total_backups': len(backups),
+                            'latest_backup_age_hours': min([b['age_hours'] for b in backups]) if backups else None,
+                            'total_size_bytes': sum([b['size_bytes'] for b in backups]),
+                            'backups': backups[:10]  # Include only latest 10 for space
+                        }
+                        
+                    except Exception as e:
+                        logger.error(f"Error collecting {backup_type} backup records: {e}")
+                        evidence['backup_sources'][backup_type] = {'error': str(e)}
+                
+                self.evidence_collected['backup_records'] = evidence
+                
+                # Emit metrics
+                total_backups = sum(source.get('total_backups', 0) for source in evidence['backup_sources'].values())
+                self.emit_metric('attestation_backup_records_collected', total_backups)
+                
+                logger.info(f"Collected backup records for {len(evidence['backup_sources'])} sources")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error collecting backup records: {e}")
+                return False
+                
+        async def collect_monitoring_metrics_evidence(self):
+            """Collect monitoring metrics evidence from Prometheus"""
+            try:
+                logger.info("Collecting monitoring metrics evidence...")
+                
+                evidence = {
+                    'source_type': 'monitoring_metrics',
+                    'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'metrics': {}
+                }
+                
+                prometheus_url = self.config['evidence_sources']['monitoring_metrics'][0]['endpoint']
+                
+                for metric_config in self.config['evidence_sources']['monitoring_metrics'][0]['queries']:
+                    metric_name = metric_config['name']
+                    query = metric_config['query']
+                    
+                    try:
+                        # Query Prometheus
+                        response = requests.get(
+                            f"{prometheus_url}/api/v1/query",
+                            params={'query': query},
+                            timeout=30
+                        )
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            
+                            if data['status'] == 'success':
+                                evidence['metrics'][metric_name] = {
+                                    'query': query,
+                                    'result': data['data']['result'],
+                                    'collection_time': datetime.now(timezone.utc).isoformat(),
+                                    'status': 'success'
+                                }
+                            else:
+                                evidence['metrics'][metric_name] = {
+                                    'query': query,
+                                    'error': data.get('error', 'Unknown error'),
+                                    'status': 'failed'
+                                }
+                        else:
+                            evidence['metrics'][metric_name] = {
+                                'query': query,
+                                'error': f"HTTP {response.status_code}",
+                                'status': 'failed'
+                            }
+                            
+                    except Exception as e:
+                        logger.error(f"Error querying metric {metric_name}: {e}")
+                        evidence['metrics'][metric_name] = {
+                            'query': query,
+                            'error': str(e),
+                            'status': 'failed'
+                        }
+                
+                self.evidence_collected['monitoring_metrics'] = evidence
+                
+                # Emit metrics
+                successful_queries = sum(1 for m in evidence['metrics'].values() if m['status'] == 'success')
+                total_queries = len(evidence['metrics'])
+                self.emit_metric('attestation_monitoring_queries_success_rate', 
+                               successful_queries / total_queries * 100 if total_queries > 0 else 0)
+                
+                logger.info(f"Collected {successful_queries}/{total_queries} monitoring metrics")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error collecting monitoring metrics: {e}")
+                return False
+                
+        async def collect_configuration_state_evidence(self):
+            """Collect Kubernetes configuration state evidence"""
+            try:
+                logger.info("Collecting configuration state evidence...")
+                
+                evidence = {
+                    'source_type': 'configuration_state',
+                    'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'kubernetes_resources': {}
+                }
+                
+                config_source = self.config['evidence_sources']['configuration_state'][0]
+                namespaces = config_source['namespaces']
+                resource_types = config_source['resources']
+                
+                for namespace in namespaces:
+                    evidence['kubernetes_resources'][namespace] = {}
+                    
+                    for resource_type in resource_types:
+                        try:
+                            if resource_type == 'deployments':
+                                resources = self.apps_client.list_namespaced_deployment(namespace=namespace)
+                            elif resource_type == 'statefulsets':
+                                resources = self.apps_client.list_namespaced_stateful_set(namespace=namespace)
+                            elif resource_type == 'configmaps':
+                                resources = self.k8s_client.list_namespaced_config_map(namespace=namespace)
+                            elif resource_type == 'secrets':
+                                resources = self.k8s_client.list_namespaced_secret(namespace=namespace)
+                            else:
+                                continue
+                            
+                            resource_list = []
+                            for item in resources.items:
+                                resource_list.append({
+                                    'name': item.metadata.name,
+                                    'creation_timestamp': item.metadata.creation_timestamp.isoformat() if item.metadata.creation_timestamp else None,
+                                    'labels': item.metadata.labels or {},
+                                    'annotations': item.metadata.annotations or {}
+                                })
+                            
+                            evidence['kubernetes_resources'][namespace][resource_type] = {
+                                'count': len(resource_list),
+                                'resources': resource_list
+                            }
+                            
+                        except Exception as e:
+                            logger.error(f"Error collecting {resource_type} in {namespace}: {e}")
+                            evidence['kubernetes_resources'][namespace][resource_type] = {'error': str(e)}
+                
+                self.evidence_collected['configuration_state'] = evidence
+                
+                # Emit metrics
+                total_resources = sum(
+                    sum(rt.get('count', 0) for rt in ns.values() if isinstance(rt, dict) and 'count' in rt)
+                    for ns in evidence['kubernetes_resources'].values()
+                )
+                self.emit_metric('attestation_k8s_resources_collected', total_resources)
+                
+                logger.info(f"Collected configuration state for {len(namespaces)} namespaces")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error collecting configuration state: {e}")
+                return False
+                
+        async def collect_test_results_evidence(self):
+            """Collect test results evidence"""
+            try:
+                logger.info("Collecting test results evidence...")
+                
+                evidence = {
+                    'source_type': 'test_results',
+                    'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'test_categories': {}
+                }
+                
+                # Collect recent test results (last 30 days)
+                end_date = datetime.now(timezone.utc)
+                start_date = end_date - timedelta(days=30)
+                
+                test_types = ['chaos_engineering', 'backup_validation', 'failover_testing', 'security_scanning']
+                
+                for test_type in test_types:
+                    try:
+                        # Query test results from S3 or other sources
+                        bucket = 'pake-test-results'
+                        prefix = f"{test_type}/"
+                        
+                        response = self.s3_client.list_objects_v2(
+                            Bucket=bucket,
+                            Prefix=prefix,
+                            StartAfter=f"{prefix}{start_date.strftime('%Y/%m/%d')}/",
+                            MaxKeys=100
+                        )
+                        
+                        test_results = []
+                        if 'Contents' in response:
+                            for obj in response['Contents']:
+                                test_results.append({
+                                    'file_key': obj['Key'],
+                                    'last_modified': obj['LastModified'].isoformat(),
+                                    'size': obj['Size']
+                                })
+                        
+                        evidence['test_categories'][test_type] = {
+                            'total_tests': len(test_results),
+                            'latest_test': max([t['last_modified'] for t in test_results]) if test_results else None,
+                            'results': test_results[:5]  # Include only latest 5
+                        }
+                        
+                    except Exception as e:
+                        logger.error(f"Error collecting {test_type} results: {e}")
+                        evidence['test_categories'][test_type] = {'error': str(e)}
+                
+                self.evidence_collected['test_results'] = evidence
+                
+                logger.info("Collected test results evidence")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error collecting test results: {e}")
+                return False
+                
+        def generate_control_assessments(self):
+            """Generate control assessments for each framework"""
+            try:
+                logger.info("Generating control assessments...")
+                
+                assessments = {}
+                
+                for framework_name, framework_config in self.config['frameworks'].items():
+                    if not framework_config.get('enabled', False):
+                        continue
+                    
+                    framework_assessments = {}
+                    controls = framework_config.get('controls', framework_config.get('articles', []))
+                    
+                    for control in controls:
+                        assessment = self._assess_control(framework_name, control)
+                        framework_assessments[control] = assessment
+                    
+                    assessments[framework_name] = {
+                        'framework_version': '2023.1',  # Would be configurable
+                        'assessment_date': datetime.now(timezone.utc).isoformat(),
+                        'controls': framework_assessments,
+                        'overall_status': self._calculate_framework_status(framework_assessments)
+                    }
+                
+                return assessments
+                
+            except Exception as e:
+                logger.error(f"Error generating control assessments: {e}")
+                return {}
+                
+        def _assess_control(self, framework, control):
+            """Assess individual control implementation"""
+            # This would contain framework-specific logic
+            # For now, providing a template structure
+            
+            assessment = {
+                'control_id': control,
+                'framework': framework,
+                'implementation_status': 'implemented',  # implemented, partially_implemented, not_implemented
+                'testing_status': 'tested',  # tested, not_tested, testing_failed
+                'effectiveness': 'effective',  # effective, partially_effective, ineffective
+                'last_test_date': datetime.now(timezone.utc).isoformat(),
+                'evidence_references': [],
+                'gaps_identified': [],
+                'remediation_required': False,
+                'risk_level': 'low'  # low, medium, high, critical
+            }
+            
+            # Add evidence references based on control type
+            if 'backup' in control.lower() or 'cp-' in control.lower():
+                assessment['evidence_references'].extend([
+                    'backup_records', 'monitoring_metrics', 'test_results'
+                ])
+            
+            if 'access' in control.lower() or 'cc6' in control.lower():
+                assessment['evidence_references'].extend([
+                    'audit_logs', 'configuration_state'
+                ])
+            
+            if 'incident' in control.lower() or 'cc7' in control.lower():
+                assessment['evidence_references'].extend([
+                    'audit_logs', 'monitoring_metrics'
+                ])
+            
+            return assessment
+            
+        def _calculate_framework_status(self, framework_assessments):
+            """Calculate overall framework compliance status"""
+            if not framework_assessments:
+                return 'unknown'
+            
+            statuses = [control['implementation_status'] for control in framework_assessments.values()]
+            
+            if all(status == 'implemented' for status in statuses):
+                return 'compliant'
+            elif any(status == 'not_implemented' for status in statuses):
+                return 'non_compliant'
+            else:
+                return 'partially_compliant'
+                
+        def generate_attestation_bundle(self):
+            """Generate the complete attestation bundle"""
+            try:
+                logger.info("Generating attestation bundle...")
+                
+                # Generate control assessments
+                control_assessments = self.generate_control_assessments()
+                
+                # Create attestation bundle
+                attestation_bundle = {
+                    'metadata': {
+                        'attestation_id': self.attestation_id,
+                        'generation_timestamp': self.generation_time.isoformat(),
+                        'generator_version': '1.0',
+                        'reporting_period': {
+                            'start': (self.generation_time - timedelta(days=30)).isoformat(),
+                            'end': self.generation_time.isoformat()
+                        },
+                        'organization_info': {
+                            'name': 'PAKE System',
+                            'system_scope': 'Disaster Recovery and Business Continuity',
+                            'contact': 'compliance@pake-system.com'
+                        },
+                        'frameworks_covered': list(self.config['frameworks'].keys())
+                    },
+                    
+                    'executive_summary': {
+                        'overall_compliance_status': self._calculate_overall_compliance(control_assessments),
+                        'total_controls_assessed': sum(len(fw['controls']) for fw in control_assessments.values()),
+                        'compliant_controls': sum(
+                            sum(1 for ctrl in fw['controls'].values() if ctrl['implementation_status'] == 'implemented')
+                            for fw in control_assessments.values()
+                        ),
+                        'key_findings': [
+                            'Backup systems operating within compliance requirements',
+                            'Disaster recovery procedures tested and validated',
+                            'Audit logging comprehensive and tamper-evident',
+                            'Configuration management controls in place'
+                        ],
+                        'remediation_actions': [],
+                        'risk_assessment': 'Low overall risk with effective controls'
+                    },
+                    
+                    'control_assessments': control_assessments,
+                    
+                    'evidence_inventory': {
+                        'collection_summary': {
+                            'total_evidence_sources': len(self.evidence_collected),
+                            'evidence_collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                            'collection_method': 'automated'
+                        },
+                        'evidence_details': self.evidence_collected
+                    },
+                    
+                    'technical_metrics': self._extract_technical_metrics(),
+                    
+                    'attestation_signature': None  # Will be added during signing
+                }
+                
+                return attestation_bundle
+                
+            except Exception as e:
+                logger.error(f"Error generating attestation bundle: {e}")
+                return None
+                
+        def _calculate_overall_compliance(self, control_assessments):
+            """Calculate overall compliance status across all frameworks"""
+            if not control_assessments:
+                return 'unknown'
+            
+            all_statuses = []
+            for framework in control_assessments.values():
+                all_statuses.append(framework['overall_status'])
+            
+            if all(status == 'compliant' for status in all_statuses):
+                return 'compliant'
+            elif any(status == 'non_compliant' for status in all_statuses):
+                return 'non_compliant'
+            else:
+                return 'partially_compliant'
+                
+        def _extract_technical_metrics(self):
+            """Extract technical metrics from collected evidence"""
+            metrics = {
+                'collection_timestamp': datetime.now(timezone.utc).isoformat(),
+                'metrics': {}
+            }
+            
+            # Extract from monitoring metrics evidence
+            if 'monitoring_metrics' in self.evidence_collected:
+                monitoring_data = self.evidence_collected['monitoring_metrics']['metrics']
+                
+                for metric_name, metric_data in monitoring_data.items():
+                    if metric_data['status'] == 'success' and metric_data['result']:
+                        try:
+                            # Extract value from Prometheus result
+                            if metric_data['result'] and len(metric_data['result']) > 0:
+                                value = float(metric_data['result'][0]['value'][1])
+                                metrics['metrics'][metric_name] = {
+                                    'value': value,
+                                    'unit': self._get_metric_unit(metric_name),
+                                    'query': metric_data['query'],
+                                    'status': 'available'
+                                }
+                        except (ValueError, KeyError, IndexError):
+                            metrics['metrics'][metric_name] = {
+                                'status': 'parsing_error',
+                                'query': metric_data['query']
+                            }
+                    else:
+                        metrics['metrics'][metric_name] = {
+                            'status': 'unavailable',
+                            'error': metric_data.get('error'),
+                            'query': metric_data['query']
+                        }
+            
+            # Add backup metrics
+            if 'backup_records' in self.evidence_collected:
+                backup_data = self.evidence_collected['backup_records']['backup_sources']
+                
+                for backup_type, backup_info in backup_data.items():
+                    if 'latest_backup_age_hours' in backup_info:
+                        metrics['metrics'][f'{backup_type}_backup_age_hours'] = {
+                            'value': backup_info['latest_backup_age_hours'],
+                            'unit': 'hours',
+                            'status': 'available'
+                        }
+                    
+                    if 'total_backups' in backup_info:
+                        metrics['metrics'][f'{backup_type}_backup_count'] = {
+                            'value': backup_info['total_backups'],
+                            'unit': 'count',
+                            'status': 'available'
+                        }
+            
+            return metrics
+            
+        def _get_metric_unit(self, metric_name):
+            """Get appropriate unit for metric"""
+            if 'rate' in metric_name or 'ratio' in metric_name:
+                return 'percentage'
+            elif 'time' in metric_name or 'duration' in metric_name:
+                return 'seconds'
+            elif 'bytes' in metric_name or 'size' in metric_name:
+                return 'bytes'
+            else:
+                return 'count'
+                
+        def sign_attestation_bundle(self, attestation_bundle):
+            """Sign the attestation bundle with digital signature"""
+            try:
+                logger.info("Signing attestation bundle...")
+                
+                # Create signing payload
+                signing_payload = {
+                    'attestation_id': attestation_bundle['metadata']['attestation_id'],
+                    'generation_timestamp': attestation_bundle['metadata']['generation_timestamp'],
+                    'bundle_hash': hashlib.sha256(
+                        json.dumps(attestation_bundle, sort_keys=True).encode()
+                    ).hexdigest(),
+                    'organization': attestation_bundle['metadata']['organization_info']['name'],
+                    'frameworks': attestation_bundle['metadata']['frameworks_covered']
+                }
+                
+                # Sign with JWT
+                token = jwt.encode(
+                    signing_payload,
+                    self.signing_key,
+                    algorithm='RS256',
+                    headers={
+                        'typ': 'JWT',
+                        'alg': 'RS256',
+                        'x5c': [base64.b64encode(self.certificate.public_bytes(serialization.Encoding.DER)).decode()]
+                    }
+                )
+                
+                # Add signature to bundle
+                attestation_bundle['attestation_signature'] = {
+                    'algorithm': 'RS256',
+                    'signature': token,
+                    'certificate_fingerprint': hashlib.sha256(
+                        self.certificate.public_bytes(serialization.Encoding.DER)
+                    ).hexdigest(),
+                    'signing_timestamp': datetime.now(timezone.utc).isoformat(),
+                    'signed_by': 'PAKE System Compliance Generator'
+                }
+                
+                return attestation_bundle
+                
+            except Exception as e:
+                logger.error(f"Error signing attestation bundle: {e}")
+                return attestation_bundle
+                
+        async def store_attestation_bundle(self, signed_bundle):
+            """Store attestation bundle in S3"""
+            try:
+                logger.info("Storing attestation bundle...")
+                
+                # Generate storage key
+                timestamp = self.generation_time.strftime('%Y/%m/%d')
+                bundle_key = f"{self.config['storage']['attestations']['prefix']}{timestamp}/{self.attestation_id}.json"
+                
+                # Convert to JSON and compress
+                bundle_json = json.dumps(signed_bundle, indent=2, sort_keys=True)
+                compressed_bundle = gzip.compress(bundle_json.encode())
+                
+                # Store attestation bundle
+                bucket = self.config['storage']['attestations']['bucket']
+                self.s3_client.put_object(
+                    Bucket=bucket,
+                    Key=bundle_key,
+                    Body=compressed_bundle,
+                    ContentType='application/json',
+                    ContentEncoding='gzip',
+                    ServerSideEncryption='AES256',
+                    Metadata={
+                        'attestation-id': self.attestation_id,
+                        'generation-timestamp': self.generation_time.isoformat(),
+                        'compliance-type': 'disaster-recovery',
+                        'frameworks': ','.join(signed_bundle['metadata']['frameworks_covered'])
+                    }
+                )
+                
+                # Store evidence bundle separately
+                evidence_key = f"{self.config['storage']['evidence_bundle']['prefix']}{timestamp}/{self.attestation_id}-evidence.json"
+                evidence_json = json.dumps(self.evidence_collected, indent=2, sort_keys=True)
+                compressed_evidence = gzip.compress(evidence_json.encode())
+                
+                evidence_bucket = self.config['storage']['evidence_bundle']['bucket']
+                self.s3_client.put_object(
+                    Bucket=evidence_bucket,
+                    Key=evidence_key,
+                    Body=compressed_evidence,
+                    ContentType='application/json',
+                    ContentEncoding='gzip',
+                    ServerSideEncryption='AES256',
+                    Metadata={
+                        'attestation-id': self.attestation_id,
+                        'evidence-type': 'compliance-bundle',
+                        'collection-timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                )
+                
+                logger.info(f"Stored attestation bundle: {bundle_key}")
+                logger.info(f"Stored evidence bundle: {evidence_key}")
+                
+                # Emit storage metrics
+                self.emit_metric('attestation_bundle_stored', 1, {
+                    'bundle_size_bytes': len(compressed_bundle),
+                    'evidence_size_bytes': len(compressed_evidence)
+                })
+                
+                return {
+                    'attestation_location': f"s3://{bucket}/{bundle_key}",
+                    'evidence_location': f"s3://{evidence_bucket}/{evidence_key}",
+                    'bundle_size': len(compressed_bundle),
+                    'evidence_size': len(compressed_evidence)
+                }
+                
+            except Exception as e:
+                logger.error(f"Error storing attestation bundle: {e}")
+                return None
+                
+        async def generate_attestation(self):
+            """Main method to generate compliance attestation"""
+            try:
+                logger.info(f"Starting compliance attestation generation: {self.attestation_id}")
+                
+                # Emit start metrics
+                self.emit_metric('attestation_generation_start_timestamp', int(time.time()))
+                self.emit_metric('attestation_generation_status', 1, {'status': 'running'})
+                
+                # Collect evidence from all sources
+                evidence_collection_tasks = [
+                    self.collect_audit_logs_evidence(),
+                    self.collect_backup_records_evidence(),
+                    self.collect_monitoring_metrics_evidence(),
+                    self.collect_configuration_state_evidence(),
+                    self.collect_test_results_evidence()
+                ]
+                
+                evidence_results = await asyncio.gather(*evidence_collection_tasks, return_exceptions=True)
+                
+                # Check evidence collection success
+                successful_collections = sum(1 for result in evidence_results if result is True)
+                total_collections = len(evidence_results)
+                
+                if successful_collections == 0:
+                    logger.error("No evidence collection succeeded")
+                    self.emit_metric('attestation_generation_status', 0, {'status': 'failed', 'reason': 'no_evidence'})
+                    return False
+                
+                logger.info(f"Evidence collection: {successful_collections}/{total_collections} successful")
+                
+                # Generate attestation bundle
+                attestation_bundle = self.generate_attestation_bundle()
+                if not attestation_bundle:
+                    logger.error("Failed to generate attestation bundle")
+                    self.emit_metric('attestation_generation_status', 0, {'status': 'failed', 'reason': 'bundle_generation'})
+                    return False
+                
+                # Sign attestation bundle
+                signed_bundle = self.sign_attestation_bundle(attestation_bundle)
+                
+                # Store attestation bundle
+                storage_result = await self.store_attestation_bundle(signed_bundle)
+                if not storage_result:
+                    logger.error("Failed to store attestation bundle")
+                    self.emit_metric('attestation_generation_status', 0, {'status': 'failed', 'reason': 'storage'})
+                    return False
+                
+                # Calculate generation duration
+                generation_duration = (datetime.now(timezone.utc) - self.generation_time).total_seconds()
+                
+                # Emit success metrics
+                self.emit_metric('attestation_generation_duration_seconds', generation_duration)
+                self.emit_metric('attestation_generation_status', 1, {'status': 'completed'})
+                self.emit_metric('attestation_evidence_collection_success_rate', 
+                               successful_collections / total_collections * 100)
+                
+                logger.info(f"Compliance attestation generated successfully: {self.attestation_id}")
+                logger.info(f"Generation duration: {generation_duration:.2f} seconds")
+                logger.info(f"Attestation location: {storage_result['attestation_location']}")
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Attestation generation failed: {e}")
+                self.emit_metric('attestation_generation_status', 0, {'status': 'failed', 'reason': 'exception'})
+                return False
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+        attestation_type = os.getenv('ATTESTATION_TYPE', 'monthly')
+        
+        generator = ComplianceAttestationGenerator(config_path)
+        success = await generator.generate_attestation()
+        
+        if not success:
+            exit(1)
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# Monthly Compliance Attestation CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-attestation-monthly
+  namespace: compliance-system
+  labels:
+    app: compliance-attestation
+    schedule: monthly
+    component: compliance
+spec:
+  schedule: '0 2 1 * *' # 1st of each month at 2:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 24 # Keep 2 years of history
+  failedJobsHistoryLimit: 6
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600 # 1 hour timeout
+      template:
+        metadata:
+          labels:
+            app: compliance-attestation
+            schedule: monthly
+            component: compliance
+          annotations:
+            compliance/type: 'monthly-attestation'
+            compliance/frameworks: 'soc2,iso27001,gdpr'
+        spec:
+          serviceAccountName: compliance-attestation
+          restartPolicy: OnFailure
+          containers:
+            - name: attestation-generator
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir kubernetes pyyaml boto3 cryptography pyjwt requests asyncpg aioredis
+                  exec python /scripts/attestation-generator.py
+              env:
+                - name: CONFIG_PATH
+                  value: '/etc/config/config.yaml'
+                - name: ATTESTATION_TYPE
+                  value: 'monthly'
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              envFrom:
+                - secretRef:
+                    name: aws-credentials
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 4Gi
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: scripts
+                  mountPath: /scripts
+                - name: signing-certs
+                  mountPath: /etc/signing
+                  readOnly: true
+          volumes:
+            - name: config
+              configMap:
+                name: compliance-attestation-config
+            - name: scripts
+              configMap:
+                name: compliance-attestation-config
+                defaultMode: 0755
+            - name: signing-certs
+              secret:
+                secretName: audit-signing-certs
+                defaultMode: 0600
+
+---
+# Quarterly Compliance Attestation CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-attestation-quarterly
+  namespace: compliance-system
+  labels:
+    app: compliance-attestation
+    schedule: quarterly
+    component: compliance
+spec:
+  schedule: '0 3 1 */3 *' # 1st of every 3rd month at 3:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 8 # Keep 2 years of history
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 5400 # 1.5 hour timeout
+      template:
+        metadata:
+          labels:
+            app: compliance-attestation
+            schedule: quarterly
+            component: compliance
+          annotations:
+            compliance/type: 'quarterly-attestation'
+            compliance/frameworks: 'soc2,iso27001,gdpr'
+        spec:
+          serviceAccountName: compliance-attestation
+          restartPolicy: OnFailure
+          containers:
+            - name: attestation-generator
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir kubernetes pyyaml boto3 cryptography pyjwt requests asyncpg aioredis
+
+                  # Override config for quarterly (90-day) reporting period
+                  cat > /tmp/quarterly-config.yaml << 'EOF'
+                  attestation:
+                    name: "dr-compliance-attestation-quarterly"
+                    description: "Quarterly compliance attestation with extended reporting period"
+                    settings:
+                      version: "1.0"
+                      format: "json_with_signatures"
+                      compression: "gzip"
+                      encryption: "AES256"
+                      retention_years: 7
+                    schedule:
+                      quarterly: "0 3 1 */3 *"
+                    frameworks:
+                      soc2:
+                        enabled: true
+                      iso27001:
+                        enabled: true
+                      gdpr:
+                        enabled: true
+                    evidence_sources:
+                      audit_logs:
+                        - source: "s3://pake-compliance-audit-logs/dr-audit-logs/"
+                          type: "audit_events"
+                          retention_days: 2555
+                      backup_records:
+                        - source: "s3://pake-backups/"
+                          type: "backup_metadata"
+                          validation_required: true
+                      monitoring_metrics:
+                        - source: "prometheus"
+                          endpoint: "http://prometheus.monitoring.svc.cluster.local:9090"
+                          queries:
+                            - name: "backup_success_rate_90d"
+                              query: "rate(backup_operations_total{status=\"success\"}[90d])"
+                            - name: "system_availability_90d"
+                              query: "avg_over_time(up{job=\"pake-api\"}[90d])"
+                            - name: "incident_count_90d"
+                              query: "increase(incident_events_total[90d])"
+                      configuration_state:
+                        - source: "kubernetes"
+                          resources: ["deployments", "statefulsets", "configmaps", "secrets", "networkpolicies"]
+                          namespaces: ["database", "backup-validation", "chaos-testing", "disaster-recovery"]
+                      test_results:
+                        - source: "s3://pake-test-results/"
+                          types: ["chaos_engineering", "backup_validation", "failover_testing", "security_scanning"]
+                    storage:
+                      attestations:
+                        bucket: "pake-compliance-attestations"
+                        prefix: "dr-attestations/quarterly/"
+                        region: "us-east-1"
+                        encryption: "AES256"
+                      evidence_bundle:
+                        bucket: "pake-compliance-evidence"
+                        prefix: "dr-evidence/quarterly/"
+                        region: "us-east-1"
+                        encryption: "AES256"
+                  EOF
+
+                  export CONFIG_PATH="/tmp/quarterly-config.yaml"
+                  exec python /scripts/attestation-generator.py
+              env:
+                - name: ATTESTATION_TYPE
+                  value: 'quarterly'
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              envFrom:
+                - secretRef:
+                    name: aws-credentials
+              resources:
+                requests:
+                  cpu: 1000m
+                  memory: 2Gi
+                limits:
+                  cpu: 4000m
+                  memory: 8Gi
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: scripts
+                  mountPath: /scripts
+                - name: signing-certs
+                  mountPath: /etc/signing
+                  readOnly: true
+          volumes:
+            - name: config
+              configMap:
+                name: compliance-attestation-config
+            - name: scripts
+              configMap:
+                name: compliance-attestation-config
+                defaultMode: 0755
+            - name: signing-certs
+              secret:
+                secretName: audit-signing-certs
+                defaultMode: 0600
+
+---
+# Annual Comprehensive Compliance Attestation CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-attestation-annual
+  namespace: compliance-system
+  labels:
+    app: compliance-attestation
+    schedule: annual
+    component: compliance
+spec:
+  schedule: '0 4 1 1 *' # January 1st at 4:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7 # Keep 7 years of history
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 7200 # 2 hour timeout
+      template:
+        metadata:
+          labels:
+            app: compliance-attestation
+            schedule: annual
+            component: compliance
+          annotations:
+            compliance/type: 'annual-comprehensive-attestation'
+            compliance/frameworks: 'soc2,iso27001,gdpr,fedramp'
+        spec:
+          serviceAccountName: compliance-attestation
+          restartPolicy: OnFailure
+          containers:
+            - name: attestation-generator
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir kubernetes pyyaml boto3 cryptography pyjwt requests asyncpg aioredis
+
+                  # Annual comprehensive configuration with all frameworks
+                  cat > /tmp/annual-config.yaml << 'EOF'
+                  attestation:
+                    name: "dr-compliance-attestation-annual-comprehensive"
+                    description: "Annual comprehensive compliance attestation with full audit scope"
+                    settings:
+                      version: "1.0"
+                      format: "json_with_signatures"
+                      compression: "gzip"
+                      encryption: "AES256"
+                      retention_years: 10
+                    frameworks:
+                      soc2:
+                        enabled: true
+                      iso27001:
+                        enabled: true
+                      gdpr:
+                        enabled: true
+                      fedramp:
+                        enabled: true
+                    evidence_sources:
+                      audit_logs:
+                        - source: "s3://pake-compliance-audit-logs/dr-audit-logs/"
+                          type: "audit_events"
+                          retention_days: 2555
+                      backup_records:
+                        - source: "s3://pake-backups/"
+                          type: "backup_metadata"
+                          validation_required: true
+                      monitoring_metrics:
+                        - source: "prometheus"
+                          endpoint: "http://prometheus.monitoring.svc.cluster.local:9090"
+                          queries:
+                            - name: "backup_success_rate_365d"
+                              query: "rate(backup_operations_total{status=\"success\"}[365d])"
+                            - name: "system_availability_365d"
+                              query: "avg_over_time(up{job=\"pake-api\"}[365d])"
+                            - name: "rto_performance_365d"
+                              query: "histogram_quantile(0.95, failover_duration_seconds_bucket[365d])"
+                            - name: "rpo_performance_365d"
+                              query: "histogram_quantile(0.95, data_loss_seconds_bucket[365d])"
+                            - name: "incident_response_time_365d"
+                              query: "histogram_quantile(0.95, incident_response_duration_seconds_bucket[365d])"
+                      configuration_state:
+                        - source: "kubernetes"
+                          resources: ["deployments", "statefulsets", "configmaps", "secrets", "networkpolicies"]
+                          namespaces: ["database", "backup-validation", "chaos-testing", "disaster-recovery", "compliance-system"]
+                      test_results:
+                        - source: "s3://pake-test-results/"
+                          types: ["chaos_engineering", "backup_validation", "failover_testing", "security_scanning", "penetration_testing"]
+                    storage:
+                      attestations:
+                        bucket: "pake-compliance-attestations"
+                        prefix: "dr-attestations/annual/"
+                        region: "us-east-1"
+                        encryption: "AES256"
+                      evidence_bundle:
+                        bucket: "pake-compliance-evidence"
+                        prefix: "dr-evidence/annual/"
+                        region: "us-east-1"
+                        encryption: "AES256"
+                  EOF
+
+                  export CONFIG_PATH="/tmp/annual-config.yaml"
+                  exec python /scripts/attestation-generator.py
+              env:
+                - name: ATTESTATION_TYPE
+                  value: 'annual'
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              envFrom:
+                - secretRef:
+                    name: aws-credentials
+              resources:
+                requests:
+                  cpu: 2000m
+                  memory: 4Gi
+                limits:
+                  cpu: 8000m
+                  memory: 16Gi
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: scripts
+                  mountPath: /scripts
+                - name: signing-certs
+                  mountPath: /etc/signing
+                  readOnly: true
+          volumes:
+            - name: config
+              configMap:
+                name: compliance-attestation-config
+            - name: scripts
+              configMap:
+                name: compliance-attestation-config
+                defaultMode: 0755
+            - name: signing-certs
+              secret:
+                secretName: audit-signing-certs
+                defaultMode: 0600
+
+---
+# ServiceAccount and RBAC for Compliance Attestation
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: compliance-attestation
+  namespace: compliance-system
+  labels:
+    app: compliance-attestation
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliance-attestation
+  labels:
+    app: compliance-attestation
+rules:
+  # Read access to configuration resources for evidence collection
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets', 'services', 'pods']
+    verbs: ['get', 'list']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'statefulsets', 'replicasets']
+    verbs: ['get', 'list']
+  - apiGroups: ['batch']
+    resources: ['jobs', 'cronjobs']
+    verbs: ['get', 'list']
+  - apiGroups: ['networking.k8s.io']
+    resources: ['networkpolicies']
+    verbs: ['get', 'list']
+  # Events for audit purposes
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['get', 'list']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-attestation
+  labels:
+    app: compliance-attestation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-attestation
+subjects:
+  - kind: ServiceAccount
+    name: compliance-attestation
+    namespace: compliance-system

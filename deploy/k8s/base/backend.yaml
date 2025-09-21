@@ -1,0 +1,229 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: pake-system
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pake-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pake-backend
+        app.kubernetes.io/component: api
+        app.kubernetes.io/version: '1.0.0'
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+        prometheus.io/path: '/metrics'
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: pake-backend
+          image: pake-backend:latest
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          env:
+            # Configuration from ConfigMap
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: LOG_LEVEL
+            - name: MAX_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: MAX_WORKERS
+            - name: CACHE_TTL
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: CACHE_TTL
+
+            # Database Configuration
+            - name: DATABASE_URL
+              value: 'postgresql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)'
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: DATABASE_PORT
+            - name: DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: DATABASE_NAME
+            - name: DATABASE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: DATABASE_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pake-secrets
+                  key: DATABASE_PASSWORD
+
+            # Redis Configuration
+            - name: REDIS_URL
+              value: 'redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/$(REDIS_DB)'
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: REDIS_PORT
+            - name: REDIS_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: REDIS_DB
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pake-secrets
+                  key: REDIS_PASSWORD
+
+            # API Configuration
+            - name: API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: API_HOST
+            - name: API_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: API_PORT
+
+            # Secrets
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pake-secrets
+                  key: JWT_SECRET_KEY
+            - name: FIRECRAWL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pake-secrets
+                  key: FIRECRAWL_API_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pake-secrets
+                  key: OPENAI_API_KEY
+
+            # Monitoring
+            - name: ENABLE_METRICS
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: ENABLE_METRICS
+            - name: METRICS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pake-config
+                  key: METRICS_PORT
+
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+            - name: app-data
+              mountPath: /app/data
+
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1'
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
+      volumes:
+        - name: app-logs
+          emptyDir: {}
+        - name: app-data
+          emptyDir: {}
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-backend-service
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: api
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+    prometheus.io/path: '/metrics'
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: http
+      name: http
+    - port: 9090
+      targetPort: metrics
+      name: metrics
+  selector:
+    app.kubernetes.io/name: pake-backend

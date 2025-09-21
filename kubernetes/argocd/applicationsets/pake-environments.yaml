@@ -1,0 +1,217 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pake-environments
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: pake-environments
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster: production
+            url: https://kubernetes.default.svc
+            namespace: pake-system
+            project: production
+            branch: main
+            sync: auto
+            prune: true
+            selfHeal: true
+          - cluster: staging
+            url: https://staging-cluster.pake-system.com
+            namespace: pake-system
+            project: staging
+            branch: staging
+            sync: auto
+            prune: true
+            selfHeal: true
+          - cluster: development
+            url: https://dev-cluster.pake-system.com
+            namespace: pake-system
+            project: development
+            branch: develop
+            sync: auto
+            prune: true
+            selfHeal: true
+
+  template:
+    metadata:
+      name: 'pake-{{cluster}}'
+      labels:
+        environment: '{{cluster}}'
+        managed-by: applicationset
+    spec:
+      project: '{{project}}'
+      source:
+        repoURL: https://github.com/pake-system/kubernetes-infrastructure
+        path: 'kubernetes/environments/{{cluster}}'
+        targetRevision: '{{branch}}'
+        directory:
+          recurse: true
+      destination:
+        server: '{{url}}'
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: '{{prune}}'
+          selfHeal: '{{selfHeal}}'
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pake-services
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: pake-services
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - service: pake-api
+                  path: kubernetes/helm-charts/pake-api
+                  namespace: pake-system
+                  autoSync: true
+                - service: pake-ai
+                  path: kubernetes/helm-charts/pake-ai
+                  namespace: pake-system
+                  autoSync: false
+                - service: pake-workers
+                  path: kubernetes/helm-charts/pake-workers
+                  namespace: pake-system
+                  autoSync: true
+                - service: pake-data
+                  path: kubernetes/helm-charts/pake-data
+                  namespace: database
+                  autoSync: false
+          - list:
+              elements:
+                - cluster: production
+                  url: https://kubernetes.default.svc
+                  project: production
+                  branch: main
+                  values: values-production.yaml
+                - cluster: staging
+                  url: https://staging-cluster.pake-system.com
+                  project: staging
+                  branch: staging
+                  values: values-staging.yaml
+                - cluster: development
+                  url: https://dev-cluster.pake-system.com
+                  project: development
+                  branch: develop
+                  values: values-development.yaml
+
+  template:
+    metadata:
+      name: '{{service}}-{{cluster}}'
+      labels:
+        service: '{{service}}'
+        environment: '{{cluster}}'
+        managed-by: applicationset
+    spec:
+      project: '{{project}}'
+      source:
+        repoURL: https://github.com/pake-system/kubernetes-infrastructure
+        path: '{{path}}'
+        targetRevision: '{{branch}}'
+        helm:
+          valueFiles:
+            - values.yaml
+            - '{{values}}'
+          parameters:
+            - name: global.environment
+              value: '{{cluster}}'
+            - name: global.cluster
+              value: '{{cluster}}'
+      destination:
+        server: '{{url}}'
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: '{{autoSync}}'
+          selfHeal: '{{autoSync}}'
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 3
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pake-infrastructure
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: pake-infrastructure
+spec:
+  generators:
+    - list:
+        elements:
+          - component: ingress-nginx
+            path: infrastructure/ingress-nginx
+            namespace: ingress-nginx
+            project: infrastructure
+          - component: cert-manager
+            path: infrastructure/cert-manager
+            namespace: cert-manager
+            project: infrastructure
+          - component: external-secrets
+            path: infrastructure/external-secrets
+            namespace: external-secrets
+            project: infrastructure
+          - component: monitoring
+            path: infrastructure/monitoring
+            namespace: monitoring
+            project: infrastructure
+          - component: backup
+            path: infrastructure/backup
+            namespace: backup
+            project: infrastructure
+
+  template:
+    metadata:
+      name: '{{component}}'
+      labels:
+        component: '{{component}}'
+        type: infrastructure
+        managed-by: applicationset
+    spec:
+      project: '{{project}}'
+      source:
+        repoURL: https://github.com/pake-system/kubernetes-infrastructure
+        path: 'kubernetes/{{path}}'
+        targetRevision: main
+        directory:
+          recurse: true
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 3
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 10m

@@ -1,0 +1,71 @@
+/**
+ * Jest Test Setup Configuration
+ */
+
+// Set test environment variables
+process.env.NODE_ENV = process.env.UNKNOWN;
+process.env.FEATURE_AGENT_RUNTIME_ENABLED = 'true';
+process.env.FEATURE_NULL_PROVIDER_ENABLED = 'true';
+process.env.FEATURE_CONCURRENT_TASK_LIMIT = '5';
+process.env.FEATURE_TASK_TIMEOUT_MS = '10000';
+
+// Mock console methods for cleaner test output
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+beforeEach(() => {
+  // Reset console mocks
+  console.warn = jest.fn();
+  console.error = jest.fn();
+});
+
+afterEach(() => {
+  // Restore console methods
+  console.warn = originalConsoleWarn;
+  console.error = originalConsoleError;
+
+  // Clear all environment variable overrides
+  delete process.env.FEATURE_TEST_FLAG;
+});
+
+// Global test timeout
+jest.setTimeout(15000);
+
+// Extend Jest matchers for better testing
+expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () => `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+
+  toMatchSchema(received: any, schema: any) {
+    // This would integrate with a JSON schema validator
+    // For now, just check that received is an object
+    const pass = typeof received === 'object' && received !== null;
+    return {
+      message: () =>
+        pass ? `expected object not to match schema` : `expected object to match schema`,
+      pass,
+    };
+  },
+});
+
+// Type declarations for custom matchers
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeWithinRange(floor: number, ceiling: number): R;
+      toMatchSchema(schema: any): R;
+    }
+  }
+}

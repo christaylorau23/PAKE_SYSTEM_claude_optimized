@@ -1,0 +1,210 @@
+/* Design Tokens - OKLCH Color System */
+/* Transcendent Color Palette with Perceptual Uniformity */
+
+:root {
+  /* === BRAND COLORS === */
+  /* Primary - Deep Technical Blue */
+  --brand-primary-50: oklch(0.98 0.02 240);
+  --brand-primary-100: oklch(0.94 0.05 240);
+  --brand-primary-200: oklch(0.88 0.08 240);
+  --brand-primary-300: oklch(0.78 0.12 240);
+  --brand-primary-400: oklch(0.68 0.18 240);
+  --brand-primary-500: oklch(0.58 0.24 240);
+  --brand-primary-600: oklch(0.48 0.26 240);
+  --brand-primary-700: oklch(0.38 0.22 240);
+  --brand-primary-800: oklch(0.28 0.18 240);
+  --brand-primary-900: oklch(0.18 0.12 240);
+  --brand-primary-950: oklch(0.08 0.06 240);
+
+  /* Secondary - Quantum Green */
+  --brand-secondary-50: oklch(0.98 0.02 140);
+  --brand-secondary-100: oklch(0.94 0.05 140);
+  --brand-secondary-200: oklch(0.88 0.08 140);
+  --brand-secondary-300: oklch(0.78 0.12 140);
+  --brand-secondary-400: oklch(0.68 0.18 140);
+  --brand-secondary-500: oklch(0.58 0.24 140);
+  --brand-secondary-600: oklch(0.48 0.26 140);
+  --brand-secondary-700: oklch(0.38 0.22 140);
+  --brand-secondary-800: oklch(0.28 0.18 140);
+  --brand-secondary-900: oklch(0.18 0.12 140);
+  --brand-secondary-950: oklch(0.08 0.06 140);
+
+  /* Accent - Cyber Orange */
+  --brand-accent-50: oklch(0.98 0.02 60);
+  --brand-accent-100: oklch(0.94 0.05 60);
+  --brand-accent-200: oklch(0.88 0.08 60);
+  --brand-accent-300: oklch(0.78 0.12 60);
+  --brand-accent-400: oklch(0.68 0.18 60);
+  --brand-accent-500: oklch(0.58 0.24 60);
+  --brand-accent-600: oklch(0.48 0.26 60);
+  --brand-accent-700: oklch(0.38 0.22 60);
+  --brand-accent-800: oklch(0.28 0.18 60);
+  --brand-accent-900: oklch(0.18 0.12 60);
+  --brand-accent-950: oklch(0.08 0.06 60);
+
+  /* === SEMANTIC COLORS === */
+  /* Success States */
+  --semantic-success-50: oklch(0.98 0.02 155);
+  --semantic-success-100: oklch(0.94 0.04 155);
+  --semantic-success-500: oklch(0.65 0.18 155);
+  --semantic-success-600: oklch(0.55 0.2 155);
+  --semantic-success-700: oklch(0.45 0.18 155);
+
+  /* Warning States */
+  --semantic-warning-50: oklch(0.98 0.02 85);
+  --semantic-warning-100: oklch(0.94 0.04 85);
+  --semantic-warning-500: oklch(0.75 0.18 85);
+  --semantic-warning-600: oklch(0.65 0.2 85);
+  --semantic-warning-700: oklch(0.55 0.18 85);
+
+  /* Error States */
+  --semantic-error-50: oklch(0.98 0.02 15);
+  --semantic-error-100: oklch(0.94 0.04 15);
+  --semantic-error-500: oklch(0.65 0.2 15);
+  --semantic-error-600: oklch(0.55 0.22 15);
+  --semantic-error-700: oklch(0.45 0.18 15);
+
+  /* Info States */
+  --semantic-info-50: oklch(0.98 0.02 200);
+  --semantic-info-100: oklch(0.94 0.04 200);
+  --semantic-info-500: oklch(0.65 0.18 200);
+  --semantic-info-600: oklch(0.55 0.2 200);
+  --semantic-info-700: oklch(0.45 0.18 200);
+
+  /* === NEUTRAL COLORS === */
+  /* True Neutral Scale */
+  --neutral-0: oklch(1 0 0);
+  --neutral-50: oklch(0.985 0 0);
+  --neutral-100: oklch(0.97 0 0);
+  --neutral-200: oklch(0.922 0 0);
+  --neutral-300: oklch(0.85 0 0);
+  --neutral-400: oklch(0.708 0 0);
+  --neutral-500: oklch(0.556 0 0);
+  --neutral-600: oklch(0.45 0 0);
+  --neutral-700: oklch(0.35 0 0);
+  --neutral-800: oklch(0.269 0 0);
+  --neutral-900: oklch(0.205 0 0);
+  --neutral-950: oklch(0.145 0 0);
+  --neutral-1000: oklch(0 0 0);
+
+  /* === SURFACE COLORS === */
+  /* Elevation System */
+  --surface-base: var(--neutral-0);
+  --surface-raised: oklch(1 0 0 / 95%);
+  --surface-overlay: oklch(1 0 0 / 90%);
+  --surface-sunken: var(--neutral-50);
+
+  /* Glass Morphism */
+  --surface-glass: oklch(1 0 0 / 8%);
+  --surface-glass-border: oklch(1 0 0 / 12%);
+
+  /* === INTERACTION COLORS === */
+  /* Hover States */
+  --interaction-hover: oklch(1 0 0 / 5%);
+  --interaction-hover-strong: oklch(1 0 0 / 10%);
+
+  /* Focus States */
+  --interaction-focus: var(--brand-primary-500);
+  --interaction-focus-ring: oklch(0.58 0.24 240 / 20%);
+
+  /* Active States */
+  --interaction-active: oklch(1 0 0 / 15%);
+  --interaction-disabled: var(--neutral-300);
+
+  /* Selection */
+  --interaction-selection: oklch(0.58 0.24 240 / 15%);
+
+  /* === TYPOGRAPHY COLORS === */
+  --text-primary: var(--neutral-950);
+  --text-secondary: var(--neutral-600);
+  --text-tertiary: var(--neutral-500);
+  --text-inverse: var(--neutral-0);
+  --text-brand: var(--brand-primary-600);
+  --text-success: var(--semantic-success-700);
+  --text-warning: var(--semantic-warning-700);
+  --text-error: var(--semantic-error-700);
+
+  /* === BORDER COLORS === */
+  --border-subtle: var(--neutral-200);
+  --border-default: var(--neutral-300);
+  --border-strong: var(--neutral-400);
+  --border-brand: var(--brand-primary-500);
+  --border-interactive: var(--brand-primary-400);
+
+  /* === SHADOW COLORS === */
+  --shadow-xs: oklch(0 0 0 / 5%);
+  --shadow-sm: oklch(0 0 0 / 8%);
+  --shadow-md: oklch(0 0 0 / 12%);
+  --shadow-lg: oklch(0 0 0 / 16%);
+  --shadow-xl: oklch(0 0 0 / 20%);
+  --shadow-2xl: oklch(0 0 0 / 25%);
+  --shadow-brand: oklch(0.58 0.24 240 / 15%);
+}
+
+/* Dark Theme Overrides */
+.dark {
+  /* === BRAND COLORS (Dark Mode Adjustments) === */
+  --brand-primary-50: oklch(0.08 0.06 240);
+  --brand-primary-100: oklch(0.12 0.08 240);
+  --brand-primary-500: oklch(0.65 0.22 240);
+  --brand-primary-600: oklch(0.75 0.2 240);
+
+  /* === SURFACE COLORS === */
+  --surface-base: var(--neutral-950);
+  --surface-raised: var(--neutral-900);
+  --surface-overlay: var(--neutral-800);
+  --surface-sunken: oklch(0.08 0 0);
+
+  /* Glass Morphism Dark */
+  --surface-glass: oklch(1 0 0 / 5%);
+  --surface-glass-border: oklch(1 0 0 / 8%);
+
+  /* === INTERACTION COLORS === */
+  --interaction-hover: oklch(1 0 0 / 8%);
+  --interaction-hover-strong: oklch(1 0 0 / 12%);
+  --interaction-active: oklch(1 0 0 / 10%);
+
+  /* === TYPOGRAPHY COLORS === */
+  --text-primary: var(--neutral-50);
+  --text-secondary: var(--neutral-400);
+  --text-tertiary: var(--neutral-500);
+  --text-inverse: var(--neutral-950);
+  --text-brand: var(--brand-primary-400);
+
+  /* === BORDER COLORS === */
+  --border-subtle: oklch(1 0 0 / 8%);
+  --border-default: oklch(1 0 0 / 12%);
+  --border-strong: oklch(1 0 0 / 16%);
+
+  /* === SHADOW COLORS === */
+  --shadow-xs: oklch(0 0 0 / 10%);
+  --shadow-sm: oklch(0 0 0 / 15%);
+  --shadow-md: oklch(0 0 0 / 20%);
+  --shadow-lg: oklch(0 0 0 / 25%);
+  --shadow-xl: oklch(0 0 0 / 30%);
+  --shadow-2xl: oklch(0 0 0 / 35%);
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --text-primary: var(--neutral-1000);
+    --text-secondary: var(--neutral-800);
+    --border-default: var(--neutral-600);
+  }
+
+  .dark {
+    --text-primary: var(--neutral-0);
+    --text-secondary: var(--neutral-200);
+    --border-default: var(--neutral-400);
+  }
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

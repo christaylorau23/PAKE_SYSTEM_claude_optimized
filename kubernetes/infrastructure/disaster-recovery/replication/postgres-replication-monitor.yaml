@@ -1,0 +1,716 @@
+# Enhanced PostgreSQL Replication Monitoring for PAKE System
+# Comprehensive replication lag monitoring with failover controller integration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-replication-monitor-config
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+    component: monitoring
+data:
+  config.yaml: |
+    replication:
+      name: "postgres-replication-monitor"
+      description: "Enhanced PostgreSQL replication monitoring with failover integration"
+      
+      # Database connection settings
+      connections:
+        primary:
+          host: "pake-postgresql-primary"
+          port: 5432
+          database: "postgres"
+          user: "postgres"
+          
+        replica:
+          host: "pake-postgresql-replica"
+          port: 5432
+          database: "postgres" 
+          user: "postgres"
+          
+      # Monitoring configuration
+      monitoring:
+        check_interval_seconds: 30
+        lag_threshold_seconds: 300  # 5 minutes
+        critical_lag_seconds: 600   # 10 minutes
+        connection_timeout: 30
+        
+      # Alert thresholds
+      thresholds:
+        replication_lag_warning: 300    # 5 minutes
+        replication_lag_critical: 600   # 10 minutes
+        wal_receiver_down_seconds: 60
+        slot_inactive_seconds: 300
+        
+      # Failover controller integration
+      failover_integration:
+        enabled: true
+        webhook_url: "http://failover-controller.disaster-recovery.svc.cluster.local:8080/api/v1/replication-status"
+        lag_threshold_for_failover: 600  # 10 minutes
+
+  replication-monitor.py: |
+    #!/usr/bin/env python3
+    """
+    PostgreSQL Replication Monitor
+    Enhanced monitoring for streaming replication with failover controller integration
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import yaml
+    import psycopg2
+    from datetime import datetime, timezone
+    import requests
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class PostgreSQLReplicationMonitor:
+        def __init__(self, config_path: str):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['replication']
+                
+            # Build connection strings
+            primary_config = self.config['connections']['primary']
+            replica_config = self.config['connections']['replica']
+            
+            REDACTED_SECRET = os.getenv('POSTGRES_PASSWORD', 'REDACTED_SECRET')
+            
+            self.primary_dsn = f"postgresql://{primary_config['user']}:{REDACTED_SECRET}@{primary_config['host']}:{primary_config['port']}/{primary_config['database']}"
+            self.replica_dsn = f"postgresql://{replica_config['user']}:{REDACTED_SECRET}@{replica_config['host']}:{replica_config['port']}/{replica_config['database']}"
+            
+            # Monitoring settings
+            self.check_interval = self.config['monitoring']['check_interval_seconds']
+            self.lag_threshold = self.config['monitoring']['lag_threshold_seconds']
+            self.critical_lag = self.config['monitoring']['critical_lag_seconds']
+            
+            # State tracking
+            self.last_successful_check = None
+            self.consecutive_failures = 0
+            self.replication_history = []
+            
+        def emit_metric(self, metric_name: str, value: float, labels: dict = None):
+            """Emit metric to Prometheus pushgateway"""
+            try:
+                if labels is None:
+                    labels = {}
+                    
+                labels.update({
+                    'component': 'postgres-replication',
+                    'database': 'postgresql',
+                    'monitor': 'enhanced'
+                })
+                
+                label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
+                metric_data = f"{metric_name}{{{label_str}}} {value}"
+                
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-replication/instance/monitor",
+                    data=metric_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=10
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error emitting metric {metric_name}: {e}")
+                
+        def check_primary_status(self):
+            """Check primary database status and replication slots"""
+            try:
+                conn = psycopg2.connect(self.primary_dsn, connect_timeout=30)
+                cursor = conn.cursor()
+                
+                # Check if primary is in recovery (should be False)
+                cursor.execute("SELECT pg_is_in_recovery();")
+                in_recovery = cursor.fetchone()[0]
+                
+                if in_recovery:
+                    logger.error("Primary database is in recovery mode!")
+                    self.emit_metric('postgres_primary_in_recovery', 1)
+                    return {'healthy': False, 'reason': 'primary_in_recovery'}
+                else:
+                    self.emit_metric('postgres_primary_in_recovery', 0)
+                
+                # Check replication slots
+                cursor.execute("""
+                    SELECT slot_name, active, restart_lsn, confirmed_flush_lsn,
+                           pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) as lag_size,
+                           pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as lag_bytes
+                    FROM pg_replication_slots;
+                """)
+                
+                slots = cursor.fetchall()
+                active_slots = sum(1 for slot in slots if slot[1])  # Count active slots
+                
+                self.emit_metric('postgres_replication_slots_total', len(slots))
+                self.emit_metric('postgres_replication_slots_active', active_slots)
+                
+                slot_details = []
+                for slot in slots:
+                    slot_name, active, restart_lsn, confirmed_flush_lsn, lag_size, lag_bytes = slot
+                    
+                    self.emit_metric('postgres_replication_slot_active', 1 if active else 0, {
+                        'slot_name': slot_name
+                    })
+                    
+                    if lag_bytes is not None:
+                        self.emit_metric('postgres_replication_slot_lag_bytes', lag_bytes, {
+                            'slot_name': slot_name
+                        })
+                    
+                    slot_details.append({
+                        'name': slot_name,
+                        'active': active,
+                        'lag_bytes': lag_bytes,
+                        'lag_size': lag_size
+                    })
+                
+                # Check WAL generation rate and current LSN
+                cursor.execute("SELECT pg_current_wal_lsn(), pg_current_wal_insert_lsn();")
+                current_lsn, insert_lsn = cursor.fetchone()
+                
+                # Check connected replicas
+                cursor.execute("""
+                    SELECT client_addr, state, sync_state, sync_priority,
+                           pg_wal_lsn_diff(pg_current_wal_lsn(), flush_lsn) as flush_lag_bytes,
+                           pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) as replay_lag_bytes
+                    FROM pg_stat_replication;
+                """)
+                
+                replicas = cursor.fetchall()
+                self.emit_metric('postgres_connected_replicas', len(replicas))
+                
+                replica_details = []
+                for replica in replicas:
+                    client_addr, state, sync_state, sync_priority, flush_lag, replay_lag = replica
+                    
+                    self.emit_metric('postgres_replica_flush_lag_bytes', flush_lag or 0, {
+                        'replica_addr': client_addr or 'unknown'
+                    })
+                    
+                    self.emit_metric('postgres_replica_replay_lag_bytes', replay_lag or 0, {
+                        'replica_addr': client_addr or 'unknown'
+                    })
+                    
+                    replica_details.append({
+                        'address': client_addr,
+                        'state': state,
+                        'sync_state': sync_state,
+                        'flush_lag_bytes': flush_lag,
+                        'replay_lag_bytes': replay_lag
+                    })
+                
+                cursor.close()
+                conn.close()
+                
+                result = {
+                    'healthy': True,
+                    'slots': slot_details,
+                    'replicas': replica_details,
+                    'current_lsn': current_lsn,
+                    'active_slots': active_slots,
+                    'total_slots': len(slots)
+                }
+                
+                logger.info(f"Primary status: OK, {active_slots}/{len(slots)} active slots, {len(replicas)} connected replicas")
+                return result
+                
+            except Exception as e:
+                logger.error(f"Error checking primary status: {e}")
+                self.emit_metric('postgres_primary_connection_error', 1)
+                return {'healthy': False, 'reason': f'connection_error: {str(e)}'}
+                
+        def check_replica_status(self):
+            """Check replica database status and lag"""
+            try:
+                conn = psycopg2.connect(self.replica_dsn, connect_timeout=30)
+                cursor = conn.cursor()
+                
+                # Check if replica is in recovery (should be True)
+                cursor.execute("SELECT pg_is_in_recovery();")
+                in_recovery = cursor.fetchone()[0]
+                
+                if not in_recovery:
+                    logger.error("Replica database is NOT in recovery mode!")
+                    self.emit_metric('postgres_replica_in_recovery', 0)
+                    return {'healthy': False, 'reason': 'replica_not_in_recovery'}
+                else:
+                    self.emit_metric('postgres_replica_in_recovery', 1)
+                
+                # Check replication lag
+                cursor.execute("""
+                    SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) as lag_seconds,
+                           pg_last_xact_replay_timestamp() as last_replay_time;
+                """)
+                
+                result = cursor.fetchone()
+                lag_seconds = result[0] if result[0] is not None else 0
+                last_replay_time = result[1]
+                
+                self.emit_metric('replication_lag_seconds', lag_seconds, {'replica': 'primary'})
+                
+                # Check last received and replayed LSN
+                cursor.execute("""
+                    SELECT pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn(),
+                           pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn()) as replay_lag_bytes;
+                """)
+                
+                lsn_result = cursor.fetchone()
+                receive_lsn, replay_lsn, replay_lag_bytes = lsn_result
+                
+                if replay_lag_bytes is not None:
+                    self.emit_metric('postgres_replay_lag_bytes', replay_lag_bytes)
+                
+                # Check WAL receiver status
+                cursor.execute("""
+                    SELECT pid, status, receive_start_lsn, receive_start_tli, 
+                           received_lsn, received_tli, last_msg_send_time, 
+                           last_msg_receipt_time, latest_end_lsn, latest_end_time,
+                           slot_name, sender_host, sender_port, conninfo
+                    FROM pg_stat_wal_receiver;
+                """)
+                
+                wal_receiver = cursor.fetchone()
+                if wal_receiver:
+                    pid, status, receive_start_lsn, receive_start_tli, received_lsn, received_tli, \
+                    last_msg_send_time, last_msg_receipt_time, latest_end_lsn, latest_end_time, \
+                    slot_name, sender_host, sender_port, conninfo = wal_receiver
+                    
+                    self.emit_metric('postgres_wal_receiver_active', 1, {
+                        'status': status,
+                        'sender_host': sender_host or 'unknown'
+                    })
+                    
+                    # Calculate message lag
+                    if last_msg_send_time and last_msg_receipt_time:
+                        msg_lag = (last_msg_receipt_time - last_msg_send_time).total_seconds()
+                        self.emit_metric('postgres_wal_receiver_message_lag_seconds', msg_lag)
+                    
+                    wal_receiver_details = {
+                        'active': True,
+                        'status': status,
+                        'sender_host': sender_host,
+                        'sender_port': sender_port,
+                        'slot_name': slot_name,
+                        'received_lsn': received_lsn,
+                        'latest_end_lsn': latest_end_lsn
+                    }
+                else:
+                    self.emit_metric('postgres_wal_receiver_active', 0)
+                    wal_receiver_details = {'active': False}
+                
+                # Check recovery status and target timeline
+                cursor.execute("""
+                    SELECT pg_last_wal_replay_lsn(), 
+                           CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE NULL END,
+                           timeline_id
+                    FROM pg_control_recovery(), pg_control_checkpoint();
+                """)
+                
+                try:
+                    recovery_result = cursor.fetchone()
+                    if recovery_result:
+                        replay_lsn_check, receive_lsn_check, timeline_id = recovery_result
+                        self.emit_metric('postgres_replica_timeline_id', timeline_id or 0)
+                except Exception as e:
+                    logger.warning(f"Could not get recovery details: {e}")
+                
+                cursor.close()
+                conn.close()
+                
+                # Evaluate lag status
+                lag_status = 'healthy'
+                if lag_seconds > self.critical_lag:
+                    lag_status = 'critical'
+                    self.emit_metric('postgres_replication_lag_critical', 1)
+                elif lag_seconds > self.lag_threshold:
+                    lag_status = 'warning'
+                    self.emit_metric('postgres_replication_lag_critical', 0)
+                else:
+                    self.emit_metric('postgres_replication_lag_critical', 0)
+                
+                # Check lag threshold for alerts
+                if lag_seconds > self.lag_threshold:
+                    logger.warning(f"Replication lag {lag_seconds:.1f}s exceeds threshold {self.lag_threshold}s")
+                    self.emit_metric('postgres_replication_lag_high', 1)
+                else:
+                    self.emit_metric('postgres_replication_lag_high', 0)
+                
+                result = {
+                    'healthy': True,
+                    'lag_seconds': lag_seconds,
+                    'lag_status': lag_status,
+                    'last_replay_time': last_replay_time,
+                    'wal_receiver': wal_receiver_details,
+                    'receive_lsn': receive_lsn,
+                    'replay_lsn': replay_lsn,
+                    'replay_lag_bytes': replay_lag_bytes
+                }
+                
+                logger.info(f"Replica status: OK, lag: {lag_seconds:.1f}s ({lag_status})")
+                return result
+                
+            except Exception as e:
+                logger.error(f"Error checking replica status: {e}")
+                self.emit_metric('postgres_replica_connection_error', 1)
+                return {'healthy': False, 'reason': f'connection_error: {str(e)}'}
+                
+        def notify_failover_controller(self, replication_status):
+            """Notify failover controller of replication status"""
+            try:
+                if not self.config.get('failover_integration', {}).get('enabled', False):
+                    return
+                    
+                webhook_url = self.config['failover_integration']['webhook_url']
+                failover_threshold = self.config['failover_integration']['lag_threshold_for_failover']
+                
+                # Prepare notification payload
+                payload = {
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'component': 'postgres-replication-monitor',
+                    'replication_status': replication_status,
+                    'lag_threshold_exceeded': replication_status.get('replica', {}).get('lag_seconds', 0) > failover_threshold,
+                    'failover_threshold': failover_threshold
+                }
+                
+                response = requests.post(webhook_url, json=payload, timeout=10)
+                
+                if response.status_code == 200:
+                    logger.debug("Successfully notified failover controller")
+                else:
+                    logger.warning(f"Failed to notify failover controller: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error notifying failover controller: {e}")
+                
+        def check_replication_health(self):
+            """Comprehensive replication health check"""
+            try:
+                # Check primary database
+                primary_status = self.check_primary_status()
+                
+                # Check replica database
+                replica_status = self.check_replica_status()
+                
+                # Combine results
+                overall_health = primary_status.get('healthy', False) and replica_status.get('healthy', False)
+                
+                replication_status = {
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'overall_healthy': overall_health,
+                    'primary': primary_status,
+                    'replica': replica_status
+                }
+                
+                # Emit overall health metrics
+                self.emit_metric('postgres_replication_healthy', 1 if overall_health else 0)
+                
+                # Update state tracking
+                if overall_health:
+                    self.last_successful_check = datetime.now(timezone.utc)
+                    self.consecutive_failures = 0
+                    self.emit_metric('postgres_replication_last_check_timestamp', int(time.time()))
+                else:
+                    self.consecutive_failures += 1
+                    self.emit_metric('postgres_replication_consecutive_failures', self.consecutive_failures)
+                
+                # Store in history (keep last 100 checks)
+                self.replication_history.append(replication_status)
+                self.replication_history = self.replication_history[-100:]
+                
+                # Calculate success rate over last 20 checks
+                if len(self.replication_history) >= 20:
+                    recent_success_rate = sum(1 for check in self.replication_history[-20:] if check['overall_healthy']) / 20 * 100
+                    self.emit_metric('postgres_replication_success_rate_20_checks', recent_success_rate)
+                
+                # Notify failover controller
+                self.notify_failover_controller(replication_status)
+                
+                return replication_status
+                
+            except Exception as e:
+                logger.error(f"Error in comprehensive replication health check: {e}")
+                self.emit_metric('postgres_replication_monitor_errors_total', 1)
+                return {'overall_healthy': False, 'error': str(e)}
+                
+        async def run_monitor(self):
+            """Main monitoring loop"""
+            logger.info(f"Starting enhanced PostgreSQL replication monitor (interval: {self.check_interval}s)")
+            
+            # Emit startup metrics
+            self.emit_metric('postgres_replication_monitor_start_timestamp', int(time.time()))
+            
+            while True:
+                try:
+                    start_time = time.time()
+                    
+                    # Run comprehensive health check
+                    status = self.check_replication_health()
+                    
+                    check_duration = time.time() - start_time
+                    self.emit_metric('postgres_replication_check_duration_seconds', check_duration)
+                    
+                    # Log summary
+                    if status.get('overall_healthy'):
+                        lag = status.get('replica', {}).get('lag_seconds', 0)
+                        logger.info(f"Replication healthy - lag: {lag:.1f}s (check: {check_duration:.2f}s)")
+                    else:
+                        logger.warning(f"Replication unhealthy - failures: {self.consecutive_failures}")
+                    
+                    # Wait for next check
+                    await asyncio.sleep(self.check_interval)
+                    
+                except Exception as e:
+                    logger.error(f"Monitor loop error: {e}")
+                    self.emit_metric('postgres_replication_monitor_errors_total', 1)
+                    await asyncio.sleep(60)  # Wait longer on error
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+        monitor = PostgreSQLReplicationMonitor(config_path)
+        await monitor.run_monitor()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# Enhanced PostgreSQL Replication Monitor CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-replication-check
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+    component: monitoring
+spec:
+  schedule: '*/5 * * * *' # Every 5 minutes
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 24 # Keep 2 hours of history
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 240 # 4 minutes timeout
+      template:
+        metadata:
+          labels:
+            app: postgres-replication-monitor
+            component: monitoring
+          annotations:
+            replication-check/type: 'enhanced-monitoring'
+        spec:
+          serviceAccountName: postgres-replication-monitor
+          restartPolicy: OnFailure
+          containers:
+            - name: replication-check
+              image: postgres:15
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  # Install Python and required packages
+                  apt-get update && apt-get install -y python3 python3-pip
+                  pip3 install --no-cache-dir pyyaml psycopg2-binary requests
+
+                  # Run enhanced monitoring
+                  exec python3 /scripts/replication-monitor.py
+              env:
+                - name: CONFIG_PATH
+                  value: '/etc/config/config.yaml'
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretRef:
+                      name: postgres-credentials
+                      key: REDACTED_SECRET
+                - name: CHECK_INTERVAL
+                  value: '30'
+                - name: LAG_THRESHOLD
+                  value: '300'
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: config
+              configMap:
+                name: postgres-replication-monitor-config
+            - name: scripts
+              configMap:
+                name: postgres-replication-monitor-config
+                defaultMode: 0755
+
+---
+# Continuous PostgreSQL Replication Monitor Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-replication-monitor
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+    component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-replication-monitor
+  template:
+    metadata:
+      labels:
+        app: postgres-replication-monitor
+        component: monitoring
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: postgres-replication-monitor
+      containers:
+        - name: monitor
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache postgresql-client
+              pip install --no-cache-dir pyyaml psycopg2-binary requests
+              exec python /scripts/replication-monitor.py
+          env:
+            - name: CONFIG_PATH
+              value: '/etc/config/config.yaml'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretRef:
+                  name: postgres-credentials
+                  key: REDACTED_SECRET
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: scripts
+              mountPath: /scripts
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'ps aux | grep -v grep | grep replication-monitor.py'
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'ps aux | grep -v grep | grep replication-monitor.py'
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: postgres-replication-monitor-config
+        - name: scripts
+          configMap:
+            name: postgres-replication-monitor-config
+            defaultMode: 0755
+
+---
+# ServiceAccount and RBAC for PostgreSQL Replication Monitor
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-replication-monitor
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: database
+  name: postgres-replication-monitor
+  labels:
+    app: postgres-replication-monitor
+rules:
+  # Access to secrets for database credentials
+  - apiGroups: ['']
+    resources: ['secrets']
+    verbs: ['get', 'list']
+  # Access to services for database connections
+  - apiGroups: ['']
+    resources: ['services']
+    verbs: ['get', 'list']
+  # Events for monitoring
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['create', 'patch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgres-replication-monitor
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+subjects:
+  - kind: ServiceAccount
+    name: postgres-replication-monitor
+    namespace: database
+roleRef:
+  kind: Role
+  name: postgres-replication-monitor
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Service for PostgreSQL Replication Monitor Metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replication-monitor-metrics
+  namespace: database
+  labels:
+    app: postgres-replication-monitor
+    monitoring: dr-enabled
+spec:
+  type: ClusterIP
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: postgres-replication-monitor

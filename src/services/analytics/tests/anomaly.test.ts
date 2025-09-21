@@ -1,0 +1,497 @@
+/**
+ * PAKE System - Anomaly Detection Tests
+ *
+ * Comprehensive test suite for anomaly detection algorithms including
+ * Z-score spike detection, configuration testing, and performance validation.
+ */
+
+import {
+  describe,
+  beforeEach,
+  afterEach,
+  it,
+  expect,
+  jest,
+} from '@jest/globals';
+import { AnomalyDetector, AnomalyType } from '../src/anomaly';
+import { TrendRecord } from '../../trends/src/types/TrendRecord';
+
+describe('AnomalyDetector', () => {
+  let detector: AnomalyDetector;
+
+  const mockTrendRecord: TrendRecord = {
+    id: 'test-trend-001',
+    platform: 'twitter',
+    category: 'technology',
+    language: 'en',
+    region: 'US',
+    title: 'AI Breakthrough in Machine Learning',
+    content:
+      'Scientists announce major breakthrough in machine learning algorithms with 90% accuracy improvement.',
+    timestamp: new Date('2024-01-15T10:30:00Z'),
+    ingestedAt: new Date(),
+    engagementCount: 1500,
+    viewCount: 25000,
+    shareCount: 350,
+    contentHash: 'test-hash-123',
+    similarityHash: 'sim-hash-456',
+    qualityScore: 0.85,
+    freshnessScore: 0.95,
+    anomalyScore: 0.1,
+    entities: [],
+    anomalies: [],
+    metadata: { source: process.env.UNKNOWN },
+    rawData: { platform_data: 'mock' },
+  };
+
+  beforeEach(() => {
+    detector = new AnomalyDetector({
+      algorithms: {
+        zScore: true,
+        isolation: true,
+        seasonality: true,
+        velocity: false,
+        clustering: false,
+      },
+      thresholds: {
+        zScore: 2.0,
+        isolation: 0.7,
+        seasonality: 2.0,
+        velocity: 3.0,
+        clustering: 0.8,
+      },
+      sourceOverrides: {},
+      windows: {
+        shortTerm: 60,
+        mediumTerm: 720,
+        longTerm: 7,
+      },
+      minSampleSize: 10,
+      warmupPeriod: 60,
+      batchSize: 100,
+      maxConcurrency: 5,
+      enableRealtime: true,
+      enableBatching: true,
+      enableAdaptive: false,
+    });
+  });
+
+  afterEach(() => {
+    detector.destroy();
+  });
+
+  describe('Basic Anomaly Detection', () => {
+    it('should detect no anomalies for normal trend', async () => {
+      const result = await detector.detectAnomalies(mockTrendRecord);
+
+      expect(result).toBeDefined();
+      expect(result.recordId).toBe(mockTrendRecord.id);
+      expect(result.anomalies).toBeInstanceOf(Array);
+      expect(result.overallScore).toBeGreaterThanOrEqual(0);
+      expect(result.overallScore).toBeLessThanOrEqual(1);
+      expect(result.confidence).toBeGreaterThanOrEqual(0);
+      expect(result.confidence).toBeLessThanOrEqual(1);
+    });
+
+    it('should detect engagement spike anomaly', async () => {
+      const spikyRecord = {
+        ...mockTrendRecord,
+        engagementCount: 50000, // Very high engagement
+        viewCount: 1000000,
+        shareCount: 10000,
+      };
+
+      const result = await detector.detectAnomalies(spikyRecord);
+
+      expect(result.anomalies.length).toBeGreaterThan(0);
+      expect(result.anomalies).toContainElementMatching(
+        anomaly => anomaly.type === AnomalyType.ENGAGEMENT_SPIKE
+      );
+      expect(result.overallScore).toBeGreaterThan(0.5);
+    });
+
+    it('should detect unusual velocity anomaly', async () => {
+      const fastRecord = {
+        ...mockTrendRecord,
+        timestamp: new Date(Date.now() - 60000), // 1 minute ago
+        engagementCount: 10000, // High engagement in short time
+      };
+
+      const result = await detector.detectAnomalies(fastRecord);
+
+      // Should detect high velocity if algorithm is enabled
+      if (result.metadata.algorithmsUsed.includes('velocity')) {
+        expect(result.anomalies).toContainElementMatching(
+          anomaly => anomaly.type === AnomalyType.UNUSUAL_VELOCITY
+        );
+      }
+    });
+
+    it('should handle empty or minimal data gracefully', async () => {
+      const minimalRecord = {
+        ...mockTrendRecord,
+        engagementCount: 0,
+        viewCount: 0,
+        shareCount: 0,
+        content: 'Short',
+      };
+
+      const result = await detector.detectAnomalies(minimalRecord);
+
+      expect(result).toBeDefined();
+      expect(result.anomalies).toBeInstanceOf(Array);
+      expect(result.overallScore).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Z-Score Detection Algorithm', () => {
+    it('should correctly calculate Z-scores', async () => {
+      // First, add some baseline data
+      const baselineRecords = Array.from({ length: 20 }, (_, i) => ({
+        ...mockTrendRecord,
+        id: `baseline-${i}`,
+        engagementCount: 1000 + Math.random() * 200, // Normal range 1000-1200
+      }));
+
+      // Process baseline records
+      for (const record of baselineRecords) {
+        await detector.detectAnomalies(record);
+      }
+
+      // Now test with outlier
+      const outlierRecord = {
+        ...mockTrendRecord,
+        id: 'outlier-test',
+        engagementCount: 5000, // Clear outlier
+      };
+
+      const result = await detector.detectAnomalies(outlierRecord);
+
+      // Should detect engagement spike
+      const engagementAnomaly = result.anomalies.find(
+        a => a.type === AnomalyType.ENGAGEMENT_SPIKE
+      );
+
+      expect(engagementAnomaly).toBeDefined();
+      expect(engagementAnomaly?.algorithm).toBe('z-score');
+      expect(engagementAnomaly?.score).toBeGreaterThan(2.0);
+    });
+
+    it('should respect Z-score thresholds', async () => {
+      const strictDetector = new AnomalyDetector({
+        thresholds: { zScore: 1.0 }, // Very strict
+      });
+
+      const result = await strictDetector.detectAnomalies(mockTrendRecord);
+
+      // More likely to detect anomalies with strict threshold
+      // (though depends on baseline data)
+      expect(result).toBeDefined();
+
+      strictDetector.destroy();
+    });
+  });
+
+  describe('Temporal Anomaly Detection', () => {
+    it('should detect off-peak activity', async () => {
+      // Create record with high activity at unusual time (3 AM)
+      const offPeakRecord = {
+        ...mockTrendRecord,
+        timestamp: new Date('2024-01-15T03:00:00Z'), // 3 AM
+        engagementCount: 5000,
+      };
+
+      const result = await detector.detectAnomalies(offPeakRecord);
+
+      // May detect off-peak activity if algorithm is enabled
+      const offPeakAnomaly = result.anomalies.find(
+        a => a.type === AnomalyType.OFF_PEAK_ACTIVITY
+      );
+
+      if (offPeakAnomaly) {
+        expect(offPeakAnomaly.algorithm).toBe('temporal-clustering');
+        expect(offPeakAnomaly.metadata.hourOfDay).toBe(3);
+      }
+    });
+
+    it('should handle time zone normalization', async () => {
+      const localTimeRecord = {
+        ...mockTrendRecord,
+        timestamp: new Date('2024-01-15T15:30:00-05:00'), // EST
+      };
+
+      const result = await detector.detectAnomalies(localTimeRecord);
+
+      expect(result).toBeDefined();
+      expect(result.recordId).toBe(localTimeRecord.id);
+    });
+  });
+
+  describe('Batch Processing', () => {
+    it('should process multiple records efficiently', async () => {
+      const records = Array.from({ length: 50 }, (_, i) => ({
+        ...mockTrendRecord,
+        id: `batch-${i}`,
+        engagementCount: 1000 + Math.random() * 500,
+      }));
+
+      const startTime = Date.now();
+      const results = await detector.detectAnomaliesBatch(records);
+      const processingTime = Date.now() - startTime;
+
+      expect(results).toHaveLength(50);
+      expect(processingTime).toBeLessThan(10000); // Should complete in under 10s
+
+      results.forEach(result => {
+        expect(result.recordId).toMatch(/^batch-\d+$/);
+        expect(result.anomalies).toBeInstanceOf(Array);
+      });
+    });
+
+    it('should handle partial failures in batch', async () => {
+      const records = [
+        mockTrendRecord,
+        { ...mockTrendRecord, id: 'valid-2' },
+        null as any, // Invalid record
+        { ...mockTrendRecord, id: 'valid-4' },
+      ];
+
+      // Should not throw, but should handle gracefully
+      const results = await detector.detectAnomaliesBatch(
+        records.filter(r => r !== null)
+      );
+
+      expect(results.length).toBe(3); // Only valid records processed
+    });
+  });
+
+  describe('Configuration and Customization', () => {
+    it('should respect source-specific overrides', async () => {
+      const configuredDetector = new AnomalyDetector({
+        thresholds: { zScore: 2.0 },
+        sourceOverrides: {
+          twitter: {
+            thresholds: { zScore: 1.5 }, // More sensitive for Twitter
+          },
+        },
+      });
+
+      const twitterRecord = { ...mockTrendRecord, platform: 'twitter' };
+      const result = await configuredDetector.detectAnomalies(twitterRecord);
+
+      expect(result).toBeDefined();
+
+      configuredDetector.destroy();
+    });
+
+    it('should handle algorithm enabling/disabling', async () => {
+      const limitedDetector = new AnomalyDetector({
+        algorithms: {
+          zScore: true,
+          isolation: false,
+          seasonality: false,
+          velocity: false,
+          clustering: false,
+        },
+      });
+
+      const result = await limitedDetector.detectAnomalies(mockTrendRecord);
+
+      expect(result.metadata.algorithmsUsed).toEqual(['z-score']);
+
+      limitedDetector.destroy();
+    });
+
+    it('should validate configuration parameters', () => {
+      expect(() => {
+        new AnomalyDetector({
+          thresholds: { zScore: -1 }, // Invalid negative threshold
+        });
+      }).not.toThrow(); // Should handle gracefully with defaults
+    });
+  });
+
+  describe('Performance and Metrics', () => {
+    it('should track detection statistics', async () => {
+      await detector.detectAnomalies(mockTrendRecord);
+      await detector.detectAnomalies({ ...mockTrendRecord, id: 'test-2' });
+
+      const stats = detector.getStatistics();
+
+      expect(stats.totalRequests).toBe(2);
+      expect(stats.averageProcessingTime).toBeGreaterThan(0);
+      expect(stats.algorithmUsage.size).toBeGreaterThan(0);
+    });
+
+    it('should complete detection within reasonable time', async () => {
+      const startTime = Date.now();
+      await detector.detectAnomalies(mockTrendRecord);
+      const processingTime = Date.now() - startTime;
+
+      expect(processingTime).toBeLessThan(5000); // Should complete in under 5s
+    });
+
+    it('should handle high load efficiently', async () => {
+      const records = Array.from({ length: 100 }, (_, i) => ({
+        ...mockTrendRecord,
+        id: `load-test-${i}`,
+      }));
+
+      const startTime = Date.now();
+      const promises = records.map(record =>
+        detector.detectAnomalies(record).catch(() => null)
+      );
+
+      const results = await Promise.all(promises);
+      const processingTime = Date.now() - startTime;
+
+      const successfulResults = results.filter(r => r !== null).length;
+      expect(successfulResults).toBeGreaterThan(90); // At least 90% success rate
+      expect(processingTime).toBeLessThan(30000); // Under 30s for 100 records
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle invalid input gracefully', async () => {
+      const invalidRecord = {
+        ...mockTrendRecord,
+        engagementCount: 'invalid' as any,
+        timestamp: 'not-a-date' as any,
+      };
+
+      // Should not throw, but should handle gracefully
+      await expect(
+        detector.detectAnomalies(invalidRecord)
+      ).resolves.toBeDefined();
+    });
+
+    it('should handle network timeouts gracefully', async () => {
+      // Mock a slow operation
+      const slowDetector = new AnomalyDetector({
+        minSampleSize: 1000000, // Unrealistic requirement
+      });
+
+      await expect(
+        slowDetector.detectAnomalies(mockTrendRecord)
+      ).resolves.toBeDefined();
+
+      slowDetector.destroy();
+    });
+  });
+
+  describe('Data Quality and Validation', () => {
+    it('should validate detection result structure', async () => {
+      const result = await detector.detectAnomalies(mockTrendRecord);
+
+      // Validate structure
+      expect(result).toHaveProperty('recordId');
+      expect(result).toHaveProperty('anomalies');
+      expect(result).toHaveProperty('overallScore');
+      expect(result).toHaveProperty('confidence');
+      expect(result).toHaveProperty('baseline');
+      expect(result).toHaveProperty('metadata');
+
+      // Validate anomaly structure
+      result.anomalies.forEach(anomaly => {
+        expect(anomaly).toHaveProperty('type');
+        expect(anomaly).toHaveProperty('algorithm');
+        expect(anomaly).toHaveProperty('score');
+        expect(anomaly).toHaveProperty('severity');
+        expect(anomaly).toHaveProperty('confidence');
+        expect(anomaly).toHaveProperty('context');
+
+        // Validate score ranges
+        expect(anomaly.score).toBeGreaterThanOrEqual(0);
+        expect(anomaly.normalizedScore).toBeGreaterThanOrEqual(0);
+        expect(anomaly.normalizedScore).toBeLessThanOrEqual(1);
+        expect(anomaly.confidence).toBeGreaterThanOrEqual(0);
+        expect(anomaly.confidence).toBeLessThanOrEqual(1);
+      });
+    });
+
+    it('should maintain consistency across multiple runs', async () => {
+      const results = await Promise.all([
+        detector.detectAnomalies(mockTrendRecord),
+        detector.detectAnomalies(mockTrendRecord),
+        detector.detectAnomalies(mockTrendRecord),
+      ]);
+
+      // Results should be consistent (within small variance)
+      const scores = results.map(r => r.overallScore);
+      const maxDiff = Math.max(...scores) - Math.min(...scores);
+      expect(maxDiff).toBeLessThan(0.1); // Small variance allowed
+    });
+  });
+
+  describe('Integration with Real Data Patterns', () => {
+    it('should handle realistic social media patterns', async () => {
+      const patterns = [
+        // Normal post
+        { ...mockTrendRecord, id: 'normal', engagementCount: 150 },
+
+        // Viral post
+        { ...mockTrendRecord, id: 'viral', engagementCount: 50000 },
+
+        // Bot activity
+        {
+          ...mockTrendRecord,
+          id: 'bot',
+          engagementCount: 1000,
+          timestamp: new Date(Date.now() - 1000), // Very recent
+        },
+
+        // Low quality
+        {
+          ...mockTrendRecord,
+          id: 'low-quality',
+          content: 'lol',
+          engagementCount: 5,
+        },
+      ];
+
+      for (const pattern of patterns) {
+        const result = await detector.detectAnomalies(pattern);
+
+        expect(result).toBeDefined();
+        expect(result.recordId).toBe(pattern.id);
+
+        // Viral posts should likely trigger anomalies
+        if (pattern.id === 'viral') {
+          expect(result.overallScore).toBeGreaterThan(0.3);
+        }
+      }
+    });
+  });
+
+  describe('Memory and Resource Management', () => {
+    it('should clean up historical data properly', async () => {
+      // Generate lots of historical data
+      for (let i = 0; i < 200; i++) {
+        await detector.detectAnomalies({
+          ...mockTrendRecord,
+          id: `cleanup-test-${i}`,
+        });
+      }
+
+      // Check that memory usage doesn't grow unbounded
+      const stats = detector.getStatistics();
+      expect(stats.totalRequests).toBe(200);
+
+      // Historical data should be limited
+      // (This is implementation-dependent, but should not grow indefinitely)
+    });
+
+    it('should handle detector destruction cleanly', () => {
+      const testDetector = new AnomalyDetector();
+
+      expect(() => {
+        testDetector.destroy();
+      }).not.toThrow();
+
+      // Should handle multiple destroy calls
+      expect(() => {
+        testDetector.destroy();
+      }).not.toThrow();
+    });
+  });
+});

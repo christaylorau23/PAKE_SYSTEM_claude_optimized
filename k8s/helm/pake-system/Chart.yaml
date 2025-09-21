@@ -1,0 +1,39 @@
+apiVersion: v2
+name: pake-system
+description: PAKE System - Enterprise AI-Powered Knowledge Management Platform
+type: application
+version: 1.0.0
+appVersion: "10.1.0"
+home: https://github.com/your-org/pake-system
+sources:
+  - https://github.com/your-org/pake-system
+maintainers:
+  - name: PAKE Team
+    email: team@pake-system.com
+keywords:
+  - ai
+  - knowledge-management
+  - research
+  - microservices
+  - fastapi
+  - kubernetes
+annotations:
+  category: AI/ML
+  licenses: Enterprise
+dependencies:
+  - name: postgresql
+    version: 12.12.8
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.11.3
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: prometheus
+    version: 25.8.2
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.prometheus.enabled
+  - name: grafana
+    version: 7.0.9
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.grafana.enabled

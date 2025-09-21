@@ -1,0 +1,568 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { SecretsManagerSDK } from '../services/SecretsManagerSDK';
+import { VaultService } from '../services/VaultService';
+import { EncryptionService } from '../services/EncryptionService';
+import { RotationService } from '../services/RotationService';
+import { HSMService } from '../services/HSMService';
+import { BreakGlassService } from '../services/BreakGlassService';
+import { MTLSService } from '../services/MTLSService';
+import { 
+  VaultConfig, 
+  EncryptionConfig, 
+  SDKConfig, 
+  Secret, 
+  RotationPolicy, 
+  BreakGlassRequest,
+  BreakGlassStatus 
+} from '../types/secrets.types';
+
+// Mock external dependencies
+vi.mock('node-vault');
+vi.mock('crypto');
+vi.mock('fs');
+vi.mock('https');
+
+describe('Secrets Management Integration Tests', () => {
+  let sdk: SecretsManagerSDK;
+  let vaultService: VaultService;
+  let encryptionService: EncryptionService;
+  let rotationService: RotationService;
+  let hsmService: HSMService;
+  let breakGlassService: BreakGlassService;
+  let mtlsService: MTLSService;
+
+  beforeAll(async () => {
+    // Setup test configuration
+    const vaultConfig: VaultConfig = {
+      endpoint: 'https://vault-test.example.com:8200',
+      token: 'test-token',
+      engines: {
+        kv: { name: 'secret', version: 2, path: 'secret/' },
+        transit: { name: 'transit', path: 'transit/' },
+        pki: { name: 'pki', path: 'pki/' },
+        database: { name: 'database', path: 'database/' }
+      },
+      auth: { method: 'token', token: 'test-token' }
+    };
+
+    const encryptionConfig: EncryptionConfig = {
+      algorithms: {
+        symmetric: 'aes-256-gcm',
+        asymmetric: 'rsa-4096',
+        hash: 'sha256',
+        kdf: 'argon2id'
+      },
+      keys: {
+        masterKeyId: 'master-key-1',
+        keyDerivationParams: {
+          memory: 64 * 1024,
+          iterations: 3,
+          parallelism: 4
+        }
+      },
+      fieldLevel: {
+        enabled: true,
+        algorithms: {
+          pii: 'aes-256-gcm',
+          sensitive: 'aes-256-gcm'
+        }
+      },
+      hsm: {
+        enabled: false, // Use mock mode for tests
+        provider: 'SoftHSM',
+        config: {
+          library: '/usr/lib/softhsm/libsofthsm2.so',
+          slot: 0,
+          pin: 'test-pin'
+        }
+      }
+    };
+
+    const sdkConfig: SDKConfig = {
+      vault: vaultConfig,
+      cache: {
+        ttl: 300,
+        maxSize: 1000,
+        encryptCached: true
+      },
+      retry: {
+        maxAttempts: 3,
+        baseDelay: 1000,
+        maxDelay: 5000
+      },
+      validation: {
+        enforceSchema: true,
+        allowedPaths: ['/test/*', '/integration/*']
+      }
+    };
+
+    // Initialize services
+    vaultService = new VaultService(vaultConfig);
+    hsmService = new HSMService(encryptionConfig.hsm, true); // Mock mode
+    encryptionService = new EncryptionService(encryptionConfig, hsmService);
+    rotationService = new RotationService(vaultService, encryptionService);
+    breakGlassService = new BreakGlassService(vaultService, encryptionService);
+    mtlsService = new MTLSService({
+      certificates: {
+        ca: '/path/to/ca.crt',
+        cert: '/path/to/server.crt',
+        key: '/path/to/server.key'
+      },
+      validation: {
+        verifyChain: true,
+        allowSelfSigned: false
+      }
+    });
+
+    sdk = new SecretsManagerSDK(sdkConfig);
+
+    // Initialize all services
+    await Promise.all([
+      vaultService.authenticate(),
+      encryptionService.initialize(),
+      hsmService.initialize(),
+      sdk.initialize()
+    ]);
+  });
+
+  afterAll(async () => {
+    // Cleanup
+  });
+
+  describe('End-to-End Secret Lifecycle', () => {
+    it('should complete full secret lifecycle: store -> retrieve -> encrypt -> rotate -> delete', async () => {
+      const secretPath = 'integration/test-secret';
+      const secretData = {
+        username: 'testuser',
+        REDACTED_SECRET: process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED',
+        apiKey: process.env.PAKE_API_KEY || 'SECURE_API_KEY_REQUIRED'
+      };
+
+      // 1. Store secret through SDK
+      const storeResult = await sdk.storeSecret(secretPath, secretData);
+      expect(storeResult).toBe(true);
+
+      // 2. Retrieve secret
+      const retrievedSecret = await sdk.getSecret(secretPath);
+      expect(retrievedSecret).toBeTruthy();
+      expect(retrievedSecret?.value).toEqual(secretData);
+
+      // 3. Encrypt sensitive fields
+      const fieldsToEncrypt = [
+        { fieldName: 'REDACTED_SECRET', algorithm: 'aes-256-gcm' as const, keyId: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' },
+        { fieldName: 'apiKey', algorithm: 'aes-256-gcm' as const, keyId: 'test-key' }
+      ];
+
+      const encryptedData = await encryptionService.encryptFields(secretData, fieldsToEncrypt);
+      
+      expect(typeof encryptedData.REDACTED_SECRET).toBe('object');
+      expect(typeof encryptedData.apiKey).toBe('object');
+      expect(encryptedData.username).toBe('testuser'); // Should remain unencrypted
+
+      // 4. Setup rotation policy
+      const rotationPolicy: RotationPolicy = {
+        secretPath,
+        schedule: {
+          type: 'fixed',
+          intervalDays: 30
+        },
+        strategy: 'gradual',
+        notifications: {
+          beforeRotation: ['admin@example.com'],
+          afterRotation: ['admin@example.com']
+        }
+      };
+
+      await rotationService.setRotationPolicy(rotationPolicy);
+
+      // 5. Perform rotation
+      const rotationResult = await rotationService.rotateNow(
+        secretPath,
+        'database-REDACTED_SECRET',
+        'immediate'
+      );
+
+      expect(rotationResult.success).toBe(true);
+      expect(rotationResult.newVersion).toBeGreaterThan(1);
+
+      // 6. Verify rotated secret is different
+      const rotatedSecret = await sdk.getSecret(secretPath);
+      expect(rotatedSecret?.metadata.version).toBeGreaterThan(1);
+
+      // 7. Delete secret
+      const deleteResult = await sdk.deleteSecret(secretPath);
+      expect(deleteResult).toBe(true);
+
+      // 8. Verify secret is deleted
+      const deletedSecret = await sdk.getSecret(secretPath);
+      expect(deletedSecret).toBeNull();
+    });
+
+    it('should handle concurrent secret access safely', async () => {
+      const secretPath = 'integration/concurrent-test';
+      const secretData = { value: 'concurrent-test-value' };
+
+      // Store initial secret
+      await sdk.storeSecret(secretPath, secretData);
+
+      // Simulate concurrent access
+      const concurrentPromises = Array.from({ length: 10 }, (_, i) => 
+        sdk.getSecret(`${secretPath}-${i}`)
+      );
+
+      const results = await Promise.allSettled(concurrentPromises);
+      
+      // All operations should complete without errors
+      results.forEach(result => {
+        expect(result.status).toBe('fulfilled');
+      });
+    });
+  });
+
+  describe('Zero-Trust Architecture Validation', () => {
+    it('should ensure no secrets in environment variables', () => {
+      const envVars = Object.keys(process.env);
+      const suspiciousKeys = envVars.filter(key => 
+        key.toLowerCase().includes('REDACTED_SECRET') ||
+        key.toLowerCase().includes('secret') ||
+        (key.toLowerCase().includes('key') && !key.includes('PATH')) ||
+        key.toLowerCase().includes('token')
+      ).filter(key => 
+        !key.includes('TEST_') && 
+        !key.includes('VITEST_') &&
+        !key.includes('NODE_')
+      );
+
+      expect(suspiciousKeys).toEqual([]);
+    });
+
+    it('should fetch all secrets at runtime', async () => {
+      const secretPath = 'integration/runtime-test';
+      const secretData = { runtimeValue: 'fetched-at-runtime' };
+
+      await sdk.storeSecret(secretPath, secretData);
+
+      // Verify secret is fetched via Vault, not from environment
+      const secret = await sdk.getSecret(secretPath);
+      
+      expect(secret?.value).toEqual(secretData);
+      expect(process.env[secretPath]).toBeUndefined();
+    });
+
+    it('should validate 100% encryption coverage for PII', async () => {
+      const piiData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        ssn: '123-45-6789',
+        phone: '+1-555-0123',
+        address: '123 Main St',
+        creditCard: '4111-1111-1111-1111'
+      };
+
+      const piiFields = [
+        { fieldName: 'email', algorithm: 'aes-256-gcm' as const, keyId: 'pii-key' },
+        { fieldName: 'ssn', algorithm: 'aes-256-gcm' as const, keyId: 'pii-key' },
+        { fieldName: 'phone', algorithm: 'aes-256-gcm' as const, keyId: 'pii-key' },
+        { fieldName: 'creditCard', algorithm: 'aes-256-gcm' as const, keyId: 'pii-key' }
+      ];
+
+      const encryptedPII = await encryptionService.encryptFields(piiData, piiFields);
+
+      // Verify sensitive fields are encrypted
+      expect(typeof encryptedPII.email).toBe('object');
+      expect(typeof encryptedPII.ssn).toBe('object');
+      expect(typeof encryptedPII.phone).toBe('object');
+      expect(typeof encryptedPII.creditCard).toBe('object');
+
+      // Non-PII fields remain unencrypted
+      expect(encryptedPII.name).toBe('John Doe');
+      expect(encryptedPII.address).toBe('123 Main St');
+    });
+  });
+
+  describe('Performance Requirements', () => {
+    it('should meet <10ms decryption overhead requirement', async () => {
+      const testData = 'performance test data'.repeat(100); // ~2KB
+      
+      // Encrypt data
+      const encrypted = await encryptionService.encryptData(testData);
+      
+      // Measure decryption time
+      const startTime = performance.now();
+      const decrypted = await encryptionService.decryptData(encrypted);
+      const decryptionTime = performance.now() - startTime;
+      
+      expect(decryptionTime).toBeLessThan(10); // <10ms requirement
+      expect(decrypted).toBe(testData);
+    });
+
+    it('should handle high-throughput secret retrieval', async () => {
+      const secretCount = 100;
+      const secretPaths: string[] = [];
+
+      // Store multiple secrets
+      for (let i = 0; i < secretCount; i++) {
+        const path = `integration/perf-test-${i}`;
+        secretPaths.push(path);
+        await sdk.storeSecret(path, { value: `test-value-${i}` });
+      }
+
+      // Measure batch retrieval time
+      const startTime = performance.now();
+      const promises = secretPaths.map(path => sdk.getSecret(path));
+      const secrets = await Promise.all(promises);
+      const totalTime = performance.now() - startTime;
+
+      expect(secrets).toHaveLength(secretCount);
+      expect(secrets.every(secret => secret !== null)).toBe(true);
+      expect(totalTime / secretCount).toBeLessThan(10); // Average <10ms per secret
+
+      // Cleanup
+      await Promise.all(secretPaths.map(path => sdk.deleteSecret(path)));
+    });
+  });
+
+  describe('Disaster Recovery Procedures', () => {
+    it('should successfully execute break-glass procedure', async () => {
+      const emergencySecret = {
+        path: 'integration/emergency-secret',
+        value: { emergencyValue: 'critical-system-key' }
+      };
+
+      // Store emergency secret
+      await sdk.storeSecret(emergencySecret.path, emergencySecret.value);
+
+      // Initiate break-glass procedure
+      const breakGlassRequest: BreakGlassRequest = {
+        procedureName: 'emergency-access',
+        initiator: {
+          userId: 'admin-user',
+          role: 'security-admin',
+          location: 'ops-center'
+        },
+        justification: 'Critical system outage - need immediate access to restore services',
+        requiredSecrets: [emergencySecret.path],
+        actions: ['secret.reveal'],
+        expiration: new Date(Date.now() + 3600000) // 1 hour
+      };
+
+      const sessionId = await breakGlassService.initiateBreakGlass(breakGlassRequest);
+      expect(sessionId).toBeTruthy();
+
+      // Simulate approvals (in real scenario, this would be manual)
+      const session = breakGlassService.getSession(sessionId);
+      expect(session?.status).toBe(BreakGlassStatus.PENDING);
+
+      // Execute emergency access
+      const emergencyResult = await breakGlassService.executeEmergencyAction(
+        sessionId,
+        'secret.reveal',
+        { secretPath: emergencySecret.path }
+      );
+
+      expect(emergencyResult.success).toBe(true);
+      expect(emergencyResult.data).toEqual(emergencySecret.value);
+
+      // Verify audit trail
+      const auditTrail = session?.auditTrail || [];
+      expect(auditTrail.length).toBeGreaterThan(0);
+      expect(auditTrail.some(entry => entry.action === 'secret.reveal')).toBe(true);
+
+      // Cleanup
+      await sdk.deleteSecret(emergencySecret.path);
+    });
+
+    it('should validate backup and restore procedures', async () => {
+      // This would typically involve backing up Vault data
+      // For testing, we simulate the process
+      
+      const testSecrets = [
+        { path: 'backup/secret-1', value: { key: 'value1' } },
+        { path: 'backup/secret-2', value: { key: 'value2' } },
+        { path: 'backup/secret-3', value: { key: 'value3' } }
+      ];
+
+      // Store test secrets
+      await Promise.all(
+        testSecrets.map(secret => sdk.storeSecret(secret.path, secret.value))
+      );
+
+      // Simulate backup (in real scenario, this would backup Vault storage)
+      const backupData = await Promise.all(
+        testSecrets.map(async (secret) => ({
+          path: secret.path,
+          data: await sdk.getSecret(secret.path)
+        }))
+      );
+
+      expect(backupData).toHaveLength(testSecrets.length);
+      expect(backupData.every(item => item.data !== null)).toBe(true);
+
+      // Simulate restore scenario (delete and restore)
+      await Promise.all(
+        testSecrets.map(secret => sdk.deleteSecret(secret.path))
+      );
+
+      // Verify deletion
+      const deletedSecrets = await Promise.all(
+        testSecrets.map(secret => sdk.getSecret(secret.path))
+      );
+      expect(deletedSecrets.every(secret => secret === null)).toBe(true);
+
+      // Simulate restore
+      await Promise.all(
+        backupData.map(item => 
+          item.data ? sdk.storeSecret(item.path, item.data.value) : Promise.resolve(false)
+        )
+      );
+
+      // Verify restoration
+      const restoredSecrets = await Promise.all(
+        testSecrets.map(secret => sdk.getSecret(secret.path))
+      );
+
+      expect(restoredSecrets.every(secret => secret !== null)).toBe(true);
+      restoredSecrets.forEach((restored, index) => {
+        expect(restored?.value).toEqual(testSecrets[index].value);
+      });
+
+      // Cleanup
+      await Promise.all(
+        testSecrets.map(secret => sdk.deleteSecret(secret.path))
+      );
+    });
+  });
+
+  describe('Security Compliance', () => {
+    it('should enforce access control policies', async () => {
+      const restrictedPath = 'restricted/admin-only';
+      const allowedPath = 'integration/allowed';
+
+      // Should allow access to permitted paths
+      await expect(
+        sdk.storeSecret(allowedPath, { value: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' })
+      ).resolves.toBe(true);
+
+      // Should deny access to restricted paths
+      await expect(
+        sdk.getSecret(restrictedPath)
+      ).rejects.toThrow('Access denied');
+    });
+
+    it('should maintain audit trail for all operations', async () => {
+      const auditEvents: any[] = [];
+      
+      // Listen for audit events
+      vaultService.on('audit', (event) => {
+        auditEvents.push(event);
+      });
+
+      const testPath = 'integration/audit-test';
+      const testValue = { auditValue: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' };
+
+      // Perform operations that should generate audit events
+      await sdk.storeSecret(testPath, testValue);
+      await sdk.getSecret(testPath);
+      await sdk.deleteSecret(testPath);
+
+      expect(auditEvents.length).toBeGreaterThan(0);
+      expect(auditEvents.some(e => e.operation === 'secret.write')).toBe(true);
+      expect(auditEvents.some(e => e.operation === 'secret.read')).toBe(true);
+      expect(auditEvents.some(e => e.operation === 'secret.delete')).toBe(true);
+    });
+
+    it('should validate certificate-based authentication', async () => {
+      // Test mTLS certificate validation
+      const testContext = await mtlsService.createContext('test-context');
+      
+      expect(testContext).toBeTruthy();
+      expect(testContext.server).toBeDefined();
+      expect(testContext.client).toBeDefined();
+      expect(testContext.caCertificates).toBeDefined();
+    });
+
+    it('should ensure all critical operations are logged', async () => {
+      const logEvents: any[] = [];
+      
+      // Monitor all services for log events
+      [sdk, vaultService, encryptionService, rotationService, breakGlassService].forEach(service => {
+        service.on('audit', (event) => logEvents.push(event));
+      });
+
+      const testPath = 'integration/logging-test';
+      const testValue = { loggingTest: 'value' };
+
+      // Perform operations
+      await sdk.storeSecret(testPath, testValue);
+      const secret = await sdk.getSecret(testPath);
+      await encryptionService.encryptData('test-data');
+      
+      // Trigger rotation
+      await rotationService.setRotationPolicy({
+        secretPath: testPath,
+        schedule: { type: 'fixed', intervalDays: 30 },
+        strategy: 'immediate'
+      });
+
+      expect(logEvents.length).toBeGreaterThan(0);
+      
+      // Verify critical operations are logged
+      const operationTypes = logEvents.map(e => e.operation);
+      expect(operationTypes).toContain('secret.write');
+      expect(operationTypes).toContain('secret.read');
+
+      // Cleanup
+      await sdk.deleteSecret(testPath);
+    });
+  });
+
+  describe('Error Handling and Resilience', () => {
+    it('should handle service unavailability gracefully', async () => {
+      // Simulate Vault being unavailable
+      const originalGetSecret = vaultService.getSecret;
+      vaultService.getSecret = vi.fn().mockRejectedValue(new Error('Service unavailable'));
+
+      await expect(
+        sdk.getSecret('integration/unavailable-test')
+      ).rejects.toThrow('Service unavailable');
+
+      // Restore original method
+      vaultService.getSecret = originalGetSecret;
+    });
+
+    it('should implement circuit breaker pattern', async () => {
+      // This would test circuit breaker implementation
+      // For now, we verify that repeated failures don't crash the service
+      
+      const failingPath = 'integration/circuit-breaker-test';
+      let attempts = 0;
+
+      // Mock to fail first 3 times, then succeed
+      const originalGetSecret = vaultService.getSecret;
+      vaultService.getSecret = vi.fn().mockImplementation((request) => {
+        attempts++;
+        if (attempts <= 3) {
+          return Promise.reject(new Error('Service failure'));
+        }
+        return originalGetSecret.call(vaultService, request);
+      });
+
+      // Store a secret first
+      await sdk.storeSecret(failingPath, { value: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' });
+
+      // Should eventually succeed after retries
+      try {
+        await sdk.getSecret(failingPath);
+      } catch (error) {
+        // Expected to fail due to circuit breaker
+        expect(attempts).toBeLessThanOrEqual(3);
+      }
+
+      // Restore original method
+      vaultService.getSecret = originalGetSecret;
+      
+      // Cleanup
+      await sdk.deleteSecret(failingPath);
+    });
+  });
+});

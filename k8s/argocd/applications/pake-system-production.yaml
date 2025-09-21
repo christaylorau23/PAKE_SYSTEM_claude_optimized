@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pake-system-production
+  namespace: argocd
+  labels:
+    app: pake-system
+    environment: production
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/pake-system
+    targetRevision: main
+    path: k8s/helm/pake-system
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-production.yaml
+      parameters:
+        - name: image.tag
+          value: "stable"
+        - name: environment
+          value: "production"
+        - name: monitoring.enabled
+          value: "true"
+        - name: autoscaling.enabled
+          value: "true"
+        - name: autoscaling.minReplicas
+          value: "3"
+        - name: autoscaling.maxReplicas
+          value: "20"
+        - name: resources.limits.cpu
+          value: "2000m"
+        - name: resources.limits.memory
+          value: "4Gi"
+        - name: resources.requests.cpu
+          value: "1000m"
+        - name: resources.requests.memory
+          value: "2Gi"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pake-system-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10

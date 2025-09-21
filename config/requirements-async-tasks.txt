@@ -1,0 +1,35 @@
+# PAKE+ Async Task Queue Requirements
+# Phase 2: Performance & Standardization Dependencies
+
+# Core Celery and Redis
+celery>=5.3.0
+redis>=5.0.0
+kombu>=5.3.0
+
+# Message broker support
+eventlet>=0.33.3
+gevent>=23.7.0
+
+# Monitoring and management
+flower>=2.0.1
+celery-types>=0.22.0
+
+# Enhanced serialization
+msgpack>=1.0.5
+orjson>=3.9.0
+
+# Task result backends
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.7
+
+# Development and testing
+pytest-celery>=0.0.0a1
+celery-batches>=0.8.1
+
+# Foundation dependencies (already installed in Phase 1)
+# fastapi>=0.100.0
+# uvicorn>=0.23.0
+# structlog>=23.1.0
+# prometheus-client>=0.17.0
+# asyncpg>=0.28.0
+# cryptography>=41.0.0

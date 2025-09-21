@@ -1,0 +1,538 @@
+# SLO/SLI Monitoring and Alerting for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slo-alerting-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  slo-alerts.yml: |
+    groups:
+    - name: pake.slo.alerts
+      interval: 30s
+      rules:
+      
+      # API Availability SLO Alerts
+      - alert: APIAvailabilitySLOBreach
+        expr: pake:api_success_rate < 0.999
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "API Availability SLO breached"
+          description: |
+            API availability is {{ $value | humanizePercentage }}, which is below the 99.9% SLO target.
+            Current success rate has been below target for {{ $activeFor }}.
+            
+            Troubleshooting steps:
+            1. Check error logs: kubectl logs -l app=pake-api -n pake-system
+            2. Check service health: kubectl get pods -l app=pake-api -n pake-system  
+            3. Review recent deployments: kubectl rollout history deployment/pake-api -n pake-system
+          runbook_url: "https://wiki.pake-system.com/runbooks/api-availability-slo"
+          dashboard_url: "https://grafana.pake-system.com/d/slo-dashboard"
+      
+      - alert: APIAvailabilitySLOBurnRateHigh
+        expr: pake:error_budget_burn_rate_api > 10
+        for: 5m
+        labels:
+          severity: warning
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "High error budget burn rate detected"
+          description: |
+            Error budget burn rate is {{ $value }}x, indicating rapid consumption of error budget.
+            At this rate, the monthly error budget will be exhausted in {{ with query "pake:error_budget_remaining_api / pake:error_budget_burn_rate_api * 30" }}{{ . | first | value | humanizeDuration }}{{ end }}.
+      
+      # API Latency SLO Alerts  
+      - alert: APILatencySLOBreach
+        expr: pake:api_latency_p95 > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "API Latency SLO breached"
+          description: |
+            API P95 latency is {{ $value }}s, exceeding the 500ms SLO target.
+            This may impact user experience and should be investigated.
+      
+      - alert: APILatencySLOCritical
+        expr: pake:api_latency_p95 > 2.0
+        for: 2m
+        labels:
+          severity: critical
+          slo: latency
+          service: pake-api  
+          team: backend
+        annotations:
+          summary: "Critical API latency detected"
+          description: |
+            API P95 latency is {{ $value }}s, significantly exceeding acceptable thresholds.
+            This requires immediate attention.
+      
+      # AI Service SLO Alerts
+      - alert: AILatencySLOBreach
+        expr: pake:ai_latency_p95 > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "AI Inference Latency SLO breached"
+          description: |
+            AI inference P95 latency is {{ $value }}s, exceeding the 2s SLO target.
+            Check GPU utilization and model loading times.
+      
+      - alert: AIAvailabilitySLOBreach
+        expr: pake:ai_success_rate < 0.99
+        for: 5m
+        labels:
+          severity: critical
+          slo: availability
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "AI Service Availability SLO breached"
+          description: |
+            AI service availability is {{ $value | humanizePercentage }}, below the 99% SLO.
+            Check for model loading failures or GPU issues.
+      
+      # Error Budget Alerts
+      - alert: ErrorBudgetExhausted
+        expr: pake:error_budget_remaining_api <= 0
+        for: 0m
+        labels:
+          severity: critical
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "Error budget completely exhausted"
+          description: |
+            The monthly error budget for API availability has been completely exhausted.
+            No more errors can be tolerated this month to meet SLO targets.
+            
+            Immediate actions required:
+            1. Stop all non-critical deployments
+            2. Focus on stability over new features
+            3. Investigate root cause of recent errors
+      
+      - alert: ErrorBudgetCriticallyLow
+        expr: pake:error_budget_remaining_api < 0.25
+        for: 0m
+        labels:
+          severity: warning
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "Error budget critically low"
+          description: |
+            Only {{ $value | humanizePercentage }} of the monthly error budget remains.
+            Consider reducing deployment frequency and focusing on reliability.
+      
+      # Multi-window burn rate alerts (fast and slow)
+      - alert: ErrorBudgetBurnRateFast
+        expr: |
+          (
+            pake:error_budget_burn_rate_api > 14.4 and
+            avg_over_time(pake:error_budget_burn_rate_api[1h]) > 14.4
+          )
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "Fast error budget burn rate detected"
+          description: |
+            Error budget is burning at {{ $value }}x the acceptable rate.
+            At this rate, the entire monthly budget will be consumed in 2 hours.
+      
+      - alert: ErrorBudgetBurnRateSlow
+        expr: |
+          (
+            pake:error_budget_burn_rate_api > 1 and
+            avg_over_time(pake:error_budget_burn_rate_api[24h]) > 1
+          )
+        for: 1h
+        labels:
+          severity: warning
+          slo: availability
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "Sustained error budget burn detected"
+          description: |
+            Error budget has been burning above the acceptable rate for 24+ hours.
+            Current burn rate: {{ $value }}x normal rate.
+
+  slo-recording-rules.yml: |
+    groups:
+    - name: pake.slo.recording
+      interval: 30s
+      rules:
+      
+      # Multi-window SLI calculations for accurate alerting
+      
+      # API Success Rate - Multiple time windows
+      - record: pake:sli_api_success_rate_5m
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[5m])) /
+          sum(rate(pake_api_requests_total[5m]))
+      
+      - record: pake:sli_api_success_rate_30m
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[30m])) /
+          sum(rate(pake_api_requests_total[30m]))
+      
+      - record: pake:sli_api_success_rate_1h
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[1h])) /
+          sum(rate(pake_api_requests_total[1h]))
+      
+      - record: pake:sli_api_success_rate_6h
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[6h])) /
+          sum(rate(pake_api_requests_total[6h]))
+      
+      - record: pake:sli_api_success_rate_3d
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[3d])) /
+          sum(rate(pake_api_requests_total[3d]))
+      
+      # API Latency P95 - Multiple time windows
+      - record: pake:sli_api_latency_p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="pake-api"}[5m]))
+            by (le)
+          )
+      
+      - record: pake:sli_api_latency_p95_30m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="pake-api"}[30m]))
+            by (le)
+          )
+      
+      - record: pake:sli_api_latency_p95_1h
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="pake-api"}[1h]))
+            by (le)
+          )
+      
+      # Error Budget Burn Rate Calculations
+      - record: pake:error_budget_burn_rate_5m
+        expr: |
+          (1 - pake:sli_api_success_rate_5m) / (1 - 0.999)
+      
+      - record: pake:error_budget_burn_rate_1h
+        expr: |
+          (1 - pake:sli_api_success_rate_1h) / (1 - 0.999)
+      
+      - record: pake:error_budget_burn_rate_6h
+        expr: |
+          (1 - pake:sli_api_success_rate_6h) / (1 - 0.999)
+      
+      # SLO Compliance Indicators
+      - record: pake:slo_api_availability_5m
+        expr: pake:sli_api_success_rate_5m >= 0.999
+        labels:
+          slo_target: "99.9"
+          measurement_window: "5m"
+      
+      - record: pake:slo_api_latency_5m
+        expr: pake:sli_api_latency_p95_5m <= 0.5
+        labels:
+          slo_target: "500ms"
+          measurement_window: "5m"
+      
+      # Long-term Error Budget Tracking
+      - record: pake:error_budget_consumed_30d
+        expr: |
+          1 - (
+            sum(increase(pake_api_requests_total{status!~"5.."}[30d])) /
+            sum(increase(pake_api_requests_total[30d]))
+          ) / 0.999
+      
+      - record: pake:error_budget_remaining_30d
+        expr: |
+          max(0, 1 - pake:error_budget_consumed_30d)
+
+---
+# Alertmanager Configuration for SLO Alerts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-slo-config
+  namespace: monitoring
+  labels:
+    app: alertmanager
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.pake-system.com:587'
+      smtp_from: 'alerts@pake-system.com'
+      smtp_auth_username: 'alerts@pake-system.com'
+      smtp_auth_REDACTED_SECRET_file: '/etc/alertmanager/secrets/smtp-REDACTED_SECRET'
+      
+      # Slack configuration
+      slack_api_url_file: '/etc/alertmanager/secrets/slack-api-url'
+      
+      # PagerDuty configuration
+      pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+    # Inhibition rules to reduce noise
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['service', 'slo']
+
+    - source_match:
+        alertname: 'ErrorBudgetExhausted'
+      target_match_re:
+        alertname: 'ErrorBudget.*'
+      equal: ['service']
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'web.hook'
+      
+      routes:
+      # Critical SLO breaches go to PagerDuty
+      - match:
+          severity: critical
+          slo: availability
+        receiver: 'pagerduty-critical'
+        group_wait: 5s
+        repeat_interval: 5m
+        
+      # Warning SLO issues go to Slack
+      - match:
+          severity: warning
+          slo: latency
+        receiver: 'slack-slo-warnings'
+        group_wait: 30s
+        repeat_interval: 30m
+        
+      # Error budget alerts have special routing
+      - match_re:
+          alertname: 'ErrorBudget.*'
+        receiver: 'error-budget-alerts'
+        group_wait: 5s
+        repeat_interval: 15m
+
+    receivers:
+    - name: 'web.hook'
+      webhook_configs:
+      - url: 'http://alertmanager-webhook.monitoring.svc.cluster.local:5000/'
+        send_resolved: true
+
+    # PagerDuty for critical alerts
+    - name: 'pagerduty-critical'
+      pagerduty_configs:
+      - service_key_file: '/etc/alertmanager/secrets/pagerduty-service-key'
+        description: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ end }}
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          service: '{{ .CommonLabels.service }}'
+          slo: '{{ .CommonLabels.slo }}'
+        links:
+        - href: '{{ .CommonAnnotations.runbook_url }}'
+          text: 'Runbook'
+        - href: '{{ .CommonAnnotations.dashboard_url }}'
+          text: 'Dashboard'
+
+    # Slack for warnings and general alerts
+    - name: 'slack-slo-warnings'
+      slack_configs:
+      - channel: '#pake-slo-alerts'
+        username: 'SLO Monitor'
+        icon_emoji: ':chart_with_upwards_trend:'
+        title: |
+          {{ if eq .Status "firing" }}:warning: SLO Warning{{ else }}:white_check_mark: SLO Resolved{{ end }}
+        text: |
+          {{ range .Alerts }}
+          *Service:* {{ .Labels.service }}
+          *SLO Type:* {{ .Labels.slo }}
+          *Description:* {{ .Annotations.description }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ if .Annotations.dashboard_url }}*Dashboard:* {{ .Annotations.dashboard_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+
+    # Specialized routing for error budget alerts
+    - name: 'error-budget-alerts'
+      slack_configs:
+      - channel: '#pake-error-budget'
+        username: 'Error Budget Monitor'
+        icon_emoji: ':warning:'
+        title: |
+          {{ if eq .Status "firing" }}:rotating_light: Error Budget Alert{{ else }}:white_check_mark: Error Budget Recovered{{ end }}
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Service:* {{ .Labels.service }}
+          *Current Status:* {{ .Annotations.description }}
+          
+          {{ if .Annotations.runbook_url }}*Action Required:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+      
+      # Also email critical error budget alerts
+      email_configs:
+      - to: 'sre-team@pake-system.com'
+        subject: |
+          {{ .Status | toUpper }}: Error Budget Alert - {{ .CommonLabels.service }}
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          
+          Dashboard: {{ .Annotations.dashboard_url }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+---
+# SLO Dashboard Annotations for Grafana
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slo-annotations
+  namespace: monitoring
+  labels:
+    app: grafana
+data:
+  annotations.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          },
+          {
+            "datasource": "Prometheus",
+            "enable": true,
+            "expr": "ALERTS{slo=\"availability\"}",
+            "iconColor": "red",
+            "name": "SLO Breaches",
+            "titleFormat": "{{ $labels.alertname }}",
+            "textFormat": "{{ $labels.service }}: {{ $labels.summary }}"
+          },
+          {
+            "datasource": "Prometheus", 
+            "enable": true,
+            "expr": "changes(pake:error_budget_remaining_api[1h]) < 0",
+            "iconColor": "orange",
+            "name": "Error Budget Changes",
+            "titleFormat": "Error Budget Decrease",
+            "textFormat": "Error budget decreased for {{ $labels.service }}"
+          }
+        ]
+      }
+    }
+
+---
+# SLO Compliance Report Generator
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: slo-compliance-report
+  namespace: monitoring
+  labels:
+    app: slo-reporting
+spec:
+  schedule: '0 9 * * MON' # Weekly on Monday at 9 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: slo-reporting
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: slo-reporter
+              image: prom/prometheus:v2.45.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  echo "Generating SLO Compliance Report for week ending $(date)"
+
+                  # Query Prometheus for SLO metrics
+                  PROMETHEUS_URL="http://prometheus.monitoring.svc.cluster.local:9090"
+
+                  # API Availability
+                  API_AVAILABILITY=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=avg_over_time(pake:api_success_rate[7d])" | jq -r '.data.result[0].value[1]')
+
+                  # API Latency
+                  API_LATENCY=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=avg_over_time(pake:api_latency_p95[7d])" | jq -r '.data.result[0].value[1]')
+
+                  # Error Budget Remaining
+                  ERROR_BUDGET=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=pake:error_budget_remaining_30d" | jq -r '.data.result[0].value[1]')
+
+                  # Generate report
+                  cat << EOF > /tmp/slo-report.md
+                  # SLO Compliance Report - Week Ending $(date +%Y-%m-%d)
+
+                  ## Summary
+                  - **API Availability**: $(echo "$API_AVAILABILITY * 100" | bc -l | cut -c1-6)%
+                  - **API P95 Latency**: $(echo "$API_LATENCY * 1000" | bc -l | cut -c1-6)ms
+                  - **Error Budget Remaining**: $(echo "$ERROR_BUDGET * 100" | bc -l | cut -c1-6)%
+
+                  ## SLO Status
+                  - ✅ API Availability SLO (99.9%): $(if (( $(echo "$API_AVAILABILITY >= 0.999" | bc -l) )); then echo "PASS"; else echo "FAIL"; fi)
+                  - ✅ API Latency SLO (500ms): $(if (( $(echo "$API_LATENCY <= 0.5" | bc -l) )); then echo "PASS"; else echo "FAIL"; fi)
+
+                  ## Recommendations
+                  $(if (( $(echo "$ERROR_BUDGET < 0.5" | bc -l) )); then echo "⚠️ Error budget is below 50%. Focus on reliability over features."; fi)
+                  $(if (( $(echo "$API_LATENCY > 0.4" | bc -l) )); then echo "⚠️ Latency approaching SLO threshold. Review performance optimizations."; fi)
+                  EOF
+
+                  echo "Report generated:"
+                  cat /tmp/slo-report.md
+
+                  # In production, this would send the report via email/Slack
+                  echo "SLO compliance report generated successfully"
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi

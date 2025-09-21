@@ -1,0 +1,671 @@
+# PAKE System - ML Services Kubernetes Deployment
+# Phase 9B: Advanced AI/ML Pipeline Integration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-services-config
+  namespace: pake-system
+data:
+  mlflow_tracking_uri: 'http://mlflow-service:5000'
+  mlflow_experiment_name: 'pake-production-ml'
+  kubernetes_namespace: 'pake-ml'
+  model_storage_path: '/models'
+  data_storage_path: '/data'
+  artifact_storage_path: '/artifacts'
+  feature_storage_path: '/features'
+  cache_storage_path: '/cache'
+  max_concurrent_jobs: '10'
+  max_concurrent_inferences: '100'
+  enable_caching: 'true'
+  enable_monitoring: 'true'
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-service
+  namespace: pake-system
+  labels:
+    app: mlflow
+spec:
+  selector:
+    app: mlflow
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-server
+  namespace: pake-system
+  labels:
+    app: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: mlflow/mlflow:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MLFLOW_BACKEND_STORE_URI
+              value: 'sqlite:///mlflow.db'
+            - name: MLFLOW_DEFAULT_ARTIFACT_ROOT
+              value: '/artifacts'
+          volumeMounts:
+            - name: mlflow-data
+              mountPath: /mlflow
+            - name: artifacts
+              mountPath: /artifacts
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: mlflow-data
+          persistentVolumeClaim:
+            claimName: mlflow-pvc
+        - name: artifacts
+          persistentVolumeClaim:
+            claimName: artifacts-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlflow-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: artifacts-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-serving-service
+  namespace: pake-system
+  labels:
+    app: model-serving
+spec:
+  selector:
+    app: model-serving
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+      name: http
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002
+      name: grpc
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-serving
+  namespace: pake-system
+  labels:
+    app: model-serving
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: model-serving
+  template:
+    metadata:
+      labels:
+        app: model-serving
+    spec:
+      containers:
+        - name: model-serving
+          image: pake-system/model-serving:latest
+          ports:
+            - containerPort: 8001
+              name: http
+            - containerPort: 8002
+              name: grpc
+          env:
+            - name: MODEL_SERVING_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: kubernetes_namespace
+            - name: MAX_CONCURRENT_INFERENCES
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: max_concurrent_inferences
+            - name: ENABLE_CACHING
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: enable_caching
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+            - name: cache-storage
+              mountPath: /cache
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+        - name: cache-storage
+          persistentVolumeClaim:
+            claimName: cache-storage-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-storage-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cache-storage-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: training-orchestrator-service
+  namespace: pake-system
+  labels:
+    app: training-orchestrator
+spec:
+  selector:
+    app: training-orchestrator
+  ports:
+    - protocol: TCP
+      port: 8003
+      targetPort: 8003
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: training-orchestrator
+  namespace: pake-system
+  labels:
+    app: training-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: training-orchestrator
+  template:
+    metadata:
+      labels:
+        app: training-orchestrator
+    spec:
+      containers:
+        - name: training-orchestrator
+          image: pake-system/training-orchestrator:latest
+          ports:
+            - containerPort: 8003
+          env:
+            - name: MLFLOW_TRACKING_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: mlflow_tracking_uri
+            - name: MLFLOW_EXPERIMENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: mlflow_experiment_name
+            - name: MAX_CONCURRENT_JOBS
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: max_concurrent_jobs
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+            - name: data-storage
+              mountPath: /data
+            - name: artifacts
+              mountPath: /artifacts
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1000m'
+            limits:
+              memory: '8Gi'
+              cpu: '4000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8003
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+        - name: data-storage
+          persistentVolumeClaim:
+            claimName: data-storage-pvc
+        - name: artifacts
+          persistentVolumeClaim:
+            claimName: artifacts-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-storage-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feature-engineering-service
+  namespace: pake-system
+  labels:
+    app: feature-engineering
+spec:
+  selector:
+    app: feature-engineering
+  ports:
+    - protocol: TCP
+      port: 8004
+      targetPort: 8004
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-engineering
+  namespace: pake-system
+  labels:
+    app: feature-engineering
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: feature-engineering
+  template:
+    metadata:
+      labels:
+        app: feature-engineering
+    spec:
+      containers:
+        - name: feature-engineering
+          image: pake-system/feature-engineering:latest
+          ports:
+            - containerPort: 8004
+          env:
+            - name: FEATURE_STORAGE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: feature_storage_path
+            - name: CACHE_STORAGE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: cache_storage_path
+          volumeMounts:
+            - name: feature-storage
+              mountPath: /features
+            - name: cache-storage
+              mountPath: /cache
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8004
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: feature-storage
+          persistentVolumeClaim:
+            claimName: feature-storage-pvc
+        - name: cache-storage
+          persistentVolumeClaim:
+            claimName: cache-storage-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: feature-storage-pvc
+  namespace: pake-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prediction-service
+  namespace: pake-system
+  labels:
+    app: prediction-service
+spec:
+  selector:
+    app: prediction-service
+  ports:
+    - protocol: TCP
+      port: 8005
+      targetPort: 8005
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prediction-service
+  namespace: pake-system
+  labels:
+    app: prediction-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: prediction-service
+  template:
+    metadata:
+      labels:
+        app: prediction-service
+    spec:
+      containers:
+        - name: prediction-service
+          image: pake-system/prediction-service:latest
+          ports:
+            - containerPort: 8005
+          env:
+            - name: MODEL_SERVING_SERVICE_URL
+              value: 'http://model-serving-service:8001'
+            - name: ENABLE_CACHING
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: enable_caching
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8005
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-monitoring-service
+  namespace: pake-system
+  labels:
+    app: ml-monitoring
+spec:
+  selector:
+    app: ml-monitoring
+  ports:
+    - protocol: TCP
+      port: 8006
+      targetPort: 8006
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-monitoring
+  namespace: pake-system
+  labels:
+    app: ml-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-monitoring
+  template:
+    metadata:
+      labels:
+        app: ml-monitoring
+    spec:
+      containers:
+        - name: ml-monitoring
+          image: pake-system/ml-monitoring:latest
+          ports:
+            - containerPort: 8006
+          env:
+            - name: ENABLE_MONITORING
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-services-config
+                  key: enable_monitoring
+            - name: MODEL_SERVING_SERVICE_URL
+              value: 'http://model-serving-service:8001'
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8006
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8006
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: model-serving-hpa
+  namespace: pake-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: model-serving
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: prediction-service-hpa
+  namespace: pake-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: prediction-service
+  minReplicas: 3
+  maxReplicas: 15
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: feature-engineering-hpa
+  namespace: pake-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: feature-engineering
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

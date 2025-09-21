@@ -1,0 +1,47 @@
+# PAKE System Infrastructure Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Basic Configuration
+aws_region   = "us-west-2"
+environment  = "dev"
+project_name = "pake-system"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+# EKS Configuration
+kubernetes_version = "1.28"
+node_instance_types = ["t3.medium", "t3.large"]
+node_min_size      = 2
+node_max_size      = 10
+node_desired_size  = 3
+node_disk_size     = 50
+
+# RDS Configuration
+postgres_version           = "15.4"
+rds_instance_class         = "db.t3.micro"
+rds_allocated_storage      = 20
+rds_max_allocated_storage  = 100
+database_name              = "pake_system"
+database_username          = "pake_admin"
+database_REDACTED_SECRET          = "your-secure-REDACTED_SECRET-here"
+backup_retention_period    = 7
+
+# Redis Configuration
+redis_node_type                = "cache.t3.micro"
+redis_num_cache_nodes          = 2
+redis_snapshot_retention_limit = 5
+
+# Cluster Access (add your IAM users here)
+cluster_admin_users = [
+  {
+    userarn  = "arn:aws:iam::123456789012:user/your-username"
+    username = "your-username"
+    groups   = ["system:masters"]
+  }
+]
+
+# Terraform State
+create_terraform_state_bucket = true

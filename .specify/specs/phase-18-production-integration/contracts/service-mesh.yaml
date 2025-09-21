@@ -1,0 +1,691 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-service-mesh-config
+  namespace: pake-system
+  labels:
+    app: pake-system
+    component: service-mesh
+    version: 18.0.0
+data:
+  mesh-config.yaml: |
+    # PAKE System Service Mesh Configuration
+    # Enterprise-grade service-to-service communication patterns
+
+    mesh:
+      name: pake-system-mesh
+      version: 18.0.0
+      mode: production
+
+    # Service Discovery Configuration
+    discovery:
+      method: kubernetes
+      namespace: pake-system
+      service_port: 15010
+      health_check_interval: 30s
+      service_timeout: 10s
+
+    # Security Configuration
+    security:
+      mtls:
+        enabled: true
+        mode: STRICT
+        cert_rotation_interval: 24h
+        root_ca_ttl: 8760h  # 1 year
+        workload_cert_ttl: 24h
+
+      authorization:
+        enabled: true
+        default_policy: DENY
+        rules_source: kubernetes
+
+      encryption:
+        transit: true
+        at_rest: false  # Handled by storage layer
+
+    # Traffic Management
+    traffic:
+      load_balancing:
+        algorithm: ROUND_ROBIN
+        health_checks:
+          enabled: true
+          interval: 10s
+          timeout: 3s
+          healthy_threshold: 2
+          unhealthy_threshold: 3
+
+      circuit_breaker:
+        enabled: true
+        max_requests: 100
+        interval: 30s
+        timeout: 60s
+        failure_threshold: 5
+
+      retry_policy:
+        attempts: 3
+        per_try_timeout: 5s
+        retry_on: 5xx,gateway-error,connect-failure,refused-stream
+
+      timeout:
+        request: 30s
+        idle: 300s
+
+    # Observability Configuration
+    observability:
+      tracing:
+        enabled: true
+        provider: jaeger
+        sampling_rate: 0.1  # 10% sampling for production
+        max_path_length: 256
+
+      metrics:
+        enabled: true
+        provider: prometheus
+        port: 15020
+        path: /metrics
+        scrape_interval: 15s
+
+      logging:
+        level: INFO
+        format: JSON
+        access_logs: true
+
+    # Rate Limiting
+    rate_limiting:
+      enabled: true
+      global_rate_limit: 10000  # requests per minute
+      per_service_limits:
+        ingestion-orchestrator: 1000
+        semantic-search: 500
+        content-analysis: 300
+        trend-analysis: 200
+        user-management: 100
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: pake-external-services
+  namespace: pake-system
+spec:
+  hosts:
+  - api.firecrawl.dev
+  - export.arxiv.org
+  - eutils.ncbi.nlm.nih.gov
+  - api.github.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  - number: 80
+    name: http
+    protocol: HTTP
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: pake-api-gateway
+  namespace: pake-system
+spec:
+  hosts:
+  - api.pake-system.com
+  - pake-api-gateway.pake-system.svc.cluster.local
+  gateways:
+  - pake-gateway
+  http:
+  # Health and Status Routes
+  - match:
+    - uri:
+        prefix: /v1/health
+    route:
+    - destination:
+        host: pake-api-gateway.pake-system.svc.cluster.local
+        port:
+          number: 8000
+    timeout: 5s
+
+  - match:
+    - uri:
+        prefix: /v1/status
+    route:
+    - destination:
+        host: pake-api-gateway.pake-system.svc.cluster.local
+        port:
+          number: 8000
+    timeout: 10s
+
+  # Research and Knowledge Routes
+  - match:
+    - uri:
+        prefix: /v1/research
+    route:
+    - destination:
+        host: ingestion-orchestrator.pake-system.svc.cluster.local
+        port:
+          number: 8001
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+
+  - match:
+    - uri:
+        prefix: /v1/search
+    route:
+    - destination:
+        host: semantic-search.pake-system.svc.cluster.local
+        port:
+          number: 8002
+    timeout: 15s
+
+  - match:
+    - uri:
+        prefix: /v1/analyze
+    route:
+    - destination:
+        host: content-analysis.pake-system.svc.cluster.local
+        port:
+          number: 8003
+    timeout: 20s
+
+  # Trend Analysis Routes
+  - match:
+    - uri:
+        prefix: /v1/trends
+    route:
+    - destination:
+        host: trend-analysis.pake-system.svc.cluster.local
+        port:
+          number: 8004
+    timeout: 25s
+
+  # Authentication Routes
+  - match:
+    - uri:
+        prefix: /v1/auth
+    route:
+    - destination:
+        host: user-management.pake-system.svc.cluster.local
+        port:
+          number: 8005
+    timeout: 10s
+
+  # User Management Routes
+  - match:
+    - uri:
+        prefix: /v1/users
+    route:
+    - destination:
+        host: user-management.pake-system.svc.cluster.local
+        port:
+          number: 8005
+    timeout: 15s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: pake-services
+  namespace: pake-system
+spec:
+  host: "*.pake-system.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+        idleTimeout: 60s
+    circuitBreaker:
+      consecutiveGatewayErrors: 5
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 50
+  portLevelSettings:
+  - port:
+      number: 8000
+    connectionPool:
+      tcp:
+        maxConnections: 200  # Higher for API Gateway
+  - port:
+      number: 8001
+    connectionPool:
+      tcp:
+        maxConnections: 150  # Higher for research orchestrator
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: pake-mtls-policy
+  namespace: pake-system
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: pake-service-access
+  namespace: pake-system
+spec:
+  selector:
+    matchLabels:
+      app: pake-system
+  rules:
+  # API Gateway can access all services
+  - from:
+    - source:
+        principals: ["cluster.local/ns/pake-system/sa/pake-api-gateway"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+
+  # Research Orchestrator access patterns
+  - from:
+    - source:
+        principals: ["cluster.local/ns/pake-system/sa/ingestion-orchestrator"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/v1/*"]
+    when:
+    - key: source.labels[app]
+      values: ["pake-system"]
+
+  # Content Analysis service access
+  - from:
+    - source:
+        principals: ["cluster.local/ns/pake-system/sa/content-analysis"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/v1/nlp/*", "/api/v1/ml/*"]
+
+  # Monitoring access (Prometheus)
+  - from:
+    - source:
+        namespaces: ["monitoring"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/health"]
+
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: pake-control-plane
+  namespace: istio-system
+spec:
+  values:
+    global:
+      meshID: pake-mesh
+      multiCluster:
+        clusterName: pake-production
+      network: pake-network
+    pilot:
+      env:
+        EXTERNAL_ISTIOD: false
+        PILOT_SKIP_VALIDATE_CLUSTER: false
+        PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION: true
+
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        hpaSpec:
+          maxReplicas: 5
+          minReplicas: 2
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: istiod
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 80
+
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        service:
+          type: LoadBalancer
+          ports:
+          - port: 80
+            targetPort: 8080
+            name: http2
+          - port: 443
+            targetPort: 8443
+            name: https
+          - port: 15021
+            targetPort: 15021
+            name: status-port
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        hpaSpec:
+          maxReplicas: 10
+          minReplicas: 3
+
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: pake-gateway
+  namespace: pake-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - api.pake-system.com
+    - "*.pake-system.com"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: pake-tls-cert
+    hosts:
+    - api.pake-system.com
+    - "*.pake-system.com"
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: EnvoyFilter
+metadata:
+  name: pake-rate-limiting
+  namespace: pake-system
+spec:
+  workloadSelector:
+    labels:
+      app: pake-api-gateway
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.local_ratelimit
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          value:
+            stat_prefix: pake_rate_limiter
+            token_bucket:
+              max_tokens: 1000
+              tokens_per_fill: 100
+              fill_interval: 60s
+            filter_enabled:
+              runtime_key: rate_limit_enabled
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            filter_enforced:
+              runtime_key: rate_limit_enforced
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            response_headers_to_add:
+            - append: false
+              header:
+                key: x-rate-limit-remaining
+                value: "%DYNAMIC_METADATA(envoy.filters.http.local_ratelimit:tokens_remaining)%"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-service-registry
+  namespace: pake-system
+  labels:
+    app: pake-system
+    component: service-registry
+data:
+  services.yaml: |
+    # PAKE System Service Registry
+    # Centralized service configuration and discovery
+
+    services:
+      api-gateway:
+        name: pake-api-gateway
+        port: 8000
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: []
+        scaling:
+          min_replicas: 3
+          max_replicas: 10
+          target_cpu: 70
+          target_memory: 80
+
+      ingestion-orchestrator:
+        name: ingestion-orchestrator
+        port: 8001
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: [semantic-search, content-analysis, cache-service]
+        scaling:
+          min_replicas: 2
+          max_replicas: 8
+          target_cpu: 75
+
+      semantic-search:
+        name: semantic-search
+        port: 8002
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: [database-service, cache-service]
+        scaling:
+          min_replicas: 2
+          max_replicas: 6
+          target_cpu: 80
+
+      content-analysis:
+        name: content-analysis
+        port: 8003
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: [ml-service, cache-service]
+        scaling:
+          min_replicas: 2
+          max_replicas: 5
+          target_cpu: 85
+
+      trend-analysis:
+        name: trend-analysis
+        port: 8004
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: [external-apis, cache-service]
+        scaling:
+          min_replicas: 1
+          max_replicas: 4
+          target_cpu: 70
+
+      user-management:
+        name: user-management
+        port: 8005
+        health_endpoint: /health
+        metrics_endpoint: /metrics
+        dependencies: [database-service, auth-service]
+        scaling:
+          min_replicas: 2
+          max_replicas: 4
+          target_cpu: 60
+
+      database-service:
+        name: database-service
+        port: 5432
+        health_endpoint: /health
+        dependencies: []
+        scaling:
+          min_replicas: 3  # Primary + 2 replicas
+          max_replicas: 5
+
+      cache-service:
+        name: cache-service
+        port: 6379
+        health_endpoint: /health
+        dependencies: []
+        scaling:
+          min_replicas: 3  # Redis cluster
+          max_replicas: 6
+
+    external_dependencies:
+      firecrawl:
+        host: api.firecrawl.dev
+        port: 443
+        protocol: https
+        rate_limit: 100  # requests per minute
+        timeout: 30s
+        retry_attempts: 3
+
+      arxiv:
+        host: export.arxiv.org
+        port: 443
+        protocol: https
+        rate_limit: 300  # requests per minute
+        timeout: 20s
+        retry_attempts: 2
+
+      pubmed:
+        host: eutils.ncbi.nlm.nih.gov
+        port: 443
+        protocol: https
+        rate_limit: 180  # requests per minute
+        timeout: 15s
+        retry_attempts: 2
+
+      github:
+        host: api.github.com
+        port: 443
+        protocol: https
+        rate_limit: 5000  # requests per hour
+        timeout: 10s
+        retry_attempts: 1
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-mesh-metrics
+  namespace: pake-system
+data:
+  metrics-config.yaml: |
+    # Service Mesh Metrics Configuration
+    # Prometheus metrics for observability
+
+    metrics:
+      request_metrics:
+        - name: pake_requests_total
+          type: counter
+          description: Total number of requests
+          labels: [source_service, destination_service, method, status_code]
+
+        - name: pake_request_duration_seconds
+          type: histogram
+          description: Request duration in seconds
+          labels: [source_service, destination_service, method]
+          buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+
+        - name: pake_request_size_bytes
+          type: histogram
+          description: Request size in bytes
+          labels: [source_service, destination_service, method]
+          buckets: [1, 10, 100, 1000, 10000, 100000, 1000000]
+
+        - name: pake_response_size_bytes
+          type: histogram
+          description: Response size in bytes
+          labels: [source_service, destination_service, method]
+          buckets: [1, 10, 100, 1000, 10000, 100000, 1000000]
+
+      connection_metrics:
+        - name: pake_tcp_connections_opened_total
+          type: counter
+          description: Total TCP connections opened
+          labels: [source_service, destination_service]
+
+        - name: pake_tcp_connections_closed_total
+          type: counter
+          description: Total TCP connections closed
+          labels: [source_service, destination_service]
+
+      error_metrics:
+        - name: pake_circuit_breaker_state
+          type: gauge
+          description: Circuit breaker state (0=closed, 1=open, 2=half-open)
+          labels: [source_service, destination_service]
+
+        - name: pake_retry_attempts_total
+          type: counter
+          description: Total retry attempts
+          labels: [source_service, destination_service, retry_reason]
+
+      security_metrics:
+        - name: pake_mtls_connections_total
+          type: counter
+          description: Total mTLS connections
+          labels: [source_service, destination_service, mtls_status]
+
+        - name: pake_authorization_decisions_total
+          type: counter
+          description: Authorization decisions
+          labels: [source_service, destination_service, decision]

@@ -1,0 +1,319 @@
+# Deployment Automation Scripts and Policies
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-scripts
+  namespace: pake-system
+  labels:
+    app: deployment-automation
+data:
+  promote-canary.sh: |
+    #!/bin/bash
+    set -e
+
+    ROLLOUT_NAME=${1:-pake-api-canary}
+    NAMESPACE=${2:-pake-system}
+
+    echo "Promoting canary deployment: $ROLLOUT_NAME in namespace: $NAMESPACE"
+
+    # Check rollout status
+    STATUS=$(kubectl argo rollouts get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.status.phase')
+
+    if [ "$STATUS" != "Paused" ]; then
+      echo "Rollout is not in paused state. Current status: $STATUS"
+      exit 1
+    fi
+
+    # Get analysis status
+    ANALYSIS_STATUS=$(kubectl argo rollouts get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.status.canary.currentAnalysis.phase // "N/A"')
+
+    if [ "$ANALYSIS_STATUS" = "Successful" ] || [ "$ANALYSIS_STATUS" = "N/A" ]; then
+      echo "Analysis successful or not required. Promoting canary..."
+      kubectl argo rollouts promote $ROLLOUT_NAME -n $NAMESPACE
+      echo "Canary promoted successfully!"
+    else
+      echo "Analysis not successful. Status: $ANALYSIS_STATUS"
+      exit 1
+    fi
+
+  abort-rollout.sh: |
+    #!/bin/bash
+    set -e
+
+    ROLLOUT_NAME=${1:-pake-api-canary}
+    NAMESPACE=${2:-pake-system}
+
+    echo "Aborting rollout: $ROLLOUT_NAME in namespace: $NAMESPACE"
+
+    kubectl argo rollouts abort $ROLLOUT_NAME -n $NAMESPACE
+    echo "Rollout aborted. Rolling back to stable version..."
+
+    kubectl argo rollouts undo $ROLLOUT_NAME -n $NAMESPACE
+    echo "Rollback completed successfully!"
+
+  blue-green-switch.sh: |
+    #!/bin/bash
+    set -e
+
+    ROLLOUT_NAME=${1:-pake-ai-blue-green}
+    NAMESPACE=${2:-pake-system}
+
+    echo "Switching blue-green deployment: $ROLLOUT_NAME in namespace: $NAMESPACE"
+
+    # Check if preview is ready
+    PREVIEW_READY=$(kubectl argo rollouts get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.status.blueGreen.previewSelector // "none"')
+
+    if [ "$PREVIEW_READY" = "none" ]; then
+      echo "Preview environment not ready"
+      exit 1
+    fi
+
+    # Run pre-promotion analysis
+    echo "Running pre-promotion analysis..."
+    kubectl argo rollouts promote $ROLLOUT_NAME -n $NAMESPACE --skip-current-step
+
+    # Wait for analysis to complete
+    kubectl argo rollouts wait $ROLLOUT_NAME -n $NAMESPACE --timeout=600s
+
+    echo "Blue-green switch completed successfully!"
+
+  check-deployment-health.sh: |
+    #!/bin/bash
+    set -e
+
+    ROLLOUT_NAME=$1
+    NAMESPACE=$2
+    TIMEOUT=${3:-300}
+
+    echo "Checking deployment health for: $ROLLOUT_NAME"
+
+    # Wait for rollout to be healthy
+    kubectl argo rollouts wait $ROLLOUT_NAME -n $NAMESPACE --timeout=${TIMEOUT}s
+
+    # Check pod readiness
+    READY_REPLICAS=$(kubectl get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.status.readyReplicas // 0')
+    DESIRED_REPLICAS=$(kubectl get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.spec.replicas')
+
+    if [ "$READY_REPLICAS" -eq "$DESIRED_REPLICAS" ]; then
+      echo "All replicas are ready: $READY_REPLICAS/$DESIRED_REPLICAS"
+    else
+      echo "Not all replicas are ready: $READY_REPLICAS/$DESIRED_REPLICAS"
+      exit 1
+    fi
+
+    # Check service endpoints
+    SERVICE_NAME=$(kubectl get rollout $ROLLOUT_NAME -n $NAMESPACE -o json | jq -r '.spec.strategy.canary.trafficRouting.nginx.stableIngress // .spec.strategy.blueGreen.activeService')
+
+    if [ "$SERVICE_NAME" != "null" ]; then
+      ENDPOINTS=$(kubectl get endpoints $SERVICE_NAME -n $NAMESPACE -o json | jq -r '.subsets[0].addresses | length')
+      if [ "$ENDPOINTS" -gt 0 ]; then
+        echo "Service endpoints are healthy: $ENDPOINTS endpoints"
+      else
+        echo "No healthy service endpoints found"
+        exit 1
+      fi
+    fi
+
+    echo "Deployment health check passed!"
+
+---
+# Deployment Notification ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-notifications
+  namespace: pake-system
+data:
+  notification-template.json: |
+    {
+      "text": "🚀 PAKE System Deployment Update",
+      "attachments": [
+        {
+          "color": "{{.Color}}",
+          "title": "{{.Title}}",
+          "fields": [
+            {
+              "title": "Service",
+              "value": "{{.Service}}",
+              "short": true
+            },
+            {
+              "title": "Environment",
+              "value": "{{.Environment}}",
+              "short": true
+            },
+            {
+              "title": "Strategy",
+              "value": "{{.Strategy}}",
+              "short": true
+            },
+            {
+              "title": "Status",
+              "value": "{{.Status}}",
+              "short": true
+            },
+            {
+              "title": "Version",
+              "value": "{{.Version}}",
+              "short": false
+            },
+            {
+              "title": "Timestamp",
+              "value": "{{.Timestamp}}",
+              "short": false
+            }
+          ]
+        }
+      ]
+    }
+
+---
+# Deployment Policy for Automated Promotions
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-policy
+  namespace: pake-system
+data:
+  policy.yaml: |
+    # Deployment automation policies
+    policies:
+      canary:
+        auto_promotion:
+          enabled: true
+          success_rate_threshold: 0.95
+          latency_threshold: 500  # milliseconds
+          error_rate_threshold: 0.05
+          analysis_duration: 300  # seconds
+          
+        failure_policy:
+          auto_rollback: true
+          notification_channels: ["slack", "email"]
+          escalation_timeout: 600  # seconds
+          
+      blue_green:
+        auto_promotion:
+          enabled: false  # Manual approval required
+          analysis_duration: 180  # seconds
+          
+        failure_policy:
+          auto_rollback: true
+          keep_previous_version: true
+          notification_channels: ["slack", "email", "pagerduty"]
+          
+      approval_gates:
+        production:
+          required_approvers: 2
+          approver_groups: ["devops", "sre"]
+          timeout: 3600  # 1 hour
+          
+        staging:
+          required_approvers: 1
+          approver_groups: ["developers", "devops"]
+          timeout: 1800  # 30 minutes
+
+---
+# RBAC for Deployment Automation
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployment-automation
+  namespace: pake-system
+  labels:
+    app: deployment-automation
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-automation
+  namespace: pake-system
+rules:
+  - apiGroups: ['argoproj.io']
+    resources: ['rollouts', 'rollouts/status']
+    verbs: ['get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['']
+    resources: ['services', 'endpoints', 'configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['create', 'patch']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'replicasets']
+    verbs: ['get', 'list', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployment-automation
+  namespace: pake-system
+subjects:
+  - kind: ServiceAccount
+    name: deployment-automation
+    namespace: pake-system
+roleRef:
+  kind: Role
+  name: deployment-automation
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Deployment Webhook for Notifications
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: deployment-health-monitor
+  namespace: pake-system
+  labels:
+    app: deployment-monitor
+spec:
+  schedule: '*/5 * * * *' # Every 5 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: deployment-monitor
+        spec:
+          serviceAccountName: deployment-automation
+          restartPolicy: OnFailure
+          containers:
+            - name: monitor
+              image: argoproj/kubectl-argo-rollouts:v1.6.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Monitoring deployment health..."
+
+                  # Check all rollouts in namespace
+                  kubectl argo rollouts list -n pake-system --output json | jq -r '.[] | select(.status.phase == "Degraded" or .status.phase == "Error") | .metadata.name' | while read rollout; do
+                    if [ -n "$rollout" ]; then
+                      echo "Unhealthy rollout detected: $rollout"
+                      
+                      # Send notification (placeholder)
+                      curl -X POST -H 'Content-type: application/json' \
+                        --data "{\"text\":\"⚠️ PAKE Deployment Issue: Rollout $rollout is in unhealthy state\"}" \
+                        ${SLACK_WEBHOOK_URL}
+                    fi
+                  done
+
+                  echo "Health monitoring completed"
+              env:
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: deployment-secrets
+                      key: slack-webhook-url
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi

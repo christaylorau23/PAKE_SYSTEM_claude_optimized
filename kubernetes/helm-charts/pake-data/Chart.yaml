@@ -1,0 +1,39 @@
+apiVersion: v2
+name: pake-data
+description: PAKE Data Services Helm Chart - PostgreSQL, Redis, ChromaDB, and Elasticsearch clusters
+type: application
+version: 0.1.0
+appVersion: '1.0.0'
+keywords:
+  - pake
+  - database
+  - postgresql
+  - redis
+  - chromadb
+  - elasticsearch
+  - vector-database
+home: https://github.com/pake-system/kubernetes-infrastructure
+sources:
+  - https://github.com/pake-system/pake-data
+maintainers:
+  - name: PAKE Team
+    email: infrastructure@pake-system.com
+dependencies:
+  - name: common
+    version: 0.1.0
+    repository: 'file://../common'
+  - name: postgresql
+    version: 12.1.9
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.3.7
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: elasticsearch
+    version: 7.17.3
+    repository: https://helm.elastic.co
+    condition: elasticsearch.enabled
+annotations:
+  category: Database
+  licenses: MIT

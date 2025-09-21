@@ -1,0 +1,503 @@
+# RTO/RPO Alerting Rules for PAKE System
+# Service Level Objective monitoring and alerting for disaster recovery performance
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rto-rpo-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alerting-rules
+    prometheus: kube-prometheus
+    role: alert-rules
+    slo-type: disaster-recovery
+spec:
+  groups:
+    - name: rto-slo.rules
+      interval: 30s
+      rules:
+        # RTO (Recovery Time Objective) Alerts
+        - alert: RTOThresholdExceeded
+          expr: failover_duration_seconds > 900
+          for: 1m
+          labels:
+            severity: critical
+            component: disaster-recovery
+            category: slo
+            slo_type: rto
+            runbook_url: 'https://runbooks.pake-system.com/rto-threshold-exceeded'
+          annotations:
+            summary: 'RTO threshold exceeded during failover'
+            description: |
+              Failover operation took {{ $value | humanizeDuration }} which exceeds the 15-minute RTO target.
+
+              **Details:**
+              - Event ID: {{ $labels.event_id }}
+              - Service: {{ $labels.service }}
+              - Target RTO: 15 minutes (900 seconds)
+              - Actual RTO: {{ $value | humanizeDuration }}
+              - Exceeded by: {{ with query "failover_duration_seconds - 900" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Impact:** Service level objective breach - customer SLA may be affected
+
+              **Immediate Actions:**
+              1. Review failover logs: `kubectl logs -n disaster-recovery -l app=failover-controller --tail=200`
+              2. Identify bottleneck steps in failover process
+              3. Check if infrastructure resources were adequate
+              4. Update incident communication to stakeholders
+
+              **Investigation:**
+              - Check DNS propagation times
+              - Review database promotion duration
+              - Verify secondary region readiness
+              - Analyze network connectivity issues
+
+        - alert: RTOBudgetBurn
+          expr: |
+            (
+              increase(failover_duration_seconds[7d]) / 7
+            ) > 900
+          for: 5m
+          labels:
+            severity: warning
+            component: disaster-recovery
+            category: slo
+            slo_type: rto
+          annotations:
+            summary: 'RTO budget burning too fast'
+            description: |
+              Average RTO over the last 7 days is {{ $value | humanizeDuration }}, which exceeds the 15-minute target.
+
+              **Trend Analysis:**
+              - 7-day average RTO: {{ $value | humanizeDuration }}
+              - Target RTO: 15 minutes
+              - Budget utilization: {{ with query "increase(failover_duration_seconds[7d]) / 7 / 900 * 100" }}{{ . | first | value | printf "%.1f" }}%{{ end }}
+
+              **Actions:**
+              1. Review recent failover operations for patterns
+              2. Identify recurring bottlenecks
+              3. Plan infrastructure optimizations
+              4. Consider revising RTO targets if consistently unachievable
+
+        - alert: ServiceRTOViolation
+          expr: service_failover_rto_achievement == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: service-failover
+            category: slo
+            slo_type: rto
+          annotations:
+            summary: 'Service-specific RTO violation'
+            description: |
+              Service {{ $labels.service }} failed to meet its RTO target during failover.
+
+              **Service Details:**
+              - Service: {{ $labels.service }}
+              - Target RTO: {{ with query "service_rto_target_seconds" }}{{ . | first | value | humanizeDuration }}{{ end }}
+              - Actual RTO: {{ with query "service_failover_duration_seconds" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Actions:**
+              1. Review service-specific failover logs
+              2. Check service scaling and readiness
+              3. Verify health check responsiveness
+              4. Assess load balancer configuration
+
+        # RPO (Recovery Point Objective) Alerts
+        - alert: RPOThresholdExceeded
+          expr: data_loss_seconds > 300
+          for: 1m
+          labels:
+            severity: critical
+            component: disaster-recovery
+            category: slo
+            slo_type: rpo
+            runbook_url: 'https://runbooks.pake-system.com/rpo-threshold-exceeded'
+          annotations:
+            summary: 'RPO threshold exceeded - data loss detected'
+            description: |
+              Data loss of {{ $value | humanizeDuration }} detected, exceeding the 5-minute RPO target.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Target RPO: 5 minutes (300 seconds)
+              - Actual RPO: {{ $value | humanizeDuration }}
+              - Data loss: {{ with query "data_loss_seconds - 300" }}{{ . | first | value | humanizeDuration }}{{ end }} beyond target
+
+              **CRITICAL IMPACT:** Customer data may be lost - immediate investigation required
+
+              **Immediate Actions:**
+              1. **STOP** any ongoing operations that might cause additional data loss
+              2. Assess scope of data loss: `kubectl exec -it pake-postgresql-replica-0 -n database -- psql -c "SELECT now() - pg_last_xact_replay_timestamp();"`
+              3. Check backup integrity and currency
+              4. Notify customers if data loss confirmed
+              5. Initiate data recovery procedures if possible
+
+              **Investigation:**
+              - Check replication lag before failover
+              - Review backup timestamps
+              - Verify transaction log integrity
+              - Assess network connectivity during incident
+
+        - alert: ReplicationLagHigh
+          expr: replication_lag_seconds > 300
+          for: 5m
+          labels:
+            severity: warning
+            component: replication
+            category: slo
+            slo_type: rpo
+            runbook_url: 'https://runbooks.pake-system.com/replication-lag-high'
+          annotations:
+            summary: 'High replication lag may impact RPO'
+            description: |
+              Database replication lag of {{ $value | humanizeDuration }} may cause RPO violation during failover.
+
+              **Details:**
+              - Database: {{ $labels.database }}
+              - Replica: {{ $labels.replica }}
+              - Current lag: {{ $value | humanizeDuration }}
+              - RPO target: 5 minutes
+              - Risk level: {{ if gt $value 600 }}HIGH{{ else if gt $value 450 }}MEDIUM{{ else }}LOW{{ end }}
+
+              **Potential Impact:** If failover occurs now, RPO target may be missed
+
+              **Actions:**
+              1. Monitor replication status: `kubectl exec -it pake-postgresql-primary-0 -n database -- psql -c "SELECT * FROM pg_stat_replication;"`
+              2. Check network connectivity between primary and replica
+              3. Verify replica resource availability (CPU, memory, disk I/O)
+              4. Consider throttling application write load if lag continues to grow
+              5. Review WAL shipping and replay performance
+
+        - alert: ReplicationLagCritical
+          expr: replication_lag_seconds > 600
+          for: 2m
+          labels:
+            severity: critical
+            component: replication
+            category: slo
+            slo_type: rpo
+          annotations:
+            summary: 'Critical replication lag - RPO at risk'
+            description: |
+              Database replication lag of {{ $value | humanizeDuration }} critically threatens RPO objectives.
+
+              **CRITICAL RISK:** Current lag exceeds 10 minutes - RPO violation likely if failover occurs
+
+              **Immediate Actions:**
+              1. **ALERT** on-call DBA immediately
+              2. Investigate replica performance and connectivity
+              3. Consider emergency measures to reduce lag
+              4. Prepare for potential manual intervention
+              5. Document incident for post-mortem analysis
+
+        # Backup RPO Monitoring
+        - alert: BackupRPOViolation
+          expr: backup_age_hours * 3600 > 300
+          for: 10m
+          labels:
+            severity: warning
+            component: backup
+            category: slo
+            slo_type: rpo
+          annotations:
+            summary: 'Backup age exceeds RPO target'
+            description: |
+              Latest backup for {{ $labels.backup_type }} is {{ $value | humanizeDuration }} old, exceeding RPO target.
+
+              **Details:**
+              - Backup type: {{ $labels.backup_type }}
+              - Backup age: {{ $value | humanizeDuration }}
+              - RPO target: 5 minutes for critical data
+
+              **Actions:**
+              1. Check backup job status and logs
+              2. Verify backup storage connectivity
+              3. Ensure backup processes are running
+              4. Consider manual backup if automated process failed
+
+        # SLO Performance Tracking
+        - alert: RTOSLABreach
+          expr: |
+            (
+              rate(failover_duration_seconds[30d]) > 900
+            ) and (
+              increase(failover_events_total[30d]) > 0
+            )
+          for: 15m
+          labels:
+            severity: warning
+            component: disaster-recovery
+            category: sla
+            slo_type: rto
+          annotations:
+            summary: 'Monthly RTO SLA may be breached'
+            description: |
+              Average RTO over the last 30 days exceeds target, risking SLA breach.
+
+              **SLA Status:**
+              - 30-day average RTO: {{ with query "rate(failover_duration_seconds[30d])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+              - Target: 15 minutes
+              - Failover events this month: {{ with query "increase(failover_events_total[30d])" }}{{ . | first | value }}{{ end }}
+
+              **Actions:**
+              1. Review all failover events from the last 30 days
+              2. Identify systemic performance issues
+              3. Plan capacity and process improvements
+              4. Update customer communication if SLA breach confirmed
+
+        - alert: RPOSLABreach
+          expr: |
+            (
+              rate(data_loss_seconds[30d]) > 300
+            ) and (
+              increase(failover_events_total[30d]) > 0
+            )
+          for: 15m
+          labels:
+            severity: critical
+            component: disaster-recovery
+            category: sla
+            slo_type: rpo
+          annotations:
+            summary: 'Monthly RPO SLA breached'
+            description: |
+              Average RPO over the last 30 days exceeds target - SLA breach confirmed.
+
+              **SLA STATUS: BREACHED**
+              - 30-day average RPO: {{ with query "rate(data_loss_seconds[30d])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+              - Target: 5 minutes
+              - Incidents with data loss: {{ with query "increase(data_loss_incidents_total[30d])" }}{{ . | first | value }}{{ end }}
+
+              **IMMEDIATE ACTIONS:**
+              1. **ESCALATE** to executive team
+              2. Prepare customer notification and credits
+              3. Conduct emergency review of DR processes
+              4. Implement immediate corrective measures
+              5. Schedule customer communication
+
+        # Availability and Uptime SLOs
+        - alert: SystemAvailabilitySLOBreach
+          expr: |
+            (
+              avg_over_time(up{job="pake-api"}[30d]) < 0.999
+            )
+          for: 1h
+          labels:
+            severity: warning
+            component: availability
+            category: sla
+            slo_type: availability
+          annotations:
+            summary: 'System availability SLO at risk'
+            description: |
+              30-day availability is {{ with query "avg_over_time(up{job=\"pake-api\"}[30d]) * 100" }}{{ . | first | value | printf "%.3f" }}%{{ end }}, below 99.9% target.
+
+              **Availability Analysis:**
+              - Current 30-day uptime: {{ with query "avg_over_time(up{job=\"pake-api\"}[30d]) * 100" }}{{ . | first | value | printf "%.3f" }}%{{ end }}
+              - Target: 99.9%
+              - Downtime budget remaining: {{ with query "(0.999 - avg_over_time(up{job=\"pake-api\"}[30d])) / 0.001 * 100" }}{{ . | first | value | printf "%.1f" }}%{{ end }}
+
+              **Actions:**
+              1. Review incident frequency and duration
+              2. Assess if additional DR improvements needed
+              3. Consider operational changes to reduce outages
+
+        # Failover Success Rate
+        - alert: FailoverSuccessRateLow
+          expr: |
+            (
+              rate(failover_success_total[7d]) / rate(failover_attempts_total[7d]) * 100 < 95
+            ) and (
+              increase(failover_attempts_total[7d]) > 0
+            )
+          for: 10m
+          labels:
+            severity: warning
+            component: disaster-recovery
+            category: reliability
+            slo_type: success_rate
+          annotations:
+            summary: 'Failover success rate below target'
+            description: |
+              Failover success rate over the last 7 days is {{ with query "rate(failover_success_total[7d]) / rate(failover_attempts_total[7d]) * 100" }}{{ . | first | value | printf "%.1f" }}%{{ end }}, below 95% target.
+
+              **Reliability Analysis:**
+              - 7-day success rate: {{ with query "rate(failover_success_total[7d]) / rate(failover_attempts_total[7d]) * 100" }}{{ . | first | value | printf "%.1f" }}%{{ end }}
+              - Target: 95%
+              - Failed attempts: {{ with query "increase(failover_attempts_total[7d]) - increase(failover_success_total[7d])" }}{{ . | first | value }}{{ end }}
+
+              **Actions:**
+              1. Review failed failover attempts
+              2. Identify common failure patterns
+              3. Improve failover reliability through testing
+              4. Update failover procedures based on learnings
+
+        # MTTR (Mean Time To Recovery) Monitoring
+        - alert: MTTRIncreasing
+          expr: |
+            (
+              rate(incident_resolution_duration_seconds[7d]) > 
+              rate(incident_resolution_duration_seconds[14d] offset 7d)
+            )
+          for: 30m
+          labels:
+            severity: warning
+            component: incident-response
+            category: slo
+            slo_type: mttr
+          annotations:
+            summary: 'Mean Time To Recovery is increasing'
+            description: |
+              MTTR has increased compared to the previous week, indicating degraded incident response.
+
+              **MTTR Trend:**
+              - Current week average: {{ with query "rate(incident_resolution_duration_seconds[7d])" }}{{ . | first | value | humanizeDuration }}{{ end }}
+              - Previous week average: {{ with query "rate(incident_resolution_duration_seconds[14d] offset 7d)" }}{{ . | first | value | humanizeDuration }}{{ end }}
+              - Change: {{ with query "rate(incident_resolution_duration_seconds[7d]) - rate(incident_resolution_duration_seconds[14d] offset 7d)" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Actions:**
+              1. Review recent incident response times
+              2. Identify bottlenecks in resolution process
+              3. Assess team training and tool effectiveness
+              4. Update incident response procedures if needed
+
+        # Data Consistency SLOs
+        - alert: DataConsistencyLag
+          expr: vector_export_lag_hours > 6
+          for: 15m
+          labels:
+            severity: warning
+            component: data-consistency
+            category: slo
+            slo_type: consistency
+          annotations:
+            summary: 'Vector database export lag exceeds target'
+            description: |
+              Vector database export is {{ $value }} hours behind, exceeding 6-hour target.
+
+              **Details:**
+              - Current lag: {{ $value }} hours
+              - Target: 6 hours maximum
+              - Service: {{ $labels.service }}
+
+              **Actions:**
+              1. Check vector export job status
+              2. Verify ChromaDB connectivity and performance
+              3. Review S3 upload process and bandwidth
+              4. Consider manual export if automated process stuck
+
+---
+# Recording Rules for SLO Calculations
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rto-rpo-recording-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: recording-rules
+    prometheus: kube-prometheus
+    role: recording-rules
+spec:
+  groups:
+    - name: slo_recording.rules
+      interval: 30s
+      rules:
+        # RTO Recording Rules
+        - record: slo:rto_achievement_rate
+          expr: |
+            (
+              increase(failover_rto_success_total[30d]) / 
+              increase(failover_attempts_total[30d])
+            )
+          labels:
+            slo: 'rto'
+            period: '30d'
+
+        - record: slo:rto_p95_monthly
+          expr: histogram_quantile(0.95, rate(failover_duration_seconds_bucket[30d]))
+          labels:
+            slo: 'rto'
+            percentile: '95'
+            period: '30d'
+
+        - record: slo:rto_p99_monthly
+          expr: histogram_quantile(0.99, rate(failover_duration_seconds_bucket[30d]))
+          labels:
+            slo: 'rto'
+            percentile: '99'
+            period: '30d'
+
+        # RPO Recording Rules
+        - record: slo:rpo_achievement_rate
+          expr: |
+            (
+              increase(failover_rpo_success_total[30d]) / 
+              increase(failover_attempts_total[30d])
+            )
+          labels:
+            slo: 'rpo'
+            period: '30d'
+
+        - record: slo:rpo_p95_monthly
+          expr: histogram_quantile(0.95, rate(data_loss_seconds_bucket[30d]))
+          labels:
+            slo: 'rpo'
+            percentile: '95'
+            period: '30d'
+
+        # Availability Recording Rules
+        - record: slo:availability_30d
+          expr: avg_over_time(up{job="pake-api"}[30d])
+          labels:
+            slo: 'availability'
+            period: '30d'
+            service: 'api'
+
+        - record: slo:availability_7d
+          expr: avg_over_time(up{job="pake-api"}[7d])
+          labels:
+            slo: 'availability'
+            period: '7d'
+            service: 'api'
+
+        # Error Budget Calculations
+        - record: slo:rto_error_budget_remaining
+          expr: |
+            (
+              1 - (
+                increase(failover_duration_seconds[30d]) / 
+                increase(failover_attempts_total[30d]) / 900
+              )
+            ) * 100
+          labels:
+            slo: 'rto'
+            metric: 'error_budget_remaining_percent'
+
+        - record: slo:availability_error_budget_remaining
+          expr: |
+            (
+              (avg_over_time(up{job="pake-api"}[30d]) - 0.999) / 
+              (1 - 0.999)
+            ) * 100
+          labels:
+            slo: 'availability'
+            metric: 'error_budget_remaining_percent'
+
+        # MTTR Calculations
+        - record: slo:mttr_7d
+          expr: |
+            rate(incident_resolution_duration_seconds[7d]) / 
+            rate(incidents_total[7d])
+          labels:
+            slo: 'mttr'
+            period: '7d'
+
+        - record: slo:mttr_30d
+          expr: |
+            rate(incident_resolution_duration_seconds[30d]) / 
+            rate(incidents_total[30d])
+          labels:
+            slo: 'mttr'
+            period: '30d'

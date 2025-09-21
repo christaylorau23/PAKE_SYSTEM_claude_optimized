@@ -1,0 +1,746 @@
+/**
+ * PAKE System - DBConnector Tests
+ *
+ * Comprehensive tests for database operations including CRUD operations,
+ * transactions, connection pooling, and error handling.
+ */
+
+import {
+  describe,
+  beforeEach,
+  afterEach,
+  it,
+  expect,
+  jest,
+  beforeAll,
+  afterAll,
+} from '@jest/globals';
+import { Pool, PoolClient } from 'pg';
+import { DBConnector } from '../src/DBConnector';
+import { ConnectorRequestType, ResponseStatus } from '../src/Connector';
+import { sampleRequests, testConfigs, testHelpers } from './fixtures/testData';
+
+// Mock the pg module
+jest.mock('pg');
+
+describe('DBConnector', () => {
+  let connector: DBConnector;
+  let mockPool: jest.Mocked<Pool>;
+  let mockClient: jest.Mocked<PoolClient>;
+
+  beforeEach(async () => {
+    // Reset all mocks
+    jest.clearAllMocks();
+
+    // Create mock pool and client
+    mockClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+      connect: jest.fn(),
+      end: jest.fn(),
+      on: jest.fn(),
+      removeListener: jest.fn(),
+      listeners: jest.fn(),
+      listenerCount: jest.fn(),
+      emit: jest.fn(),
+      addListener: jest.fn(),
+      once: jest.fn(),
+      removeAllListeners: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      eventNames: jest.fn(),
+      rawListeners: jest.fn(),
+      off: jest.fn(),
+    } as any;
+
+    mockPool = {
+      connect: jest.fn().mockResolvedValue(mockClient),
+      query: jest.fn(),
+      end: jest.fn(),
+      totalCount: 0,
+      idleCount: 0,
+      waitingCount: 0,
+      on: jest.fn(),
+      removeListener: jest.fn(),
+      listeners: jest.fn(),
+      listenerCount: jest.fn(),
+      emit: jest.fn(),
+      addListener: jest.fn(),
+      once: jest.fn(),
+      removeAllListeners: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      eventNames: jest.fn(),
+      rawListeners: jest.fn(),
+      off: jest.fn(),
+    } as any;
+
+    (Pool as jest.MockedClass<typeof Pool>).mockImplementation(() => mockPool);
+
+    connector = new DBConnector('test-db', testConfigs.database);
+    await connector.connect();
+  });
+
+  afterEach(async () => {
+    await connector.disconnect();
+  });
+
+  describe('Basic Database Operations', () => {
+    it('should execute SELECT queries successfully', async () => {
+      const mockResult = {
+        rows: [
+          { id: 1, name: 'John Doe', email: 'john@example.com' },
+          { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
+        ],
+        rowCount: 2,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      };
+
+      mockClient.query.mockResolvedValue(mockResult);
+
+      const response = await connector.fetch(sampleRequests.database.select);
+
+      expect(response.success).toBe(true);
+      expect(response.status).toBe(ResponseStatus.SUCCESS);
+      expect(response.data).toEqual(mockResult);
+      expect(response.metadata.recordCount).toBe(2);
+
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id, name, email FROM users'),
+        expect.any(Array)
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should execute INSERT queries successfully', async () => {
+      const mockResult = {
+        rows: [{ id: 12345, created_at: '2024-01-15T10:30:00Z' }],
+        rowCount: 1,
+        command: 'INSERT',
+        fields: [],
+        oid: 0,
+      };
+
+      mockClient.query.mockResolvedValue(mockResult);
+
+      const response = await connector.fetch(sampleRequests.database.insert);
+
+      expect(response.success).toBe(true);
+      expect(response.status).toBe(ResponseStatus.SUCCESS);
+      expect(response.data).toEqual(mockResult);
+      expect(response.metadata.recordCount).toBe(1);
+
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO events'),
+        expect.arrayContaining([
+          'user_signup',
+          12345,
+          expect.any(String), // timestamp
+          expect.any(String), // JSON metadata
+        ])
+      );
+    });
+
+    it('should execute UPDATE queries successfully', async () => {
+      const updateRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.UPDATE,
+        target: 'users',
+        parameters: {
+          data: { name: 'Updated Name', email: 'updated@example.com' },
+          where: { id: 123 },
+          returning: ['id', 'name', 'updated_at'],
+        },
+      });
+
+      const mockResult = {
+        rows: [
+          { id: 123, name: 'Updated Name', updated_at: '2024-01-15T11:00:00Z' },
+        ],
+        rowCount: 1,
+        command: 'UPDATE',
+        fields: [],
+        oid: 0,
+      };
+
+      mockClient.query.mockResolvedValue(mockResult);
+
+      const response = await connector.fetch(updateRequest);
+
+      expect(response.success).toBe(true);
+      expect(response.data).toEqual(mockResult);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE users SET'),
+        expect.arrayContaining(['Updated Name', 'updated@example.com', 123])
+      );
+    });
+
+    it('should execute DELETE queries successfully', async () => {
+      const deleteRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.DELETE,
+        target: 'users',
+        parameters: {
+          where: { id: 123, active: false },
+          returning: ['id'],
+        },
+      });
+
+      const mockResult = {
+        rows: [{ id: 123 }],
+        rowCount: 1,
+        command: 'DELETE',
+        fields: [],
+        oid: 0,
+      };
+
+      mockClient.query.mockResolvedValue(mockResult);
+
+      const response = await connector.fetch(deleteRequest);
+
+      expect(response.success).toBe(true);
+      expect(response.data).toEqual(mockResult);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM users WHERE'),
+        expect.arrayContaining([123, false])
+      );
+    });
+
+    it('should execute custom SQL queries', async () => {
+      const mockResult = {
+        rows: [
+          { date: '2024-01-15', user_count: 150, avg_engagement: 0.75 },
+          { date: '2024-01-14', user_count: 142, avg_engagement: 0.73 },
+        ],
+        rowCount: 2,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      };
+
+      mockClient.query.mockResolvedValue(mockResult);
+
+      const response = await connector.fetch(
+        sampleRequests.database.customQuery
+      );
+
+      expect(response.success).toBe(true);
+      expect(response.data).toEqual(mockResult);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('DATE_TRUNC'),
+        ['2024-01-01', '2024-12-31']
+      );
+    });
+  });
+
+  describe('Query Building', () => {
+    it('should build complex WHERE clauses', async () => {
+      const complexSelectRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: {
+          columns: ['*'],
+          where: {
+            age: { '>': 18, '<=': 65 },
+            status: 'active',
+            tags: { LIKE: '%premium%' },
+            created_at: { '>=': '2024-01-01' },
+          },
+          orderBy: [
+            { column: 'created_at', direction: 'DESC' },
+            { column: 'name', direction: 'ASC' },
+          ],
+          limit: 100,
+          offset: 50,
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      await connector.fetch(complexSelectRequest);
+
+      const [query, params] = mockClient.query.mock.calls[0];
+
+      expect(query).toContain('WHERE');
+      expect(query).toContain('age >');
+      expect(query).toContain('age <=');
+      expect(query).toContain('status =');
+      expect(query).toContain('tags LIKE');
+      expect(query).toContain('created_at >=');
+      expect(query).toContain('ORDER BY created_at DESC, name ASC');
+      expect(query).toContain('LIMIT 100 OFFSET 50');
+
+      expect(params).toEqual(
+        expect.arrayContaining([18, 65, 'active', '%premium%', '2024-01-01'])
+      );
+    });
+
+    it('should handle JOIN operations', async () => {
+      const joinRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: {
+          columns: ['users.id', 'users.name', 'profiles.bio'],
+          joins: [
+            {
+              type: 'LEFT',
+              table: 'profiles',
+              on: 'users.id = profiles.user_id',
+            },
+          ],
+          where: { 'users.active': true },
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      await connector.fetch(joinRequest);
+
+      const [query] = mockClient.query.mock.calls[0];
+
+      expect(query).toContain(
+        'LEFT JOIN profiles ON users.id = profiles.user_id'
+      );
+      expect(query).toContain('SELECT users.id, users.name, profiles.bio');
+    });
+
+    it('should sanitize table and column names', async () => {
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users; DROP TABLE users; --',
+        parameters: {
+          columns: ['id', 'name; DELETE FROM users; --'],
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('INVALID_IDENTIFIER');
+      expect(mockClient.query).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Transaction Support', () => {
+    it('should execute transactions successfully', async () => {
+      const transactionRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.QUERY,
+        target: 'transaction',
+        parameters: {
+          transaction: [
+            {
+              sql: 'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id',
+              params: ['John Doe', 'john@example.com'],
+            },
+            {
+              sql: 'INSERT INTO profiles (user_id, bio) VALUES ($1, $2)',
+              params: ['{{result[0].rows[0].id}}', 'Software developer'],
+            },
+          ],
+        },
+      });
+
+      mockClient.query
+        .mockResolvedValueOnce({
+          command: 'BEGIN',
+          rows: [],
+          rowCount: 0,
+          fields: [],
+          oid: 0,
+        })
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [{ id: 123 }],
+          rowCount: 1,
+          fields: [],
+          oid: 0,
+        })
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [],
+          rowCount: 1,
+          fields: [],
+          oid: 0,
+        })
+        .mockResolvedValueOnce({
+          command: 'COMMIT',
+          rows: [],
+          rowCount: 0,
+          fields: [],
+          oid: 0,
+        });
+
+      const response = await connector.fetch(transactionRequest);
+
+      expect(response.success).toBe(true);
+      expect(mockClient.query).toHaveBeenCalledTimes(4);
+      expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
+      expect(mockClient.query).toHaveBeenNthCalledWith(4, 'COMMIT');
+    });
+
+    it('should rollback transaction on error', async () => {
+      const transactionRequest = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.QUERY,
+        target: 'transaction',
+        parameters: {
+          transaction: [
+            { sql: 'INSERT INTO users (name) VALUES ($1)', params: ['John'] },
+            { sql: 'INSERT INTO invalid_table (id) VALUES ($1)', params: [1] },
+          ],
+        },
+      });
+
+      mockClient.query
+        .mockResolvedValueOnce({
+          command: 'BEGIN',
+          rows: [],
+          rowCount: 0,
+          fields: [],
+          oid: 0,
+        })
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [{ id: 123 }],
+          rowCount: 1,
+          fields: [],
+          oid: 0,
+        })
+        .mockRejectedValueOnce(
+          new Error('relation "invalid_table" does not exist')
+        )
+        .mockResolvedValueOnce({
+          command: 'ROLLBACK',
+          rows: [],
+          rowCount: 0,
+          fields: [],
+          oid: 0,
+        });
+
+      const response = await connector.fetch(transactionRequest);
+
+      expect(response.success).toBe(false);
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+    });
+  });
+
+  describe('Connection Pooling', () => {
+    it('should properly manage connection pool', async () => {
+      // Create multiple simultaneous requests
+      const requests = Array.from({ length: 5 }, (_, i) =>
+        testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.SELECT,
+          target: 'users',
+          parameters: { columns: ['*'], where: { id: i + 1 } },
+        })
+      );
+
+      mockClient.query.mockResolvedValue({
+        rows: [{ id: 1, name: process.env.UNKNOWN }],
+        rowCount: 1,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      // Execute all requests concurrently
+      const responses = await Promise.all(
+        requests.map(request => connector.fetch(request))
+      );
+
+      expect(responses).toHaveLength(5);
+      expect(responses.every(r => r.success)).toBe(true);
+
+      // Pool should have been used for all connections
+      expect(mockPool.connect).toHaveBeenCalledTimes(5);
+      expect(mockClient.release).toHaveBeenCalledTimes(5);
+    });
+
+    it('should handle connection pool exhaustion gracefully', async () => {
+      // Mock pool to throw error on connection
+      mockPool.connect.mockRejectedValue(new Error('Pool exhausted'));
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: { columns: ['*'] },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(false);
+      expect(response.status).toBe(ResponseStatus.SERVICE_UNAVAILABLE);
+      expect(response.error?.code).toBe('CONNECTION_POOL_ERROR');
+    });
+
+    it('should retry on connection errors', async () => {
+      mockPool.connect
+        .mockRejectedValueOnce(new Error('Connection failed'))
+        .mockResolvedValueOnce(mockClient);
+
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: { columns: ['*'] },
+        config: { maxRetries: 2, retryDelay: 10 },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(true);
+      expect(mockPool.connect).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle database constraint violations', async () => {
+      const error = new Error(
+        'duplicate key value violates unique constraint "users_email_key"'
+      ) as any;
+      error.code = '23505'; // PostgreSQL unique violation code
+
+      mockClient.query.mockRejectedValue(error);
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.INSERT,
+        target: 'users',
+        parameters: {
+          data: { name: 'John', email: 'duplicate@example.com' },
+        },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('CONSTRAINT_VIOLATION');
+      expect(response.error?.retryable).toBe(false);
+    });
+
+    it('should handle syntax errors', async () => {
+      const error = new Error('syntax error at or near "SELCT"') as any;
+      error.code = '42601'; // PostgreSQL syntax error code
+
+      mockClient.query.mockRejectedValue(error);
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.QUERY,
+        target: 'custom',
+        parameters: {
+          sql: 'SELCT * FROM users', // Intentional typo
+          params: [],
+        },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('SYNTAX_ERROR');
+      expect(response.error?.retryable).toBe(false);
+    });
+
+    it('should handle connection timeouts', async () => {
+      mockClient.query.mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Query timeout')), 100)
+          )
+      );
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: { columns: ['*'] },
+        config: { timeout: 50 },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(false);
+      expect(response.status).toBe(ResponseStatus.TIMEOUT);
+    });
+  });
+
+  describe('Data Type Handling', () => {
+    it('should handle JSON data types', async () => {
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.INSERT,
+        target: 'documents',
+        parameters: {
+          data: {
+            title: 'Test Document',
+            metadata: { tags: ['test', 'document'], version: 1.0 },
+            content: { sections: [{ title: 'Intro', text: 'Hello' }] },
+          },
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [{ id: 1 }],
+        rowCount: 1,
+        command: 'INSERT',
+        fields: [],
+        oid: 0,
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(true);
+
+      const [query, params] = mockClient.query.mock.calls[0];
+      expect(params).toContain('{"tags":["test","document"],"version":1}');
+      expect(params).toContain(
+        '{"sections":[{"title":"Intro","text":"Hello"}]}'
+      );
+    });
+
+    it('should handle array data types', async () => {
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: {
+          columns: ['*'],
+          where: { tags: { ANY: ['admin', 'user'] } },
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      await connector.fetch(request);
+
+      const [query, params] = mockClient.query.mock.calls[0];
+      expect(query).toContain('= ANY($1)');
+      expect(params[0]).toEqual(['admin', 'user']);
+    });
+
+    it('should handle date and timestamp types', async () => {
+      const testDate = new Date('2024-01-15T10:30:00Z');
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.INSERT,
+        target: 'events',
+        parameters: {
+          data: {
+            name: 'Test Event',
+            occurred_at: testDate,
+            scheduled_for: '2024-01-16 15:00:00',
+          },
+        },
+      });
+
+      mockClient.query.mockResolvedValue({
+        rows: [{ id: 1 }],
+        rowCount: 1,
+        command: 'INSERT',
+        fields: [],
+        oid: 0,
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(true);
+
+      const [query, params] = mockClient.query.mock.calls[0];
+      expect(params).toContain(testDate.toISOString());
+      expect(params).toContain('2024-01-16 15:00:00');
+    });
+  });
+
+  describe('Performance and Monitoring', () => {
+    it('should track query performance metrics', async () => {
+      mockClient.query.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve({
+                  rows: [],
+                  rowCount: 0,
+                  command: 'SELECT',
+                  fields: [],
+                  oid: 0,
+                }),
+              50
+            )
+          )
+      );
+
+      const request = testHelpers.createMockConnectorRequest({
+        type: ConnectorRequestType.SELECT,
+        target: 'users',
+        parameters: { columns: ['*'] },
+      });
+
+      const response = await connector.fetch(request);
+
+      expect(response.success).toBe(true);
+      expect(response.metadata.executionTime).toBeGreaterThan(40);
+
+      const metrics = connector.getMetrics();
+      expect(metrics.totalRequests).toBe(1);
+      expect(metrics.successfulRequests).toBe(1);
+      expect(metrics.averageResponseTime).toBeGreaterThan(0);
+    });
+
+    it('should provide health check status', async () => {
+      mockPool.query = jest.fn().mockResolvedValue({
+        rows: [{ version: 'PostgreSQL 13.0' }],
+        rowCount: 1,
+        command: 'SELECT',
+        fields: [],
+        oid: 0,
+      });
+
+      const isHealthy = await connector.healthCheck();
+
+      expect(isHealthy).toBe(true);
+      expect(mockPool.query).toHaveBeenCalledWith('SELECT version()');
+    });
+
+    it('should detect unhealthy database connection', async () => {
+      mockPool.query = jest
+        .fn()
+        .mockRejectedValue(new Error('Connection failed'));
+
+      const isHealthy = await connector.healthCheck();
+
+      expect(isHealthy).toBe(false);
+    });
+  });
+});

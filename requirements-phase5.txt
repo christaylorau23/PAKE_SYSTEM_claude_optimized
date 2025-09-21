@@ -1,0 +1,47 @@
+# PAKE System Phase 5 Requirements - Full Persistence Stack
+# All Phase 4 requirements plus additional database testing and migration tools
+
+# Include all Phase 4 requirements
+-r requirements-phase4.txt
+
+# Additional PostgreSQL Tools
+psycopg2-binary>=2.9.7  # PostgreSQL adapter for synchronous operations
+alembic>=1.13.0  # Database migrations (already in Phase 4 but reinforced)
+
+# Enhanced Database Testing
+pytest-postgresql>=5.0.0  # PostgreSQL testing fixtures
+factory-boy>=3.3.0  # Test data factories
+faker>=20.1.0  # Fake data generation for testing
+
+# Database Management Tools
+pgcli>=3.5.0  # PostgreSQL command line interface
+sqlalchemy-utils>=0.41.1  # Additional SQLAlchemy utilities
+
+# Enhanced Analytics & Reporting
+pandas>=2.1.0  # Data analysis for search analytics
+numpy>=1.24.0  # Numerical computing for metrics
+matplotlib>=3.7.0  # Plotting for analytics dashboards
+seaborn>=0.12.0  # Statistical visualization
+
+# Background Task Processing
+celery>=5.3.0  # Distributed task queue
+redis>=5.0.0  # Backend for Celery (already in Phase 4)
+
+# Additional Security
+argon2-cffi>=23.1.0  # Modern REDACTED_SECRET hashing
+cryptography>=41.0.0  # Cryptographic primitives
+
+# Configuration Management
+python-dotenv>=1.0.0  # Environment variable management
+pydantic-settings>=2.0.0  # Settings management with Pydantic
+
+# Development Tools
+pytest-cov>=4.1.0  # Test coverage
+black>=23.9.0  # Code formatting
+isort>=5.12.0  # Import sorting
+mypy>=1.6.0  # Type checking
+pre-commit>=3.5.0  # Git hooks
+
+# Production Monitoring
+sentry-sdk>=1.38.0  # Error tracking
+datadog>=0.47.0  # APM and monitoring

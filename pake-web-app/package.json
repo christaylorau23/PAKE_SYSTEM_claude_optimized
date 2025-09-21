@@ -1,0 +1,15 @@
+{
+  "name": "pake-system-web-app",
+  "version": "1.0.0",
+  "description": "PAKE System Enterprise Web Application",
+  "private": true,
+  "scripts": {
+    "dev": "python -m uvicorn src.api.enterprise.multi_tenant_server:app --reload --host 0.0.0.0 --port 3000",
+    "start": "python -m uvicorn src.api.enterprise.multi_tenant_server:app --host 0.0.0.0 --port 3000",
+    "build": "echo 'No build step required for Python'",
+    "vercel-build": "echo 'Vercel build step'"
+  },
+  "engines": {
+    "python": "3.12"
+  }
+}

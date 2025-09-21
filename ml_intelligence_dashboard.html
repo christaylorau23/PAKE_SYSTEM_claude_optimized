@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PAKE ML Intelligence Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        color: white;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .header .subtitle {
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+      }
+
+      .card-title {
+        font-size: 1.4em;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .card-icon {
+        font-size: 1.5em;
+        opacity: 0.7;
+      }
+
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 15px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .metric-label {
+        font-weight: 500;
+        color: #555;
+      }
+
+      .metric-value {
+        font-weight: 600;
+        font-size: 1.1em;
+        color: #2c3e50;
+      }
+
+      .metric-good {
+        color: #27ae60;
+      }
+
+      .metric-warning {
+        color: #f39c12;
+      }
+
+      .metric-error {
+        color: #e74c3c;
+      }
+
+      .insights-list {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .insight-item {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      .insight-item:hover {
+        background: #e9ecef;
+        border-left-color: #2980b9;
+      }
+
+      .insight-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 8px;
+      }
+
+      .insight-description {
+        color: #555;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+
+      .insight-suggestions {
+        margin-top: 10px;
+      }
+
+      .insight-suggestion {
+        background: #e8f4f8;
+        padding: 5px 10px;
+        margin: 5px 0;
+        border-radius: 15px;
+        font-size: 0.9em;
+        display: inline-block;
+        margin-right: 10px;
+      }
+
+      .priority-high {
+        border-left-color: #e74c3c;
+      }
+
+      .priority-medium {
+        border-left-color: #f39c12;
+      }
+
+      .priority-low {
+        border-left-color: #95a5a6;
+      }
+
+      .trending-topics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .topic-tag {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .topic-count {
+        background: rgba(255, 255, 255, 0.3);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+      }
+
+      .session-item {
+        background: #f8f9fa;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 8px;
+        border-left: 4px solid #27ae60;
+      }
+
+      .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .session-id {
+        font-family: monospace;
+        background: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+      }
+
+      .session-queries {
+        margin-top: 10px;
+      }
+
+      .query-item {
+        background: #e8f4f8;
+        padding: 5px 10px;
+        margin: 5px 0;
+        border-radius: 15px;
+        font-size: 0.9em;
+        display: inline-block;
+        margin-right: 10px;
+      }
+
+      .refresh-btn {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 1em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .refresh-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .refresh-btn:active {
+        transform: translateY(0);
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-good {
+        background: #27ae60;
+      }
+
+      .status-warning {
+        background: #f39c12;
+      }
+
+      .status-error {
+        background: #e74c3c;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-top: 20px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .error {
+        background: #ffe6e6;
+        color: #d63384;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #dc3545;
+        margin: 10px 0;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .loading-indicator {
+        animation: pulse 2s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧠 PAKE ML Intelligence Dashboard</h1>
+        <div class="subtitle">
+          Real-time Research Analytics & Knowledge Insights
+        </div>
+        <button class="refresh-btn" onclick="refreshDashboard()">
+          🔄 Refresh Dashboard
+        </button>
+      </div>
+
+      <div id="dashboard-content">
+        <div class="loading loading-indicator">
+          <h3>Loading ML Intelligence Dashboard...</h3>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = 'http://localhost:8000';
+
+      let dashboardData = null;
+      let charts = {};
+
+      async function fetchDashboardData() {
+        try {
+          const response = await fetch(`${API_BASE}/ml/dashboard`);
+          const data = await response.json();
+
+          if (data.success) {
+            dashboardData = data.dashboard_data;
+            renderDashboard();
+          } else {
+            showError('Failed to load dashboard data');
+          }
+        } catch (error) {
+          showError(`Network error: ${error.message}`);
+        }
+      }
+
+      function renderDashboard() {
+        const container = document.getElementById('dashboard-content');
+
+        container.innerHTML = `
+                <div class="dashboard-grid">
+                    <!-- System Metrics Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 System Metrics</div>
+                            <div class="card-icon">⚡</div>
+                        </div>
+                        ${renderSystemMetrics()}
+                    </div>
+
+                    <!-- Search Performance Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🔍 Search Performance</div>
+                            <div class="card-icon">📈</div>
+                        </div>
+                        ${renderSearchPerformance()}
+                    </div>
+
+                    <!-- Research Intelligence Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🧠 Research Intelligence</div>
+                            <div class="card-icon">🎯</div>
+                        </div>
+                        ${renderResearchIntelligence()}
+                    </div>
+
+                    <!-- Trending Topics Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🔥 Trending Topics</div>
+                            <div class="card-icon">📊</div>
+                        </div>
+                        ${renderTrendingTopics()}
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Knowledge Insights Card -->
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <div class="card-title">💡 AI-Generated Insights</div>
+                            <div class="card-icon">🤖</div>
+                        </div>
+                        ${renderKnowledgeInsights()}
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Research Sessions Card -->
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <div class="card-title">📚 Recent Research Sessions</div>
+                            <div class="card-icon">🕒</div>
+                        </div>
+                        ${renderRecentSessions()}
+                    </div>
+                </div>
+            `;
+
+        // Initialize charts after rendering
+        setTimeout(() => {
+          initializeCharts();
+        }, 100);
+      }
+
+      function renderSystemMetrics() {
+        const metrics = dashboardData.dashboard_metrics;
+
+        return `
+                <div class="metric">
+                    <span class="metric-label">Total Searches Today</span>
+                    <span class="metric-value metric-good">${metrics.total_searches_today}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Response Time</span>
+                    <span class="metric-value ${metrics.avg_response_time_ms < 200 ? 'metric-good' : 'metric-warning'}">${metrics.avg_response_time_ms.toFixed(1)}ms</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Success Rate</span>
+                    <span class="metric-value metric-good">${metrics.success_rate}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Active Sessions</span>
+                    <span class="metric-value">${metrics.active_research_sessions}</span>
+                </div>
+            `;
+      }
+
+      function renderSearchPerformance() {
+        const metrics = dashboardData.dashboard_metrics;
+
+        return `
+                <div class="metric">
+                    <span class="metric-label">Productivity Score</span>
+                    <span class="metric-value ${getScoreClass(metrics.research_productivity_score)}">${(metrics.research_productivity_score * 100).toFixed(1)}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Exploration Diversity</span>
+                    <span class="metric-value ${getScoreClass(metrics.exploration_diversity)}">${(metrics.exploration_diversity * 100).toFixed(1)}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Content Analyzed</span>
+                    <span class="metric-value">${metrics.total_content_analyzed}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Confidence</span>
+                    <span class="metric-value ${getScoreClass(metrics.avg_confidence_score)}">${(metrics.avg_confidence_score * 100).toFixed(1)}%</span>
+                </div>
+            `;
+      }
+
+      function renderResearchIntelligence() {
+        const metrics = dashboardData.dashboard_metrics;
+        const systemStatus = dashboardData.system_status;
+
+        return `
+                <div class="metric">
+                    <span class="metric-label">Patterns Identified</span>
+                    <span class="metric-value">${systemStatus.patterns_identified}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Insights Generated</span>
+                    <span class="metric-value metric-good">${systemStatus.insights_generated}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Knowledge Gaps</span>
+                    <span class="metric-value ${metrics.knowledge_gaps.length > 0 ? 'metric-warning' : 'metric-good'}">${metrics.knowledge_gaps.length}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Focus Areas</span>
+                    <span class="metric-value">${metrics.focus_areas.length}</span>
+                </div>
+            `;
+      }
+
+      function renderTrendingTopics() {
+        const topics = dashboardData.dashboard_metrics.trending_topics;
+
+        if (topics.length === 0) {
+          return '<p style="text-align: center; color: #666; padding: 20px;">No trending topics yet. Start searching to see trends!</p>';
+        }
+
+        const topicsHtml = topics
+          .map(
+            ([topic, count]) =>
+              `<div class="topic-tag">
+                    ${topic}
+                    <span class="topic-count">${count}</span>
+                </div>`
+          )
+          .join('');
+
+        return `<div class="trending-topics">${topicsHtml}</div>`;
+      }
+
+      function renderKnowledgeInsights() {
+        const insights = dashboardData.knowledge_insights;
+
+        if (insights.length === 0) {
+          return '<p style="text-align: center; color: #666; padding: 20px;">No insights available yet. Perform more searches to generate personalized insights!</p>';
+        }
+
+        const insightsHtml = insights
+          .map(
+            insight => `
+                <div class="insight-item priority-${insight.priority}">
+                    <div class="insight-title">${insight.title}</div>
+                    <div class="insight-description">${insight.description}</div>
+                    <div class="insight-suggestions">
+                        ${insight.actionable_suggestions
+                          .map(
+                            suggestion =>
+                              `<div class="insight-suggestion">💡 ${suggestion}</div>`
+                          )
+                          .join('')}
+                    </div>
+                </div>
+            `
+          )
+          .join('');
+
+        return `<div class="insights-list">${insightsHtml}</div>`;
+      }
+
+      function renderRecentSessions() {
+        const sessions = dashboardData.recent_sessions;
+
+        if (sessions.length === 0) {
+          return '<p style="text-align: center; color: #666; padding: 20px;">No recent sessions found.</p>';
+        }
+
+        const sessionsHtml = sessions
+          .map(session => {
+            const startTime = new Date(session.start_time).toLocaleString();
+
+            return `
+                    <div class="session-item">
+                        <div class="session-header">
+                            <div>
+                                <span class="session-id">${session.session_id}</span>
+                                <span style="margin-left: 10px; color: #666;">${startTime}</span>
+                            </div>
+                            <div>
+                                <span class="metric-value">${session.total_results} results</span>
+                            </div>
+                        </div>
+                        <div><strong>Avg Semantic Score:</strong> ${(session.avg_semantic_score * 100).toFixed(1)}%</div>
+                        <div><strong>Dominant Topics:</strong> ${session.dominant_topics.join(', ')}</div>
+                        <div class="session-queries">
+                            <strong>Queries:</strong>
+                            ${session.queries.map(query => `<div class="query-item">${query}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+          })
+          .join('');
+
+        return sessionsHtml;
+      }
+
+      function getScoreClass(score) {
+        if (score >= 0.7) return 'metric-good';
+        if (score >= 0.4) return 'metric-warning';
+        return 'metric-error';
+      }
+
+      function initializeCharts() {
+        // This function can be expanded to include Chart.js visualizations
+        // For now, we're focusing on the core dashboard functionality
+      }
+
+      function showError(message) {
+        const container = document.getElementById('dashboard-content');
+        container.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                    <br><br>
+                    <button class="refresh-btn" onclick="refreshDashboard()">Try Again</button>
+                </div>
+            `;
+      }
+
+      async function refreshDashboard() {
+        const container = document.getElementById('dashboard-content');
+        container.innerHTML =
+          '<div class="loading loading-indicator"><h3>Refreshing dashboard...</h3></div>';
+        await fetchDashboardData();
+      }
+
+      // Auto-refresh every 30 seconds
+      setInterval(fetchDashboardData, 30000);
+
+      // Initial load
+      document.addEventListener('DOMContentLoaded', fetchDashboardData);
+    </script>
+  </body>
+</html>

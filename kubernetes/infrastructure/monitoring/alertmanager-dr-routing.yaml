@@ -1,0 +1,604 @@
+# AlertManager Configuration for DR Alert Routing
+# Routes disaster recovery alerts to appropriate channels with escalation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-dr-routing
+  namespace: monitoring
+  labels:
+    app: alertmanager
+    component: routing
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@pake-system.com'
+      slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+      
+    # Inhibition rules suppress alerts when other alerts are firing
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+
+    # Route tree for alert distribution
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'default-receiver'
+      
+      routes:
+      # Critical DR alerts - immediate escalation
+      - match:
+          severity: critical
+          component: disaster-recovery
+        receiver: 'dr-critical-alerts'
+        group_wait: 10s
+        group_interval: 2m
+        repeat_interval: 4h
+        
+      # Backup system alerts
+      - match_re:
+          alertname: '(BackupRestoreValidationFailed|BackupStaleCritical|PostgreSQLBackupRestoreFailed|BackupTooOld)'
+        receiver: 'dr-backup-alerts'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 6h
+        
+      # Compliance and audit alerts
+      - match_re:
+          alertname: '(ComplianceAttestationMissing|AuditLogGapDetected|SOC2ComplianceViolation|GDPRDataProcessingIncident)'
+        receiver: 'dr-compliance-alerts'
+        group_wait: 60s
+        group_interval: 10m
+        repeat_interval: 8h
+        
+      # Chaos engineering alerts
+      - match_re:
+          alertname: '(ChaosExperimentFailed|ChaosPodKillFailed|ChaosNetworkPartitionFailed)'
+        receiver: 'dr-chaos-alerts'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 24h
+        
+      # Replication and data alerts
+      - match_re:
+          alertname: '(ReplicationLagHigh|DataExportStale|ObjectSyncLagHigh)'
+        receiver: 'dr-replication-alerts'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 6h
+        
+      # Infrastructure alerts affecting DR
+      - match:
+          category: infrastructure
+          component: disaster-recovery
+        receiver: 'dr-infrastructure-alerts'
+        group_wait: 60s
+        group_interval: 10m
+        repeat_interval: 12h
+        
+      # RTO/RPO performance alerts
+      - match_re:
+          alertname: '(RTOThresholdExceeded|RPOThresholdExceeded|FailoverDurationHigh)'
+        receiver: 'dr-performance-alerts'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 6h
+        
+      # General DR warnings
+      - match:
+          severity: warning
+          component: disaster-recovery
+        receiver: 'dr-warning-alerts'
+        group_wait: 2m
+        group_interval: 10m
+        repeat_interval: 24h
+
+    # Receiver definitions
+    receivers:
+
+    # Default receiver for unmatched alerts
+    - name: 'default-receiver'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DEFAULT/WEBHOOK'
+        channel: '#alerts'
+        title: 'PAKE System Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+    # Critical DR alerts - multiple channels + escalation
+    - name: 'dr-critical-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#dr-critical'
+        title: '🚨 CRITICAL DR ALERT'
+        text: |
+          <!channel> CRITICAL DISASTER RECOVERY ALERT
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Component:* {{ .Labels.component }}
+          *Service:* {{ .Labels.service }}
+          *Description:* {{ .Annotations.description }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        send_resolved: true
+        
+      pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+        description: 'Critical DR Alert: {{ .GroupLabels.alertname }}'
+        severity: 'critical'
+        details:
+          alert_name: '{{ .GroupLabels.alertname }}'
+          component: '{{ .GroupLabels.component }}'
+          service: '{{ .GroupLabels.service }}'
+          description: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+          
+      email_configs:
+      - to: 'dr-team@pake-system.com,oncall@pake-system.com'
+        subject: 'CRITICAL: DR Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          Critical Disaster Recovery Alert
+          
+          Alert: {{ .GroupLabels.alertname }}
+          Time: {{ range .Alerts }}{{ .StartsAt }}{{ end }}
+          
+          {{ range .Alerts }}
+          Summary: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+    # Backup system alerts
+    - name: 'dr-backup-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#dr-backups'
+        title: '💾 Backup System Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Service:* {{ .Labels.service }}
+          *Backup Type:* {{ .Labels.backup_type }}
+          *Description:* {{ .Annotations.description }}
+          *Actions:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        send_resolved: true
+        
+      email_configs:
+      - to: 'backup-team@pake-system.com'
+        subject: 'Backup Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          Backup System Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Service: {{ .Labels.service }}
+          Backup Type: {{ .Labels.backup_type }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+    # Compliance and audit alerts
+    - name: 'dr-compliance-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/COMPLIANCE/WEBHOOK'
+        channel: '#compliance-alerts'
+        title: '📋 Compliance Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Framework:* {{ .Labels.framework }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          *Impact:* {{ .Annotations.impact }}
+          {{ end }}
+        send_resolved: true
+        
+      email_configs:
+      - to: 'compliance@pake-system.com,legal@pake-system.com'
+        subject: 'Compliance Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          Compliance/Audit Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Framework: {{ .Labels.framework }}
+          Description: {{ .Annotations.description }}
+          Impact: {{ .Annotations.impact }}
+          {{ end }}
+
+    # Chaos engineering alerts
+    - name: 'dr-chaos-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#chaos-engineering'
+        title: '🧪 Chaos Engineering Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Experiment:* {{ .Labels.experiment_type }}
+          *Status:* {{ .Labels.status }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+        
+    # Replication and data alerts
+    - name: 'dr-replication-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#dr-replication'
+        title: '🔄 Replication Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Service:* {{ .Labels.service }}
+          *Lag:* {{ .Labels.lag_seconds }}s
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+        
+      email_configs:
+      - to: 'database-team@pake-system.com'
+        subject: 'Replication Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          Database Replication Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Service: {{ .Labels.service }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+    # Infrastructure alerts affecting DR
+    - name: 'dr-infrastructure-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/INFRASTRUCTURE/WEBHOOK'
+        channel: '#infrastructure'
+        title: '🏗️ Infrastructure Alert (DR Impact)'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Component:* {{ .Labels.component }}
+          *Node:* {{ .Labels.node }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+    # RTO/RPO performance alerts
+    - name: 'dr-performance-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#dr-performance'
+        title: '⚡ DR Performance Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Metric:* {{ .Labels.metric_name }}
+          *Value:* {{ .Labels.value }}
+          *Threshold:* {{ .Labels.threshold }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+        
+      email_configs:
+      - to: 'sre-team@pake-system.com'
+        subject: 'DR Performance Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          DR Performance Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Current Value: {{ .Labels.value }}
+          Threshold: {{ .Labels.threshold }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+    # General DR warnings
+    - name: 'dr-warning-alerts'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/DR/WEBHOOK'
+        channel: '#dr-warnings'
+        title: '⚠️ DR Warning'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Component:* {{ .Labels.component }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+---
+# AlertManager Deployment with DR Routing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-dr
+  namespace: monitoring
+  labels:
+    app: alertmanager
+    component: dr-routing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alertmanager
+      component: dr-routing
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+        component: dr-routing
+    spec:
+      serviceAccountName: alertmanager
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.25.0
+          args:
+            - '--config.file=/etc/alertmanager/alertmanager.yml'
+            - '--storage.path=/alertmanager'
+            - '--data.retention=120h'
+            - '--cluster.listen-address=0.0.0.0:9094'
+            - '--cluster.peer=alertmanager-dr-0.alertmanager-dr.monitoring.svc.cluster.local:9094'
+            - '--cluster.peer=alertmanager-dr-1.alertmanager-dr.monitoring.svc.cluster.local:9094'
+            - '--web.listen-address=0.0.0.0:9093'
+            - '--web.external-url=http://alertmanager.pake-system.com'
+          ports:
+            - name: web
+              containerPort: 9093
+            - name: cluster
+              containerPort: 9094
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+            - name: storage
+              mountPath: /alertmanager
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9093
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-dr-routing
+        - name: storage
+          emptyDir: {}
+
+---
+# AlertManager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-dr
+  namespace: monitoring
+  labels:
+    app: alertmanager
+    component: dr-routing
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 9093
+      targetPort: 9093
+    - name: cluster
+      port: 9094
+      targetPort: 9094
+  selector:
+    app: alertmanager
+    component: dr-routing
+
+---
+# Prometheus Configuration Update for DR Alertmanager
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-dr-alerting-config
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alerting
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      evaluation_interval: 30s
+      external_labels:
+        cluster: 'pake-production'
+        region: 'us-east-1'
+        
+    # AlertManager configuration
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets:
+          - alertmanager-dr.monitoring.svc.cluster.local:9093
+        path_prefix: /
+        scheme: http
+        timeout: 10s
+        api_version: v2
+        
+    # Rule files for DR alerts
+    rule_files:
+    - "/etc/prometheus/rules/*.yml"
+    - "/etc/prometheus/rules/dr/*.yml"
+
+    # Scrape configurations (abbreviated)
+    scrape_configs:
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['localhost:9090']
+      
+    - job_name: 'alertmanager-dr'
+      static_configs:
+      - targets: ['alertmanager-dr.monitoring.svc.cluster.local:9093']
+      
+    # Additional scrape configs for DR components
+    - job_name: 'dr-services'
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names:
+          - disaster-recovery
+          - backup-validation
+          - chaos-testing
+          - compliance-system
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_monitoring]
+        action: keep
+        regex: dr-enabled
+      - source_labels: [__meta_kubernetes_service_name]
+        target_label: service
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+
+---
+# ServiceAccount for AlertManager
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+
+---
+# ClusterRole for AlertManager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alertmanager
+  labels:
+    app: alertmanager
+rules:
+  - apiGroups: ['']
+    resources: ['services', 'endpoints', 'pods']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['']
+    resources: ['configmaps']
+    verbs: ['get']
+
+---
+# ClusterRoleBinding for AlertManager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alertmanager
+  labels:
+    app: alertmanager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alertmanager
+subjects:
+  - kind: ServiceAccount
+    name: alertmanager
+    namespace: monitoring
+
+---
+# Network Policy for AlertManager Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alertmanager-dr-network-policy
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  podSelector:
+    matchLabels:
+      app: alertmanager
+      component: dr-routing
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 9093
+    - from:
+        - podSelector:
+            matchLabels:
+              app: alertmanager
+      ports:
+        - protocol: TCP
+          port: 9094
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443 # HTTPS for webhooks
+        - protocol: TCP
+          port: 80 # HTTP for webhooks
+        - protocol: TCP
+          port: 587 # SMTP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: alertmanager
+      ports:
+        - protocol: TCP
+          port: 9094
+
+---
+# Ingress for AlertManager Web UI
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager-dr-ingress
+  namespace: monitoring
+  labels:
+    app: alertmanager
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: alertmanager-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'AlertManager Authentication Required'
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - alertmanager.pake-system.com
+      secretName: alertmanager-tls
+  rules:
+    - host: alertmanager.pake-system.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: alertmanager-dr
+                port:
+                  number: 9093

@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pake.ai/schemas/AgentResult.json",
+  "title": "Agent Result Schema",
+  "description": "Schema for agent execution result validation and contract testing",
+  "type": "object",
+  "required": ["taskId", "status", "output", "metadata"],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Task ID this result corresponds to"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "error", "timeout", "partial"],
+      "description": "Execution status"
+    },
+    "output": {
+      "type": "object",
+      "description": "Processing outputs",
+      "properties": {
+        "data": {
+          "type": "object",
+          "description": "Primary result data",
+          "additionalProperties": true
+        },
+        "entities": {
+          "type": "array",
+          "description": "Extracted entities from content",
+          "items": {
+            "$ref": "#/$defs/EntityResult"
+          }
+        },
+        "sentiment": {
+          "$ref": "#/$defs/SentimentResult",
+          "description": "Sentiment analysis results"
+        },
+        "trends": {
+          "type": "array",
+          "description": "Trend analysis results",
+          "items": {
+            "$ref": "#/$defs/TrendResult"
+          }
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 1000000,
+          "description": "Generated content or summaries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["provider", "startTime", "endTime", "duration"],
+      "description": "Execution metadata",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Provider that executed the task"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Processing start time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Processing end time"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Processing duration in milliseconds"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score (0-1)"
+        },
+        "usage": {
+          "type": "object",
+          "description": "Resource usage statistics",
+          "properties": {
+            "tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of tokens processed"
+            },
+            "apiCalls": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of API calls made"
+            },
+            "memoryMb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Memory usage in MB"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "description": "Error information (if status is ERROR)",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "INVALID_INPUT",
+            "PROVIDER_UNAVAILABLE",
+            "TIMEOUT",
+            "QUOTA_EXCEEDED",
+            "INTERNAL_ERROR",
+            "CONFIGURATION_ERROR"
+          ],
+          "description": "Error code"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Error message"
+        },
+        "details": {
+          "type": "object",
+          "description": "Additional error details",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "EntityResult": {
+      "type": "object",
+      "required": ["type", "value", "confidence"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "PERSON",
+            "ORGANIZATION",
+            "LOCATION",
+            "DATE",
+            "TIME",
+            "MONEY",
+            "PERCENT",
+            "PRODUCT",
+            "EVENT"
+          ],
+          "description": "Entity type"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Entity value/name"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score (0-1)"
+        },
+        "span": {
+          "type": "object",
+          "description": "Position in source text",
+          "required": ["start", "end"],
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Start character position"
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "End character position"
+            }
+          },
+          "additionalProperties": false
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional entity metadata",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "SentimentResult": {
+      "type": "object",
+      "required": ["score", "label", "confidence"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Overall sentiment score (-1 to 1, negative to positive)"
+        },
+        "label": {
+          "type": "string",
+          "enum": ["positive", "negative", "neutral"],
+          "description": "Sentiment label"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence in sentiment classification (0-1)"
+        },
+        "emotions": {
+          "type": "object",
+          "description": "Detailed emotion analysis",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrendResult": {
+      "type": "object",
+      "required": ["topic", "direction", "strength", "period"],
+      "properties": {
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Topic or keyword being tracked"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["up", "down", "stable"],
+          "description": "Trend direction"
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Trend strength (0-1)"
+        },
+        "period": {
+          "type": "object",
+          "required": ["start", "end"],
+          "description": "Time period for this trend",
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Period start time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Period end time"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dataPoints": {
+          "type": "array",
+          "description": "Supporting data points",
+          "items": {
+            "type": "object",
+            "required": ["timestamp", "value"],
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data point timestamp"
+              },
+              "value": {
+                "type": "number",
+                "description": "Data point value"
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 1000
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "taskId": "task_001",
+      "status": "success",
+      "output": {
+        "sentiment": {
+          "score": 0.8,
+          "label": "positive",
+          "confidence": 0.95,
+          "emotions": {
+            "joy": 0.7,
+            "excitement": 0.6,
+            "satisfaction": 0.8
+          }
+        }
+      },
+      "metadata": {
+        "provider": "NullProvider",
+        "startTime": "2024-01-01T12:00:00Z",
+        "endTime": "2024-01-01T12:00:02Z",
+        "duration": 2000,
+        "confidence": 0.95,
+        "usage": {
+          "tokens": 50,
+          "apiCalls": 1,
+          "memoryMb": 128
+        }
+      }
+    }
+  ]
+}

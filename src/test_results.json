@@ -1,0 +1,32 @@
+{
+  "component_tests": {
+    "confidence_score": 0.85,
+    "vector_dimensions": 128,
+    "passed": true
+  },
+  "note_creation": {
+    "note_created": true,
+    "automation_active": false,
+    "has_pake_id": false,
+    "confidence_score": null,
+    "note_path": "vault\\00-Inbox\\2025-09-11-test-cb8df0af.md"
+  },
+  "manual_processing": {
+    "success": true,
+    "pake_id": "156f65b7-5a15-47a5-9d2e-44277a3a2b26",
+    "confidence_score": 0.5,
+    "processing_time": 0.021666526794433594,
+    "vector_embedded": true,
+    "knowledge_graph_updated": true
+  },
+  "data_persistence": {
+    "state_file_exists": true,
+    "kg_file_exists": true,
+    "vectors_dir_exists": true,
+    "vector_files_count": 11
+  },
+  "automation_status": {
+    "log_exists": true,
+    "log_entries": 6
+  }
+}

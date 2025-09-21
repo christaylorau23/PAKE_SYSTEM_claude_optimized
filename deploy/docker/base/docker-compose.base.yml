@@ -1,0 +1,160 @@
+# Base Docker Compose Configuration for PAKE System
+# This file contains the common service definitions used across all environments
+
+version: '3.8'
+
+x-common-variables: &common-variables
+  PYTHONUNBUFFERED: 1
+  PYTHONDONTWRITEBYTECODE: 1
+
+x-common-healthcheck: &common-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pake_system}
+      POSTGRES_USER: ${POSTGRES_USER:-pake_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-pake_user} -d ${POSTGRES_DB:-pake_system}',
+        ]
+      <<: *common-healthcheck
+    restart: unless-stopped
+    networks:
+      - pake-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-changeme}
+      --maxmemory ${REDIS_MAX_MEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-changeme}', 'ping']
+      <<: *common-healthcheck
+    restart: unless-stopped
+    networks:
+      - pake-network
+
+  # PAKE Backend API
+  pake-backend:
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-production}
+    environment:
+      <<: *common-variables
+      # Database Configuration
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pake_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-pake_system}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${POSTGRES_DB:-pake_system}
+      DATABASE_USER: ${POSTGRES_USER:-pake_user}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+
+      # Redis Configuration
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379/${REDIS_DB:-0}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+      REDIS_DB: ${REDIS_DB:-0}
+
+      # Application Configuration
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MAX_WORKERS: ${MAX_WORKERS:-4}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+
+      # Security Configuration
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-changeme-jwt-secret}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+
+      # External API Keys
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Monitoring
+      ENABLE_METRICS: ${ENABLE_METRICS:-true}
+      METRICS_PORT: 9090
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      <<: *common-healthcheck
+    restart: unless-stopped
+    networks:
+      - pake-network
+
+  # PAKE Frontend
+  pake-frontend:
+    build:
+      context: ../../..
+      dockerfile: frontend/Dockerfile
+      target: ${BUILD_TARGET:-production}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      PORT: 3000
+    depends_on:
+      - pake-backend
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      <<: *common-healthcheck
+    restart: unless-stopped
+    networks:
+      - pake-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - pake-backend
+      - pake-frontend
+    restart: unless-stopped
+    networks:
+      - pake-network
+
+# Named volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Networks
+networks:
+  pake-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

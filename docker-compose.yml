@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16.1
+    environment:
+      POSTGRES_DB: pake_system
+      POSTGRES_USER: pake_user
+      POSTGRES_PASSWORD: secure_REDACTED_SECRET
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pake_user -d pake_system']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://pake_user:secure_REDACTED_SECRET@postgres:5432/pake_system
+      REDIS_URL: redis://redis:6379
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+      PUBMED_EMAIL: ${PUBMED_EMAIL}
+      VAULT_PATH: /app/vault
+      MCP_SERVER_PORT: 8000
+    ports:
+      - '8000:8000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./vault:/app/vault
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.bridge
+    environment:
+      VAULT_PATH: /app/vault
+      BRIDGE_PORT: 3001
+      MCP_SERVER_URL: http://mcp-server:8000
+    ports:
+      - '3001:3001'
+    depends_on:
+      - mcp-server
+    volumes:
+      - ./vault:/app/vault
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - mcp-server
+      - bridge
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

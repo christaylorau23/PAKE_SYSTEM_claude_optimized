@@ -1,0 +1,130 @@
+{
+  "name": "@pake/ai-security",
+  "version": "1.0.0",
+  "description": "PAKE System AI-Specific Security Controls - Prompt injection prevention, model protection, and adversarial defense",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:prompt-injection": "vitest run src/tests/prompt-injection.test.ts",
+    "test:model-protection": "vitest run src/tests/model-protection.test.ts",
+    "test:adversarial": "vitest run src/tests/adversarial.test.ts",
+    "test:cost-controls": "vitest run src/tests/cost-controls.test.ts",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "ci": "npm run lint && npm run test:coverage && npm run build",
+    "benchmark": "ts-node scripts/benchmark-security.ts",
+    "security-scan": "ts-node scripts/security-scan.ts"
+  },
+  "keywords": [
+    "pake",
+    "ai-security",
+    "prompt-injection",
+    "llm-security",
+    "adversarial-defense",
+    "model-protection",
+    "ai-safety"
+  ],
+  "author": "PAKE System",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "express-slow-down": "^2.0.1",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4",
+    "uuid": "^9.0.1",
+    "crypto": "^1.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.6.2",
+    "bull": "^4.12.2",
+    "redis": "^4.6.10",
+    "prom-client": "^15.1.0",
+    "@tensorflow/tfjs-node": "^4.15.0",
+    "natural": "^6.10.0",
+    "compromise": "^14.10.0",
+    "sentiment": "^5.0.2",
+    "levenshtein": "^1.0.5",
+    "similarity": "^1.2.1",
+    "bloom-filters": "^3.0.1",
+    "crypto-js": "^4.2.0",
+    "tiktoken": "^1.0.10",
+    "openai": "^4.24.0",
+    "@anthropic-ai/sdk": "^0.28.0",
+    "node-cache": "^5.1.2",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.9.0",
+    "@types/uuid": "^9.0.7",
+    "@types/compression": "^1.7.5",
+    "@types/morgan": "^1.9.9",
+    "@types/natural": "^5.1.5",
+    "@types/crypto-js": "^4.2.1",
+    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "vitest": "^1.6.0",
+    "@vitest/ui": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "supertest": "^6.3.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
+    "prettier": "^3.1.0"
+  },
+  "peerDependencies": {
+    "@pake/audit": "^1.0.0",
+    "@pake/auth": "^1.0.0",
+    "@pake/secrets-manager": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "aiSecurity": {
+    "promptInjection": {
+      "enabled": true,
+      "strictMode": true,
+      "maxPromptLength": 10000,
+      "maxOutputLength": 50000,
+      "suspiciousPatterns": [
+        "ignore previous instructions",
+        "forget everything",
+        "system prompt",
+        "jailbreak",
+        "developer mode"
+      ]
+    },
+    "modelProtection": {
+      "enabled": true,
+      "watermarking": true,
+      "queryAnalysis": true,
+      "extractionThreshold": 10
+    },
+    "costControls": {
+      "enabled": true,
+      "defaultTokenBudget": 100000,
+      "budgetPeriod": "monthly",
+      "throttleThreshold": 0.8
+    },
+    "adversarialDefense": {
+      "enabled": true,
+      "perturbationThreshold": 0.1,
+      "consistencyChecks": true,
+      "falsePositiveTarget": 0.05
+    }
+  }
+}

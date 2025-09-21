@@ -1,0 +1,41 @@
+# ⚠️  DEPRECATED: This file is deprecated in favor of Poetry
+#
+# PAKE System has migrated to Poetry for dependency management.
+# The new unified configuration is in pyproject.toml
+#
+# 🔄 MIGRATION INSTRUCTIONS:
+#
+# 1. Install Poetry:
+#    curl -sSL https://install.python-poetry.org | python3 -
+#
+# 2. Run the migration script:
+#    python scripts/migrate_to_poetry.py
+#
+# 3. Install dependencies with Poetry:
+#    poetry install --with dev,trends
+#
+# 4. Activate Poetry environment:
+#    poetry shell
+#
+# 5. Run tests to verify:
+#    poetry run pytest tests/ -v
+#
+# 📋 BENEFITS OF POETRY:
+# - Single pyproject.toml file instead of 11+ requirements.txt files
+# - Automatic dependency resolution and conflict detection
+# - Lock file for reproducible builds (poetry.lock)
+# - Virtual environment management built-in
+# - Organized dependency groups (main, dev, trends, docs, etc.)
+# - Better CI/CD integration
+#
+# 📁 BACKUP: All old requirements files are backed up in backups/requirements_backup/
+#
+# For more information, see the Poetry section in CLAUDE.md
+
+# If you absolutely must use this file (not recommended), here are the core dependencies:
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+sqlalchemy>=2.0.25
+redis>=5.2.0
+asyncpg>=0.29.0

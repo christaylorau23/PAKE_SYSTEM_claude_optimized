@@ -1,0 +1,339 @@
+# PAKE System - Phase 16 Multi-Tenant Kubernetes Configuration
+# Tenant Namespace Template with Resource Quotas and Network Policies
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-{{TENANT_ID}}
+  labels:
+    name: tenant-{{TENANT_ID}}
+    tenant-id: '{{TENANT_ID}}'
+    tenant-name: '{{TENANT_NAME}}'
+    tenant-plan: '{{TENANT_PLAN}}'
+    pake-system: 'multitenant'
+    managed-by: 'pake-tenant-provisioner'
+  annotations:
+    description: 'PAKE System tenant namespace for {{TENANT_NAME}}'
+    created-by: 'pake-tenant-provisioner'
+    created-at: '{{CREATED_AT}}'
+    tenant-domain: '{{TENANT_DOMAIN}}'
+
+---
+# Resource Quota for Tenant Isolation
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-resource-quota
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  hard:
+    # CPU limits and requests for all pods in the namespace
+    requests.cpu: '{{CPU_REQUEST_LIMIT}}' # e.g., "2" for 2 CPU cores
+    limits.cpu: '{{CPU_LIMIT}}' # e.g., "4" for 4 CPU cores
+    # Memory limits and requests for all pods in the namespace
+    requests.memory: { { MEMORY_REQUEST_LIMIT } } # e.g., 4Gi
+    limits.memory: { { MEMORY_LIMIT } } # e.g., 8Gi
+    # Object count limits
+    pods: '{{POD_LIMIT}}' # e.g., "10"
+    services: '{{SERVICE_LIMIT}}' # e.g., "5"
+    configmaps: '{{CONFIGMAP_LIMIT}}' # e.g., "20"
+    secrets: '{{SECRET_LIMIT}}' # e.g., "10"
+    persistentvolumeclaims: '{{PVC_LIMIT}}' # e.g., "5"
+    replicationcontrollers: '{{RC_LIMIT}}' # e.g., "10"
+    resourcequotas: '1'
+
+---
+# Limit Range for Default Resource Limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-limit-range
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  limits:
+    - default:
+        cpu: '{{DEFAULT_CPU_LIMIT}}' # e.g., "500m"
+        memory: '{{DEFAULT_MEMORY_LIMIT}}' # e.g., "512Mi"
+      defaultRequest:
+        cpu: '{{DEFAULT_CPU_REQUEST}}' # e.g., "100m"
+        memory: '{{DEFAULT_MEMORY_REQUEST}}' # e.g., "128Mi"
+      type: Container
+
+---
+# Network Policy - Default Deny All
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  podSelector: {} # Selects all pods in the namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Network Policy - Allow Same Namespace Communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {} # Allow ingress from any pod in this namespace
+  egress:
+    - to:
+        - podSelector: {} # Allow egress to any pod in this namespace
+
+---
+# Network Policy - Allow Ingress Controller Access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: traefik # Label of the namespace where the ingress controller is running
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+
+---
+# Network Policy - Allow Database Access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-access
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: database # Label of the database namespace
+      ports:
+        - protocol: TCP
+          port: 5432 # PostgreSQL port
+
+---
+# Network Policy - Allow Redis Access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: redis # Label of the Redis namespace
+      ports:
+        - protocol: TCP
+          port: 6379 # Redis port
+
+---
+# Role for Tenant Admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-admin-role
+  namespace: tenant-{{TENANT_ID}}
+rules:
+  - apiGroups: ['', 'apps', 'batch', 'networking.k8s.io']
+    resources:
+      [
+        'pods',
+        'deployments',
+        'jobs',
+        'services',
+        'configmaps',
+        'secrets',
+        'ingresses',
+        'networkpolicies',
+      ]
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+  - apiGroups: ['']
+    resources: ['pods/log']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['apps']
+    resources: ['replicasets', 'daemonsets']
+    verbs: ['get', 'list', 'watch']
+
+---
+# RoleBinding for Tenant Admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-admin-binding
+  namespace: tenant-{{TENANT_ID}}
+subjects:
+  - kind: User
+    name: '{{TENANT_ADMIN_USER}}' # e.g., "admin@tenant.com"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: tenant-admin-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Service Account for Tenant
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tenant-service-account
+  namespace: tenant-{{TENANT_ID}}
+  labels:
+    tenant-id: '{{TENANT_ID}}'
+    pake-system: 'multitenant'
+
+---
+# Role for Tenant Service Account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-service-role
+  namespace: tenant-{{TENANT_ID}}
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'services', 'configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'replicasets']
+    verbs: ['get', 'list', 'watch']
+
+---
+# RoleBinding for Tenant Service Account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-service-binding
+  namespace: tenant-{{TENANT_ID}}
+subjects:
+  - kind: ServiceAccount
+    name: tenant-service-account
+    namespace: tenant-{{TENANT_ID}}
+roleRef:
+  kind: Role
+  name: tenant-service-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ConfigMap for Tenant Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tenant-config
+  namespace: tenant-{{TENANT_ID}}
+  labels:
+    tenant-id: '{{TENANT_ID}}'
+    pake-system: 'multitenant'
+data:
+  tenant-id: '{{TENANT_ID}}'
+  tenant-name: '{{TENANT_NAME}}'
+  tenant-domain: '{{TENANT_DOMAIN}}'
+  tenant-plan: '{{TENANT_PLAN}}'
+  tenant-status: '{{TENANT_STATUS}}'
+  database-host: 'postgresql.database.svc.cluster.local'
+  database-port: '5432'
+  database-name: 'pake_system_multitenant'
+  redis-host: 'redis.redis.svc.cluster.local'
+  redis-port: '6379'
+  api-gateway-url: 'https://api.pake.com'
+  monitoring-enabled: 'true'
+  logging-level: 'info'
+
+---
+# Secret for Tenant Database Credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tenant-db-secret
+  namespace: tenant-{{TENANT_ID}}
+  labels:
+    tenant-id: '{{TENANT_ID}}'
+    pake-system: 'multitenant'
+type: Opaque
+data:
+  username: { { DB_USERNAME_B64 } } # Base64 encoded username
+  REDACTED_SECRET: { { DB_PASSWORD_B64 } } # Base64 encoded REDACTED_SECRET
+  database: { { DB_NAME_B64 } } # Base64 encoded database name
+
+---
+# Secret for Tenant API Keys
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tenant-api-secret
+  namespace: tenant-{{TENANT_ID}}
+  labels:
+    tenant-id: '{{TENANT_ID}}'
+    pake-system: 'multitenant'
+type: Opaque
+data:
+  api-key: { { API_KEY_B64 } } # Base64 encoded API key
+  jwt-secret: { { JWT_SECRET_B64 } } # Base64 encoded JWT secret
+  encryption-key: { { ENCRYPTION_KEY_B64 } } # Base64 encoded encryption key
+
+---
+# Pod Disruption Budget for Tenant Services
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: tenant-pdb
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      tenant-id: '{{TENANT_ID}}'
+      app: 'pake-service'
+
+---
+# Horizontal Pod Autoscaler for Tenant Services
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tenant-hpa
+  namespace: tenant-{{TENANT_ID}}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pake-service
+  minReplicas: 1
+  maxReplicas: { { MAX_REPLICAS } } # e.g., 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

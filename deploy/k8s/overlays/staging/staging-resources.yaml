@@ -1,0 +1,68 @@
+# Staging Resource Limits - Production-like but scaled down
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-backend
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-frontend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-frontend
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '100m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1'

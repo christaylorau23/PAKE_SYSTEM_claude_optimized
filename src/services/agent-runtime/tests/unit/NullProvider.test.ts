@@ -1,0 +1,355 @@
+/**
+ * Unit Tests for NullProvider
+ */
+
+import { NullProvider } from '../../src/providers/NullProvider';
+import { AgentTask, AgentTaskType, AgentResultStatus, AgentResult } from '../../src/types';
+import { AgentCapability } from '../../src/providers/AgentProvider';
+
+describe('NullProvider', () => {
+  let provider: NullProvider;
+
+  beforeEach(() => {
+    provider = new NullProvider();
+  });
+
+  afterEach(async () => {
+    await provider.dispose();
+  });
+
+  describe('Constructor and Configuration', () => {
+    it('should initialize with default configuration', () => {
+      expect(provider.name).toBe('NullProvider');
+      expect(provider.version).toBe('1.0.0');
+      expect(provider.capabilities).toContain(AgentCapability.TEXT_ANALYSIS);
+      expect(provider.capabilities).toContain(AgentCapability.SENTIMENT_ANALYSIS);
+    });
+
+    it('should accept custom configuration', () => {
+      const customProvider = new NullProvider({
+        timeout: 5000,
+        concurrency: 5,
+      });
+
+      expect(customProvider.name).toBe('NullProvider');
+      // Configuration is private, so we test via behavior
+    });
+
+    it('should support all major agent capabilities', () => {
+      const expectedCapabilities = [
+        AgentCapability.TEXT_ANALYSIS,
+        AgentCapability.SENTIMENT_ANALYSIS,
+        AgentCapability.ENTITY_EXTRACTION,
+        AgentCapability.TREND_DETECTION,
+        AgentCapability.CONTENT_GENERATION,
+        AgentCapability.DATA_SYNTHESIS,
+      ];
+
+      expectedCapabilities.forEach((capability) => {
+        expect(provider.capabilities).toContain(capability);
+      });
+    });
+  });
+
+  describe('Health Check', () => {
+    it('should return true when provider is active', async () => {
+      const health = await provider.healthCheck();
+      expect(health).toBe(true);
+    });
+
+    it('should return false after disposal', async () => {
+      await provider.dispose();
+      const health = await provider.healthCheck();
+      expect(health).toBe(false);
+    });
+  });
+
+  describe('Task Execution', () => {
+    let sampleTask: AgentTask;
+
+    beforeEach(() => {
+      sampleTask = {
+        id: 'test_task_001',
+        type: AgentTaskType.SENTIMENT_ANALYSIS,
+        input: {
+          content: 'This is a test message for sentiment analysis.',
+        },
+        config: {
+          timeout: 30000,
+          priority: 5,
+        },
+        metadata: {
+          source: 'test_suite',
+          createdAt: new Date().toISOString(),
+          correlationId: 'test_correlation_001',
+        },
+      };
+    });
+
+    it('should execute task successfully', async () => {
+      const result = await provider.run(sampleTask);
+
+      expect(result.taskId).toBe(sampleTask.id);
+      expect(result.status).toBe(AgentResultStatus.SUCCESS);
+      expect(result.metadata.provider).toBe('NullProvider');
+      expect(result.metadata.duration).toBeGreaterThan(0);
+      expect(result.metadata.confidence).toBeWithinRange(0.7, 1.0);
+    });
+
+    it('should return deterministic results for same task ID', async () => {
+      const result1 = await provider.run(sampleTask);
+      const result2 = await provider.run(sampleTask);
+
+      // Same task ID should produce same deterministic results
+      expect(result1.output.sentiment?.score).toBe(result2.output.sentiment?.score);
+      expect(result1.metadata.confidence).toBe(result2.metadata.confidence);
+    });
+
+    it('should return different results for different task IDs', async () => {
+      const task2 = { ...sampleTask, id: 'test_task_002' };
+
+      const result1 = await provider.run(sampleTask);
+      const result2 = await provider.run(task2);
+
+      // Different task IDs should produce different results
+      expect(result1.output.sentiment?.score).not.toBe(result2.output.sentiment?.score);
+      expect(result1.metadata.confidence).not.toBe(result2.metadata.confidence);
+    });
+
+    it('should throw error when disposed', async () => {
+      await provider.dispose();
+
+      await expect(provider.run(sampleTask)).rejects.toThrow('Provider has been disposed');
+    });
+
+    it('should simulate processing delay', async () => {
+      const startTime = Date.now();
+      const result = await provider.run(sampleTask);
+      const endTime = Date.now();
+
+      const actualDuration = endTime - startTime;
+      const reportedDuration = result.metadata.duration;
+
+      // Should have some processing delay
+      expect(actualDuration).toBeGreaterThan(50);
+      expect(reportedDuration).toBeWithinRange(50, 150);
+    });
+  });
+
+  describe('Task Type Handling', () => {
+    it('should handle sentiment analysis tasks', async () => {
+      const task: AgentTask = {
+        id: 'sentiment_test',
+        type: AgentTaskType.SENTIMENT_ANALYSIS,
+        input: { content: 'I love this product!' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.output.sentiment).toBeDefined();
+      expect(result.output.sentiment?.score).toBeWithinRange(-1, 1);
+      expect(result.output.sentiment?.label).toMatch(/positive|negative|neutral/);
+      expect(result.output.sentiment?.confidence).toBeWithinRange(0.6, 1.0);
+      expect(result.output.sentiment?.emotions).toBeDefined();
+    });
+
+    it('should handle entity extraction tasks', async () => {
+      const task: AgentTask = {
+        id: 'entity_test',
+        type: AgentTaskType.ENTITY_EXTRACTION,
+        input: { content: 'John Smith works at Acme Corp in New York.' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.output.entities).toBeDefined();
+      expect(Array.isArray(result.output.entities)).toBe(true);
+      expect(result.output.entities!.length).toBeGreaterThan(0);
+
+      const firstEntity = result.output.entities![0];
+      expect(firstEntity.type).toMatch(/PERSON|ORGANIZATION|LOCATION|DATE|MONEY/);
+      expect(firstEntity.value).toBeTruthy();
+      expect(firstEntity.confidence).toBeWithinRange(0.6, 1.0);
+    });
+
+    it('should handle trend detection tasks', async () => {
+      const task: AgentTask = {
+        id: 'trend_test',
+        type: AgentTaskType.TREND_DETECTION,
+        input: { content: 'Technology trends are evolving rapidly.' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.output.trends).toBeDefined();
+      expect(Array.isArray(result.output.trends)).toBe(true);
+      expect(result.output.trends!.length).toBeGreaterThan(0);
+
+      const firstTrend = result.output.trends![0];
+      expect(firstTrend.topic).toBeTruthy();
+      expect(firstTrend.direction).toMatch(/up|down|stable/);
+      expect(firstTrend.strength).toBeWithinRange(0.2, 1.0);
+      expect(firstTrend.period).toBeDefined();
+    });
+
+    it('should handle content analysis tasks', async () => {
+      const task: AgentTask = {
+        id: 'analysis_test',
+        type: AgentTaskType.CONTENT_ANALYSIS,
+        input: { content: 'This is a comprehensive analysis of market trends.' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.output.data).toBeDefined();
+      expect(result.output.data?.wordCount).toBeGreaterThan(0);
+      expect(result.output.data?.readabilityScore).toBeWithinRange(0, 1);
+      expect(Array.isArray(result.output.data?.keyTopics)).toBe(true);
+    });
+
+    it('should handle content synthesis tasks', async () => {
+      const task: AgentTask = {
+        id: 'synthesis_test',
+        type: AgentTaskType.CONTENT_SYNTHESIS,
+        input: { content: 'Original content to be synthesized and summarized.' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.output.content).toBeDefined();
+      expect(typeof result.output.content).toBe('string');
+      expect(result.output.content!.length).toBeGreaterThan(10);
+      expect(result.output.data?.synthesisMethod).toBeDefined();
+    });
+
+    it('should handle unknown task types gracefully', async () => {
+      const task: AgentTask = {
+        id: 'unknown_test',
+        type: 'unknown_type' as AgentTaskType,
+        input: { content: 'Test content' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result = await provider.run(task);
+
+      expect(result.status).toBe(AgentResultStatus.SUCCESS);
+      expect(result.output.data).toBeDefined();
+      expect(result.output.data?.message).toContain('Unknown task type');
+    });
+  });
+
+  describe('Statistics and Monitoring', () => {
+    it('should track execution count', async () => {
+      const initialStats = provider.getStats();
+      expect(initialStats.executionCount).toBe(0);
+
+      const task: AgentTask = {
+        id: 'stats_test',
+        type: AgentTaskType.SENTIMENT_ANALYSIS,
+        input: { content: process.env.UNKNOWN },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      await provider.run(task);
+
+      const finalStats = provider.getStats();
+      expect(finalStats.executionCount).toBe(1);
+      expect(finalStats.disposed).toBe(false);
+    });
+
+    it('should provide configuration in stats', () => {
+      const customProvider = new NullProvider({
+        timeout: 15000,
+        concurrency: 3,
+      });
+
+      const stats = customProvider.getStats();
+      expect(stats.config).toBeDefined();
+      expect(stats.config.timeout).toBe(15000);
+      expect(stats.config.concurrency).toBe(3);
+    });
+  });
+
+  describe('Resource Management', () => {
+    it('should dispose cleanly', async () => {
+      expect(provider.getStats().disposed).toBe(false);
+
+      await provider.dispose();
+
+      expect(provider.getStats().disposed).toBe(true);
+      await expect(provider.healthCheck()).resolves.toBe(false);
+    });
+
+    it('should be safe to dispose multiple times', async () => {
+      await provider.dispose();
+      await provider.dispose(); // Should not throw
+
+      expect(provider.getStats().disposed).toBe(true);
+    });
+  });
+
+  describe('Deterministic Behavior', () => {
+    it('should produce consistent sentiment scores', async () => {
+      const tasks = [
+        'I love this product!',
+        'This is terrible.',
+        'It is okay, nothing special.',
+      ].map((content, index) => ({
+        id: `consistent_test_${index}`,
+        type: AgentTaskType.SENTIMENT_ANALYSIS,
+        input: { content },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      }));
+
+      const results1 = await Promise.all(tasks.map((task) => provider.run(task)));
+
+      // Create new provider to test consistency across instances
+      const provider2 = new NullProvider();
+      const results2 = await Promise.all(tasks.map((task) => provider2.run(task)));
+
+      // Results should be identical across providers for same task IDs
+      for (let i = 0; i < results1.length; i++) {
+        expect(results1[i].output.sentiment?.score).toBe(results2[i].output.sentiment?.score);
+        expect(results1[i].output.sentiment?.label).toBe(results2[i].output.sentiment?.label);
+      }
+
+      await provider2.dispose();
+    });
+
+    it('should generate stable entity extractions', async () => {
+      const task: AgentTask = {
+        id: 'stable_entities',
+        type: AgentTaskType.ENTITY_EXTRACTION,
+        input: { content: 'John Smith from Microsoft visited California.' },
+        config: {},
+        metadata: { source: process.env.UNKNOWN, createdAt: new Date().toISOString() },
+      };
+
+      const result1 = await provider.run(task);
+      const result2 = await provider.run(task);
+
+      expect(result1.output.entities?.length).toBe(result2.output.entities?.length);
+
+      if (result1.output.entities && result2.output.entities) {
+        for (let i = 0; i < result1.output.entities.length; i++) {
+          expect(result1.output.entities[i].type).toBe(result2.output.entities[i].type);
+          expect(result1.output.entities[i].value).toBe(result2.output.entities[i].value);
+          expect(result1.output.entities[i].confidence).toBe(result2.output.entities[i].confidence);
+        }
+      }
+    });
+  });
+});

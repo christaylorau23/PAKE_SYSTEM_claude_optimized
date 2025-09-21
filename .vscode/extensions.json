@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-git",
+    "eamodio.gitlens",
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode",
+    "rust-lang.rust-analyzer"
+  ],
+  "_claude_code_curated": true
+}

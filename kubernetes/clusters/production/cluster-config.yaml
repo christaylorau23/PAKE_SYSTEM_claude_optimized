@@ -1,0 +1,370 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config
+  namespace: kube-system
+data:
+  cluster.yaml: |
+    # PAKE Production Kubernetes Cluster Configuration
+    apiVersion: kind.x-k8s.io/v1alpha4
+    kind: Cluster
+    metadata:
+      name: pake-production
+    spec:
+      # Kubernetes version
+      kubernetesVersion: "v1.28.4"
+      
+      # Networking configuration
+      networking:
+        apiServerAddress: "0.0.0.0"
+        apiServerPort: 6443
+        podSubnet: "10.244.0.0/16"
+        serviceSubnet: "10.96.0.0/12"
+        dnsDomain: "cluster.local"
+      
+      # Node pools configuration
+      nodes:
+        # Control plane nodes (3 for HA)
+        - role: control-plane
+          kubernetesVersion: "v1.28.4"
+          extraMounts:
+            - hostPath: /var/lib/etcd
+              containerPath: /var/lib/etcd
+          extraPortMappings:
+            - containerPort: 80
+              hostPort: 80
+            - containerPort: 443
+              hostPort: 443
+        
+        - role: control-plane
+          kubernetesVersion: "v1.28.4"
+        
+        - role: control-plane
+          kubernetesVersion: "v1.28.4"
+        
+        # Worker nodes (20 for production load)
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: standard
+            workload: api-services
+          taints:
+            - key: workload
+              value: api-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: standard
+            workload: api-services
+          taints:
+            - key: workload
+              value: api-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: memory-optimized
+            workload: ai-services
+          taints:
+            - key: workload
+              value: ai-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: memory-optimized
+            workload: ai-services
+          taints:
+            - key: workload
+              value: ai-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: gpu
+            workload: ai-inference
+            gpu-type: nvidia-v100
+          taints:
+            - key: nvidia.com/gpu
+              value: "true"
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: gpu
+            workload: ai-inference
+            gpu-type: nvidia-v100
+          taints:
+            - key: nvidia.com/gpu
+              value: "true"
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: database
+            workload: data-services
+          taints:
+            - key: workload
+              value: data-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: database
+            workload: data-services
+          taints:
+            - key: workload
+              value: data-services
+              effect: NoSchedule
+        
+        - role: worker
+          kubernetesVersion: "v1.28.4"
+          labels:
+            node-type: database
+            workload: data-services
+          taints:
+            - key: workload
+              value: data-services
+              effect: NoSchedule
+      
+      # Cluster-wide settings
+      kubeadmConfigPatches:
+        - |
+          apiVersion: kubeadm.k8s.io/v1beta3
+          kind: ClusterConfiguration
+          etcd:
+            local:
+              dataDir: "/var/lib/etcd"
+              serverCertSANs:
+                - "localhost"
+                - "127.0.0.1"
+                - "pake-etcd.cluster.local"
+              peerCertSANs:
+                - "localhost"
+                - "127.0.0.1"
+                - "pake-etcd.cluster.local"
+          apiServer:
+            extraArgs:
+              audit-log-maxage: "30"
+              audit-log-maxbackup: "10"
+              audit-log-maxsize: "100"
+              audit-log-path: "/var/log/audit.log"
+              enable-admission-plugins: "NodeRestriction,ResourceQuota,PodSecurityPolicy"
+              encryption-provider-config: "/etc/kubernetes/encryption.yaml"
+            extraVolumes:
+              - name: audit-log
+                hostPath: "/var/log/audit.log"
+                mountPath: "/var/log/audit.log"
+              - name: encryption-config
+                hostPath: "/etc/kubernetes/encryption.yaml"
+                mountPath: "/etc/kubernetes/encryption.yaml"
+          controllerManager:
+            extraArgs:
+              bind-address: "0.0.0.0"
+              terminated-pod-gc-threshold: "50"
+          scheduler:
+            extraArgs:
+              bind-address: "0.0.0.0"
+        
+        - |
+          apiVersion: kubeadm.k8s.io/v1beta3
+          kind: InitConfiguration
+          nodeRegistration:
+            kubeletExtraArgs:
+              node-labels: "pake-cluster=production"
+              max-pods: "250"
+              eviction-hard: "memory.available<5%,nodefs.available<10%"
+              eviction-soft: "memory.available<10%,nodefs.available<15%"
+              eviction-soft-grace-period: "memory.available=2m,nodefs.available=2m"
+        
+        - |
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          maxPods: 250
+          cgroupDriver: systemd
+          containerRuntimeEndpoint: "unix:///var/run/containerd/containerd.sock"
+          resolvConf: "/run/systemd/resolve/resolv.conf"
+          runtimeRequestTimeout: "2m"
+          staticPodPath: "/etc/kubernetes/manifests"
+          authentication:
+            webhook:
+              enabled: true
+            anonymous:
+              enabled: false
+          authorization:
+            mode: Webhook
+          clusterDNS:
+            - "10.96.0.10"
+          clusterDomain: "cluster.local"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-resources
+  namespace: kube-system
+data:
+  resource-quotas.yaml: |
+    # Default resource quotas for production
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: compute-quota
+      namespace: default
+    spec:
+      hard:
+        requests.cpu: "100"
+        requests.memory: 200Gi
+        limits.cpu: "200"
+        limits.memory: 400Gi
+        persistentvolumeclaims: "10"
+
+    ---
+    apiVersion: v1
+    kind: LimitRange
+    metadata:
+      name: default-limits
+      namespace: default
+    spec:
+      limits:
+        - default:
+            cpu: "1"
+            memory: "2Gi"
+          defaultRequest:
+            cpu: "100m"
+            memory: "256Mi"
+          type: Container
+        - max:
+            cpu: "8"
+            memory: "32Gi"
+          min:
+            cpu: "10m"
+            memory: "64Mi"
+          type: Container
+
+  network-policies.yaml: |
+    # Default network policies for security
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: default-deny-all
+      namespace: default
+    spec:
+      podSelector: {}
+      policyTypes:
+        - Ingress
+        - Egress
+
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: allow-same-namespace
+      namespace: default
+    spec:
+      podSelector: {}
+      policyTypes:
+        - Ingress
+        - Egress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  name: default
+      egress:
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  name: default
+        - to: {} # Allow DNS resolution
+          ports:
+            - protocol: UDP
+              port: 53
+
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: allow-ingress-traffic
+      namespace: default
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: frontend
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  name: ingress-nginx
+        - ports:
+            - protocol: TCP
+              port: 80
+            - protocol: TCP
+              port: 443
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-policies
+  namespace: kube-system
+data:
+  pod-security-policy.yaml: |
+    apiVersion: policy/v1beta1
+    kind: PodSecurityPolicy
+    metadata:
+      name: pake-restricted
+    spec:
+      privileged: false
+      allowPrivilegeEscalation: false
+      requiredDropCapabilities:
+        - ALL
+      volumes:
+        - 'configMap'
+        - 'emptyDir'
+        - 'projected'
+        - 'secret'
+        - 'downwardAPI'
+        - 'persistentVolumeClaim'
+      runAsUser:
+        rule: 'MustRunAsNonRoot'
+      seLinux:
+        rule: 'RunAsAny'
+      fsGroup:
+        rule: 'RunAsAny'
+      readOnlyRootFilesystem: true
+      
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: pake-restricted-psp
+    rules:
+      - apiGroups: ['policy']
+        resources: ['podsecuritypolicies']
+        verbs: ['use']
+        resourceNames: ['pake-restricted']
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: pake-restricted-psp
+    roleRef:
+      kind: ClusterRole
+      name: pake-restricted-psp
+      apiGroup: rbac.authorization.k8s.io
+    subjects:
+      - kind: ServiceAccount
+        name: default
+        namespace: pake-system

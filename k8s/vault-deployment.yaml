@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vault-system
+  labels:
+    name: vault-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  namespace: vault-system
+  labels:
+    app: vault
+    component: secret-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      serviceAccountName: vault
+      containers:
+        - name: vault
+          image: vault:1.15.2
+          ports:
+            - containerPort: 8200
+              name: http
+          env:
+            - name: VAULT_DEV_ROOT_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: vault-secret
+                  key: root-token
+            - name: VAULT_DEV_LISTEN_ADDRESS
+              value: '0.0.0.0:8200'
+            - name: VAULT_ADDR
+              value: 'http://0.0.0.0:8200'
+          command:
+            - vault
+            - server
+            - -dev
+            - -dev-root-token-id=$(VAULT_DEV_ROOT_TOKEN_ID)
+            - -dev-listen-address=$(VAULT_DEV_LISTEN_ADDRESS)
+          resources:
+            requests:
+              cpu: '100m'
+              memory: '256Mi'
+            limits:
+              cpu: '500m'
+              memory: '512Mi'
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/health
+              port: 8200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health
+              port: 8200
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: vault-data
+              mountPath: /vault/data
+      volumes:
+        - name: vault-data
+          persistentVolumeClaim:
+            claimName: vault-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-service
+  namespace: vault-system
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8200
+      targetPort: 8200
+      name: http
+  selector:
+    app: vault
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-data-pvc
+  namespace: vault-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault
+  namespace: vault-system
+# Vault secret is generated dynamically by the deployment script
+# See deploy-secure.sh for secure token generation
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: vault-system
+spec:
+  template:
+    spec:
+      serviceAccountName: vault
+      containers:
+        - name: vault-init
+          image: vault:1.15.2
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for Vault to be ready
+              until vault status; do
+                echo "Waiting for Vault to be ready..."
+                sleep 5
+              done
+
+              # Enable KV v2 secrets engine
+              vault secrets enable -path=secret kv-v2
+
+              # Create wealth-platform secrets with environment variables
+              vault kv put secret/wealth-platform/postgres \
+                database="${POSTGRES_DB:-wealth_db}" \
+                username="${POSTGRES_USER:-postgres}" \
+                REDACTED_SECRET="${POSTGRES_PASSWORD:-$(openssl rand -base64 32)}" \
+                replication-REDACTED_SECRET="${POSTGRES_REPLICATION_PASSWORD:-$(openssl rand -base64 32)}"
+
+              vault kv put secret/wealth-platform/api \
+                database-url="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-$(openssl rand -base64 32)}@postgresql-primary-service:5432/wealth_db}" \
+                firecrawl-api-key="${FIRECRAWL_API_KEY:-your-firecrawl-api-key-here}" \
+                openai-api-key="${OPENAI_API_KEY:-your-openai-api-key-here}" \
+                alphavantage-api-key="${ALPHA_VANTAGE_API_KEY:-your-alpha-vantage-key-here}"
+
+              vault kv put secret/wealth-platform/grafana \
+                admin-REDACTED_SECRET="${GRAFANA_ADMIN_PASSWORD:-$(openssl rand -base64 32)}"
+
+              # Enable Kubernetes auth method
+              vault auth enable kubernetes
+
+              # Configure Kubernetes auth
+              vault write auth/kubernetes/config \
+                token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+                kubernetes_host="https://kubernetes.default.svc.cluster.local" \
+                kubernetes_ca_cert="$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)"
+
+              # Create policy for wealth-platform
+              vault policy write wealth-platform - <<EOF
+              path "secret/data/wealth-platform/*" {
+                capabilities = ["read"]
+              }
+              EOF
+
+              # Create role for wealth-platform
+              vault write auth/kubernetes/role/wealth-platform \
+                bound_service_account_names=external-secrets \
+                bound_service_account_namespaces=external-secrets-system \
+                policies=wealth-platform \
+                ttl=24h
+
+              echo "Vault initialization completed successfully!"
+          env:
+            - name: VAULT_ADDR
+              value: 'http://vault-service:8200'
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-secret
+                  key: root-token
+          resources:
+            requests:
+              cpu: '100m'
+              memory: '128Mi'
+            limits:
+              cpu: '200m'
+              memory: '256Mi'
+      restartPolicy: OnFailure

@@ -1,0 +1,182 @@
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - 'http://localhost:3000'
+            - 'https://*.pake-system.com'
+          allowed_headers:
+            - '*'
+
+  # Prometheus receiver for pulling metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['0.0.0.0:8888']
+
+  # Host metrics receiver
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      filesystem:
+      memory:
+      network:
+      process:
+
+  # Docker stats receiver
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 10s
+    timeout: 20s
+
+processors:
+  # Batch processor for performance
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  # Resource processor to add service information
+  resource:
+    attributes:
+      - key: service.name
+        value: 'pake-system'
+        action: upsert
+      - key: service.version
+        value: '1.0.0'
+        action: upsert
+      - key: deployment.environment
+        value: 'development'
+        action: upsert
+
+  # Attributes processor for trace enhancement
+  attributes:
+    actions:
+      - key: http.user_agent
+        action: delete
+      - key: http.request.header.authorization
+        action: delete
+      - key: db.statement
+        action: update
+        from_attribute: db.statement
+        # Sanitize SQL statements
+      - key: pake.service.tier
+        value: 'backend'
+        action: insert
+
+  # Probabilistic sampler for trace sampling
+  probabilistic_sampler:
+    sampling_percentage: 10.0
+
+  # Span processor for trace enhancement
+  span:
+    name:
+      from_attributes: ['http.method', 'http.route']
+      separator: ' '
+
+exporters:
+  # Jaeger exporter for traces
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+  # Prometheus exporter for metrics
+  prometheus:
+    endpoint: '0.0.0.0:9464'
+    namespace: 'pake_system'
+    const_labels:
+      environment: 'development'
+    send_timestamps: true
+    metric_expiration: 180m
+    enable_open_metrics: true
+
+  # OTLP exporter for additional backends
+  otlp/jaeger:
+    endpoint: 'jaeger:4317'
+    tls:
+      insecure: true
+
+  # Logging exporter for debugging
+  logging:
+    loglevel: info
+    sampling_initial: 2
+    sampling_thereafter: 500
+
+  # Elasticsearch exporter for logs
+  elasticsearch:
+    endpoints: ['http://elasticsearch:9200']
+    logs_index: 'pake-logs'
+    pipeline: 'pake-ingest-pipeline'
+
+extensions:
+  # Health check extension
+  health_check:
+    endpoint: 0.0.0.0:8888
+    path: '/health'
+
+  # Performance profiler
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  # Metrics extension
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors:
+        [
+          memory_limiter,
+          batch,
+          resource,
+          attributes,
+          probabilistic_sampler,
+          span,
+        ]
+      exporters: [jaeger, otlp/jaeger, logging]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics, docker_stats]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [prometheus, logging]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [elasticsearch, logging]
+
+  # Telemetry configuration
+  telemetry:
+    logs:
+      level: 'info'
+    metrics:
+      address: 0.0.0.0:8888
+      level: 'detailed'
+    traces:
+      processors: ['batch']

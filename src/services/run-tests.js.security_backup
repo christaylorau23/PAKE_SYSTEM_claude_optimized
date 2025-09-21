@@ -1,0 +1,610 @@
+#!/usr/bin/env node
+
+/**
+ * PAKE System - Test Runner
+ * 
+ * Comprehensive test runner script for all services with reporting and analysis.
+ */
+
+const { exec } = require('child_process');
+const fs = require('fs').promises;
+const path = require('path');
+
+// Configuration
+const config = {
+  testSuites: {
+    'connectors': {
+      name: 'Connector Tests',
+      path: 'connectors/tests',
+      pattern: '**/*.test.ts',
+      timeout: 30000
+    },
+    'trends': {
+      name: 'Trends Pipeline Tests',
+      path: 'trends/tests',
+      pattern: '**/*.test.ts',
+      timeout: 20000
+    },
+    'integration': {
+      name: 'Integration Tests',
+      path: 'tests/integration',
+      pattern: '**/*.test.ts',
+      timeout: 60000
+    }
+  },
+  coverage: {
+    threshold: 85,
+    outputDir: 'coverage',
+    formats: ['text', 'html', 'lcov', 'json-summary']
+  },
+  reporting: {
+    outputDir: 'test-results',
+    formats: ['junit', 'json', 'html']
+  }
+};
+
+class TestRunner {
+  constructor() {
+    this.results = {
+      suites: {},
+      summary: {
+        totalTests: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        duration: 0
+      }
+    };
+  }
+
+  async run(options = {}) {
+    console.log('🧪 PAKE System Test Runner');
+    console.log('=' .repeat(50));
+
+    const startTime = Date.now();
+
+    try {
+      // Setup test environment
+      await this.setupEnvironment();
+
+      // Run test suites
+      if (options.suite) {
+        await this.runSuite(options.suite, options);
+      } else {
+        await this.runAllSuites(options);
+      }
+
+      // Generate reports
+      await this.generateReports();
+
+      // Print summary
+      this.printSummary();
+
+    } catch (error) {
+      console.error('❌ Test runner failed:', error.message);
+      process.exit(1);
+    } finally {
+      const duration = Date.now() - startTime;
+      console.log(`\n⏱️  Total execution time: ${(duration / 1000).toFixed(2)}s`);
+    }
+  }
+
+  async setupEnvironment() {
+    console.log('🔧 Setting up test environment...');
+
+    // Ensure directories exist
+    await this.ensureDirectories([
+      config.coverage.outputDir,
+      config.reporting.outputDir,
+      'logs/tests'
+    ]);
+
+    // Set environment variables
+    process.env.NODE_ENV = process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED';
+    process.env.LOG_LEVEL = 'error';
+    process.env.TEST_TIMEOUT = '30000';
+
+    console.log('✅ Environment setup complete');
+  }
+
+  async runAllSuites(options) {
+    console.log('🚀 Running all test suites...\n');
+
+    const suiteNames = Object.keys(config.testSuites);
+    
+    for (const suiteName of suiteNames) {
+      await this.runSuite(suiteName, options);
+      console.log(); // Add spacing between suites
+    }
+  }
+
+  async runSuite(suiteName, options = {}) {
+    const suite = config.testSuites[suiteName];
+    if (!suite) {
+      throw new Error(`Unknown test suite: ${suiteName}`);
+    }
+
+    console.log(`🧪 Running ${suite.name}...`);
+
+    const startTime = Date.now();
+
+    try {
+      // Build Jest command
+      const jestCmd = this.buildJestCommand(suiteName, suite, options);
+      
+      console.log(`📝 Command: ${jestCmd}`);
+      
+      // Execute tests
+      const result = await this.executeCommand(jestCmd);
+      
+      const duration = Date.now() - startTime;
+      
+      // Parse results
+      const suiteResult = await this.parseTestResults(suiteName, result, duration);
+      this.results.suites[suiteName] = suiteResult;
+      
+      // Update summary
+      this.updateSummary(suiteResult);
+      
+      if (suiteResult.success) {
+        console.log(`✅ ${suite.name} completed successfully`);
+        console.log(`   Tests: ${suiteResult.tests.passed}/${suiteResult.tests.total} passed`);
+        console.log(`   Coverage: ${suiteResult.coverage.overall}%`);
+        console.log(`   Duration: ${(duration / 1000).toFixed(2)}s`);
+      } else {
+        console.log(`❌ ${suite.name} failed`);
+        console.log(`   Failed tests: ${suiteResult.tests.failed}`);
+        console.log(`   Error: ${suiteResult.error}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to run ${suite.name}:`, error.message);
+      this.results.suites[suiteName] = {
+        success: false,
+        error: error.message,
+        tests: { total: 0, passed: 0, failed: 1 },
+        coverage: { overall: 0 }
+      };
+    }
+  }
+
+  buildJestCommand(suiteName, suite, options) {
+    const baseCmd = 'npx jest';
+    const args = [];
+
+    // Test pattern
+    args.push(`--testPathPattern=${suite.path}/${suite.pattern}`);
+
+    // Coverage
+    if (!options.noCoverage) {
+      args.push('--coverage');
+      args.push(`--coverageDirectory=${config.coverage.outputDir}/${suiteName}`);
+    }
+
+    // Output format
+    args.push('--verbose');
+    
+    if (options.json) {
+      args.push('--json');
+      args.push(`--outputFile=${config.reporting.outputDir}/${suiteName}-results.json`);
+    }
+
+    // Watch mode
+    if (options.watch) {
+      args.push('--watch');
+    }
+
+    // Specific test file or pattern
+    if (options.testNamePattern) {
+      args.push(`--testNamePattern="${options.testNamePattern}"`);
+    }
+
+    // Timeout
+    args.push(`--testTimeout=${suite.timeout || 30000}`);
+
+    // Parallel execution
+    if (!options.serial) {
+      args.push('--maxWorkers=50%');
+    }
+
+    // Silent mode
+    if (options.silent) {
+      args.push('--silent');
+    }
+
+    return `${baseCmd} ${args.join(' ')}`;
+  }
+
+  async executeCommand(command) {
+    return new Promise((resolve, reject) => {
+      exec(command, { 
+        cwd: __dirname,
+        maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+      }, (error, stdout, stderr) => {
+        if (error && error.code !== 1) { // Jest exits with 1 when tests fail
+          reject(error);
+        } else {
+          resolve({
+            stdout,
+            stderr,
+            exitCode: error ? error.code : 0
+          });
+        }
+      });
+    });
+  }
+
+  async parseTestResults(suiteName, result, duration) {
+    const suiteResult = {
+      success: result.exitCode === 0,
+      tests: {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0
+      },
+      coverage: {
+        overall: 0,
+        lines: 0,
+        functions: 0,
+        branches: 0,
+        statements: 0
+      },
+      duration,
+      error: null
+    };
+
+    try {
+      // Parse Jest output for test counts
+      const testResults = this.parseJestOutput(result.stdout);
+      suiteResult.tests = testResults;
+
+      // Parse coverage information
+      const coverage = await this.parseCoverageResults(suiteName);
+      suiteResult.coverage = coverage;
+
+    } catch (parseError) {
+      console.warn(`⚠️  Could not parse results for ${suiteName}:`, parseError.message);
+      suiteResult.error = parseError.message;
+    }
+
+    return suiteResult;
+  }
+
+  parseJestOutput(output) {
+    const tests = {
+      total: 0,
+      passed: 0,
+      failed: 0,
+      skipped: 0
+    };
+
+    // Extract test summary from Jest output
+    const lines = output.split('\n');
+    
+    for (const line of lines) {
+      // Look for test summary line
+      if (line.includes('Tests:')) {
+        const matches = line.match(/(\d+)\s+failed,?\s*(\d+)\s+passed,?\s*(\d+)\s+total/);
+        if (matches) {
+          tests.failed = parseInt(matches[1]) || 0;
+          tests.passed = parseInt(matches[2]) || 0;
+          tests.total = parseInt(matches[3]) || 0;
+        }
+      }
+      
+      // Look for skipped tests
+      if (line.includes('skipped')) {
+        const matches = line.match(/(\d+)\s+skipped/);
+        if (matches) {
+          tests.skipped = parseInt(matches[1]) || 0;
+        }
+      }
+    }
+
+    return tests;
+  }
+
+  async parseCoverageResults(suiteName) {
+    const coverage = {
+      overall: 0,
+      lines: 0,
+      functions: 0,
+      branches: 0,
+      statements: 0
+    };
+
+    try {
+      const coveragePath = path.join(config.coverage.outputDir, suiteName, 'coverage-summary.json');
+      const coverageData = await fs.readFile(coveragePath, 'utf8');
+      const coverageJson = JSON.parse(coverageData);
+
+      if (coverageJson.total) {
+        coverage.lines = coverageJson.total.lines.pct || 0;
+        coverage.functions = coverageJson.total.functions.pct || 0;
+        coverage.branches = coverageJson.total.branches.pct || 0;
+        coverage.statements = coverageJson.total.statements.pct || 0;
+        coverage.overall = Math.round((coverage.lines + coverage.functions + coverage.branches + coverage.statements) / 4);
+      }
+
+    } catch (error) {
+      console.warn(`⚠️  Could not parse coverage for ${suiteName}:`, error.message);
+    }
+
+    return coverage;
+  }
+
+  updateSummary(suiteResult) {
+    this.results.summary.totalTests += suiteResult.tests.total;
+    this.results.summary.passed += suiteResult.tests.passed;
+    this.results.summary.failed += suiteResult.tests.failed;
+    this.results.summary.skipped += suiteResult.tests.skipped;
+    this.results.summary.duration += suiteResult.duration;
+  }
+
+  async generateReports() {
+    console.log('📊 Generating test reports...');
+
+    try {
+      // Generate JSON report
+      await this.generateJsonReport();
+      
+      // Generate HTML report
+      await this.generateHtmlReport();
+      
+      // Generate coverage badge
+      await this.generateCoverageBadge();
+      
+      console.log('✅ Reports generated successfully');
+      
+    } catch (error) {
+      console.warn('⚠️  Report generation failed:', error.message);
+    }
+  }
+
+  async generateJsonReport() {
+    const reportPath = path.join(config.reporting.outputDir, 'test-results.json');
+    const report = {
+      timestamp: new Date().toISOString(),
+      summary: this.results.summary,
+      suites: this.results.suites,
+      environment: {
+        node: process.version,
+        platform: process.platform,
+        arch: process.arch
+      }
+    };
+
+    await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
+    console.log(`📄 JSON report: ${reportPath}`);
+  }
+
+  async generateHtmlReport() {
+    const htmlTemplate = this.getHtmlReportTemplate();
+    const reportPath = path.join(config.reporting.outputDir, 'test-results.html');
+    
+    const html = htmlTemplate
+      .replace('{{RESULTS_JSON}}', JSON.stringify(this.results, null, 2))
+      .replace('{{TIMESTAMP}}', new Date().toLocaleString())
+      .replace('{{SUMMARY}}', this.getSummaryHtml());
+
+    await fs.writeFile(reportPath, html);
+    console.log(`🌐 HTML report: ${reportPath}`);
+  }
+
+  async generateCoverageBadge() {
+    const overallCoverage = this.calculateOverallCoverage();
+    const color = overallCoverage >= 90 ? 'brightgreen' : overallCoverage >= 80 ? 'yellow' : 'red';
+    
+    const badgeUrl = `https://img.shields.io/badge/coverage-${overallCoverage}%25-${color}`;
+    const badgePath = path.join(config.reporting.outputDir, 'coverage-badge.md');
+    
+    await fs.writeFile(badgePath, `![Coverage](${badgeUrl})\n`);
+    console.log(`🏆 Coverage badge: ${badgePath}`);
+  }
+
+  calculateOverallCoverage() {
+    const suites = Object.values(this.results.suites);
+    if (suites.length === 0) return 0;
+    
+    const totalCoverage = suites.reduce((sum, suite) => sum + (suite.coverage?.overall || 0), 0);
+    return Math.round(totalCoverage / suites.length);
+  }
+
+  printSummary() {
+    console.log('\n📊 Test Summary');
+    console.log('=' .repeat(50));
+    
+    const { summary } = this.results;
+    const successRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests * 100).toFixed(1) : 0;
+    const overallCoverage = this.calculateOverallCoverage();
+    
+    console.log(`Total Tests:     ${summary.totalTests}`);
+    console.log(`Passed:          ${summary.passed} (${successRate}%)`);
+    console.log(`Failed:          ${summary.failed}`);
+    console.log(`Skipped:         ${summary.skipped}`);
+    console.log(`Duration:        ${(summary.duration / 1000).toFixed(2)}s`);
+    console.log(`Coverage:        ${overallCoverage}%`);
+    
+    // Suite breakdown
+    console.log('\n📝 Suite Breakdown:');
+    for (const [suiteName, result] of Object.entries(this.results.suites)) {
+      const status = result.success ? '✅' : '❌';
+      const coverage = result.coverage?.overall || 0;
+      console.log(`  ${status} ${suiteName}: ${result.tests.passed}/${result.tests.total} tests, ${coverage}% coverage`);
+    }
+
+    // Exit with appropriate code
+    const hasFailures = summary.failed > 0 || Object.values(this.results.suites).some(s => !s.success);
+    if (hasFailures) {
+      console.log('\n❌ Some tests failed');
+      process.exit(1);
+    } else {
+      console.log('\n✅ All tests passed');
+      process.exit(0);
+    }
+  }
+
+  getSummaryHtml() {
+    const { summary } = this.results;
+    const successRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests * 100).toFixed(1) : 0;
+    
+    return `
+      <div class="summary">
+        <div class="metric">
+          <span class="label">Total Tests:</span>
+          <span class="value">${summary.totalTests}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Success Rate:</span>
+          <span class="value">${successRate}%</span>
+        </div>
+        <div class="metric">
+          <span class="label">Duration:</span>
+          <span class="value">${(summary.duration / 1000).toFixed(2)}s</span>
+        </div>
+      </div>
+    `;
+  }
+
+  getHtmlReportTemplate() {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAKE System Test Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; }
+        .summary { display: flex; gap: 20px; margin: 20px 0; }
+        .metric { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .label { font-weight: bold; display: block; }
+        .value { font-size: 1.5em; color: #27ae60; }
+        .suite { background: white; margin: 10px 0; padding: 15px; border-radius: 8px; }
+        .success { border-left: 4px solid #27ae60; }
+        .failed { border-left: 4px solid #e74c3c; }
+        pre { background: #ecf0f1; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 PAKE System Test Results</h1>
+        <p>Generated on {{TIMESTAMP}}</p>
+    </div>
+    
+    {{SUMMARY}}
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = {{RESULTS_JSON}};
+        const container = document.getElementById('results');
+        
+        Object.entries(results.suites).forEach(([name, suite]) => {
+            const div = document.createElement('div');
+            div.className = \`suite \${suite.success ? 'success' : 'failed'}\`;
+            div.innerHTML = \`
+                <h3>\${suite.success ? '✅' : '❌'} \${name}</h3>
+                <p>Tests: \${suite.tests.passed}/\${suite.tests.total} passed</p>
+                <p>Coverage: \${suite.coverage.overall}%</p>
+                <p>Duration: \${(suite.duration / 1000).toFixed(2)}s</p>
+                \${suite.error ? \`<p style="color: red;">Error: \${suite.error}</p>\` : ''}
+            \`;
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>
+    `;
+  }
+
+  async ensureDirectories(dirs) {
+    for (const dir of dirs) {
+      try {
+        await fs.mkdir(dir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist
+      }
+    }
+  }
+}
+
+// CLI handling
+async function main() {
+  const args = process.argv.slice(2);
+  const options = {};
+
+  // Parse command line arguments
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    switch (arg) {
+      case '--suite':
+        options.suite = args[++i];
+        break;
+      case '--watch':
+        options.watch = true;
+        break;
+      case '--no-coverage':
+        options.noCoverage = true;
+        break;
+      case '--json':
+        options.json = true;
+        break;
+      case '--silent':
+        options.silent = true;
+        break;
+      case '--serial':
+        options.serial = true;
+        break;
+      case '--test-name-pattern':
+        options.testNamePattern = args[++i];
+        break;
+      case '--help':
+        printHelp();
+        return;
+      default:
+        if (arg.startsWith('--')) {
+          console.warn(`Unknown option: ${arg}`);
+        }
+    }
+  }
+
+  const runner = new TestRunner();
+  await runner.run(options);
+}
+
+function printHelp() {
+  console.log(`
+🧪 PAKE System Test Runner
+
+Usage: node run-tests.js [options]
+
+Options:
+  --suite <name>              Run specific test suite (connectors, trends, integration)
+  --watch                     Run in watch mode
+  --no-coverage              Skip coverage collection
+  --json                     Output results in JSON format
+  --silent                   Reduce output verbosity
+  --serial                   Run tests serially instead of parallel
+  --test-name-pattern <pattern>  Run tests matching pattern
+  --help                     Show this help message
+
+Examples:
+  node run-tests.js                           # Run all tests
+  node run-tests.js --suite connectors        # Run only connector tests
+  node run-tests.js --watch --suite trends    # Run trends tests in watch mode
+  node run-tests.js --no-coverage --silent    # Quick run without coverage
+  `);
+}
+
+// Run if called directly
+if (require.main === module) {
+  main().catch(error => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}
+
+module.exports = { TestRunner };

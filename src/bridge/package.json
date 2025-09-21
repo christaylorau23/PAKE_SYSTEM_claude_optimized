@@ -1,0 +1,119 @@
+{
+  "name": "@pake/obsidian-bridge",
+  "version": "2.0.0",
+  "description": "Enhanced TypeScript API bridge for PAKE+ Obsidian vault integration",
+  "main": "obsidian_bridge.js",
+  "types": "obsidian_bridge.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "start": "node obsidian_bridge.js",
+    "start:ts": "ts-node obsidian_bridge.ts",
+    "dev": "nodemon --exec ts-node obsidian_bridge.ts",
+    "dev:js": "nodemon obsidian_bridge.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "jest --detectOpenHandles --forceExit",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist *.js *.d.ts *.js.map",
+    "health": "curl -f http://localhost:3001/health || echo 'Bridge not responding'",
+    "diagnostics": "node -e \"console.log('Bridge Status:', require('http').get('http://localhost:3001/health', res => res.on('data', d => console.log(d.toString()))))\"",
+    "prestart": "npm run build",
+    "prestartts": "npm run type-check"
+  },
+  "keywords": [
+    "pake",
+    "obsidian",
+    "knowledge-management",
+    "api",
+    "bridge",
+    "typescript",
+    "vault-integration"
+  ],
+  "author": "PAKE+ System Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "1.12.2",
+    "chokidar": "3.6.0",
+    "compression": "1.8.1",
+    "cors": "2.8.5",
+    "dotenv": "16.6.1",
+    "express": "4.21.2",
+    "fs-extra": "11.3.2",
+    "gray-matter": "4.0.3",
+    "helmet": "7.2.0",
+    "uuid": "9.0.1"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^29.5.12",
+    "@types/node": "20.19.17",
+    "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "supertest": "^6.3.4",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=11.5.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
+    "collectCoverageFrom": [
+      "*.ts",
+      "!*.d.ts",
+      "!*.config.ts"
+    ]
+  },
+  "nodemonConfig": {
+    "watch": [
+      "*.ts",
+      "*.js"
+    ],
+    "ext": "ts,js",
+    "ignore": [
+      "*.test.ts",
+      "*.spec.ts",
+      "dist/",
+      "node_modules/"
+    ],
+    "delay": "1000"
+  },
+  "bridge": {
+    "port": 3001,
+    "vault_path": "../../../vault",
+    "api_version": "v2.0",
+    "features": {
+      "real_time_sync": true,
+      "file_watching": true,
+      "metadata_preservation": true,
+      "conflict_resolution": "last-write-wins",
+      "backup_strategy": "incremental"
+    },
+    "health_endpoints": [
+      "/health",
+      "/status",
+      "/diagnostics"
+    ]
+  }
+}

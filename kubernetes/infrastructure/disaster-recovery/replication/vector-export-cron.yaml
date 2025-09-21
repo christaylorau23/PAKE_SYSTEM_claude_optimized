@@ -1,0 +1,964 @@
+# Vector Database Daily Export CronJob for PAKE System
+# Exports ChromaDB collections to S3 and secondary regions
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-export-scripts
+  namespace: database
+  labels:
+    app: vector-export
+data:
+  vector-export-script.py: |
+    #!/usr/bin/env python3
+    """
+    ChromaDB Vector Export Script
+    Exports vector collections to S3 and secondary regions for disaster recovery
+    """
+
+    import asyncio
+    import aiohttp
+    import boto3
+    import json
+    import logging
+    import os
+    import tarfile
+    import tempfile
+    import time
+    from datetime import datetime, timedelta
+    from pathlib import Path
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class VectorExporter:
+        def __init__(self):
+            self.chromadb_url = os.getenv('CHROMADB_URL', 'http://chromadb.database.svc.cluster.local:8000')
+            self.backup_bucket = os.getenv('BACKUP_BUCKET', 's3://pake-backups')
+            self.secondary_bucket = os.getenv('SECONDARY_BACKUP_BUCKET', 's3://pake-backups-eu')
+            self.tertiary_bucket = os.getenv('TERTIARY_BACKUP_BUCKET', 's3://pake-backups-ap')
+            self.retention_days = int(os.getenv('RETENTION_DAYS', '30'))
+            
+            # AWS clients for different regions
+            self.s3_primary = boto3.client('s3', region_name='us-east-1')
+            self.s3_secondary = boto3.client('s3', region_name='eu-west-1')
+            self.s3_tertiary = boto3.client('s3', region_name='ap-southeast-1')
+            
+            self.session = None
+            
+        async def start(self):
+            """Initialize the exporter"""
+            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300))
+            
+        async def stop(self):
+            """Cleanup resources"""
+            if self.session:
+                await self.session.close()
+                
+        async def get_collections(self):
+            """Get list of all collections from ChromaDB"""
+            try:
+                async with self.session.get(f"{self.chromadb_url}/api/v1/collections") as response:
+                    if response.status == 200:
+                        collections = await response.json()
+                        logger.info(f"Found {len(collections)} collections")
+                        return collections
+                    else:
+                        logger.error(f"Failed to get collections: HTTP {response.status}")
+                        return []
+            except Exception as e:
+                logger.error(f"Error getting collections: {e}")
+                return []
+                
+        async def get_collection_data(self, collection_name):
+            """Get all data from a specific collection"""
+            try:
+                logger.info(f"Exporting collection: {collection_name}")
+                
+                # Get collection metadata
+                async with self.session.get(f"{self.chromadb_url}/api/v1/collections/{collection_name}") as response:
+                    if response.status != 200:
+                        logger.error(f"Failed to get collection {collection_name}: HTTP {response.status}")
+                        return None
+                        
+                    collection_info = await response.json()
+                
+                # Get all documents with embeddings
+                query_payload = {
+                    "query_texts": [""],  # Empty query to get all
+                    "n_results": 100000,  # Large number to get all results
+                    "include": ["embeddings", "metadatas", "documents"]
+                }
+                
+                async with self.session.post(
+                    f"{self.chromadb_url}/api/v1/collections/{collection_name}/query",
+                    json=query_payload
+                ) as response:
+                    if response.status == 200:
+                        query_data = await response.json()
+                        
+                        # Combine collection info and data
+                        export_data = {
+                            "collection_info": collection_info,
+                            "data": query_data,
+                            "export_metadata": {
+                                "timestamp": datetime.utcnow().isoformat(),
+                                "collection_name": collection_name,
+                                "document_count": len(query_data.get("ids", [])),
+                                "export_version": "1.0"
+                            }
+                        }
+                        
+                        logger.info(f"Exported {len(query_data.get('ids', []))} documents from {collection_name}")
+                        return export_data
+                    else:
+                        logger.error(f"Failed to query collection {collection_name}: HTTP {response.status}")
+                        return None
+                        
+            except Exception as e:
+                logger.error(f"Error exporting collection {collection_name}: {e}")
+                return None
+                
+        async def export_all_collections(self):
+            """Export all collections to local files"""
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            export_dir = Path(f"/tmp/vector_export_{timestamp}")
+            export_dir.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                collections = await self.get_collections()
+                if not collections:
+                    logger.warning("No collections found to export")
+                    return None
+                
+                export_manifest = {
+                    "export_timestamp": timestamp,
+                    "export_date": datetime.utcnow().isoformat(),
+                    "chromadb_url": self.chromadb_url,
+                    "collections": [],
+                    "total_documents": 0,
+                    "total_size_bytes": 0
+                }
+                
+                total_documents = 0
+                
+                for collection in collections:
+                    collection_name = collection["name"]
+                    collection_data = await self.get_collection_data(collection_name)
+                    
+                    if collection_data:
+                        # Save collection data to JSON file
+                        collection_file = export_dir / f"{collection_name}.json"
+                        with open(collection_file, 'w') as f:
+                            json.dump(collection_data, f, indent=2)
+                        
+                        file_size = collection_file.stat().st_size
+                        doc_count = len(collection_data["data"].get("ids", []))
+                        total_documents += doc_count
+                        
+                        export_manifest["collections"].append({
+                            "name": collection_name,
+                            "file": f"{collection_name}.json",
+                            "document_count": doc_count,
+                            "file_size_bytes": file_size,
+                            "metadata": collection_data["collection_info"]
+                        })
+                        
+                        export_manifest["total_size_bytes"] += file_size
+                        
+                        logger.info(f"Saved {collection_name}: {doc_count} docs, {file_size} bytes")
+                
+                export_manifest["total_documents"] = total_documents
+                
+                # Save manifest
+                manifest_file = export_dir / "export_manifest.json"
+                with open(manifest_file, 'w') as f:
+                    json.dump(export_manifest, f, indent=2)
+                
+                logger.info(f"Export completed: {len(collections)} collections, {total_documents} total documents")
+                return export_dir, export_manifest
+                
+            except Exception as e:
+                logger.error(f"Error during export: {e}")
+                return None
+                
+        def create_archive(self, export_dir, timestamp):
+            """Create compressed archive of export"""
+            try:
+                archive_path = f"/tmp/vector_export_{timestamp}.tar.gz"
+                
+                with tarfile.open(archive_path, "w:gz") as tar:
+                    tar.add(export_dir, arcname=f"vector_export_{timestamp}")
+                
+                archive_size = Path(archive_path).stat().st_size
+                logger.info(f"Created archive: {archive_path} ({archive_size} bytes)")
+                
+                return archive_path, archive_size
+                
+            except Exception as e:
+                logger.error(f"Error creating archive: {e}")
+                return None, 0
+                
+        def upload_to_s3(self, archive_path, timestamp, archive_size):
+            """Upload archive to all S3 regions"""
+            results = {}
+            
+            s3_configs = [
+                ("primary", self.s3_primary, self.backup_bucket),
+                ("secondary", self.s3_secondary, self.secondary_bucket),
+                ("tertiary", self.s3_tertiary, self.tertiary_bucket)
+            ]
+            
+            for region_name, s3_client, bucket in s3_configs:
+                try:
+                    start_time = time.time()
+                    bucket_name = bucket.replace('s3://', '')
+                    key = f"vector-exports/vector_export_{timestamp}.tar.gz"
+                    
+                    logger.info(f"Uploading to {region_name}: {bucket}/{key}")
+                    
+                    # Upload with metadata
+                    s3_client.upload_file(
+                        archive_path,
+                        bucket_name,
+                        key,
+                        ExtraArgs={
+                            'StorageClass': 'STANDARD_IA',
+                            'Metadata': {
+                                'export-timestamp': timestamp,
+                                'export-date': datetime.utcnow().isoformat(),
+                                'source-system': 'pake-chromadb',
+                                'archive-size': str(archive_size)
+                            }
+                        }
+                    )
+                    
+                    upload_time = time.time() - start_time
+                    logger.info(f"Upload to {region_name} completed in {upload_time:.2f}s")
+                    
+                    results[region_name] = {
+                        "success": True,
+                        "bucket": bucket,
+                        "key": key,
+                        "upload_time": upload_time
+                    }
+                    
+                except Exception as e:
+                    logger.error(f"Failed to upload to {region_name}: {e}")
+                    results[region_name] = {
+                        "success": False,
+                        "error": str(e)
+                    }
+            
+            return results
+            
+        def cleanup_old_exports(self):
+            """Remove old exports from S3 based on retention policy"""
+            cutoff_date = datetime.utcnow() - timedelta(days=self.retention_days)
+            cutoff_prefix = cutoff_date.strftime('vector_export_%Y%m%d')
+            
+            for region_name, s3_client, bucket in [
+                ("primary", self.s3_primary, self.backup_bucket),
+                ("secondary", self.s3_secondary, self.secondary_bucket),
+                ("tertiary", self.s3_tertiary, self.tertiary_bucket)
+            ]:
+                try:
+                    bucket_name = bucket.replace('s3://', '')
+                    
+                    # List objects in vector-exports prefix
+                    response = s3_client.list_objects_v2(
+                        Bucket=bucket_name,
+                        Prefix='vector-exports/'
+                    )
+                    
+                    if 'Contents' not in response:
+                        continue
+                    
+                    deleted_count = 0
+                    for obj in response['Contents']:
+                        key = obj['Key']
+                        if 'vector_export_' in key:
+                            # Extract timestamp from filename
+                            try:
+                                filename = key.split('/')[-1]
+                                timestamp_str = filename.replace('vector_export_', '').replace('.tar.gz', '')
+                                file_date = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                                
+                                if file_date < cutoff_date:
+                                    logger.info(f"Deleting old export from {region_name}: {key}")
+                                    s3_client.delete_object(Bucket=bucket_name, Key=key)
+                                    deleted_count += 1
+                                    
+                            except ValueError:
+                                # Skip files that don't match expected pattern
+                                continue
+                    
+                    if deleted_count > 0:
+                        logger.info(f"Deleted {deleted_count} old exports from {region_name}")
+                        
+                except Exception as e:
+                    logger.error(f"Error cleaning up old exports in {region_name}: {e}")
+                    
+        def update_metrics(self, export_manifest, upload_results, total_time):
+            """Update Prometheus metrics"""
+            try:
+                metrics = [
+                    f"vector_export_status{{type=\"success\"}} 1",
+                    f"vector_export_collections_total {len(export_manifest['collections'])}",
+                    f"vector_export_documents_total {export_manifest['total_documents']}",
+                    f"vector_export_size_bytes {export_manifest['total_size_bytes']}",
+                    f"vector_export_duration_seconds {total_time}",
+                    f"vector_export_timestamp {int(time.time())}"
+                ]
+                
+                # Add upload status for each region
+                for region, result in upload_results.items():
+                    status = 1 if result["success"] else 0
+                    metrics.append(f"vector_export_upload_status{{region=\"{region}\"}} {status}")
+                    if result["success"]:
+                        metrics.append(f"vector_export_upload_duration_seconds{{region=\"{region}\"}} {result['upload_time']}")
+                
+                metrics_data = "\n".join(metrics)
+                
+                # Send to Prometheus pushgateway
+                import requests
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/vector-export/instance/chromadb",
+                    data=metrics_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    logger.info("Metrics updated successfully")
+                else:
+                    logger.warning(f"Failed to update metrics: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error updating metrics: {e}")
+                
+        async def run_export(self):
+            """Main export process"""
+            start_time = time.time()
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            
+            logger.info(f"Starting vector export: {timestamp}")
+            
+            try:
+                await self.start()
+                
+                # Export collections
+                export_result = await self.export_all_collections()
+                if not export_result:
+                    logger.error("Export failed - no data exported")
+                    return False
+                
+                export_dir, export_manifest = export_result
+                
+                # Create archive
+                archive_path, archive_size = self.create_archive(export_dir, timestamp)
+                if not archive_path:
+                    logger.error("Failed to create archive")
+                    return False
+                
+                # Upload to all regions
+                upload_results = self.upload_to_s3(archive_path, timestamp, archive_size)
+                
+                # Check if at least primary upload succeeded
+                if not upload_results.get("primary", {}).get("success", False):
+                    logger.error("Primary upload failed - export considered failed")
+                    return False
+                
+                # Cleanup old exports
+                self.cleanup_old_exports()
+                
+                # Update metrics
+                total_time = time.time() - start_time
+                self.update_metrics(export_manifest, upload_results, total_time)
+                
+                logger.info(f"Vector export completed successfully in {total_time:.2f}s")
+                logger.info(f"Exported {export_manifest['total_documents']} documents from {len(export_manifest['collections'])} collections")
+                
+                # Cleanup local files
+                import shutil
+                shutil.rmtree(export_dir, ignore_errors=True)
+                Path(archive_path).unlink(missing_ok=True)
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Export failed: {e}")
+                return False
+                
+            finally:
+                await self.stop()
+
+    async def main():
+        exporter = VectorExporter()
+        success = await exporter.run_export()
+        
+        if not success:
+            # Update failure metrics
+            try:
+                import requests
+                requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/vector-export/instance/chromadb",
+                    data="vector_export_status{type=\"error\"} 0",
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=30
+                )
+            except:
+                pass
+            exit(1)
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+  vector-validation-script.py: |
+    #!/usr/bin/env python3
+    """
+    Vector Export Validation Script
+    Validates the latest vector export by downloading and checking data integrity
+    """
+
+    import boto3
+    import json
+    import logging
+    import os
+    import tarfile
+    import tempfile
+    import time
+    from datetime import datetime
+    from pathlib import Path
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    class VectorValidator:
+        def __init__(self):
+            self.backup_bucket = os.getenv('BACKUP_BUCKET', 's3://pake-backups')
+            self.s3_client = boto3.client('s3', region_name='us-east-1')
+            
+        def get_latest_export(self):
+            """Get the latest vector export from S3"""
+            try:
+                bucket_name = self.backup_bucket.replace('s3://', '')
+                
+                response = self.s3_client.list_objects_v2(
+                    Bucket=bucket_name,
+                    Prefix='vector-exports/',
+                    MaxKeys=1000
+                )
+                
+                if 'Contents' not in response:
+                    logger.error("No vector exports found")
+                    return None
+                
+                # Sort by last modified and get the latest
+                exports = sorted(response['Contents'], key=lambda x: x['LastModified'], reverse=True)
+                latest_export = exports[0]
+                
+                logger.info(f"Latest export: {latest_export['Key']} ({latest_export['Size']} bytes)")
+                return latest_export
+                
+            except Exception as e:
+                logger.error(f"Error finding latest export: {e}")
+                return None
+                
+        def validate_export(self, export_key):
+            """Download and validate vector export"""
+            try:
+                bucket_name = self.backup_bucket.replace('s3://', '')
+                
+                # Download export
+                with tempfile.NamedTemporaryFile(suffix='.tar.gz', delete=False) as tmp_file:
+                    logger.info(f"Downloading {export_key}...")
+                    self.s3_client.download_file(bucket_name, export_key, tmp_file.name)
+                    
+                    # Extract archive
+                    with tempfile.TemporaryDirectory() as extract_dir:
+                        with tarfile.open(tmp_file.name, 'r:gz') as tar:
+                            tar.extractall(extract_dir)
+                        
+                        # Find the extracted directory
+                        extracted_dirs = [d for d in Path(extract_dir).iterdir() if d.is_dir()]
+                        if not extracted_dirs:
+                            logger.error("No directory found in extracted archive")
+                            return False
+                        
+                        export_dir = extracted_dirs[0]
+                        
+                        # Validate manifest
+                        manifest_file = export_dir / "export_manifest.json"
+                        if not manifest_file.exists():
+                            logger.error("Export manifest not found")
+                            return False
+                        
+                        with open(manifest_file, 'r') as f:
+                            manifest = json.load(f)
+                        
+                        logger.info(f"Validating export with {len(manifest['collections'])} collections")
+                        
+                        # Validate each collection file
+                        for collection in manifest['collections']:
+                            collection_file = export_dir / collection['file']
+                            
+                            if not collection_file.exists():
+                                logger.error(f"Collection file not found: {collection['file']}")
+                                return False
+                            
+                            # Check file size
+                            actual_size = collection_file.stat().st_size
+                            expected_size = collection['file_size_bytes']
+                            
+                            if actual_size != expected_size:
+                                logger.error(f"Size mismatch for {collection['file']}: {actual_size} != {expected_size}")
+                                return False
+                            
+                            # Validate JSON structure
+                            try:
+                                with open(collection_file, 'r') as f:
+                                    collection_data = json.load(f)
+                                
+                                # Check required fields
+                                required_fields = ['collection_info', 'data', 'export_metadata']
+                                for field in required_fields:
+                                    if field not in collection_data:
+                                        logger.error(f"Missing field '{field}' in {collection['file']}")
+                                        return False
+                                
+                                # Validate document count
+                                actual_docs = len(collection_data['data'].get('ids', []))
+                                expected_docs = collection['document_count']
+                                
+                                if actual_docs != expected_docs:
+                                    logger.error(f"Document count mismatch for {collection['name']}: {actual_docs} != {expected_docs}")
+                                    return False
+                                
+                                logger.info(f"✓ {collection['name']}: {actual_docs} documents, {actual_size} bytes")
+                                
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Invalid JSON in {collection['file']}: {e}")
+                                return False
+                        
+                        logger.info("Export validation completed successfully")
+                        return True
+                
+            except Exception as e:
+                logger.error(f"Error validating export: {e}")
+                return False
+            
+            finally:
+                # Cleanup
+                try:
+                    os.unlink(tmp_file.name)
+                except:
+                    pass
+                    
+        def update_metrics(self, validation_success, export_age_hours=None):
+            """Update validation metrics"""
+            try:
+                metrics = [
+                    f"vector_export_validation_status {1 if validation_success else 0}",
+                    f"vector_export_validation_timestamp {int(time.time())}"
+                ]
+                
+                if export_age_hours is not None:
+                    metrics.append(f"vector_export_age_hours {export_age_hours}")
+                
+                metrics_data = "\n".join(metrics)
+                
+                import requests
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/vector-export-validation/instance/validator",
+                    data=metrics_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    logger.info("Validation metrics updated")
+                else:
+                    logger.warning(f"Failed to update metrics: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error updating metrics: {e}")
+                
+        def run_validation(self):
+            """Main validation process"""
+            logger.info("Starting vector export validation")
+            
+            latest_export = self.get_latest_export()
+            if not latest_export:
+                self.update_metrics(False)
+                return False
+            
+            # Calculate export age
+            export_age = datetime.utcnow() - latest_export['LastModified'].replace(tzinfo=None)
+            export_age_hours = export_age.total_seconds() / 3600
+            
+            logger.info(f"Export age: {export_age_hours:.2f} hours")
+            
+            # Validate the export
+            validation_success = self.validate_export(latest_export['Key'])
+            
+            # Update metrics
+            self.update_metrics(validation_success, export_age_hours)
+            
+            return validation_success
+
+    def main():
+        validator = VectorValidator()
+        success = validator.run_validation()
+        
+        if not success:
+            exit(1)
+
+    if __name__ == "__main__":
+        main()
+
+---
+# Daily Vector Export CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vector-daily-export
+  namespace: database
+  labels:
+    app: vector-export
+    type: daily
+spec:
+  schedule: '0 2 * * *' # Daily at 2:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: vector-export
+            type: daily
+        spec:
+          serviceAccountName: vector-export
+          restartPolicy: OnFailure
+          containers:
+            - name: vector-export
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir aiohttp boto3 requests
+                  exec python /scripts/vector-export-script.py
+              env:
+                - name: CHROMADB_URL
+                  value: 'http://chromadb.database.svc.cluster.local:8000'
+                - name: BACKUP_BUCKET
+                  value: 's3://pake-backups'
+                - name: SECONDARY_BACKUP_BUCKET
+                  value: 's3://pake-backups-eu'
+                - name: TERTIARY_BACKUP_BUCKET
+                  value: 's3://pake-backups-ap'
+                - name: RETENTION_DAYS
+                  value: '30'
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+              resources:
+                requests:
+                  cpu: 1000m
+                  memory: 2Gi
+                limits:
+                  cpu: 4000m
+                  memory: 8Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: vector-export-scripts
+                defaultMode: 0755
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 50Gi
+          nodeSelector:
+            workload: database
+
+---
+# Vector Export Validation CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vector-export-validation
+  namespace: database
+  labels:
+    app: vector-export
+    type: validation
+spec:
+  schedule: '0 8 * * *' # Daily at 8:00 AM UTC (6 hours after export)
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: vector-export
+            type: validation
+        spec:
+          serviceAccountName: vector-export
+          restartPolicy: OnFailure
+          containers:
+            - name: validation
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir boto3 requests
+                  exec python /scripts/vector-validation-script.py
+              env:
+                - name: BACKUP_BUCKET
+                  value: 's3://pake-backups'
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 4Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: vector-export-scripts
+                defaultMode: 0755
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 10Gi
+
+---
+# Weekly Vector Export with Full Analysis
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vector-weekly-export
+  namespace: database
+  labels:
+    app: vector-export
+    type: weekly
+spec:
+  schedule: '0 3 * * 0' # Sunday at 3:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: vector-export
+            type: weekly
+        spec:
+          serviceAccountName: vector-export
+          restartPolicy: OnFailure
+          containers:
+            - name: weekly-export
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir aiohttp boto3 requests numpy
+
+                  # Run daily export first
+                  python /scripts/vector-export-script.py
+
+                  # Generate additional analytics
+                  python3 << 'EOF'
+                  import asyncio
+                  import aiohttp
+                  import json
+                  import logging
+                  import boto3
+                  from datetime import datetime
+
+                  logging.basicConfig(level=logging.INFO)
+                  logger = logging.getLogger(__name__)
+
+                  async def generate_analytics():
+                      chromadb_url = "http://chromadb.database.svc.cluster.local:8000"
+                      
+                      try:
+                          async with aiohttp.ClientSession() as session:
+                              # Get collections
+                              async with session.get(f"{chromadb_url}/api/v1/collections") as response:
+                                  collections = await response.json()
+                              
+                              analytics = {
+                                  "timestamp": datetime.utcnow().isoformat(),
+                                  "total_collections": len(collections),
+                                  "collection_stats": []
+                              }
+                              
+                              for collection in collections:
+                                  name = collection["name"]
+                                  
+                                  # Get collection details
+                                  async with session.get(f"{chromadb_url}/api/v1/collections/{name}") as response:
+                                      details = await response.json()
+                                  
+                                  # Count documents
+                                  query_payload = {"query_texts": [""], "n_results": 1}
+                                  async with session.post(f"{chromadb_url}/api/v1/collections/{name}/count") as response:
+                                      if response.status == 200:
+                                          count_data = await response.json()
+                                          doc_count = count_data
+                                      else:
+                                          # Fallback to query method
+                                          async with session.post(f"{chromadb_url}/api/v1/collections/{name}/query", json=query_payload) as query_response:
+                                              query_data = await query_response.json()
+                                              doc_count = len(query_data.get("ids", []))
+                                  
+                                  analytics["collection_stats"].append({
+                                      "name": name,
+                                      "document_count": doc_count,
+                                      "metadata": details
+                                  })
+                                  
+                                  logger.info(f"Collection {name}: {doc_count} documents")
+                              
+                              # Save analytics
+                              timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+                              analytics_file = f"/tmp/vector_analytics_{timestamp}.json"
+                              
+                              with open(analytics_file, 'w') as f:
+                                  json.dump(analytics, f, indent=2)
+                              
+                              # Upload to S3
+                              s3_client = boto3.client('s3', region_name='us-east-1')
+                              s3_client.upload_file(
+                                  analytics_file,
+                                  'pake-backups',
+                                  f'vector-exports/analytics/vector_analytics_{timestamp}.json'
+                              )
+                              
+                              logger.info(f"Weekly analytics generated: {analytics['total_collections']} collections")
+                              
+                      except Exception as e:
+                          logger.error(f"Error generating analytics: {e}")
+
+                  asyncio.run(generate_analytics())
+                  EOF
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              resources:
+                requests:
+                  cpu: 2000m
+                  memory: 4Gi
+                limits:
+                  cpu: 8000m
+                  memory: 16Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: vector-export-scripts
+                defaultMode: 0755
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 100Gi
+
+---
+# ServiceAccount and RBAC for vector export
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vector-export
+  namespace: database
+  labels:
+    app: vector-export
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vector-export
+  namespace: database
+rules:
+  - apiGroups: ['']
+    resources: ['secrets', 'configmaps']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['pods']
+    verbs: ['get', 'list']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vector-export
+  namespace: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vector-export
+subjects:
+  - kind: ServiceAccount
+    name: vector-export
+    namespace: database

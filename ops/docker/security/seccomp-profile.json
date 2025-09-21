@@ -1,0 +1,193 @@
+{
+  "comment": "PAKE Agent Sandbox - Seccomp Security Profile",
+  "description": "Restrictive seccomp profile for isolated agent execution",
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": [
+    "SCMP_ARCH_X86_64",
+    "SCMP_ARCH_X86",
+    "SCMP_ARCH_X32",
+    "SCMP_ARCH_ARM64",
+    "SCMP_ARCH_ARM"
+  ],
+  "syscalls": [
+    {
+      "comment": "Essential system calls for Node.js runtime",
+      "names": [
+        "read",
+        "write",
+        "close",
+        "open",
+        "openat",
+        "stat",
+        "fstat",
+        "lstat",
+        "newfstatat",
+        "access",
+        "faccessat",
+        "readlink",
+        "readlinkat",
+        "getcwd",
+        "chdir",
+        "getdents",
+        "getdents64"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Memory management",
+      "names": [
+        "mmap",
+        "munmap",
+        "mprotect",
+        "brk",
+        "mremap",
+        "madvise",
+        "mincore"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Process and thread management (restricted)",
+      "names": [
+        "getpid",
+        "getppid",
+        "gettid",
+        "getuid",
+        "getgid",
+        "geteuid",
+        "getegid",
+        "getgroups",
+        "exit",
+        "exit_group"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Time and signals (limited)",
+      "names": [
+        "clock_gettime",
+        "gettimeofday",
+        "nanosleep",
+        "rt_sigaction",
+        "rt_sigprocmask",
+        "rt_sigreturn",
+        "sigaltstack"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "I/O multiplexing for Node.js event loop",
+      "names": [
+        "poll",
+        "ppoll",
+        "select",
+        "pselect6",
+        "epoll_create",
+        "epoll_create1",
+        "epoll_ctl",
+        "epoll_wait",
+        "epoll_pwait"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Pipes and IPC (limited)",
+      "names": ["pipe", "pipe2", "eventfd", "eventfd2"],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Socket operations (conditionally allowed)",
+      "names": [
+        "socket",
+        "bind",
+        "connect",
+        "listen",
+        "accept",
+        "accept4",
+        "getsockname",
+        "getpeername",
+        "getsockopt",
+        "setsockopt"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 2,
+          "op": "SCMP_CMP_EQ",
+          "comment": "Allow only AF_INET sockets"
+        }
+      ]
+    },
+    {
+      "comment": "Resource limits and information",
+      "names": ["getrlimit", "prlimit64", "uname", "arch_prctl"],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Thread synchronization (limited)",
+      "names": ["futex", "set_robust_list", "get_robust_list"],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Debugging and tracing (blocked)",
+      "names": ["ptrace", "process_vm_readv", "process_vm_writev"],
+      "action": "SCMP_ACT_ERRNO"
+    },
+    {
+      "comment": "Dangerous system calls (blocked)",
+      "names": [
+        "execve",
+        "execveat",
+        "fork",
+        "vfork",
+        "clone",
+        "clone3",
+        "unshare",
+        "setns",
+        "mount",
+        "umount",
+        "umount2",
+        "pivot_root",
+        "chroot",
+        "setuid",
+        "setgid",
+        "setreuid",
+        "setregid",
+        "setresuid",
+        "setresgid",
+        "capget",
+        "capset",
+        "prctl",
+        "seccomp",
+        "bpf",
+        "userfaultfd",
+        "memfd_create",
+        "kexec_load",
+        "kexec_file_load",
+        "init_module",
+        "finit_module",
+        "delete_module",
+        "quotactl",
+        "acct",
+        "swapon",
+        "swapoff",
+        "reboot",
+        "sethostname",
+        "setdomainname"
+      ],
+      "action": "SCMP_ACT_KILL"
+    },
+    {
+      "comment": "Network system calls (conditionally blocked)",
+      "names": ["sendto", "recvfrom", "sendmsg", "recvmsg", "shutdown"],
+      "action": "SCMP_ACT_ALLOW",
+      "includes": {
+        "caps": []
+      },
+      "excludes": {
+        "caps": ["CAP_NET_RAW"]
+      }
+    }
+  ]
+}

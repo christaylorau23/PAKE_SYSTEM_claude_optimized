@@ -1,0 +1,97 @@
+# PAKE System - Development Docker Compose
+# Lightweight development setup with hot reload
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database (lightweight for development)
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: pake-postgres-dev
+    environment:
+      POSTGRES_DB: pake_system_dev
+      POSTGRES_USER: pake_dev
+      POSTGRES_PASSWORD: dev_REDACTED_SECRET
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - pake-dev-network
+
+  # Redis Cache (development)
+  redis-dev:
+    image: redis:7-alpine
+    container_name: pake-redis-dev
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - pake-dev-network
+
+  # PAKE Backend (development with hot reload)
+  pake-backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: pake-backend-dev
+    environment:
+      DATABASE_URL: postgresql://pake_dev:dev_REDACTED_SECRET@postgres-dev:5432/pake_system_dev
+      REDIS_URL: redis://redis-dev:6379/0
+      JWT_SECRET_KEY: dev-secret-key-not-for-production
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+      DEBUG: true
+    ports:
+      - '8001:8000'
+      - '8002:8001'
+    volumes:
+      - .:/app
+      - /app/venv # Don't override virtual environment
+    depends_on:
+      - postgres-dev
+      - redis-dev
+    networks:
+      - pake-dev-network
+    command:
+      [
+        'python',
+        '-m',
+        'uvicorn',
+        'mcp_server_realtime:app',
+        '--host',
+        '0.0.0.0',
+        '--port',
+        '8000',
+        '--reload',
+      ]
+
+  # Frontend (development with hot reload)
+  pake-frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: pake-frontend-dev
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+      NEXT_PUBLIC_WS_URL: ws://localhost:8002
+      NODE_ENV: development
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Don't override node_modules
+    networks:
+      - pake-dev-network
+    command: ['npm', 'run', 'dev']
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  pake-dev-network:
+    driver: bridge

@@ -1,0 +1,1274 @@
+# Disaster Recovery Dashboards and Alerting for PAKE System
+# Comprehensive monitoring and alerting for DR components
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dr-monitoring
+  labels:
+    name: dr-monitoring
+
+---
+# Grafana Dashboard ConfigMaps for DR
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-overview-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+data:
+  dr-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "PAKE System - Disaster Recovery Overview",
+        "tags": ["disaster-recovery", "pake-system"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "RTO/RPO Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pake_rto_seconds",
+                "legendFormat": "Current RTO (seconds)"
+              },
+              {
+                "expr": "pake_rpo_seconds",
+                "legendFormat": "Current RPO (seconds)"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 300},
+                    {"color": "red", "value": 900}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Cluster Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pake_cluster_health",
+                "legendFormat": "{{cluster}} ({{region}})"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  {"options": {"0": {"text": "Unhealthy", "color": "red"}},
+                   "1": {"text": "Healthy", "color": "green"}}
+                ]
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Failover Events",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "increase(pake_failover_total[5m])",
+                "legendFormat": "{{from_cluster}} → {{to_cluster}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Backup Status",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "backup_age_hours",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "transformations": [
+              {
+                "id": "organize",
+                "options": {
+                  "excludeByName": {},
+                  "indexByName": {},
+                  "renameByName": {
+                    "service": "Service",
+                    "Value": "Age (hours)"
+                  }
+                }
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 5,
+            "title": "Replication Lag",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "postgres_replication_lag_seconds",
+                "legendFormat": "PostgreSQL {{replica}}"
+              },
+              {
+                "expr": "redis_replication_lag_seconds",
+                "legendFormat": "Redis {{replica}}"
+              },
+              {
+                "expr": "chromadb_sync_lag_seconds",
+                "legendFormat": "ChromaDB {{replica}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 60},
+                    {"color": "red", "value": 300}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Chaos Engineering Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "chaos_experiments_total",
+                "legendFormat": "Total Experiments"
+              },
+              {
+                "expr": "sum(chaos_failures_detected_total)",
+                "legendFormat": "Failures Detected"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+          },
+          {
+            "id": 7,
+            "title": "System Resilience Score",
+            "type": "gauge",
+            "targets": [
+              {
+                "expr": "system_resilience_score",
+                "legendFormat": "Resilience %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 70},
+                    {"color": "green", "value": 90}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+          }
+        ]
+      }
+    }
+
+---
+# Backup Monitoring Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-monitoring-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+data:
+  backup-monitoring.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "PAKE System - Backup Monitoring",
+        "tags": ["backup", "disaster-recovery"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "5m",
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Backup Success Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(backup_validation_success_total[24h]) / (rate(backup_validation_success_total[24h]) + rate(backup_validation_failure_total[24h])) * 100",
+                "legendFormat": "Success Rate %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 95},
+                    {"color": "green", "value": 99}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Backup Size Trend",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "backup_size_bytes",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "bytes"
+              }
+            },
+            "gridPos": {"h": 8, "w": 16, "x": 8, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Backup Age",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "backup_age_hours",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "transformations": [
+              {
+                "id": "organize",
+                "options": {
+                  "renameByName": {
+                    "service": "Service",
+                    "Value": "Age (hours)"
+                  }
+                }
+              }
+            ],
+            "fieldConfig": {
+              "overrides": [
+                {
+                  "matcher": {"id": "byName", "options": "Age (hours)"},
+                  "properties": [
+                    {
+                      "id": "thresholds",
+                      "value": {
+                        "steps": [
+                          {"color": "green", "value": null},
+                          {"color": "yellow", "value": 24},
+                          {"color": "red", "value": 48}
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Backup Validation Duration",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "backup_validation_duration_seconds",
+                "legendFormat": "{{service}} - {{test_type}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Backup Storage Usage",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "sum(backup_size_bytes) by (service)",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "bytes"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Recent Backup Events",
+            "type": "logs",
+            "targets": [
+              {
+                "expr": "{job=\"backup-jobs\"} |= \"backup\"",
+                "legendFormat": ""
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ]
+      }
+    }
+
+---
+# Compliance Monitoring Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+data:
+  compliance-monitoring.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "PAKE System - Compliance Monitoring",
+        "tags": ["compliance", "audit", "security"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "1m",
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Compliance Scores",
+            "type": "gauge",
+            "targets": [
+              {
+                "expr": "compliance_score{framework=\"soc2\"}",
+                "legendFormat": "SOC2"
+              },
+              {
+                "expr": "compliance_score{framework=\"gdpr\"}",
+                "legendFormat": "GDPR"
+              },
+              {
+                "expr": "compliance_score{framework=\"iso27001\"}",
+                "legendFormat": "ISO27001"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 80},
+                    {"color": "green", "value": 95}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Compliance Violations",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "increase(compliance_violations_total[5m])",
+                "legendFormat": "{{framework}} - {{control}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Audit Events by Type",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "sum(increase(compliance_audit_events_total[1h])) by (event_type)",
+                "legendFormat": "{{event_type}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "PII Access Events",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "increase(pii_access_events_total[5m])",
+                "legendFormat": "{{operation}} by {{user}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Data Access by Classification",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "sum(increase(data_access_events_total[1h])) by (classification, operation)",
+                "legendFormat": "{{classification}} - {{operation}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+          }
+        ]
+      }
+    }
+
+---
+# AlertManager Rules for DR
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-alerting-rules
+  namespace: monitoring
+  labels:
+    prometheus_rule: '1'
+    app: prometheus
+data:
+  dr-rules.yaml: |
+    groups:
+    - name: disaster_recovery
+      rules:
+      # RTO/RPO Alerts
+      - alert: RTOTargetExceeded
+        expr: pake_rto_seconds > 900
+        for: 1m
+        labels:
+          severity: critical
+          service: disaster-recovery
+        annotations:
+          summary: "RTO target exceeded"
+          description: "Recovery Time Objective exceeded: {{ $value }}s > 900s (15 minutes)"
+          
+      - alert: RPOTargetExceeded
+        expr: pake_rpo_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: disaster-recovery
+        annotations:
+          summary: "RPO target exceeded"
+          description: "Recovery Point Objective exceeded: {{ $value }}s > 300s (5 minutes)"
+          
+      # Cluster Health Alerts
+      - alert: ClusterUnhealthy
+        expr: pake_cluster_health == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: disaster-recovery
+        annotations:
+          summary: "Cluster {{ $labels.cluster }} is unhealthy"
+          description: "Cluster {{ $labels.cluster }} in region {{ $labels.region }} has been unhealthy for more than 2 minutes"
+          
+      # Failover Alerts
+      - alert: AutomaticFailoverTriggered
+        expr: increase(pake_failover_total{type="auto"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          service: disaster-recovery
+        annotations:
+          summary: "Automatic failover triggered"
+          description: "Automatic failover from {{ $labels.from_cluster }} to {{ $labels.to_cluster }}"
+          
+      # Backup Alerts
+      - alert: BackupTooOld
+        expr: backup_age_hours > 48
+        for: 1m
+        labels:
+          severity: critical
+          service: backup
+        annotations:
+          summary: "Backup for {{ $labels.service }} is too old"
+          description: "Last backup for {{ $labels.service }} is {{ $value }} hours old"
+          
+      - alert: BackupValidationFailed
+        expr: increase(backup_validation_failure_total[1h]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          service: backup
+        annotations:
+          summary: "Backup validation failed"
+          description: "Backup validation failed for {{ $labels.service }} ({{ $labels.test_type }} test)"
+          
+      - alert: BackupSizeAnomaly
+        expr: abs(backup_size_bytes - backup_size_bytes offset 24h) / backup_size_bytes offset 24h > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: backup
+        annotations:
+          summary: "Backup size anomaly detected"
+          description: "Backup size for {{ $labels.service }} changed by more than 50% compared to 24h ago"
+          
+      # Replication Alerts
+      - alert: PostgreSQLReplicationLag
+        expr: postgres_replication_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag high"
+          description: "PostgreSQL replica {{ $labels.replica }} lag is {{ $value }}s"
+          
+      - alert: RedisReplicationLag
+        expr: redis_replication_lag_seconds > 60
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis replication lag high"
+          description: "Redis replica {{ $labels.replica }} lag is {{ $value }}s"
+          
+      - alert: ChromaDBSyncLag
+        expr: chromadb_sync_lag_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+          service: chromadb
+        annotations:
+          summary: "ChromaDB sync lag high"
+          description: "ChromaDB replica {{ $labels.replica }} sync lag is {{ $value }}s"
+          
+      # Chaos Engineering Alerts
+      - alert: ChaosExperimentFailed
+        expr: increase(chaos_failures_detected_total[10m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          service: chaos-engineering
+        annotations:
+          summary: "Multiple chaos experiment failures"
+          description: "{{ $value }} chaos experiment failures detected in {{ $labels.service }}"
+          
+      - alert: SystemResilienceLow
+        expr: system_resilience_score < 70
+        for: 10m
+        labels:
+          severity: warning
+          service: chaos-engineering
+        annotations:
+          summary: "System resilience score low"
+          description: "System resilience score is {{ $value }}%, below 70% threshold"
+          
+      # Compliance Alerts
+      - alert: ComplianceViolation
+        expr: increase(compliance_violations_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          service: compliance
+        annotations:
+          summary: "Compliance violation detected"
+          description: "{{ $labels.framework }} violation in control {{ $labels.control }}"
+          
+      - alert: ComplianceScoreLow
+        expr: compliance_score < 95
+        for: 30m
+        labels:
+          severity: warning
+          service: compliance
+        annotations:
+          summary: "Compliance score below threshold"
+          description: "{{ $labels.framework }} compliance score is {{ $value }}%, below 95% threshold"
+          
+      - alert: ExcessivePIIAccess
+        expr: increase(pii_access_events_total[1h]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: compliance
+        annotations:
+          summary: "Excessive PII access detected"
+          description: "{{ $value }} PII access events in the last hour by {{ $labels.user }}"
+
+---
+# Disaster Recovery Alert Manager Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-alertmanager-config
+  namespace: monitoring
+  labels:
+    app: alertmanager
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alerts@pake-system.com'
+      smtp_auth_username: 'alerts@pake-system.com'
+      smtp_auth_REDACTED_SECRET: 'process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED''
+      
+    route:
+      group_by: ['alertname', 'service']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'default-receiver'
+      routes:
+      # Critical DR alerts
+      - match:
+          severity: critical
+          service: disaster-recovery
+        receiver: 'dr-critical'
+        group_wait: 0s
+        repeat_interval: 5m
+        
+      # Backup alerts
+      - match:
+          service: backup
+        receiver: 'backup-team'
+        
+      # Compliance alerts
+      - match:
+          service: compliance
+        receiver: 'compliance-team'
+        
+      # Chaos engineering alerts
+      - match:
+          service: chaos-engineering
+        receiver: 'sre-team'
+        
+    receivers:
+    - name: 'default-receiver'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#pake-alerts'
+        title: 'PAKE System Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+        
+    - name: 'dr-critical'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#pake-critical'
+        title: '🚨 CRITICAL DR Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+      pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_KEY'
+        description: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+      email_configs:
+      - to: 'sre-team@pake-system.com'
+        subject: 'CRITICAL: DR Alert - {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+          
+    - name: 'backup-team'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#pake-backup'
+        title: '💾 Backup Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+      email_configs:
+      - to: 'backup-team@pake-system.com'
+        subject: 'Backup Alert - {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        
+    - name: 'compliance-team'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#pake-compliance'
+        title: '🛡️ Compliance Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+      email_configs:
+      - to: 'compliance-team@pake-system.com'
+        subject: 'Compliance Alert - {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        
+    - name: 'sre-team'
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#pake-sre'
+        title: '🔧 SRE Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+
+---
+# DR Status Dashboard Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dr-status-dashboard
+  namespace: dr-monitoring
+  labels:
+    app: dr-status-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dr-status-dashboard
+  template:
+    metadata:
+      labels:
+        app: dr-status-dashboard
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+    spec:
+      serviceAccountName: dr-status-dashboard
+      containers:
+        - name: dashboard
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir flask prometheus_client requests
+              exec python /app/dashboard.py
+          env:
+            - name: PROMETHEUS_URL
+              value: 'http://prometheus.monitoring.svc.cluster.local:9090'
+            - name: GRAFANA_URL
+              value: 'http://grafana.monitoring.svc.cluster.local:3000'
+            - name: DASHBOARD_PORT
+              value: '8090'
+            - name: METRICS_PORT
+              value: '8080'
+          ports:
+            - containerPort: 8080
+              name: metrics
+            - containerPort: 8090
+              name: dashboard
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      volumes:
+        - name: app-code
+          configMap:
+            name: dr-status-dashboard-code
+
+---
+# DR Status Dashboard Code
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-status-dashboard-code
+  namespace: dr-monitoring
+data:
+  dashboard.py: |
+    import os
+    import requests
+    import json
+    import logging
+    from datetime import datetime
+    from flask import Flask, render_template_string, jsonify
+    from prometheus_client import start_http_server, Gauge
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    app = Flask(__name__)
+
+    # Prometheus metrics for dashboard status
+    dr_dashboard_status = Gauge('dr_dashboard_status', 'DR dashboard operational status')
+
+    class DRStatusDashboard:
+        def __init__(self):
+            self.prometheus_url = os.getenv('PROMETHEUS_URL', 'http://prometheus.monitoring.svc.cluster.local:9090')
+            self.grafana_url = os.getenv('GRAFANA_URL', 'http://grafana.monitoring.svc.cluster.local:3000')
+            
+        def query_prometheus(self, query):
+            """Query Prometheus for metrics"""
+            try:
+                response = requests.get(f"{self.prometheus_url}/api/v1/query", 
+                                      params={'query': query}, timeout=10)
+                if response.status_code == 200:
+                    return response.json()['data']['result']
+                return []
+            except Exception as e:
+                logger.error(f"Error querying Prometheus: {e}")
+                return []
+        
+        def get_dr_status(self):
+            """Get comprehensive DR status"""
+            status = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'overall_status': 'healthy',
+                'components': {}
+            }
+            
+            # RTO/RPO Status
+            rto_result = self.query_prometheus('pake_rto_seconds')
+            rpo_result = self.query_prometheus('pake_rpo_seconds')
+            
+            rto_value = float(rto_result[0]['value'][1]) if rto_result else 0
+            rpo_value = float(rpo_result[0]['value'][1]) if rpo_result else 0
+            
+            status['components']['rto_rpo'] = {
+                'status': 'healthy' if rto_value <= 900 and rpo_value <= 300 else 'degraded',
+                'rto_seconds': rto_value,
+                'rpo_seconds': rpo_value,
+                'rto_target': 900,
+                'rpo_target': 300
+            }
+            
+            # Cluster Health
+            cluster_health = self.query_prometheus('pake_cluster_health')
+            healthy_clusters = sum(1 for result in cluster_health if float(result['value'][1]) == 1)
+            total_clusters = len(cluster_health)
+            
+            status['components']['clusters'] = {
+                'status': 'healthy' if healthy_clusters == total_clusters else 'degraded',
+                'healthy_count': healthy_clusters,
+                'total_count': total_clusters,
+                'details': [
+                    {
+                        'name': result['metric']['cluster'],
+                        'region': result['metric']['region'],
+                        'healthy': float(result['value'][1]) == 1
+                    } for result in cluster_health
+                ]
+            }
+            
+            # Backup Status
+            backup_age = self.query_prometheus('backup_age_hours')
+            old_backups = sum(1 for result in backup_age if float(result['value'][1]) > 24)
+            total_backups = len(backup_age)
+            
+            status['components']['backups'] = {
+                'status': 'healthy' if old_backups == 0 else 'degraded',
+                'old_backup_count': old_backups,
+                'total_backup_count': total_backups,
+                'details': [
+                    {
+                        'service': result['metric']['service'],
+                        'age_hours': float(result['value'][1]),
+                        'status': 'healthy' if float(result['value'][1]) <= 24 else 'old'
+                    } for result in backup_age
+                ]
+            }
+            
+            # Replication Status
+            pg_lag = self.query_prometheus('postgres_replication_lag_seconds')
+            redis_lag = self.query_prometheus('redis_replication_lag_seconds')
+            chroma_lag = self.query_prometheus('chromadb_sync_lag_seconds')
+            
+            replication_issues = 0
+            replication_issues += sum(1 for result in pg_lag if float(result['value'][1]) > 300)
+            replication_issues += sum(1 for result in redis_lag if float(result['value'][1]) > 60)
+            replication_issues += sum(1 for result in chroma_lag if float(result['value'][1]) > 600)
+            
+            status['components']['replication'] = {
+                'status': 'healthy' if replication_issues == 0 else 'degraded',
+                'issues_count': replication_issues,
+                'postgresql': [{'replica': r['metric']['replica'], 'lag': float(r['value'][1])} for r in pg_lag],
+                'redis': [{'replica': r['metric']['replica'], 'lag': float(r['value'][1])} for r in redis_lag],
+                'chromadb': [{'replica': r['metric']['replica'], 'lag': float(r['value'][1])} for r in chroma_lag]
+            }
+            
+            # Compliance Status
+            compliance_scores = self.query_prometheus('compliance_score')
+            low_scores = sum(1 for result in compliance_scores if float(result['value'][1]) < 95)
+            
+            status['components']['compliance'] = {
+                'status': 'healthy' if low_scores == 0 else 'degraded',
+                'low_score_count': low_scores,
+                'scores': [
+                    {
+                        'framework': result['metric']['framework'],
+                        'score': float(result['value'][1])
+                    } for result in compliance_scores
+                ]
+            }
+            
+            # Determine overall status
+            component_statuses = [comp['status'] for comp in status['components'].values()]
+            if 'degraded' in component_statuses:
+                status['overall_status'] = 'degraded'
+            
+            return status
+
+    dashboard = DRStatusDashboard()
+
+    # Status page HTML template
+    STATUS_PAGE_TEMPLATE = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>PAKE System - Disaster Recovery Status</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background-color: #f8f9fa;
+            }
+            .header {
+                background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+                color: white;
+                padding: 30px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            .status-overview {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .status-card {
+                background: white;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                text-align: center;
+            }
+            .status-healthy { border-left: 5px solid #28a745; }
+            .status-degraded { border-left: 5px solid #ffc107; }
+            .status-critical { border-left: 5px solid #dc3545; }
+            .component-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                gap: 20px;
+            }
+            .component-card {
+                background: white;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .metric-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+            .metric-item:last-child {
+                border-bottom: none;
+            }
+            .status-indicator {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+            .indicator-healthy { background-color: #28a745; }
+            .indicator-degraded { background-color: #ffc107; }
+            .indicator-critical { background-color: #dc3545; }
+            .refresh-btn {
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin: 10px 5px;
+            }
+            .refresh-btn:hover {
+                background: #0056b3;
+            }
+            .timestamp {
+                text-align: center;
+                color: #666;
+                margin-top: 20px;
+                font-size: 14px;
+            }
+        </style>
+        <script>
+            function refreshStatus() {
+                location.reload();
+            }
+            
+            function autoRefresh() {
+                setInterval(refreshStatus, 30000); // Refresh every 30 seconds
+            }
+            
+            window.onload = autoRefresh;
+        </script>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🛡️ PAKE System - Disaster Recovery Status</h1>
+            <p>Real-time monitoring of disaster recovery capabilities</p>
+            <button class="refresh-btn" onclick="refreshStatus()">🔄 Refresh</button>
+            <a href="{{ grafana_url }}/d/dr-overview" target="_blank" class="refresh-btn">📊 Grafana</a>
+        </div>
+        
+        <div class="status-overview">
+            <div class="status-card status-{{ status.overall_status }}">
+                <h2>Overall Status</h2>
+                <div style="font-size: 24px; margin: 10px 0;">
+                    <span class="status-indicator indicator-{{ status.overall_status }}"></span>
+                    {{ status.overall_status.title() }}
+                </div>
+            </div>
+            
+            <div class="status-card">
+                <h2>RTO Target</h2>
+                <div style="font-size: 24px; margin: 10px 0;">
+                    {{ "%.0f"|format(status.components.rto_rpo.rto_seconds) }}s / 900s
+                </div>
+                <div style="color: {% if status.components.rto_rpo.rto_seconds <= 900 %}#28a745{% else %}#dc3545{% endif %};">
+                    {{ "✅ Within Target" if status.components.rto_rpo.rto_seconds <= 900 else "❌ Exceeds Target" }}
+                </div>
+            </div>
+            
+            <div class="status-card">
+                <h2>RPO Target</h2>
+                <div style="font-size: 24px; margin: 10px 0;">
+                    {{ "%.0f"|format(status.components.rto_rpo.rpo_seconds) }}s / 300s
+                </div>
+                <div style="color: {% if status.components.rto_rpo.rpo_seconds <= 300 %}#28a745{% else %}#dc3545{% endif %};">
+                    {{ "✅ Within Target" if status.components.rto_rpo.rpo_seconds <= 300 else "❌ Exceeds Target" }}
+                </div>
+            </div>
+            
+            <div class="status-card">
+                <h2>Healthy Clusters</h2>
+                <div style="font-size: 24px; margin: 10px 0;">
+                    {{ status.components.clusters.healthy_count }} / {{ status.components.clusters.total_count }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="component-grid">
+            <div class="component-card">
+                <h3>🌐 Cluster Health</h3>
+                {% for cluster in status.components.clusters.details %}
+                <div class="metric-item">
+                    <span>{{ cluster.name }} ({{ cluster.region }})</span>
+                    <span>
+                        <span class="status-indicator indicator-{{ 'healthy' if cluster.healthy else 'critical' }}"></span>
+                        {{ "Healthy" if cluster.healthy else "Unhealthy" }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="component-card">
+                <h3>💾 Backup Status</h3>
+                {% for backup in status.components.backups.details %}
+                <div class="metric-item">
+                    <span>{{ backup.service.title() }}</span>
+                    <span style="color: {% if backup.age_hours <= 24 %}#28a745{% else %}#ffc107{% endif %};">
+                        {{ "%.1f"|format(backup.age_hours) }}h ago
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="component-card">
+                <h3>🔄 Replication Status</h3>
+                <h4>PostgreSQL</h4>
+                {% for replica in status.components.replication.postgresql %}
+                <div class="metric-item">
+                    <span>{{ replica.replica }}</span>
+                    <span style="color: {% if replica.lag <= 300 %}#28a745{% else %}#ffc107{% endif %};">
+                        {{ "%.0f"|format(replica.lag) }}s lag
+                    </span>
+                </div>
+                {% endfor %}
+                
+                <h4>Redis</h4>
+                {% for replica in status.components.replication.redis %}
+                <div class="metric-item">
+                    <span>{{ replica.replica }}</span>
+                    <span style="color: {% if replica.lag <= 60 %}#28a745{% else %}#ffc107{% endif %};">
+                        {{ "%.0f"|format(replica.lag) }}s lag
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="component-card">
+                <h3>🛡️ Compliance Status</h3>
+                {% for score in status.components.compliance.scores %}
+                <div class="metric-item">
+                    <span>{{ score.framework.upper() }}</span>
+                    <span style="color: {% if score.score >= 95 %}#28a745{% elif score.score >= 80 %}#ffc107{% else %}#dc3545{% endif %};">
+                        {{ "%.1f"|format(score.score) }}%
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="timestamp">
+            Last updated: {{ status.timestamp[:19] }} UTC
+        </div>
+    </body>
+    </html>
+    '''
+
+    @app.route('/')
+    def status_page():
+        status = dashboard.get_dr_status()
+        return render_template_string(
+            STATUS_PAGE_TEMPLATE, 
+            status=status, 
+            grafana_url=dashboard.grafana_url
+        )
+
+    @app.route('/api/status')
+    def api_status():
+        return jsonify(dashboard.get_dr_status())
+
+    @app.route('/health')
+    def health():
+        dr_dashboard_status.set(1)
+        return jsonify({'status': 'healthy'})
+
+    if __name__ == '__main__':
+        # Start Prometheus metrics server
+        start_http_server(int(os.getenv('METRICS_PORT', 8080)))
+        
+        # Start Flask dashboard
+        app.run(
+            host='0.0.0.0',
+            port=int(os.getenv('DASHBOARD_PORT', 8090)),
+            debug=False
+        )
+
+---
+# ServiceAccount and RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dr-status-dashboard
+  namespace: dr-monitoring
+  labels:
+    app: dr-status-dashboard
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dr-status-dashboard
+  labels:
+    app: dr-status-dashboard
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'services']
+    verbs: ['get', 'list']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dr-status-dashboard
+  labels:
+    app: dr-status-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dr-status-dashboard
+subjects:
+  - kind: ServiceAccount
+    name: dr-status-dashboard
+    namespace: dr-monitoring
+
+---
+# Service for DR Status Dashboard
+apiVersion: v1
+kind: Service
+metadata:
+  name: dr-status-dashboard
+  namespace: dr-monitoring
+  labels:
+    app: dr-status-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: metrics
+    - port: 8090
+      targetPort: 8090
+      name: dashboard
+  selector:
+    app: dr-status-dashboard
+
+---
+# Ingress for DR Status Dashboard
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dr-status-dashboard
+  namespace: dr-monitoring
+  labels:
+    app: dr-status-dashboard
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dr-status.pake-system.com
+      secretName: dr-status-dashboard-tls
+  rules:
+    - host: dr-status.pake-system.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dr-status-dashboard
+                port:
+                  number: 8090

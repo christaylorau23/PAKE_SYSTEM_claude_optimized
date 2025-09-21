@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pake-system
+  labels:
+    name: pake-system
+    app.kubernetes.io/name: pake-system
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: pake-enterprise
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pake-resource-quota
+  namespace: pake-system
+spec:
+  hard:
+    requests.cpu: '8'
+    requests.memory: 16Gi
+    limits.cpu: '16'
+    limits.memory: 32Gi
+    persistentvolumeclaims: '10'
+    services: '10'
+    secrets: '20'
+    configmaps: '20'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-network-policy
+  namespace: pake-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: pake-system
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+  egress:
+    - {}

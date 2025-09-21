@@ -1,0 +1,926 @@
+openapi: 3.1.0
+info:
+  title: PAKE System Unified API Gateway
+  description: Enterprise API Gateway providing unified access to 50+ PAKE System microservices with rate limiting, authentication, and intelligent routing
+  version: 18.0.0
+  contact:
+    name: PAKE System Engineering
+    email: engineering@pake-system.com
+  license:
+    name: Enterprise License
+    url: https://pake-system.com/license
+
+servers:
+  - url: https://api.pake-system.com/v1
+    description: Production API Gateway
+  - url: https://staging-api.pake-system.com/v1
+    description: Staging API Gateway
+  - url: http://localhost:8000/v1
+    description: Development API Gateway
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  # Health and Status Endpoints
+  /health:
+    get:
+      tags: [System]
+      summary: API Gateway Health Check
+      description: Comprehensive health check including all downstream services
+      operationId: getGatewayHealth
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: System degraded or unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /status:
+    get:
+      tags: [System]
+      summary: System Status and Metrics
+      description: Real-time system status including performance metrics and service availability
+      operationId: getSystemStatus
+      responses:
+        '200':
+          description: System status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  # Research and Knowledge Management
+  /research:
+    post:
+      tags: [Research]
+      summary: Multi-Source Research
+      description: Perform research across Web, ArXiv, PubMed with intelligent orchestration
+      operationId: performResearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchRequest'
+      responses:
+        '200':
+          description: Research completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              description: Request limit per window
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Requests remaining in current window
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Time when rate limit resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search:
+    get:
+      tags: [Search]
+      summary: Semantic Knowledge Search
+      description: AI-powered semantic search across knowledge base with relevance scoring
+      operationId: searchKnowledge
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 500
+        - name: limit
+          in: query
+          description: Maximum number of results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: source
+          in: query
+          description: Filter by content source
+          schema:
+            type: string
+            enum: [web, arxiv, pubmed, knowledge_base, all]
+            default: all
+        - name: relevance_threshold
+          in: query
+          description: Minimum relevance score (0.0-1.0)
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.7
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  # Content Analysis and AI Services
+  /analyze:
+    post:
+      tags: [AI]
+      summary: AI Content Analysis
+      description: Comprehensive content analysis including sentiment, entities, and summarization
+      operationId: analyzeContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+
+  # Trend Intelligence and Analytics
+  /trends:
+    get:
+      tags: [Trends]
+      summary: Real-time Trend Analysis
+      description: Live trend intelligence with investment opportunity mapping
+      operationId: getTrendAnalysis
+      parameters:
+        - name: category
+          in: query
+          description: Trend category filter
+          schema:
+            type: string
+            enum: [technology, finance, healthcare, entertainment, all]
+            default: all
+        - name: timeframe
+          in: query
+          description: Analysis timeframe
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d]
+            default: 24h
+        - name: region
+          in: query
+          description: Geographic region filter
+          schema:
+            type: string
+            enum: [global, north_america, europe, asia_pacific]
+            default: global
+      responses:
+        '200':
+          description: Trend analysis retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendResponse'
+
+  # Authentication and User Management
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User Authentication
+      description: Authenticate user and obtain JWT access token
+      operationId: authenticateUser
+      security: []  # No authentication required for login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh Access Token
+      description: Refresh JWT access token using refresh token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  # User Profile and Preferences
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get User Profile
+      description: Retrieve current user profile and preferences
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+    put:
+      tags: [Users]
+      summary: Update User Profile
+      description: Update user profile and preferences
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token for authenticated requests
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service-to-service authentication
+
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status, timestamp, services]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall system health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+        version:
+          type: string
+          description: API Gateway version
+        uptime:
+          type: integer
+          description: System uptime in seconds
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceHealth'
+          description: Health status of all downstream services
+
+    ServiceHealth:
+      type: object
+      required: [name, status, response_time]
+      properties:
+        name:
+          type: string
+          description: Service name
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Service health status
+        response_time:
+          type: number
+          description: Service response time in milliseconds
+        last_check:
+          type: string
+          format: date-time
+          description: Last health check timestamp
+        error_message:
+          type: string
+          description: Error message if service is unhealthy
+
+    SystemStatus:
+      type: object
+      required: [performance, resources, metrics]
+      properties:
+        performance:
+          $ref: '#/components/schemas/PerformanceMetrics'
+        resources:
+          $ref: '#/components/schemas/ResourceMetrics'
+        metrics:
+          $ref: '#/components/schemas/SystemMetrics'
+        active_users:
+          type: integer
+          description: Number of currently active users
+        request_rate:
+          type: number
+          description: Current requests per second
+
+    PerformanceMetrics:
+      type: object
+      required: [avg_response_time, p95_response_time, cache_hit_rate]
+      properties:
+        avg_response_time:
+          type: number
+          description: Average response time in milliseconds
+        p95_response_time:
+          type: number
+          description: 95th percentile response time in milliseconds
+        p99_response_time:
+          type: number
+          description: 99th percentile response time in milliseconds
+        cache_hit_rate:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Cache hit rate as percentage (0.0-1.0)
+        error_rate:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Error rate as percentage (0.0-1.0)
+
+    ResourceMetrics:
+      type: object
+      required: [cpu_usage, memory_usage, disk_usage]
+      properties:
+        cpu_usage:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: CPU utilization as percentage (0.0-1.0)
+        memory_usage:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Memory utilization as percentage (0.0-1.0)
+        disk_usage:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Disk utilization as percentage (0.0-1.0)
+        network_io:
+          type: object
+          properties:
+            bytes_in:
+              type: integer
+              description: Network bytes received per second
+            bytes_out:
+              type: integer
+              description: Network bytes sent per second
+
+    SystemMetrics:
+      type: object
+      required: [total_requests, successful_requests, failed_requests]
+      properties:
+        total_requests:
+          type: integer
+          description: Total requests processed
+        successful_requests:
+          type: integer
+          description: Successfully processed requests
+        failed_requests:
+          type: integer
+          description: Failed requests
+        request_rate_limit_hits:
+          type: integer
+          description: Number of rate limit violations
+        concurrent_connections:
+          type: integer
+          description: Current concurrent connections
+
+    ResearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Research query string
+        sources:
+          type: array
+          items:
+            type: string
+            enum: [web, arxiv, pubmed, social]
+          description: Sources to include in research
+          default: [web, arxiv, pubmed]
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum results per source
+        include_analysis:
+          type: boolean
+          default: true
+          description: Include AI analysis and summarization
+        priority:
+          type: string
+          enum: [low, normal, high]
+          default: normal
+          description: Request priority level
+
+    ResearchResponse:
+      type: object
+      required: [query, results, metadata]
+      properties:
+        query:
+          type: string
+          description: Original research query
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchResult'
+          description: Research results from all sources
+        metadata:
+          $ref: '#/components/schemas/ResearchMetadata'
+        analysis:
+          $ref: '#/components/schemas/ContentAnalysis'
+          description: AI-generated analysis and insights
+
+    ResearchResult:
+      type: object
+      required: [id, title, source, content, relevance_score]
+      properties:
+        id:
+          type: string
+          description: Unique result identifier
+        title:
+          type: string
+          description: Result title
+        source:
+          type: string
+          enum: [web, arxiv, pubmed, social]
+          description: Content source
+        content:
+          type: string
+          description: Result content or summary
+        url:
+          type: string
+          format: uri
+          description: Original content URL
+        relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: AI-computed relevance score
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Source-specific metadata
+
+    ResearchMetadata:
+      type: object
+      required: [total_results, processing_time, sources_used]
+      properties:
+        total_results:
+          type: integer
+          description: Total number of results found
+        processing_time:
+          type: number
+          description: Processing time in milliseconds
+        sources_used:
+          type: array
+          items:
+            type: string
+          description: List of sources that returned results
+        cache_status:
+          type: string
+          enum: [hit, miss, partial]
+          description: Cache utilization for this request
+        timestamp:
+          type: string
+          format: date-time
+          description: Request processing timestamp
+
+    SearchResponse:
+      type: object
+      required: [query, results, metadata]
+      properties:
+        query:
+          type: string
+          description: Original search query
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+          description: Search results with relevance ranking
+        metadata:
+          $ref: '#/components/schemas/SearchMetadata'
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Query suggestions and related topics
+
+    SearchResult:
+      type: object
+      required: [id, title, content, source, relevance_score]
+      properties:
+        id:
+          type: string
+          description: Unique result identifier
+        title:
+          type: string
+          description: Content title
+        content:
+          type: string
+          description: Content excerpt or summary
+        source:
+          type: string
+          description: Content source
+        url:
+          type: string
+          format: uri
+          description: Content URL
+        relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Semantic relevance score
+        created_at:
+          type: string
+          format: date-time
+          description: Content creation timestamp
+        tags:
+          type: array
+          items:
+            type: string
+          description: Content tags and categories
+
+    SearchMetadata:
+      type: object
+      required: [total_results, search_time, facets]
+      properties:
+        total_results:
+          type: integer
+          description: Total matching results
+        search_time:
+          type: number
+          description: Search processing time in milliseconds
+        facets:
+          type: object
+          properties:
+            sources:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
+
+    AnalysisRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 50000
+          description: Content to analyze
+        analysis_types:
+          type: array
+          items:
+            type: string
+            enum: [sentiment, entities, topics, summarization, classification]
+          default: [sentiment, entities, topics, summarization]
+          description: Types of analysis to perform
+        language:
+          type: string
+          description: Content language (ISO 639-1)
+          default: en
+
+    AnalysisResponse:
+      type: object
+      required: [content, analysis_results, metadata]
+      properties:
+        content:
+          type: string
+          description: Analyzed content (truncated if necessary)
+        analysis_results:
+          $ref: '#/components/schemas/ContentAnalysis'
+        metadata:
+          type: object
+          properties:
+            processing_time:
+              type: number
+              description: Analysis processing time in milliseconds
+            model_versions:
+              type: object
+              additionalProperties: true
+              description: AI model versions used for analysis
+
+    ContentAnalysis:
+      type: object
+      properties:
+        sentiment:
+          type: object
+          properties:
+            score:
+              type: number
+              minimum: -1.0
+              maximum: 1.0
+            label:
+              type: string
+              enum: [positive, negative, neutral]
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+        entities:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              type:
+                type: string
+              confidence:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+        topics:
+          type: array
+          items:
+            type: object
+            properties:
+              topic:
+                type: string
+              relevance:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+              keywords:
+                type: array
+                items:
+                  type: string
+        summary:
+          type: string
+          description: AI-generated content summary
+        classification:
+          type: object
+          properties:
+            category:
+              type: string
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+
+    TrendResponse:
+      type: object
+      required: [trends, metadata]
+      properties:
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendData'
+          description: Trend analysis results
+        metadata:
+          type: object
+          properties:
+            analysis_time:
+              type: number
+              description: Analysis processing time in milliseconds
+            data_freshness:
+              type: string
+              format: date-time
+              description: Most recent data timestamp
+            geographic_coverage:
+              type: array
+              items:
+                type: string
+              description: Geographic regions included
+
+    TrendData:
+      type: object
+      required: [keyword, trend_direction, growth_rate, confidence]
+      properties:
+        keyword:
+          type: string
+          description: Trending keyword or topic
+        trend_direction:
+          type: string
+          enum: [rising, falling, stable, emerging]
+          description: Trend direction
+        growth_rate:
+          type: number
+          description: Growth rate percentage
+        volume:
+          type: integer
+          description: Trend volume or mentions
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Trend prediction confidence
+        geographic_data:
+          type: array
+          items:
+            type: object
+            properties:
+              region:
+                type: string
+              intensity:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+        related_keywords:
+          type: array
+          items:
+            type: string
+          description: Related trending keywords
+        investment_signal:
+          type: string
+          enum: [strong_buy, buy, hold, sell, strong_sell]
+          description: Investment recommendation signal
+
+    LoginRequest:
+      type: object
+      required: [email, REDACTED_SECRET]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+        REDACTED_SECRET:
+          type: string
+          minLength: 8
+          description: User REDACTED_SECRET
+        remember_me:
+          type: boolean
+          default: false
+          description: Extended session duration
+
+    LoginResponse:
+      type: object
+      required: [access_token, user]
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: JWT refresh token
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          description: JWT refresh token
+
+    UserProfile:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+          description: User email address
+        name:
+          type: string
+          description: User display name
+        avatar_url:
+          type: string
+          format: uri
+          description: User avatar image URL
+        preferences:
+          type: object
+          properties:
+            default_sources:
+              type: array
+              items:
+                type: string
+                enum: [web, arxiv, pubmed, social]
+            language:
+              type: string
+              default: en
+            timezone:
+              type: string
+              default: UTC
+        usage_stats:
+          type: object
+          properties:
+            total_searches:
+              type: integer
+            total_research_requests:
+              type: integer
+            last_activity:
+              type: string
+              format: date-time
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: User display name
+        preferences:
+          type: object
+          properties:
+            default_sources:
+              type: array
+              items:
+                type: string
+                enum: [web, arxiv, pubmed, social]
+            language:
+              type: string
+            timezone:
+              type: string
+
+    ErrorResponse:
+      type: object
+      required: [error, message, timestamp]
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+        request_id:
+          type: string
+          description: Unique request identifier for debugging
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details

@@ -1,0 +1,316 @@
+{
+  "name": "PAKE Content Generation Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-content-generation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "content-generation-webhook",
+      "name": "Content Generation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "content-generation-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract content generation parameters\nconst contentType = $json.contentType || 'blog_post';\nconst topic = $json.topic;\nconst targetAudience = $json.targetAudience || 'general';\nconst tone = $json.tone || 'professional';\nconst keywords = $json.keywords || [];\n\n// Validate required fields\nif (!topic) {\n  throw new Error('Topic is required for content generation');\n}\n\n// Prepare AI prompt based on content type\nlet prompt = '';\nswitch (contentType) {\n  case 'blog_post':\n    prompt = `Write a comprehensive blog post about \"${topic}\" targeted at ${targetAudience}. Use a ${tone} tone and incorporate these keywords naturally: ${keywords.join(', ')}. Include an engaging introduction, detailed body with subheadings, and a compelling conclusion.`;\n    break;\n  case 'social_media':\n    prompt = `Create engaging social media content about \"${topic}\" for ${targetAudience}. Use a ${tone} tone. Include relevant hashtags and keep it concise but impactful.`;\n    break;\n  case 'email_newsletter':\n    prompt = `Write an email newsletter section about \"${topic}\" for ${targetAudience}. Use a ${tone} tone and make it scannable with bullet points where appropriate.`;\n    break;\n  case 'product_description':\n    prompt = `Write a compelling product description for \"${topic}\" targeting ${targetAudience}. Use a ${tone} tone and highlight key benefits and features.`;\n    break;\n  default:\n    prompt = `Create high-quality content about \"${topic}\" for ${targetAudience} using a ${tone} tone.`;\n}\n\nreturn {\n  contentType,\n  topic,\n  targetAudience,\n  tone,\n  keywords,\n  prompt,\n  timestamp: new Date().toISOString(),\n  requestId: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`\n};"
+      },
+      "id": "prepare-content-request",
+      "name": "Prepare Content Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"You are a professional content writer specialized in creating high-quality, engaging content. Always provide well-structured, original content that meets the specified requirements.\"}, {\"role\": \"user\", \"content\": $json.prompt}]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "2000"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "openai-content-generation",
+      "name": "OpenAI Content Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process OpenAI response\nconst response = $json;\nconst generatedContent = response.choices[0].message.content;\nconst usage = response.usage;\n\n// Calculate confidence score based on response quality\nlet confidenceScore = 0.8;\nif (generatedContent.length > 500) confidenceScore += 0.1;\nif (generatedContent.includes('\\n\\n')) confidenceScore += 0.05; // Has paragraphs\nif (generatedContent.match(/#{1,3}\\s/g)) confidenceScore += 0.05; // Has headings\n\n// Prepare content metadata\nconst wordCount = generatedContent.split(/\\s+/).length;\nconst readingTime = Math.ceil(wordCount / 200); // ~200 words per minute\n\nconst processedContent = {\n  id: $('Prepare Content Request').item.json.requestId,\n  contentType: $('Prepare Content Request').item.json.contentType,\n  topic: $('Prepare Content Request').item.json.topic,\n  targetAudience: $('Prepare Content Request').item.json.targetAudience,\n  tone: $('Prepare Content Request').item.json.tone,\n  keywords: $('Prepare Content Request').item.json.keywords,\n  generatedContent,\n  metadata: {\n    wordCount,\n    readingTime,\n    confidenceScore: Math.min(confidenceScore, 1.0),\n    generatedAt: new Date().toISOString(),\n    model: 'gpt-4',\n    tokensUsed: usage.total_tokens,\n    cost: usage.total_tokens * 0.00003 // Approximate cost for GPT-4\n  },\n  status: 'generated',\n  quality_checks: {\n    length_adequate: wordCount >= 100,\n    has_structure: generatedContent.includes('\\n\\n'),\n    keyword_inclusion: $('Prepare Content Request').item.json.keywords.some(keyword => \n      generatedContent.toLowerCase().includes(keyword.toLowerCase())\n    )\n  }\n};\n\nreturn processedContent;"
+      },
+      "id": "process-generated-content",
+      "name": "Process Generated Content",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/content/store",
+        "authentication": "genericCredential",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content_data",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-content",
+      "name": "Store Content in PAKE System",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.metadata.confidenceScore}}",
+              "operation": "larger",
+              "value2": 0.8
+            }
+          ]
+        }
+      },
+      "id": "quality-gate",
+      "name": "Quality Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5678/webhook/trigger-social-media-publishing",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content_id",
+              "value": "={{$json.id}}"
+            },
+            {
+              "name": "content",
+              "value": "={{$json.generatedContent}}"
+            },
+            {
+              "name": "contentType",
+              "value": "={{$json.contentType}}"
+            },
+            {
+              "name": "auto_publish",
+              "value": "={{$json.contentType === 'social_media'}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-publishing",
+      "name": "Trigger Publishing Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/content/review-queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content_id",
+              "value": "={{$json.id}}"
+            },
+            {
+              "name": "reason",
+              "value": "Low confidence score - requires manual review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-to-review",
+      "name": "Send to Review Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Content generation completed\",\n  \"content_id\": $json.id,\n  \"confidence_score\": $json.metadata.confidenceScore,\n  \"next_action\": $json.metadata.confidenceScore > 0.8 ? \"auto_publish\" : \"manual_review\",\n  \"word_count\": $json.metadata.wordCount,\n  \"estimated_reading_time\": $json.metadata.readingTime + \" minutes\"\n}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Content Generation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Content Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Content Request": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Content Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Content Generation": {
+      "main": [
+        [
+          {
+            "node": "Process Generated Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Generated Content": {
+      "main": [
+        [
+          {
+            "node": "Store Content in PAKE System",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Content in PAKE System": {
+      "main": [
+        [
+          {
+            "node": "Quality Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Gate": {
+      "main": [
+        [
+          {
+            "node": "Trigger Publishing Workflow",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to Review Queue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error_handler_workflow"
+  },
+  "staticData": {},
+  "meta": {
+    "created": "2024-08-30T23:00:00.000Z",
+    "description": "Automated content generation workflow using OpenAI GPT-4 with quality scoring and intelligent routing",
+    "tags": ["content", "ai", "automation", "openai"]
+  }
+}

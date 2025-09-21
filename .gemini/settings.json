@@ -1,0 +1,72 @@
+{
+  "model": "gemini-2.0-flash-exp",
+  "telemetry": {
+    "enabled": false
+  },
+  "approvalMode": "default",
+  "sandbox": false,
+  "debug": false,
+  "mcpServers": {
+    "pake-obsidian": {
+      "command": "curl",
+      "args": [
+        "-X",
+        "POST",
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        "@-",
+        "http://localhost:3000/api/search_notes"
+      ],
+      "description": "PAKE Obsidian Bridge - File-based note management",
+      "timeout": 10000,
+      "trust": true
+    },
+    "pake-server": {
+      "command": "curl",
+      "args": [
+        "-X",
+        "POST",
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        "@-",
+        "http://localhost:8000/search_notes"
+      ],
+      "description": "PAKE MCP Server - Database-backed semantic search",
+      "timeout": 10000,
+      "trust": true
+    }
+  },
+  "context": {
+    "includeFiles": [
+      "agent_prompts/ingestion_agent.md",
+      "agent_prompts/synthesis_agent.md",
+      "agent_prompts/governance_workflows.md",
+      "configs/claude_gemini_tools.json"
+    ],
+    "excludePatterns": ["node_modules/**", "data/**", "logs/**", ".git/**"]
+  },
+  "extensions": [],
+  "workspace": {
+    "rootDir": "D:\\Projects\\PAKE_SYSTEM",
+    "vaultDir": "D:\\Projects\\PAKE_SYSTEM\\vault",
+    "scriptsDir": "D:\\Projects\\PAKE_SYSTEM\\scripts",
+    "mcpDir": "D:\\Projects\\PAKE_SYSTEM\\mcp-servers"
+  },
+  "pake": {
+    "endpoints": {
+      "obsidian_bridge": "http://localhost:3000",
+      "mcp_server": "http://localhost:8000"
+    },
+    "vault_path": "D:\\Projects\\PAKE_SYSTEM\\vault",
+    "agent_prompts_path": "D:\\Projects\\PAKE_SYSTEM\\agent_prompts",
+    "confidence_thresholds": {
+      "high": 0.8,
+      "medium": 0.6,
+      "low": 0.4,
+      "quarantine": 0.3
+    },
+    "default_review_limit": 20
+  }
+}

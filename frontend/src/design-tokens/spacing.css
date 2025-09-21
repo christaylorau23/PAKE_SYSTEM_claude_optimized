@@ -1,0 +1,323 @@
+/* Design Tokens - Spacing & Layout System */
+/* Harmonic Spatial Relationships with Golden Ratio Proportions */
+
+:root {
+  /* === BASE SPACING UNIT === */
+  /* Using 4px base unit for pixel-perfect layouts */
+  --space-unit: 0.25rem; /* 4px */
+
+  /* === SPACING SCALE === */
+  /* Geometric progression with 1.618 (Golden Ratio) intervals */
+  --space-px: 1px;
+  --space-0: 0;
+  --space-0-5: calc(var(--space-unit) * 0.5); /* 2px */
+  --space-1: var(--space-unit); /* 4px */
+  --space-1-5: calc(var(--space-unit) * 1.5); /* 6px */
+  --space-2: calc(var(--space-unit) * 2); /* 8px */
+  --space-2-5: calc(var(--space-unit) * 2.5); /* 10px */
+  --space-3: calc(var(--space-unit) * 3); /* 12px */
+  --space-3-5: calc(var(--space-unit) * 3.5); /* 14px */
+  --space-4: calc(var(--space-unit) * 4); /* 16px */
+  --space-5: calc(var(--space-unit) * 5); /* 20px */
+  --space-6: calc(var(--space-unit) * 6); /* 24px */
+  --space-7: calc(var(--space-unit) * 7); /* 28px */
+  --space-8: calc(var(--space-unit) * 8); /* 32px */
+  --space-9: calc(var(--space-unit) * 9); /* 36px */
+  --space-10: calc(var(--space-unit) * 10); /* 40px */
+  --space-11: calc(var(--space-unit) * 11); /* 44px */
+  --space-12: calc(var(--space-unit) * 12); /* 48px */
+  --space-14: calc(var(--space-unit) * 14); /* 56px */
+  --space-16: calc(var(--space-unit) * 16); /* 64px */
+  --space-20: calc(var(--space-unit) * 20); /* 80px */
+  --space-24: calc(var(--space-unit) * 24); /* 96px */
+  --space-28: calc(var(--space-unit) * 28); /* 112px */
+  --space-32: calc(var(--space-unit) * 32); /* 128px */
+  --space-36: calc(var(--space-unit) * 36); /* 144px */
+  --space-40: calc(var(--space-unit) * 40); /* 160px */
+  --space-44: calc(var(--space-unit) * 44); /* 176px */
+  --space-48: calc(var(--space-unit) * 48); /* 192px */
+  --space-52: calc(var(--space-unit) * 52); /* 208px */
+  --space-56: calc(var(--space-unit) * 56); /* 224px */
+  --space-60: calc(var(--space-unit) * 60); /* 240px */
+  --space-64: calc(var(--space-unit) * 64); /* 256px */
+  --space-72: calc(var(--space-unit) * 72); /* 288px */
+  --space-80: calc(var(--space-unit) * 80); /* 320px */
+  --space-96: calc(var(--space-unit) * 96); /* 384px */
+
+  /* === SEMANTIC SPACING === */
+  /* Component-specific spacing based on cognitive psychology */
+
+  /* Micro Spacing - Within components */
+  --space-micro-xs: var(--space-0-5); /* 2px - Minimal visual breathing */
+  --space-micro-sm: var(--space-1); /* 4px - Tight relationships */
+  --space-micro-md: var(--space-2); /* 8px - Close relationships */
+  --space-micro-lg: var(--space-3); /* 12px - Related elements */
+
+  /* Component Spacing - Between related elements */
+  --space-component-xs: var(--space-2); /* 8px - Form elements */
+  --space-component-sm: var(--space-3); /* 12px - List items */
+  --space-component-md: var(--space-4); /* 16px - Card content */
+  --space-component-lg: var(--space-6); /* 24px - Section padding */
+  --space-component-xl: var(--space-8); /* 32px - Major components */
+
+  /* Layout Spacing - Between major sections */
+  --space-layout-xs: var(--space-8); /* 32px - Tight sections */
+  --space-layout-sm: var(--space-12); /* 48px - Standard sections */
+  --space-layout-md: var(--space-16); /* 64px - Comfortable sections */
+  --space-layout-lg: var(--space-24); /* 96px - Spacious sections */
+  --space-layout-xl: var(--space-32); /* 128px - Hero sections */
+  --space-layout-2xl: var(--space-48); /* 192px - Page sections */
+
+  /* === CONTAINER SIZES === */
+  /* Content width constraints for optimal readability */
+  --container-xs: 20rem; /* 320px - Mobile content */
+  --container-sm: 24rem; /* 384px - Small forms */
+  --container-md: 28rem; /* 448px - Medium content */
+  --container-lg: 32rem; /* 512px - Large forms */
+  --container-xl: 36rem; /* 576px - Reading content */
+  --container-2xl: 42rem; /* 672px - Wide content */
+  --container-3xl: 48rem; /* 768px - Article width */
+  --container-4xl: 56rem; /* 896px - Dashboard content */
+  --container-5xl: 64rem; /* 1024px - Wide layouts */
+  --container-6xl: 72rem; /* 1152px - Max content */
+  --container-7xl: 80rem; /* 1280px - Ultra wide */
+  --container-full: 100%;
+
+  /* === BREAKPOINTS === */
+  /* Responsive design breakpoints */
+  --breakpoint-xs: 20rem; /* 320px */
+  --breakpoint-sm: 24rem; /* 384px */
+  --breakpoint-md: 28rem; /* 448px */
+  --breakpoint-lg: 32rem; /* 512px */
+  --breakpoint-xl: 36rem; /* 576px */
+  --breakpoint-2xl: 42rem; /* 672px */
+  --breakpoint-3xl: 48rem; /* 768px */
+  --breakpoint-4xl: 56rem; /* 896px */
+  --breakpoint-5xl: 64rem; /* 1024px */
+  --breakpoint-6xl: 72rem; /* 1152px */
+  --breakpoint-7xl: 80rem; /* 1280px */
+
+  /* === ASPECT RATIOS === */
+  --aspect-square: 1 / 1;
+  --aspect-video: 16 / 9;
+  --aspect-cinema: 21 / 9;
+  --aspect-golden: 1.618 / 1;
+  --aspect-photo: 4 / 3;
+  --aspect-portrait: 3 / 4;
+
+  /* === Z-INDEX SCALE === */
+  /* Logical stacking order */
+  --z-hide: -1;
+  --z-auto: auto;
+  --z-base: 0;
+  --z-docked: 10;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-banner: 1030;
+  --z-overlay: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-skiplink: 1070;
+  --z-toast: 1080;
+  --z-tooltip: 1090;
+  --z-max: 2147483647;
+
+  /* === BORDER RADIUS === */
+  /* Harmonious corner rounding */
+  --radius-none: 0;
+  --radius-xs: 0.125rem; /* 2px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-base: 0.375rem; /* 6px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.5rem; /* 24px */
+  --radius-3xl: 2rem; /* 32px */
+  --radius-full: 9999px;
+
+  /* === SHADOWS === */
+  /* Elevation system using realistic light physics */
+  --shadow-xs: 0 1px 2px 0 var(--shadow-xs);
+  --shadow-sm: 0 1px 3px 0 var(--shadow-sm), 0 1px 2px -1px var(--shadow-xs);
+  --shadow-base: 0 1px 3px 0 var(--shadow-sm), 0 1px 2px -1px var(--shadow-xs);
+  --shadow-md: 0 4px 6px -1px var(--shadow-sm), 0 2px 4px -2px var(--shadow-xs);
+  --shadow-lg:
+    0 10px 15px -3px var(--shadow-md), 0 4px 6px -4px var(--shadow-sm);
+  --shadow-xl:
+    0 20px 25px -5px var(--shadow-lg), 0 8px 10px -6px var(--shadow-md);
+  --shadow-2xl: 0 25px 50px -12px var(--shadow-xl);
+  --shadow-inner: inset 0 2px 4px 0 var(--shadow-xs);
+
+  /* Brand shadows */
+  --shadow-brand-sm:
+    0 1px 3px 0 var(--shadow-brand), 0 1px 2px -1px var(--shadow-brand);
+  --shadow-brand-md:
+    0 4px 6px -1px var(--shadow-brand), 0 2px 4px -2px var(--shadow-brand);
+  --shadow-brand-lg:
+    0 10px 15px -3px var(--shadow-brand), 0 4px 6px -4px var(--shadow-brand);
+
+  /* === BLUR VALUES === */
+  --blur-none: 0;
+  --blur-sm: 4px;
+  --blur-base: 8px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
+}
+
+/* === LAYOUT UTILITIES === */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-component-md);
+  padding-right: var(--space-component-md);
+}
+
+.container-xs {
+  max-width: var(--container-xs);
+}
+.container-sm {
+  max-width: var(--container-sm);
+}
+.container-md {
+  max-width: var(--container-md);
+}
+.container-lg {
+  max-width: var(--container-lg);
+}
+.container-xl {
+  max-width: var(--container-xl);
+}
+.container-2xl {
+  max-width: var(--container-2xl);
+}
+.container-3xl {
+  max-width: var(--container-3xl);
+}
+.container-4xl {
+  max-width: var(--container-4xl);
+}
+.container-5xl {
+  max-width: var(--container-5xl);
+}
+.container-6xl {
+  max-width: var(--container-6xl);
+}
+.container-7xl {
+  max-width: var(--container-7xl);
+}
+
+/* === SPACING CLASSES === */
+/* Auto-generated spacing utilities */
+.space-y-0 > * + * {
+  margin-top: var(--space-0);
+}
+.space-y-1 > * + * {
+  margin-top: var(--space-1);
+}
+.space-y-2 > * + * {
+  margin-top: var(--space-2);
+}
+.space-y-3 > * + * {
+  margin-top: var(--space-3);
+}
+.space-y-4 > * + * {
+  margin-top: var(--space-4);
+}
+.space-y-5 > * + * {
+  margin-top: var(--space-5);
+}
+.space-y-6 > * + * {
+  margin-top: var(--space-6);
+}
+.space-y-8 > * + * {
+  margin-top: var(--space-8);
+}
+.space-y-10 > * + * {
+  margin-top: var(--space-10);
+}
+.space-y-12 > * + * {
+  margin-top: var(--space-12);
+}
+
+.space-x-0 > * + * {
+  margin-left: var(--space-0);
+}
+.space-x-1 > * + * {
+  margin-left: var(--space-1);
+}
+.space-x-2 > * + * {
+  margin-left: var(--space-2);
+}
+.space-x-3 > * + * {
+  margin-left: var(--space-3);
+}
+.space-x-4 > * + * {
+  margin-left: var(--space-4);
+}
+.space-x-5 > * + * {
+  margin-left: var(--space-5);
+}
+.space-x-6 > * + * {
+  margin-left: var(--space-6);
+}
+.space-x-8 > * + * {
+  margin-left: var(--space-8);
+}
+.space-x-10 > * + * {
+  margin-left: var(--space-10);
+}
+.space-x-12 > * + * {
+  margin-left: var(--space-12);
+}
+
+/* === RESPONSIVE SPACING ADJUSTMENTS === */
+@media (max-width: 768px) {
+  :root {
+    --space-layout-xs: var(--space-6); /* Reduce layout spacing on mobile */
+    --space-layout-sm: var(--space-8);
+    --space-layout-md: var(--space-12);
+    --space-layout-lg: var(--space-16);
+    --space-layout-xl: var(--space-20);
+    --space-layout-2xl: var(--space-24);
+  }
+
+  .container {
+    padding-left: var(--space-component-sm);
+    padding-right: var(--space-component-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --space-layout-xs: var(--space-4); /* Further reduce on small mobile */
+    --space-layout-sm: var(--space-6);
+    --space-layout-md: var(--space-8);
+  }
+
+  .container {
+    padding-left: var(--space-component-xs);
+    padding-right: var(--space-component-xs);
+  }
+}
+
+/* === ACCESSIBILITY SPACING === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-margin-top: var(
+      --space-20
+    ); /* Ensure focus indicators are visible */
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --space-component-xs: calc(var(--space-component-xs) * 1.25);
+    --space-component-sm: calc(var(--space-component-sm) * 1.25);
+    --space-component-md: calc(var(--space-component-md) * 1.25);
+  }
+}

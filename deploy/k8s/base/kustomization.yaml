@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: pake-system-base
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: pake-system
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/version: '1.0.0'
+
+# Common annotations
+commonAnnotations:
+  config.kubernetes.io/managed-by: 'kustomize'
+  deployment.kubernetes.io/revision: '1'
+
+# Resources to include
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - redis.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+# Images with base tags (will be overridden in overlays)
+images:
+  - name: pake-backend
+    newName: pake-system/backend
+    newTag: latest
+  - name: pake-frontend
+    newName: pake-system/frontend
+    newTag: latest
+  - name: postgres
+    newName: postgres
+    newTag: '15-alpine'
+  - name: redis
+    newName: redis
+    newTag: '7-alpine'
+
+# ConfigMap generators for build information
+configMapGenerator:
+  - name: pake-build-info
+    literals:
+      - BUILD_DATE=$(date +%Y-%m-%d)
+      - BUILD_VERSION=1.0.0
+      - BUILD_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+      - ENVIRONMENT=base
+
+# Base namespace
+namespace: pake-system
+
+# Replacements for dynamic values
+replacements:
+  - source:
+      kind: ConfigMap
+      name: pake-build-info
+      fieldPath: data.BUILD_VERSION
+    targets:
+      - select:
+          kind: Deployment
+        fieldPaths:
+          - metadata.labels.[app.kubernetes.io/version]
+          - spec.template.metadata.labels.[app.kubernetes.io/version]

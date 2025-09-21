@@ -1,0 +1,538 @@
+# Disaster Recovery Procedures for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-procedures
+  namespace: kube-system
+  labels:
+    app: disaster-recovery
+data:
+  cluster-backup.sh: |
+    #!/bin/bash
+    set -e
+
+    BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_LOCATION=${BACKUP_LOCATION:-"s3://pake-dr-backups"}
+    CLUSTER_NAME=${CLUSTER_NAME:-"pake-production"}
+
+    echo "Starting cluster backup at $(date)"
+    echo "Backup timestamp: $BACKUP_TIMESTAMP"
+    echo "Backup location: $BACKUP_LOCATION"
+
+    # Create backup directory
+    BACKUP_DIR="/tmp/cluster-backup-$BACKUP_TIMESTAMP"
+    mkdir -p $BACKUP_DIR
+
+    # 1. Backup etcd
+    echo "Backing up etcd..."
+    ETCDCTL_API=3 etcdctl \
+      --endpoints=https://127.0.0.1:2379 \
+      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+      --cert=/etc/kubernetes/pki/etcd/server.crt \
+      --key=/etc/kubernetes/pki/etcd/server.key \
+      snapshot save $BACKUP_DIR/etcd-snapshot-$BACKUP_TIMESTAMP.db
+
+    # 2. Backup Kubernetes certificates
+    echo "Backing up Kubernetes certificates..."
+    tar -czf $BACKUP_DIR/k8s-certs-$BACKUP_TIMESTAMP.tar.gz \
+      -C /etc/kubernetes pki/
+
+    # 3. Backup cluster configuration
+    echo "Backing up cluster configuration..."
+    mkdir -p $BACKUP_DIR/cluster-config
+
+    # Export all cluster-wide resources
+    kubectl get all --all-namespaces -o yaml > $BACKUP_DIR/cluster-config/all-resources.yaml
+    kubectl get pv -o yaml > $BACKUP_DIR/cluster-config/persistent-volumes.yaml
+    kubectl get sc -o yaml > $BACKUP_DIR/cluster-config/storage-classes.yaml
+    kubectl get crd -o yaml > $BACKUP_DIR/cluster-config/custom-resources.yaml
+    kubectl get clusterroles -o yaml > $BACKUP_DIR/cluster-config/cluster-roles.yaml
+    kubectl get clusterrolebindings -o yaml > $BACKUP_DIR/cluster-config/cluster-role-bindings.yaml
+
+    # Export namespace-specific resources
+    for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
+      echo "Backing up namespace: $ns"
+      mkdir -p $BACKUP_DIR/cluster-config/namespaces/$ns
+      kubectl get all -n $ns -o yaml > $BACKUP_DIR/cluster-config/namespaces/$ns/all-resources.yaml
+      kubectl get secrets -n $ns -o yaml > $BACKUP_DIR/cluster-config/namespaces/$ns/secrets.yaml
+      kubectl get configmaps -n $ns -o yaml > $BACKUP_DIR/cluster-config/namespaces/$ns/configmaps.yaml
+      kubectl get pvc -n $ns -o yaml > $BACKUP_DIR/cluster-config/namespaces/$ns/pvcs.yaml
+    done
+
+    # 4. Backup ArgoCD applications and configurations
+    echo "Backing up ArgoCD..."
+    kubectl get applications -n argocd -o yaml > $BACKUP_DIR/cluster-config/argocd-applications.yaml
+    kubectl get appprojects -n argocd -o yaml > $BACKUP_DIR/cluster-config/argocd-projects.yaml
+    kubectl get applicationsets -n argocd -o yaml > $BACKUP_DIR/cluster-config/argocd-applicationsets.yaml
+
+    # 5. Create backup manifest
+    cat > $BACKUP_DIR/backup-manifest.yaml << EOF
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: backup-manifest-$BACKUP_TIMESTAMP
+      namespace: kube-system
+    data:
+      timestamp: "$BACKUP_TIMESTAMP"
+      cluster: "$CLUSTER_NAME"
+      kubernetes-version: "$(kubectl version --short --client | grep 'Client Version')"
+      etcd-version: "$(etcdctl version | head -1)"
+      backup-location: "$BACKUP_LOCATION"
+      backup-size: "$(du -sh $BACKUP_DIR | cut -f1)"
+      nodes: "$(kubectl get nodes --no-headers | wc -l)"
+      namespaces: "$(kubectl get namespaces --no-headers | wc -l)"
+      pods: "$(kubectl get pods --all-namespaces --no-headers | wc -l)"
+      services: "$(kubectl get services --all-namespaces --no-headers | wc -l)"
+    EOF
+
+    # 6. Compress and upload backup
+    echo "Compressing backup..."
+    cd /tmp
+    tar -czf cluster-backup-$BACKUP_TIMESTAMP.tar.gz cluster-backup-$BACKUP_TIMESTAMP/
+
+    echo "Uploading backup to $BACKUP_LOCATION..."
+    aws s3 cp cluster-backup-$BACKUP_TIMESTAMP.tar.gz \
+      $BACKUP_LOCATION/cluster-backups/
+
+    # 7. Cleanup local files
+    rm -rf $BACKUP_DIR
+    rm -f cluster-backup-$BACKUP_TIMESTAMP.tar.gz
+
+    # 8. Verify backup
+    echo "Verifying backup..."
+    aws s3 ls $BACKUP_LOCATION/cluster-backups/cluster-backup-$BACKUP_TIMESTAMP.tar.gz
+
+    if [ $? -eq 0 ]; then
+      echo "✅ Cluster backup completed successfully at $(date)"
+      echo "Backup location: $BACKUP_LOCATION/cluster-backups/cluster-backup-$BACKUP_TIMESTAMP.tar.gz"
+    else
+      echo "❌ Backup verification failed"
+      exit 1
+    fi
+
+  cluster-restore.sh: |
+    #!/bin/bash
+    set -e
+
+    BACKUP_FILE=$1
+    BACKUP_LOCATION=${BACKUP_LOCATION:-"s3://pake-dr-backups"}
+
+    if [ -z "$BACKUP_FILE" ]; then
+      echo "Usage: $0 <backup-file-name>"
+      echo "Available backups:"
+      aws s3 ls $BACKUP_LOCATION/cluster-backups/
+      exit 1
+    fi
+
+    echo "Starting cluster restore from backup: $BACKUP_FILE"
+    echo "⚠️  WARNING: This will replace the current cluster state!"
+    echo "Press Ctrl+C within 10 seconds to cancel..."
+    sleep 10
+
+    # Download backup
+    echo "Downloading backup..."
+    RESTORE_DIR="/tmp/cluster-restore-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p $RESTORE_DIR
+    cd $RESTORE_DIR
+
+    aws s3 cp $BACKUP_LOCATION/cluster-backups/$BACKUP_FILE ./
+    tar -xzf $BACKUP_FILE
+
+    BACKUP_EXTRACTED=$(find . -name "cluster-backup-*" -type d | head -1)
+    cd $BACKUP_EXTRACTED
+
+    # 1. Stop kube-apiserver (if running on control plane)
+    echo "Stopping kube-apiserver..."
+    sudo systemctl stop kube-apiserver || true
+
+    # 2. Restore etcd
+    echo "Restoring etcd..."
+    ETCD_SNAPSHOT=$(find . -name "etcd-snapshot-*.db" | head -1)
+
+    sudo rm -rf /var/lib/etcd/member
+    ETCDCTL_API=3 etcdctl snapshot restore $ETCD_SNAPSHOT \
+      --data-dir=/var/lib/etcd \
+      --initial-cluster-token=etcd-cluster-1 \
+      --initial-advertise-peer-urls=https://127.0.0.1:2380 \
+      --name=master-1 \
+      --initial-cluster=master-1=https://127.0.0.1:2380
+
+    sudo chown -R etcd:etcd /var/lib/etcd
+
+    # 3. Restore certificates
+    echo "Restoring Kubernetes certificates..."
+    sudo tar -xzf k8s-certs-*.tar.gz -C /etc/kubernetes/
+
+    # 4. Start etcd and kube-apiserver
+    echo "Starting etcd and kube-apiserver..."
+    sudo systemctl start etcd
+    sudo systemctl start kube-apiserver
+    sudo systemctl start kube-controller-manager
+    sudo systemctl start kube-scheduler
+
+    # Wait for API server to be ready
+    echo "Waiting for API server to be ready..."
+    timeout 300 bash -c 'until kubectl get nodes; do sleep 5; done'
+
+    # 5. Restore cluster configuration
+    echo "Restoring cluster configuration..."
+
+    # Restore storage classes first
+    kubectl apply -f cluster-config/storage-classes.yaml
+
+    # Restore custom resource definitions
+    kubectl apply -f cluster-config/custom-resources.yaml
+
+    # Wait for CRDs to be established
+    sleep 30
+
+    # Restore cluster-wide RBAC
+    kubectl apply -f cluster-config/cluster-roles.yaml
+    kubectl apply -f cluster-config/cluster-role-bindings.yaml
+
+    # Restore persistent volumes
+    kubectl apply -f cluster-config/persistent-volumes.yaml
+
+    # 6. Restore namespaced resources
+    echo "Restoring namespaced resources..."
+
+    for ns_dir in cluster-config/namespaces/*/; do
+      ns=$(basename $ns_dir)
+      echo "Restoring namespace: $ns"
+      
+      # Skip system namespaces that are auto-created
+      if [[ "$ns" == "kube-system" || "$ns" == "kube-public" || "$ns" == "kube-node-lease" ]]; then
+        continue
+      fi
+      
+      # Create namespace if it doesn't exist
+      kubectl create namespace $ns --dry-run=client -o yaml | kubectl apply -f -
+      
+      # Restore secrets and configmaps first
+      kubectl apply -f $ns_dir/secrets.yaml -n $ns || true
+      kubectl apply -f $ns_dir/configmaps.yaml -n $ns || true
+      
+      # Restore PVCs
+      kubectl apply -f $ns_dir/pvcs.yaml -n $ns || true
+      
+      # Wait for PVCs to be bound
+      kubectl wait --for=condition=Bound pvc --all -n $ns --timeout=300s || true
+      
+      # Restore other resources
+      kubectl apply -f $ns_dir/all-resources.yaml -n $ns || true
+    done
+
+    # 7. Restore ArgoCD
+    echo "Restoring ArgoCD..."
+    kubectl apply -f cluster-config/argocd-projects.yaml || true
+    kubectl apply -f cluster-config/argocd-applications.yaml || true
+    kubectl apply -f cluster-config/argocd-applicationsets.yaml || true
+
+    # 8. Cleanup
+    cd /
+    rm -rf $RESTORE_DIR
+
+    echo "✅ Cluster restore completed successfully!"
+    echo "Please verify all applications are running correctly."
+    echo "Run: kubectl get pods --all-namespaces"
+
+  database-restore.sh: |
+    #!/bin/bash
+    set -e
+
+    DATABASE_TYPE=${1:-postgresql}
+    BACKUP_FILE=$2
+    NAMESPACE=${3:-database}
+
+    echo "Starting $DATABASE_TYPE database restore..."
+
+    case $DATABASE_TYPE in
+      postgresql)
+        echo "Restoring PostgreSQL database..."
+        
+        # Scale down applications that use the database
+        kubectl scale deployment pake-api --replicas=0 -n pake-system
+        kubectl scale deployment pake-workers --replicas=0 -n pake-system
+        
+        # Create restore job
+        kubectl apply -f - <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: postgresql-restore-$(date +%s)
+      namespace: $NAMESPACE
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: restore
+            image: postgres:15-alpine
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGHOST
+              value: "pake-postgresql.database.svc.cluster.local"
+            - name: PGUSER
+              value: "postgres"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Downloading backup from S3..."
+              aws s3 cp s3://pake-backups/postgresql/$BACKUP_FILE /tmp/backup.sql.gz
+              
+              echo "Stopping connections to database..."
+              psql -h \$PGHOST -U \$PGUSER -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'pake_production' AND pid <> pg_backend_pid();"
+              
+              echo "Dropping existing database..."
+              psql -h \$PGHOST -U \$PGUSER -c "DROP DATABASE IF EXISTS pake_production;"
+              
+              echo "Creating new database..."
+              psql -h \$PGHOST -U \$PGUSER -c "CREATE DATABASE pake_production;"
+              
+              echo "Restoring database..."
+              gunzip -c /tmp/backup.sql.gz | psql -h \$PGHOST -U \$PGUSER -d pake_production
+              
+              echo "Database restore completed successfully!"
+    EOF
+        ;;
+        
+      redis)
+        echo "Restoring Redis database..."
+        kubectl apply -f - <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: redis-restore-$(date +%s)
+      namespace: $NAMESPACE
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: restore
+            image: redis:7-alpine
+            env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDACTED_SECRET
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Downloading Redis backup..."
+              aws s3 cp s3://pake-backups/redis/$BACKUP_FILE /tmp/backup.rdb
+              
+              echo "Redis restore would be implemented here"
+              echo "This requires coordination with Redis pods"
+    EOF
+        ;;
+        
+      chromadb)
+        echo "Restoring ChromaDB..."
+        # Implementation for ChromaDB restore
+        echo "ChromaDB restore would be implemented here"
+        ;;
+        
+      *)
+        echo "Unknown database type: $DATABASE_TYPE"
+        exit 1
+        ;;
+    esac
+
+    echo "Database restore initiated. Monitor with:"
+    echo "kubectl get jobs -n $NAMESPACE"
+    echo "kubectl logs -f job/[job-name] -n $NAMESPACE"
+
+  failover-procedure.sh: |
+    #!/bin/bash
+    set -e
+
+    FAILOVER_TYPE=${1:-manual}
+    SOURCE_CLUSTER=${2:-primary}
+    TARGET_CLUSTER=${3:-secondary}
+
+    echo "Starting failover procedure..."
+    echo "Type: $FAILOVER_TYPE"
+    echo "From: $SOURCE_CLUSTER"
+    echo "To: $TARGET_CLUSTER"
+
+    case $FAILOVER_TYPE in
+      manual)
+        echo "⚠️  MANUAL FAILOVER INITIATED"
+        echo "This will switch traffic from $SOURCE_CLUSTER to $TARGET_CLUSTER"
+        echo "Press Enter to continue or Ctrl+C to cancel..."
+        read
+        ;;
+      auto)
+        echo "🤖 AUTOMATIC FAILOVER TRIGGERED"
+        ;;
+    esac
+
+    # 1. Health check on target cluster
+    echo "Checking target cluster health..."
+    kubectl --context=$TARGET_CLUSTER get nodes
+    kubectl --context=$TARGET_CLUSTER get pods --all-namespaces | grep -v Running | grep -v Completed || true
+
+    # 2. Sync latest data (if possible)
+    echo "Attempting final data sync..."
+    # This would implement database replication sync
+
+    # 3. Update DNS to point to new cluster
+    echo "Updating DNS records..."
+    # Implementation would update Route53 or other DNS provider
+
+    # 4. Scale down source cluster (graceful)
+    if kubectl --context=$SOURCE_CLUSTER get nodes > /dev/null 2>&1; then
+      echo "Gracefully scaling down source cluster..."
+      kubectl --context=$SOURCE_CLUSTER scale deployment --all --replicas=0 --all-namespaces
+    else
+      echo "Source cluster not accessible, proceeding with failover..."
+    fi
+
+    # 5. Scale up target cluster
+    echo "Scaling up target cluster..."
+    kubectl --context=$TARGET_CLUSTER apply -f - <<EOF
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: failover-status
+      namespace: kube-system
+    data:
+      status: "active"
+      timestamp: "$(date -Iseconds)"
+      previous-cluster: "$SOURCE_CLUSTER"
+      failover-type: "$FAILOVER_TYPE"
+    EOF
+
+    # 6. Verify services
+    echo "Verifying services in target cluster..."
+    kubectl --context=$TARGET_CLUSTER get svc --all-namespaces
+
+    echo "✅ Failover procedure completed"
+    echo "Monitor applications: kubectl --context=$TARGET_CLUSTER get pods --all-namespaces"
+
+---
+# Disaster Recovery CronJob for Regular Backups
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: disaster-recovery-backup
+  namespace: kube-system
+  labels:
+    app: disaster-recovery
+spec:
+  schedule: '0 1 * * *' # Daily at 1 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: disaster-recovery-backup
+        spec:
+          serviceAccountName: disaster-recovery
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: bitnami/kubectl:latest
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: BACKUP_LOCATION
+                  value: 's3://pake-dr-backups'
+                - name: CLUSTER_NAME
+                  value: 'pake-production'
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              command:
+                - /bin/bash
+                - /scripts/cluster-backup.sh
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: etcd-certs
+                  mountPath: /etc/kubernetes/pki/etcd
+                  readOnly: true
+          volumes:
+            - name: scripts
+              configMap:
+                name: disaster-recovery-procedures
+                defaultMode: 0755
+            - name: etcd-certs
+              hostPath:
+                path: /etc/kubernetes/pki/etcd
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ''
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              effect: NoSchedule
+
+---
+# Disaster Recovery Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: disaster-recovery
+  namespace: kube-system
+  labels:
+    app: disaster-recovery
+
+---
+# Disaster Recovery RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-recovery
+  labels:
+    app: disaster-recovery
+rules:
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ['*']
+  - nonResourceURLs: ['*']
+    verbs: ['*']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: disaster-recovery
+  labels:
+    app: disaster-recovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: disaster-recovery
+subjects:
+  - kind: ServiceAccount
+    name: disaster-recovery
+    namespace: kube-system

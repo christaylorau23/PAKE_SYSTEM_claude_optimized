@@ -1,0 +1,51 @@
+# Dockerfile for AI Security Monitor
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd --create-home --shell /bin/bash app
+
+# Copy requirements first for better caching
+COPY requirements-ai-security.txt /app/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-ai-security.txt
+
+# Copy application code
+COPY ai-security-monitor.py /app/
+COPY ai-security-config.yml /app/config.yml
+
+# Copy MCP integration files
+COPY mcp-servers/pake_mcp_server.py /app/mcp_integration/
+COPY mcp-servers/base_server.py /app/mcp_integration/
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs /app/cache && \
+    chown -R app:app /app
+
+# Switch to app user
+USER app
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Default command
+CMD ["python", "-m", "uvicorn", "ai-security-monitor:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

@@ -1,0 +1,259 @@
+# Canary Rollout Template for PAKE API Services
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: pake-api-canary
+  namespace: pake-system
+  labels:
+    app: pake-api
+    strategy: canary
+spec:
+  replicas: 10
+  strategy:
+    canary:
+      # Analysis run to evaluate canary
+      analysis:
+        templates:
+          - templateName: success-rate
+          - templateName: latency
+        args:
+          - name: service-name
+            value: pake-api
+          - name: canary-hash
+            valueFrom:
+              podTemplateHashValue: Latest
+
+      # Canary steps with automated promotion
+      steps:
+        - setWeight: 10
+        - pause: { duration: 2m }
+
+        - setWeight: 25
+        - pause: { duration: 5m }
+
+        - analysis:
+            templates:
+              - templateName: success-rate
+            args:
+              - name: service-name
+                value: pake-api
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        - setWeight: 50
+        - pause: { duration: 10m }
+
+        - setWeight: 75
+        - pause: { duration: 5m }
+
+        - analysis:
+            templates:
+              - templateName: success-rate
+              - templateName: latency
+            args:
+              - name: service-name
+                value: pake-api
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+      # Traffic routing
+      trafficRouting:
+        nginx:
+          stableIngress: pake-api
+          annotationPrefix: nginx.ingress.kubernetes.io
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+            canary-by-header-value: 'true'
+
+      # Anti-affinity for canary pods
+      antiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: {}
+        preferredDuringSchedulingIgnoredDuringExecution:
+          weight: 1
+
+      # Canary metadata
+      canaryMetadata:
+        labels:
+          deployment-type: canary
+        annotations:
+          deployment.kubernetes.io/revision: canary
+
+      # Stable metadata
+      stableMetadata:
+        labels:
+          deployment-type: stable
+        annotations:
+          deployment.kubernetes.io/revision: stable
+
+  selector:
+    matchLabels:
+      app: pake-api
+
+  template:
+    metadata:
+      labels:
+        app: pake-api
+    spec:
+      serviceAccountName: pake-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+        - name: pake-api
+          image: ghcr.io/pake-system/pake-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: 'production'
+            - name: LOG_LEVEL
+              value: 'INFO'
+          envFrom:
+            - secretRef:
+                name: pake-api-secrets
+            - configMapRef:
+                name: pake-api-config
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /app/cache
+            - name: logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: logs
+          emptyDir:
+            sizeLimit: 2Gi
+
+      nodeSelector:
+        workload: api-services
+        node-type: standard
+
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api-services
+          effect: NoSchedule
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - pake-api
+                topologyKey: kubernetes.io/hostname
+
+---
+# Success Rate Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: pake-system
+spec:
+  args:
+    - name: service-name
+      value: pake-api
+    - name: canary-hash
+  metrics:
+    - name: success-rate
+      # Minimum success rate of 95%
+      successCondition: result[0] >= 0.95
+      # Failure if success rate drops below 90%
+      failureCondition: result[0] < 0.90
+      interval: 1m
+      count: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{service="{{args.service-name}}",status!~"5.."}[5m])) /
+            sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+---
+# Latency Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: latency
+  namespace: pake-system
+spec:
+  args:
+    - name: service-name
+      value: pake-api
+    - name: canary-hash
+  metrics:
+    - name: p95-latency
+      # P95 latency should be under 500ms
+      successCondition: result[0] < 0.5
+      # Failure if P95 latency exceeds 1s
+      failureCondition: result[0] > 1.0
+      interval: 1m
+      count: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) 
+              by (le)
+            )

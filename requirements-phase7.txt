@@ -1,0 +1,131 @@
+# PAKE System Phase 7 Requirements - Real-time Features & Admin Dashboard
+# User Search History Management, WebSocket Support, and Admin Dashboard
+
+# Core Phase 4-6 Dependencies (inherited)
+redis>=5.0.0
+hiredis>=2.3.0  # C extension for better Redis performance
+asyncpg>=0.29.0  # PostgreSQL async driver
+sqlalchemy>=2.0.0  # ORM
+alembic>=1.13.0  # Database migrations
+pyjwt>=2.8.0  # JWT tokens
+passlib>=1.7.4  # Password hashing
+python-multipart>=0.0.6  # Form data parsing
+bcrypt>=4.1.0  # Password encryption
+
+# WebSocket Support (Enhanced)
+websockets>=12.0
+python-socketio>=5.10.0  # Socket.IO for real-time features
+# socketio-async>=0.4.0  # Not available  # Async Socket.IO extensions
+
+# Real-time Communication
+aioredis>=2.0.1  # Async Redis for real-time message queuing
+channels>=4.0.0  # Django channels style async communication
+channels-redis>=4.1.0  # Redis backend for channels
+
+# Enhanced Monitoring & Analytics
+prometheus-client>=0.19.0  # Metrics collection
+structlog>=23.2.0  # Structured logging
+psutil>=5.9.6  # System metrics (CPU, memory, disk)
+asyncio-mqtt>=0.11.0  # MQTT for IoT-style messaging (optional)
+
+# Admin Dashboard Dependencies
+jinja2>=3.1.2  # Template rendering for admin UI
+matplotlib>=3.8.0  # Chart generation for analytics
+pandas>=2.1.0  # Data analysis for admin insights
+plotly>=5.17.0  # Interactive charts for dashboard
+dash>=2.14.0  # Web dashboard framework (optional alternative)
+
+# Enhanced Performance & Optimization
+httpx>=0.25.0  # Better HTTP client
+aiofiles>=23.2.0  # Async file I/O
+uvloop>=0.19.0  # High-performance event loop (Unix only)
+orjson>=3.9.0  # Fast JSON serialization
+cython>=3.0.0  # Performance optimizations
+numba>=0.58.0  # JIT compilation for analytics
+
+# Data Export/Import
+openpyxl>=3.1.2  # Excel file handling
+xlsxwriter>=3.1.9  # Excel writing
+python-dateutil>=2.8.2  # Date parsing utilities
+
+# Security Enhancements
+cryptography>=41.0.0  # Advanced cryptographic functions
+argon2-cffi>=23.0.0  # Password hashing
+python-jose>=3.3.0  # JWT with more algorithms
+itsdangerous>=2.1.2  # Secure data serialization
+
+# Development & Testing (Enhanced)
+pytest-asyncio>=0.23.0  # Async test support
+pytest-redis>=3.1.0  # Redis testing utilities
+fakeredis>=2.20.0  # Redis mock for testing
+# pytest-websocket>=0.6.0  # WebSocket testing - package not available, use websockets directly
+pytest-mock>=3.12.0  # Enhanced mocking
+factory-boy>=3.3.0  # Test data factories
+freezegun>=1.2.2  # Time mocking for tests
+
+# Documentation & API
+sphinx>=7.2.0  # Documentation generation
+sphinx-rtd-theme>=1.3.0  # ReadTheDocs theme
+fastapi-users>=12.1.0  # Advanced user management (optional)
+slowapi>=0.1.9  # Rate limiting for FastAPI
+
+# Background Tasks & Scheduling
+celery>=5.3.0  # Distributed task queue
+redis-py-cluster>=2.1.3  # Redis cluster support
+apscheduler>=3.10.0  # Advanced Python scheduler
+dramatiq>=1.15.0  # Alternative task queue
+
+# Monitoring & Observability
+opentelemetry-api>=1.20.0  # OpenTelemetry tracing
+opentelemetry-instrumentation-fastapi>=0.41b0  # FastAPI tracing
+sentry-sdk>=1.38.0  # Error tracking
+newrelic>=9.2.0  # APM monitoring (optional)
+
+# Production ASGI servers (Enhanced)
+gunicorn>=21.2.0  # Production WSGI server
+uvicorn[standard]>=0.24.0  # Production ASGI server
+hypercorn>=0.14.4  # Alternative ASGI server with HTTP/2
+daphne>=4.0.0  # Django Channels ASGI server
+
+# Optional: Advanced Features
+aiokafka>=0.8.11  # Apache Kafka for event streaming
+confluent-kafka>=2.3.0  # Confluent Kafka client
+elasticsearch>=8.11.0  # Elasticsearch for search
+# kibana>=8.11.0  # Kibana for log visualization - not available as Python package
+loguru>=0.7.2  # Advanced logging
+rich>=13.7.0  # Rich terminal output for debugging
+
+# Machine Learning & AI (Optional)
+scikit-learn>=1.3.0  # ML for search quality analysis
+numpy>=1.25.0  # Numerical computing
+scipy>=1.11.0  # Scientific computing
+transformers>=4.35.0  # NLP models for content analysis
+sentence-transformers>=2.2.2  # Semantic search embeddings
+
+# Cloud & Deployment (Optional)
+boto3>=1.34.0  # AWS SDK
+azure-storage-blob>=12.19.0  # Azure blob storage
+google-cloud-storage>=2.10.0  # Google Cloud storage
+kubernetes>=28.1.0  # Kubernetes client
+
+# Development Tools
+black>=23.11.0  # Code formatting
+isort>=5.12.0  # Import sorting
+flake8>=6.1.0  # Linting
+mypy>=1.7.0  # Type checking
+pre-commit>=3.5.0  # Git hooks
+bandit>=1.7.5  # Security linting
+
+# Testing Dependencies
+pytest>=7.4.0  # Testing framework
+pytest-asyncio>=0.21.1  # Async testing
+pytest-cov>=4.1.0  # Coverage reporting
+pytest-mock>=3.12.0  # Mocking utilities
+safety>=2.3.5  # Security vulnerability checking
+
+
+
+
+
+
+

@@ -1,0 +1,39 @@
+# Social Media Distribution Network Requirements
+# Install with: pip install -r requirements_social.txt
+
+# Core dependencies
+tweepy>=4.14.0          # Twitter/X API v2
+praw>=7.7.1             # Reddit API wrapper
+requests>=2.31.0        # HTTP requests for APIs
+pillow>=10.0.0          # Image processing
+schedule>=1.2.0         # Job scheduling
+asyncio-throttle>=1.0.2 # Rate limiting
+
+# Image/Video processing
+opencv-python>=4.8.0    # Video processing
+moviepy>=1.0.3          # Video editing
+ffmpeg-python>=0.2.0    # Video conversion
+
+# Data handling
+python-dotenv>=1.0.0    # Environment variable management
+pydantic>=2.0.0         # Data validation
+dataclasses-json>=0.6.0 # JSON serialization
+
+# Async support
+aiohttp>=3.8.0          # Async HTTP client
+aiofiles>=23.0.0        # Async file operations
+
+# Analytics and monitoring
+python-telegram-bot>=20.0  # Telegram notifications (optional)
+slack-sdk>=3.21.0           # Slack notifications (optional)
+
+# Development and testing
+pytest>=7.4.0              # Testing framework
+pytest-asyncio>=0.21.0     # Async testing
+black>=23.0.0               # Code formatting
+flake8>=6.0.0               # Linting
+
+# Optional: Advanced features
+textblob>=0.17.1            # Sentiment analysis
+langdetect>=1.0.9           # Language detection
+beautifulsoup4>=4.12.0      # HTML parsing for link previews

@@ -1,0 +1,685 @@
+# Enhanced Prometheus Configuration with Custom Metrics for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config-enhanced
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'pake-production'
+        environment: 'production'
+        region: 'us-east-1'
+
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets:
+          - alertmanager:9093
+
+    # Remote write configuration for long-term storage
+    remote_write:
+    - url: "https://prometheus-remote.pake-system.com/api/v1/write"
+      basic_auth:
+        username: pake-prometheus
+        REDACTED_SECRET_file: /etc/prometheus/secrets/remote-write-REDACTED_SECRET
+      write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'pake_.*|istio_.*|jaeger_.*'
+        action: keep
+
+    scrape_configs:
+    # Kubernetes API server
+    - job_name: 'kubernetes-apiserver'
+      kubernetes_sd_configs:
+      - role: endpoints
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'apiserver_request_duration_seconds.*'
+        target_label: __tmp_apiserver_latency
+        replacement: 'true'
+
+    # Kubernetes nodes with enhanced metrics
+    - job_name: 'kubernetes-nodes'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/$1/proxy/metrics
+
+    # cAdvisor metrics
+    - job_name: 'kubernetes-cadvisor'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+      metric_relabel_configs:
+      # Keep only important container metrics
+      - source_labels: [__name__]
+        regex: 'container_(cpu|memory|network|fs)_.*'
+        action: keep
+      - source_labels: [container_name]
+        regex: 'POD|^$'
+        action: drop
+
+    # PAKE API services with custom metrics
+    - job_name: 'pake-api'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - pake-system
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: pake-api.*
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: http
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+      metric_relabel_configs:
+      # Business metrics
+      - source_labels: [__name__]
+        regex: 'pake_api_(requests|users|revenue)_.*'
+        target_label: __tmp_business_metric
+        replacement: 'true'
+      # Performance metrics
+      - source_labels: [__name__]
+        regex: 'http_request_duration_seconds.*'
+        target_label: __tmp_performance_metric
+        replacement: 'true'
+
+    # PAKE AI services with ML-specific metrics
+    - job_name: 'pake-ai'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - pake-system
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: pake-ai.*
+      scrape_interval: 30s
+      scrape_timeout: 25s
+      metric_relabel_configs:
+      # AI/ML specific metrics
+      - source_labels: [__name__]
+        regex: 'pake_ai_(tokens|inference|model|gpu)_.*'
+        target_label: __tmp_ai_metric
+        replacement: 'true'
+      # GPU metrics
+      - source_labels: [__name__]
+        regex: 'nvidia_gpu_.*'
+        target_label: __tmp_gpu_metric
+        replacement: 'true'
+      # Cost tracking
+      - source_labels: [__name__]
+        regex: 'pake_ai_cost_.*'
+        target_label: __tmp_cost_metric
+        replacement: 'true'
+
+    # PAKE Workers with queue metrics
+    - job_name: 'pake-workers'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - pake-system
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: pake-workers.*
+      metric_relabel_configs:
+      # Worker-specific metrics
+      - source_labels: [__name__]
+        regex: 'celery_.*|worker_.*|queue_.*'
+        target_label: __tmp_worker_metric
+        replacement: 'true'
+      # Task execution metrics
+      - source_labels: [__name__]
+        regex: 'pake_tasks_(completed|failed|duration)_.*'
+        target_label: __tmp_task_metric
+        replacement: 'true'
+
+    # Database metrics
+    - job_name: 'databases'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - database
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: '.*postgresql.*|.*redis.*|.*chromadb.*'
+      scrape_interval: 30s
+      metric_relabel_configs:
+      # Database performance metrics
+      - source_labels: [__name__]
+        regex: 'pg_.*|redis_.*|chroma_.*'
+        target_label: __tmp_db_metric
+        replacement: 'true'
+
+    # Istio service mesh metrics
+    - job_name: 'istio-mesh'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - istio-system
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: 'istio-proxy|istiod'
+      metric_relabel_configs:
+      # Service mesh metrics
+      - source_labels: [__name__]
+        regex: 'istio_.*'
+        target_label: __tmp_istio_metric
+        replacement: 'true'
+      # mTLS metrics
+      - source_labels: [__name__]
+        regex: 'istio_request_total'
+        target_label: __tmp_security_metric
+        replacement: 'true'
+
+    # Jaeger metrics
+    - job_name: 'jaeger'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - observability
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: 'jaeger.*'
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'jaeger_.*'
+        target_label: __tmp_tracing_metric
+        replacement: 'true'
+
+    # OpenTelemetry Collector metrics
+    - job_name: 'otel-collector'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - observability
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: 'otel-collector'
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'otelcol_.*'
+        target_label: __tmp_otel_metric
+        replacement: 'true'
+
+    # Custom business metrics endpoint
+    - job_name: 'pake-business-metrics'
+      static_configs:
+      - targets: ['pake-api.pake-system.svc.cluster.local:8080']
+      metrics_path: '/metrics/business'
+      scrape_interval: 60s
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'pake_business_.*'
+        target_label: __tmp_business_kpi
+        replacement: 'true'
+
+    # Security metrics
+    - job_name: 'pake-security-metrics'
+      static_configs:
+      - targets: ['pake-api.pake-system.svc.cluster.local:8080']
+      metrics_path: '/metrics/security'
+      scrape_interval: 30s
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'pake_security_.*'
+        target_label: __tmp_security_kpi
+        replacement: 'true'
+
+    # Node Exporter with enhanced metrics
+    - job_name: 'node-exporter'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_endpoints_name]
+        action: keep
+        regex: node-exporter
+      - source_labels: [__meta_kubernetes_endpoint_address_target_name]
+        action: replace
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      metric_relabel_configs:
+      # Keep important system metrics
+      - source_labels: [__name__]
+        regex: 'node_(cpu|memory|disk|network|filesystem|load).*'
+        action: keep
+      # Add custom labels
+      - source_labels: [instance]
+        target_label: node_role
+        regex: '.*-master-.*'
+        replacement: 'master'
+      - source_labels: [instance]
+        target_label: node_role
+        regex: '.*-worker-.*'
+        replacement: 'worker'
+
+---
+# Custom Metrics Rules for Recording Important KPIs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-custom-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  pake-business-rules.yml: |
+    groups:
+    - name: pake.business.kpis
+      interval: 30s
+      rules:
+      # API Success Rate (SLI)
+      - record: pake:api_success_rate
+        expr: |
+          sum(rate(pake_api_requests_total{status!~"5.."}[5m])) /
+          sum(rate(pake_api_requests_total[5m]))
+        labels:
+          sli_type: availability
+          service: pake-api
+      
+      # API Latency P95 (SLI)
+      - record: pake:api_latency_p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="pake-api"}[5m]))
+            by (le)
+          )
+        labels:
+          sli_type: latency
+          service: pake-api
+      
+      # API Throughput (SLI)
+      - record: pake:api_throughput
+        expr: |
+          sum(rate(pake_api_requests_total[5m]))
+        labels:
+          sli_type: throughput
+          service: pake-api
+      
+      # AI Inference Success Rate
+      - record: pake:ai_success_rate
+        expr: |
+          sum(rate(pake_ai_inference_total{status="success"}[5m])) /
+          sum(rate(pake_ai_inference_total[5m]))
+        labels:
+          sli_type: availability
+          service: pake-ai
+      
+      # AI Inference Latency P95
+      - record: pake:ai_latency_p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(pake_ai_inference_duration_seconds_bucket[5m]))
+            by (le)
+          )
+        labels:
+          sli_type: latency
+          service: pake-ai
+      
+      # Daily Active Users
+      - record: pake:daily_active_users
+        expr: |
+          count(
+            count by (user_id) (
+              pake_api_requests_total{user_id!=""}[24h]
+            )
+          )
+        labels:
+          metric_type: business_kpi
+          frequency: daily
+      
+      # Revenue per Hour
+      - record: pake:revenue_per_hour
+        expr: |
+          sum(increase(pake_business_revenue_total[1h]))
+        labels:
+          metric_type: business_kpi
+          frequency: hourly
+      
+      # AI Token Cost per Hour
+      - record: pake:ai_cost_per_hour
+        expr: |
+          sum(increase(pake_ai_cost_total[1h]))
+        labels:
+          metric_type: cost_kpi
+          frequency: hourly
+      
+      # Database Connection Utilization
+      - record: pake:db_connection_utilization
+        expr: |
+          (
+            pg_stat_database_numbackends /
+            pg_settings_max_connections
+          ) * 100
+        labels:
+          metric_type: infrastructure_kpi
+          service: postgresql
+      
+      # Worker Queue Health
+      - record: pake:worker_queue_health
+        expr: |
+          (
+            sum(celery_queue_length) /
+            (sum(celery_active_workers) * 10)  # 10 tasks per worker capacity
+          ) * 100
+        labels:
+          metric_type: infrastructure_kpi
+          service: pake-workers
+      
+      # Security Alert Rate
+      - record: pake:security_alert_rate
+        expr: |
+          sum(rate(pake_security_alerts_total[5m]))
+        labels:
+          metric_type: security_kpi
+          service: security
+      
+      # GPU Utilization Average
+      - record: pake:gpu_utilization_avg
+        expr: |
+          avg(nvidia_gpu_utilization)
+        labels:
+          metric_type: infrastructure_kpi
+          service: pake-ai
+
+  pake-slo-rules.yml: |
+    groups:
+    - name: pake.slo.evaluation
+      interval: 30s
+      rules:
+      # API Availability SLO (99.9%)
+      - record: pake:slo_api_availability
+        expr: |
+          pake:api_success_rate >= 0.999
+        labels:
+          slo_type: availability
+          slo_target: "99.9"
+          service: pake-api
+      
+      # API Latency SLO (P95 < 500ms)
+      - record: pake:slo_api_latency
+        expr: |
+          pake:api_latency_p95 < 0.5
+        labels:
+          slo_type: latency
+          slo_target: "500ms"
+          service: pake-api
+      
+      # AI Latency SLO (P95 < 2s)
+      - record: pake:slo_ai_latency
+        expr: |
+          pake:ai_latency_p95 < 2.0
+        labels:
+          slo_type: latency
+          slo_target: "2s"
+          service: pake-ai
+      
+      # Error Budget Burn Rate (API)
+      - record: pake:error_budget_burn_rate_api
+        expr: |
+          (1 - pake:api_success_rate) / (1 - 0.999)
+        labels:
+          slo_type: availability
+          service: pake-api
+      
+      # Error Budget Remaining (API)
+      - record: pake:error_budget_remaining_api
+        expr: |
+          1 - (
+            sum(increase(pake_api_requests_total{status=~"5.."}[30d])) /
+            sum(increase(pake_api_requests_total[30d]))
+          ) / (1 - 0.999)
+        labels:
+          slo_type: availability
+          service: pake-api
+
+  pake-cost-rules.yml: |
+    groups:
+    - name: pake.cost.tracking
+      interval: 60s
+      rules:
+      # Infrastructure Cost per Hour
+      - record: pake:infrastructure_cost_per_hour
+        expr: |
+          # Calculate based on node types and counts
+          sum(
+            count by (node_type) (kube_node_info) *
+            on (node_type) group_left() (
+              label_replace(
+                vector(0.1), # $0.10 per hour for standard nodes
+                "node_type", "standard", "", ""
+              ) or
+              label_replace(
+                vector(0.5), # $0.50 per hour for GPU nodes
+                "node_type", "gpu", "", ""
+              ) or
+              label_replace(
+                vector(0.2), # $0.20 per hour for database nodes
+                "node_type", "database", "", ""
+              )
+            )
+          )
+        labels:
+          cost_type: infrastructure
+      
+      # AI API Cost per Hour
+      - record: pake:ai_api_cost_per_hour
+        expr: |
+          sum(increase(pake_ai_cost_total[1h]))
+        labels:
+          cost_type: ai_apis
+      
+      # Total Cost per Hour
+      - record: pake:total_cost_per_hour
+        expr: |
+          pake:infrastructure_cost_per_hour + pake:ai_api_cost_per_hour
+        labels:
+          cost_type: total
+      
+      # Cost per Request
+      - record: pake:cost_per_request
+        expr: |
+          pake:total_cost_per_hour /
+          sum(rate(pake_api_requests_total[1h]) * 3600)
+        labels:
+          cost_type: unit_cost
+      
+      # Revenue vs Cost Ratio
+      - record: pake:revenue_cost_ratio
+        expr: |
+          pake:revenue_per_hour / pake:total_cost_per_hour
+        labels:
+          business_metric: profitability
+
+---
+# Enhanced Prometheus Deployment with increased resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-enhanced
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+      annotations:
+        prometheus.io/scrape: 'false' # Don't scrape itself recursively
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.45.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus/'
+            - '--web.console.libraries=/etc/prometheus/console_libraries'
+            - '--web.console.templates=/etc/prometheus/consoles'
+            - '--storage.tsdb.retention.time=30d'
+            - '--storage.tsdb.retention.size=200GB'
+            - '--web.enable-lifecycle'
+            - '--web.enable-admin-api'
+            - '--log.level=info'
+            - '--query.max-concurrency=50'
+            - '--query.max-samples=50000000'
+            - '--web.max-connections=512'
+            - '--storage.tsdb.min-block-duration=2h'
+            - '--storage.tsdb.max-block-duration=2h'
+          ports:
+            - containerPort: 9090
+              name: web
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: web
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: web
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          resources:
+            limits:
+              cpu: 4000m
+              memory: 16Gi
+            requests:
+              cpu: 1000m
+              memory: 8Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: storage
+              mountPath: /prometheus
+            - name: rules
+              mountPath: /etc/prometheus/rules
+            - name: secrets
+              mountPath: /etc/prometheus/secrets
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config-enhanced
+        - name: storage
+          persistentVolumeClaim:
+            claimName: prometheus-storage-enhanced
+        - name: rules
+          configMap:
+            name: prometheus-custom-rules
+        - name: secrets
+          secret:
+            secretName: prometheus-secrets
+      nodeSelector:
+        workload: api-services
+        node-type: standard
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api-services
+          effect: NoSchedule
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: prometheus
+                topologyKey: kubernetes.io/hostname
+
+---
+# Enhanced Prometheus Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-storage-enhanced
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 500Gi

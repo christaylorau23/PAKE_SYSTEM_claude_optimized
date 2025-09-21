@@ -1,0 +1,255 @@
+# PAKE+ Monitoring and Observability Stack
+# Prometheus + Grafana + Loki for comprehensive system monitoring
+
+version: '3.9'
+
+services:
+  # ============================================================================
+  # PROMETHEUS - Metrics Collection
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: pake_prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--log.level=info'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=prometheus'
+
+  # ============================================================================
+  # GRAFANA - Metrics Visualization
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: pake_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=pake_admin_2024
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SMTP_ENABLED=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboard-configs:/var/lib/grafana/dashboards:ro
+    ports:
+      - '3000:3000'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    labels:
+      - 'monitoring.service=grafana'
+
+  # ============================================================================
+  # LOKI - Log Aggregation
+  # ============================================================================
+  loki:
+    image: grafana/loki:3.3.0
+    container_name: pake_loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/tmp/loki
+    ports:
+      - '3100:3100'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=loki'
+
+  # ============================================================================
+  # PROMTAIL - Log Shipping to Loki
+  # ============================================================================
+  promtail:
+    image: grafana/promtail:3.3.0
+    container_name: pake_promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - promtail_positions:/tmp/positions
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - loki
+    labels:
+      - 'monitoring.service=promtail'
+
+  # ============================================================================
+  # ALERTMANAGER - Alert Management
+  # ============================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: pake_alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--cluster.listen-address=0.0.0.0:9094'
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - '9093:9093'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=alertmanager'
+
+  # ============================================================================
+  # NODE EXPORTER - System Metrics
+  # ============================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: pake_node_exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.cpu'
+      - '--collector.meminfo'
+      - '--collector.diskstats'
+      - '--collector.filesystem'
+      - '--collector.netdev'
+      - '--collector.loadavg'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - '9100:9100'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=node-exporter'
+
+  # ============================================================================
+  # REDIS EXPORTER - Redis Metrics
+  # ============================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.64.0
+    container_name: pake_redis_exporter
+    environment:
+      - REDIS_ADDR=redis://pake_redis_node_1:6379
+      - REDIS_PASSWORD=process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'
+    ports:
+      - '9121:9121'
+    networks:
+      - monitoring
+      - pake_network # Connect to PAKE network to access Redis
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=redis-exporter'
+
+  # ============================================================================
+  # POSTGRES EXPORTER - PostgreSQL Metrics
+  # ============================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: pake_postgres_exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://pake_user:pake_secure_REDACTED_SECRET@pake_postgres_enhanced:5432/pake_db?sslmode=disable
+    ports:
+      - '9187:9187'
+    networks:
+      - monitoring
+      - pake_network # Connect to PAKE network to access PostgreSQL
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    labels:
+      - 'monitoring.service=postgres-exporter'
+
+  # ============================================================================
+  # CADVISOR - Container Metrics
+  # ============================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.50.0
+    container_name: pake_cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    ports:
+      - '8080:8080'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=cadvisor'
+
+  # ============================================================================
+  # JAEGER - Distributed Tracing
+  # ============================================================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: pake_jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    ports:
+      - '16686:16686' # Jaeger UI
+      - '14268:14268' # HTTP collector
+      - '14250:14250' # gRPC collector
+      - '9411:9411' # Zipkin collector
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - 'monitoring.service=jaeger'
+
+networks:
+  monitoring:
+    driver: bridge
+    name: pake_monitoring
+  pake_network:
+    external: true
+    name: docker_pake_network
+
+volumes:
+  prometheus_data:
+    driver: local
+    name: pake_prometheus_data
+
+  grafana_data:
+    driver: local
+    name: pake_grafana_data
+
+  loki_data:
+    driver: local
+    name: pake_loki_data
+
+  alertmanager_data:
+    driver: local
+    name: pake_alertmanager_data
+
+  promtail_positions:
+    driver: local
+    name: pake_promtail_positions

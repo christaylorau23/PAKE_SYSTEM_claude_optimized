@@ -1,0 +1,30 @@
+apiVersion: v2
+name: pake-workers
+description: PAKE Background Workers Helm Chart - Celery/RQ async task processing workers
+type: application
+version: 0.1.0
+appVersion: '1.0.0'
+keywords:
+  - pake
+  - workers
+  - celery
+  - rq
+  - background-jobs
+  - async
+home: https://github.com/pake-system/kubernetes-infrastructure
+sources:
+  - https://github.com/pake-system/pake-workers
+maintainers:
+  - name: PAKE Team
+    email: infrastructure@pake-system.com
+dependencies:
+  - name: common
+    version: 0.1.0
+    repository: 'file://../common'
+  - name: redis
+    version: 17.3.7
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+annotations:
+  category: Application
+  licenses: MIT

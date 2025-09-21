@@ -1,0 +1,349 @@
+# Enhanced Docker Compose configuration for PAKE+ Foundation Hardening
+# Includes Redis Cluster, enhanced monitoring, and improved resilience
+
+version: '3.9'
+
+services:
+  # ============================================================================
+  # REDIS CLUSTER SETUP FOR DISTRIBUTED CACHING
+  # ============================================================================
+
+  redis-node-1:
+    image: redis:7-alpine
+    container_name: pake_redis_node_1
+    command: >
+      redis-server 
+      --cluster-enabled yes 
+      --cluster-config-file nodes.conf 
+      --cluster-node-timeout 5000 
+      --appendonly yes 
+      --port 6379
+      --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+    volumes:
+      - redis_node_1_data:/data
+    ports:
+      - '6379:6379'
+      - '16379:16379'
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  redis-node-2:
+    image: redis:7-alpine
+    container_name: pake_redis_node_2
+    command: >
+      redis-server 
+      --cluster-enabled yes 
+      --cluster-config-file nodes.conf 
+      --cluster-node-timeout 5000 
+      --appendonly yes 
+      --port 6379
+      --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+    volumes:
+      - redis_node_2_data:/data
+    ports:
+      - '6380:6379'
+      - '16380:16379'
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  redis-node-3:
+    image: redis:7-alpine
+    container_name: pake_redis_node_3
+    command: >
+      redis-server 
+      --cluster-enabled yes 
+      --cluster-config-file nodes.conf 
+      --cluster-node-timeout 5000 
+      --appendonly yes 
+      --port 6379
+      --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+    volumes:
+      - redis_node_3_data:/data
+    ports:
+      - '6381:6379'
+      - '16381:16379'
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  # Redis Cluster Initialization
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: pake_redis_cluster_init
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    command: >
+      sh -c "
+        echo 'Waiting for Redis nodes to start...' &&
+        sleep 10 &&
+        redis-cli --cluster create 
+        redis-node-1:6379 
+        redis-node-2:6379 
+        redis-node-3:6379 
+        --cluster-replicas 0 
+        --cluster-yes
+        -a ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'} || 
+        echo 'Cluster already exists or failed to create'
+      "
+    networks:
+      - pake_network
+    restart: 'no'
+
+  # ============================================================================
+  # ENHANCED POSTGRESQL WITH MONITORING
+  # ============================================================================
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pake_postgres_enhanced
+    environment:
+      POSTGRES_DB: pake_knowledge
+      POSTGRES_USER: pake_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      # Performance tuning
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: pg_stat_statements,auto_explain
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 4MB
+    volumes:
+      - postgres_data_enhanced:/var/lib/postgresql/data
+      - ./init-db-enhanced.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./postgresql-enhanced.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    networks:
+      - pake_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pake_admin -d pake_knowledge']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================================================
+  # ENHANCED MCP SERVER WITH FOUNDATION HARDENING
+  # ============================================================================
+
+  enhanced_mcp_server:
+    build:
+      context: ../mcp-servers
+      dockerfile: Dockerfile.enhanced
+    container_name: pake_enhanced_mcp_server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-node-1:
+        condition: service_started
+      redis-node-2:
+        condition: service_started
+      redis-node-3:
+        condition: service_started
+    environment:
+      # Database configuration
+      - DATABASE_URL=postgresql://pake_admin:${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}@postgres:5432/pake_knowledge
+
+      # Redis Cluster configuration
+      - REDIS_CLUSTER_NODES=redis-node-1:6379,redis-node-2:6379,redis-node-3:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+
+      # API keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CONTEXT7_API_KEY=${CONTEXT7_API_KEY:-ctx7sk-cd355449-4329-4692-b3f8-981a68ec56fe}
+
+      # Application configuration
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - ENABLE_METRICS=true
+      - ENABLE_SECURITY_GUARDS=true
+
+      # Circuit breaker configuration
+      - CIRCUIT_BREAKER_ENABLED=true
+      - CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+      - CIRCUIT_BREAKER_RECOVERY_TIMEOUT=60
+
+      # Security configuration
+      - SECURITY_PROMPT_INJECTION_THRESHOLD=0.7
+      - SECURITY_BLOCK_HIGH_THREATS=true
+      - SECURITY_MAX_INPUT_LENGTH=50000
+
+      # Performance configuration
+      - CACHE_DEFAULT_TTL=3600
+      - MAX_CONCURRENT_REQUESTS=100
+      - REQUEST_TIMEOUT=30
+    ports:
+      - '${MCP_PORT:-8000}:8000'
+    volumes:
+      - ../vault:/vault:ro
+      - ../logs:/app/logs
+      - ../data:/app/data
+    networks:
+      - pake_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================================================
+  # MONITORING AND OBSERVABILITY STACK
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: pake_prometheus
+    ports:
+      - '${PROMETHEUS_PORT:-9090}:9090'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - pake_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: pake_grafana
+    depends_on:
+      - prometheus
+    ports:
+      - '${GRAFANA_PORT:-3000}:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-pake_grafana_2024}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource,postgres-datasource
+    networks:
+      - pake_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+
+  # ============================================================================
+  # LOAD BALANCER FOR HIGH AVAILABILITY
+  # ============================================================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: pake_load_balancer
+    depends_on:
+      enhanced_mcp_server:
+        condition: service_healthy
+    ports:
+      - '${NGINX_HTTP_PORT:-80}:80'
+      - '${NGINX_HTTPS_PORT:-443}:443'
+    volumes:
+      - ./nginx/nginx-enhanced.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - pake_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - load-balancer
+      - full
+
+  # ============================================================================
+  # BACKUP AND DATA PERSISTENCE
+  # ============================================================================
+
+  backup-service:
+    image: alpine:latest
+    container_name: pake_backup_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - postgres_data_enhanced:/backup/postgres:ro
+      - redis_node_1_data:/backup/redis1:ro
+      - redis_node_2_data:/backup/redis2:ro
+      - redis_node_3_data:/backup/redis3:ro
+      - ../backups:/backup/output
+      - ./scripts/backup.sh:/backup.sh:ro
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=pake_admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      - POSTGRES_DB=pake_knowledge
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *} # Daily at 2 AM
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+    command: >
+      sh -c "
+        apk add --no-cache postgresql-client redis &&
+        crond -f -d 8
+      "
+    networks:
+      - pake_network
+    restart: unless-stopped
+    profiles:
+      - backup
+      - full
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+
+volumes:
+  postgres_data_enhanced:
+    driver: local
+  redis_node_1_data:
+    driver: local
+  redis_node_2_data:
+    driver: local
+  redis_node_3_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+
+networks:
+  pake_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

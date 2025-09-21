@@ -1,0 +1,41 @@
+# PAKE System Voice Agents Service - Development Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S voiceagent -u 1001
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install && npm cache clean --force
+
+# Copy source code
+COPY --chown=voiceagent:nodejs src ./src
+
+# Create logs directory
+RUN mkdir -p logs && chown voiceagent:nodejs logs
+
+# Switch to non-root user
+USER voiceagent
+
+# Expose ports
+EXPOSE 9000 9229
+
+# Development command with hot reload and debugging
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start:watch"]
+
+# Metadata
+LABEL maintainer="PAKE System Development Team" \
+      version="dev" \
+      description="PAKE System Voice Agents Service - Development Image" \
+      service="voice-agents" \
+      environment="development"

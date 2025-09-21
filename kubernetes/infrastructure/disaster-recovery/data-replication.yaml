@@ -1,0 +1,1350 @@
+# Data Replication Pipelines for PAKE System
+# Supports PostgreSQL streaming replication, Redis Sentinel, and ChromaDB sync
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: replication-system
+  labels:
+    name: replication-system
+
+---
+# PostgreSQL Streaming Replication Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-replication-config
+  namespace: database
+  labels:
+    app: postgresql-replication
+data:
+  postgresql-master.conf: |
+    # PostgreSQL Master Configuration for Streaming Replication
+
+    # Replication settings
+    wal_level = replica
+    max_wal_senders = 10
+    max_replication_slots = 10
+    hot_standby = on
+    hot_standby_feedback = on
+
+    # Archive settings for Point-in-Time Recovery
+    archive_mode = on
+    archive_command = 'wal-g wal-push %p'
+    archive_timeout = 300  # 5 minutes
+
+    # Checkpointing
+    checkpoint_completion_target = 0.9
+    checkpoint_timeout = 5min
+    max_wal_size = 2GB
+    min_wal_size = 256MB
+
+    # Synchronous replication for consistency
+    synchronous_standby_names = 'pake_replica_1,pake_replica_2'
+    synchronous_commit = on
+
+    # Logging
+    log_destination = 'stderr'
+    log_statement = 'mod'
+    log_replication_commands = on
+    log_min_duration_statement = 1000
+
+    # Performance
+    shared_buffers = 2GB
+    effective_cache_size = 6GB
+    work_mem = 64MB
+    maintenance_work_mem = 512MB
+
+  postgresql-replica.conf: |
+    # PostgreSQL Replica Configuration
+
+    # Standby settings
+    hot_standby = on
+    hot_standby_feedback = on
+
+    # Recovery settings
+    restore_command = 'wal-g wal-fetch %f %p'
+    recovery_target_timeline = 'latest'
+
+    # Performance tuning for read replicas
+    shared_buffers = 2GB
+    effective_cache_size = 6GB
+    work_mem = 64MB
+
+    # Logging
+    log_destination = 'stderr'
+    log_min_duration_statement = 1000
+
+  recovery.conf: |
+    # Recovery configuration for replicas
+    standby_mode = 'on'
+    primary_conninfo = 'host=pake-postgresql-primary.database.svc.cluster.local port=5432 user=replicator application_name=pake_replica_1 sslmode=require'
+    recovery_target_timeline = 'latest'
+    restore_command = 'wal-g wal-fetch %f %p'
+
+  pg_hba.conf: |
+    # PostgreSQL Host-Based Authentication for Replication
+
+    # Database administrative login by Unix domain socket
+    local   all             postgres                                peer
+    local   all             all                                     md5
+
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            md5
+    host    all             all             10.0.0.0/8              md5
+    host    all             all             172.16.0.0/12           md5
+    host    all             all             192.168.0.0/16          md5
+
+    # Replication connections
+    host    replication     replicator      10.0.0.0/8              md5
+    host    replication     replicator      172.16.0.0/12           md5
+    host    replication     replicator      192.168.0.0/16          md5
+
+  init-replication.sql: |
+    -- Create replication user
+    CREATE USER replicator REPLICATION LOGIN ENCRYPTED PASSWORD 'replica_REDACTED_SECRET_change_me';
+
+    -- Create replication slots
+    SELECT pg_create_physical_replication_slot('pake_replica_1_slot');
+    SELECT pg_create_physical_replication_slot('pake_replica_2_slot');
+
+    -- Grant necessary permissions
+    GRANT USAGE ON SCHEMA pg_catalog TO replicator;
+    GRANT SELECT ON pg_stat_replication TO replicator;
+
+---
+# PostgreSQL Primary Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pake-postgresql-primary
+  namespace: database
+  labels:
+    app: pake-postgresql-primary
+    role: primary
+spec:
+  serviceName: pake-postgresql-primary
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pake-postgresql-primary
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: pake-postgresql-primary
+        role: primary
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: postgresql-replication
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: pake_production
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+            - name: POSTGRES_INITDB_ARGS
+              value: '--auth-host=md5'
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 4Gi
+            limits:
+              cpu: 4000m
+              memory: 8Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgresql-config
+              mountPath: /etc/postgresql
+            - name: wal-archive
+              mountPath: /var/lib/postgresql/archive
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.12.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATA_SOURCE_NAME
+              value: 'postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:5432/pake_production?sslmode=disable'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+          ports:
+            - containerPort: 9187
+              name: metrics
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+        - name: wal-g
+          image: wal-g/wal-g:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGHOST
+              value: localhost
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: WALG_S3_PREFIX
+              value: 's3://pake-backups/wal-archives'
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
+            - name: AWS_REGION
+              value: 'us-east-1'
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "WAL-G archive daemon started"
+              # WAL-G will be called by PostgreSQL archive_command
+              while true; do
+                sleep 3600
+              done
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+              readOnly: true
+            - name: wal-archive
+              mountPath: /var/lib/postgresql/archive
+      volumes:
+        - name: postgresql-config
+          configMap:
+            name: postgresql-replication-config
+        - name: init-scripts
+          configMap:
+            name: postgresql-replication-config
+        - name: wal-archive
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 200Gi
+
+---
+# PostgreSQL Replica Deployment (EU Region)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pake-postgresql-replica-eu
+  namespace: database
+  labels:
+    app: pake-postgresql-replica
+    role: replica
+    region: eu-west-1
+spec:
+  serviceName: pake-postgresql-replica-eu
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pake-postgresql-replica
+      role: replica
+      region: eu-west-1
+  template:
+    metadata:
+      labels:
+        app: pake-postgresql-replica
+        role: replica
+        region: eu-west-1
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+    spec:
+      serviceAccountName: postgresql-replication
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: init-replica
+          image: postgres:15-alpine
+          env:
+            - name: PGPASSWORD
+              value: 'replica_REDACTED_SECRET_change_me'
+          command:
+            - /bin/sh
+            - -c
+            - |
+              if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
+                echo "Initializing replica from primary..."
+                pg_basebackup -h pake-postgresql-primary.database.svc.cluster.local \
+                  -D /var/lib/postgresql/data \
+                  -U replicator \
+                  -v -P -W -R \
+                  -S pake_replica_1_slot
+                
+                # Configure replica
+                cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
+                cp /etc/postgresql/recovery.conf /var/lib/postgresql/data/recovery.conf
+                chown -R postgres:postgres /var/lib/postgresql/data
+              fi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgresql-config
+              mountPath: /etc/postgresql
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: PGUSER
+              value: postgres
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: wal-archive
+              mountPath: /var/lib/postgresql/archive
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.12.0
+          env:
+            - name: DATA_SOURCE_NAME
+              value: 'postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:5432/pake_production?sslmode=disable'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+          ports:
+            - containerPort: 9187
+              name: metrics
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: postgresql-config
+          configMap:
+            name: postgresql-replication-config
+        - name: wal-archive
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 200Gi
+
+---
+# Redis Sentinel Configuration for High Availability
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-sentinel-config
+  namespace: database
+  labels:
+    app: redis-sentinel
+data:
+  sentinel.conf: |
+    # Redis Sentinel Configuration
+    port 26379
+    dir /data
+
+    # Monitor the master
+    sentinel monitor pake-redis-master pake-redis-master.database.svc.cluster.local 6379 2
+    sentinel auth-pass pake-redis-master $(REDIS_PASSWORD)
+
+    # Timeouts and thresholds
+    sentinel down-after-milliseconds pake-redis-master 5000
+    sentinel parallel-syncs pake-redis-master 1
+    sentinel failover-timeout pake-redis-master 10000
+
+    # Notification scripts
+    sentinel notification-script pake-redis-master /opt/sentinel-notify.sh
+    sentinel client-reconfig-script pake-redis-master /opt/sentinel-reconfig.sh
+
+    # Logging
+    logfile ""
+    loglevel notice
+
+  sentinel-notify.sh: |
+    #!/bin/bash
+    # Notification script for Redis Sentinel events
+    EVENT_TYPE=$1
+    EVENT_OBJECT=$2
+
+    echo "$(date): Redis Sentinel Event: $EVENT_TYPE $EVENT_OBJECT" >> /var/log/sentinel-events.log
+
+    # Send notification to monitoring system
+    curl -X POST http://alertmanager.monitoring.svc.cluster.local:9093/api/v1/alerts \
+      -H "Content-Type: application/json" \
+      -d '[{
+        "labels": {
+          "alertname": "RedisSentinelEvent",
+          "severity": "warning",
+          "service": "redis",
+          "event_type": "'$EVENT_TYPE'",
+          "event_object": "'$EVENT_OBJECT'"
+        },
+        "annotations": {
+          "summary": "Redis Sentinel event occurred",
+          "description": "Event: '$EVENT_TYPE' for '$EVENT_OBJECT'"
+        }
+      }]'
+
+  sentinel-reconfig.sh: |
+    #!/bin/bash
+    # Reconfiguration script for Redis Sentinel failover
+    MASTER_NAME=$1
+    ROLE=$2
+    STATE=$3
+    FROM_IP=$4
+    FROM_PORT=$5
+    TO_IP=$6
+    TO_PORT=$7
+
+    echo "$(date): Redis failover: $MASTER_NAME $ROLE $STATE $FROM_IP:$FROM_PORT -> $TO_IP:$TO_PORT" >> /var/log/sentinel-reconfig.log
+
+    # Update application configuration if needed
+    kubectl patch configmap redis-config -n pake-system -p '{
+      "data": {
+        "redis_master_host": "'$TO_IP'",
+        "redis_master_port": "'$TO_PORT'"
+      }
+    }'
+
+    # Restart applications to pick up new Redis master
+    kubectl rollout restart deployment/pake-api -n pake-system
+    kubectl rollout restart deployment/pake-workers-high -n pake-system
+
+  redis-master.conf: |
+    # Redis Master Configuration
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+
+    # AOF
+    appendonly yes
+    appendfsync everysec
+
+    # Replication
+    replica-serve-stale-data yes
+    replica-read-only yes
+
+    # Security
+    requirepass $(REDIS_PASSWORD)
+
+    # Performance
+    maxmemory 4gb
+    maxmemory-policy allkeys-lru
+
+    # Logging
+    loglevel notice
+
+  redis-replica.conf: |
+    # Redis Replica Configuration
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+
+    # Replication
+    replicaof pake-redis-master.database.svc.cluster.local 6379
+    masterauth $(REDIS_PASSWORD)
+    requirepass $(REDIS_PASSWORD)
+
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+
+    # AOF
+    appendonly yes
+    appendfsync everysec
+
+    # Performance
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+
+    # Logging
+    loglevel notice
+
+---
+# Redis Sentinel StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-sentinel
+  namespace: database
+  labels:
+    app: redis-sentinel
+spec:
+  serviceName: redis-sentinel
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-sentinel
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9121'
+    spec:
+      serviceAccountName: redis-replication
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: redis-sentinel
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Replace REDACTED_SECRET in config
+              envsubst < /etc/redis/sentinel.conf > /tmp/sentinel.conf
+              exec redis-sentinel /tmp/sentinel.conf
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDACTED_SECRET
+          ports:
+            - containerPort: 26379
+              name: sentinel
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - -p
+                - '26379'
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - -p
+                - '26379'
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: redis-config
+              mountPath: /etc/redis
+            - name: data
+              mountPath: /data
+            - name: scripts
+              mountPath: /opt
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.45.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_ADDR
+              value: 'redis://localhost:26379'
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDACTED_SECRET
+          ports:
+            - containerPort: 9121
+              name: metrics
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-sentinel-config
+        - name: scripts
+          configMap:
+            name: redis-sentinel-config
+            defaultMode: 0755
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 10Gi
+
+---
+# ChromaDB Replication Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chromadb-replication-config
+  namespace: database
+  labels:
+    app: chromadb-replication
+data:
+  chroma-sync.py: |
+    #!/usr/bin/env python3
+    """
+    ChromaDB Replication Script
+    Syncs collections between primary and replica instances
+    """
+
+    import asyncio
+    import aiohttp
+    import logging
+    import time
+    import json
+    from datetime import datetime
+    import os
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    class ChromaDBReplicator:
+        def __init__(self, primary_url, replica_urls):
+            self.primary_url = primary_url
+            self.replica_urls = replica_urls
+            self.session = None
+            
+        async def start(self):
+            self.session = aiohttp.ClientSession()
+            
+        async def stop(self):
+            if self.session:
+                await self.session.close()
+                
+        async def get_collections(self, base_url):
+            """Get list of collections from ChromaDB instance"""
+            try:
+                async with self.session.get(f"{base_url}/api/v1/collections") as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        logger.error(f"Failed to get collections from {base_url}: {response.status}")
+                        return []
+            except Exception as e:
+                logger.error(f"Error getting collections from {base_url}: {e}")
+                return []
+                
+        async def get_collection_data(self, base_url, collection_name):
+            """Get all data from a collection"""
+            try:
+                async with self.session.get(f"{base_url}/api/v1/collections/{collection_name}") as response:
+                    if response.status == 200:
+                        collection_info = await response.json()
+                        
+                        # Get all vectors from collection
+                        async with self.session.post(f"{base_url}/api/v1/collections/{collection_name}/query", 
+                                                   json={"query_texts": [""], "n_results": 100000}) as query_response:
+                            if query_response.status == 200:
+                                query_data = await query_response.json()
+                                return {
+                                    "info": collection_info,
+                                    "data": query_data
+                                }
+            except Exception as e:
+                logger.error(f"Error getting collection data from {base_url}/{collection_name}: {e}")
+                return None
+                
+        async def create_collection(self, base_url, collection_name, metadata=None):
+            """Create a collection in ChromaDB"""
+            try:
+                payload = {"name": collection_name}
+                if metadata:
+                    payload["metadata"] = metadata
+                    
+                async with self.session.post(f"{base_url}/api/v1/collections", json=payload) as response:
+                    return response.status == 200
+            except Exception as e:
+                logger.error(f"Error creating collection {collection_name} in {base_url}: {e}")
+                return False
+                
+        async def sync_collection(self, collection_name):
+            """Sync a collection from primary to all replicas"""
+            logger.info(f"Syncing collection: {collection_name}")
+            
+            # Get data from primary
+            primary_data = await self.get_collection_data(self.primary_url, collection_name)
+            if not primary_data:
+                logger.error(f"Failed to get data for collection {collection_name} from primary")
+                return False
+                
+            # Sync to each replica
+            for replica_url in self.replica_urls:
+                try:
+                    # Check if collection exists in replica
+                    replica_collections = await self.get_collections(replica_url)
+                    collection_exists = any(c["name"] == collection_name for c in replica_collections)
+                    
+                    if not collection_exists:
+                        # Create collection
+                        success = await self.create_collection(
+                            replica_url, 
+                            collection_name, 
+                            primary_data["info"].get("metadata")
+                        )
+                        if not success:
+                            logger.error(f"Failed to create collection {collection_name} in {replica_url}")
+                            continue
+                    
+                    # Sync data (simplified - in production, implement differential sync)
+                    if primary_data["data"].get("ids"):
+                        async with self.session.post(
+                            f"{replica_url}/api/v1/collections/{collection_name}/add",
+                            json={
+                                "ids": primary_data["data"]["ids"],
+                                "embeddings": primary_data["data"].get("embeddings", []),
+                                "metadatas": primary_data["data"].get("metadatas", []),
+                                "documents": primary_data["data"].get("documents", [])
+                            }
+                        ) as response:
+                            if response.status == 200:
+                                logger.info(f"Successfully synced {collection_name} to {replica_url}")
+                            else:
+                                logger.error(f"Failed to sync {collection_name} to {replica_url}: {response.status}")
+                                
+                except Exception as e:
+                    logger.error(f"Error syncing {collection_name} to {replica_url}: {e}")
+                    
+        async def sync_all_collections(self):
+            """Sync all collections from primary to replicas"""
+            collections = await self.get_collections(self.primary_url)
+            
+            for collection in collections:
+                await self.sync_collection(collection["name"])
+                
+        async def health_check(self):
+            """Check health of all ChromaDB instances"""
+            results = {}
+            
+            # Check primary
+            try:
+                async with self.session.get(f"{self.primary_url}/api/v1/heartbeat") as response:
+                    results["primary"] = response.status == 200
+            except:
+                results["primary"] = False
+                
+            # Check replicas
+            for i, replica_url in enumerate(self.replica_urls):
+                try:
+                    async with self.session.get(f"{replica_url}/api/v1/heartbeat") as response:
+                        results[f"replica_{i}"] = response.status == 200
+                except:
+                    results[f"replica_{i}"] = False
+                    
+            return results
+            
+    async def main():
+        primary_url = os.getenv("CHROMADB_PRIMARY_URL", "http://chromadb-primary.database.svc.cluster.local:8000")
+        replica_urls = [
+            os.getenv("CHROMADB_REPLICA_EU_URL", "http://chromadb-replica-eu.database.svc.cluster.local:8000"),
+            os.getenv("CHROMADB_REPLICA_AP_URL", "http://chromadb-replica-ap.database.svc.cluster.local:8000")
+        ]
+        
+        replicator = ChromaDBReplicator(primary_url, replica_urls)
+        await replicator.start()
+        
+        try:
+            # Run continuous sync
+            while True:
+                logger.info("Starting ChromaDB replication cycle")
+                
+                # Health check
+                health = await replicator.health_check()
+                logger.info(f"Health status: {health}")
+                
+                # Sync collections
+                await replicator.sync_all_collections()
+                
+                logger.info("ChromaDB replication cycle completed")
+                await asyncio.sleep(300)  # 5 minutes
+                
+        except KeyboardInterrupt:
+            logger.info("Shutting down ChromaDB replicator")
+        finally:
+            await replicator.stop()
+            
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# ChromaDB Replication CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: chromadb-replication
+  namespace: database
+  labels:
+    app: chromadb-replication
+spec:
+  schedule: '*/10 * * * *' # Every 10 minutes
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: chromadb-replication
+        spec:
+          serviceAccountName: chromadb-replication
+          restartPolicy: OnFailure
+          containers:
+            - name: replicator
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pip install --no-cache-dir aiohttp asyncio
+                  exec python /scripts/chroma-sync.py
+              env:
+                - name: CHROMADB_PRIMARY_URL
+                  value: 'http://chromadb-primary.database.svc.cluster.local:8000'
+                - name: CHROMADB_REPLICA_EU_URL
+                  value: 'http://chromadb-replica-eu.database.svc.cluster.local:8000'
+                - name: CHROMADB_REPLICA_AP_URL
+                  value: 'http://chromadb-replica-ap.database.svc.cluster.local:8000'
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+                limits:
+                  cpu: 1000m
+                  memory: 1Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: scripts
+              configMap:
+                name: chromadb-replication-config
+                defaultMode: 0755
+
+---
+# Replication Monitoring Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: replication-monitor
+  namespace: replication-system
+  labels:
+    app: replication-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: replication-monitor
+  template:
+    metadata:
+      labels:
+        app: replication-monitor
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: replication-monitor
+      containers:
+        - name: monitor
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir asyncio aiohttp prometheus_client psycopg2-binary redis
+              exec python /app/monitor.py
+          env:
+            - name: PROMETHEUS_PORT
+              value: '8080'
+            - name: POSTGRES_PRIMARY_HOST
+              value: 'pake-postgresql-primary.database.svc.cluster.local'
+            - name: POSTGRES_REPLICA_HOST
+              value: 'pake-postgresql-replica-eu.database.svc.cluster.local'
+            - name: REDIS_SENTINEL_HOSTS
+              value: 'redis-sentinel-0.database.svc.cluster.local:26379,redis-sentinel-1.database.svc.cluster.local:26379,redis-sentinel-2.database.svc.cluster.local:26379'
+            - name: CHROMADB_PRIMARY_URL
+              value: 'http://chromadb-primary.database.svc.cluster.local:8000'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDACTED_SECRET
+          ports:
+            - containerPort: 8080
+              name: metrics
+            - containerPort: 8090
+              name: api
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      volumes:
+        - name: app-code
+          configMap:
+            name: replication-monitor-code
+
+---
+# Replication Monitor Code
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replication-monitor-code
+  namespace: replication-system
+data:
+  monitor.py: |
+    import asyncio
+    import aiohttp
+    import psycopg2
+    import redis
+    import time
+    import logging
+    import os
+    from prometheus_client import start_http_server, Gauge, Counter
+    from aiohttp import web
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    # Prometheus metrics
+    postgres_replication_lag = Gauge('postgres_replication_lag_seconds', 'PostgreSQL replication lag', ['replica'])
+    redis_replication_lag = Gauge('redis_replication_lag_seconds', 'Redis replication lag', ['replica'])
+    chromadb_sync_lag = Gauge('chromadb_sync_lag_seconds', 'ChromaDB sync lag', ['replica'])
+    replication_errors = Counter('replication_errors_total', 'Replication errors', ['service', 'type'])
+
+    class ReplicationMonitor:
+        def __init__(self):
+            self.session = None
+            
+        async def start(self):
+            self.session = aiohttp.ClientSession()
+            
+            # Start monitoring tasks
+            asyncio.create_task(self.monitor_postgres_replication())
+            asyncio.create_task(self.monitor_redis_replication())
+            asyncio.create_task(self.monitor_chromadb_sync())
+            
+            # Start metrics server
+            start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
+            
+            # Start API server
+            await self.start_api_server()
+            
+        async def monitor_postgres_replication(self):
+            """Monitor PostgreSQL replication lag"""
+            while True:
+                try:
+                    # Connect to primary
+                    primary_conn = psycopg2.connect(
+                        host=os.getenv('POSTGRES_PRIMARY_HOST'),
+                        user='postgres',
+                        REDACTED_SECRET=os.getenv('POSTGRES_PASSWORD'),
+                        database='postgres'
+                    )
+                    
+                    # Connect to replica
+                    replica_conn = psycopg2.connect(
+                        host=os.getenv('POSTGRES_REPLICA_HOST'),
+                        user='postgres',
+                        REDACTED_SECRET=os.getenv('POSTGRES_PASSWORD'),
+                        database='postgres'
+                    )
+                    
+                    # Get primary LSN
+                    primary_cur = primary_conn.cursor()
+                    primary_cur.execute("SELECT pg_current_wal_lsn()")
+                    primary_lsn = primary_cur.fetchone()[0]
+                    
+                    # Get replica replay LSN
+                    replica_cur = replica_conn.cursor()
+                    replica_cur.execute("SELECT pg_last_wal_replay_lsn()")
+                    replica_lsn = replica_cur.fetchone()[0]
+                    
+                    # Calculate lag
+                    primary_cur.execute(f"SELECT EXTRACT(EPOCH FROM ('{primary_lsn}'::pg_lsn - '{replica_lsn}'::pg_lsn) / 1024 / 1024)")
+                    lag_mb = primary_cur.fetchone()[0] or 0
+                    
+                    # Estimate lag in seconds (rough approximation)
+                    lag_seconds = lag_mb * 0.1  # Assume 10MB/s average write rate
+                    
+                    postgres_replication_lag.labels(replica='eu-west-1').set(lag_seconds)
+                    
+                    primary_conn.close()
+                    replica_conn.close()
+                    
+                    await asyncio.sleep(30)
+                    
+                except Exception as e:
+                    logger.error(f"Error monitoring PostgreSQL replication: {e}")
+                    replication_errors.labels(service='postgresql', type='monitoring').inc()
+                    await asyncio.sleep(60)
+                    
+        async def monitor_redis_replication(self):
+            """Monitor Redis replication through Sentinel"""
+            while True:
+                try:
+                    sentinel_hosts = os.getenv('REDIS_SENTINEL_HOSTS', '').split(',')
+                    
+                    for sentinel_host in sentinel_hosts:
+                        host, port = sentinel_host.split(':')
+                        r = redis.Redis(host=host, port=int(port), decode_responses=True)
+                        
+                        # Get master info
+                        master_info = r.sentinel_masters()
+                        if 'pake-redis-master' in master_info:
+                            master = master_info['pake-redis-master']
+                            
+                            # Get replica info
+                            replicas = r.sentinel_slaves('pake-redis-master')
+                            
+                            for replica in replicas:
+                                lag = int(replica.get('master-lag', 0))
+                                redis_replication_lag.labels(replica=replica['name']).set(lag)
+                        
+                        break  # Use first working sentinel
+                        
+                    await asyncio.sleep(30)
+                    
+                except Exception as e:
+                    logger.error(f"Error monitoring Redis replication: {e}")
+                    replication_errors.labels(service='redis', type='monitoring').inc()
+                    await asyncio.sleep(60)
+                    
+        async def monitor_chromadb_sync(self):
+            """Monitor ChromaDB sync status"""
+            while True:
+                try:
+                    primary_url = os.getenv('CHROMADB_PRIMARY_URL')
+                    
+                    # Get collections from primary
+                    async with self.session.get(f"{primary_url}/api/v1/collections") as response:
+                        if response.status == 200:
+                            collections = await response.json()
+                            
+                            # For each collection, check last sync time
+                            # (This is simplified - would need to track sync timestamps)
+                            chromadb_sync_lag.labels(replica='eu-west-1').set(0)
+                            chromadb_sync_lag.labels(replica='ap-southeast-1').set(0)
+                            
+                    await asyncio.sleep(60)
+                    
+                except Exception as e:
+                    logger.error(f"Error monitoring ChromaDB sync: {e}")
+                    replication_errors.labels(service='chromadb', type='monitoring').inc()
+                    await asyncio.sleep(120)
+                    
+        async def start_api_server(self):
+            """Start API server for replication status"""
+            app = web.Application()
+            
+            app.router.add_get('/health', self.handle_health)
+            app.router.add_get('/status', self.handle_status)
+            
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', 8090)
+            await site.start()
+            logger.info("Replication monitor API started on port 8090")
+            
+        async def handle_health(self, request):
+            return web.json_response({'status': 'healthy'})
+            
+        async def handle_status(self, request):
+            return web.json_response({
+                'postgres_replication': 'monitoring',
+                'redis_replication': 'monitoring',
+                'chromadb_sync': 'monitoring'
+            })
+
+    async def main():
+        monitor = ReplicationMonitor()
+        await monitor.start()
+        
+        # Keep running
+        try:
+            await asyncio.Future()
+        except KeyboardInterrupt:
+            logger.info("Shutting down replication monitor")
+
+    if __name__ == '__main__':
+        asyncio.run(main())
+
+---
+# ServiceAccounts and RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgresql-replication
+  namespace: database
+  labels:
+    app: postgresql-replication
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: redis-replication
+  namespace: database
+  labels:
+    app: redis-replication
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chromadb-replication
+  namespace: database
+  labels:
+    app: chromadb-replication
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: replication-monitor
+  namespace: replication-system
+  labels:
+    app: replication-monitor
+
+---
+# ClusterRole for replication monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: replication-monitor
+  labels:
+    app: replication-monitor
+rules:
+  - apiGroups: ['']
+    resources: ['configmaps', 'services', 'endpoints']
+    verbs: ['get', 'list', 'patch', 'update']
+  - apiGroups: ['apps']
+    resources: ['deployments']
+    verbs: ['get', 'list', 'patch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: replication-monitor
+  labels:
+    app: replication-monitor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: replication-monitor
+subjects:
+  - kind: ServiceAccount
+    name: replication-monitor
+    namespace: replication-system
+
+---
+# Services for replication components
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-postgresql-primary
+  namespace: database
+  labels:
+    app: pake-postgresql-primary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+    - port: 9187
+      targetPort: 9187
+      name: metrics
+  selector:
+    app: pake-postgresql-primary
+    role: primary
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-postgresql-replica-eu
+  namespace: database
+  labels:
+    app: pake-postgresql-replica
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+    - port: 9187
+      targetPort: 9187
+      name: metrics
+  selector:
+    app: pake-postgresql-replica
+    role: replica
+    region: eu-west-1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel
+  namespace: database
+  labels:
+    app: redis-sentinel
+spec:
+  type: ClusterIP
+  clusterIP: None # Headless service
+  ports:
+    - port: 26379
+      targetPort: 26379
+      name: sentinel
+    - port: 9121
+      targetPort: 9121
+      name: metrics
+  selector:
+    app: redis-sentinel
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: replication-monitor
+  namespace: replication-system
+  labels:
+    app: replication-monitor
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: metrics
+    - port: 8090
+      targetPort: 8090
+      name: api
+  selector:
+    app: replication-monitor

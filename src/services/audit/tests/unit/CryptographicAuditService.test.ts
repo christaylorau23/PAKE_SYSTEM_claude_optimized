@@ -1,0 +1,748 @@
+/**
+ * Unit tests for CryptographicAuditService
+ */
+
+import { CryptographicAuditService } from '../../src/services/CryptographicAuditService';
+import {
+  AuditEvent,
+  ActionType,
+  ActionResult,
+  ActorType,
+} from '../../src/types/audit.types';
+
+describe('CryptographicAuditService', () => {
+  let cryptoService: CryptographicAuditService;
+  const testSigningKey = 'test-signing-key-for-testing-purposes-only';
+  const testEncryptionKey =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+  beforeEach(() => {
+    cryptoService = new CryptographicAuditService(
+      testSigningKey,
+      testEncryptionKey
+    );
+  });
+
+  afterEach(async () => {
+    // Cleanup if needed
+  });
+
+  describe('constructor', () => {
+    it('should initialize with valid keys', () => {
+      expect(cryptoService).toBeInstanceOf(CryptographicAuditService);
+    });
+
+    it('should throw error with invalid encryption key length', () => {
+      expect(() => {
+        new CryptographicAuditService(testSigningKey, 'invalid-key');
+      }).toThrow('Encryption key must be 32 bytes (64 hex characters)');
+    });
+  });
+
+  describe('signAuditEvent', () => {
+    const mockEvent: Omit<AuditEvent, 'signature'> = {
+      id: 'test-event-001',
+      timestamp: '2024-01-01T12:00:00.000Z',
+      actor: {
+        id: 'test-user',
+        type: ActorType.USER,
+        ip: '192.168.1.100',
+      },
+      action: {
+        type: ActionType.READ,
+        resource: 'test-resource',
+        resourceId: 'resource-001',
+        result: ActionResult.SUCCESS,
+      },
+      context: {
+        environment: process.env.UNKNOWN,
+        application: 'audit-test',
+        version: '1.0.0',
+      },
+      version: '1.0.0',
+    };
+
+    it('should sign an audit event successfully', async () => {
+      const signedEvent = await cryptoService.signAuditEvent(mockEvent);
+
+      expect(signedEvent).toHaveProperty('signature');
+      expect(signedEvent.signature).toBeTruthy();
+      expect(typeof signedEvent.signature).toBe('string');
+      expect(signedEvent.signature.length).toBe(64); // SHA256 hex length
+    });
+
+    it('should produce consistent signatures for identical events', async () => {
+      const signedEvent1 = await cryptoService.signAuditEvent(mockEvent);
+
+      // Reset chain state for consistent test
+      cryptoService = new CryptographicAuditService(
+        testSigningKey,
+        testEncryptionKey
+      );
+      const signedEvent2 = await cryptoService.signAuditEvent(mockEvent);
+
+      expect(signedEvent1.signature).toBe(signedEvent2.signature);
+    });
+
+    it('should produce different signatures for different events', async () => {
+      const signedEvent1 = await cryptoService.signAuditEvent(mockEvent);
+
+      const modifiedEvent = { ...mockEvent, id: 'test-event-002' };
+      const signedEvent2 = await cryptoService.signAuditEvent(modifiedEvent);
+
+      expect(signedEvent1.signature).not.toBe(signedEvent2.signature);
+    });
+
+    it('should handle events with minimal required fields', async () => {
+      const minimalEvent: Omit<AuditEvent, 'signature'> = {
+        id: 'minimal-event',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        actor: {
+          id: 'system',
+          type: ActorType.SYSTEM,
+        },
+        action: {
+          type: ActionType.CREATE,
+          resource: 'system',
+          result: ActionResult.SUCCESS,
+        },
+        context: {
+          environment: process.env.UNKNOWN,
+          application: 'audit-test',
+          version: '1.0.0',
+        },
+        version: '1.0.0',
+      };
+
+      const signedEvent = await cryptoService.signAuditEvent(minimalEvent);
+      expect(signedEvent.signature).toBeTruthy();
+    });
+  });
+
+  describe('verifyAuditEvent', () => {
+    it('should verify a valid signed event', async () => {
+      const mockEvent: Omit<AuditEvent, 'signature'> = {
+        id: 'verify-test-001',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        actor: {
+          id: 'test-user',
+          type: ActorType.USER,
+        },
+        action: {
+          type: ActionType.UPDATE,
+          resource: 'test-resource',
+          result: ActionResult.SUCCESS,
+        },
+        context: {
+          environment: process.env.UNKNOWN,
+          application: 'audit-test',
+          version: '1.0.0',
+        },
+        version: '1.0.0',
+      };
+
+      const signedEvent = await cryptoService.signAuditEvent(mockEvent);
+      const isValid = await cryptoService.verifyAuditEvent(signedEvent);
+
+      expect(isValid).toBe(true);
+    });
+
+    it('should reject an event with tampered signature', async () => {
+      const mockEvent: Omit<AuditEvent, 'signature'> = {
+        id: 'tamper-test-001',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        actor: {
+          id: 'test-user',
+          type: ActorType.USER,
+        },
+        action: {
+          type: ActionType.DELETE,
+          resource: 'test-resource',
+          result: ActionResult.SUCCESS,
+        },
+        context: {
+          environment: process.env.UNKNOWN,
+          application: 'audit-test',
+          version: '1.0.0',
+        },
+        version: '1.0.0',
+      };
+
+      const signedEvent = await cryptoService.signAuditEvent(mockEvent);
+
+      // Tamper with signature
+      const tamperedEvent = { ...signedEvent, signature: 'invalid-signature' };
+      const isValid = await cryptoService.verifyAuditEvent(tamperedEvent);
+
+      expect(isValid).toBe(false);
+    });
+
+    it('should reject an event with no signature', async () => {
+      const eventWithoutSignature = {
+        id: 'no-sig-test-001',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        actor: {
+          id: 'test-user',
+          type: ActorType.USER,
+        },
+        action: {
+          type: ActionType.read,
+          resource: 'test-resource',
+          result: ActionResult.SUCCESS,
+        },
+        context: {
+          environment: process.env.UNKNOWN,
+          application: 'audit-test',
+          version: '1.0.0',
+        },
+        version: '1.0.0',
+      } as AuditEvent;
+
+      const isValid = await cryptoService.verifyAuditEvent(
+        eventWithoutSignature
+      );
+      expect(isValid).toBe(false);
+    });
+  });
+
+  describe('createSignedBatch', () => {
+    it('should create a signed batch of events', async () => {
+      const events: AuditEvent[] = [
+        {
+          id: 'batch-event-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'document',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'signature1',
+        },
+        {
+          id: 'batch-event-002',
+          timestamp: '2024-01-01T12:01:00.000Z',
+          actor: { id: 'user2', type: ActorType.USER },
+          action: {
+            type: ActionType.UPDATE,
+            resource: 'document',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'signature2',
+        },
+      ];
+
+      const batch = await cryptoService.createSignedBatch(events);
+
+      expect(batch.events).toEqual(events);
+      expect(batch.batchId).toBeTruthy();
+      expect(batch.timestamp).toBeTruthy();
+      expect(batch.checksum).toBeTruthy();
+      expect(batch.checksum.includes(':')).toBe(true); // checksum:signature format
+    });
+
+    it('should create different checksums for different batches', async () => {
+      const events1: AuditEvent[] = [
+        {
+          id: 'batch1-event-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc1',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig1',
+        },
+      ];
+
+      const events2: AuditEvent[] = [
+        {
+          id: 'batch2-event-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc2',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig2',
+        },
+      ];
+
+      const batch1 = await cryptoService.createSignedBatch(events1);
+      const batch2 = await cryptoService.createSignedBatch(events2);
+
+      expect(batch1.checksum).not.toBe(batch2.checksum);
+    });
+  });
+
+  describe('verifyBatch', () => {
+    it('should verify a valid batch', async () => {
+      const events: AuditEvent[] = [
+        {
+          id: 'verify-batch-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.READ,
+            resource: 'data',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'signature1',
+        },
+      ];
+
+      const batch = await cryptoService.createSignedBatch(events);
+      const isValid = await cryptoService.verifyBatch(batch);
+
+      expect(isValid).toBe(true);
+    });
+
+    it('should reject a batch with tampered checksum', async () => {
+      const events: AuditEvent[] = [
+        {
+          id: 'tamper-batch-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.EXECUTE,
+            resource: 'command',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'signature1',
+        },
+      ];
+
+      const batch = await cryptoService.createSignedBatch(events);
+
+      // Tamper with checksum
+      batch.checksum = 'tampered:checksum';
+      const isValid = await cryptoService.verifyBatch(batch);
+
+      expect(isValid).toBe(false);
+    });
+  });
+
+  describe('encryptSensitiveData and decryptSensitiveData', () => {
+    it('should encrypt and decrypt data successfully', () => {
+      const sensitiveData = {
+        REDACTED_SECRET: process.env.UNKNOWN,
+        apiKey: process.env.UNKNOWN,
+        personalInfo: {
+          ssn: '123-45-6789',
+          email: 'user@example.com',
+        },
+      };
+
+      const encrypted = cryptoService.encryptSensitiveData(sensitiveData);
+      expect(encrypted).toBeTruthy();
+      expect(typeof encrypted).toBe('string');
+      expect(encrypted.split(':')).toHaveLength(3); // iv:authTag:encrypted
+
+      const decrypted = cryptoService.decryptSensitiveData(encrypted);
+      expect(decrypted).toEqual(sensitiveData);
+    });
+
+    it('should fail to decrypt with wrong key', () => {
+      const data = { secret: process.env.UNKNOWN };
+      const encrypted = cryptoService.encryptSensitiveData(data);
+
+      // Create service with different key
+      const wrongKeyCrypto = new CryptographicAuditService(
+        testSigningKey,
+        'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
+      );
+
+      expect(() => {
+        wrongKeyCrypto.decryptSensitiveData(encrypted);
+      }).toThrow();
+    });
+  });
+
+  describe('generateTamperSeal and verifyTamperSeal', () => {
+    it('should generate and verify tamper seal', () => {
+      const events: AuditEvent[] = [
+        {
+          id: 'seal-test-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'file',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig1',
+        },
+        {
+          id: 'seal-test-002',
+          timestamp: '2024-01-01T12:01:00.000Z',
+          actor: { id: 'user2', type: ActorType.USER },
+          action: {
+            type: ActionType.UPDATE,
+            resource: 'file',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig2',
+        },
+      ];
+
+      const seal = cryptoService.generateTamperSeal(events);
+      expect(seal).toBeTruthy();
+      expect(typeof seal).toBe('string');
+      expect(seal.includes(':')).toBe(true); // seal:signature format
+
+      const isValid = cryptoService.verifyTamperSeal(events, seal);
+      expect(isValid).toBe(true);
+    });
+
+    it('should detect tampering with events', () => {
+      const originalEvents: AuditEvent[] = [
+        {
+          id: 'tamper-seal-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.DELETE,
+            resource: 'file',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'original-sig',
+        },
+      ];
+
+      const seal = cryptoService.generateTamperSeal(originalEvents);
+
+      // Tamper with events
+      const tamperedEvents = [
+        {
+          ...originalEvents[0],
+          signature: 'tampered-sig',
+        },
+      ];
+
+      const isValid = cryptoService.verifyTamperSeal(tamperedEvents, seal);
+      expect(isValid).toBe(false);
+    });
+  });
+
+  describe('detectChainTampering', () => {
+    it('should detect no issues with valid events', () => {
+      const validEvents: AuditEvent[] = [
+        {
+          id: 'chain-test-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'valid-sig-1',
+        },
+        {
+          id: 'chain-test-002',
+          timestamp: '2024-01-01T12:01:00.000Z',
+          actor: { id: 'user2', type: ActorType.USER },
+          action: {
+            type: ActionType.UPDATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'valid-sig-2',
+        },
+      ];
+
+      const issues = cryptoService.detectChainTampering(validEvents);
+      expect(issues).toEqual([]);
+    });
+
+    it('should detect temporal ordering violations', () => {
+      const eventsWithTimeViolation: AuditEvent[] = [
+        {
+          id: 'time-test-001',
+          timestamp: '2024-01-01T12:01:00.000Z', // Later timestamp first
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig-1',
+        },
+        {
+          id: 'time-test-002',
+          timestamp: '2024-01-01T12:00:00.000Z', // Earlier timestamp second
+          actor: { id: 'user2', type: ActorType.USER },
+          action: {
+            type: ActionType.UPDATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig-2',
+        },
+      ];
+
+      const issues = cryptoService.detectChainTampering(
+        eventsWithTimeViolation
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0].eventId).toBe('time-test-002');
+      expect(issues[0].issue).toContain('Temporal ordering violation');
+    });
+
+    it('should detect missing signatures', () => {
+      const eventsWithMissingSignature: AuditEvent[] = [
+        {
+          id: 'missing-sig-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          // Missing signature property
+        } as AuditEvent,
+      ];
+
+      const issues = cryptoService.detectChainTampering(
+        eventsWithMissingSignature
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0].eventId).toBe('missing-sig-001');
+      expect(issues[0].issue).toBe('Missing cryptographic signature');
+    });
+
+    it('should detect duplicate event IDs', () => {
+      const eventsWithDuplicates: AuditEvent[] = [
+        {
+          id: 'duplicate-test', // Same ID
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc1',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig-1',
+        },
+        {
+          id: 'duplicate-test', // Same ID
+          timestamp: '2024-01-01T12:01:00.000Z',
+          actor: { id: 'user2', type: ActorType.USER },
+          action: {
+            type: ActionType.UPDATE,
+            resource: 'doc2',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'sig-2',
+        },
+      ];
+
+      const issues = cryptoService.detectChainTampering(eventsWithDuplicates);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].eventId).toBe('duplicate-test');
+      expect(issues[0].issue).toBe('Duplicate event ID detected');
+    });
+  });
+
+  describe('generateIntegrityReport', () => {
+    it('should generate integrity report for valid events', async () => {
+      const validEvents: AuditEvent[] = [
+        {
+          id: 'report-test-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'report',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          signature: 'valid-signature',
+        },
+      ];
+
+      const report = await cryptoService.generateIntegrityReport(validEvents);
+
+      expect(report.summary.totalEvents).toBe(1);
+      expect(report.summary.integrityStatus).toBe('verified');
+      expect(report.summary.issues).toHaveLength(0);
+      expect(report.proof.tamperSeal).toBeTruthy();
+      expect(report.proof.chainHash).toBeTruthy();
+      expect(report.proof.generatedAt).toBeTruthy();
+      expect(report.proof.signature).toBeTruthy();
+    });
+
+    it('should generate integrity report for compromised events', async () => {
+      const compromisedEvents: AuditEvent[] = [
+        {
+          id: 'compromised-001',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          actor: { id: 'user1', type: ActorType.USER },
+          action: {
+            type: ActionType.CREATE,
+            resource: 'doc',
+            result: ActionResult.SUCCESS,
+          },
+          context: {
+            environment: 'test',
+            application: 'audit-test',
+            version: process.env.UNKNOWN,
+          },
+          version: '1.0.0',
+          // Missing signature - will be flagged as compromised
+        } as AuditEvent,
+      ];
+
+      const report =
+        await cryptoService.generateIntegrityReport(compromisedEvents);
+
+      expect(report.summary.totalEvents).toBe(1);
+      expect(report.summary.integrityStatus).toBe('compromised');
+      expect(report.summary.issues.length).toBeGreaterThan(0);
+      expect(report.proof.signature).toBeTruthy();
+    });
+  });
+
+  describe('getChainState', () => {
+    it('should return initial chain state', () => {
+      const chainState = cryptoService.getChainState();
+
+      expect(chainState.initialized).toBe(true);
+      expect(chainState.lastEventHash).toBeTruthy();
+      expect(chainState.chainIntegrityHash).toBeTruthy();
+    });
+
+    it('should update chain state after signing events', async () => {
+      const initialState = cryptoService.getChainState();
+
+      const mockEvent: Omit<AuditEvent, 'signature'> = {
+        id: 'chain-state-test',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        actor: { id: 'user1', type: ActorType.USER },
+        action: {
+          type: ActionType.CREATE,
+          resource: process.env.UNKNOWN,
+          result: ActionResult.SUCCESS,
+        },
+        context: {
+          environment: 'test',
+          application: 'audit-test',
+          version: process.env.UNKNOWN,
+        },
+        version: '1.0.0',
+      };
+
+      await cryptoService.signAuditEvent(mockEvent);
+      const updatedState = cryptoService.getChainState();
+
+      expect(updatedState.lastEventHash).not.toBe(initialState.lastEventHash);
+      expect(updatedState.chainIntegrityHash).not.toBe(
+        initialState.chainIntegrityHash
+      );
+    });
+  });
+});

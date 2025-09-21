@@ -1,0 +1,53 @@
+{
+    "python.defaultInterpreterPath": "/root/projects/PAKE_SYSTEM_claude_optimized/venv/bin/python",
+    "python.analysis.extraPaths": [
+        "./src",
+        "./config",
+        "./scripts"
+    ],
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "warning",
+        "reportOptionalMemberAccess": "warning",
+        "reportArgumentType": "error",
+        "reportGeneralTypeIssues": "error"
+    },
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=88",
+        "--extend-ignore=E203,W503",
+        "--exclude=.git,__pycache__,.venv"
+    ],
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--line-length=88"
+    ],
+    "python.sortImports.args": [
+        "--profile=black"
+    ],
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/node_modules": true
+    },
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.autoSearchPaths": true,
+    "cursorpyright.analysis.diagnosticMode": "workspace",
+    "cursorpyright.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "warning",
+        "reportOptionalMemberAccess": "warning",
+        "reportArgumentType": "error",
+        "reportGeneralTypeIssues": "error"
+    },
+    "cursorpyright.analysis.extraPaths": [
+        "./src",
+        "./config",
+        "./scripts"
+    ],
+    "cursorpyright.analysis.typeCheckingMode": "standard"
+}

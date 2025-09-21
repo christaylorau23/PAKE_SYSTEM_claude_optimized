@@ -1,0 +1,173 @@
+/**
+ * Authentication Configuration
+ * Centralized configuration for the PAKE authentication system
+ */
+
+import { AuthConfig, PasswordPolicy } from '../types';
+import { config as baseConfig } from '../../../config/service_config';
+
+// Default REDACTED_SECRET policy aligned with enterprise security standards
+const defaultPasswordPolicy: PasswordPolicy = {
+  minLength: 12,
+  maxLength: 128,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumbers: true,
+  requireSymbols: true,
+  preventCommonPasswords: true,
+  preventReuse: 12,
+  maxAge: 90 // 90 days
+};
+
+export const authConfig: AuthConfig = {
+  jwt: {
+    secret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
+    accessTokenExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
+    refreshTokenExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
+    issuer: process.env.JWT_ISSUER || 'pake-system',
+    audience: process.env.JWT_AUDIENCE || 'pake-users'
+  },
+
+  oauth: {
+    providers: {
+      google: process.env.GOOGLE_CLIENT_ID ? {
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        scope: ['profile', 'email'],
+        redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback',
+        authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl: 'https://oauth2.googleapis.com/token',
+        userInfoUrl: 'https://www.googleapis.com/oauth2/v2/userinfo'
+      } : undefined,
+
+      github: process.env.GITHUB_CLIENT_ID ? {
+        clientId: process.env.GITHUB_CLIENT_ID!,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+        scope: ['user:email'],
+        redirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/auth/github/callback',
+        authUrl: 'https://github.com/login/oauth/authorize',
+        tokenUrl: 'https://github.com/login/oauth/access_token',
+        userInfoUrl: 'https://api.github.com/user'
+      } : undefined,
+
+      microsoft: process.env.MICROSOFT_CLIENT_ID ? {
+        clientId: process.env.MICROSOFT_CLIENT_ID!,
+        clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
+        scope: ['openid', 'profile', 'email'],
+        redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
+        authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        userInfoUrl: 'https://graph.microsoft.com/v1.0/me'
+      } : undefined
+    }
+  },
+
+  mfa: {
+    issuer: process.env.MFA_ISSUER || 'PAKE System',
+    windowSize: parseInt(process.env.MFA_WINDOW_SIZE || '2')
+  },
+
+  session: {
+    maxSessions: parseInt(process.env.MAX_SESSIONS_PER_USER || '5'),
+    maxAge: parseInt(process.env.SESSION_MAX_AGE || '86400'), // 24 hours in seconds
+    extendOnActivity: process.env.EXTEND_SESSION_ON_ACTIVITY !== 'false'
+  },
+
+  security: {
+    REDACTED_SECRETPolicy: {
+      ...defaultPasswordPolicy,
+      minLength: parseInt(process.env.PASSWORD_MIN_LENGTH || '12'),
+      maxLength: parseInt(process.env.PASSWORD_MAX_LENGTH || '128'),
+      requireUppercase: process.env.PASSWORD_REQUIRE_UPPERCASE !== 'false',
+      requireLowercase: process.env.PASSWORD_REQUIRE_LOWERCASE !== 'false',
+      requireNumbers: process.env.PASSWORD_REQUIRE_NUMBERS !== 'false',
+      requireSymbols: process.env.PASSWORD_REQUIRE_SYMBOLS !== 'false',
+      preventCommonPasswords: process.env.PASSWORD_PREVENT_COMMON !== 'false',
+      preventReuse: parseInt(process.env.PASSWORD_PREVENT_REUSE || '12'),
+      maxAge: parseInt(process.env.PASSWORD_MAX_AGE || '90')
+    },
+
+    lockoutPolicy: {
+      maxAttempts: parseInt(process.env.LOCKOUT_MAX_ATTEMPTS || '5'),
+      lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '30'), // 30 minutes
+      resetAfter: parseInt(process.env.LOCKOUT_RESET_AFTER || '60') // 60 minutes
+    },
+
+    rateLimiting: {
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || '900000'), // 15 minutes
+      maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
+    }
+  }
+};
+
+// Environment validation
+export function validateAuthConfig(): void {
+  const required = ['JWT_SECRET'];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
+    throw new Error('JWT_SECRET must be changed in production');
+  }
+}
+
+// Redis configuration for sessions and caching
+export const redisConfig = {
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  REDACTED_SECRET: process.env.REDIS_PASSWORD,
+  db: parseInt(process.env.REDIS_DB || '0'),
+  keyPrefix: process.env.REDIS_KEY_PREFIX || 'pake:auth:',
+  retryDelayOnFailover: 100,
+  enableReadyCheck: true,
+  maxRetriesPerRequest: 3
+};
+
+// Database configuration
+export const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'pake_system',
+  username: process.env.DB_USER || 'postgres',
+  REDACTED_SECRET: process.env.DB_PASSWORD || 'postgres',
+  ssl: process.env.DB_SSL === 'true',
+  pool: {
+    min: parseInt(process.env.DB_POOL_MIN || '2'),
+    max: parseInt(process.env.DB_POOL_MAX || '10'),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
+  }
+};
+
+// Email configuration for notifications
+export const emailConfig = {
+  smtp: {
+    host: process.env.SMTP_HOST || 'localhost',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD
+    }
+  },
+  from: process.env.EMAIL_FROM || 'noreply@pake-system.com',
+  templates: {
+    verificationEmail: 'email-verification',
+    REDACTED_SECRETReset: 'REDACTED_SECRET-reset',
+    loginNotification: 'login-notification',
+    mfaBackupCodes: 'mfa-backup-codes'
+  }
+};
+
+// WebAuthn configuration
+export const webAuthnConfig = {
+  rpName: process.env.WEBAUTHN_RP_NAME || 'PAKE System',
+  rpID: process.env.WEBAUTHN_RP_ID || 'localhost',
+  origin: process.env.WEBAUTHN_ORIGIN || 'http://localhost:3000',
+  timeout: parseInt(process.env.WEBAUTHN_TIMEOUT || '60000'), // 60 seconds
+  attestation: (process.env.WEBAUTHN_ATTESTATION as any) || 'none',
+  userVerification: (process.env.WEBAUTHN_USER_VERIFICATION as any) || 'preferred'
+};

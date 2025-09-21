@@ -1,0 +1,843 @@
+# ELK Stack (Elasticsearch, Logstash, Kibana) for Centralized Logging
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+  labels:
+    name: logging
+    istio-injection: enabled
+
+---
+# Elasticsearch for Log Storage
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch-logs
+  namespace: logging
+spec:
+  version: 8.8.0
+
+  # Node sets for logging workload
+  nodeSets:
+    # Master nodes for cluster coordination
+    - name: master
+      count: 3
+      config:
+        node.roles: ['master']
+        node.store.allow_mmap: false
+        cluster.max_shards_per_node: 3000
+
+        # Optimized for logging workload
+        ES_JAVA_OPTS: '-Xms2g -Xmx2g'
+
+        # Index settings optimized for logs
+        index.number_of_shards: 1
+        index.number_of_replicas: 1
+        index.refresh_interval: 30s
+        index.translog.flush_threshold_size: 1GB
+        index.translog.sync_interval: 30s
+
+        # Logging-specific optimizations
+        indices.memory.index_buffer_size: 20%
+        indices.memory.min_index_buffer_size: 96mb
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: 1000m
+                  memory: 4Gi
+                requests:
+                  cpu: 200m
+                  memory: 2Gi
+              env:
+                - name: ES_JAVA_OPTS
+                  value: '-Xms2g -Xmx2g'
+
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - data-services
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: elasticsearch-logs
+                    topologyKey: kubernetes.io/hostname
+
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: data-services
+              effect: NoSchedule
+
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: ['ReadWriteOnce']
+            storageClassName: fast-ssd
+            resources:
+              requests:
+                storage: 200Gi
+
+    # Data nodes for log storage
+    - name: data-hot
+      count: 3
+      config:
+        node.roles: ['data_hot', 'data_content', 'ingest']
+        node.store.allow_mmap: false
+        ES_JAVA_OPTS: '-Xms8g -Xmx8g'
+
+        # Hot tier configuration for recent logs
+        node.attr.data: hot
+        cluster.routing.allocation.awareness.attributes: data
+
+        # Optimized for high ingestion rate
+        thread_pool.write.queue_size: 10000
+        thread_pool.search.queue_size: 10000
+
+        # Index lifecycle management
+        xpack.ilm.enabled: true
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: 4000m
+                  memory: 16Gi
+                requests:
+                  cpu: 1000m
+                  memory: 8Gi
+              env:
+                - name: ES_JAVA_OPTS
+                  value: '-Xms8g -Xmx8g'
+
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - data-services
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: elasticsearch-logs
+                    topologyKey: kubernetes.io/hostname
+
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: data-services
+              effect: NoSchedule
+
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: ['ReadWriteOnce']
+            storageClassName: fast-ssd
+            resources:
+              requests:
+                storage: 1Ti
+
+    # Warm tier for older logs
+    - name: data-warm
+      count: 2
+      config:
+        node.roles: ['data_warm', 'data_content']
+        node.store.allow_mmap: false
+        ES_JAVA_OPTS: '-Xms4g -Xmx4g'
+
+        # Warm tier configuration
+        node.attr.data: warm
+
+        # Optimized for storage efficiency
+        index.codec: best_compression
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: 2000m
+                  memory: 8Gi
+                requests:
+                  cpu: 500m
+                  memory: 4Gi
+
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - data-services
+
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: data-services
+              effect: NoSchedule
+
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: ['ReadWriteOnce']
+            storageClassName: standard-ssd
+            resources:
+              requests:
+                storage: 2Ti
+
+  # HTTP configuration
+  http:
+    service:
+      spec:
+        type: ClusterIP
+    tls:
+      selfSignedCertificate:
+        disabled: true
+
+---
+# Kibana for Log Visualization
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana
+  namespace: logging
+spec:
+  version: 8.8.0
+  count: 2
+
+  elasticsearchRef:
+    name: elasticsearch-logs
+
+  config:
+    server.host: '0.0.0.0'
+    server.publicBaseUrl: 'https://kibana.pake-system.com'
+
+    # Security configuration
+    xpack.security.enabled: true
+    xpack.security.authentication.providers.basic.basic1.order: 0
+
+    # Logging configuration
+    logging.appenders.console.type: console
+    logging.appenders.console.layout.type: json
+    logging.root.level: info
+
+    # Performance tuning
+    elasticsearch.requestTimeout: 300000
+    elasticsearch.shardTimeout: 30000
+    server.maxPayloadBytes: 1048576
+
+    # Monitoring
+    xpack.monitoring.enabled: true
+    xpack.monitoring.kibana.collection.enabled: true
+
+    # Canvas and reporting
+    xpack.canvas.enabled: true
+    xpack.reporting.enabled: true
+    xpack.reporting.capture.browser.chromium.disableSandbox: true
+
+    # Machine Learning (if needed)
+    xpack.ml.enabled: false
+
+  # Resource configuration
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 2Gi
+          env:
+            - name: NODE_OPTIONS
+              value: '--max-old-space-size=3072'
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - api-services
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    kibana.k8s.elastic.co/name: kibana
+                topologyKey: kubernetes.io/hostname
+
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api-services
+          effect: NoSchedule
+
+  # HTTP configuration
+  http:
+    service:
+      spec:
+        type: ClusterIP
+    tls:
+      selfSignedCertificate:
+        disabled: true
+
+---
+# Kibana Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana
+  namespace: logging
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: kibana-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'PAKE System - Kibana Logs'
+    nginx.ingress.kubernetes.io/proxy-body-size: '50m'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '300'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '300'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - kibana.pake-system.com
+      secretName: kibana-tls
+  rules:
+    - host: kibana.pake-system.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kibana-kb-http
+                port:
+                  number: 5601
+
+---
+# Fluentd for Log Collection and Processing
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+  namespace: logging
+  labels:
+    app: fluentd
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  template:
+    metadata:
+      labels:
+        app: fluentd
+    spec:
+      serviceAccountName: fluentd
+      tolerations:
+        # Run on all nodes
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+        - operator: Exists
+          effect: NoSchedule
+
+      containers:
+        - name: fluentd
+          image: fluent/fluentd-kubernetes-daemonset:v1.16-debian-elasticsearch8-1
+          imagePullPolicy: IfNotPresent
+
+          env:
+            # Elasticsearch configuration
+            - name: FLUENT_ELASTICSEARCH_HOST
+              value: 'elasticsearch-logs-es-http.logging.svc.cluster.local'
+            - name: FLUENT_ELASTICSEARCH_PORT
+              value: '9200'
+            - name: FLUENT_ELASTICSEARCH_SCHEME
+              value: 'http'
+            - name: FLUENT_ELASTICSEARCH_SSL_VERIFY
+              value: 'false'
+
+            # Index configuration
+            - name: FLUENT_ELASTICSEARCH_INDEX_NAME
+              value: 'pake-logs'
+            - name: FLUENT_ELASTICSEARCH_TYPE_NAME
+              value: '_doc'
+
+            # Performance tuning
+            - name: FLUENT_ELASTICSEARCH_BUFFER_CHUNK_LIMIT_SIZE
+              value: '8MB'
+            - name: FLUENT_ELASTICSEARCH_BUFFER_QUEUE_LIMIT_LENGTH
+              value: '32'
+            - name: FLUENT_ELASTICSEARCH_FLUSH_INTERVAL
+              value: '5s'
+            - name: FLUENT_ELASTICSEARCH_MAX_RETRY_WAIT
+              value: '30'
+            - name: FLUENT_ELASTICSEARCH_DISABLE_RETRY_LIMIT
+              value: 'true'
+
+            # Log level
+            - name: FLUENT_LOG_LEVEL
+              value: 'info'
+
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: fluentd-config
+              mountPath: /fluentd/etc/
+            - name: tmp
+              mountPath: /tmp
+
+          # Security context
+          securityContext:
+            runAsUser: 0
+            privileged: true
+
+      # Host path volumes
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: tmp
+          emptyDir: {}
+        - name: fluentd-config
+          configMap:
+            name: fluentd-config
+
+---
+# Fluentd Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: logging
+data:
+  fluent.conf: |
+    @include systemd.conf
+    @include kubernetes.conf
+    @include conf.d/*.conf
+
+    # Main log processing pipeline
+    <match fluent.**>
+      @type null
+    </match>
+
+    # Kubernetes container logs
+    <source>
+      @type tail
+      @id in_tail_container_logs
+      path /var/log/containers/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head true
+      format json
+      time_key time
+      time_format %Y-%m-%dT%H:%M:%S.%NZ
+    </source>
+
+    # Kubernetes metadata enrichment
+    <filter kubernetes.**>
+      @type kubernetes_metadata
+      @id filter_kube_metadata
+      kubernetes_url "#{ENV['FLUENT_FILTER_KUBERNETES_URL'] || 'https://' + ENV.fetch('KUBERNETES_SERVICE_HOST') + ':' + ENV.fetch('KUBERNETES_SERVICE_PORT') + '/api'}"
+      verify_ssl "#{ENV['KUBERNETES_VERIFY_SSL'] || true}"
+      ca_file "#{ENV['KUBERNETES_CA_FILE']}"
+      skip_labels false
+      skip_container_metadata false
+      skip_master_url false
+      skip_namespace_metadata false
+      watch false
+      de_dot false
+      annotation_match [ ".*" ]
+    </filter>
+
+    # Parse different log formats
+    <filter kubernetes.**>
+      @type parser
+      @id filter_parser
+      key_name log
+      reserve_data true
+      remove_key_name_field false
+      <parse>
+        @type multi_format
+        <pattern>
+          format json
+          time_key time
+          time_type string
+          time_format %Y-%m-%dT%H:%M:%S.%L%z
+        </pattern>
+        <pattern>
+          format regexp
+          expression /^(?<timestamp>[^ ]*) (?<level>[^ ]*) (?<message>.*)$/
+          time_key timestamp
+          time_format %Y-%m-%dT%H:%M:%S.%L%z
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
+      </parse>
+    </filter>
+
+    # Add PAKE-specific enrichment
+    <filter kubernetes.**>
+      @type record_transformer
+      @id filter_pake_enrichment
+      enable_ruby true
+      <record>
+        cluster_name pake-production
+        environment production
+        log_source fluentd
+        # Extract service name from namespace and pod
+        service_name ${record.dig("kubernetes", "labels", "app") || record.dig("kubernetes", "container_name") || "unknown"}
+        # Extract version from labels
+        service_version ${record.dig("kubernetes", "labels", "version") || "unknown"}
+        # Add correlation ID if present
+        correlation_id ${record["log"] ? (record["log"].match(/correlation[_-]id[:\s=]+([a-zA-Z0-9\-]+)/i) ? $1 : nil) : nil}
+        # Extract user ID if present
+        user_id ${record["log"] ? (record["log"].match(/user[_-]id[:\s=]+([a-zA-Z0-9\-]+)/i) ? $1 : nil) : nil}
+        # Extract trace ID if present
+        trace_id ${record["log"] ? (record["log"].match(/trace[_-]id[:\s=]+([a-zA-Z0-9\-]+)/i) ? $1 : nil) : nil}
+      </record>
+    </filter>
+
+    # Security log filtering
+    <filter kubernetes.**>
+      @type grep
+      @id filter_security_logs
+      <regexp>
+        key log
+        pattern /(?i)(error|warn|fail|exception|security|attack|unauthorized|forbidden)/
+      </regexp>
+      <or>
+        <regexp>
+          key kubernetes.labels.security
+          pattern /true/
+        </regexp>
+      </or>
+    </filter>
+
+    # Performance log filtering for AI services
+    <filter kubernetes.**>
+      @type grep
+      @id filter_ai_performance
+      <regexp>
+        key kubernetes.labels.app
+        pattern /pake-ai/
+      </regexp>
+      <regexp>
+        key log
+        pattern /(?i)(inference|token|latency|gpu|model)/
+      </regexp>
+    </filter>
+
+    # Route to different indices based on content
+    <match kubernetes.**>
+      @type rewrite_tag_filter
+      @id retag_based_on_content
+      <rule>
+        key kubernetes.labels.app
+        pattern ^pake-api$
+        tag pake.api.${tag}
+      </rule>
+      <rule>
+        key kubernetes.labels.app
+        pattern ^pake-ai$
+        tag pake.ai.${tag}
+      </rule>
+      <rule>
+        key kubernetes.labels.app
+        pattern ^pake-workers$
+        tag pake.workers.${tag}
+      </rule>
+      <rule>
+        key kubernetes.namespace_name
+        pattern ^(database|monitoring|istio-system)$
+        tag pake.infrastructure.${tag}
+      </rule>
+      <rule>
+        key level
+        pattern ^(ERROR|FATAL|error|fatal)$
+        tag pake.errors.${tag}
+      </rule>
+      <rule>
+        key log
+        pattern /(?i)(security|attack|unauthorized|forbidden)/
+        tag pake.security.${tag}
+      </rule>
+      <rule>
+        key "*"
+        pattern .*
+        tag pake.general.${tag}
+      </rule>
+    </match>
+
+    # Output to Elasticsearch with different indices
+    <match pake.api.**>
+      @type elasticsearch
+      @id out_es_api
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+      ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
+      
+      index_name pake-api-logs
+      type_name _doc
+      
+      # ILM policy
+      ilm_policy_id pake-logs-policy
+      ilm_policy_override true
+      
+      # Buffering
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/elasticsearch-api
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 8MB
+        queue_limit_length 32
+        overflow_action block
+      </buffer>
+    </match>
+
+    <match pake.ai.**>
+      @type elasticsearch
+      @id out_es_ai
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+      ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
+      
+      index_name pake-ai-logs
+      type_name _doc
+      
+      ilm_policy_id pake-logs-policy
+      ilm_policy_override true
+      
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/elasticsearch-ai
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 8MB
+        queue_limit_length 32
+        overflow_action block
+      </buffer>
+    </match>
+
+    <match pake.errors.**>
+      @type elasticsearch
+      @id out_es_errors
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+      ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
+      
+      index_name pake-errors
+      type_name _doc
+      
+      ilm_policy_id pake-errors-policy
+      ilm_policy_override true
+      
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/elasticsearch-errors
+        flush_mode immediate
+        retry_type exponential_backoff
+        flush_thread_count 4
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 4MB
+        queue_limit_length 64
+        overflow_action block
+      </buffer>
+    </match>
+
+    <match pake.security.**>
+      @type elasticsearch
+      @id out_es_security
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+      ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
+      
+      index_name pake-security-logs
+      type_name _doc
+      
+      ilm_policy_id pake-security-policy
+      ilm_policy_override true
+      
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/elasticsearch-security
+        flush_mode immediate
+        retry_type exponential_backoff
+        flush_thread_count 4
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 4MB
+        queue_limit_length 64
+        overflow_action block
+      </buffer>
+    </match>
+
+    # Catch-all for other logs
+    <match **>
+      @type elasticsearch
+      @id out_es_general
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+      ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
+      
+      index_name pake-general-logs
+      type_name _doc
+      
+      ilm_policy_id pake-logs-policy
+      ilm_policy_override true
+      
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/elasticsearch-general
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 10s
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 8MB
+        queue_limit_length 32
+        overflow_action block
+      </buffer>
+    </match>
+
+---
+# Fluentd RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: logging
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluentd
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluentd
+roleRef:
+  kind: ClusterRole
+  name: fluentd
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: fluentd
+    namespace: logging
+
+---
+# Service Monitor for ELK Stack monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: elasticsearch-logs
+  namespace: logging
+  labels:
+    app: elasticsearch-logs
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      elasticsearch.k8s.elastic.co/cluster-name: elasticsearch-logs
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /_prometheus/metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kibana
+  namespace: logging
+  labels:
+    app: kibana
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      kibana.k8s.elastic.co/name: kibana
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /api/stats

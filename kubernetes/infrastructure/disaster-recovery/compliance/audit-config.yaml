@@ -1,0 +1,946 @@
+# Disaster Recovery Compliance Audit Configuration
+# Signed, immutable logs of backup/restore/failover operations with identity tracking
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-audit-config
+  namespace: compliance-system
+  labels:
+    app: dr-audit
+    component: compliance
+data:
+  config.yaml: |
+    audit:
+      name: "dr-compliance-audit"
+      description: "Disaster Recovery compliance auditing with signed immutable logs"
+      
+      # Audit configuration
+      settings:
+        log_level: "info"
+        retention_days: 2555  # 7 years for compliance
+        signing_required: true
+        immutable_storage: true
+        chain_validation: true
+        
+      # Event types to audit
+      event_types:
+        backup_operations:
+          - "backup_started"
+          - "backup_completed"
+          - "backup_failed"
+          - "backup_validated"
+          - "backup_deleted"
+          
+        restore_operations:
+          - "restore_initiated"
+          - "restore_completed"
+          - "restore_failed"
+          - "restore_validated"
+          - "restore_rollback"
+          
+        failover_operations:
+          - "failover_triggered"
+          - "failover_completed"
+          - "failover_failed"
+          - "failover_rollback"
+          - "dns_switched"
+          - "traffic_redirected"
+          
+        chaos_operations:
+          - "chaos_experiment_started"
+          - "chaos_experiment_completed"
+          - "chaos_experiment_failed"
+          - "chaos_rollback_triggered"
+          
+        access_operations:
+          - "emergency_access_granted"
+          - "privileged_command_executed"
+          - "configuration_changed"
+          - "runbook_accessed"
+          
+        compliance_operations:
+          - "attestation_generated"
+          - "audit_log_exported"
+          - "compliance_check_performed"
+          - "violation_detected"
+          
+      # Required fields for audit events
+      required_fields:
+        - "timestamp"
+        - "event_type"
+        - "operator_identity"
+        - "operator_reason"
+        - "source_system"
+        - "target_system"
+        - "operation_id"
+        - "result_status"
+        - "resource_identifiers"
+        
+      # Identity verification
+      identity_verification:
+        methods:
+          - "kubernetes_service_account"
+          - "x509_certificate"
+          - "oauth_token"
+          - "api_key"
+        required_claims:
+          - "sub"    # Subject (user ID)
+          - "iss"    # Issuer
+          - "aud"    # Audience
+          - "exp"    # Expiration
+          - "iat"    # Issued at
+          
+      # Signing configuration
+      signing:
+        algorithm: "RS256"
+        key_rotation_days: 90
+        signature_format: "JWS"
+        include_certificate_chain: true
+        
+      # Storage configuration
+      storage:
+        primary:
+          type: "s3"
+          bucket: "pake-compliance-audit-logs"
+          prefix: "dr-audit-logs/"
+          region: "us-east-1"
+          encryption: "AES256"
+          
+        backup:
+          type: "s3"
+          bucket: "pake-compliance-audit-logs-backup"
+          prefix: "dr-audit-logs/"
+          region: "eu-west-1"
+          encryption: "AES256"
+          
+        immutable:
+          object_lock: true
+          retention_mode: "COMPLIANCE"
+          retention_years: 7
+          legal_hold: false
+          
+      # Compliance frameworks
+      frameworks:
+        soc2:
+          enabled: true
+          requirements:
+            - "CC6.1"  # Logical and physical access controls
+            - "CC6.2"  # System software and applications
+            - "CC6.3"  # Data access and transmission
+            - "CC7.1"  # System monitoring
+            
+        iso27001:
+          enabled: true
+          requirements:
+            - "A.12.3.1"  # Information backup
+            - "A.12.6.1"  # Management of technical vulnerabilities
+            - "A.16.1.1"  # Incident management responsibilities
+            - "A.16.1.5"  # Response to information security incidents
+            
+        gdpr:
+          enabled: true
+          requirements:
+            - "Article 25"  # Data protection by design
+            - "Article 32"  # Security of processing
+            - "Article 33"  # Notification of data breach
+            - "Article 35"  # Data protection impact assessment
+
+  audit-collector.py: |
+    #!/usr/bin/env python3
+    """
+    DR Compliance Audit Collector
+    Collects, signs, and stores immutable audit logs for disaster recovery operations
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import yaml
+    import hashlib
+    import hmac
+    import base64
+    import uuid
+    from datetime import datetime, timedelta, timezone
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa, padding
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    from cryptography import x509
+    import jwt
+    import boto3
+    import asyncpg
+    import aioredis
+    from kubernetes import client, config, watch
+    import requests
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class DRAuditCollector:
+        def __init__(self, config_path):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['audit']
+            
+            # Initialize clients
+            try:
+                config.load_incluster_config()
+            except:
+                config.load_kube_config()
+            
+            self.k8s_client = client.CoreV1Api()
+            self.s3_client = boto3.client('s3')
+            
+            # Audit state
+            self.collector_id = f"audit-collector-{uuid.uuid4().hex[:8]}"
+            self.start_time = None
+            self.signing_key = None
+            self.certificate = None
+            self.event_sequence = 0
+            self.last_log_hash = None
+            
+            # Load signing key and certificate
+            self._load_signing_materials()
+            
+        def _load_signing_materials(self):
+            """Load signing key and certificate"""
+            try:
+                # Load private key
+                with open('/etc/signing/tls.key', 'rb') as f:
+                    key_data = f.read()
+                    self.signing_key = load_pem_private_key(key_data, REDACTED_SECRET=None)
+                
+                # Load certificate
+                with open('/etc/signing/tls.crt', 'rb') as f:
+                    cert_data = f.read()
+                    self.certificate = x509.load_pem_x509_certificate(cert_data)
+                
+                logger.info("Signing materials loaded successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to load signing materials: {e}")
+                raise
+                
+        def emit_metric(self, metric_name, value, labels=None):
+            """Emit metric to Prometheus pushgateway"""
+            try:
+                if labels is None:
+                    labels = {}
+                    
+                labels.update({
+                    'collector_id': self.collector_id,
+                    'audit_type': 'dr-compliance'
+                })
+                
+                label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
+                metric_data = f"{metric_name}{{{label_str}}} {value}"
+                
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/compliance-audit/instance/dr-audit-collector",
+                    data=metric_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=10
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error emitting metric {metric_name}: {e}")
+                
+        def extract_operator_identity(self, event_data):
+            """Extract operator identity from event data"""
+            try:
+                # Try to get identity from various sources
+                identity_info = {
+                    'user_id': 'unknown',
+                    'user_name': 'unknown',
+                    'source': 'unknown',
+                    'authentication_method': 'unknown',
+                    'session_id': 'unknown'
+                }
+                
+                # Kubernetes context
+                if 'kubernetes' in event_data:
+                    k8s_data = event_data['kubernetes']
+                    if 'user' in k8s_data:
+                        identity_info['user_id'] = k8s_data['user'].get('uid', 'unknown')
+                        identity_info['user_name'] = k8s_data['user'].get('username', 'unknown')
+                        identity_info['source'] = 'kubernetes'
+                        identity_info['authentication_method'] = k8s_data['user'].get('auth_method', 'service_account')
+                
+                # Service account context
+                if 'service_account' in event_data:
+                    sa_data = event_data['service_account']
+                    identity_info['user_id'] = sa_data.get('uid', 'unknown')
+                    identity_info['user_name'] = f"system:serviceaccount:{sa_data.get('namespace', 'unknown')}:{sa_data.get('name', 'unknown')}"
+                    identity_info['source'] = 'service_account'
+                    identity_info['authentication_method'] = 'service_account_token'
+                
+                # Manual operator context
+                if 'operator' in event_data:
+                    op_data = event_data['operator']
+                    identity_info['user_id'] = op_data.get('id', 'unknown')
+                    identity_info['user_name'] = op_data.get('name', 'unknown')
+                    identity_info['source'] = 'manual'
+                    identity_info['authentication_method'] = op_data.get('auth_method', 'unknown')
+                    identity_info['session_id'] = op_data.get('session_id', 'unknown')
+                
+                return identity_info
+                
+            except Exception as e:
+                logger.error(f"Error extracting operator identity: {e}")
+                return {
+                    'user_id': 'error',
+                    'user_name': 'error',
+                    'source': 'error', 
+                    'authentication_method': 'error',
+                    'session_id': 'error'
+                }
+                
+        def create_audit_event(self, event_type, operator_identity, operator_reason, resource_data, result_data=None):
+            """Create a structured audit event"""
+            try:
+                self.event_sequence += 1
+                
+                # Base audit event structure
+                audit_event = {
+                    # Standard audit fields
+                    'audit_version': '1.0',
+                    'event_id': str(uuid.uuid4()),
+                    'sequence_number': self.event_sequence,
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'collector_id': self.collector_id,
+                    
+                    # Event classification
+                    'event_type': event_type,
+                    'category': self._get_event_category(event_type),
+                    'severity': self._get_event_severity(event_type, result_data),
+                    
+                    # Identity and authorization
+                    'operator_identity': operator_identity,
+                    'operator_reason': operator_reason,
+                    'authorization_context': self._get_authorization_context(),
+                    
+                    # Resource information
+                    'resource_identifiers': resource_data,
+                    'source_system': resource_data.get('source_system', 'unknown'),
+                    'target_system': resource_data.get('target_system', 'unknown'),
+                    
+                    # Operation details
+                    'operation_id': resource_data.get('operation_id', str(uuid.uuid4())),
+                    'parent_operation_id': resource_data.get('parent_operation_id'),
+                    'result_status': result_data.get('status', 'unknown') if result_data else 'in_progress',
+                    'result_details': result_data or {},
+                    
+                    # Compliance context
+                    'compliance_frameworks': ['soc2', 'iso27001', 'gdpr'],
+                    'data_classification': resource_data.get('data_classification', 'internal'),
+                    'retention_required': True,
+                    
+                    # Chain integrity
+                    'previous_log_hash': self.last_log_hash,
+                    'log_chain_position': self.event_sequence,
+                }
+                
+                # Calculate current log hash
+                event_json = json.dumps(audit_event, sort_keys=True)
+                current_hash = hashlib.sha256(event_json.encode()).hexdigest()
+                audit_event['log_hash'] = current_hash
+                self.last_log_hash = current_hash
+                
+                return audit_event
+                
+            except Exception as e:
+                logger.error(f"Error creating audit event: {e}")
+                return None
+                
+        def _get_event_category(self, event_type):
+            """Get event category for classification"""
+            categories = {
+                'backup_': 'data_protection',
+                'restore_': 'data_recovery',
+                'failover_': 'disaster_recovery',
+                'chaos_': 'resilience_testing',
+                'access_': 'access_control',
+                'compliance_': 'governance'
+            }
+            
+            for prefix, category in categories.items():
+                if event_type.startswith(prefix):
+                    return category
+            
+            return 'other'
+            
+        def _get_event_severity(self, event_type, result_data):
+            """Determine event severity"""
+            if result_data and result_data.get('status') == 'failed':
+                return 'high'
+            elif 'emergency' in event_type or 'critical' in event_type:
+                return 'critical'
+            elif 'failover' in event_type or 'restore' in event_type:
+                return 'medium'
+            else:
+                return 'low'
+                
+        def _get_authorization_context(self):
+            """Get current authorization context"""
+            return {
+                'cluster_name': os.getenv('CLUSTER_NAME', 'unknown'),
+                'namespace': os.getenv('POD_NAMESPACE', 'unknown'),
+                'rbac_permissions': ['audit:create', 'audit:read'],
+                'audit_scope': 'disaster_recovery'
+            }
+            
+        def sign_audit_event(self, audit_event):
+            """Sign audit event with private key"""
+            try:
+                # Create payload for signing
+                payload = {
+                    'event_id': audit_event['event_id'],
+                    'timestamp': audit_event['timestamp'],
+                    'event_type': audit_event['event_type'],
+                    'operator_identity': audit_event['operator_identity'],
+                    'resource_identifiers': audit_event['resource_identifiers'],
+                    'log_hash': audit_event['log_hash'],
+                    'sequence_number': audit_event['sequence_number']
+                }
+                
+                # Create JWT with signing
+                token = jwt.encode(
+                    payload,
+                    self.signing_key,
+                    algorithm='RS256',
+                    headers={
+                        'typ': 'JWT',
+                        'alg': 'RS256',
+                        'x5c': [base64.b64encode(self.certificate.public_bytes(serialization.Encoding.DER)).decode()]
+                    }
+                )
+                
+                # Add signature to audit event
+                audit_event['digital_signature'] = {
+                    'algorithm': 'RS256',
+                    'signature': token,
+                    'certificate_fingerprint': hashlib.sha256(
+                        self.certificate.public_bytes(serialization.Encoding.DER)
+                    ).hexdigest(),
+                    'signing_time': datetime.now(timezone.utc).isoformat()
+                }
+                
+                return audit_event
+                
+            except Exception as e:
+                logger.error(f"Error signing audit event: {e}")
+                return audit_event
+                
+        async def store_audit_event(self, signed_event):
+            """Store signed audit event in immutable storage"""
+            try:
+                # Generate storage key
+                timestamp = signed_event['timestamp']
+                event_date = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).strftime('%Y/%m/%d')
+                storage_key = f"{self.config['storage']['primary']['prefix']}{event_date}/{signed_event['event_id']}.json"
+                
+                # Convert to JSON
+                event_json = json.dumps(signed_event, indent=2, sort_keys=True)
+                
+                # Store in primary location
+                self.s3_client.put_object(
+                    Bucket=self.config['storage']['primary']['bucket'],
+                    Key=storage_key,
+                    Body=event_json,
+                    ContentType='application/json',
+                    ServerSideEncryption='AES256',
+                    Metadata={
+                        'event-type': signed_event['event_type'],
+                        'operator': signed_event['operator_identity']['user_name'],
+                        'sequence': str(signed_event['sequence_number']),
+                        'compliance': 'dr-audit'
+                    }
+                )
+                
+                # Store in backup location
+                backup_bucket = self.config['storage']['backup']['bucket']
+                self.s3_client.put_object(
+                    Bucket=backup_bucket,
+                    Key=storage_key,
+                    Body=event_json,
+                    ContentType='application/json',
+                    ServerSideEncryption='AES256'
+                )
+                
+                logger.info(f"Stored audit event {signed_event['event_id']} at {storage_key}")
+                
+                # Emit storage metrics
+                self.emit_metric('audit_events_stored_total', 1, {
+                    'event_type': signed_event['event_type'],
+                    'category': signed_event['category'],
+                    'severity': signed_event['severity']
+                })
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error storing audit event: {e}")
+                self.emit_metric('audit_storage_errors_total', 1, {
+                    'error_type': 'storage_failure'
+                })
+                return False
+                
+        async def watch_kubernetes_events(self):
+            """Watch Kubernetes events for DR operations"""
+            try:
+                w = watch.Watch()
+                
+                # Watch events in DR-related namespaces
+                for event in w.stream(
+                    self.k8s_client.list_event_for_all_namespaces,
+                    timeout_seconds=0
+                ):
+                    try:
+                        k8s_event = event['object']
+                        event_type = event['type']
+                        
+                        # Filter for DR-related events
+                        if self._is_dr_related_event(k8s_event):
+                            await self._process_kubernetes_event(k8s_event, event_type)
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing Kubernetes event: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error watching Kubernetes events: {e}")
+                
+        def _is_dr_related_event(self, k8s_event):
+            """Check if Kubernetes event is DR-related"""
+            dr_keywords = [
+                'backup', 'restore', 'failover', 'chaos', 
+                'disaster-recovery', 'compliance', 'validation'
+            ]
+            
+            event_text = f"{k8s_event.reason} {k8s_event.message}".lower()
+            namespace = k8s_event.namespace
+            
+            # Check if event contains DR keywords
+            if any(keyword in event_text for keyword in dr_keywords):
+                return True
+                
+            # Check if event is in DR-related namespaces
+            dr_namespaces = [
+                'backup-validation', 'chaos-testing', 'compliance-system',
+                'disaster-recovery', 'database', 'monitoring'
+            ]
+            
+            if namespace in dr_namespaces:
+                return True
+                
+            return False
+            
+        async def _process_kubernetes_event(self, k8s_event, event_type):
+            """Process a DR-related Kubernetes event"""
+            try:
+                # Extract operator identity from event
+                operator_identity = {
+                    'user_id': 'system',
+                    'user_name': 'kubernetes-system',
+                    'source': 'kubernetes',
+                    'authentication_method': 'service_account',
+                    'session_id': 'kubernetes-event'
+                }
+                
+                # Extract resource information
+                resource_data = {
+                    'source_system': 'kubernetes',
+                    'target_system': k8s_event.involved_object.name,
+                    'operation_id': f"k8s-{k8s_event.uid}",
+                    'namespace': k8s_event.namespace,
+                    'resource_type': k8s_event.involved_object.kind,
+                    'resource_name': k8s_event.involved_object.name,
+                    'event_reason': k8s_event.reason,
+                    'event_message': k8s_event.message
+                }
+                
+                # Determine audit event type
+                audit_event_type = self._map_k8s_event_to_audit_type(k8s_event)
+                
+                # Create and store audit event
+                audit_event = self.create_audit_event(
+                    event_type=audit_event_type,
+                    operator_identity=operator_identity,
+                    operator_reason=f"Kubernetes event: {k8s_event.reason}",
+                    resource_data=resource_data,
+                    result_data={'status': 'completed', 'message': k8s_event.message}
+                )
+                
+                if audit_event:
+                    signed_event = self.sign_audit_event(audit_event)
+                    await self.store_audit_event(signed_event)
+                    
+            except Exception as e:
+                logger.error(f"Error processing Kubernetes event: {e}")
+                
+        def _map_k8s_event_to_audit_type(self, k8s_event):
+            """Map Kubernetes event to audit event type"""
+            reason = k8s_event.reason.lower()
+            message = k8s_event.message.lower()
+            
+            # Map based on event reason and message
+            if 'backup' in reason or 'backup' in message:
+                if 'start' in message:
+                    return 'backup_started'
+                elif 'complet' in message or 'success' in message:
+                    return 'backup_completed'
+                elif 'fail' in message or 'error' in message:
+                    return 'backup_failed'
+                else:
+                    return 'backup_operation'
+                    
+            elif 'restore' in reason or 'restore' in message:
+                if 'start' in message:
+                    return 'restore_initiated'
+                elif 'complet' in message or 'success' in message:
+                    return 'restore_completed'
+                elif 'fail' in message or 'error' in message:
+                    return 'restore_failed'
+                else:
+                    return 'restore_operation'
+                    
+            elif 'failover' in reason or 'failover' in message:
+                return 'failover_triggered'
+                
+            elif 'chaos' in reason or 'chaos' in message:
+                return 'chaos_experiment_started'
+                
+            else:
+                return 'system_operation'
+                
+        async def process_webhook_events(self):
+            """Process webhook events from external systems"""
+            # This would be implemented as a webhook server
+            # For now, we'll simulate with log file watching
+            pass
+            
+        async def run_audit_collector(self):
+            """Run the main audit collection process"""
+            try:
+                self.start_time = datetime.now(timezone.utc)
+                logger.info(f"Starting DR audit collector: {self.collector_id}")
+                
+                # Emit collector start metrics
+                self.emit_metric('audit_collector_start_timestamp', int(time.time()))
+                self.emit_metric('audit_collector_status', 1, {'status': 'running'})
+                
+                # Start Kubernetes event watching
+                await self.watch_kubernetes_events()
+                
+            except Exception as e:
+                logger.error(f"Audit collector failed: {e}")
+                self.emit_metric('audit_collector_status', 0, {'status': 'failed'})
+                return False
+                
+        def generate_compliance_report(self, start_date, end_date):
+            """Generate compliance report for given date range"""
+            try:
+                # This would query stored audit events and generate compliance reports
+                # Implementation would depend on specific compliance requirements
+                pass
+            except Exception as e:
+                logger.error(f"Error generating compliance report: {e}")
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+        collector = DRAuditCollector(config_path)
+        
+        await collector.run_audit_collector()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+  audit-webhook.py: |
+    #!/usr/bin/env python3
+    """
+    DR Audit Webhook Server
+    Receives audit events from external systems and operators
+    """
+
+    from flask import Flask, request, jsonify
+    import json
+    import logging
+    import os
+    import yaml
+    from datetime import datetime, timezone
+    import asyncio
+    import threading
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    app = Flask(__name__)
+
+    # Load configuration
+    config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)['audit']
+
+    # Initialize audit collector (would be shared instance)
+    from audit_collector import DRAuditCollector
+    audit_collector = None
+
+    def init_collector():
+        global audit_collector
+        audit_collector = DRAuditCollector(config_path)
+
+    @app.route('/audit/event', methods=['POST'])
+    def receive_audit_event():
+        """Receive audit event from external system or operator"""
+        try:
+            event_data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['event_type', 'operator_identity', 'operator_reason', 'resource_data']
+            for field in required_fields:
+                if field not in event_data:
+                    return jsonify({'error': f'Missing required field: {field}'}), 400
+            
+            # Extract identity with additional context from request
+            operator_identity = event_data['operator_identity']
+            operator_identity.update({
+                'source_ip': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'unknown'),
+                'request_id': request.headers.get('X-Request-ID', 'unknown'),
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Create audit event
+            audit_event = audit_collector.create_audit_event(
+                event_type=event_data['event_type'],
+                operator_identity=operator_identity,
+                operator_reason=event_data['operator_reason'],
+                resource_data=event_data['resource_data'],
+                result_data=event_data.get('result_data')
+            )
+            
+            if audit_event:
+                # Sign and store event
+                signed_event = audit_collector.sign_audit_event(audit_event)
+                
+                # Store asynchronously
+                asyncio.create_task(audit_collector.store_audit_event(signed_event))
+                
+                return jsonify({
+                    'status': 'success',
+                    'event_id': audit_event['event_id'],
+                    'message': 'Audit event recorded'
+                }), 200
+            else:
+                return jsonify({'error': 'Failed to create audit event'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error processing audit webhook: {e}")
+            return jsonify({'error': 'Internal server error'}), 500
+
+    @app.route('/audit/health', methods=['GET'])
+    def health_check():
+        """Health check endpoint"""
+        return jsonify({'status': 'healthy', 'service': 'dr-audit-webhook'}), 200
+
+    if __name__ == '__main__':
+        init_collector()
+        app.run(host='0.0.0.0', port=8080, debug=False)
+
+---
+# Create compliance-system namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: compliance-system
+  labels:
+    name: compliance-system
+    compliance: enabled
+
+---
+# DR Audit Collector Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dr-audit-collector
+  namespace: compliance-system
+  labels:
+    app: dr-audit-collector
+    component: compliance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dr-audit-collector
+  template:
+    metadata:
+      labels:
+        app: dr-audit-collector
+        component: compliance
+      annotations:
+        audit.compliance/type: 'dr-audit-collector'
+    spec:
+      serviceAccountName: dr-audit-collector
+      containers:
+        - name: audit-collector
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir kubernetes pyyaml asyncpg aioredis boto3 cryptography pyjwt requests flask
+              exec python /scripts/audit-collector.py
+          env:
+            - name: CONFIG_PATH
+              value: '/etc/config/config.yaml'
+            - name: CLUSTER_NAME
+              value: 'pake-production'
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: aws-credentials
+          ports:
+            - name: webhook
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: scripts
+              mountPath: /scripts
+            - name: signing-certs
+              mountPath: /etc/signing
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /audit/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /audit/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: dr-audit-config
+        - name: scripts
+          configMap:
+            name: dr-audit-config
+            defaultMode: 0755
+        - name: signing-certs
+          secret:
+            secretName: audit-signing-certs
+            defaultMode: 0600
+
+---
+# DR Audit Webhook Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: dr-audit-webhook
+  namespace: compliance-system
+  labels:
+    app: dr-audit-collector
+    component: webhook
+spec:
+  selector:
+    app: dr-audit-collector
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
+
+---
+# ServiceAccount and RBAC for DR Audit Collector
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dr-audit-collector
+  namespace: compliance-system
+  labels:
+    app: dr-audit-collector
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dr-audit-collector
+  labels:
+    app: dr-audit-collector
+rules:
+  # Event watching across all namespaces
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['get', 'list', 'watch']
+  # Pod and service information for context
+  - apiGroups: ['']
+    resources: ['pods', 'services', 'configmaps']
+    verbs: ['get', 'list']
+  # Job and CronJob information for DR operations
+  - apiGroups: ['batch']
+    resources: ['jobs', 'cronjobs']
+    verbs: ['get', 'list', 'watch']
+  # Deployment information for DR services
+  - apiGroups: ['apps']
+    resources: ['deployments', 'statefulsets']
+    verbs: ['get', 'list']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dr-audit-collector
+  labels:
+    app: dr-audit-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dr-audit-collector
+subjects:
+  - kind: ServiceAccount
+    name: dr-audit-collector
+    namespace: compliance-system
+
+---
+# Audit Signing Certificates Secret (template)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: audit-signing-certs
+  namespace: compliance-system
+  labels:
+    app: dr-audit-collector
+type: kubernetes.io/tls
+data:
+  # Base64 encoded certificate and private key for audit log signing
+  # Generate with: openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.crt -days 365 -nodes
+  # Then: kubectl create secret tls audit-signing-certs --cert=tls.crt --key=tls.key -n compliance-system
+  tls.crt: ''
+  tls.key: ''

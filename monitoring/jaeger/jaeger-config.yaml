@@ -1,0 +1,137 @@
+# Jaeger configuration for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  namespace: monitoring
+data:
+  jaeger.yaml: |
+    service:
+      name: jaeger
+      version: 1.0.0
+    
+    sampling:
+      type: const
+      param: 1  # Sample 100% of traces for development
+    
+    reporter:
+      logSpans: true
+      localAgentHostPort: jaeger-agent:6831
+    
+    headers:
+      traceContextHeaderName: uber-trace-id
+      baggageHeaderPrefix: uberctx-
+    
+    baggage_restrictions:
+      denyBaggageOnInitializationFailure: false
+      hostPort: ""
+      refreshInterval: 60s
+    
+    throttler:
+      hostPort: ""
+      synchronousInitialization: false
+      initialBalance: 100
+      creditsPerSecond: 10.0
+    
+    # Storage configuration
+    storage:
+      type: elasticsearch
+      elasticsearch:
+        serverURLs: http://elasticsearch:9200
+        username: ""
+        REDACTED_SECRET: ""
+        indexPrefix: jaeger
+        tagsAsFields:
+          all: false
+          config: []
+        createIndexTemplate: true
+        useILM: true
+        ilm:
+          policyName: jaeger-policy
+          rolloverAge: 7d
+          rolloverSize: 50GB
+          rolloverDocs: 10000000
+    
+    # Query configuration
+    query:
+      port: 16686
+      basePath: /jaeger
+      staticAssets: /jaeger-ui/build/
+      uiConfig:
+        dependencies:
+          menuEnabled: true
+          dagMaxServicesLen: 100
+        search:
+          maxLookback:
+            label: "Max Lookback"
+            options:
+              - value: 0h
+                text: "Since the beginning"
+              - value: 1h
+                text: "Last hour"
+              - value: 6h
+                text: "Last 6 hours"
+              - value: 12h
+                text: "Last 12 hours"
+              - value: 24h
+                text: "Last 24 hours"
+              - value: 48h
+                text: "Last 48 hours"
+              - value: 72h
+                text: "Last 72 hours"
+              - value: 168h
+                text: "Last week"
+          maxLimit: 1500
+        archive:
+          enabled: false
+        tracking:
+          gaID: ""
+        menu:
+          - label: "About Jaeger"
+            items:
+              - label: "Documentation"
+                url: "https://www.jaegertracing.io/docs/latest/"
+              - label: "GitHub"
+                url: "https://github.com/jaegertracing/jaeger"
+              - label: "Blog"
+                url: "https://medium.com/jaegertracing"
+    
+    # Collector configuration
+    collector:
+      zipkin:
+        httpPort: 9411
+      otlp:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+      jaeger:
+        grpc:
+          endpoint: 0.0.0.0:14250
+        thrift:
+          http:
+            endpoint: 0.0.0.0:14268
+        thrift-compact:
+          endpoint: 0.0.0.0:6831
+        thrift-binary:
+          endpoint: 0.0.0.0:6832
+    
+    # Agent configuration
+    agent:
+      httpServer:
+        hostPort: 0.0.0.0:5778
+      grpcServer:
+        hostPort: 0.0.0.0:14250
+      zipkinThriftHTTPPort: 0
+      compactThriftPort: 6831
+      binaryThriftPort: 6832
+      sampling:
+        strategies:
+          - type: const
+            param: 1
+        samplingRefreshInterval: 60s
+      reporter:
+        queueSize: 100
+        bufferFlushInterval: 1s
+        logSpans: true
+        localAgentHostPort: jaeger-agent:6831

@@ -1,0 +1,170 @@
+# PAKE System - Staging Environment Values
+
+# Override default values for staging environment
+replicaCount: 2
+
+image:
+  tag: "staging"
+
+# Environment configuration
+env:
+  - name: ENVIRONMENT
+    value: "staging"
+  - name: LOG_LEVEL
+    value: "DEBUG"
+  - name: ENABLE_METRICS
+    value: "true"
+  - name: DEBUG
+    value: "true"
+
+# Resource configuration for staging
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Autoscaling for staging
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 85
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+
+# Ingress for staging
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: staging.pake-system.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Database configuration for staging
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "staging-postgres-REDACTED_SECRET"
+    username: "pake"
+    REDACTED_SECRET: "staging-pake-REDACTED_SECRET"
+    database: "pake_system_staging"
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Redis configuration for staging
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    REDACTED_SECRET: "staging-redis-REDACTED_SECRET"
+  master:
+    persistence:
+      enabled: true
+      size: 4Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 125m
+        memory: 128Mi
+
+# Monitoring for staging
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+        size: 4Gi
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+  grafana:
+    enabled: true
+    adminPassword: "staging-grafana-REDACTED_SECRET"
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 125m
+        memory: 128Mi
+
+# Network policies for staging
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+
+# Pod disruption budget for staging
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Health checks for staging
+healthCheck:
+  enabled: true
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Development features enabled for staging
+development:
+  enabled: true
+  hotReload: false
+  debugMode: true

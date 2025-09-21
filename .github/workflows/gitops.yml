@@ -1,0 +1,256 @@
+name: GitOps Deployment
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/gitops.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARGOCD_APP_NAME: "pake-system"
+  ARGOCD_SERVER: "argocd.pake-system.com"
+
+jobs:
+  update-gitops:
+    name: 'Update GitOps Configuration'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set environment variables
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+            echo "NAMESPACE=pake-system-prod" >> $GITHUB_ENV
+            echo "VALUES_FILE=values-production.yaml" >> $GITHUB_ENV
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+            echo "NAMESPACE=pake-system-staging" >> $GITHUB_ENV
+            echo "VALUES_FILE=values-staging.yaml" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_ENV
+            echo "NAMESPACE=pake-system-${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_ENV
+            echo "VALUES_FILE=values-${{ github.event.inputs.environment || 'staging' }}.yaml" >> $GITHUB_ENV
+          fi
+
+      - name: Update image tag in values
+        run: |
+          # Get the latest commit SHA for image tag
+          IMAGE_TAG=${GITHUB_SHA:0:7}
+          
+          # Update the image tag in the appropriate values file
+          if [ -f "k8s/helm/pake-system/$VALUES_FILE" ]; then
+            sed -i "s/tag: \".*\"/tag: \"$IMAGE_TAG\"/" k8s/helm/pake-system/$VALUES_FILE
+            echo "Updated image tag to $IMAGE_TAG in $VALUES_FILE"
+          else
+            echo "Values file $VALUES_FILE not found, using default values.yaml"
+            sed -i "s/tag: \".*\"/tag: \"$IMAGE_TAG\"/" k8s/helm/pake-system/values.yaml
+          fi
+
+      - name: Update ArgoCD application
+        run: |
+          # Update the ArgoCD application manifest
+          cat > k8s/argocd/applications/pake-system-$ENVIRONMENT.yaml << EOF
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: pake-system-$ENVIRONMENT
+            namespace: argocd
+            finalizers:
+              - resources-finalizer.argocd.argoproj.io
+          spec:
+            project: default
+            source:
+              repoURL: https://github.com/${{ github.repository }}
+              targetRevision: ${{ github.ref_name }}
+              path: k8s/helm/pake-system
+              helm:
+                valueFiles:
+                  - values.yaml
+                  - $VALUES_FILE
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: $NAMESPACE
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+              syncOptions:
+                - CreateNamespace=true
+                - PrunePropagationPolicy=foreground
+                - PruneLast=true
+              retry:
+                limit: 5
+                backoff:
+                  duration: 5s
+                  factor: 2
+                  maxDuration: 3m
+          EOF
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add k8s/
+          git commit -m "Update GitOps configuration for $ENVIRONMENT environment
+
+          - Updated image tag to ${{ github.sha }}
+          - Updated ArgoCD application manifest
+          - Environment: $ENVIRONMENT
+          - Namespace: $NAMESPACE" || echo "No changes to commit"
+          git push
+
+  deploy-staging:
+    name: 'Deploy to Staging'
+    runs-on: ubuntu-latest
+    needs: update-gitops
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Login to ArgoCD
+        run: |
+          argocd login $ARGOCD_SERVER --username admin --REDACTED_SECRET ${{ secrets.ARGOCD_PASSWORD }} --insecure
+
+      - name: Sync ArgoCD application
+        run: |
+          argocd app sync pake-system-staging --force
+          argocd app wait pake-system-staging --health --timeout 600
+
+      - name: Get application status
+        run: |
+          argocd app get pake-system-staging
+
+  deploy-production:
+    name: 'Deploy to Production'
+    runs-on: ubuntu-latest
+    needs: update-gitops
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Login to ArgoCD
+        run: |
+          argocd login $ARGOCD_SERVER --username admin --REDACTED_SECRET ${{ secrets.ARGOCD_PASSWORD }} --insecure
+
+      - name: Sync ArgoCD application
+        run: |
+          argocd app sync pake-system-production --force
+          argocd app wait pake-system-production --health --timeout 600
+
+      - name: Get application status
+        run: |
+          argocd app get pake-system-production
+
+      - name: Notify deployment success
+        run: |
+          echo "🚀 Production deployment completed successfully!"
+          echo "Environment: production"
+          echo "Image tag: ${{ github.sha }}"
+          echo "Namespace: pake-system-prod"
+
+  rollback:
+    name: 'Rollback Deployment'
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Login to ArgoCD
+        run: |
+          argocd login $ARGOCD_SERVER --username admin --REDACTED_SECRET ${{ secrets.ARGOCD_PASSWORD }} --insecure
+
+      - name: Rollback application
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            argocd app rollback pake-system-production
+          else
+            argocd app rollback pake-system-staging
+          fi
+
+      - name: Notify rollback
+        run: |
+          echo "⚠️ Deployment failed, rollback initiated"
+          echo "Please check the application logs and fix the issues"

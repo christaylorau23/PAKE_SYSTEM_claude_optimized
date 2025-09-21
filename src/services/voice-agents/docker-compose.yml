@@ -1,0 +1,95 @@
+# PAKE System Voice Agents Service - Docker Compose Configuration
+version: '3.8'
+
+services:
+  voice-agents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pake-system/voice-agents:latest
+    container_name: pake-voice-agents
+    restart: unless-stopped
+    ports:
+      - '9000:9000'
+    environment:
+      - NODE_ENV=production
+      - VOICE_AGENT_PORT=9000
+      - LOG_LEVEL=info
+      - REDIS_URL=redis://redis:6379
+      # Vapi.ai Configuration (set via .env file)
+      - VAPI_API_KEY=${VAPI_API_KEY}
+      - VAPI_API_ENDPOINT=${VAPI_API_ENDPOINT:-https://api.vapi.ai}
+      - DEFAULT_VOICE_ID=${DEFAULT_VOICE_ID:-en-US-Standard-A}
+      - DEFAULT_KNOWLEDGE_BASE_ID=${DEFAULT_KNOWLEDGE_BASE_ID:-default}
+      # Voice Quality Settings
+      - VOICE_RESPONSE_TIMEOUT=${VOICE_RESPONSE_TIMEOUT:-5000}
+      - VOICE_STREAMING_LATENCY=${VOICE_STREAMING_LATENCY:-3}
+      - VOICE_QUALITY_THRESHOLD=${VOICE_QUALITY_THRESHOLD:-0.8}
+      - FALLBACK_PROVIDER=${FALLBACK_PROVIDER:-elevenlabs}
+      # Knowledge Integration
+      - KNOWLEDGE_CONTEXT_DEPTH=${KNOWLEDGE_CONTEXT_DEPTH:-5}
+      - KNOWLEDGE_CONFIDENCE_THRESHOLD=${KNOWLEDGE_CONFIDENCE_THRESHOLD:-0.7}
+      - REAL_TIME_SEARCH_ENABLED=${REAL_TIME_SEARCH_ENABLED:-true}
+      # Circuit Breaker Settings
+      - CIRCUIT_BREAKER_FAILURE_THRESHOLD=${CIRCUIT_BREAKER_FAILURE_THRESHOLD:-5}
+      - CIRCUIT_BREAKER_RESET_TIMEOUT=${CIRCUIT_BREAKER_RESET_TIMEOUT:-60000}
+      - CIRCUIT_BREAKER_MONITOR_WINDOW=${CIRCUIT_BREAKER_MONITOR_WINDOW:-60000}
+      # Conversation Management
+      - CONVERSATION_MEMORY_TTL=${CONVERSATION_MEMORY_TTL:-3600}
+      # CORS Configuration
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+    volumes:
+      - voice-logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - pake-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "const http = require('http'); const req = http.request({hostname: 'localhost', port: 9000, path: '/health'}, res => process.exit(res.statusCode === 200 ? 0 : 1)); req.end();",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - 'pake.service=voice-agents'
+      - 'pake.version=1.0.0'
+      - 'pake.component=ai-framework'
+
+  redis:
+    image: redis:7-alpine
+    container_name: pake-voice-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - pake-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    labels:
+      - 'pake.service=redis'
+      - 'pake.component=voice-agents-cache'
+
+volumes:
+  voice-logs:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  pake-network:
+    driver: bridge
+    labels:
+      - 'pake.network=voice-agents'

@@ -1,0 +1,870 @@
+/**
+ * Role-Based Access Control Service
+ * Handles user roles, permissions, and access control using Casbin
+ */
+
+import { newEnforcer, Enforcer } from 'casbin';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { Role, Permission, User, PermissionCheck } from '../types';
+import { RedisService } from './RedisService';
+import { Logger } from '../utils/logger';
+
+export class RBACService {
+  private readonly logger = new Logger('RBACService');
+  private readonly redis: RedisService;
+  private enforcer: Enforcer | null = null;
+  private readonly modelPath: string;
+
+  constructor(redis: RedisService) {
+    this.redis = redis;
+    this.modelPath = path.join(__dirname, '../config/rbac_model.conf');
+  }
+
+  /**
+   * Initialize RBAC system
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Create Casbin enforcer
+      this.enforcer = await newEnforcer(this.modelPath);
+
+      // Load default roles and permissions
+      await this.createDefaultRolesAndPermissions();
+
+      this.logger.info('RBAC system initialized successfully');
+    } catch (error) {
+      this.logger.error('Failed to initialize RBAC system', {
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new role
+   */
+  async createRole(
+    name: string,
+    description: string,
+    permissions: string[] = []
+  ): Promise<Role> {
+    try {
+      const roleId = uuidv4();
+      const now = new Date();
+
+      const role: Role = {
+        id: roleId,
+        name: name.toLowerCase(),
+        description,
+        permissions: [],
+        isSystem: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      // Store role
+      await this.redis.set(`role:${roleId}`, JSON.stringify(role));
+      await this.redis.set(`role_by_name:${name.toLowerCase()}`, roleId);
+
+      // Add role to Casbin
+      if (this.enforcer) {
+        await this.enforcer.addGroupingPolicy(
+          name.toLowerCase(),
+          name.toLowerCase()
+        );
+      }
+
+      // Add permissions to role
+      if (permissions.length > 0) {
+        await this.addPermissionsToRole(roleId, permissions);
+      }
+
+      this.logger.info('Role created successfully', { roleId, name });
+      return role;
+    } catch (error) {
+      this.logger.error('Failed to create role', {
+        name,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get role by ID
+   */
+  async getRole(roleId: string): Promise<Role | null> {
+    try {
+      const roleData = await this.redis.get(`role:${roleId}`);
+      if (!roleData) {
+        return null;
+      }
+
+      const role: Role = JSON.parse(roleData);
+
+      // Load permissions
+      role.permissions = await this.getRolePermissions(roleId);
+
+      return role;
+    } catch (error) {
+      this.logger.error('Failed to get role', { roleId, error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * Get role by name
+   */
+  async getRoleByName(name: string): Promise<Role | null> {
+    try {
+      const roleId = await this.redis.get(`role_by_name:${name.toLowerCase()}`);
+      if (!roleId) {
+        return null;
+      }
+
+      return await this.getRole(roleId);
+    } catch (error) {
+      this.logger.error('Failed to get role by name', {
+        name,
+        error: error.message,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * List all roles
+   */
+  async listRoles(): Promise<Role[]> {
+    try {
+      const roleKeys = await this.redis.keys('role:*');
+      const roles: Role[] = [];
+
+      for (const key of roleKeys) {
+        if (!key.includes('role_by_name')) {
+          const roleData = await this.redis.get(key);
+          if (roleData) {
+            const role: Role = JSON.parse(roleData);
+            role.permissions = await this.getRolePermissions(role.id);
+            roles.push(role);
+          }
+        }
+      }
+
+      return roles.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      this.logger.error('Failed to list roles', { error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * Update role
+   */
+  async updateRole(
+    roleId: string,
+    updates: Partial<Omit<Role, 'id' | 'createdAt'>>
+  ): Promise<Role | null> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return null;
+      }
+
+      const updatedRole: Role = {
+        ...role,
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      await this.redis.set(`role:${roleId}`, JSON.stringify(updatedRole));
+
+      // Update name index if name changed
+      if (updates.name && updates.name !== role.name) {
+        await this.redis.del(`role_by_name:${role.name}`);
+        await this.redis.set(
+          `role_by_name:${updates.name.toLowerCase()}`,
+          roleId
+        );
+      }
+
+      this.logger.info('Role updated successfully', { roleId });
+      return updatedRole;
+    } catch (error) {
+      this.logger.error('Failed to update role', {
+        roleId,
+        error: error.message,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Delete role
+   */
+  async deleteRole(roleId: string): Promise<boolean> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return false;
+      }
+
+      if (role.isSystem) {
+        throw new Error('Cannot delete system role');
+      }
+
+      // Remove role assignments from users
+      await this.removeRoleFromAllUsers(roleId);
+
+      // Remove from Casbin
+      if (this.enforcer) {
+        await this.enforcer.removeFilteredGroupingPolicy(0, role.name);
+        await this.enforcer.removeFilteredPolicy(0, role.name);
+      }
+
+      // Delete role data
+      await this.redis.del(`role:${roleId}`);
+      await this.redis.del(`role_by_name:${role.name}`);
+
+      this.logger.info('Role deleted successfully', {
+        roleId,
+        name: role.name,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to delete role', {
+        roleId,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Create a new permission
+   */
+  async createPermission(
+    name: string,
+    resource: string,
+    action: string,
+    description: string
+  ): Promise<Permission> {
+    try {
+      const permissionId = uuidv4();
+
+      const permission: Permission = {
+        id: permissionId,
+        name: name.toLowerCase(),
+        resource: resource.toLowerCase(),
+        action: action.toLowerCase(),
+        description,
+      };
+
+      await this.redis.set(
+        `permission:${permissionId}`,
+        JSON.stringify(permission)
+      );
+      await this.redis.set(
+        `permission_by_name:${name.toLowerCase()}`,
+        permissionId
+      );
+
+      this.logger.info('Permission created successfully', {
+        permissionId,
+        name,
+        resource,
+        action,
+      });
+      return permission;
+    } catch (error) {
+      this.logger.error('Failed to create permission', {
+        name,
+        resource,
+        action,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get permission by ID
+   */
+  async getPermission(permissionId: string): Promise<Permission | null> {
+    try {
+      const permissionData = await this.redis.get(`permission:${permissionId}`);
+      if (!permissionData) {
+        return null;
+      }
+
+      return JSON.parse(permissionData);
+    } catch (error) {
+      this.logger.error('Failed to get permission', {
+        permissionId,
+        error: error.message,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * List all permissions
+   */
+  async listPermissions(): Promise<Permission[]> {
+    try {
+      const permissionKeys = await this.redis.keys('permission:*');
+      const permissions: Permission[] = [];
+
+      for (const key of permissionKeys) {
+        if (!key.includes('permission_by_name')) {
+          const permissionData = await this.redis.get(key);
+          if (permissionData) {
+            permissions.push(JSON.parse(permissionData));
+          }
+        }
+      }
+
+      return permissions.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      this.logger.error('Failed to list permissions', { error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * Add permissions to role
+   */
+  async addPermissionsToRole(
+    roleId: string,
+    permissionNames: string[]
+  ): Promise<boolean> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return false;
+      }
+
+      for (const permissionName of permissionNames) {
+        const permissionId = await this.redis.get(
+          `permission_by_name:${permissionName.toLowerCase()}`
+        );
+        if (permissionId) {
+          const permission = await this.getPermission(permissionId);
+          if (permission && this.enforcer) {
+            await this.enforcer.addPolicy(
+              role.name,
+              permission.resource,
+              permission.action
+            );
+          }
+        }
+      }
+
+      this.logger.info('Permissions added to role', {
+        roleId,
+        permissions: permissionNames,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to add permissions to role', {
+        roleId,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Remove permissions from role
+   */
+  async removePermissionsFromRole(
+    roleId: string,
+    permissionNames: string[]
+  ): Promise<boolean> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return false;
+      }
+
+      for (const permissionName of permissionNames) {
+        const permissionId = await this.redis.get(
+          `permission_by_name:${permissionName.toLowerCase()}`
+        );
+        if (permissionId) {
+          const permission = await this.getPermission(permissionId);
+          if (permission && this.enforcer) {
+            await this.enforcer.removePolicy(
+              role.name,
+              permission.resource,
+              permission.action
+            );
+          }
+        }
+      }
+
+      this.logger.info('Permissions removed from role', {
+        roleId,
+        permissions: permissionNames,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to remove permissions from role', {
+        roleId,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get permissions for a role
+   */
+  async getRolePermissions(roleId: string): Promise<Permission[]> {
+    try {
+      const role = await this.redis.get(`role:${roleId}`);
+      if (!role) {
+        return [];
+      }
+
+      const roleName = JSON.parse(role).name;
+
+      if (!this.enforcer) {
+        return [];
+      }
+
+      const policies = await this.enforcer.getPermissionsForUser(roleName);
+      const permissions: Permission[] = [];
+
+      for (const policy of policies) {
+        const [, resource, action] = policy;
+
+        // Find permission by resource and action
+        const allPermissions = await this.listPermissions();
+        const permission = allPermissions.find(
+          p => p.resource === resource && p.action === action
+        );
+
+        if (permission) {
+          permissions.push(permission);
+        }
+      }
+
+      return permissions;
+    } catch (error) {
+      this.logger.error('Failed to get role permissions', {
+        roleId,
+        error: error.message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Assign role to user
+   */
+  async assignRoleToUser(userId: string, roleId: string): Promise<boolean> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return false;
+      }
+
+      // Add to user's roles in Redis
+      await this.redis.sadd(`user_roles:${userId}`, roleId);
+
+      // Add to Casbin
+      if (this.enforcer) {
+        await this.enforcer.addGroupingPolicy(userId, role.name);
+      }
+
+      this.logger.info('Role assigned to user', {
+        userId,
+        roleId,
+        roleName: role.name,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to assign role to user', {
+        userId,
+        roleId,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Remove role from user
+   */
+  async removeRoleFromUser(userId: string, roleId: string): Promise<boolean> {
+    try {
+      const role = await this.getRole(roleId);
+      if (!role) {
+        return false;
+      }
+
+      // Remove from user's roles in Redis
+      await this.redis.srem(`user_roles:${userId}`, roleId);
+
+      // Remove from Casbin
+      if (this.enforcer) {
+        await this.enforcer.removeGroupingPolicy(userId, role.name);
+      }
+
+      this.logger.info('Role removed from user', {
+        userId,
+        roleId,
+        roleName: role.name,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to remove role from user', {
+        userId,
+        roleId,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get user roles
+   */
+  async getUserRoles(userId: string): Promise<Role[]> {
+    try {
+      const roleIds = await this.redis.smembers(`user_roles:${userId}`);
+      const roles: Role[] = [];
+
+      for (const roleId of roleIds) {
+        const role = await this.getRole(roleId);
+        if (role) {
+          roles.push(role);
+        }
+      }
+
+      return roles;
+    } catch (error) {
+      this.logger.error('Failed to get user roles', {
+        userId,
+        error: error.message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Get user permissions (aggregated from all roles)
+   */
+  async getUserPermissions(userId: string): Promise<Permission[]> {
+    try {
+      const roles = await this.getUserRoles(userId);
+      const permissionMap = new Map<string, Permission>();
+
+      for (const role of roles) {
+        const rolePermissions = await this.getRolePermissions(role.id);
+        for (const permission of rolePermissions) {
+          permissionMap.set(permission.id, permission);
+        }
+      }
+
+      return Array.from(permissionMap.values());
+    } catch (error) {
+      this.logger.error('Failed to get user permissions', {
+        userId,
+        error: error.message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Check if user has permission
+   */
+  async hasPermission(
+    userId: string,
+    resource: string,
+    action: string
+  ): Promise<boolean> {
+    try {
+      if (!this.enforcer) {
+        return false;
+      }
+
+      return await this.enforcer.enforce(
+        userId,
+        resource.toLowerCase(),
+        action.toLowerCase()
+      );
+    } catch (error) {
+      this.logger.error('Permission check failed', {
+        userId,
+        resource,
+        action,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Check multiple permissions
+   */
+  async hasPermissions(
+    userId: string,
+    checks: PermissionCheck[]
+  ): Promise<boolean[]> {
+    const results: boolean[] = [];
+
+    for (const check of checks) {
+      const hasPermission = await this.hasPermission(
+        userId,
+        check.resource,
+        check.action
+      );
+      results.push(hasPermission);
+    }
+
+    return results;
+  }
+
+  /**
+   * Check if user has any of the specified roles
+   */
+  async hasAnyRole(userId: string, roleNames: string[]): Promise<boolean> {
+    try {
+      const userRoles = await this.getUserRoles(userId);
+      const userRoleNames = userRoles.map(r => r.name.toLowerCase());
+
+      return roleNames.some(roleName =>
+        userRoleNames.includes(roleName.toLowerCase())
+      );
+    } catch (error) {
+      this.logger.error('Role check failed', {
+        userId,
+        roles: roleNames,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Create default roles and permissions
+   */
+  private async createDefaultRolesAndPermissions(): Promise<void> {
+    try {
+      // Create default permissions
+      const defaultPermissions = [
+        // User management
+        {
+          name: 'user.read',
+          resource: 'user',
+          action: 'read',
+          description: 'View user information',
+        },
+        {
+          name: 'user.write',
+          resource: 'user',
+          action: 'write',
+          description: 'Create and update users',
+        },
+        {
+          name: 'user.delete',
+          resource: 'user',
+          action: 'delete',
+          description: 'Delete users',
+        },
+
+        // Role management
+        {
+          name: 'role.read',
+          resource: 'role',
+          action: 'read',
+          description: 'View roles',
+        },
+        {
+          name: 'role.write',
+          resource: 'role',
+          action: 'write',
+          description: 'Create and update roles',
+        },
+        {
+          name: 'role.delete',
+          resource: 'role',
+          action: 'delete',
+          description: 'Delete roles',
+        },
+
+        // Knowledge vault
+        {
+          name: 'vault.read',
+          resource: 'vault',
+          action: 'read',
+          description: 'Read knowledge vault',
+        },
+        {
+          name: 'vault.write',
+          resource: 'vault',
+          action: 'write',
+          description: 'Write to knowledge vault',
+        },
+        {
+          name: 'vault.admin',
+          resource: 'vault',
+          action: 'admin',
+          description: process.env.UNKNOWN,
+        },
+
+        // Analytics
+        {
+          name: 'analytics.read',
+          resource: 'analytics',
+          action: 'read',
+          description: 'View analytics',
+        },
+        {
+          name: 'analytics.admin',
+          resource: 'analytics',
+          action: 'admin',
+          description: process.env.UNKNOWN,
+        },
+
+        // System
+        {
+          name: 'system.admin',
+          resource: 'system',
+          action: 'admin',
+          description: process.env.UNKNOWN,
+        },
+        {
+          name: 'audit.read',
+          resource: 'audit',
+          action: 'read',
+          description: 'View audit logs',
+        },
+      ];
+
+      for (const perm of defaultPermissions) {
+        const existingId = await this.redis.get(
+          `permission_by_name:${perm.name}`
+        );
+        if (!existingId) {
+          await this.createPermission(
+            perm.name,
+            perm.resource,
+            perm.action,
+            perm.description
+          );
+        }
+      }
+
+      // Create default roles
+      const defaultRoles = [
+        {
+          name: process.env.UNKNOWN,
+          description: 'System administrator with full access',
+          permissions: [
+            'user.read',
+            'user.write',
+            'user.delete',
+            'role.read',
+            'role.write',
+            'role.delete',
+            'vault.read',
+            'vault.write',
+            'vault.admin',
+            'analytics.read',
+            'analytics.admin',
+            'system.admin',
+            'audit.read',
+          ],
+          isSystem: true,
+        },
+        {
+          name: 'user',
+          description: 'Standard user with basic access',
+          permissions: ['vault.read', 'vault.write', 'analytics.read'],
+          isSystem: true,
+        },
+        {
+          name: 'viewer',
+          description: 'Read-only access',
+          permissions: ['vault.read', 'analytics.read'],
+          isSystem: true,
+        },
+      ];
+
+      for (const roleData of defaultRoles) {
+        const existingRole = await this.getRoleByName(roleData.name);
+        if (!existingRole) {
+          const role = await this.createRole(
+            roleData.name,
+            roleData.description,
+            roleData.permissions
+          );
+
+          // Mark as system role
+          const updatedRole = { ...role, isSystem: roleData.isSystem };
+          await this.redis.set(`role:${role.id}`, JSON.stringify(updatedRole));
+        }
+      }
+
+      this.logger.info('Default roles and permissions created');
+    } catch (error) {
+      this.logger.error('Failed to create default roles and permissions', {
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove role from all users
+   */
+  private async removeRoleFromAllUsers(roleId: string): Promise<void> {
+    try {
+      const userRoleKeys = await this.redis.keys('user_roles:*');
+
+      for (const key of userRoleKeys) {
+        await this.redis.srem(key, roleId);
+      }
+    } catch (error) {
+      this.logger.error('Failed to remove role from all users', {
+        roleId,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get RBAC statistics
+   */
+  async getStats(): Promise<{
+    totalRoles: number;
+    totalPermissions: number;
+    systemRoles: number;
+    customRoles: number;
+  }> {
+    try {
+      const roles = await this.listRoles();
+      const permissions = await this.listPermissions();
+
+      return {
+        totalRoles: roles.length,
+        totalPermissions: permissions.length,
+        systemRoles: roles.filter(r => r.isSystem).length,
+        customRoles: roles.filter(r => !r.isSystem).length,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get RBAC stats', { error: error.message });
+      return {
+        totalRoles: 0,
+        totalPermissions: 0,
+        systemRoles: 0,
+        customRoles: 0,
+      };
+    }
+  }
+}

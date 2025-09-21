@@ -1,0 +1,948 @@
+# Disaster Recovery Metrics Exporter for PAKE System
+# Comprehensive metrics collection for replication, snapshots, and object sync
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-metrics-exporter-config
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+data:
+  config.yaml: |
+    exporter:
+      # Collection intervals
+      intervals:
+        replication_lag: 30      # 30 seconds
+        snapshot_status: 300     # 5 minutes
+        export_status: 600       # 10 minutes
+        object_sync_lag: 120     # 2 minutes
+        
+      # Database connections
+      databases:
+        postgresql:
+          primary_host: "pake-postgresql-primary.database.svc.cluster.local"
+          replica_hosts:
+            - "pake-postgresql-replica-eu.database.svc.cluster.local"
+            - "pake-postgresql-replica-ap.database.svc.cluster.local"
+          port: 5432
+          user: "postgres"
+          database: "postgres"
+          
+        redis:
+          sentinel_hosts:
+            - "redis-sentinel-0.database.svc.cluster.local:26379"
+            - "redis-sentinel-1.database.svc.cluster.local:26379"
+            - "redis-sentinel-2.database.svc.cluster.local:26379"
+          master_name: "pake-redis-master"
+          
+      # Vector database
+      chromadb:
+        primary_url: "http://chromadb.database.svc.cluster.local:8000"
+        replica_urls:
+          - "http://chromadb-replica-eu.database.svc.cluster.local:8000"
+          - "http://chromadb-replica-ap.database.svc.cluster.local:8000"
+          
+      # Object storage
+      object_storage:
+        primary_bucket: "pake-storage-primary"
+        primary_region: "us-east-1"
+        targets:
+          secondary:
+            bucket: "pake-storage-eu"
+            region: "eu-west-1"
+          tertiary:
+            bucket: "pake-storage-ap"
+            region: "ap-southeast-1"
+            
+      # Backup storage
+      backup_storage:
+        buckets:
+          primary: "s3://pake-backups"
+          secondary: "s3://pake-backups-eu"
+          tertiary: "s3://pake-backups-ap"
+          
+      # Metrics configuration
+      metrics:
+        port: 8080
+        path: "/metrics"
+        
+      # Alerting thresholds
+      thresholds:
+        postgres_replication_lag_seconds: 300
+        redis_replication_lag_seconds: 60
+        vector_export_age_hours: 25
+        object_sync_lag_seconds: 1800
+        snapshot_age_hours: 2
+
+  exporter.py: |
+    #!/usr/bin/env python3
+    """
+    Disaster Recovery Metrics Exporter
+    Collects and exposes metrics for all DR components
+    """
+
+    import asyncio
+    import asyncpg
+    import aiohttp
+    import boto3
+    import logging
+    import os
+    import redis
+    import time
+    import yaml
+    from datetime import datetime, timedelta
+    from prometheus_client import start_http_server, Gauge, Counter, Histogram, Info
+    from botocore.exceptions import ClientError
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    # Prometheus metrics
+
+    # Replication metrics
+    replication_lag_seconds = Gauge('replication_lag_seconds', 'Replication lag in seconds', ['service', 'replica', 'region'])
+    replication_status = Gauge('replication_status', 'Replication status (1=healthy, 0=unhealthy)', ['service', 'replica'])
+    replication_bytes_behind = Gauge('replication_bytes_behind', 'Bytes behind primary', ['service', 'replica'])
+
+    # Snapshot metrics
+    last_snapshot_timestamp = Gauge('last_snapshot_timestamp', 'Timestamp of last snapshot', ['service', 'type'])
+    snapshot_size_bytes = Gauge('snapshot_size_bytes', 'Size of last snapshot in bytes', ['service', 'type'])
+    snapshot_duration_seconds = Gauge('snapshot_duration_seconds', 'Duration of last snapshot', ['service', 'type'])
+    snapshot_age_hours = Gauge('snapshot_age_hours', 'Age of last snapshot in hours', ['service', 'type'])
+
+    # Export metrics
+    last_export_timestamp = Gauge('last_export_timestamp', 'Timestamp of last export', ['service', 'target'])
+    export_size_bytes = Gauge('export_size_bytes', 'Size of last export in bytes', ['service', 'target'])
+    export_age_hours = Gauge('export_age_hours', 'Age of last export in hours', ['service', 'target'])
+    export_objects_count = Gauge('export_objects_count', 'Number of objects in last export', ['service', 'target'])
+
+    # Object sync metrics
+    object_sync_lag_seconds = Gauge('object_sync_lag_seconds', 'Object synchronization lag', ['source_bucket', 'target_bucket'])
+    object_sync_objects_total = Gauge('object_sync_objects_total', 'Total objects synchronized', ['source_bucket', 'target_bucket'])
+    object_sync_bytes_total = Gauge('object_sync_bytes_total', 'Total bytes synchronized', ['source_bucket', 'target_bucket'])
+    object_sync_last_sync_timestamp = Gauge('object_sync_last_sync_timestamp', 'Last sync timestamp', ['source_bucket', 'target_bucket'])
+
+    # General DR metrics
+    dr_component_health = Gauge('dr_component_health', 'DR component health status', ['component', 'instance'])
+    dr_rto_seconds = Gauge('dr_rto_seconds', 'Current RTO in seconds')
+    dr_rpo_seconds = Gauge('dr_rpo_seconds', 'Current RPO in seconds')
+
+    # Error counters
+    dr_errors_total = Counter('dr_errors_total', 'Total DR-related errors', ['component', 'error_type'])
+
+    class DRMetricsExporter:
+        def __init__(self, config_path):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['exporter']
+            
+            # Database connections
+            self.pg_connections = {}
+            self.redis_connections = {}
+            self.session = None
+            
+            # AWS clients
+            self.s3_clients = {}
+            for region in ['us-east-1', 'eu-west-1', 'ap-southeast-1']:
+                self.s3_clients[region] = boto3.client('s3', region_name=region)
+            
+        async def start(self):
+            """Initialize connections"""
+            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
+            
+            # Initialize PostgreSQL connections
+            await self.init_postgres_connections()
+            
+            # Initialize Redis connections
+            self.init_redis_connections()
+            
+            logger.info("DR Metrics Exporter started")
+            
+        async def stop(self):
+            """Cleanup connections"""
+            if self.session:
+                await self.session.close()
+                
+            # Close PostgreSQL connections
+            for conn in self.pg_connections.values():
+                if conn:
+                    await conn.close()
+                    
+            logger.info("DR Metrics Exporter stopped")
+            
+        async def init_postgres_connections(self):
+            """Initialize PostgreSQL connections"""
+            db_config = self.config['databases']['postgresql']
+            REDACTED_SECRET = os.getenv('POSTGRES_PASSWORD')
+            
+            # Primary connection
+            try:
+                self.pg_connections['primary'] = await asyncpg.connect(
+                    host=db_config['primary_host'],
+                    port=db_config['port'],
+                    user=db_config['user'],
+                    REDACTED_SECRET=REDACTED_SECRET,
+                    database=db_config['database']
+                )
+                logger.info("Connected to PostgreSQL primary")
+            except Exception as e:
+                logger.error(f"Failed to connect to PostgreSQL primary: {e}")
+                
+            # Replica connections
+            for i, replica_host in enumerate(db_config['replica_hosts']):
+                try:
+                    conn_key = f"replica_{i}"
+                    self.pg_connections[conn_key] = await asyncpg.connect(
+                        host=replica_host,
+                        port=db_config['port'],
+                        user=db_config['user'],
+                        REDACTED_SECRET=REDACTED_SECRET,
+                        database=db_config['database']
+                    )
+                    logger.info(f"Connected to PostgreSQL replica: {replica_host}")
+                except Exception as e:
+                    logger.error(f"Failed to connect to PostgreSQL replica {replica_host}: {e}")
+                    
+        def init_redis_connections(self):
+            """Initialize Redis Sentinel connections"""
+            try:
+                sentinel_hosts = self.config['databases']['redis']['sentinel_hosts']
+                sentinel_list = []
+                
+                for host_port in sentinel_hosts:
+                    host, port = host_port.split(':')
+                    sentinel_list.append((host, int(port)))
+                
+                self.redis_sentinel = redis.Sentinel(sentinel_list, socket_timeout=5)
+                logger.info("Connected to Redis Sentinel")
+                
+            except Exception as e:
+                logger.error(f"Failed to connect to Redis Sentinel: {e}")
+                self.redis_sentinel = None
+                
+        async def collect_postgres_metrics(self):
+            """Collect PostgreSQL replication metrics"""
+            try:
+                # Get primary metrics
+                if 'primary' in self.pg_connections and self.pg_connections['primary']:
+                    primary_conn = self.pg_connections['primary']
+                    
+                    # Get current WAL LSN
+                    primary_lsn = await primary_conn.fetchval("SELECT pg_current_wal_lsn()")
+                    
+                    # Get replication status
+                    replication_stats = await primary_conn.fetch("""
+                        SELECT 
+                            application_name,
+                            client_addr,
+                            state,
+                            sent_lsn,
+                            write_lsn,
+                            flush_lsn,
+                            replay_lsn,
+                            write_lag,
+                            flush_lag,
+                            replay_lag,
+                            sync_state
+                        FROM pg_stat_replication
+                    """)
+                    
+                    for stat in replication_stats:
+                        app_name = stat['application_name']
+                        region = 'eu-west-1' if 'eu' in app_name else 'ap-southeast-1'
+                        
+                        # Convert lag intervals to seconds
+                        write_lag = stat['write_lag'].total_seconds() if stat['write_lag'] else 0
+                        flush_lag = stat['flush_lag'].total_seconds() if stat['flush_lag'] else 0
+                        replay_lag = stat['replay_lag'].total_seconds() if stat['replay_lag'] else 0
+                        
+                        # Use the highest lag as the overall lag
+                        max_lag = max(write_lag, flush_lag, replay_lag)
+                        
+                        replication_lag_seconds.labels(
+                            service='postgresql',
+                            replica=app_name,
+                            region=region
+                        ).set(max_lag)
+                        
+                        # Status based on state
+                        status = 1 if stat['state'] == 'streaming' else 0
+                        replication_status.labels(
+                            service='postgresql',
+                            replica=app_name
+                        ).set(status)
+                        
+                        # Calculate bytes behind
+                        if stat['replay_lsn'] and primary_lsn:
+                            # This is a simplified calculation
+                            bytes_behind = 0  # PostgreSQL LSN arithmetic is complex
+                            replication_bytes_behind.labels(
+                                service='postgresql',
+                                replica=app_name
+                            ).set(bytes_behind)
+                
+                # Check replica metrics
+                for i, replica_key in enumerate([k for k in self.pg_connections.keys() if k.startswith('replica_')]):
+                    if self.pg_connections[replica_key]:
+                        replica_conn = self.pg_connections[replica_key]
+                        
+                        try:
+                            # Check if replica is in recovery
+                            is_replica = await replica_conn.fetchval("SELECT pg_is_in_recovery()")
+                            
+                            if is_replica:
+                                # Get replica lag
+                                lag_query = """
+                                    SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) as lag_seconds
+                                """
+                                lag_result = await replica_conn.fetchval(lag_query)
+                                lag_seconds = lag_result if lag_result else 0
+                                
+                                replica_name = f"replica_{i}"
+                                region = 'eu-west-1' if i == 0 else 'ap-southeast-1'
+                                
+                                replication_lag_seconds.labels(
+                                    service='postgresql',
+                                    replica=replica_name,
+                                    region=region
+                                ).set(lag_seconds)
+                                
+                                # Health status
+                                health = 1 if lag_seconds < self.config['thresholds']['postgres_replication_lag_seconds'] else 0
+                                dr_component_health.labels(
+                                    component='postgresql-replication',
+                                    instance=replica_name
+                                ).set(health)
+                                
+                        except Exception as e:
+                            logger.error(f"Error collecting replica metrics for {replica_key}: {e}")
+                            dr_errors_total.labels(component='postgresql', error_type='metrics_collection').inc()
+                
+            except Exception as e:
+                logger.error(f"Error collecting PostgreSQL metrics: {e}")
+                dr_errors_total.labels(component='postgresql', error_type='connection').inc()
+                
+        def collect_redis_metrics(self):
+            """Collect Redis replication metrics"""
+            try:
+                if not self.redis_sentinel:
+                    return
+                    
+                master_name = self.config['databases']['redis']['master_name']
+                
+                # Get master info
+                master_info = self.redis_sentinel.sentinel_masters()[master_name]
+                
+                # Get slaves info
+                slaves_info = self.redis_sentinel.sentinel_slaves(master_name)
+                
+                for slave_info in slaves_info:
+                    slave_name = slave_info['name']
+                    lag = int(slave_info.get('master-lag', 0))
+                    
+                    # Determine region from slave info
+                    region = 'unknown'
+                    if 'eu' in slave_name.lower():
+                        region = 'eu-west-1'
+                    elif 'ap' in slave_name.lower():
+                        region = 'ap-southeast-1'
+                        
+                    replication_lag_seconds.labels(
+                        service='redis',
+                        replica=slave_name,
+                        region=region
+                    ).set(lag)
+                    
+                    # Status based on flags
+                    is_online = 'o_down' not in slave_info['flags'] and 's_down' not in slave_info['flags']
+                    replication_status.labels(
+                        service='redis',
+                        replica=slave_name
+                    ).set(1 if is_online else 0)
+                    
+                    # Health check
+                    health = 1 if lag < self.config['thresholds']['redis_replication_lag_seconds'] and is_online else 0
+                    dr_component_health.labels(
+                        component='redis-replication',
+                        instance=slave_name
+                    ).set(health)
+                    
+            except Exception as e:
+                logger.error(f"Error collecting Redis metrics: {e}")
+                dr_errors_total.labels(component='redis', error_type='metrics_collection').inc()
+                
+        async def collect_snapshot_metrics(self):
+            """Collect snapshot metrics from S3"""
+            try:
+                for service in ['postgresql', 'redis', 'chromadb']:
+                    for snapshot_type in ['hourly', 'daily', 'weekly']:
+                        await self.collect_service_snapshot_metrics(service, snapshot_type)
+                        
+            except Exception as e:
+                logger.error(f"Error collecting snapshot metrics: {e}")
+                dr_errors_total.labels(component='snapshots', error_type='metrics_collection').inc()
+                
+        async def collect_service_snapshot_metrics(self, service, snapshot_type):
+            """Collect snapshot metrics for a specific service and type"""
+            try:
+                s3_client = self.s3_clients['us-east-1']
+                bucket = 'pake-backups'
+                prefix = f'snapshots/{service}/{snapshot_type}/'
+                
+                # List recent snapshots
+                response = s3_client.list_objects_v2(
+                    Bucket=bucket,
+                    Prefix=prefix,
+                    MaxKeys=10
+                )
+                
+                if 'Contents' not in response:
+                    return
+                    
+                # Get the most recent snapshot
+                snapshots = sorted(response['Contents'], key=lambda x: x['LastModified'], reverse=True)
+                latest_snapshot = snapshots[0]
+                
+                # Extract timestamp
+                last_modified = latest_snapshot['LastModified']
+                timestamp = int(last_modified.timestamp())
+                
+                # Calculate age
+                age_seconds = (datetime.utcnow().replace(tzinfo=last_modified.tzinfo) - last_modified).total_seconds()
+                age_hours = age_seconds / 3600
+                
+                # Update metrics
+                last_snapshot_timestamp.labels(service=service, type=snapshot_type).set(timestamp)
+                snapshot_size_bytes.labels(service=service, type=snapshot_type).set(latest_snapshot['Size'])
+                snapshot_age_hours.labels(service=service, type=snapshot_type).set(age_hours)
+                
+                # Try to get metadata for duration
+                metadata_key = latest_snapshot['Key'].replace('.sql.gz', '_metadata.json').replace('.dump', '_metadata.json')
+                try:
+                    metadata_obj = s3_client.get_object(Bucket=bucket, Key=metadata_key)
+                    metadata = json.loads(metadata_obj['Body'].read().decode('utf-8'))
+                    
+                    if 'snapshot_duration_seconds' in metadata:
+                        snapshot_duration_seconds.labels(service=service, type=snapshot_type).set(
+                            metadata['snapshot_duration_seconds']
+                        )
+                        
+                except:
+                    pass  # Metadata not available
+                    
+                # Health check based on age
+                max_age_hours = 2 if snapshot_type == 'hourly' else (25 if snapshot_type == 'daily' else 168)
+                health = 1 if age_hours < max_age_hours else 0
+                
+                dr_component_health.labels(
+                    component=f'{service}-snapshots',
+                    instance=snapshot_type
+                ).set(health)
+                
+            except Exception as e:
+                logger.error(f"Error collecting {service} {snapshot_type} snapshot metrics: {e}")
+                
+        async def collect_export_metrics(self):
+            """Collect vector export metrics"""
+            try:
+                s3_client = self.s3_clients['us-east-1']
+                
+                # Check vector exports
+                buckets_regions = [
+                    ('pake-backups', 'us-east-1'),
+                    ('pake-backups-eu', 'eu-west-1'),
+                    ('pake-backups-ap', 'ap-southeast-1')
+                ]
+                
+                for bucket, region in buckets_regions:
+                    try:
+                        client = self.s3_clients[region]
+                        response = client.list_objects_v2(
+                            Bucket=bucket,
+                            Prefix='vector-exports/',
+                            MaxKeys=10
+                        )
+                        
+                        if 'Contents' not in response:
+                            continue
+                            
+                        # Get latest export
+                        exports = sorted(response['Contents'], key=lambda x: x['LastModified'], reverse=True)
+                        latest_export = exports[0]
+                        
+                        # Extract metrics
+                        last_modified = latest_export['LastModified']
+                        timestamp = int(last_modified.timestamp())
+                        age_seconds = (datetime.utcnow().replace(tzinfo=last_modified.tzinfo) - last_modified).total_seconds()
+                        age_hours = age_seconds / 3600
+                        
+                        # Update metrics
+                        last_export_timestamp.labels(service='chromadb', target=region).set(timestamp)
+                        export_size_bytes.labels(service='chromadb', target=region).set(latest_export['Size'])
+                        export_age_hours.labels(service='chromadb', target=region).set(age_hours)
+                        
+                        # Health check
+                        health = 1 if age_hours < self.config['thresholds']['vector_export_age_hours'] else 0
+                        dr_component_health.labels(
+                            component='vector-exports',
+                            instance=region
+                        ).set(health)
+                        
+                    except Exception as e:
+                        logger.error(f"Error collecting export metrics for {bucket}: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error collecting export metrics: {e}")
+                dr_errors_total.labels(component='exports', error_type='metrics_collection').inc()
+                
+        async def collect_object_sync_metrics(self):
+            """Collect object synchronization metrics"""
+            try:
+                storage_config = self.config['object_storage']
+                primary_bucket = storage_config['primary_bucket']
+                primary_region = storage_config['primary_region']
+                
+                # Get primary bucket stats
+                primary_client = self.s3_clients[primary_region]
+                primary_stats = await self.get_bucket_sync_stats(primary_client, primary_bucket)
+                
+                for target_name, target_config in storage_config['targets'].items():
+                    target_bucket = target_config['bucket']
+                    target_region = target_config['region']
+                    target_client = self.s3_clients[target_region]
+                    
+                    # Get target bucket stats
+                    target_stats = await self.get_bucket_sync_stats(target_client, target_bucket)
+                    
+                    # Calculate lag
+                    lag_seconds = 0
+                    if primary_stats['last_modified'] and target_stats['last_modified']:
+                        lag_seconds = max(0, (primary_stats['last_modified'] - target_stats['last_modified']).total_seconds())
+                    
+                    # Update metrics
+                    object_sync_lag_seconds.labels(
+                        source_bucket=primary_bucket,
+                        target_bucket=target_bucket
+                    ).set(lag_seconds)
+                    
+                    object_sync_objects_total.labels(
+                        source_bucket=primary_bucket,
+                        target_bucket=target_bucket
+                    ).set(target_stats['count'])
+                    
+                    object_sync_bytes_total.labels(
+                        source_bucket=primary_bucket,
+                        target_bucket=target_bucket
+                    ).set(target_stats['total_size'])
+                    
+                    if target_stats['last_modified']:
+                        object_sync_last_sync_timestamp.labels(
+                            source_bucket=primary_bucket,
+                            target_bucket=target_bucket
+                        ).set(int(target_stats['last_modified'].timestamp()))
+                    
+                    # Health check
+                    health = 1 if lag_seconds < self.config['thresholds']['object_sync_lag_seconds'] else 0
+                    dr_component_health.labels(
+                        component='object-sync',
+                        instance=f"{primary_bucket}-{target_bucket}"
+                    ).set(health)
+                    
+            except Exception as e:
+                logger.error(f"Error collecting object sync metrics: {e}")
+                dr_errors_total.labels(component='object-sync', error_type='metrics_collection').inc()
+                
+        async def get_bucket_sync_stats(self, s3_client, bucket):
+            """Get basic sync statistics for a bucket"""
+            try:
+                stats = {'count': 0, 'total_size': 0, 'last_modified': None}
+                
+                paginator = s3_client.get_paginator('list_objects_v2')
+                page_iterator = paginator.paginate(Bucket=bucket, PaginationConfig={'MaxItems': 1000})
+                
+                for page in page_iterator:
+                    if 'Contents' in page:
+                        stats['count'] += len(page['Contents'])
+                        for obj in page['Contents']:
+                            stats['total_size'] += obj['Size']
+                            if stats['last_modified'] is None or obj['LastModified'] > stats['last_modified']:
+                                stats['last_modified'] = obj['LastModified']
+                
+                return stats
+                
+            except Exception as e:
+                logger.error(f"Error getting bucket stats for {bucket}: {e}")
+                return {'count': 0, 'total_size': 0, 'last_modified': None}
+                
+        def calculate_rto_rpo(self):
+            """Calculate current RTO and RPO based on component status"""
+            # This is a simplified calculation
+            # In practice, you'd want more sophisticated logic
+            
+            # RTO: Time to recover (based on component health and known recovery times)
+            base_rto = 300  # 5 minutes base
+            
+            # Add time for unhealthy components
+            # Check if replication is healthy
+            # Check if snapshots are recent
+            # etc.
+            
+            current_rto = base_rto
+            
+            # RPO: Maximum data loss (based on replication lag and snapshot age)
+            max_lag = 0
+            
+            # Get maximum replication lag across all services
+            # This would need to query current metric values
+            
+            current_rpo = max_lag
+            
+            dr_rto_seconds.set(current_rto)
+            dr_rpo_seconds.set(current_rpo)
+            
+        async def collect_all_metrics(self):
+            """Collect all DR metrics"""
+            logger.info("Collecting DR metrics...")
+            
+            try:
+                # Collect metrics in parallel where possible
+                await asyncio.gather(
+                    self.collect_postgres_metrics(),
+                    self.collect_snapshot_metrics(),
+                    self.collect_export_metrics(),
+                    self.collect_object_sync_metrics(),
+                    return_exceptions=True
+                )
+                
+                # Redis metrics (synchronous)
+                self.collect_redis_metrics()
+                
+                # Calculate overall RTO/RPO
+                self.calculate_rto_rpo()
+                
+                logger.info("DR metrics collection completed")
+                
+            except Exception as e:
+                logger.error(f"Error in metrics collection: {e}")
+                dr_errors_total.labels(component='exporter', error_type='collection_failure').inc()
+                
+        async def run_exporter(self):
+            """Main exporter loop"""
+            await self.start()
+            
+            try:
+                while True:
+                    await self.collect_all_metrics()
+                    
+                    # Sleep for the shortest interval
+                    min_interval = min(self.config['intervals'].values())
+                    await asyncio.sleep(min_interval)
+                    
+            except KeyboardInterrupt:
+                logger.info("Exporter stopped by user")
+            except Exception as e:
+                logger.error(f"Error in exporter loop: {e}")
+            finally:
+                await self.stop()
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+        
+        # Start Prometheus metrics server
+        start_http_server(int(os.getenv('METRICS_PORT', 8080)))
+        logger.info("Prometheus metrics server started on port 8080")
+        
+        # Start metrics exporter
+        exporter = DRMetricsExporter(config_path)
+        await exporter.run_exporter()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# DR Metrics Exporter Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dr-metrics-exporter
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dr-metrics-exporter
+  template:
+    metadata:
+      labels:
+        app: dr-metrics-exporter
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: dr-metrics-exporter
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: exporter
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir asyncpg aiohttp boto3 redis prometheus_client pyyaml
+              exec python /app/exporter.py
+          env:
+            - name: CONFIG_PATH
+              value: '/etc/config/config.yaml'
+            - name: METRICS_PORT
+              value: '8080'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-REDACTED_SECRET
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDACTED_SECRET
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
+          ports:
+            - containerPort: 8080
+              name: metrics
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: app-code
+              mountPath: /app
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: config
+          configMap:
+            name: dr-metrics-exporter-config
+        - name: app-code
+          configMap:
+            name: dr-metrics-exporter-config
+            defaultMode: 0755
+      nodeSelector:
+        workload: monitoring
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: monitoring
+          effect: NoSchedule
+
+---
+# ServiceAccount and RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dr-metrics-exporter
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dr-metrics-exporter
+  labels:
+    app: dr-metrics-exporter
+rules:
+  - apiGroups: ['']
+    resources: ['secrets', 'configmaps', 'services', 'endpoints', 'pods']
+    verbs: ['get', 'list', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dr-metrics-exporter
+  labels:
+    app: dr-metrics-exporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dr-metrics-exporter
+subjects:
+  - kind: ServiceAccount
+    name: dr-metrics-exporter
+    namespace: monitoring
+
+---
+# Service for DR Metrics Exporter
+apiVersion: v1
+kind: Service
+metadata:
+  name: dr-metrics-exporter
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: metrics
+  selector:
+    app: dr-metrics-exporter
+
+---
+# ServiceMonitor for Prometheus to scrape DR metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dr-metrics-exporter
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: dr-metrics-exporter
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+# PrometheusRule for DR alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dr-metrics-alerts
+  namespace: monitoring
+  labels:
+    app: dr-metrics-exporter
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: dr-replication
+      rules:
+        - alert: PostgreSQLReplicationLagHigh
+          expr: replication_lag_seconds{service="postgresql"} > 300
+          for: 5m
+          labels:
+            severity: warning
+            component: disaster-recovery
+          annotations:
+            summary: 'PostgreSQL replication lag is high'
+            description: 'PostgreSQL replica {{ $labels.replica }} has {{ $value }}s lag'
+
+        - alert: RedisReplicationLagHigh
+          expr: replication_lag_seconds{service="redis"} > 60
+          for: 2m
+          labels:
+            severity: warning
+            component: disaster-recovery
+          annotations:
+            summary: 'Redis replication lag is high'
+            description: 'Redis replica {{ $labels.replica }} has {{ $value }}s lag'
+
+        - alert: VectorExportTooOld
+          expr: export_age_hours{service="chromadb"} > 25
+          for: 1m
+          labels:
+            severity: critical
+            component: disaster-recovery
+          annotations:
+            summary: 'Vector export is too old'
+            description: 'ChromaDB export for {{ $labels.target }} is {{ $value }} hours old'
+
+        - alert: ObjectSyncLagHigh
+          expr: object_sync_lag_seconds > 1800
+          for: 10m
+          labels:
+            severity: warning
+            component: disaster-recovery
+          annotations:
+            summary: 'Object sync lag is high'
+            description: 'Object sync from {{ $labels.source_bucket }} to {{ $labels.target_bucket }} has {{ $value }}s lag'
+
+        - alert: SnapshotTooOld
+          expr: snapshot_age_hours{type="hourly"} > 2
+          for: 5m
+          labels:
+            severity: warning
+            component: disaster-recovery
+          annotations:
+            summary: 'Hourly snapshot is too old'
+            description: '{{ $labels.service }} hourly snapshot is {{ $value }} hours old'
+
+        - alert: DRComponentUnhealthy
+          expr: dr_component_health == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: disaster-recovery
+          annotations:
+            summary: 'DR component is unhealthy'
+            description: 'DR component {{ $labels.component }} instance {{ $labels.instance }} is unhealthy'
+
+    - name: dr-performance
+      rules:
+        - alert: RPOTargetExceeded
+          expr: dr_rpo_seconds > 300
+          for: 2m
+          labels:
+            severity: critical
+            component: disaster-recovery
+          annotations:
+            summary: 'RPO target exceeded'
+            description: 'Current RPO is {{ $value }}s, exceeding 5-minute target'
+
+        - alert: RTOTargetExceeded
+          expr: dr_rto_seconds > 900
+          for: 1m
+          labels:
+            severity: critical
+            component: disaster-recovery
+          annotations:
+            summary: 'RTO target exceeded'
+            description: 'Current RTO is {{ $value }}s, exceeding 15-minute target'

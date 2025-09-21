@@ -1,0 +1,139 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'pake-system'
+    environment: 'development'
+
+rule_files:
+  - 'alert_rules.yml'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # Node Exporter - System metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # cAdvisor - Container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 10s
+
+  # OTEL Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+    scrape_interval: 10s
+
+  # PAKE System Services
+  - job_name: 'pake-frontend'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pake-voice-agents'
+    static_configs:
+      - targets: ['host.docker.internal:9000']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pake-video-generation'
+    static_configs:
+      - targets: ['host.docker.internal:9001']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pake-social-media'
+    static_configs:
+      - targets: ['host.docker.internal:9002']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # HashiCorp Vault
+  - job_name: 'vault'
+    static_configs:
+      - targets: ['host.docker.internal:8200']
+    metrics_path: /v1/sys/metrics
+    params:
+      format: ['prometheus']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Service Discovery for dynamic targets
+  - job_name: 'docker-containers'
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_pake_service]
+        target_label: __tmp_pake_service
+      - source_labels: [__tmp_pake_service]
+        regex: (.+)
+        target_label: job
+        replacement: pake-${1}
+      - source_labels: [__meta_docker_container_label_pake_metrics_path]
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__meta_docker_container_label_pake_metrics_port]
+        target_label: __tmp_port
+        regex: (.+)
+      - source_labels: [__address__, __tmp_port]
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+
+  # Blackbox exporter for endpoint monitoring
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://localhost:3000 # Frontend
+          - http://localhost:9000/health # Voice Agents
+          - http://localhost:9001/health # Video Generation
+          - http://localhost:9002/health # Social Media
+          - http://localhost:8200/v1/sys/health # Vault
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: http://localhost:8086/api/v1/prom/write?db=prometheus
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500

@@ -1,0 +1,79 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: pake-system-base
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: pake-system
+  app.kubernetes.io/managed-by: kustomize
+
+# Resources to include
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - redis.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+  - monitoring.yaml
+  - ml-services.yaml
+
+# Images to be used
+images:
+  - name: pake-system
+    newTag: latest
+  - name: pake-frontend
+    newTag: latest
+
+# ConfigMap generators
+configMapGenerator:
+  - name: pake-build-info
+    literals:
+      - BUILD_DATE=$(date +%Y-%m-%d)
+      - BUILD_VERSION=9.1.0
+      - BUILD_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+
+# Secret generators (for development only - use external secret management in production)
+# secretGenerator:
+#   - name: pake-api-keys
+#     literals:
+#       - FIRECRAWL_API_KEY=your-api-key-here
+#       - OPENAI_API_KEY=your-api-key-here
+
+# Patches for common configurations
+patchesStrategicMerge:
+  # - resource-limits.yaml
+  # - security-context.yaml
+
+# JSON patches for fine-grained modifications
+# patchesJson6902:
+#   - target:
+#       version: v1
+#       kind: Deployment
+#       name: pake-backend
+#     path: deployment-patches.yaml
+
+# Namespace to deploy to
+namespace: pake-system
+
+# Name prefix for all resources
+namePrefix: ''
+
+# Name suffix for all resources
+nameSuffix: ''
+
+# Replacements for template substitution
+replacements:
+  - source:
+      kind: ConfigMap
+      name: pake-build-info
+      fieldPath: data.BUILD_VERSION
+    targets:
+      - select:
+          kind: Deployment
+        fieldPaths:
+          - metadata.labels.[app.kubernetes.io/version]

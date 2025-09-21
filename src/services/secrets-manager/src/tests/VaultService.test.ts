@@ -1,0 +1,415 @@
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { VaultService } from '../services/VaultService';
+import {
+  VaultConfig,
+  Secret,
+  SecretRequest,
+  CertificateRequest,
+} from '../types/secrets.types';
+import * as vault from 'node-vault';
+
+vi.mock('node-vault');
+vi.mock('fs', () => ({
+  readFileSync: vi.fn().mockReturnValue('mock-cert-content'),
+  existsSync: vi.fn().mockReturnValue(true),
+}));
+
+describe('VaultService', () => {
+  let vaultService: VaultService;
+  let mockVaultClient: any;
+  let config: VaultConfig;
+
+  beforeEach(() => {
+    mockVaultClient = {
+      health: vi.fn().mockResolvedValue({ initialized: true, sealed: false }),
+      read: vi.fn(),
+      write: vi.fn(),
+      delete: vi.fn(),
+      list: vi.fn(),
+      encrypt: vi.fn(),
+      decrypt: vi.fn(),
+      sign: vi.fn(),
+      verify: vi.fn(),
+      generateCertificate: vi.fn(),
+      revokeCertificate: vi.fn(),
+    };
+
+    (vault as any).mockReturnValue(mockVaultClient);
+
+    config = {
+      endpoint: 'https://vault.example.com:8200',
+      token: 'test-token',
+      engines: {
+        kv: { name: 'secret', version: 2, path: 'secret/' },
+        transit: { name: 'transit', path: 'transit/' },
+        pki: { name: 'pki', path: 'pki/' },
+        database: { name: 'database', path: 'database/' },
+      },
+      auth: {
+        method: 'token',
+        token: 'test-token',
+      },
+      tls: {
+        caCert: '/path/to/ca.crt',
+        clientCert: '/path/to/client.crt',
+        clientKey: '/path/to/client.key',
+        verify: true,
+      },
+    };
+
+    vaultService = new VaultService(config);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Authentication', () => {
+    it('should authenticate with token method', async () => {
+      await vaultService.authenticate();
+      expect(mockVaultClient.health).toHaveBeenCalled();
+    });
+
+    it('should handle authentication failure', async () => {
+      mockVaultClient.health.mockRejectedValue(
+        new Error('Authentication failed')
+      );
+      await expect(vaultService.authenticate()).rejects.toThrow(
+        'Vault authentication failed'
+      );
+    });
+  });
+
+  describe('Secret Operations', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should store a secret successfully', async () => {
+      const secret: Secret = {
+        metadata: {
+          path: 'myapp/database',
+          version: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tags: ['database', 'production'],
+        },
+        value: { username: 'admin', REDACTED_SECRET: process.env.UNKNOWN },
+        encrypted: false,
+      };
+
+      mockVaultClient.write.mockResolvedValue({ data: { version: 1 } });
+
+      const result = await vaultService.storeSecret('myapp/database', secret);
+      expect(result).toBe(true);
+      expect(mockVaultClient.write).toHaveBeenCalledWith(
+        'secret/data/myapp/database',
+        { data: secret.value, metadata: { tags: secret.metadata.tags } }
+      );
+    });
+
+    it('should retrieve a secret successfully', async () => {
+      const mockSecretData = {
+        data: {
+          data: { username: 'admin', REDACTED_SECRET: process.env.UNKNOWN },
+          metadata: {
+            version: 1,
+            created_time: '2023-01-01T00:00:00Z',
+            deletion_time: '',
+            destroyed: false,
+          },
+        },
+      };
+
+      mockVaultClient.read.mockResolvedValue(mockSecretData);
+
+      const request: SecretRequest = {
+        path: 'myapp/database',
+        version: 1,
+        fields: ['username', 'REDACTED_SECRET'],
+      };
+
+      const secret = await vaultService.getSecret(request);
+      expect(secret).toBeTruthy();
+      expect(secret?.value).toEqual({
+        username: 'admin',
+        REDACTED_SECRET: process.env.UNKNOWN,
+      });
+      expect(secret?.metadata.version).toBe(1);
+    });
+
+    it('should handle secret not found', async () => {
+      mockVaultClient.read.mockRejectedValue({ response: { statusCode: 404 } });
+
+      const request: SecretRequest = {
+        path: 'nonexistent/secret',
+      };
+
+      const secret = await vaultService.getSecret(request);
+      expect(secret).toBeNull();
+    });
+
+    it('should delete a secret successfully', async () => {
+      mockVaultClient.delete.mockResolvedValue({});
+
+      const result = await vaultService.deleteSecret('myapp/database');
+      expect(result).toBe(true);
+      expect(mockVaultClient.delete).toHaveBeenCalledWith(
+        'secret/metadata/myapp/database'
+      );
+    });
+
+    it('should list secrets in a path', async () => {
+      mockVaultClient.list.mockResolvedValue({
+        data: { keys: ['database', 'api-keys', 'certificates'] },
+      });
+
+      const secrets = await vaultService.listSecrets('myapp');
+      expect(secrets).toEqual(['database', 'api-keys', 'certificates']);
+    });
+  });
+
+  describe('Encryption Operations', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should encrypt data using Transit engine', async () => {
+      const plaintext = 'sensitive data';
+      const keyName = 'myapp-key';
+
+      mockVaultClient.encrypt.mockResolvedValue({
+        data: { ciphertext: 'vault:v1:encrypted-data' },
+      });
+
+      const result = await vaultService.encrypt(keyName, plaintext);
+      expect(result).toBe('vault:v1:encrypted-data');
+      expect(mockVaultClient.encrypt).toHaveBeenCalledWith({
+        name: keyName,
+        plaintext: Buffer.from(plaintext).toString('base64'),
+      });
+    });
+
+    it('should decrypt data using Transit engine', async () => {
+      const ciphertext = 'vault:v1:encrypted-data';
+      const keyName = 'myapp-key';
+
+      mockVaultClient.decrypt.mockResolvedValue({
+        data: { plaintext: Buffer.from('sensitive data').toString('base64') },
+      });
+
+      const result = await vaultService.decrypt(keyName, ciphertext);
+      expect(result).toBe('sensitive data');
+    });
+
+    it('should sign data using Transit engine', async () => {
+      const data = 'data to sign';
+      const keyName = 'signing-key';
+
+      mockVaultClient.sign.mockResolvedValue({
+        data: { signature: 'vault:v1:signature-data' },
+      });
+
+      const result = await vaultService.sign(keyName, data);
+      expect(result).toBe('vault:v1:signature-data');
+    });
+
+    it('should verify signature using Transit engine', async () => {
+      const data = 'signed data';
+      const signature = 'vault:v1:signature-data';
+      const keyName = 'signing-key';
+
+      mockVaultClient.verify.mockResolvedValue({
+        data: { valid: true },
+      });
+
+      const result = await vaultService.verifySignature(
+        keyName,
+        data,
+        signature
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('Certificate Operations', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should generate certificate successfully', async () => {
+      const certRequest: CertificateRequest = {
+        commonName: 'test.example.com',
+        role: 'web-server',
+        altNames: ['api.example.com'],
+        ttl: '30d',
+        format: 'pem',
+      };
+
+      const mockCertData = {
+        data: {
+          certificate:
+            '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+          private_key:
+            '-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----',
+          ca_chain: [
+            '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+          ],
+          serial_number: '12345',
+        },
+      };
+
+      mockVaultClient.write.mockResolvedValue(mockCertData);
+
+      const result = await vaultService.generateCertificate(certRequest);
+      expect(result.certificate).toBeTruthy();
+      expect(result.privateKey).toBeTruthy();
+      expect(result.caChain).toHaveLength(1);
+      expect(result.serialNumber).toBe('12345');
+    });
+
+    it('should revoke certificate successfully', async () => {
+      const serialNumber = '12345';
+      mockVaultClient.write.mockResolvedValue({});
+
+      const result = await vaultService.revokeCertificate(serialNumber);
+      expect(result).toBe(true);
+      expect(mockVaultClient.write).toHaveBeenCalledWith('pki/revoke', {
+        serial_number: serialNumber,
+      });
+    });
+  });
+
+  describe('Health and Status', () => {
+    it('should check health status', async () => {
+      mockVaultClient.health.mockResolvedValue({
+        initialized: true,
+        sealed: false,
+        standby: false,
+        performance_standby: false,
+        replication_performance_mode: 'disabled',
+        replication_dr_mode: 'disabled',
+        server_time_utc: Date.now(),
+        version: '1.12.0',
+      });
+
+      const health = await vaultService.getHealth();
+      expect(health.initialized).toBe(true);
+      expect(health.sealed).toBe(false);
+      expect(health.version).toBe('1.12.0');
+    });
+
+    it('should handle sealed vault', async () => {
+      mockVaultClient.health.mockResolvedValue({
+        initialized: true,
+        sealed: true,
+      });
+
+      const health = await vaultService.getHealth();
+      expect(health.sealed).toBe(true);
+    });
+  });
+
+  describe('Error Handling', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should handle network errors gracefully', async () => {
+      mockVaultClient.read.mockRejectedValue(new Error('ECONNREFUSED'));
+
+      const request: SecretRequest = { path: 'test/secret' };
+      await expect(vaultService.getSecret(request)).rejects.toThrow(
+        'Vault operation failed'
+      );
+    });
+
+    it('should handle rate limiting', async () => {
+      mockVaultClient.read.mockRejectedValue({ response: { statusCode: 429 } });
+
+      const request: SecretRequest = { path: 'test/secret' };
+      await expect(vaultService.getSecret(request)).rejects.toThrow(
+        'Rate limited'
+      );
+    });
+
+    it('should handle insufficient permissions', async () => {
+      mockVaultClient.read.mockRejectedValue({ response: { statusCode: 403 } });
+
+      const request: SecretRequest = { path: 'forbidden/secret' };
+      await expect(vaultService.getSecret(request)).rejects.toThrow(
+        'Access denied'
+      );
+    });
+  });
+
+  describe('Audit Integration', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should emit audit events for secret operations', async () => {
+      const auditSpy = vi.fn();
+      vaultService.on('audit', auditSpy);
+
+      mockVaultClient.read.mockResolvedValue({
+        data: {
+          data: { key: 'value' },
+          metadata: { version: 1, created_time: '2023-01-01T00:00:00Z' },
+        },
+      });
+
+      const request: SecretRequest = { path: 'test/secret' };
+      await vaultService.getSecret(request);
+
+      expect(auditSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'secret.read',
+          path: 'test/secret',
+          success: true,
+        })
+      );
+    });
+
+    it('should emit audit events for failed operations', async () => {
+      const auditSpy = vi.fn();
+      vaultService.on('audit', auditSpy);
+
+      mockVaultClient.read.mockRejectedValue(new Error('Access denied'));
+
+      const request: SecretRequest = { path: 'forbidden/secret' };
+      await expect(vaultService.getSecret(request)).rejects.toThrow();
+
+      expect(auditSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'secret.read',
+          path: 'forbidden/secret',
+          success: false,
+        })
+      );
+    });
+  });
+
+  describe('Performance', () => {
+    beforeEach(async () => {
+      await vaultService.authenticate();
+    });
+
+    it('should complete secret retrieval within performance requirements', async () => {
+      mockVaultClient.read.mockResolvedValue({
+        data: {
+          data: { key: 'value' },
+          metadata: { version: 1, created_time: '2023-01-01T00:00:00Z' },
+        },
+      });
+
+      const request: SecretRequest = { path: 'test/secret' };
+      const startTime = performance.now();
+
+      await vaultService.getSecret(request);
+
+      const duration = performance.now() - startTime;
+      expect(duration).toBeLessThan(10); // Less than 10ms requirement
+    });
+  });
+});

@@ -1,0 +1,329 @@
+# Blue-Green Rollout Template for PAKE AI Services
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: pake-ai-blue-green
+  namespace: pake-system
+  labels:
+    app: pake-ai
+    strategy: blue-green
+spec:
+  replicas: 5
+  strategy:
+    blueGreen:
+      # Reference to active service (blue or green)
+      activeService: pake-ai-active
+      # Reference to preview service for testing green
+      previewService: pake-ai-preview
+
+      # Auto promotion after successful tests
+      autoPromotionEnabled: false
+
+      # Scale down delay after promotion
+      scaleDownDelaySeconds: 30
+      # Keep old version for 10 minutes for rollback
+      prePromotionAnalysis:
+        templates:
+          - templateName: success-rate-bg
+          - templateName: ai-model-health
+        args:
+          - name: service-name
+            value: pake-ai-preview
+          - name: model-endpoint
+            value: /v1/models/health
+
+      # Post promotion analysis
+      postPromotionAnalysis:
+        templates:
+          - templateName: success-rate-bg
+          - templateName: ai-inference-latency
+        args:
+          - name: service-name
+            value: pake-ai-active
+          - name: latency-threshold
+            value: '2.0'
+
+      # Preview metadata
+      previewMetadata:
+        labels:
+          deployment-type: preview
+          color: green
+        annotations:
+          deployment.kubernetes.io/revision: preview
+
+      # Active metadata
+      activeMetadata:
+        labels:
+          deployment-type: active
+          color: blue
+        annotations:
+          deployment.kubernetes.io/revision: active
+
+  selector:
+    matchLabels:
+      app: pake-ai
+
+  template:
+    metadata:
+      labels:
+        app: pake-ai
+    spec:
+      serviceAccountName: pake-ai
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      priorityClassName: high-priority
+      runtimeClassName: nvidia
+
+      containers:
+        - name: pake-ai
+          image: ghcr.io/pake-system/pake-ai:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+
+          env:
+            - name: ENVIRONMENT
+              value: 'production'
+            - name: LOG_LEVEL
+              value: 'INFO'
+            - name: GPU_MEMORY_FRACTION
+              value: '0.9'
+            - name: MODEL_CACHE_SIZE
+              value: '10GB'
+            - name: BATCH_SIZE
+              value: '8'
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: 'all'
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: 'compute,utility'
+
+          envFrom:
+            - secretRef:
+                name: pake-ai-secrets
+            - configMapRef:
+                name: pake-ai-config
+
+          # Extended timeouts for AI initialization
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 60 # Up to 10 minutes
+
+          resources:
+            limits:
+              cpu: 4000m
+              memory: 16Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: 1000m
+              memory: 8Gi
+              nvidia.com/gpu: 1
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: model-cache
+              mountPath: /app/models
+            - name: logs
+              mountPath: /app/logs
+            - name: gpu-drivers
+              mountPath: /usr/local/nvidia
+              readOnly: true
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: pake-ai-models
+        - name: logs
+          emptyDir:
+            sizeLimit: 5Gi
+        - name: gpu-drivers
+          hostPath:
+            path: /usr/local/nvidia
+
+      nodeSelector:
+        workload: ai-inference
+        node-type: gpu
+        gpu-type: nvidia-v100
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Equal
+          value: 'true'
+          effect: NoSchedule
+        - key: workload
+          operator: Equal
+          value: ai-services
+          effect: NoSchedule
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - pake-ai
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - ai-inference
+                      - ai-services
+
+---
+# Active Service (Blue)
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-ai-active
+  namespace: pake-system
+  labels:
+    app: pake-ai
+    type: active
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: pake-ai
+
+---
+# Preview Service (Green)
+apiVersion: v1
+kind: Service
+metadata:
+  name: pake-ai-preview
+  namespace: pake-system
+  labels:
+    app: pake-ai
+    type: preview
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: pake-ai
+
+---
+# Success Rate Analysis Template for Blue-Green
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate-bg
+  namespace: pake-system
+spec:
+  args:
+    - name: service-name
+      value: pake-ai
+  metrics:
+    - name: success-rate
+      successCondition: result[0] >= 0.95
+      failureCondition: result[0] < 0.90
+      interval: 30s
+      count: 5
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{service="{{args.service-name}}",status!~"5.."}[2m])) /
+            sum(rate(http_requests_total{service="{{args.service-name}}"}[2m]))
+
+---
+# AI Model Health Check Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: ai-model-health
+  namespace: pake-system
+spec:
+  args:
+    - name: service-name
+      value: pake-ai
+    - name: model-endpoint
+      value: /v1/models/health
+  metrics:
+    - name: model-health-check
+      successCondition: result == "1"
+      interval: 30s
+      count: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          query: |
+            probe_success{job="model-health-check",service="{{args.service-name}}"}
+
+---
+# AI Inference Latency Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: ai-inference-latency
+  namespace: pake-system
+spec:
+  args:
+    - name: service-name
+      value: pake-ai
+    - name: latency-threshold
+      value: '2.0'
+  metrics:
+    - name: inference-latency
+      successCondition: result[0] < {{args.latency-threshold}}
+      failureCondition: result[0] > 5.0
+      interval: 1m
+      count: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(ai_inference_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) 
+              by (le)
+            )

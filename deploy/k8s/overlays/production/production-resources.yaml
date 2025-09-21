@@ -1,0 +1,103 @@
+# Production Resource Limits - Enterprise-grade
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-backend
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2'
+          # Production-specific environment variables
+          env:
+            - name: WORKER_PROCESSES
+              value: 'auto'
+            - name: WORKER_CONNECTIONS
+              value: '1024'
+            - name: MAX_CONCURRENT_REQUESTS
+              value: '1000'
+            - name: CONNECTION_POOL_SIZE
+              value: '20'
+            - name: CACHE_SIZE
+              value: '1073741824' # 1GB
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-frontend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-frontend
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1'
+          env:
+            - name: NODE_OPTIONS
+              value: '--max-old-space-size=1536'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1'
+            limits:
+              memory: '8Gi'
+              cpu: '4'
+          env:
+            - name: POSTGRES_SHARED_BUFFERS
+              value: '2GB'
+            - name: POSTGRES_EFFECTIVE_CACHE_SIZE
+              value: '6GB'
+            - name: POSTGRES_WORK_MEM
+              value: '64MB'
+            - name: POSTGRES_MAINTENANCE_WORK_MEM
+              value: '512MB'
+            - name: POSTGRES_MAX_CONNECTIONS
+              value: '200'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2'
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --maxmemory
+            - '3gb'
+            - --maxmemory-policy
+            - 'allkeys-lru'

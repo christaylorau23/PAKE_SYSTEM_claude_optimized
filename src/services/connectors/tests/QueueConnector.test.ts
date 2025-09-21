@@ -1,0 +1,798 @@
+/**
+ * PAKE System - QueueConnector Tests
+ *
+ * Comprehensive tests for queue operations including publishing, consuming,
+ * subscribing, and multi-backend support (Redis, RabbitMQ, SQS).
+ */
+
+import {
+  describe,
+  beforeEach,
+  afterEach,
+  it,
+  expect,
+  jest,
+  beforeAll,
+  afterAll,
+} from '@jest/globals';
+import { QueueConnector } from '../src/QueueConnector';
+import { ConnectorRequestType, ResponseStatus } from '../src/Connector';
+import { sampleRequests, testConfigs, testHelpers } from './fixtures/testData';
+
+// Mock Redis
+jest.mock('redis', () => ({
+  createClient: jest.fn(() => ({
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    publish: jest.fn(),
+    subscribe: jest.fn(),
+    unsubscribe: jest.fn(),
+    lPush: jest.fn(),
+    brPop: jest.fn(),
+    lLen: jest.fn(),
+    ping: jest.fn(),
+    on: jest.fn(),
+    off: jest.fn(),
+    isOpen: true,
+    isReady: true,
+  })),
+}));
+
+// Mock amqplib (RabbitMQ)
+jest.mock('amqplib', () => ({
+  connect: jest.fn(() =>
+    Promise.resolve({
+      createChannel: jest.fn(() =>
+        Promise.resolve({
+          assertQueue: jest.fn(),
+          assertExchange: jest.fn(),
+          publish: jest.fn(),
+          sendToQueue: jest.fn(),
+          consume: jest.fn(),
+          ack: jest.fn(),
+          nack: jest.fn(),
+          cancel: jest.fn(),
+          close: jest.fn(),
+          on: jest.fn(),
+        })
+      ),
+      close: jest.fn(),
+      on: jest.fn(),
+    })
+  ),
+}));
+
+// Mock AWS SQS
+jest.mock('@aws-sdk/client-sqs', () => ({
+  SQSClient: jest.fn(() => ({
+    send: jest.fn(),
+    destroy: jest.fn(),
+  })),
+  SendMessageCommand: jest.fn(),
+  ReceiveMessageCommand: jest.fn(),
+  DeleteMessageCommand: jest.fn(),
+  GetQueueUrlCommand: jest.fn(),
+  CreateQueueCommand: jest.fn(),
+}));
+
+describe('QueueConnector', () => {
+  describe('Redis Backend', () => {
+    let connector: QueueConnector;
+    let mockRedisClient: any;
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+
+      const redis = await import('redis');
+      mockRedisClient = redis.createClient();
+
+      connector = new QueueConnector('test-redis-queue', {
+        ...testConfigs.redis,
+        timeout: 5000,
+        maxRetries: 2,
+        retryDelay: 100,
+      });
+
+      await connector.connect();
+    });
+
+    afterEach(async () => {
+      await connector.disconnect();
+    });
+
+    describe('Publishing Messages', () => {
+      it('should publish messages to Redis queue successfully', async () => {
+        mockRedisClient.lPush.mockResolvedValue(1);
+
+        const response = await connector.fetch(sampleRequests.queue.publish);
+
+        expect(response.success).toBe(true);
+        expect(response.status).toBe(ResponseStatus.SUCCESS);
+        expect(response.data.published).toBe(true);
+        expect(response.data.messageId).toBeDefined();
+
+        expect(mockRedisClient.lPush).toHaveBeenCalledWith(
+          'trend-updates',
+          expect.stringContaining('"platform":"twitter"')
+        );
+      });
+
+      it('should handle publish failures gracefully', async () => {
+        mockRedisClient.lPush.mockRejectedValue(
+          new Error('Redis connection lost')
+        );
+
+        const response = await connector.fetch(sampleRequests.queue.publish);
+
+        expect(response.success).toBe(false);
+        expect(response.error?.code).toBe('PUBLISH_FAILED');
+        expect(response.error?.retryable).toBe(true);
+      });
+
+      it('should support message priority and TTL', async () => {
+        const priorityRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.PUBLISH,
+          target: 'priority-queue',
+          parameters: {
+            message: { type: 'urgent-alert', data: 'System down!' },
+            options: {
+              priority: 10,
+              ttl: 60000, // 1 minute
+              delay: 5000, // 5 second delay
+            },
+          },
+        });
+
+        mockRedisClient.lPush.mockResolvedValue(1);
+
+        const response = await connector.fetch(priorityRequest);
+
+        expect(response.success).toBe(true);
+
+        // Should have called with priority queue name
+        expect(mockRedisClient.lPush).toHaveBeenCalledWith(
+          expect.stringContaining('priority'),
+          expect.any(String)
+        );
+      });
+    });
+
+    describe('Consuming Messages', () => {
+      it('should consume messages from Redis queue successfully', async () => {
+        const mockMessages = [
+          'queue-name',
+          JSON.stringify({
+            id: 'msg-001',
+            content: { event: 'trend_detected', data: { platform: 'twitter' } },
+            timestamp: new Date().toISOString(),
+          }),
+        ];
+
+        mockRedisClient.brPop.mockResolvedValue(mockMessages);
+        mockRedisClient.lLen.mockResolvedValue(5); // Queue length
+
+        const response = await connector.fetch(sampleRequests.queue.consume);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(1);
+        expect(response.data.messages[0]).toMatchObject({
+          id: 'msg-001',
+          content: {
+            event: 'trend_detected',
+            data: { platform: 'twitter' },
+          },
+        });
+        expect(response.data.hasMore).toBe(true);
+
+        expect(mockRedisClient.brPop).toHaveBeenCalledWith(
+          'processed-trends',
+          5 // timeout from request
+        );
+      });
+
+      it('should handle empty queue gracefully', async () => {
+        mockRedisClient.brPop.mockResolvedValue(null); // Empty queue
+        mockRedisClient.lLen.mockResolvedValue(0);
+
+        const response = await connector.fetch(sampleRequests.queue.consume);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(0);
+        expect(response.data.hasMore).toBe(false);
+      });
+
+      it('should support batch consumption', async () => {
+        const batchRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.CONSUME,
+          target: 'batch-queue',
+          parameters: {
+            count: 5,
+            timeout: 2000,
+            acknowledgeMode: 'manual',
+          },
+        });
+
+        // Mock multiple messages
+        mockRedisClient.brPop
+          .mockResolvedValueOnce([
+            'queue',
+            JSON.stringify({ id: '1', data: 'msg1' }),
+          ])
+          .mockResolvedValueOnce([
+            'queue',
+            JSON.stringify({ id: '2', data: 'msg2' }),
+          ])
+          .mockResolvedValueOnce([
+            'queue',
+            JSON.stringify({ id: '3', data: 'msg3' }),
+          ])
+          .mockResolvedValueOnce(null); // No more messages
+
+        mockRedisClient.lLen.mockResolvedValue(0);
+
+        const response = await connector.fetch(batchRequest);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(3);
+        expect(mockRedisClient.brPop).toHaveBeenCalledTimes(4); // Should keep trying until timeout
+      });
+    });
+
+    describe('Pub/Sub Subscriptions', () => {
+      it('should subscribe to Redis channels successfully', async () => {
+        mockRedisClient.subscribe.mockResolvedValue(undefined);
+
+        const response = await connector.fetch(sampleRequests.queue.subscribe);
+
+        expect(response.success).toBe(true);
+        expect(response.data.subscribed).toBe(true);
+        expect(response.data.pattern).toBe('live-events');
+
+        expect(mockRedisClient.subscribe).toHaveBeenCalledWith('live-events');
+      });
+
+      it('should handle subscription failures', async () => {
+        mockRedisClient.subscribe.mockRejectedValue(
+          new Error('Subscription failed')
+        );
+
+        const response = await connector.fetch(sampleRequests.queue.subscribe);
+
+        expect(response.success).toBe(false);
+        expect(response.error?.code).toBe('SUBSCRIPTION_FAILED');
+      });
+
+      it('should support pattern-based subscriptions', async () => {
+        const patternRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.SUBSCRIBE,
+          target: 'events.trends.*',
+          parameters: {
+            pattern: 'events.trends.*',
+            callback: 'handlePatternEvent',
+            options: { durableSubscription: false },
+          },
+        });
+
+        mockRedisClient.pSubscribe = jest.fn().mockResolvedValue(undefined);
+
+        const response = await connector.fetch(patternRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockRedisClient.pSubscribe).toHaveBeenCalledWith(
+          'events.trends.*'
+        );
+      });
+    });
+  });
+
+  describe('RabbitMQ Backend', () => {
+    let connector: QueueConnector;
+    let mockConnection: any;
+    let mockChannel: any;
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+
+      const amqp = await import('amqplib');
+      mockChannel = {
+        assertQueue: jest.fn().mockResolvedValue({ queue: 'test-queue' }),
+        assertExchange: jest.fn(),
+        publish: jest.fn().mockReturnValue(true),
+        sendToQueue: jest.fn().mockReturnValue(true),
+        consume: jest.fn(),
+        ack: jest.fn(),
+        nack: jest.fn(),
+        cancel: jest.fn(),
+        close: jest.fn(),
+        on: jest.fn(),
+      };
+
+      mockConnection = {
+        createChannel: jest.fn().mockResolvedValue(mockChannel),
+        close: jest.fn(),
+        on: jest.fn(),
+      };
+
+      amqp.connect.mockResolvedValue(mockConnection);
+
+      connector = new QueueConnector('test-rabbitmq-queue', {
+        queueBackend: 'rabbitmq',
+        rabbitmq: {
+          url: 'amqp://localhost:5672',
+          options: {
+            heartbeat: 60,
+            connection_timeout: 10000,
+          },
+        },
+        timeout: 5000,
+        maxRetries: 2,
+        retryDelay: 100,
+      });
+
+      await connector.connect();
+    });
+
+    afterEach(async () => {
+      await connector.disconnect();
+    });
+
+    describe('Publishing Messages', () => {
+      it('should publish messages to RabbitMQ exchange', async () => {
+        const exchangeRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.PUBLISH,
+          target: 'trend-exchange',
+          parameters: {
+            message: { type: 'trend_update', data: { platform: 'reddit' } },
+            options: {
+              routingKey: 'trends.reddit',
+              exchange: 'trend-exchange',
+              exchangeType: 'topic',
+              persistent: true,
+            },
+          },
+        });
+
+        const response = await connector.fetch(exchangeRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockChannel.assertExchange).toHaveBeenCalledWith(
+          'trend-exchange',
+          'topic',
+          expect.objectContaining({ durable: true })
+        );
+        expect(mockChannel.publish).toHaveBeenCalledWith(
+          'trend-exchange',
+          'trends.reddit',
+          expect.any(Buffer),
+          expect.objectContaining({ persistent: true })
+        );
+      });
+
+      it('should send messages to RabbitMQ queue directly', async () => {
+        const response = await connector.fetch(sampleRequests.queue.publish);
+
+        expect(response.success).toBe(true);
+        expect(mockChannel.assertQueue).toHaveBeenCalledWith(
+          'trend-updates',
+          expect.objectContaining({ durable: true })
+        );
+        expect(mockChannel.sendToQueue).toHaveBeenCalledWith(
+          'trend-updates',
+          expect.any(Buffer),
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('Consuming Messages', () => {
+      it('should consume messages from RabbitMQ queue', async () => {
+        const mockMessage = {
+          content: Buffer.from(
+            JSON.stringify({
+              id: 'msg-001',
+              content: {
+                event: 'trend_processed',
+                data: { platform: 'twitter' },
+              },
+              timestamp: new Date().toISOString(),
+            })
+          ),
+          properties: {
+            messageId: 'msg-001',
+            timestamp: Date.now(),
+            deliveryTag: 1,
+          },
+          fields: {
+            deliveryTag: 1,
+            exchange: '',
+            routingKey: 'processed-trends',
+          },
+        };
+
+        // Mock the consume method to call the callback immediately
+        mockChannel.consume.mockImplementation((queue, callback) => {
+          setTimeout(() => callback(mockMessage), 10);
+          return Promise.resolve({ consumerTag: 'test-consumer' });
+        });
+
+        const response = await connector.fetch(sampleRequests.queue.consume);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(1);
+        expect(response.data.messages[0]).toMatchObject({
+          id: 'msg-001',
+          content: {
+            event: 'trend_processed',
+            data: { platform: 'twitter' },
+          },
+        });
+
+        expect(mockChannel.consume).toHaveBeenCalledWith(
+          'processed-trends',
+          expect.any(Function),
+          expect.objectContaining({ noAck: false })
+        );
+      });
+
+      it('should acknowledge messages properly', async () => {
+        const ackRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.ACKNOWLEDGE,
+          target: 'processed-trends',
+          parameters: {
+            messageId: 'msg-001',
+            deliveryTag: 1,
+            acknowledge: true,
+          },
+        });
+
+        const response = await connector.fetch(ackRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockChannel.ack).toHaveBeenCalledWith(
+          expect.objectContaining({ deliveryTag: 1 })
+        );
+      });
+
+      it('should reject messages when needed', async () => {
+        const nackRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.ACKNOWLEDGE,
+          target: 'processed-trends',
+          parameters: {
+            messageId: 'msg-001',
+            deliveryTag: 1,
+            acknowledge: false,
+            requeue: true,
+          },
+        });
+
+        const response = await connector.fetch(nackRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockChannel.nack).toHaveBeenCalledWith(
+          expect.objectContaining({ deliveryTag: 1 }),
+          false, // multiple
+          true // requeue
+        );
+      });
+    });
+  });
+
+  describe('AWS SQS Backend', () => {
+    let connector: QueueConnector;
+    let mockSQSClient: any;
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+
+      const { SQSClient } = await import('@aws-sdk/client-sqs');
+      mockSQSClient = {
+        send: jest.fn(),
+        destroy: jest.fn(),
+      };
+
+      SQSClient.mockImplementation(() => mockSQSClient);
+
+      connector = new QueueConnector('test-sqs-queue', {
+        queueBackend: 'sqs',
+        aws: {
+          region: 'us-east-1',
+          credentials: {
+            accessKeyId: 'test-key',
+            secretAccessKey: 'test-secret',
+          },
+        },
+        timeout: 5000,
+        maxRetries: 2,
+        retryDelay: 100,
+      });
+
+      await connector.connect();
+    });
+
+    afterEach(async () => {
+      await connector.disconnect();
+    });
+
+    describe('Publishing Messages', () => {
+      it('should send messages to SQS queue', async () => {
+        mockSQSClient.send.mockResolvedValue({
+          MessageId: 'test-message-id',
+          MD5OfBody: 'test-md5',
+        });
+
+        const response = await connector.fetch(sampleRequests.queue.publish);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messageId).toBe('test-message-id');
+
+        expect(mockSQSClient.send).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.objectContaining({
+              QueueUrl: expect.any(String),
+              MessageBody: expect.stringContaining('"platform":"twitter"'),
+              MessageAttributes: expect.any(Object),
+            }),
+          })
+        );
+      });
+
+      it('should handle FIFO queue messages', async () => {
+        const fifoRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.PUBLISH,
+          target: 'trends.fifo',
+          parameters: {
+            message: { type: 'trend', data: process.env.UNKNOWN },
+            options: {
+              messageGroupId: 'trend-group-1',
+              messageDeduplicationId: 'dedup-123',
+            },
+          },
+        });
+
+        mockSQSClient.send.mockResolvedValue({
+          MessageId: 'fifo-message-id',
+          MD5OfBody: 'test-md5',
+          SequenceNumber: '123456789',
+        });
+
+        const response = await connector.fetch(fifoRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockSQSClient.send).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.objectContaining({
+              MessageGroupId: 'trend-group-1',
+              MessageDeduplicationId: 'dedup-123',
+            }),
+          })
+        );
+      });
+    });
+
+    describe('Consuming Messages', () => {
+      it('should receive messages from SQS queue', async () => {
+        const mockMessages = {
+          Messages: [
+            {
+              MessageId: 'msg-001',
+              Body: JSON.stringify({
+                id: 'trend-001',
+                content: { event: 'trend_detected', platform: 'instagram' },
+              }),
+              ReceiptHandle: 'receipt-handle-001',
+              Attributes: {
+                SentTimestamp: Date.now().toString(),
+              },
+            },
+            {
+              MessageId: 'msg-002',
+              Body: JSON.stringify({
+                id: 'trend-002',
+                content: { event: 'trend_processed', platform: 'tiktok' },
+              }),
+              ReceiptHandle: 'receipt-handle-002',
+              Attributes: {
+                SentTimestamp: Date.now().toString(),
+              },
+            },
+          ],
+        };
+
+        mockSQSClient.send.mockResolvedValue(mockMessages);
+
+        const response = await connector.fetch(sampleRequests.queue.consume);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(2);
+        expect(response.data.messages[0]).toMatchObject({
+          id: 'msg-001',
+          content: {
+            id: 'trend-001',
+            content: { event: 'trend_detected', platform: 'instagram' },
+          },
+          receiptHandle: 'receipt-handle-001',
+        });
+      });
+
+      it('should handle empty queue responses', async () => {
+        mockSQSClient.send.mockResolvedValue({ Messages: undefined });
+
+        const response = await connector.fetch(sampleRequests.queue.consume);
+
+        expect(response.success).toBe(true);
+        expect(response.data.messages).toHaveLength(0);
+        expect(response.data.hasMore).toBe(false);
+      });
+    });
+
+    describe('Message Acknowledgment', () => {
+      it('should delete acknowledged messages', async () => {
+        const ackRequest = testHelpers.createMockConnectorRequest({
+          type: ConnectorRequestType.ACKNOWLEDGE,
+          target: 'processed-trends',
+          parameters: {
+            messageId: 'msg-001',
+            receiptHandle: 'receipt-handle-001',
+            acknowledge: true,
+          },
+        });
+
+        mockSQSClient.send.mockResolvedValue({});
+
+        const response = await connector.fetch(ackRequest);
+
+        expect(response.success).toBe(true);
+        expect(mockSQSClient.send).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.objectContaining({
+              QueueUrl: expect.any(String),
+              ReceiptHandle: 'receipt-handle-001',
+            }),
+          })
+        );
+      });
+    });
+  });
+
+  describe('Multi-Backend Operations', () => {
+    it('should switch backends based on configuration', async () => {
+      const redisConnector = new QueueConnector('redis-queue', {
+        queueBackend: 'redis',
+      });
+      const rabbitConnector = new QueueConnector('rabbit-queue', {
+        queueBackend: 'rabbitmq',
+      });
+      const sqsConnector = new QueueConnector('sqs-queue', {
+        queueBackend: 'sqs',
+      });
+
+      expect(redisConnector).toBeDefined();
+      expect(rabbitConnector).toBeDefined();
+      expect(sqsConnector).toBeDefined();
+    });
+
+    it('should provide backend-specific health checks', async () => {
+      const connector = new QueueConnector('test-queue', {
+        queueBackend: 'redis',
+        ...testConfigs.redis,
+      });
+
+      await connector.connect();
+
+      const redis = await import('redis');
+      const mockRedisClient = redis.createClient();
+      mockRedisClient.ping.mockResolvedValue('PONG');
+
+      const isHealthy = await connector.healthCheck();
+
+      expect(isHealthy).toBe(true);
+      expect(mockRedisClient.ping).toHaveBeenCalled();
+
+      await connector.disconnect();
+    });
+  });
+
+  describe('Error Handling and Resilience', () => {
+    let connector: QueueConnector;
+
+    beforeEach(async () => {
+      connector = new QueueConnector('test-error-queue', {
+        queueBackend: 'redis',
+        ...testConfigs.redis,
+        timeout: 1000,
+        maxRetries: 3,
+        retryDelay: 50,
+      });
+      await connector.connect();
+    });
+
+    afterEach(async () => {
+      await connector.disconnect();
+    });
+
+    it('should retry on transient failures', async () => {
+      const redis = await import('redis');
+      const mockRedisClient = redis.createClient();
+
+      mockRedisClient.lPush
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Timeout'))
+        .mockResolvedValueOnce(1);
+
+      const response = await connector.fetch(sampleRequests.queue.publish);
+
+      expect(response.success).toBe(true);
+      expect(mockRedisClient.lPush).toHaveBeenCalledTimes(3);
+    });
+
+    it('should fail after max retries exceeded', async () => {
+      const redis = await import('redis');
+      const mockRedisClient = redis.createClient();
+
+      mockRedisClient.lPush.mockRejectedValue(new Error('Persistent error'));
+
+      const response = await connector.fetch(sampleRequests.queue.publish);
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('MAX_RETRIES_EXCEEDED');
+      expect(mockRedisClient.lPush).toHaveBeenCalledTimes(4); // Initial + 3 retries
+    });
+
+    it('should handle connection loss gracefully', async () => {
+      const redis = await import('redis');
+      const mockRedisClient = redis.createClient();
+      mockRedisClient.isOpen = false;
+      mockRedisClient.isReady = false;
+
+      const response = await connector.fetch(sampleRequests.queue.publish);
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('CONNECTION_NOT_READY');
+    });
+  });
+
+  describe('Performance and Monitoring', () => {
+    let connector: QueueConnector;
+
+    beforeEach(async () => {
+      connector = new QueueConnector('test-metrics-queue', testConfigs.redis);
+      await connector.connect();
+    });
+
+    afterEach(async () => {
+      await connector.disconnect();
+    });
+
+    it('should track message throughput metrics', async () => {
+      const redis = await import('redis');
+      const mockRedisClient = redis.createClient();
+      mockRedisClient.lPush.mockResolvedValue(1);
+
+      // Publish multiple messages
+      for (let i = 0; i < 5; i++) {
+        await connector.fetch(sampleRequests.queue.publish);
+      }
+
+      const metrics = connector.getMetrics();
+      expect(metrics.totalRequests).toBe(5);
+      expect(metrics.successfulRequests).toBe(5);
+      expect(metrics.failedRequests).toBe(0);
+      expect(metrics.averageResponseTime).toBeGreaterThan(0);
+    });
+
+    it('should provide queue-specific metrics', async () => {
+      const status = connector.getStatus();
+
+      expect(status).toMatchObject({
+        name: 'test-metrics-queue',
+        connected: true,
+        health: expect.any(Number),
+        metrics: expect.objectContaining({
+          totalRequests: expect.any(Number),
+          successfulRequests: expect.any(Number),
+          failedRequests: expect.any(Number),
+        }),
+      });
+    });
+  });
+});

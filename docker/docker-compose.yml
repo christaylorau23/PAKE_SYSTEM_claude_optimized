@@ -1,0 +1,138 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pake_postgres
+    environment:
+      POSTGRES_DB: pake_knowledge
+      POSTGRES_USER: pake_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: pake_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+    volumes:
+      - redis_data:/data
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  mcp_server:
+    build:
+      context: ../mcp-servers
+      dockerfile: Dockerfile
+    container_name: pake_mcp_server
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://pake_admin:${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}@postgres:5432/pake_knowledge
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENVIRONMENT=production
+    ports:
+      - '${MCP_PORT:-8000}:8000'
+    volumes:
+      - ../vault:/vault:ro
+      - ../logs:/app/logs
+      - ../data:/app/data
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: pake_ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - '${OLLAMA_PORT:-11434}:11434'
+    networks:
+      - pake_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: pake_n8n
+    depends_on:
+      - postgres
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-n8n_secure_2024}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:${N8N_PORT:-5678}/
+      - GENERIC_TIMEZONE=America/New_York
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=pake_admin
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
+    ports:
+      - '${N8N_PORT:-5678}:5678'
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../scripts:/scripts:ro
+      - ../data:/data
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: pake_nginx
+    depends_on:
+      - mcp_server
+      - n8n
+    ports:
+      - '${NGINX_PORT:-80}:80'
+      - '${NGINX_HTTPS_PORT:-443}:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../logs/nginx:/var/log/nginx
+    networks:
+      - pake_network
+    restart: unless-stopped
+
+networks:
+  pake_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+  n8n_data:
+    driver: local

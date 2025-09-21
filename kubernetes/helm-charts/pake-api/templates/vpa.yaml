@@ -1,0 +1,23 @@
+{{- if .Values.verticalPodAutoscaler.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "pake-api.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pake-api.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "pake-api.fullname" . }}
+  updatePolicy:
+    updateMode: {{ .Values.verticalPodAutoscaler.updateMode }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: {{ .Chart.Name }}
+      minAllowed:
+        {{- toYaml .Values.verticalPodAutoscaler.minAllowed | nindent 8 }}
+      maxAllowed:
+        {{- toYaml .Values.verticalPodAutoscaler.maxAllowed | nindent 8 }}
+{{- end }}

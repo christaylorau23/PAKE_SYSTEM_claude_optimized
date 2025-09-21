@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: pake-system-production
+
+# Base configuration
+resources:
+  - ../../base
+
+# Production-specific resources
+resources:
+  - vertical-pod-autoscaler.yaml
+  - cluster-autoscaler.yaml
+  - service-mesh.yaml
+  - backup-jobs.yaml
+
+# Production images with specific tags
+images:
+  - name: pake-system
+    newName: your-registry.com/pake-system
+    newTag: v8.0.0-prod
+  - name: pake-frontend
+    newName: your-registry.com/pake-frontend
+    newTag: v8.0.0-prod
+
+# Production configuration patches
+patchesStrategicMerge:
+  - production-resources.yaml
+  - production-replicas.yaml
+  - production-storage.yaml
+  - production-security.yaml
+
+# Production environment variables
+configMapGenerator:
+  - name: pake-production-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=warn
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+      - MAX_WORKERS=8
+      - CACHE_TTL=3600
+
+# Production secrets (use external secret management)
+# secretGenerator:
+#   - name: pake-production-secrets
+#     behavior: replace
+#     files:
+#       - JWT_SECRET_KEY=secrets/jwt-secret
+#       - POSTGRES_PASSWORD=secrets/postgres-REDACTED_SECRET
+#       - REDIS_PASSWORD=secrets/redis-REDACTED_SECRET
+
+# Namespace
+namespace: pake-system
+
+# Production-specific labels
+commonLabels:
+  environment: production
+  tier: enterprise
+
+# Production annotations
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"
+  kubernetes.io/managed-by: "kustomize"
+  backup.kubernetes.io/enabled: "true"

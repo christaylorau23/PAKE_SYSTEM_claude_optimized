@@ -1,0 +1,630 @@
+# PostgreSQL Hourly Snapshot CronJobs for PAKE System
+# Creates hourly snapshots for point-in-time recovery
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-snapshot-scripts
+  namespace: database
+  labels:
+    app: postgres-snapshots
+data:
+  snapshot-script.sh: |
+    #!/bin/bash
+    set -e
+
+    # Configuration
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_BUCKET=${BACKUP_BUCKET:-"s3://pake-backups"}
+    POSTGRES_HOST=${POSTGRES_HOST:-"pake-postgresql-primary.database.svc.cluster.local"}
+    POSTGRES_DB=${POSTGRES_DB:-"pake_production"}
+    RETENTION_HOURS=${RETENTION_HOURS:-168}  # 7 days
+
+    # Logging function
+    log() {
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    }
+
+    # Error handling
+    handle_error() {
+        log "ERROR: $1"
+        # Send alert to monitoring
+        curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-snapshots/instance/$(hostname) \
+          --data-binary "postgres_snapshot_status{type=\"error\"} 0" || true
+        exit 1
+    }
+
+    # Cleanup function
+    cleanup() {
+        log "Cleaning up temporary files..."
+        rm -f /tmp/snapshot_*.sql /tmp/snapshot_*.sql.gz
+    }
+    trap cleanup EXIT
+
+    log "Starting PostgreSQL snapshot creation"
+    log "Timestamp: $TIMESTAMP"
+    log "Host: $POSTGRES_HOST"
+    log "Database: $POSTGRES_DB"
+
+    # Check if PostgreSQL is accessible
+    if ! pg_isready -h $POSTGRES_HOST -p 5432 -U postgres; then
+        handle_error "PostgreSQL is not ready at $POSTGRES_HOST"
+    fi
+
+    # Get database size for monitoring
+    DB_SIZE=$(psql -h $POSTGRES_HOST -U postgres -d $POSTGRES_DB -t -c "SELECT pg_database_size('$POSTGRES_DB');" | tr -d ' ')
+    log "Database size: $DB_SIZE bytes"
+
+    # Create snapshot using pg_dump
+    log "Creating database snapshot..."
+    SNAPSHOT_START_TIME=$(date +%s)
+
+    pg_dump -h $POSTGRES_HOST -U postgres -d $POSTGRES_DB \
+        --verbose \
+        --no-REDACTED_SECRET \
+        --format=custom \
+        --compress=9 \
+        --file=/tmp/snapshot_${TIMESTAMP}.dump || handle_error "Failed to create snapshot"
+
+    SNAPSHOT_END_TIME=$(date +%s)
+    SNAPSHOT_DURATION=$((SNAPSHOT_END_TIME - SNAPSHOT_START_TIME))
+
+    # Get snapshot file size
+    SNAPSHOT_SIZE=$(stat -c%s /tmp/snapshot_${TIMESTAMP}.dump)
+    log "Snapshot created successfully in ${SNAPSHOT_DURATION}s, size: $SNAPSHOT_SIZE bytes"
+
+    # Create additional SQL export for compatibility
+    log "Creating SQL export..."
+    pg_dump -h $POSTGRES_HOST -U postgres -d $POSTGRES_DB \
+        --verbose \
+        --no-REDACTED_SECRET \
+        --format=plain \
+        --file=/tmp/snapshot_${TIMESTAMP}.sql || handle_error "Failed to create SQL export"
+
+    # Compress SQL export
+    gzip /tmp/snapshot_${TIMESTAMP}.sql
+    SQL_SIZE=$(stat -c%s /tmp/snapshot_${TIMESTAMP}.sql.gz)
+    log "SQL export created, compressed size: $SQL_SIZE bytes"
+
+    # Upload to S3
+    log "Uploading snapshot to S3..."
+    UPLOAD_START_TIME=$(date +%s)
+
+    # Upload custom format dump
+    aws s3 cp /tmp/snapshot_${TIMESTAMP}.dump \
+        $BACKUP_BUCKET/snapshots/postgresql/custom/snapshot_${TIMESTAMP}.dump \
+        --storage-class STANDARD_IA || handle_error "Failed to upload custom format snapshot"
+
+    # Upload SQL format
+    aws s3 cp /tmp/snapshot_${TIMESTAMP}.sql.gz \
+        $BACKUP_BUCKET/snapshots/postgresql/sql/snapshot_${TIMESTAMP}.sql.gz \
+        --storage-class STANDARD_IA || handle_error "Failed to upload SQL snapshot"
+
+    UPLOAD_END_TIME=$(date +%s)
+    UPLOAD_DURATION=$((UPLOAD_END_TIME - UPLOAD_START_TIME))
+    log "Upload completed in ${UPLOAD_DURATION}s"
+
+    # Create metadata file
+    log "Creating snapshot metadata..."
+    cat > /tmp/snapshot_${TIMESTAMP}_metadata.json << EOF
+    {
+      "timestamp": "$TIMESTAMP",
+      "creation_time": "$(date -d @$SNAPSHOT_START_TIME -Iseconds)",
+      "database": "$POSTGRES_DB",
+      "host": "$POSTGRES_HOST",
+      "database_size_bytes": $DB_SIZE,
+      "snapshot_size_bytes": $SNAPSHOT_SIZE,
+      "sql_size_bytes": $SQL_SIZE,
+      "snapshot_duration_seconds": $SNAPSHOT_DURATION,
+      "upload_duration_seconds": $UPLOAD_DURATION,
+      "compression_ratio": $(echo "scale=2; $SNAPSHOT_SIZE / $DB_SIZE" | bc -l),
+      "custom_format_path": "snapshots/postgresql/custom/snapshot_${TIMESTAMP}.dump",
+      "sql_format_path": "snapshots/postgresql/sql/snapshot_${TIMESTAMP}.sql.gz",
+      "wal_lsn": "$(psql -h $POSTGRES_HOST -U postgres -d postgres -t -c "SELECT pg_current_wal_lsn();" | tr -d ' ')",
+      "backup_type": "snapshot",
+      "retention_policy": "${RETENTION_HOURS}h"
+    }
+    EOF
+
+    # Upload metadata
+    aws s3 cp /tmp/snapshot_${TIMESTAMP}_metadata.json \
+        $BACKUP_BUCKET/snapshots/postgresql/metadata/snapshot_${TIMESTAMP}_metadata.json || \
+        handle_error "Failed to upload metadata"
+
+    # Clean up old snapshots
+    log "Cleaning up old snapshots (retention: ${RETENTION_HOURS}h)..."
+    CUTOFF_DATE=$(date -d "${RETENTION_HOURS} hours ago" +%Y%m%d_%H%M%S)
+
+    # List and delete old snapshots
+    aws s3 ls $BACKUP_BUCKET/snapshots/postgresql/custom/ | \
+    while read -r line; do
+        filename=$(echo $line | awk '{print $4}')
+        if [[ $filename =~ snapshot_([0-9]{8}_[0-9]{6})\.dump ]]; then
+            file_timestamp="${BASH_REMATCH[1]}"
+            if [[ "$file_timestamp" < "$CUTOFF_DATE" ]]; then
+                log "Deleting old snapshot: $filename"
+                aws s3 rm $BACKUP_BUCKET/snapshots/postgresql/custom/$filename
+                aws s3 rm $BACKUP_BUCKET/snapshots/postgresql/sql/snapshot_${file_timestamp}.sql.gz 2>/dev/null || true
+                aws s3 rm $BACKUP_BUCKET/snapshots/postgresql/metadata/snapshot_${file_timestamp}_metadata.json 2>/dev/null || true
+            fi
+        fi
+    done
+
+    # Update Prometheus metrics
+    log "Updating monitoring metrics..."
+    curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-snapshots/instance/$(hostname) \
+      --data-binary @- << EOF
+    postgres_snapshot_status{type="success"} 1
+    postgres_snapshot_duration_seconds $SNAPSHOT_DURATION
+    postgres_snapshot_size_bytes $SNAPSHOT_SIZE
+    postgres_snapshot_database_size_bytes $DB_SIZE
+    postgres_snapshot_upload_duration_seconds $UPLOAD_DURATION
+    postgres_snapshot_compression_ratio $(echo "scale=4; $SNAPSHOT_SIZE / $DB_SIZE" | bc -l)
+    postgres_snapshot_timestamp $(date +%s)
+    EOF
+
+    log "PostgreSQL snapshot completed successfully"
+    log "Custom format: $BACKUP_BUCKET/snapshots/postgresql/custom/snapshot_${TIMESTAMP}.dump"
+    log "SQL format: $BACKUP_BUCKET/snapshots/postgresql/sql/snapshot_${TIMESTAMP}.sql.gz"
+
+  validation-script.sh: |
+    #!/bin/bash
+    set -e
+
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_BUCKET=${BACKUP_BUCKET:-"s3://pake-backups"}
+    POSTGRES_HOST=${POSTGRES_HOST:-"pake-postgresql-primary.database.svc.cluster.local"}
+
+    log() {
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] VALIDATE: $1"
+    }
+
+    log "Starting snapshot validation"
+
+    # Get latest snapshot
+    LATEST_SNAPSHOT=$(aws s3 ls $BACKUP_BUCKET/snapshots/postgresql/custom/ | sort | tail -1 | awk '{print $4}')
+
+    if [ -z "$LATEST_SNAPSHOT" ]; then
+        log "ERROR: No snapshots found"
+        exit 1
+    fi
+
+    log "Validating snapshot: $LATEST_SNAPSHOT"
+
+    # Download and test restore
+    aws s3 cp $BACKUP_BUCKET/snapshots/postgresql/custom/$LATEST_SNAPSHOT /tmp/test_snapshot.dump
+
+    # Test if dump file is valid
+    pg_restore --list /tmp/test_snapshot.dump > /dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        log "Snapshot validation successful: $LATEST_SNAPSHOT"
+        curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-snapshot-validation/instance/$(hostname) \
+          --data-binary "postgres_snapshot_validation_status 1"
+    else
+        log "ERROR: Snapshot validation failed: $LATEST_SNAPSHOT"
+        curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-snapshot-validation/instance/$(hostname) \
+          --data-binary "postgres_snapshot_validation_status 0"
+        exit 1
+    fi
+
+    # Cleanup
+    rm -f /tmp/test_snapshot.dump
+
+  replica-validation-script.sh: |
+    #!/bin/bash
+    set -e
+
+    # Validate replication lag on all replicas
+    PRIMARY_HOST=${PRIMARY_HOST:-"pake-postgresql-primary.database.svc.cluster.local"}
+
+    log() {
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] REPL-VALIDATE: $1"
+    }
+
+    log "Starting replication validation"
+
+    # Get primary LSN
+    PRIMARY_LSN=$(psql -h $PRIMARY_HOST -U postgres -d postgres -t -c "SELECT pg_current_wal_lsn();" | tr -d ' ')
+    log "Primary LSN: $PRIMARY_LSN"
+
+    # Check EU replica
+    EU_HOST="pake-postgresql-replica-eu.database.svc.cluster.local"
+    if pg_isready -h $EU_HOST -p 5432 -U postgres; then
+        EU_LSN=$(psql -h $EU_HOST -U postgres -d postgres -t -c "SELECT pg_last_wal_replay_lsn();" | tr -d ' ')
+        EU_LAG=$(psql -h $EU_HOST -U postgres -d postgres -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()));" | tr -d ' ')
+        log "EU Replica - LSN: $EU_LSN, Lag: ${EU_LAG}s"
+        
+        curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-replication-validation/instance/eu-replica \
+          --data-binary "postgres_replica_lag_seconds $EU_LAG"
+    else
+        log "WARNING: EU replica not accessible"
+    fi
+
+    # Check AP replica
+    AP_HOST="pake-postgresql-replica-ap.database.svc.cluster.local"
+    if pg_isready -h $AP_HOST -p 5432 -U postgres; then
+        AP_LSN=$(psql -h $AP_HOST -U postgres -d postgres -t -c "SELECT pg_last_wal_replay_lsn();" | tr -d ' ')
+        AP_LAG=$(psql -h $AP_HOST -U postgres -d postgres -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()));" | tr -d ' ')
+        log "AP Replica - LSN: $AP_LSN, Lag: ${AP_LAG}s"
+        
+        curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-replication-validation/instance/ap-replica \
+          --data-binary "postgres_replica_lag_seconds $AP_LAG"
+    else
+        log "WARNING: AP replica not accessible"
+    fi
+
+    log "Replication validation completed"
+
+---
+# Hourly PostgreSQL Snapshot CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-hourly-snapshot
+  namespace: database
+  labels:
+    app: postgres-snapshots
+    type: hourly
+spec:
+  schedule: '0 * * * *' # Every hour at minute 0
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 24 # Keep 24 hours of history
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: postgres-snapshots
+            type: hourly
+        spec:
+          serviceAccountName: postgres-snapshots
+          restartPolicy: OnFailure
+          containers:
+            - name: snapshot
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - /scripts/snapshot-script.sh
+              env:
+                - name: POSTGRES_HOST
+                  value: 'pake-postgresql-primary.database.svc.cluster.local'
+                - name: POSTGRES_DB
+                  value: 'pake_production'
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: postgres-REDACTED_SECRET
+                - name: BACKUP_BUCKET
+                  value: 's3://pake-backups'
+                - name: RETENTION_HOURS
+                  value: '168' # 7 days
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 4Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: postgres-snapshot-scripts
+                defaultMode: 0755
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 10Gi
+          nodeSelector:
+            workload: database
+
+---
+# Daily PostgreSQL Snapshot Validation CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-snapshot-validation
+  namespace: database
+  labels:
+    app: postgres-snapshots
+    type: validation
+spec:
+  schedule: '30 6 * * *' # Daily at 6:30 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: postgres-snapshots
+            type: validation
+        spec:
+          serviceAccountName: postgres-snapshots
+          restartPolicy: OnFailure
+          containers:
+            - name: validation
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - /scripts/validation-script.sh
+              env:
+                - name: BACKUP_BUCKET
+                  value: 's3://pake-backups'
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+                limits:
+                  cpu: 1000m
+                  memory: 2Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: postgres-snapshot-scripts
+                defaultMode: 0755
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 5Gi
+
+---
+# Replication Validation CronJob (every 15 minutes)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-replication-validation
+  namespace: database
+  labels:
+    app: postgres-snapshots
+    type: replication-validation
+spec:
+  schedule: '*/15 * * * *' # Every 15 minutes
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 96 # Keep 24 hours of 15-min intervals
+  failedJobsHistoryLimit: 10
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: postgres-snapshots
+            type: replication-validation
+        spec:
+          serviceAccountName: postgres-snapshots
+          restartPolicy: OnFailure
+          containers:
+            - name: replication-validation
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - /scripts/replica-validation-script.sh
+              env:
+                - name: PRIMARY_HOST
+                  value: 'pake-postgresql-primary.database.svc.cluster.local'
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: postgres-REDACTED_SECRET
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 200m
+                  memory: 512Mi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: scripts
+              configMap:
+                name: postgres-snapshot-scripts
+                defaultMode: 0755
+
+---
+# Weekly Deep Snapshot (with schema analysis)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-weekly-deep-snapshot
+  namespace: database
+  labels:
+    app: postgres-snapshots
+    type: weekly-deep
+spec:
+  schedule: '0 1 * * 0' # Sunday at 1:00 AM UTC
+  timeZone: 'UTC'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: postgres-snapshots
+            type: weekly-deep
+        spec:
+          serviceAccountName: postgres-snapshots
+          restartPolicy: OnFailure
+          containers:
+            - name: deep-snapshot
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_BUCKET="s3://pake-backups"
+                  POSTGRES_HOST="pake-postgresql-primary.database.svc.cluster.local"
+
+                  echo "Starting weekly deep snapshot: $TIMESTAMP"
+
+                  # Create comprehensive database dump with all objects
+                  pg_dumpall -h $POSTGRES_HOST -U postgres \
+                    --verbose \
+                    --file=/tmp/weekly_full_${TIMESTAMP}.sql
+
+                  # Create schema-only dump for analysis
+                  pg_dump -h $POSTGRES_HOST -U postgres -d pake_production \
+                    --schema-only \
+                    --verbose \
+                    --file=/tmp/weekly_schema_${TIMESTAMP}.sql
+
+                  # Generate database statistics
+                  psql -h $POSTGRES_HOST -U postgres -d pake_production -c "
+                    SELECT 
+                      schemaname,
+                      tablename,
+                      n_tup_ins,
+                      n_tup_upd,
+                      n_tup_del,
+                      n_live_tup,
+                      n_dead_tup,
+                      last_vacuum,
+                      last_autovacuum,
+                      last_analyze,
+                      last_autoanalyze
+                    FROM pg_stat_user_tables
+                    ORDER BY n_live_tup DESC;
+                  " > /tmp/weekly_stats_${TIMESTAMP}.txt
+
+                  # Compress all files
+                  gzip /tmp/weekly_full_${TIMESTAMP}.sql
+                  gzip /tmp/weekly_schema_${TIMESTAMP}.sql
+                  gzip /tmp/weekly_stats_${TIMESTAMP}.txt
+
+                  # Upload to S3
+                  aws s3 cp /tmp/weekly_full_${TIMESTAMP}.sql.gz \
+                    $BACKUP_BUCKET/snapshots/postgresql/weekly/weekly_full_${TIMESTAMP}.sql.gz
+
+                  aws s3 cp /tmp/weekly_schema_${TIMESTAMP}.sql.gz \
+                    $BACKUP_BUCKET/snapshots/postgresql/weekly/weekly_schema_${TIMESTAMP}.sql.gz
+
+                  aws s3 cp /tmp/weekly_stats_${TIMESTAMP}.txt.gz \
+                    $BACKUP_BUCKET/snapshots/postgresql/weekly/weekly_stats_${TIMESTAMP}.txt.gz
+
+                  echo "Weekly deep snapshot completed successfully"
+
+                  # Update metrics
+                  curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-weekly-snapshots/instance/$(hostname) \
+                    --data-binary "postgres_weekly_snapshot_timestamp $(date +%s)"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: postgres-REDACTED_SECRET
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+                - name: AWS_DEFAULT_REGION
+                  value: 'us-east-1'
+              resources:
+                requests:
+                  cpu: 1000m
+                  memory: 2Gi
+                limits:
+                  cpu: 4000m
+                  memory: 8Gi
+              volumeMounts:
+                - name: tmp-storage
+                  mountPath: /tmp
+          volumes:
+            - name: tmp-storage
+              emptyDir:
+                sizeLimit: 20Gi
+
+---
+# ServiceAccount and RBAC for snapshots
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-snapshots
+  namespace: database
+  labels:
+    app: postgres-snapshots
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: postgres-snapshots
+  namespace: database
+rules:
+  - apiGroups: ['']
+    resources: ['secrets', 'configmaps']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['pods']
+    verbs: ['get', 'list']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgres-snapshots
+  namespace: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: postgres-snapshots
+subjects:
+  - kind: ServiceAccount
+    name: postgres-snapshots
+    namespace: database

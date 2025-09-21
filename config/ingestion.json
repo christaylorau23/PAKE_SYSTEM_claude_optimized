@@ -1,0 +1,167 @@
+{
+  "sources": [
+    {
+      "name": "Hacker News - AI",
+      "type": "rss",
+      "url": "https://hnrss.org/frontpage?q=AI+OR+artificial+intelligence+OR+machine+learning",
+      "interval": 1800,
+      "enabled": true,
+      "metadata": {
+        "tags": ["ai", "tech", "news"]
+      },
+      "filters": {
+        "min_score": 10
+      }
+    },
+    {
+      "name": "ArXiv AI Research",
+      "type": "rss",
+      "url": "http://export.arxiv.org/rss/cs.AI",
+      "interval": 3600,
+      "enabled": true,
+      "metadata": {
+        "tags": ["research", "ai", "academic"]
+      }
+    },
+    {
+      "name": "ArXiv Machine Learning",
+      "type": "rss",
+      "url": "http://export.arxiv.org/rss/cs.LG",
+      "interval": 3600,
+      "enabled": true,
+      "metadata": {
+        "tags": ["research", "ml", "academic"]
+      }
+    },
+    {
+      "name": "MIT Technology Review AI",
+      "type": "rss",
+      "url": "https://www.technologyreview.com/feed/",
+      "interval": 7200,
+      "enabled": true,
+      "metadata": {
+        "tags": ["tech", "innovation", "ai"]
+      }
+    },
+    {
+      "name": "OpenAI Blog",
+      "type": "web",
+      "url": "https://openai.com/blog",
+      "interval": 86400,
+      "enabled": true,
+      "metadata": {
+        "tags": ["openai", "ai", "announcements"]
+      }
+    },
+    {
+      "name": "Anthropic News",
+      "type": "web",
+      "url": "https://www.anthropic.com/news",
+      "interval": 86400,
+      "enabled": true,
+      "metadata": {
+        "tags": ["anthropic", "ai", "safety"]
+      }
+    },
+    {
+      "name": "Personal Documents",
+      "type": "file",
+      "url": "file://D:/Documents/Research",
+      "interval": 3600,
+      "enabled": false,
+      "metadata": {
+        "tags": ["personal", "research", "documents"]
+      },
+      "filters": {
+        "file_types": [".txt", ".md", ".pdf", ".docx"]
+      }
+    },
+    {
+      "name": "Gmail Important",
+      "type": "email",
+      "url": null,
+      "credentials": {
+        "server": "imap.gmail.com",
+        "port": 993,
+        "username": "your-email@gmail.com",
+        "REDACTED_SECRET": "your-app-REDACTED_SECRET"
+      },
+      "interval": 1800,
+      "enabled": false,
+      "metadata": {
+        "tags": ["email", "personal"]
+      },
+      "filters": {
+        "folders": ["INBOX"],
+        "unread_only": true,
+        "from_whitelist": ["newsletters@", "research@", "alerts@"]
+      }
+    },
+    {
+      "name": "Reddit r/MachineLearning",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/MachineLearning/.rss",
+      "interval": 3600,
+      "enabled": true,
+      "metadata": {
+        "tags": ["reddit", "ml", "community"]
+      },
+      "filters": {
+        "min_upvotes": 50
+      }
+    },
+    {
+      "name": "Medium AI Publications",
+      "type": "rss",
+      "url": "https://medium.com/feed/towards-data-science",
+      "interval": 7200,
+      "enabled": true,
+      "metadata": {
+        "tags": ["medium", "data-science", "tutorials"]
+      }
+    }
+  ],
+  "global_settings": {
+    "max_content_length": 50000,
+    "min_content_length": 100,
+    "default_confidence": 0.6,
+    "enable_deduplication": true,
+    "batch_size": 10,
+    "max_items_per_source": 20,
+    "content_filters": {
+      "exclude_keywords": ["advertisement", "sponsored", "crypto pump"],
+      "require_keywords": [],
+      "max_age_days": 30
+    },
+    "rate_limiting": {
+      "requests_per_minute": 60,
+      "delay_between_requests": 1
+    },
+    "retry_settings": {
+      "max_retries": 3,
+      "retry_delay": 5,
+      "exponential_backoff": true
+    },
+    "notification_settings": {
+      "webhook_url": null,
+      "email_alerts": false,
+      "log_level": "INFO"
+    }
+  },
+  "scheduling": {
+    "high_priority_sources": [
+      "ArXiv AI Research",
+      "OpenAI Blog",
+      "Anthropic News"
+    ],
+    "low_priority_sources": [
+      "Reddit r/MachineLearning",
+      "Medium AI Publications"
+    ],
+    "quiet_hours": {
+      "start": "23:00",
+      "end": "07:00",
+      "timezone": "America/New_York"
+    }
+  }
+}

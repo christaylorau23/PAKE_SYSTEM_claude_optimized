@@ -1,0 +1,29 @@
+# PAKE+ System Commit Message Template
+# 
+# Format: <type>(<scope>): <subject>
+#
+# Types:
+#   feat:     A new feature
+#   fix:      A bug fix
+#   docs:     Documentation changes
+#   style:    Code style changes (formatting, etc)
+#   refactor: Code refactoring
+#   test:     Adding or updating tests
+#   chore:    Maintenance tasks
+#   security: Security-related changes
+#
+# Security Checklist:
+# [ ] No secrets or credentials included
+# [ ] No sensitive configuration data
+# [ ] No API keys or tokens
+# [ ] No database REDACTED_SECRETs
+# [ ] No private keys or certificates
+#
+# Example:
+# security(auth): implement secure credential management
+#
+# - Replace hardcoded REDACTED_SECRETs with environment variables
+# - Add secrets management infrastructure
+# - Update .gitignore to exclude sensitive files
+#
+# Closes #123

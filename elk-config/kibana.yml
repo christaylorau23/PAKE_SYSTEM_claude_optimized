@@ -1,0 +1,40 @@
+# Kibana Configuration for AI Security Monitoring
+
+# Server settings
+server.name: 'pake-security-kibana'
+server.host: '0.0.0.0'
+server.port: 5601
+
+# Elasticsearch connection
+elasticsearch.hosts: ['http://elasticsearch:9200']
+elasticsearch.username: ''
+elasticsearch.REDACTED_SECRET: ''
+
+# Security settings (disabled for development)
+xpack.security.enabled: false
+xpack.encryptedSavedObjects.encryptionKey: 'pake-security-kibana-encryption-key-32-characters'
+
+# Monitoring
+xpack.monitoring.ui.container.elasticsearch.enabled: true
+
+# Logging
+logging.appenders:
+  file:
+    type: file
+    fileName: /usr/share/kibana/logs/kibana.log
+    layout:
+      type: json
+logging.root.level: info
+
+# UI settings
+map.includeElasticMapsService: false
+
+# Advanced settings
+elasticsearch.requestTimeout: 30000
+elasticsearch.shardTimeout: 30000
+
+# Index patterns
+kibana.defaultAppId: 'discover'
+
+# Save objects
+savedObjects.maxImportPayloadBytes: 26214400

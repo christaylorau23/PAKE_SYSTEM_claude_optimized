@@ -1,0 +1,403 @@
+# OpenTelemetry Auto-Instrumentation for PAKE Services
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: pake-instrumentation
+  namespace: pake-system
+spec:
+  # Exporter configuration
+  exporter:
+    endpoint: http://otel-collector.observability.svc.cluster.local:4317
+
+  # Resource attributes
+  resource:
+    addK8sUIDAttributes: true
+
+  # Propagators for trace context
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+    - jaeger
+
+  # Sampler configuration
+  sampler:
+    type: parentbased_traceidratio
+    argument: '1.0' # 100% sampling for development, adjust for production
+
+  # Language-specific configurations
+
+  # Python instrumentation for API and AI services
+  python:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.40b0
+    env:
+      # Service identification
+      - name: OTEL_SERVICE_NAME
+        value: pake-api
+      - name: OTEL_SERVICE_VERSION
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.labels['version']
+
+      # Resource attributes
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: >-
+          service.name=pake-api,
+          service.version=$(OTEL_SERVICE_VERSION),
+          deployment.environment=production,
+          k8s.cluster.name=pake-production,
+          k8s.namespace.name=$(OTEL_RESOURCE_ATTRIBUTES_K8S_NAMESPACE_NAME),
+          k8s.pod.name=$(OTEL_RESOURCE_ATTRIBUTES_K8S_POD_NAME),
+          k8s.container.name=$(OTEL_RESOURCE_ATTRIBUTES_K8S_CONTAINER_NAME)
+
+      # Instrumentation configuration
+      - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+        value: 'true'
+      - name: OTEL_PYTHON_LOG_CORRELATION
+        value: 'true'
+      - name: OTEL_PYTHON_LOG_LEVEL
+        value: 'info'
+
+      # Database instrumentation
+      - name: OTEL_PYTHON_ASYNCPG_INSTRUMENT
+        value: 'true'
+      - name: OTEL_PYTHON_REDIS_INSTRUMENT
+        value: 'true'
+      - name: OTEL_PYTHON_REQUESTS_INSTRUMENT
+        value: 'true'
+      - name: OTEL_PYTHON_HTTPX_INSTRUMENT
+        value: 'true'
+
+      # Framework instrumentation
+      - name: OTEL_PYTHON_FASTAPI_INSTRUMENT
+        value: 'true'
+      - name: OTEL_PYTHON_CELERY_INSTRUMENT
+        value: 'true'
+
+      # Performance tuning
+      - name: OTEL_BSP_MAX_QUEUE_SIZE
+        value: '2048'
+      - name: OTEL_BSP_BATCH_TIMEOUT
+        value: '1000'
+      - name: OTEL_BSP_MAX_EXPORT_BATCH_SIZE
+        value: '512'
+
+      # Custom attributes for business context
+      - name: OTEL_PYTHON_EXCLUDED_URLS
+        value: '/health,/metrics,/favicon.ico'
+      - name: OTEL_PYTHON_REQUEST_HOOK
+        value: 'pake_telemetry.request_hook'
+      - name: OTEL_PYTHON_RESPONSE_HOOK
+        value: 'pake_telemetry.response_hook'
+
+  # Node.js instrumentation (if needed for frontend services)
+  nodejs:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.40.0
+    env:
+      - name: OTEL_SERVICE_NAME
+        value: pake-frontend
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: >-
+          service.name=pake-frontend,
+          deployment.environment=production,
+          k8s.cluster.name=pake-production
+
+  # Java instrumentation (if needed)
+  java:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:1.28.0
+    env:
+      - name: OTEL_SERVICE_NAME
+        value: pake-java-service
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: >-
+          service.name=pake-java-service,
+          deployment.environment=production
+
+---
+# Custom telemetry configuration for PAKE API
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-telemetry-config
+  namespace: pake-system
+data:
+  telemetry_hooks.py: |
+    from opentelemetry import trace
+    from opentelemetry.trace import Status, StatusCode
+    from opentelemetry.semconv.trace import SpanAttributes
+    import json
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    def request_hook(span, environ):
+        """Custom request hook to add business context"""
+        if span and span.is_recording():
+            # Add custom attributes
+            user_id = environ.get('HTTP_X_USER_ID')
+            if user_id:
+                span.set_attribute('user.id', user_id)
+            
+            # Add API version
+            api_version = environ.get('HTTP_X_API_VERSION', 'v1')
+            span.set_attribute('api.version', api_version)
+            
+            # Add request size
+            content_length = environ.get('CONTENT_LENGTH', '0')
+            if content_length.isdigit():
+                span.set_attribute('http.request.content_length', int(content_length))
+            
+            # Add correlation ID
+            correlation_id = environ.get('HTTP_X_CORRELATION_ID')
+            if correlation_id:
+                span.set_attribute('correlation.id', correlation_id)
+
+    def response_hook(span, environ, status, response_headers):
+        """Custom response hook to add response context"""
+        if span and span.is_recording():
+            # Add response size
+            for header_name, header_value in response_headers:
+                if header_name.lower() == 'content-length':
+                    if header_value.isdigit():
+                        span.set_attribute('http.response.content_length', int(header_value))
+                        break
+            
+            # Add custom status based on status code
+            status_code = int(status.split()[0])
+            if status_code >= 400:
+                span.set_status(Status(StatusCode.ERROR))
+                if status_code >= 500:
+                    span.set_attribute('error', True)
+
+    # AI-specific telemetry functions
+    def trace_ai_inference(model_name, input_tokens, output_tokens, latency_ms):
+        """Add AI-specific telemetry"""
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("ai.inference") as span:
+            span.set_attribute("ai.model.name", model_name)
+            span.set_attribute("ai.tokens.input", input_tokens)
+            span.set_attribute("ai.tokens.output", output_tokens)
+            span.set_attribute("ai.latency.ms", latency_ms)
+            span.set_attribute("ai.cost.tokens", input_tokens + output_tokens)
+            
+            # Calculate cost (example rates)
+            input_cost = input_tokens * 0.0001  # $0.0001 per input token
+            output_cost = output_tokens * 0.0002  # $0.0002 per output token
+            total_cost = input_cost + output_cost
+            span.set_attribute("ai.cost.usd", total_cost)
+
+    def trace_database_query(query_type, table_name, duration_ms, rows_affected=None):
+        """Add database-specific telemetry"""
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("db.query") as span:
+            span.set_attribute("db.operation", query_type)
+            span.set_attribute("db.sql.table", table_name)
+            span.set_attribute("db.query.duration_ms", duration_ms)
+            if rows_affected is not None:
+                span.set_attribute("db.rows_affected", rows_affected)
+
+    def trace_worker_task(task_name, queue_name, retry_count=0):
+        """Add worker task telemetry"""
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("worker.task") as span:
+            span.set_attribute("worker.task.name", task_name)
+            span.set_attribute("worker.queue.name", queue_name)
+            span.set_attribute("worker.retry.count", retry_count)
+            span.set_attribute("worker.id", environ.get('HOSTNAME', 'unknown'))
+
+---
+# Telemetry ConfigMap for environment variables
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-env-config
+  namespace: pake-system
+data:
+  # Common OpenTelemetry environment variables
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector.observability.svc.cluster.local:4317'
+  OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc'
+  OTEL_EXPORTER_OTLP_INSECURE: 'true'
+
+  # Trace configuration
+  OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
+  OTEL_TRACES_SAMPLER_ARG: '1.0'
+
+  # Metrics configuration
+  OTEL_METRICS_EXPORTER: 'otlp'
+  OTEL_METRICS_EXPORT_INTERVAL: '10000'
+  OTEL_METRICS_EXPORT_TIMEOUT: '5000'
+
+  # Logs configuration
+  OTEL_LOGS_EXPORTER: 'otlp'
+  OTEL_LOGS_LEVEL: 'info'
+
+  # Resource detection
+  OTEL_RESOURCE_ATTRIBUTES_POD_NAME: '' # Will be injected
+  OTEL_RESOURCE_ATTRIBUTES_POD_UID: '' # Will be injected
+  OTEL_RESOURCE_ATTRIBUTES_NODE_NAME: '' # Will be injected
+
+  # Custom business attributes
+  OTEL_SERVICE_NAMESPACE: 'pake-system'
+  OTEL_DEPLOYMENT_ENVIRONMENT: 'production'
+
+---
+# ServiceMonitor for application metrics via OpenTelemetry
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pake-otel-metrics
+  namespace: pake-system
+  labels:
+    app: pake-telemetry
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pake-api
+  endpoints:
+    - port: http
+      interval: 15s
+      path: /metrics
+      metricRelabelings:
+        # Add service label
+        - sourceLabels: [__meta_kubernetes_pod_label_app]
+          targetLabel: service
+        # Add version label
+        - sourceLabels: [__meta_kubernetes_pod_label_version]
+          targetLabel: version
+        # Rename OpenTelemetry metrics
+        - sourceLabels: [__name__]
+          regex: 'otel_(.*)'
+          targetLabel: __name__
+          replacement: 'pake_${1}'
+
+---
+# Example of manual instrumentation for critical paths
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manual-instrumentation-examples
+  namespace: pake-system
+data:
+  api_instrumentation.py: |
+    from opentelemetry import trace, metrics
+    from opentelemetry.trace import Status, StatusCode
+    from opentelemetry.metrics import get_meter
+    import time
+    import logging
+
+    # Get tracer and meter
+    tracer = trace.get_tracer("pake.api")
+    meter = get_meter("pake.api")
+
+    # Custom metrics
+    request_counter = meter.create_counter(
+        name="pake_api_requests_total",
+        description="Total number of API requests"
+    )
+
+    request_duration = meter.create_histogram(
+        name="pake_api_request_duration_seconds",
+        description="API request duration in seconds"
+    )
+
+    ai_token_counter = meter.create_counter(
+        name="pake_ai_tokens_total",
+        description="Total AI tokens processed"
+    )
+
+    ai_cost_counter = meter.create_counter(
+        name="pake_ai_cost_total",
+        description="Total AI cost in USD"
+    )
+
+    async def instrumented_api_endpoint(request):
+        """Example of manual instrumentation for API endpoint"""
+        start_time = time.time()
+        
+        with tracer.start_as_current_span("api.endpoint") as span:
+            # Add request context
+            span.set_attribute("http.method", request.method)
+            span.set_attribute("http.url", str(request.url))
+            span.set_attribute("user.id", request.headers.get("x-user-id", "anonymous"))
+            
+            try:
+                # Process request
+                result = await process_request(request)
+                
+                # Add response context
+                span.set_attribute("http.status_code", 200)
+                span.set_status(Status(StatusCode.OK))
+                
+                # Record metrics
+                request_counter.add(1, {"method": request.method, "status": "success"})
+                
+                return result
+                
+            except Exception as e:
+                # Handle error
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.message", str(e))
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                
+                # Record error metrics
+                request_counter.add(1, {"method": request.method, "status": "error"})
+                
+                raise
+                
+            finally:
+                # Record duration
+                duration = time.time() - start_time
+                request_duration.record(duration, {"method": request.method})
+                span.set_attribute("duration.seconds", duration)
+
+    async def instrumented_ai_call(prompt, model="gpt-4"):
+        """Example of AI-specific instrumentation"""
+        with tracer.start_as_current_span("ai.inference") as span:
+            span.set_attribute("ai.model.name", model)
+            span.set_attribute("ai.prompt.length", len(prompt))
+            
+            start_time = time.time()
+            
+            try:
+                # Make AI API call
+                response = await ai_service.generate(prompt, model)
+                
+                # Extract token usage
+                input_tokens = response.usage.prompt_tokens
+                output_tokens = response.usage.completion_tokens
+                total_tokens = input_tokens + output_tokens
+                
+                # Add AI-specific attributes
+                span.set_attribute("ai.tokens.input", input_tokens)
+                span.set_attribute("ai.tokens.output", output_tokens)
+                span.set_attribute("ai.tokens.total", total_tokens)
+                
+                # Calculate and record cost
+                cost = calculate_ai_cost(input_tokens, output_tokens, model)
+                span.set_attribute("ai.cost.usd", cost)
+                
+                # Record metrics
+                ai_token_counter.add(total_tokens, {"model": model})
+                ai_cost_counter.add(cost, {"model": model})
+                
+                return response.content
+                
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                raise
+                
+            finally:
+                duration = time.time() - start_time
+                span.set_attribute("ai.duration.seconds", duration)
+
+    def calculate_ai_cost(input_tokens, output_tokens, model):
+        """Calculate AI API cost based on model and token usage"""
+        rates = {
+            "gpt-4": {"input": 0.00003, "output": 0.00006},
+            "gpt-3.5-turbo": {"input": 0.0000015, "output": 0.000002},
+            "claude-3": {"input": 0.000008, "output": 0.000024}
+        }
+        
+        model_rates = rates.get(model, rates["gpt-3.5-turbo"])
+        return (input_tokens * model_rates["input"]) + (output_tokens * model_rates["output"])

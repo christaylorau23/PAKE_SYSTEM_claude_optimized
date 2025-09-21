@@ -1,0 +1,332 @@
+# AI Security Monitor Configuration
+# This file configures the AI-assisted security monitoring system
+
+# ============================================================================
+# APPLICATION SETTINGS
+# ============================================================================
+app:
+  name: "AI Security Monitor"
+  version: "1.0.0"
+  debug: false
+  log_level: "INFO"
+  
+# ============================================================================
+# API CONFIGURATION
+# ============================================================================
+api:
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8090"  # Security dashboard
+  rate_limit:
+    requests_per_minute: 100
+    burst_size: 20
+
+# ============================================================================
+# ELASTICSEARCH CONFIGURATION
+# ============================================================================
+elasticsearch:
+  host: "elasticsearch"
+  port: 9200
+  index_patterns:
+    - "logs-*"
+    - "security-*"
+    - "audit-*"
+  query_size: 1000
+  scroll_timeout: "5m"
+  connection_timeout: 30
+  retry_attempts: 3
+
+# ============================================================================
+# AI/LLM CONFIGURATION
+# ============================================================================
+ai:
+  provider: "mock"  # Options: mock, openai, anthropic, local
+  
+  # OpenAI Configuration
+  openai:
+    model: "gpt-3.5-turbo"
+    temperature: 0.1
+    max_tokens: 1000
+    timeout: 30
+  
+  # Anthropic Configuration
+  anthropic:
+    model: "claude-3-haiku-20240307"
+    max_tokens: 1000
+    timeout: 30
+  
+  # Local LLM Configuration (if using local models)
+  local:
+    model_path: "/app/models/security-model"
+    device: "cpu"  # or "cuda" if GPU available
+    
+  # Analysis settings
+  analysis:
+    confidence_threshold: 0.3
+    batch_size: 100
+    analysis_interval: 300  # seconds (5 minutes)
+    max_log_age_hours: 24
+
+# ============================================================================
+# SECURITY PATTERN DETECTION
+# ============================================================================
+security_patterns:
+  # Failed login detection
+  failed_login:
+    enabled: true
+    patterns:
+      - "failed.*login"
+      - "authentication.*failed"
+      - "invalid.*credentials"
+      - "unauthorized.*access"
+      - "401.*unauthorized"
+    severity: "MEDIUM"
+    threshold_count: 5  # Alert after 5 failures
+    time_window: 300    # within 5 minutes
+  
+  # SQL injection detection
+  sql_injection:
+    enabled: true
+    patterns:
+      - "(union|select|insert|update|delete).*(\-\-|\/\*)"
+      - "or.*1=1"
+      - "drop.*table"
+      - "exec.*sp_"
+      - "information_schema"
+    severity: "CRITICAL"
+    threshold_count: 1  # Alert on first occurrence
+    time_window: 60
+  
+  # Slow query detection
+  slow_query:
+    enabled: true
+    patterns:
+      - "slow.*query"
+      - "execution.*time.*\\d{3,}"  # >100ms
+      - "timeout.*exceeded"
+      - "query.*duration.*\\d+\\.?\\d*s"
+    severity: "LOW"
+    threshold_ms: 1000  # Alert on queries >1 second
+    threshold_count: 3
+    time_window: 300
+  
+  # XSS attempt detection
+  xss_attempt:
+    enabled: true
+    patterns:
+      - "<script.*?>"
+      - "javascript:"
+      - "onerror.*="
+      - "alert\\("
+      - "document\\.cookie"
+    severity: "HIGH"
+    threshold_count: 1
+    time_window: 60
+  
+  # Path traversal detection
+  path_traversal:
+    enabled: true
+    patterns:
+      - "\\.\\.\\/\\.\\.\\/"
+      - "\\.\\.\\\\\\.\\.\\\\"
+      - "\\/etc\\/passwd"
+      - "\\/windows\\/system32"
+      - "\\.\\..*\\/.*\\.\\."
+    severity: "CRITICAL"
+    threshold_count: 1
+    time_window: 60
+  
+  # Rate limiting violations
+  rate_limiting:
+    enabled: true
+    max_requests_per_ip: 100
+    time_window: 300  # 5 minutes
+    severity: "HIGH"
+    
+  # Suspicious user agents
+  suspicious_user_agents:
+    enabled: true
+    patterns:
+      - "sqlmap"
+      - "nikto"
+      - "nmap"
+      - "burp"
+      - "owasp.*zap"
+    severity: "HIGH"
+    threshold_count: 1
+    time_window: 60
+
+# ============================================================================
+# ALERT MANAGEMENT
+# ============================================================================
+alerts:
+  # Alert storage
+  storage:
+    type: "memory"  # Options: memory, database, redis
+    retention_days: 7
+    max_alerts: 10000
+  
+  # Alert correlation
+  correlation:
+    enabled: true
+    time_window: 300  # 5 minutes
+    similarity_threshold: 0.8
+    max_correlated_alerts: 10
+  
+  # Alert severity levels
+  severity_levels:
+    CRITICAL:
+      risk_score_min: 80
+      auto_block: false  # Don't auto-block by default
+      notification_priority: 1
+    HIGH:
+      risk_score_min: 60
+      auto_block: false
+      notification_priority: 2
+    MEDIUM:
+      risk_score_min: 40
+      auto_block: false
+      notification_priority: 3
+    LOW:
+      risk_score_min: 20
+      auto_block: false
+      notification_priority: 4
+
+# ============================================================================
+# MCP INTEGRATION
+# ============================================================================
+mcp:
+  enabled: true
+  host: "mcp_server"
+  port: 8000
+  timeout: 30
+  
+  # Features to use from MCP system
+  features:
+    threat_intelligence: true
+    historical_analysis: true
+    context_enrichment: true
+    security_logging: true
+  
+  # Vault integration
+  vault:
+    path: "/vault"
+    enable_context_search: true
+    max_context_items: 10
+
+# ============================================================================
+# DATABASE CONFIGURATION (OPTIONAL)
+# ============================================================================
+database:
+  enabled: false  # Set to true to use database for alert storage
+  url: "postgresql://pake_admin:REDACTED_SECRET@postgres:5432/pake_knowledge"
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+
+# ============================================================================
+# REDIS CONFIGURATION (OPTIONAL)
+# ============================================================================
+redis:
+  enabled: false  # Set to true to use Redis for caching
+  host: "redis"
+  port: 6379
+  REDACTED_SECRET: "process.env.PAKE_HARDCODED_PASSWORD || 'SECURE_HARDCODED_PASSWORD_REQUIRED''SECURE_DB_PASSWORD_REQUIRED'"
+  db: 1  # Use separate DB for security monitor
+  
+  # Caching configuration
+  cache:
+    ip_reputation_ttl: 3600      # 1 hour
+    user_behavior_ttl: 1800      # 30 minutes
+    analysis_results_ttl: 7200   # 2 hours
+
+# ============================================================================
+# MONITORING AND METRICS
+# ============================================================================
+monitoring:
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    port: 8081
+    path: "/metrics"
+  
+  # Health check
+  health_check:
+    enabled: true
+    path: "/health"
+    include_components: true
+  
+  # Performance metrics
+  metrics:
+    track_analysis_time: true
+    track_alert_generation: true
+    track_api_requests: true
+
+# ============================================================================
+# SECURITY SETTINGS
+# ============================================================================
+security:
+  # API authentication (optional)
+  authentication:
+    enabled: false
+    type: "bearer_token"  # Options: none, api_key, bearer_token
+    api_key_header: "X-API-Key"
+    token_secret: "your-secret-key-here"
+  
+  # IP filtering (optional)
+  ip_filtering:
+    enabled: false
+    allow_list: []
+    deny_list: []
+  
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst_size: 20
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+logging:
+  level: "INFO"
+  format: "json"
+  
+  # Log destinations
+  handlers:
+    console:
+      enabled: true
+      level: "INFO"
+    file:
+      enabled: true
+      level: "DEBUG"
+      path: "/app/logs/ai-security-monitor.log"
+      max_size: "100MB"
+      backup_count: 5
+    elasticsearch:
+      enabled: false  # Set to true to send logs back to ELK
+      index: "ai-security-monitor-logs"
+  
+  # Structured logging
+  structured:
+    enabled: true
+    include_trace_id: true
+    include_user_context: true
+
+# ============================================================================
+# DEVELOPMENT SETTINGS
+# ============================================================================
+development:
+  # Mock data generation
+  mock_data:
+    enabled: false  # Set to true for testing
+    log_generation_rate: 10  # logs per minute
+    include_attacks: true
+    
+  # Debug features
+  debug:
+    log_analysis_details: false
+    save_intermediate_results: false
+    enable_debug_endpoints: false

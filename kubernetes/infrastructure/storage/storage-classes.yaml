@@ -1,0 +1,138 @@
+# Fast SSD Storage Class for high-performance workloads
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+  labels:
+    performance: high
+    cost: premium
+  annotations:
+    storageclass.kubernetes.io/is-default-class: 'false'
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3 # General Purpose SSD v3
+  iops: '3000'
+  throughput: '125'
+  fsType: ext4
+  encrypted: 'true'
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+mountOptions:
+  - debug
+  - data=ordered
+
+---
+# Standard SSD Storage Class for general workloads
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard-ssd
+  labels:
+    performance: standard
+    cost: medium
+  annotations:
+    storageclass.kubernetes.io/is-default-class: 'true'
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: '1000'
+  throughput: '62'
+  fsType: ext4
+  encrypted: 'true'
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+mountOptions:
+  - debug
+
+---
+# High IOPS Storage Class for databases
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: high-iops
+  labels:
+    performance: premium
+    cost: high
+    use-case: database
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io2 # Provisioned IOPS SSD v2
+  iops: '10000'
+  fsType: ext4
+  encrypted: 'true'
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+mountOptions:
+  - debug
+  - data=ordered
+  - noatime
+
+---
+# Archive Storage Class for backups
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: archive
+  labels:
+    performance: low
+    cost: low
+    use-case: backup
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: sc1 # Cold HDD
+  fsType: ext4
+  encrypted: 'true'
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+
+---
+# Shared Storage Class for multi-pod access
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: shared-storage
+  labels:
+    access-mode: shared
+    performance: standard
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: fs-12345678 # Replace with actual EFS ID
+  directoryPerms: '0755'
+  basePath: '/pake-shared'
+allowVolumeExpansion: false
+volumeBindingMode: Immediate
+reclaimPolicy: Retain
+mountOptions:
+  - tls
+  - _netdev
+  - iam
+
+---
+# GPU Storage Class for ML models
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gpu-storage
+  labels:
+    performance: premium
+    use-case: ai-ml
+    gpu-optimized: 'true'
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: '5000'
+  throughput: '250'
+  fsType: ext4
+  encrypted: 'true'
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+mountOptions:
+  - debug
+  - data=ordered
+  - noatime

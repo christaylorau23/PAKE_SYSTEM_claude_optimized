@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pake.ai/schemas/AgentTask.json",
+  "title": "Agent Task Schema",
+  "description": "Schema for agent task input validation and contract testing",
+  "type": "object",
+  "required": ["id", "type", "input", "config", "metadata"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Unique task identifier"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "content_analysis",
+        "sentiment_analysis",
+        "entity_extraction",
+        "trend_detection",
+        "content_synthesis",
+        "data_processing"
+      ],
+      "description": "Type of agent task to execute"
+    },
+    "input": {
+      "type": "object",
+      "description": "Task input data",
+      "properties": {
+        "content": {
+          "type": "string",
+          "maxLength": 1000000,
+          "description": "Raw text content to analyze"
+        },
+        "data": {
+          "type": "object",
+          "description": "Structured data payload",
+          "additionalProperties": true
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "maxItems": 10,
+          "description": "File attachments or references"
+        }
+      },
+      "additionalProperties": false
+    },
+    "config": {
+      "type": "object",
+      "description": "Task configuration and parameters",
+      "properties": {
+        "timeout": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 300000,
+          "description": "Maximum processing time in milliseconds"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Processing priority (1-10, higher = more important)"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Additional parameters specific to task type",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["source", "createdAt"],
+      "description": "Task metadata",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Source system or user that created the task"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when task was created"
+        },
+        "correlationId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128,
+          "description": "Correlation ID for request tracing"
+        },
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_@.-]+$",
+          "maxLength": 256,
+          "description": "User context for the task"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": "task_001",
+      "type": "sentiment_analysis",
+      "input": {
+        "content": "This product is amazing! I love the new features."
+      },
+      "config": {
+        "timeout": 30000,
+        "priority": 5,
+        "parameters": {
+          "includeEmotions": true,
+          "language": "en"
+        }
+      },
+      "metadata": {
+        "source": "web_api",
+        "createdAt": "2024-01-01T12:00:00Z",
+        "correlationId": "req_12345",
+        "userId": "user_789"
+      }
+    },
+    {
+      "id": "task_002",
+      "type": "entity_extraction",
+      "input": {
+        "content": "John Smith from Acme Corp visited New York on January 15th.",
+        "data": {
+          "language": "en",
+          "domain": "business"
+        }
+      },
+      "config": {
+        "timeout": 15000,
+        "priority": 3
+      },
+      "metadata": {
+        "source": "batch_processor",
+        "createdAt": "2024-01-01T12:05:00Z"
+      }
+    }
+  ]
+}

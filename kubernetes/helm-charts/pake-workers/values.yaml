@@ -1,0 +1,383 @@
+# PAKE Background Workers - Production Values
+# Scalable async task processing with priority queues
+
+# Global configuration
+global:
+  imageRegistry: ''
+  imagePullSecrets: []
+  storageClass: ''
+
+# Image configuration
+image:
+  registry: ghcr.io
+  repository: pake-system/pake-workers
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Worker types configuration
+workers:
+  # High priority workers (critical tasks)
+  high:
+    enabled: true
+    replicaCount: 8
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    queues: ['high', 'critical']
+    concurrency: 4
+
+  # Medium priority workers (standard tasks)
+  medium:
+    enabled: true
+    replicaCount: 12
+    resources:
+      limits:
+        cpu: 1500m
+        memory: 3Gi
+      requests:
+        cpu: 300m
+        memory: 768Mi
+    queues: ['medium', 'default']
+    concurrency: 6
+
+  # Low priority workers (background tasks)
+  low:
+    enabled: true
+    replicaCount: 6
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+    queues: ['low', 'batch']
+    concurrency: 8
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+
+# Pod configuration
+podAnnotations:
+  prometheus.io/scrape: 'true'
+  prometheus.io/port: '8080'
+  prometheus.io/path: '/metrics'
+
+podLabels:
+  app.kubernetes.io/component: worker
+  app.kubernetes.io/part-of: pake-system
+  tier: workers
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Service configuration for metrics
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '8080'
+
+# Horizontal Pod Autoscaler per worker type
+autoscaling:
+  high:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 20
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 30
+
+  medium:
+    enabled: true
+    minReplicas: 8
+    maxReplicas: 30
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 15
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 40
+            periodSeconds: 30
+
+  low:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 85
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 600
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 120
+      scaleUp:
+        stabilizationWindowSeconds: 120
+        policies:
+          - type: Percent
+            value: 30
+            periodSeconds: 60
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  high:
+    enabled: true
+    minAvailable: 60%
+  medium:
+    enabled: true
+    minAvailable: 50%
+  low:
+    enabled: true
+    minAvailable: 30%
+
+# Node assignment - standard nodes
+nodeSelector:
+  workload: api-services
+  node-type: standard
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: api-services
+    effect: NoSchedule
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pake-workers
+          topologyKey: kubernetes.io/hostname
+
+# Health checks
+livenessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - 'celery inspect ping -d celery@$HOSTNAME'
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - 'celery inspect active -d celery@$HOSTNAME'
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Environment variables
+env:
+  - name: ENVIRONMENT
+    value: 'production'
+  - name: LOG_LEVEL
+    value: 'INFO'
+  - name: WORKER_LOGLEVEL
+    value: 'INFO'
+  - name: WORKER_PREFETCH_MULTIPLIER
+    value: '1'
+  - name: WORKER_MAX_TASKS_PER_CHILD
+    value: '1000'
+  - name: WORKER_DISABLE_RATE_LIMITS
+    value: 'false'
+  - name: CELERYD_TASK_TIME_LIMIT
+    value: '300'
+  - name: CELERYD_TASK_SOFT_TIME_LIMIT
+    value: '240'
+
+# Environment variables from secrets
+envFrom:
+  - secretRef:
+      name: pake-workers-secrets
+  - configMapRef:
+      name: pake-workers-config
+
+# Volume mounts
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: logs
+    mountPath: /app/logs
+  - name: task-results
+    mountPath: /app/results
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: logs
+    emptyDir:
+      sizeLimit: 2Gi
+  - name: task-results
+    emptyDir:
+      sizeLimit: 5Gi
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ''
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    prometheus: kube-prometheus
+  annotations: {}
+
+# Redis dependency
+redis:
+  enabled: false # Use external Redis cluster
+  external:
+    host: pake-redis.database.svc.cluster.local
+    port: 6379
+    existingSecret: redis-credentials
+    REDACTED_SECRETKey: REDACTED_SECRET
+
+# External secrets
+externalSecrets:
+  enabled: true
+  secretStore:
+    kind: ClusterSecretStore
+    name: vault-backend
+  secrets:
+    - name: pake-workers-secrets
+      refreshInterval: '15m'
+      data:
+        - secretKey: REDIS_URL
+          remoteRef:
+            key: pake/redis
+            property: url
+        - secretKey: DATABASE_URL
+          remoteRef:
+            key: pake/database
+            property: url
+        - secretKey: CELERY_BROKER_URL
+          remoteRef:
+            key: pake/celery
+            property: broker_url
+        - secretKey: CELERY_RESULT_BACKEND
+          remoteRef:
+            key: pake/celery
+            property: result_backend
+
+# Network policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: pake-system
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: database
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    - to: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+        - protocol: UDP
+          port: 53
+
+# Queue monitoring
+queueMonitoring:
+  enabled: true
+  flower:
+    enabled: true
+    image:
+      repository: mher/flower
+      tag: '1.2.0'
+    service:
+      type: ClusterIP
+      port: 5555
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/auth-type: basic
+        nginx.ingress.kubernetes.io/auth-secret: flower-auth
+      hosts:
+        - host: flower.pake-system.com
+          paths:
+            - path: /
+              pathType: Prefix
+
+# Priority classes for different worker types
+priorityClasses:
+  high: 'high-priority'
+  medium: 'medium-priority'
+  low: 'low-priority'

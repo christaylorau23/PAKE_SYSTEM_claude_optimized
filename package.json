@@ -1,0 +1,128 @@
+{
+  "name": "pake-system",
+  "version": "2.0.0",
+  "description": "Production-ready, enterprise-grade knowledge management and AI research system with multi-source ingestion capabilities",
+  "private": true,
+  "workspaces": [
+    "src/bridge",
+    "frontend",
+    "scripts",
+    "src/services/*"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:workspaces",
+    "install:workspaces": "npm install --workspaces",
+    "build": "npm run build:bridge && npm run build:frontend",
+    "build:bridge": "npm run build --workspace=src/bridge",
+    "build:frontend": "npm run build --workspace=frontend",
+    "dev": "concurrently \"npm run dev:bridge\" \"npm run dev:frontend\"",
+    "dev:bridge": "npm run dev --workspace=src/bridge",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "start": "npm run start:bridge",
+    "start:bridge": "npm run start --workspace=src/bridge",
+    "start:frontend": "npm run start --workspace=frontend",
+    "test": "npm run test:python && npm run test:typescript",
+    "test:python": "python -m pytest tests/ -v",
+    "test:typescript": "npm run test --workspaces --if-present",
+    "test:coverage": "python -m pytest tests/ --cov=src --cov-report=html && npm run test:coverage --workspaces --if-present",
+    "lint": "npm run lint:python && npm run lint:typescript",
+    "lint:python": "npm run lint:python:ruff",
+    "lint:python:legacy": "python -m flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503",
+    "lint:typescript": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "format": "prettier --write . && npm run format:python",
+    "format:check": "prettier --check . && npm run format:python:check",
+    "format:staged": "prettier --write --cache",
+    "format:python": "./black_env/bin/python -m black src/ tests/ scripts/ --exclude=black_env",
+    "format:python:check": "./black_env/bin/python -m black --check src/ tests/ scripts/ --exclude=black_env",
+    "lint:python:ruff": "./black_env/bin/python -m ruff check src/ tests/ scripts/",
+    "lint:python:ruff:fix": "./black_env/bin/python -m ruff check --fix src/ tests/ scripts/",
+    "format:python:ruff": "./black_env/bin/python -m ruff format src/ tests/ scripts/",
+    "format:python:ruff:check": "./black_env/bin/python -m ruff format --check src/ tests/ scripts/",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "health": "npm run health:system",
+    "health:system": "python scripts/test_apis_simple.py",
+    "health:bridge": "curl -f http://localhost:3001/health || echo 'Bridge not running'",
+    "health:full": "python scripts/test_production_pipeline.py",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules .coverage .pytest_cache",
+    "reset": "npm run clean && npm run install:all",
+    "doctor": "npm run health:system && npm run type-check && npm run lint",
+    "setup": "npm run install:all && npm run build && npm run test && echo '✅ PAKE System setup complete!'",
+    "debug:logs": "grep -r 'ERROR\\|FATAL' logs/ | tail -20 || echo 'No error logs found'",
+    "debug:services": "ps aux | grep -E 'python|node' | grep -v grep || echo 'No Python/Node processes found'",
+    "performance": "python -m pytest tests/ -v --benchmark-only || echo 'Run pip install pytest-benchmark for performance tests'",
+    "spec:init": "uv tool run --from git+https://github.com/github/spec-kit.git specify --help",
+    "spec:constitution": "cat .specify/memory/constitution.md",
+    "spec:update-context": "./.specify/scripts/bash/update-agent-context.sh",
+    "spec:check-prerequisites": "./.specify/scripts/bash/check-task-prerequisites.sh",
+    "spec:setup-plan": "./.specify/scripts/bash/setup-plan.sh",
+    "spec:create-feature": "./.specify/scripts/bash/create-new-feature.sh",
+    "spec:feature-paths": "./.specify/scripts/bash/get-feature-paths.sh",
+    "spec:validate": "npm run doctor && echo '✅ Spec-Kit integration validated'"
+  },
+  "keywords": [
+    "pake",
+    "knowledge-management",
+    "ai-research",
+    "ingestion-pipeline",
+    "obsidian",
+    "firecrawl",
+    "arxiv",
+    "pubmed",
+    "claude-code"
+  ],
+  "author": "PAKE+ System Development Team",
+  "license": "MIT",
+  "homepage": "https://github.com/your-org/pake-system",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/pake-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/pake-system/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=11.5.0",
+    "python": ">=3.12.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.2",
+    "cross-env": "^7.0.3",
+    "eslint": "9.36.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.6.2",
+    "rimraf": "^5.0.5",
+    "typescript-eslint": "8.44.0"
+  },
+  "config": {
+    "bridge_port": "3001",
+    "frontend_port": "3000"
+  },
+  "pake": {
+    "version": "2.0.0",
+    "status": "production-ready",
+    "phase": "2B",
+    "last_updated": "2025-09-12",
+    "components": {
+      "bridge": {
+        "path": "src/bridge",
+        "port": 3001,
+        "status": "operational"
+      },
+      "frontend": {
+        "path": "frontend",
+        "port": 3000,
+        "status": "deployed"
+      },
+      "ingestion": {
+        "path": "src/services/ingestion",
+        "status": "production-active"
+      },
+      "vault": {
+        "path": "vault",
+        "status": "synced"
+      }
+    }
+  }
+}

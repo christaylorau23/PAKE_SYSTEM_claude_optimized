@@ -1,0 +1,57 @@
+name: Node.js Debug Workflow
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  debug-node-job:
+    runs-on: ubuntu-latest
+
+    # Remove defaults to handle path checking manually
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with Cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/bridge/package-lock.json
+
+      - name: Check Bridge Directory
+        run: |
+          if [ -d "src/bridge" ]; then
+            echo "Bridge directory found"
+            ls -la src/bridge/
+          else
+            echo "Bridge directory not found"
+            find . -name "package.json" -type f
+          fi
+
+      - name: Install Dependencies
+        run: |
+          if [ -d "src/bridge" ] && [ -f "src/bridge/package.json" ]; then
+            cd src/bridge
+            npm ci
+          else
+            echo "No package.json found in src/bridge, skipping installation"
+          fi
+
+      - name: Debug Information
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          if [ -d "src/bridge" ]; then
+            echo "Bridge directory contents:"
+            ls -la src/bridge/
+          fi

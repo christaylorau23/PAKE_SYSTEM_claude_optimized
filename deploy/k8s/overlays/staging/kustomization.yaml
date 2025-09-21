@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: pake-system-staging
+
+# Base configuration
+resources:
+  - ../../base
+  - staging-monitoring.yaml
+
+# Staging-specific labels
+commonLabels:
+  environment: staging
+  tier: staging
+
+# Staging-specific annotations
+commonAnnotations:
+  config.kubernetes.io/environment: 'staging'
+  deployment.kubernetes.io/note: 'Staging environment for integration testing'
+
+# Staging images (use release candidates or stable dev tags)
+images:
+  - name: pake-backend
+    newName: your-registry.com/pake-system/backend
+    newTag: v1.0.0-rc1
+  - name: pake-frontend
+    newName: your-registry.com/pake-system/frontend
+    newTag: v1.0.0-rc1
+
+# Staging configuration patches
+patchesStrategicMerge:
+  - staging-resources.yaml
+  - staging-config.yaml
+
+# Staging-specific ConfigMap
+configMapGenerator:
+  - name: pake-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=info
+      - ENVIRONMENT=staging
+      - ENABLE_DEBUG=false
+      - ENABLE_HOT_RELOAD=false
+      - MAX_WORKERS=4
+      - CACHE_TTL=3600
+      - CORS_ORIGINS=https://staging.pake.yourdomain.com
+      - RATE_LIMIT_MAX_REQUESTS=200
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+
+# Staging secrets (use production-like secret management)
+secretGenerator:
+  - name: pake-secrets
+    behavior: replace
+    literals:
+      - DATABASE_PASSWORD=staging-db-REDACTED_SECRET
+      - REDIS_PASSWORD=staging-redis-REDACTED_SECRET
+      - JWT_SECRET_KEY=staging-jwt-secret-key
+      - FIRECRAWL_API_KEY=staging-firecrawl-key
+      - OPENAI_API_KEY=staging-openai-key
+      - ANTHROPIC_API_KEY=staging-anthropic-key
+
+# Staging replicas (production-like but reduced)
+replicas:
+  - name: pake-backend
+    count: 2
+  - name: pake-frontend
+    count: 2
+  - name: postgres
+    count: 1
+  - name: redis
+    count: 1
+
+# Staging namespace
+namespace: pake-system

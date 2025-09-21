@@ -1,0 +1,3 @@
+# Configuration module dependencies
+# This file exists primarily for security scanning purposes
+# The configs module uses standard library only

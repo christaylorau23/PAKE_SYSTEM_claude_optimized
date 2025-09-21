@@ -1,0 +1,451 @@
+# PAKE Data Services - Production Values
+# High-availability database clusters with backup and monitoring
+
+# Global configuration
+global:
+  imageRegistry: ''
+  imagePullSecrets: []
+  storageClass: 'fast-ssd'
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  architecture: replication
+  auth:
+    postgresPassword: '' # Set via external secret
+    username: pake_user
+    REDACTED_SECRET: '' # Set via external secret
+    database: pake_production
+    existingSecret: postgresql-credentials
+
+  # Primary configuration
+  primary:
+    persistence:
+      enabled: true
+      storageClass: 'fast-ssd'
+      size: 100Gi
+    resources:
+      limits:
+        cpu: 4000m
+        memory: 16Gi
+      requests:
+        cpu: 1000m
+        memory: 8Gi
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: workload
+                  operator: In
+                  values:
+                    - data-services
+    pgHBA: |
+      local all all trust
+      host all all 127.0.0.1/32 md5
+      host all all ::1/128 md5
+      host all all 10.0.0.0/8 md5
+      host replication all 10.0.0.0/8 md5
+    configuration: |
+      max_connections = 200
+      shared_buffers = 4GB
+      effective_cache_size = 12GB
+      maintenance_work_mem = 1GB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 16MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      work_mem = 20MB
+      min_wal_size = 2GB
+      max_wal_size = 8GB
+      max_worker_processes = 8
+      max_parallel_workers_per_gather = 4
+      max_parallel_workers = 8
+      max_parallel_maintenance_workers = 4
+
+  # Read replicas
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: 'fast-ssd'
+      size: 100Gi
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+      requests:
+        cpu: 500m
+        memory: 4Gi
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+
+  # Metrics and monitoring
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+# Redis Configuration
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    REDACTED_SECRET: '' # Set via external secret
+    existingSecret: redis-credentials
+    existingSecretPasswordKey: REDACTED_SECRET
+
+  # Master configuration
+  master:
+    count: 1
+    persistence:
+      enabled: true
+      storageClass: 'fast-ssd'
+      size: 50Gi
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+      requests:
+        cpu: 500m
+        memory: 4Gi
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+    configuration: |
+      maxmemory 6gb
+      maxmemory-policy allkeys-lru
+      tcp-keepalive 60
+      save 900 1
+      save 300 10
+      save 60 10000
+
+  # Replica configuration
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: 'fast-ssd'
+      size: 50Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+      requests:
+        cpu: 250m
+        memory: 2Gi
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+
+  # Metrics
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+# ChromaDB Configuration (Vector Database)
+chromadb:
+  enabled: true
+  image:
+    registry: ghcr.io
+    repository: chroma-core/chroma
+    tag: '0.4.15'
+    pullPolicy: IfNotPresent
+
+  replicaCount: 3
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 8Gi
+    requests:
+      cpu: 500m
+      memory: 4Gi
+
+  persistence:
+    enabled: true
+    storageClass: 'fast-ssd'
+    size: 200Gi
+    accessMode: ReadWriteOnce
+
+  nodeSelector:
+    workload: data-services
+    node-type: database
+
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: data-services
+      effect: NoSchedule
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: chromadb
+            topologyKey: kubernetes.io/hostname
+
+  env:
+    - name: CHROMA_HOST
+      value: '0.0.0.0'
+    - name: CHROMA_PORT
+      value: '8000'
+    - name: CHROMA_LOG_LEVEL
+      value: 'INFO'
+    - name: ANONYMIZED_TELEMETRY
+      value: 'false'
+    - name: PERSIST_DIRECTORY
+      value: '/data'
+
+  volumeMounts:
+    - name: data
+      mountPath: /data
+    - name: tmp
+      mountPath: /tmp
+
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: chromadb-data
+    - name: tmp
+      emptyDir: {}
+
+# Elasticsearch Configuration
+elasticsearch:
+  enabled: true
+  clusterName: 'pake-elasticsearch'
+
+  # Master nodes
+  master:
+    masterOnly: true
+    replicaCount: 3
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: 'fast-ssd'
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+
+  # Data nodes
+  data:
+    replicaCount: 3
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 16Gi
+      requests:
+        cpu: 1000m
+        memory: 8Gi
+    persistence:
+      enabled: true
+      size: 500Gi
+      storageClass: 'fast-ssd'
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: elasticsearch
+                  role: data
+              topologyKey: kubernetes.io/hostname
+
+  # Client/coordinating nodes
+  client:
+    replicaCount: 2
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    nodeSelector:
+      workload: data-services
+      node-type: database
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: data-services
+        effect: NoSchedule
+
+# External secrets configuration
+externalSecrets:
+  enabled: true
+  secretStore:
+    kind: ClusterSecretStore
+    name: vault-backend
+  secrets:
+    - name: postgresql-credentials
+      refreshInterval: '15m'
+      data:
+        - secretKey: postgres-REDACTED_SECRET
+          remoteRef:
+            key: pake/database
+            property: postgres_REDACTED_SECRET
+        - secretKey: REDACTED_SECRET
+          remoteRef:
+            key: pake/database
+            property: user_REDACTED_SECRET
+        - secretKey: replication-REDACTED_SECRET
+          remoteRef:
+            key: pake/database
+            property: replication_REDACTED_SECRET
+
+    - name: redis-credentials
+      refreshInterval: '15m'
+      data:
+        - secretKey: REDACTED_SECRET
+          remoteRef:
+            key: pake/redis
+            property: REDACTED_SECRET
+        - secretKey: auth-token
+          remoteRef:
+            key: pake/redis
+            property: auth_token
+
+# Backup configuration
+backup:
+  postgresql:
+    enabled: true
+    schedule: '0 2 * * *' # Daily at 2 AM
+    retention: '30d'
+    storageClass: 'standard'
+    size: 500Gi
+
+  redis:
+    enabled: true
+    schedule: '0 3 * * *' # Daily at 3 AM
+    retention: '14d'
+    storageClass: 'standard'
+    size: 100Gi
+
+  chromadb:
+    enabled: true
+    schedule: '0 4 * * *' # Daily at 4 AM
+    retention: '30d'
+    storageClass: 'standard'
+    size: 1Ti
+
+  elasticsearch:
+    enabled: true
+    schedule: '0 5 * * *' # Daily at 5 AM
+    retention: '14d'
+    storageClass: 'standard'
+    size: 2Ti
+
+# Network policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: pake-system
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 5432 # PostgreSQL
+        - protocol: TCP
+          port: 6379 # Redis
+        - protocol: TCP
+          port: 8000 # ChromaDB
+        - protocol: TCP
+          port: 9200 # Elasticsearch
+        - protocol: TCP
+          port: 9300 # Elasticsearch cluster
+  egress:
+    - to: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+# Service monitors for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    prometheus: kube-prometheus
+
+# Priority classes
+priorityClassName: 'high-priority'
+
+# Pod disruption budgets
+podDisruptionBudget:
+  postgresql:
+    enabled: true
+    minAvailable: 1
+  redis:
+    enabled: true
+    minAvailable: 1
+  chromadb:
+    enabled: true
+    minAvailable: 2
+  elasticsearch:
+    enabled: true
+    minAvailable: 2

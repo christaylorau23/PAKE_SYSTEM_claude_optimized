@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+  <head>
+    <title>MCP Memory Server Monitor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+      .status-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .status-healthy {
+        border-left: 4px solid #4caf50;
+      }
+      .status-warning {
+        border-left: 4px solid #ff9800;
+      }
+      .status-error {
+        border-left: 4px solid #f44336;
+      }
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+      }
+      .activity-log {
+        max-height: 300px;
+        overflow-y: auto;
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .activity-item {
+        margin: 5px 0;
+        padding: 5px;
+        background: white;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .refresh-btn {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .refresh-btn:hover {
+        background: #1976d2;
+      }
+      .timestamp {
+        color: #666;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🧠 MCP Memory Server Monitor</h1>
+      <p>Real-time monitoring of Graphiti knowledge graph sharing</p>
+      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card" id="server-status">
+        <h3>🏥 Server Health</h3>
+        <div id="server-health">Checking...</div>
+      </div>
+
+      <div class="status-card" id="neo4j-status">
+        <h3>🔗 Neo4j Database</h3>
+        <div id="neo4j-health">Checking...</div>
+      </div>
+
+      <div class="status-card" id="connections-status">
+        <h3>📡 Active Connections</h3>
+        <div id="connections-info">Checking...</div>
+      </div>
+
+      <div class="status-card" id="knowledge-status">
+        <h3>🧠 Knowledge Graph</h3>
+        <div id="knowledge-stats">Checking...</div>
+      </div>
+
+      <div class="status-card" id="recent-activity">
+        <h3>📋 Recent Activity</h3>
+        <div class="activity-log" id="activity-log">
+          <div class="activity-item">Monitor started...</div>
+        </div>
+      </div>
+
+      <div class="status-card" id="quick-actions">
+        <h3>⚡ Quick Actions</h3>
+        <button onclick="testConnection()">Test MCP Connection</button
+        ><br /><br />
+        <button onclick="viewKnowledgeGraph()">Open Neo4j Browser</button
+        ><br /><br />
+        <button onclick="exportContext()">Export Current Context</button
+        ><br /><br />
+        <button onclick="clearKnowledgeGraph()">Clear Knowledge Graph</button>
+      </div>
+    </div>
+
+    <script>
+      let activityCount = 0;
+
+      async function checkServerHealth() {
+        try {
+          const response = await fetch('http://localhost:8000/health');
+          const data = await response.json();
+
+          document.getElementById('server-health').innerHTML = `
+                    <div class="metric">
+                        <span>Status:</span>
+                        <span style="color: ${response.ok ? '#4CAF50' : '#F44336'}">${response.ok ? 'Healthy' : 'Error'}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Response Time:</span>
+                        <span>${Date.now() - window.healthStart}ms</span>
+                    </div>
+                `;
+
+          document.getElementById('server-status').className =
+            `status-card ${response.ok ? 'status-healthy' : 'status-error'}`;
+
+          addActivity(
+            `Server health check: ${response.ok ? 'Healthy' : 'Error'}`
+          );
+        } catch (error) {
+          document.getElementById('server-health').innerHTML = `
+                    <div class="metric">
+                        <span>Status:</span>
+                        <span style="color: #F44336">Offline</span>
+                    </div>
+                    <div class="metric">
+                        <span>Error:</span>
+                        <span>${error.message}</span>
+                    </div>
+                `;
+          document.getElementById('server-status').className =
+            'status-card status-error';
+          addActivity(`Server error: ${error.message}`);
+        }
+      }
+
+      async function checkNeo4jHealth() {
+        try {
+          const response = await fetch('http://localhost:7474');
+
+          document.getElementById('neo4j-health').innerHTML = `
+                    <div class="metric">
+                        <span>Browser:</span>
+                        <span style="color: ${response.ok ? '#4CAF50' : '#F44336'}">${response.ok ? 'Accessible' : 'Error'}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Username:</span>
+                        <span>neo4j</span>
+                    </div>
+                    <div class="metric">
+                        <span>Password:</span>
+                        <span>graphiti_REDACTED_SECRET</span>
+                    </div>
+                `;
+
+          document.getElementById('neo4j-status').className =
+            `status-card ${response.ok ? 'status-healthy' : 'status-error'}`;
+        } catch (error) {
+          document.getElementById('neo4j-health').innerHTML = `
+                    <div class="metric">
+                        <span>Status:</span>
+                        <span style="color: #F44336">Offline</span>
+                    </div>
+                `;
+          document.getElementById('neo4j-status').className =
+            'status-card status-error';
+        }
+      }
+
+      async function checkConnections() {
+        try {
+          // This would be a custom endpoint for connection stats
+          document.getElementById('connections-info').innerHTML = `
+                    <div class="metric">
+                        <span>Claude Code:</span>
+                        <span style="color: #4CAF50">Connected</span>
+                    </div>
+                    <div class="metric">
+                        <span>Cursor IDE:</span>
+                        <span style="color: #FF9800">Checking...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Last Sync:</span>
+                        <span>${new Date().toLocaleTimeString()}</span>
+                    </div>
+                `;
+        } catch (error) {
+          document.getElementById('connections-info').innerHTML =
+            `Error checking connections`;
+        }
+      }
+
+      async function checkKnowledgeStats() {
+        try {
+          // This would query the knowledge graph for stats
+          document.getElementById('knowledge-stats').innerHTML = `
+                    <div class="metric">
+                        <span>Episodes:</span>
+                        <span>Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Entities:</span>
+                        <span>Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Relations:</span>
+                        <span>Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Last Update:</span>
+                        <span>${new Date().toLocaleTimeString()}</span>
+                    </div>
+                `;
+        } catch (error) {
+          document.getElementById('knowledge-stats').innerHTML =
+            `Error loading stats`;
+        }
+      }
+
+      function addActivity(message) {
+        const activityLog = document.getElementById('activity-log');
+        const timestamp = new Date().toLocaleTimeString();
+
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+        item.innerHTML = `
+                <span class="timestamp">${timestamp}</span> - ${message}
+            `;
+
+        activityLog.insertBefore(item, activityLog.firstChild);
+
+        // Keep only last 20 items
+        while (activityLog.children.length > 20) {
+          activityLog.removeChild(activityLog.lastChild);
+        }
+      }
+
+      function testConnection() {
+        addActivity('Testing MCP connection...');
+        window.healthStart = Date.now();
+        checkServerHealth();
+      }
+
+      function viewKnowledgeGraph() {
+        window.open('http://localhost:7474', '_blank');
+        addActivity('Opened Neo4j Browser');
+      }
+
+      function exportContext() {
+        addActivity('Exporting current context...');
+        // This would trigger a context export
+      }
+
+      function clearKnowledgeGraph() {
+        if (confirm('Are you sure you want to clear the knowledge graph?')) {
+          addActivity('Clearing knowledge graph...');
+          // This would clear the graph
+        }
+      }
+
+      function refreshAll() {
+        addActivity('Refreshing all status checks...');
+        checkServerHealth();
+        checkNeo4jHealth();
+        checkConnections();
+        checkKnowledgeStats();
+      }
+
+      // Auto-refresh every 30 seconds
+      setInterval(refreshAll, 30000);
+
+      // Initial load
+      refreshAll();
+    </script>
+  </body>
+</html>

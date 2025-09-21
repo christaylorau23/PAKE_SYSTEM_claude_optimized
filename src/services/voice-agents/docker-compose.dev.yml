@@ -1,0 +1,66 @@
+# PAKE System Voice Agents Service - Development Docker Compose Configuration
+version: '3.8'
+
+services:
+  voice-agents-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: pake-system/voice-agents:dev
+    container_name: pake-voice-agents-dev
+    restart: unless-stopped
+    ports:
+      - '9000:9000'
+      - '9229:9229' # Node.js debugging port
+    environment:
+      - NODE_ENV=development
+      - VOICE_AGENT_PORT=9000
+      - LOG_LEVEL=debug
+      - REDIS_URL=redis://redis:6379
+      # Development-specific settings
+      - CIRCUIT_BREAKER_FAILURE_THRESHOLD=3
+      - CIRCUIT_BREAKER_RESET_TIMEOUT=30000
+      - CONVERSATION_MEMORY_TTL=1800 # 30 minutes for dev
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8080
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - voice-logs-dev:/app/logs
+      - /app/node_modules # Anonymous volume to prevent local node_modules from being mounted
+    depends_on:
+      - redis-dev
+    networks:
+      - pake-dev-network
+    command: npm run start:watch
+    labels:
+      - 'pake.service=voice-agents'
+      - 'pake.version=dev'
+      - 'pake.environment=development'
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: pake-voice-redis-dev
+    restart: unless-stopped
+    ports:
+      - '6380:6379' # Different port for dev
+    volumes:
+      - redis-data-dev:/data
+    command: redis-server --appendonly yes
+    networks:
+      - pake-dev-network
+    labels:
+      - 'pake.service=redis'
+      - 'pake.environment=development'
+
+volumes:
+  voice-logs-dev:
+    driver: local
+  redis-data-dev:
+    driver: local
+
+networks:
+  pake-dev-network:
+    driver: bridge
+    labels:
+      - 'pake.network=voice-agents-dev'
