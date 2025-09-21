@@ -4,7 +4,7 @@
 replicaCount: 3
 
 image:
-  tag: "stable"
+  tag: "c56f99d"
 
 # Environment configuration
 env:
