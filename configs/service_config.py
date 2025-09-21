@@ -146,8 +146,12 @@ class SecurityConfig:
     def __post_init__(self):
         """Validate security configuration"""
         if not self.jwt_secret_key:
+            # Check environment from global config or environment variable
+            env_str = os.getenv('PAKE_ENVIRONMENT', 'development').lower()
+            if env_str in ['prod', 'production']:
+                raise ValueError("JWT secret key must be set in production environment")
             logger.warning("JWT secret key not set - using default (not secure for production)")
-            self.jwt_secret_key = "dev-secret-key-change-in-production"
+            self.jwt_secret_key = os.getenv('JWT_SECRET_KEY_FALLBACK', 'dev-secret-key-change-in-production')
         if self.jwt_expire_minutes < 1:
             raise ValueError("JWT expire minutes must be at least 1")
 

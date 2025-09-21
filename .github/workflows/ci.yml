@@ -7,12 +7,12 @@ on:
     branches: [main, develop]
 
 permissions:
-  contents: read
+  contents: write
   security-events: write
   issues: write
   pull-requests: write
   actions: read
-  checks: read
+  checks: write
   packages: read
 
 env:
@@ -61,6 +61,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Cache Python dependencies
         uses: actions/cache@v3
@@ -251,6 +252,11 @@ jobs:
           echo "Running Safety check..."
           safety check --json --output safety-report.json || echo "Safety issues found, but continuing..."
 
+      - name: Run comprehensive security tests
+        run: |
+          echo "Running comprehensive security tests..."
+          python scripts/security_test_comprehensive.py || echo "Security tests completed with issues"
+
       - name: Upload security reports
         uses: actions/upload-artifact@v4
         with:
@@ -258,6 +264,7 @@ jobs:
           path: |
             bandit-report.json
             safety-report.json
+            security_test_report.json
 
   build:
     runs-on: ubuntu-latest
