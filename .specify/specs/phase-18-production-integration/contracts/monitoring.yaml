@@ -1,0 +1,1158 @@
+openapi: 3.1.0
+info:
+  title: PAKE System Monitoring & Observability API
+  description: |
+    Comprehensive monitoring and observability contracts for Phase 18 Production System Integration.
+
+    This specification defines the complete monitoring infrastructure for 50+ microservices with:
+    - Prometheus metrics collection and exposition
+    - Distributed tracing with OpenTelemetry
+    - Centralized logging with structured JSON format
+    - Health check endpoints with dependency validation
+    - Real-time alerting and notification systems
+
+    Performance Requirements:
+    - Metrics collection: <10ms overhead per request
+    - Trace sampling: 1-10% configurable rate for production
+    - Log aggregation: <100ms from service to centralized storage
+    - Health checks: <1s response time with dependency validation
+
+    Enterprise Features:
+    - Multi-tenant metrics isolation
+    - Grafana dashboard automation
+    - Alert fatigue prevention with intelligent escalation
+    - Audit trail for all administrative operations
+  version: 18.0.0
+  contact:
+    name: PAKE System Engineering
+    email: engineering@pake-system.com
+  license:
+    name: Enterprise License
+    url: https://pake-system.com/license
+
+servers:
+  - url: https://monitoring.pake-system.com/api/v1
+    description: Production Monitoring API
+  - url: https://staging-monitoring.pake-system.com/api/v1
+    description: Staging Environment
+  - url: http://localhost:9090/api/v1
+    description: Local Development
+
+paths:
+  # Prometheus Metrics Endpoints
+  /metrics:
+    get:
+      summary: Prometheus Metrics Exposition
+      description: |
+        Standard Prometheus metrics endpoint for all PAKE System services.
+
+        Key Metrics Categories:
+        - Business Metrics: Research requests, user sessions, data ingestion
+        - System Metrics: Request duration, error rates, resource utilization
+        - Infrastructure Metrics: Database connections, cache hit rates, API latencies
+        - Security Metrics: Authentication attempts, rate limit violations, access patterns
+      operationId: getPrometheusMetrics
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: Prometheus metrics in OpenMetrics format
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: prometheus
+              example: |
+                # HELP pake_research_requests_total Total number of research requests
+                # TYPE pake_research_requests_total counter
+                pake_research_requests_total{service="orchestrator",source="web"} 1542
+                pake_research_requests_total{service="orchestrator",source="arxiv"} 892
+
+                # HELP pake_request_duration_seconds Request duration histogram
+                # TYPE pake_request_duration_seconds histogram
+                pake_request_duration_seconds_bucket{service="api_gateway",le="0.1"} 1205
+                pake_request_duration_seconds_bucket{service="api_gateway",le="0.5"} 1456
+                pake_request_duration_seconds_bucket{service="api_gateway",le="1.0"} 1489
+                pake_request_duration_seconds_bucket{service="api_gateway",le="+Inf"} 1502
+                pake_request_duration_seconds_sum{service="api_gateway"} 245.8
+                pake_request_duration_seconds_count{service="api_gateway"} 1502
+
+  /metrics/custom:
+    get:
+      summary: Custom Business Metrics
+      description: |
+        Extended business-specific metrics for PAKE System operations.
+
+        Includes advanced metrics for:
+        - Multi-source research correlation analysis
+        - Cache effectiveness across L1/L2 layers
+        - User engagement and retention patterns
+        - External API performance and reliability
+      operationId: getCustomMetrics
+      tags:
+        - Metrics
+      parameters:
+        - name: service
+          in: query
+          description: Filter metrics by service name
+          schema:
+            type: string
+            enum: [orchestrator, api_gateway, caching, ingestion, trends]
+        - name: timeframe
+          in: query
+          description: Metrics collection timeframe
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 1h
+      responses:
+        '200':
+          description: Custom metrics in JSON format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  service_metrics:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        business_kpis:
+                          type: object
+                          properties:
+                            research_success_rate:
+                              type: number
+                              format: float
+                              minimum: 0
+                              maximum: 1
+                            multi_source_correlation:
+                              type: number
+                              format: float
+                            average_research_time:
+                              type: number
+                              format: float
+                        performance_metrics:
+                          type: object
+                          properties:
+                            cache_hit_rate:
+                              type: number
+                              format: float
+                            database_connection_efficiency:
+                              type: number
+                              format: float
+                            api_success_rate:
+                              type: number
+                              format: float
+
+  # Health Check Endpoints
+  /health:
+    get:
+      summary: System Health Check
+      description: |
+        Comprehensive health check with dependency validation.
+
+        Health Check Levels:
+        - Shallow: Service availability only (<100ms)
+        - Deep: Include database, cache, external API connectivity (<1s)
+        - Full: Complete dependency graph validation (<5s)
+      operationId: getSystemHealth
+      tags:
+        - Health
+      parameters:
+        - name: level
+          in: query
+          description: Depth of health check
+          schema:
+            type: string
+            enum: [shallow, deep, full]
+            default: shallow
+        - name: include_dependencies
+          in: query
+          description: Include dependency health status
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/{service}:
+    get:
+      summary: Individual Service Health
+      description: Health check for specific microservice with detailed diagnostics
+      operationId: getServiceHealth
+      tags:
+        - Health
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Service identifier
+          schema:
+            type: string
+            pattern: '^[a-z0-9_-]+$'
+        - name: include_metrics
+          in: query
+          description: Include recent performance metrics
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  # Distributed Tracing Endpoints
+  /traces:
+    get:
+      summary: Query Distributed Traces
+      description: |
+        Query distributed traces using OpenTelemetry standards.
+
+        Trace Query Capabilities:
+        - Service dependency mapping
+        - Request flow visualization
+        - Performance bottleneck identification
+        - Error correlation across services
+      operationId: queryTraces
+      tags:
+        - Tracing
+      parameters:
+        - name: trace_id
+          in: query
+          description: Specific trace identifier
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{32}$'
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: operation
+          in: query
+          description: Filter by operation name
+          schema:
+            type: string
+        - name: start_time
+          in: query
+          description: Start time for trace query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for trace query
+          schema:
+            type: string
+            format: date-time
+        - name: min_duration
+          in: query
+          description: Minimum trace duration (milliseconds)
+          schema:
+            type: integer
+            minimum: 0
+        - name: max_duration
+          in: query
+          description: Maximum trace duration (milliseconds)
+          schema:
+            type: integer
+            minimum: 0
+        - name: tags
+          in: query
+          description: Filter by span tags (key:value format)
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: '^[^:]+:[^:]+$'
+        - name: limit
+          in: query
+          description: Maximum number of traces to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Traces found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trace'
+                  total_count:
+                    type: integer
+                  query_time_ms:
+                    type: number
+
+  /traces/{trace_id}:
+    get:
+      summary: Get Specific Trace
+      description: Retrieve complete trace information including all spans and timeline
+      operationId: getTrace
+      tags:
+        - Tracing
+      parameters:
+        - name: trace_id
+          in: path
+          required: true
+          description: Trace identifier
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{32}$'
+      responses:
+        '200':
+          description: Trace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceDetail'
+        '404':
+          description: Trace not found
+
+  # Logging Endpoints
+  /logs:
+    get:
+      summary: Query Centralized Logs
+      description: |
+        Query structured logs from centralized logging system.
+
+        Log Query Features:
+        - Full-text search across all services
+        - Structured field filtering
+        - Correlation with traces and metrics
+        - Real-time log streaming capability
+      operationId: queryLogs
+      tags:
+        - Logging
+      parameters:
+        - name: query
+          in: query
+          description: Lucene-style query string
+          schema:
+            type: string
+            example: 'level:ERROR AND service:orchestrator'
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: level
+          in: query
+          description: Filter by log level
+          schema:
+            type: string
+            enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+        - name: start_time
+          in: query
+          description: Start time for log query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for log query
+          schema:
+            type: string
+            format: date-time
+        - name: trace_id
+          in: query
+          description: Filter by trace ID for correlation
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{32}$'
+        - name: user_id
+          in: query
+          description: Filter by user identifier
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of log entries
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1000
+        - name: sort
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [timestamp_asc, timestamp_desc, relevance]
+            default: timestamp_desc
+      responses:
+        '200':
+          description: Log entries found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LogEntry'
+                  total_count:
+                    type: integer
+                  query_time_ms:
+                    type: number
+
+  /logs/stream:
+    get:
+      summary: Real-time Log Streaming
+      description: |
+        Server-Sent Events (SSE) endpoint for real-time log streaming.
+
+        Stream Features:
+        - Live log tail functionality
+        - Filtered streaming by service/level
+        - Automatic reconnection support
+        - Configurable buffer size
+      operationId: streamLogs
+      tags:
+        - Logging
+      parameters:
+        - name: service
+          in: query
+          description: Filter stream by service
+          schema:
+            type: string
+        - name: level
+          in: query
+          description: Minimum log level
+          schema:
+            type: string
+            enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+            default: INFO
+        - name: buffer_size
+          in: query
+          description: Stream buffer size
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Log stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # Alert Management Endpoints
+  /alerts:
+    get:
+      summary: Query Active Alerts
+      description: |
+        Retrieve current active alerts and alert history.
+
+        Alert Management Features:
+        - Severity-based filtering and escalation
+        - Alert correlation and deduplication
+        - Notification history and acknowledgment
+        - SLA tracking and compliance reporting
+      operationId: getAlerts
+      tags:
+        - Alerts
+      parameters:
+        - name: status
+          in: query
+          description: Filter by alert status
+          schema:
+            type: string
+            enum: [active, acknowledged, resolved, suppressed]
+        - name: severity
+          in: query
+          description: Filter by severity level
+          schema:
+            type: string
+            enum: [critical, high, medium, low, info]
+        - name: service
+          in: query
+          description: Filter by service
+          schema:
+            type: string
+        - name: rule_group
+          in: query
+          description: Filter by alert rule group
+          schema:
+            type: string
+        - name: start_time
+          in: query
+          description: Start time for alert query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for alert query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Alerts found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  summary:
+                    type: object
+                    properties:
+                      total_active:
+                        type: integer
+                      by_severity:
+                        type: object
+                        additionalProperties:
+                          type: integer
+
+    post:
+      summary: Create Custom Alert
+      description: Create custom alert rule for specific monitoring conditions
+      operationId: createAlert
+      tags:
+        - Alerts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRule'
+      responses:
+        '201':
+          description: Alert rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRule'
+        '400':
+          description: Invalid alert rule configuration
+
+  /alerts/{alert_id}/acknowledge:
+    post:
+      summary: Acknowledge Alert
+      description: Acknowledge alert to prevent notification escalation
+      operationId: acknowledgeAlert
+      tags:
+        - Alerts
+      parameters:
+        - name: alert_id
+          in: path
+          required: true
+          description: Alert identifier
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                acknowledged_by:
+                  type: string
+                  description: User acknowledging the alert
+                notes:
+                  type: string
+                  description: Optional acknowledgment notes
+      responses:
+        '200':
+          description: Alert acknowledged
+        '404':
+          description: Alert not found
+
+  # Dashboard Configuration
+  /dashboards:
+    get:
+      summary: List Available Dashboards
+      description: |
+        Retrieve list of available Grafana dashboards and their configurations.
+
+        Dashboard Categories:
+        - System Overview: High-level system health and performance
+        - Service Specific: Individual microservice monitoring
+        - Business Metrics: User engagement and research analytics
+        - Infrastructure: Database, cache, and network monitoring
+      operationId: getDashboards
+      tags:
+        - Dashboards
+      parameters:
+        - name: category
+          in: query
+          description: Filter by dashboard category
+          schema:
+            type: string
+            enum: [system, service, business, infrastructure]
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dashboard list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Dashboard'
+
+  /dashboards/{dashboard_id}:
+    get:
+      summary: Get Dashboard Configuration
+      description: Retrieve complete dashboard configuration including panels and queries
+      operationId: getDashboard
+      tags:
+        - Dashboards
+      parameters:
+        - name: dashboard_id
+          in: path
+          required: true
+          description: Dashboard identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dashboard configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardDetail'
+        '404':
+          description: Dashboard not found
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - services
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall system health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+        version:
+          type: string
+          description: System version
+        uptime_seconds:
+          type: integer
+          description: System uptime in seconds
+        services:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServiceHealth'
+        dependencies:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DependencyHealth'
+        performance_summary:
+          type: object
+          properties:
+            total_requests_last_hour:
+              type: integer
+            average_response_time_ms:
+              type: number
+            error_rate_percentage:
+              type: number
+        resource_utilization:
+          type: object
+          properties:
+            cpu_percentage:
+              type: number
+            memory_percentage:
+              type: number
+            disk_percentage:
+              type: number
+
+    ServiceHealth:
+      type: object
+      required:
+        - service_name
+        - status
+        - timestamp
+      properties:
+        service_name:
+          type: string
+          description: Service identifier
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          description: Service version
+        uptime_seconds:
+          type: integer
+        response_time_ms:
+          type: number
+          description: Health check response time
+        error_details:
+          type: string
+          description: Error message if unhealthy
+        metrics:
+          type: object
+          properties:
+            requests_per_minute:
+              type: number
+            error_rate:
+              type: number
+            memory_usage_mb:
+              type: number
+            cpu_usage_percentage:
+              type: number
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/DependencyHealth'
+
+    DependencyHealth:
+      type: object
+      required:
+        - name
+        - status
+        - type
+      properties:
+        name:
+          type: string
+          description: Dependency name
+        type:
+          type: string
+          enum: [database, cache, external_api, service, queue]
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        response_time_ms:
+          type: number
+        error_message:
+          type: string
+        last_check:
+          type: string
+          format: date-time
+
+    Trace:
+      type: object
+      required:
+        - trace_id
+        - start_time
+        - duration_ms
+        - span_count
+      properties:
+        trace_id:
+          type: string
+          pattern: '^[a-f0-9]{32}$'
+        start_time:
+          type: string
+          format: date-time
+        duration_ms:
+          type: number
+        span_count:
+          type: integer
+        root_service:
+          type: string
+        operation_name:
+          type: string
+        status:
+          type: string
+          enum: [ok, error, timeout]
+        error_count:
+          type: integer
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+
+    TraceDetail:
+      type: object
+      required:
+        - trace_id
+        - spans
+      properties:
+        trace_id:
+          type: string
+          pattern: '^[a-f0-9]{32}$'
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Span'
+        timeline:
+          type: object
+          properties:
+            start_time:
+              type: string
+              format: date-time
+            end_time:
+              type: string
+              format: date-time
+            duration_ms:
+              type: number
+        service_map:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    Span:
+      type: object
+      required:
+        - span_id
+        - operation_name
+        - start_time
+        - duration_ms
+      properties:
+        span_id:
+          type: string
+          pattern: '^[a-f0-9]{16}$'
+        parent_span_id:
+          type: string
+          pattern: '^[a-f0-9]{16}$'
+        operation_name:
+          type: string
+        service_name:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        duration_ms:
+          type: number
+        status:
+          type: string
+          enum: [ok, error, timeout]
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        logs:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              level:
+                type: string
+              message:
+                type: string
+              fields:
+                type: object
+
+    LogEntry:
+      type: object
+      required:
+        - timestamp
+        - level
+        - message
+        - service
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+        message:
+          type: string
+        service:
+          type: string
+        trace_id:
+          type: string
+          pattern: '^[a-f0-9]{32}$'
+        span_id:
+          type: string
+          pattern: '^[a-f0-9]{16}$'
+        user_id:
+          type: string
+        request_id:
+          type: string
+        correlation_id:
+          type: string
+        fields:
+          type: object
+          additionalProperties: true
+          description: Structured log fields
+        source:
+          type: object
+          properties:
+            file:
+              type: string
+            line:
+              type: integer
+            function:
+              type: string
+
+    Alert:
+      type: object
+      required:
+        - alert_id
+        - rule_name
+        - status
+        - severity
+        - created_at
+      properties:
+        alert_id:
+          type: string
+          format: uuid
+        rule_name:
+          type: string
+        status:
+          type: string
+          enum: [active, acknowledged, resolved, suppressed]
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        service:
+          type: string
+        message:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        acknowledged_at:
+          type: string
+          format: date-time
+        acknowledged_by:
+          type: string
+        resolved_at:
+          type: string
+          format: date-time
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+        runbook_url:
+          type: string
+          format: uri
+        notification_history:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              channel:
+                type: string
+              recipient:
+                type: string
+              status:
+                type: string
+
+    AlertRule:
+      type: object
+      required:
+        - name
+        - expression
+        - severity
+        - duration
+      properties:
+        rule_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Human-readable alert rule name
+        description:
+          type: string
+        expression:
+          type: string
+          description: PromQL expression for alert condition
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        duration:
+          type: string
+          pattern: '^[0-9]+[smh]$'
+          description: How long condition must be true (e.g., '5m', '1h')
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+        notification_channels:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+          default: true
+        runbook_url:
+          type: string
+          format: uri
+
+    Dashboard:
+      type: object
+      required:
+        - dashboard_id
+        - title
+        - category
+      properties:
+        dashboard_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [system, service, business, infrastructure]
+        service:
+          type: string
+          description: Associated service (if service-specific)
+        url:
+          type: string
+          format: uri
+          description: Grafana dashboard URL
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+
+    DashboardDetail:
+      allOf:
+        - $ref: '#/components/schemas/Dashboard'
+        - type: object
+          properties:
+            panels:
+              type: array
+              items:
+                type: object
+                properties:
+                  panel_id:
+                    type: integer
+                  title:
+                    type: string
+                  type:
+                    type: string
+                    enum: [graph, singlestat, table, heatmap, logs]
+                  targets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        expr:
+                          type: string
+                          description: PromQL query expression
+                        legend:
+                          type: string
+            variables:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  query:
+                    type: string
+                  options:
+                    type: array
+                    items:
+                      type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for service authentication
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for external integrations
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: Metrics
+    description: Prometheus metrics collection and exposition
+  - name: Health
+    description: Service health checks and system status
+  - name: Tracing
+    description: Distributed tracing with OpenTelemetry
+  - name: Logging
+    description: Centralized logging and log analysis
+  - name: Alerts
+    description: Alert management and notification
+  - name: Dashboards
+    description: Monitoring dashboard configuration
+
+externalDocs:
+  description: PAKE System Monitoring Documentation
+  url: https://docs.pake-system.com/monitoring

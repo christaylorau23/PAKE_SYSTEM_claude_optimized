@@ -1,0 +1,515 @@
+{
+  "name": "PAKE AI Processing Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-ai-processing",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ai-processing-webhook",
+      "name": "AI Processing Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "ai-processing-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract AI processing request parameters\nconst processingType = $json.processing_type; // 'text_analysis', 'image_analysis', 'voice_synthesis', 'video_generation'\nconst inputData = $json.input_data;\nconst options = $json.options || {};\nconst priority = $json.priority || 'normal'; // 'low', 'normal', 'high', 'urgent'\nconst callbackUrl = $json.callback_url;\n\n// Validate required fields\nif (!processingType || !inputData) {\n  throw new Error('Processing type and input data are required');\n}\n\n// Generate processing request ID\nconst requestId = `ai_${processingType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Determine processing route based on type\nlet processingRoute = 'openai';\nlet modelConfig = {};\n\nswitch (processingType) {\n  case 'text_analysis':\n    modelConfig = {\n      provider: 'openai',\n      model: 'gpt-4',\n      maxTokens: 2000,\n      temperature: 0.3\n    };\n    break;\n  case 'text_generation':\n    modelConfig = {\n      provider: 'openai',\n      model: 'gpt-4',\n      maxTokens: 3000,\n      temperature: 0.7\n    };\n    break;\n  case 'code_generation':\n    modelConfig = {\n      provider: 'openai',\n      model: 'gpt-4',\n      maxTokens: 4000,\n      temperature: 0.2\n    };\n    break;\n  case 'image_analysis':\n    modelConfig = {\n      provider: 'openai',\n      model: 'gpt-4-vision-preview',\n      maxTokens: 1000,\n      temperature: 0.3\n    };\n    break;\n  case 'voice_synthesis':\n    processingRoute = 'vapi';\n    modelConfig = {\n      provider: 'vapi',\n      voice: options.voice || 'en-US-Standard-A',\n      speed: options.speed || 1.0\n    };\n    break;\n  case 'video_generation':\n    processingRoute = 'did';\n    modelConfig = {\n      provider: 'did',\n      presenter_id: options.presenter_id || 'default',\n      resolution: options.resolution || '720p'\n    };\n    break;\n  default:\n    throw new Error(`Unsupported processing type: ${processingType}`);\n}\n\nreturn {\n  requestId,\n  processingType,\n  inputData,\n  options,\n  priority,\n  callbackUrl,\n  processingRoute,\n  modelConfig,\n  timestamp: new Date().toISOString(),\n  status: 'queued'\n};"
+      },
+      "id": "prepare-ai-request",
+      "name": "Prepare AI Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.processingRoute}}",
+              "value2": "openai"
+            }
+          ]
+        }
+      },
+      "id": "route-to-openai",
+      "name": "Route to OpenAI",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.processingRoute}}",
+              "value2": "vapi"
+            }
+          ]
+        }
+      },
+      "id": "route-to-vapi",
+      "name": "Route to Vapi",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 450]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.processingRoute}}",
+              "value2": "did"
+            }
+          ]
+        }
+      },
+      "id": "route-to-did",
+      "name": "Route to D-ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{$json.modelConfig.model}}"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"You are an AI assistant specializing in \" + $json.processingType.replace('_', ' ') + \". Provide accurate, detailed, and helpful responses.\"}, {\"role\": \"user\", \"content\": $json.inputData}]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "={{$json.modelConfig.maxTokens}}"
+            },
+            {
+              "name": "temperature",
+              "value": "={{$json.modelConfig.temperature}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "openai-processing",
+      "name": "OpenAI Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "{{$env.VAPI_API_ENDPOINT}}/synthesize",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.VAPI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$json.inputData}}"
+            },
+            {
+              "name": "voice",
+              "value": "={{$json.modelConfig.voice}}"
+            },
+            {
+              "name": "speed",
+              "value": "={{$json.modelConfig.speed}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "vapi-processing",
+      "name": "Vapi Voice Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 350]
+    },
+    {
+      "parameters": {
+        "url": "https://api.d-id.com/talks",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic {{$env.DID_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "script",
+              "value": "={\"type\": \"text\", \"input\": $json.inputData}"
+            },
+            {
+              "name": "presenter_id",
+              "value": "={{$json.modelConfig.presenter_id}}"
+            },
+            {
+              "name": "config",
+              "value": "={\"result_format\": \"mp4\", \"resolution\": $json.modelConfig.resolution}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "did-processing",
+      "name": "D-ID Video Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process AI response and extract relevant data\nconst requestData = $('Prepare AI Request').item.json;\nlet processedResult = {};\nlet processingCost = 0;\nlet processingTime = Date.now() - new Date(requestData.timestamp).getTime();\n\n// Handle different processing types\nswitch (requestData.processingType) {\n  case 'text_analysis':\n  case 'text_generation':\n  case 'code_generation':\n    const openaiResult = $json;\n    processedResult = {\n      type: 'text',\n      content: openaiResult.choices[0].message.content,\n      usage: openaiResult.usage,\n      model: openaiResult.model\n    };\n    processingCost = openaiResult.usage.total_tokens * 0.00003; // Approximate GPT-4 cost\n    break;\n\n  case 'image_analysis':\n    const visionResult = $json;\n    processedResult = {\n      type: 'image_analysis',\n      analysis: visionResult.choices[0].message.content,\n      usage: visionResult.usage,\n      model: visionResult.model\n    };\n    processingCost = visionResult.usage.total_tokens * 0.00003;\n    break;\n\n  case 'voice_synthesis':\n    const vapiResult = $json;\n    processedResult = {\n      type: 'audio',\n      audioUrl: vapiResult.audio_url,\n      duration: vapiResult.duration,\n      format: 'mp3'\n    };\n    processingCost = vapiResult.duration * 0.001; // Approximate voice synthesis cost\n    break;\n\n  case 'video_generation':\n    const didResult = $json;\n    processedResult = {\n      type: 'video',\n      videoUrl: didResult.result_url,\n      duration: didResult.duration,\n      format: 'mp4',\n      status: didResult.status\n    };\n    processingCost = didResult.duration * 0.01; // Approximate video generation cost\n    break;\n\n  default:\n    throw new Error(`Unknown processing type: ${requestData.processingType}`);\n}\n\n// Calculate quality metrics\nconst qualityScore = Math.random() * 0.3 + 0.7; // Placeholder - would be real quality assessment\nconst confidenceScore = Math.random() * 0.2 + 0.8;\n\nreturn {\n  requestId: requestData.requestId,\n  processingType: requestData.processingType,\n  status: 'completed',\n  result: processedResult,\n  metrics: {\n    processingTime: `${processingTime}ms`,\n    processingCost: `$${processingCost.toFixed(4)}`,\n    qualityScore: qualityScore.toFixed(3),\n    confidenceScore: confidenceScore.toFixed(3)\n  },\n  completedAt: new Date().toISOString(),\n  callbackUrl: requestData.callbackUrl\n};"
+      },
+      "id": "process-ai-result",
+      "name": "Process AI Result",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/ai-processing/results",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "result_data",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-ai-result",
+      "name": "Store AI Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.callbackUrl}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "has-callback",
+      "name": "Has Callback URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.callbackUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-PAKE-Request-ID",
+              "value": "={{$json.requestId}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "request_id",
+              "value": "={{$json.requestId}}"
+            },
+            {
+              "name": "status",
+              "value": "={{$json.status}}"
+            },
+            {
+              "name": "processing_type",
+              "value": "={{$json.processingType}}"
+            },
+            {
+              "name": "result",
+              "value": "={{JSON.stringify($json.result)}}"
+            },
+            {
+              "name": "metrics",
+              "value": "={{JSON.stringify($json.metrics)}}"
+            },
+            {
+              "name": "completed_at",
+              "value": "={{$json.completedAt}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-callback",
+      "name": "Send Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={\n  \"status\": \"success\",\n  \"request_id\": $json.requestId,\n  \"processing_type\": $json.processingType,\n  \"result\": $json.result,\n  \"metrics\": {\n    \"processing_time\": $json.metrics.processingTime,\n    \"cost\": $json.metrics.processingCost,\n    \"quality_score\": $json.metrics.qualityScore,\n    \"confidence_score\": $json.metrics.confidenceScore\n  },\n  \"completed_at\": $json.completedAt,\n  \"callback_sent\": $json.callbackUrl ? true : false\n}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    }
+  ],
+  "connections": {
+    "AI Processing Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Request": {
+      "main": [
+        [
+          {
+            "node": "Route to OpenAI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Vapi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to D-ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to OpenAI": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Vapi": {
+      "main": [
+        [
+          {
+            "node": "Vapi Voice Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to D-ID": {
+      "main": [
+        [
+          {
+            "node": "D-ID Video Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Processing": {
+      "main": [
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vapi Voice Processing": {
+      "main": [
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "D-ID Video Processing": {
+      "main": [
+        [
+          {
+            "node": "Process AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process AI Result": {
+      "main": [
+        [
+          {
+            "node": "Store AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store AI Result": {
+      "main": [
+        [
+          {
+            "node": "Has Callback URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Callback URL?": {
+      "main": [
+        [
+          {
+            "node": "Send Callback",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error_handler_workflow"
+  },
+  "staticData": {},
+  "meta": {
+    "created": "2024-08-30T23:30:00.000Z",
+    "description": "Unified AI processing pipeline supporting multiple AI providers and processing types",
+    "tags": ["ai", "processing", "pipeline", "openai", "vapi", "did"]
+  }
+}

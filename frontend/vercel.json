@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/app/api/**/*.{js,ts}": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}

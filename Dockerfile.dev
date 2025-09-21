@@ -1,0 +1,47 @@
+# PAKE System - Development Docker Container
+# Optimized for development with hot reload
+
+FROM python:3.12-slim
+
+# Install system dependencies for development
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    postgresql-client \
+    redis-tools \
+    vim \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for development
+RUN useradd --create-home --shell /bin/bash pake
+
+# Set working directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements-core.txt requirements-phase7.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-phase7.txt && \
+    pip install --no-cache-dir \
+        pytest-asyncio \
+        pytest-mock \
+        ipython \
+        jupyter
+
+# Create necessary directories
+RUN mkdir -p logs cache data && \
+    chown -R pake:pake /app
+
+# Switch to non-root user
+USER pake
+
+# Copy application code (will be overridden by volume in development)
+COPY --chown=pake:pake . .
+
+# Expose ports
+EXPOSE 8000 8001
+
+# Development command (overridden in docker-compose.dev.yml)
+CMD ["python", "mcp_server_realtime.py"]

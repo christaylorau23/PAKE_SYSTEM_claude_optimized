@@ -1,0 +1,193 @@
+{
+  "claude_tools": [
+    {
+      "name": "search_notes",
+      "description": "Searches the Obsidian PAKE vault for notes that match a set of metadata filters. Returns a list of summaries and PAKE IDs, not the full content. Use this to discover relevant notes before reading them with get_note_by_id.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "object",
+            "description": "A dictionary of key-value pairs to filter notes by. Available filters: 'pake_type' (SourceNote, InsightNote, etc), 'status' (Raw, Refined, Quarantined), 'tags' (array or single tag), 'min_confidence' (0.0-1.0), 'verification_status' (pending, verified, rejected). Example: {'pake_type': 'SourceNote', 'tags': 'ai'}",
+            "additionalProperties": true
+          }
+        },
+        "required": ["filters"]
+      }
+    },
+    {
+      "name": "get_note_by_id",
+      "description": "Retrieves the full content and metadata of a single note from the Obsidian PAKE vault using its unique PAKE ID. Use this after finding notes with search_notes.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pake_id": {
+            "type": "string",
+            "description": "The unique PAKE ID of the note to retrieve (UUID format)"
+          }
+        },
+        "required": ["pake_id"]
+      }
+    },
+    {
+      "name": "notes_from_schema",
+      "description": "Creates a new note in the PAKE vault using the structured schema. Automatically assigns PAKE ID, calculates confidence score, and stores in appropriate vault location.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the note"
+          },
+          "content": {
+            "type": "string",
+            "description": "The main content of the note in Markdown format"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["SourceNote", "InsightNote", "ProjectNote", "DailyNote"],
+            "default": "SourceNote",
+            "description": "The type of note being created"
+          },
+          "source_uri": {
+            "type": "string",
+            "description": "The source URI where this information came from (URL, file path, etc)"
+          },
+          "confidence_score": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Confidence score for the information quality (0.0-1.0)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Raw", "Refined", "Quarantined"],
+            "default": "Raw",
+            "description": "Processing status of the note"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of tags for categorization"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Brief summary of the note content"
+          },
+          "human_notes": {
+            "type": "string",
+            "description": "Additional human annotations or notes"
+          }
+        },
+        "required": ["title", "content"]
+      }
+    }
+  ],
+  "gemini_tools": [
+    {
+      "name": "search_notes",
+      "description": "Searches the Obsidian PAKE vault for notes that match a set of metadata filters. Returns a list of summaries and PAKE IDs, not the full content.",
+      "parameters": {
+        "type": "OBJECT",
+        "properties": {
+          "filters": {
+            "type": "OBJECT",
+            "description": "A dictionary of key-value pairs to filter notes by. For example, {'pake_type': 'SourceNote', 'tags': 'ai', 'min_confidence': 0.7}. Available filters: pake_type, status, tags, min_confidence, verification_status."
+          }
+        },
+        "required": ["filters"]
+      }
+    },
+    {
+      "name": "get_note_by_id",
+      "description": "Retrieves the full content and metadata of a single note from the Obsidian PAKE vault using its unique PAKE ID.",
+      "parameters": {
+        "type": "OBJECT",
+        "properties": {
+          "pake_id": {
+            "type": "STRING",
+            "description": "The unique PAKE ID of the note to retrieve."
+          }
+        },
+        "required": ["pake_id"]
+      }
+    },
+    {
+      "name": "notes_from_schema",
+      "description": "Creates a new structured note in the PAKE vault. Use this to store new knowledge with proper metadata, confidence scoring, and organization.",
+      "parameters": {
+        "type": "OBJECT",
+        "properties": {
+          "title": {
+            "type": "STRING",
+            "description": "The title of the note"
+          },
+          "content": {
+            "type": "STRING",
+            "description": "The main content of the note in Markdown format"
+          },
+          "type": {
+            "type": "STRING",
+            "description": "The type of note: SourceNote (external information), InsightNote (synthesized analysis), ProjectNote, or DailyNote"
+          },
+          "source_uri": {
+            "type": "STRING",
+            "description": "The source URI where this information came from (URL, file path, etc)"
+          },
+          "confidence_score": {
+            "type": "NUMBER",
+            "description": "Confidence score for information quality (0.0 = very low confidence, 1.0 = very high confidence)"
+          },
+          "status": {
+            "type": "STRING",
+            "description": "Processing status: Raw (new), Refined (reviewed), or Quarantined (needs review)"
+          },
+          "tags": {
+            "type": "ARRAY",
+            "description": "Array of tags for categorization and discovery"
+          },
+          "summary": {
+            "type": "STRING",
+            "description": "Brief summary of the note content for quick reference"
+          },
+          "human_notes": {
+            "type": "STRING",
+            "description": "Additional human annotations, corrections, or contextual notes"
+          }
+        },
+        "required": ["title", "content"]
+      }
+    }
+  ],
+  "endpoint_configuration": {
+    "obsidian_bridge": {
+      "base_url": "http://localhost:3000",
+      "endpoints": {
+        "search_notes": "/api/search_notes",
+        "get_note_by_id": "/api/get_note_by_id",
+        "notes_from_schema": "/api/notes"
+      }
+    },
+    "mcp_server": {
+      "base_url": "http://localhost:8000",
+      "endpoints": {
+        "search_notes": "/search_notes",
+        "get_note_by_id": "/get_note_by_id",
+        "notes_from_schema": "/notes_from_schema"
+      }
+    }
+  },
+  "usage_examples": {
+    "search_workflow": {
+      "step1": "Use search_notes with filters to find relevant notes",
+      "step2": "Use get_note_by_id to retrieve full content of interesting notes",
+      "step3": "Use notes_from_schema to create new insights or store external information"
+    },
+    "research_workflow": {
+      "description": "For research tasks, first search existing knowledge, then create new SourceNotes for external information, finally create InsightNotes for synthesis"
+    },
+    "synthesis_workflow": {
+      "description": "Search for related SourceNotes, read their full content, analyze patterns and themes, then create InsightNotes with proper source attribution"
+    }
+  }
+}

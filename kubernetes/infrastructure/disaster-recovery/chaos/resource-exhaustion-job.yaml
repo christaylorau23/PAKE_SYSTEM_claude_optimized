@@ -1,0 +1,952 @@
+# Resource Exhaustion Chaos Testing for PAKE System
+# Tests system behavior under CPU, memory, and disk stress
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaos-resource-exhaustion-config
+  namespace: chaos-testing
+  labels:
+    app: chaos-resource-exhaustion
+    chaos-type: resource-exhaustion
+data:
+  config.yaml: |
+    chaos:
+      name: "resource-exhaustion"
+      description: "Resource exhaustion chaos to test system behavior under stress"
+      
+      # Experiment configuration
+      experiment:
+        duration: "8m"
+        dry_run: false
+        safety_checks: true
+        auto_rollback: true
+        
+      # Resource stress scenarios
+      scenarios:
+        - name: "api-cpu-stress"
+          description: "CPU stress on API services"
+          duration: "3m"
+          resource_type: "cpu"
+          target:
+            namespace: "pake-api"
+            selector:
+              app: "pake-api"
+            container: "pake-api"
+          stress_config:
+            cpu_percentage: 80
+            cpu_cores: 2
+            
+        - name: "ai-memory-stress"
+          description: "Memory stress on AI workers"
+          duration: "4m"
+          resource_type: "memory"
+          target:
+            namespace: "pake-ai"
+            selector:
+              app: "pake-ai-worker"
+            container: "ai-worker"
+          stress_config:
+            memory_percentage: 70
+            memory_size: "2Gi"
+            
+        - name: "database-disk-stress"
+          description: "Disk I/O stress on database"
+          duration: "5m"
+          resource_type: "disk"
+          target:
+            namespace: "database"
+            selector:
+              app: "postgresql"
+              role: "replica"
+            container: "postgresql"
+          stress_config:
+            disk_percentage: 60
+            io_size: "1G"
+            io_workers: 4
+            
+        - name: "network-bandwidth-stress"
+          description: "Network bandwidth stress"
+          duration: "3m"
+          resource_type: "network"
+          target:
+            namespace: "pake-api"
+            selector:
+              app: "pake-api"
+            container: "pake-api"
+          stress_config:
+            bandwidth_limit: "100Mbps"
+            packet_loss: "1%"
+            
+      # Safety constraints
+      safety:
+        # Protected pods that should never be stressed
+        protected_pods:
+          - "etcd"
+          - "kube-apiserver"
+          - "kube-scheduler"
+          - "kube-controller-manager"
+          
+        # Node resource thresholds
+        node_limits:
+          max_cpu_usage: 90.0    # Max 90% CPU usage on node
+          max_memory_usage: 85.0  # Max 85% memory usage on node
+          min_free_disk: "5Gi"   # Min 5GB free disk space
+          
+        # Pre-experiment health checks
+        health_checks:
+          - name: "api-health"
+            url: "http://pake-api.pake-api.svc.cluster.local:8080/health"
+            timeout: 10
+            
+          - name: "ai-health"
+            url: "http://pake-ai.pake-ai.svc.cluster.local:8080/health"
+            timeout: 10
+            
+        # Success criteria during stress
+        success_criteria:
+          max_error_rate: 20.0     # 20% error rate acceptable during stress
+          max_response_time: 8000  # 8s response time during stress
+          min_availability: 80.0   # 80% availability during stress
+          
+      # Monitoring configuration
+      monitoring:
+        metrics_interval: 10
+        trace_tags:
+          experiment: "resource-exhaustion"
+          environment: "production"
+          team: "platform"
+
+  resource-exhaustion.py: |
+    #!/usr/bin/env python3
+    """
+    Resource Exhaustion Chaos Experiment
+    Creates controlled resource stress to test system resilience
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import yaml
+    from datetime import datetime, timedelta
+    from kubernetes import client, config
+    from kubernetes.client.rest import ApiException
+    import aiohttp
+    import requests
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class ResourceExhaustionChaosExperiment:
+        def __init__(self, config_path):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['chaos']
+            
+            # Initialize Kubernetes client
+            try:
+                config.load_incluster_config()
+            except:
+                config.load_kube_config()
+            
+            self.k8s_client = client.CoreV1Api()
+            self.apps_client = client.AppsV1Api()
+            
+            # Experiment state
+            self.experiment_id = f"resource-exhaustion-{int(time.time())}"
+            self.start_time = None
+            self.active_stress_pods = []
+            self.baseline_metrics = {}
+            self.session = None
+            
+        async def start(self):
+            """Initialize the experiment"""
+            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
+            logger.info(f"Starting resource exhaustion experiment: {self.experiment_id}")
+            
+        async def stop(self):
+            """Cleanup resources"""
+            if self.session:
+                await self.session.close()
+                
+        def emit_metric(self, metric_name, value, labels=None):
+            """Emit metric to Prometheus pushgateway"""
+            try:
+                if labels is None:
+                    labels = {}
+                    
+                labels.update({
+                    'experiment_id': self.experiment_id,
+                    'experiment_type': 'resource-exhaustion',
+                    **self.config['monitoring']['trace_tags']
+                })
+                
+                label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
+                metric_data = f"{metric_name}{{{label_str}}} {value}"
+                
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/chaos-engineering/instance/resource-exhaustion",
+                    data=metric_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=10
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Error emitting metric {metric_name}: {e}")
+                
+        async def perform_health_check(self, check_config):
+            """Perform health check on a service"""
+            try:
+                start_time = time.time()
+                async with self.session.get(check_config['url']) as response:
+                    response_time = (time.time() - start_time) * 1000  # Convert to ms
+                    
+                    if response.status == 200:
+                        return True, response_time
+                    else:
+                        logger.warning(f"Health check failed for {check_config['name']}: HTTP {response.status}")
+                        return False, response_time
+                        
+            except asyncio.TimeoutError:
+                logger.warning(f"Health check timeout for {check_config['name']}")
+                return False, check_config.get('timeout', 10) * 1000
+            except Exception as e:
+                logger.error(f"Health check error for {check_config['name']}: {e}")
+                return False, 0
+                
+        async def collect_baseline_metrics(self):
+            """Collect baseline resource metrics"""
+            logger.info("Collecting baseline resource metrics...")
+            
+            baseline = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'health_checks': {},
+                'node_resources': {},
+                'pod_resources': {}
+            }
+            
+            # Perform health checks
+            for check in self.config['safety']['health_checks']:
+                healthy, response_time = await self.perform_health_check(check)
+                baseline['health_checks'][check['name']] = {
+                    'healthy': healthy,
+                    'response_time': response_time
+                }
+                
+                self.emit_metric(
+                    'chaos_baseline_resource_health_status',
+                    1 if healthy else 0,
+                    {'service': check['name']}
+                )
+                
+                self.emit_metric(
+                    'chaos_baseline_resource_response_time_ms',
+                    response_time,
+                    {'service': check['name']}
+                )
+            
+            # Collect node resource usage
+            try:
+                nodes = self.k8s_client.list_node()
+                for node in nodes.items:
+                    node_name = node.metadata.name
+                    
+                    # Get node metrics (this would typically come from metrics-server)
+                    # For now, we'll collect basic node info
+                    baseline['node_resources'][node_name] = {
+                        'allocatable_cpu': node.status.allocatable.get('cpu', '0'),
+                        'allocatable_memory': node.status.allocatable.get('memory', '0'),
+                        'conditions': [
+                            {
+                                'type': condition.type,
+                                'status': condition.status
+                            }
+                            for condition in node.status.conditions or []
+                        ]
+                    }
+                    
+            except Exception as e:
+                logger.error(f"Error collecting node metrics: {e}")
+            
+            # Collect pod resource usage for target pods
+            try:
+                for scenario in self.config['scenarios']:
+                    target = scenario['target']
+                    pods = self.k8s_client.list_namespaced_pod(
+                        namespace=target['namespace'],
+                        label_selector=','.join([f"{k}={v}" for k, v in target['selector'].items()])
+                    )
+                    
+                    for pod in pods.items:
+                        if pod.status.phase == 'Running':
+                            pod_key = f"{pod.metadata.namespace}/{pod.metadata.name}"
+                            baseline['pod_resources'][pod_key] = {
+                                'node': pod.spec.node_name,
+                                'containers': []
+                            }
+                            
+                            for container in pod.spec.containers:
+                                container_info = {
+                                    'name': container.name,
+                                    'requests': container.resources.requests or {},
+                                    'limits': container.resources.limits or {}
+                                }
+                                baseline['pod_resources'][pod_key]['containers'].append(container_info)
+                                
+            except Exception as e:
+                logger.error(f"Error collecting pod metrics: {e}")
+            
+            self.baseline_metrics = baseline
+            logger.info(f"Baseline resource metrics collected")
+            return baseline
+            
+        def get_stress_pod_manifest(self, scenario, target_pod):
+            """Create stress testing pod manifest"""
+            stress_config = scenario['stress_config']
+            resource_type = scenario['resource_type']
+            
+            # Build stress-ng command based on resource type
+            stress_commands = []
+            
+            if resource_type == 'cpu':
+                cpu_cores = stress_config.get('cpu_cores', 1)
+                cpu_load = stress_config.get('cpu_percentage', 80)
+                stress_commands.append(f"stress-ng --cpu {cpu_cores} --cpu-load {cpu_load}")
+                
+            elif resource_type == 'memory':
+                memory_size = stress_config.get('memory_size', '1Gi')
+                memory_workers = stress_config.get('memory_workers', 1)
+                stress_commands.append(f"stress-ng --vm {memory_workers} --vm-bytes {memory_size}")
+                
+            elif resource_type == 'disk':
+                io_workers = stress_config.get('io_workers', 2)
+                io_size = stress_config.get('io_size', '1G')
+                stress_commands.append(f"stress-ng --io {io_workers} --io-ops 1000")
+                stress_commands.append(f"stress-ng --hdd 1 --hdd-bytes {io_size}")
+                
+            elif resource_type == 'network':
+                # Network stress is more complex and would typically require tc (traffic control)
+                bandwidth_limit = stress_config.get('bandwidth_limit', '100Mbps')
+                stress_commands.append(f"stress-ng --sock 4 --sock-ops 1000")
+            
+            # Combine all stress commands
+            full_command = " & ".join(stress_commands) + f" & sleep {self._parse_duration(scenario['duration'])} && pkill stress-ng"
+            
+            pod_name = f"chaos-stress-{scenario['name']}-{self.experiment_id[:8]}"
+            
+            stress_pod = client.V1Pod(
+                api_version="v1",
+                kind="Pod",
+                metadata=client.V1ObjectMeta(
+                    name=pod_name,
+                    namespace=target_pod.metadata.namespace,
+                    labels={
+                        "chaos-experiment": self.experiment_id,
+                        "chaos-type": "resource-exhaustion",
+                        "scenario": scenario['name'],
+                        "stress-target": target_pod.metadata.name
+                    }
+                ),
+                spec=client.V1PodSpec(
+                    restart_policy="Never",
+                    node_name=target_pod.spec.node_name,  # Run on same node as target
+                    containers=[
+                        client.V1Container(
+                            name="stress",
+                            image="quay.io/coreos/stress:latest",
+                            command=["/bin/sh"],
+                            args=["-c", full_command],
+                            resources=client.V1ResourceRequirements(
+                                requests={
+                                    "cpu": "100m",
+                                    "memory": "128Mi"
+                                },
+                                limits={
+                                    "cpu": "2000m",
+                                    "memory": stress_config.get('memory_size', '2Gi') if resource_type == 'memory' else "1Gi"
+                                }
+                            ),
+                            security_context=client.V1SecurityContext(
+                                run_as_non_root=False,  # stress-ng may need root for some operations
+                                privileged=False
+                            )
+                        )
+                    ],
+                    priority_class_name="system-node-critical" if resource_type == 'disk' else None,
+                    tolerations=[
+                        client.V1Toleration(
+                            key="chaos-testing",
+                            operator="Equal",
+                            value="true",
+                            effect="NoSchedule"
+                        )
+                    ]
+                )
+            )
+            
+            return stress_pod
+            
+        async def create_resource_stress(self, scenario):
+            """Create resource stress for a scenario"""
+            try:
+                logger.info(f"Creating resource stress for scenario: {scenario['name']}")
+                
+                target = scenario['target']
+                
+                # Get target pods
+                pods = self.k8s_client.list_namespaced_pod(
+                    namespace=target['namespace'],
+                    label_selector=','.join([f"{k}={v}" for k, v in target['selector'].items()])
+                )
+                
+                target_pods = [pod for pod in pods.items if pod.status.phase == 'Running']
+                
+                if not target_pods:
+                    logger.warning(f"No running target pods found for scenario: {scenario['name']}")
+                    return []
+                
+                created_stress_pods = []
+                
+                # Create stress pod for each target pod (but limit to avoid overwhelming)
+                max_stress_pods = min(len(target_pods), 3)  # Limit to 3 stress pods
+                selected_pods = target_pods[:max_stress_pods]
+                
+                for target_pod in selected_pods:
+                    # Check if pod is protected
+                    if self.is_pod_protected(target_pod):
+                        logger.info(f"Skipping protected pod: {target_pod.metadata.name}")
+                        continue
+                    
+                    # Create stress pod
+                    stress_pod_manifest = self.get_stress_pod_manifest(scenario, target_pod)
+                    
+                    created_pod = self.k8s_client.create_namespaced_pod(
+                        namespace=target_pod.metadata.namespace,
+                        body=stress_pod_manifest
+                    )
+                    
+                    stress_record = {
+                        'scenario': scenario['name'],
+                        'resource_type': scenario['resource_type'],
+                        'stress_pod_name': created_pod.metadata.name,
+                        'stress_pod_namespace': created_pod.metadata.namespace,
+                        'target_pod_name': target_pod.metadata.name,
+                        'target_pod_namespace': target_pod.metadata.namespace,
+                        'start_time': datetime.utcnow().isoformat(),
+                        'duration': scenario['duration']
+                    }
+                    
+                    created_stress_pods.append(stress_record)
+                    
+                    logger.info(f"Created stress pod {created_pod.metadata.name} targeting {target_pod.metadata.name}")
+                    
+                    # Brief delay between stress pod creation
+                    await asyncio.sleep(2)
+                
+                self.active_stress_pods.extend(created_stress_pods)
+                
+                # Emit metrics
+                self.emit_metric(
+                    'chaos_stress_pods_created_total',
+                    len(created_stress_pods),
+                    {
+                        'scenario': scenario['name'],
+                        'resource_type': scenario['resource_type'],
+                        'namespace': target['namespace']
+                    }
+                )
+                
+                return created_stress_pods
+                
+            except ApiException as e:
+                logger.error(f"Kubernetes API error creating stress for {scenario['name']}: {e}")
+                self.emit_metric('chaos_stress_creation_failures_total', 1, {'scenario': scenario['name']})
+                return []
+            except Exception as e:
+                logger.error(f"Error creating stress for {scenario['name']}: {e}")
+                self.emit_metric('chaos_stress_creation_failures_total', 1, {'scenario': scenario['name']})
+                return []
+                
+        def is_pod_protected(self, pod):
+            """Check if pod should be protected from stress testing"""
+            # Check protected pod names
+            for protected in self.config['safety']['protected_pods']:
+                if protected in pod.metadata.name:
+                    return True
+                    
+            # Check if pod has chaos-safe label
+            if pod.metadata.labels and pod.metadata.labels.get('chaos-safe') == 'false':
+                return True
+                
+            return False
+            
+        async def monitor_stress_impact(self, duration_seconds):
+            """Monitor system behavior during resource stress"""
+            logger.info(f"Monitoring stress impact for {duration_seconds} seconds...")
+            
+            start_time = time.time()
+            
+            while time.time() - start_time < duration_seconds:
+                try:
+                    # Check health endpoints
+                    for check in self.config['safety']['health_checks']:
+                        healthy, response_time = await self.perform_health_check(check)
+                        
+                        self.emit_metric(
+                            'chaos_stress_health_status',
+                            1 if healthy else 0,
+                            {'service': check['name']}
+                        )
+                        
+                        self.emit_metric(
+                            'chaos_stress_response_time_ms',
+                            response_time,
+                            {'service': check['name']}
+                        )
+                        
+                        # Check against success criteria
+                        max_response_time = self.config['safety']['success_criteria']['max_response_time']
+                        if response_time > max_response_time:
+                            logger.warning(f"Response time {response_time}ms exceeds threshold {max_response_time}ms for {check['name']}")
+                    
+                    # Monitor stress pod status
+                    for stress_record in self.active_stress_pods:
+                        try:
+                            stress_pod = self.k8s_client.read_namespaced_pod(
+                                name=stress_record['stress_pod_name'],
+                                namespace=stress_record['stress_pod_namespace']
+                            )
+                            
+                            self.emit_metric(
+                                'chaos_stress_pod_status',
+                                1 if stress_pod.status.phase == 'Running' else 0,
+                                {
+                                    'scenario': stress_record['scenario'],
+                                    'stress_pod': stress_record['stress_pod_name'],
+                                    'target_pod': stress_record['target_pod_name']
+                                }
+                            )
+                            
+                        except Exception as e:
+                            logger.error(f"Error checking stress pod {stress_record['stress_pod_name']}: {e}")
+                    
+                    # Wait before next check
+                    await asyncio.sleep(self.config['monitoring']['metrics_interval'])
+                    
+                except Exception as e:
+                    logger.error(f"Error during stress monitoring: {e}")
+                    await asyncio.sleep(10)
+            
+            logger.info("Stress impact monitoring completed")
+            
+        async def cleanup_stress_pods(self):
+            """Remove all stress testing pods"""
+            logger.info("Cleaning up stress testing pods...")
+            
+            cleanup_success = True
+            
+            for stress_record in self.active_stress_pods:
+                try:
+                    self.k8s_client.delete_namespaced_pod(
+                        name=stress_record['stress_pod_name'],
+                        namespace=stress_record['stress_pod_namespace'],
+                        grace_period_seconds=0
+                    )
+                    
+                    stress_record['end_time'] = datetime.utcnow().isoformat()
+                    stress_record['status'] = 'removed'
+                    
+                    logger.info(f"Deleted stress pod: {stress_record['stress_pod_name']}")
+                    
+                except ApiException as e:
+                    if e.status == 404:
+                        logger.info(f"Stress pod {stress_record['stress_pod_name']} already deleted")
+                    else:
+                        logger.error(f"Error deleting stress pod {stress_record['stress_pod_name']}: {e}")
+                        cleanup_success = False
+                except Exception as e:
+                    logger.error(f"Error deleting stress pod {stress_record['stress_pod_name']}: {e}")
+                    cleanup_success = False
+            
+            # Clean up any orphaned stress pods
+            try:
+                all_namespaces = self.k8s_client.list_namespace()
+                for ns in all_namespaces.items:
+                    try:
+                        pods = self.k8s_client.list_namespaced_pod(
+                            namespace=ns.metadata.name,
+                            label_selector=f"chaos-experiment={self.experiment_id}"
+                        )
+                        
+                        for pod in pods.items:
+                            if 'chaos-stress' in pod.metadata.name:
+                                logger.info(f"Cleaning up orphaned stress pod: {pod.metadata.name}")
+                                self.k8s_client.delete_namespaced_pod(
+                                    name=pod.metadata.name,
+                                    namespace=pod.metadata.namespace,
+                                    grace_period_seconds=0
+                                )
+                                
+                    except Exception as e:
+                        logger.error(f"Error cleaning stress pods in namespace {ns.metadata.name}: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error during orphaned pod cleanup: {e}")
+                cleanup_success = False
+            
+            self.emit_metric('chaos_stress_cleanup_status', 1 if cleanup_success else 0)
+            return cleanup_success
+            
+        def _parse_duration(self, duration_str):
+            """Parse duration string like '5m' to seconds"""
+            if duration_str.endswith('s'):
+                return int(duration_str[:-1])
+            elif duration_str.endswith('m'):
+                return int(duration_str[:-1]) * 60
+            elif duration_str.endswith('h'):
+                return int(duration_str[:-1]) * 3600
+            else:
+                return int(duration_str)  # Assume seconds
+                
+        async def run_experiment(self):
+            """Run the complete resource exhaustion experiment"""
+            try:
+                await self.start()
+                self.start_time = datetime.utcnow()
+                
+                logger.info(f"Starting resource exhaustion experiment: {self.config['name']}")
+                logger.info(f"Description: {self.config['description']}")
+                
+                # Emit experiment start metrics
+                self.emit_metric('chaos_experiment_start_timestamp', int(time.time()))
+                self.emit_metric('chaos_experiment_status', 1, {'status': 'running'})
+                
+                # Collect baseline metrics
+                baseline = await self.collect_baseline_metrics()
+                
+                # Perform safety checks
+                if self.config['experiment']['safety_checks']:
+                    all_healthy = all(check['healthy'] for check in baseline['health_checks'].values())
+                    if not all_healthy:
+                        logger.error("Pre-experiment health checks failed. Aborting experiment.")
+                        self.emit_metric('chaos_experiment_status', 0, {'status': 'aborted', 'reason': 'health_check_failed'})
+                        return False
+                
+                # Execute resource stress if not dry run
+                if not self.config['experiment']['dry_run']:
+                    total_stress_pods = 0
+                    
+                    for scenario in self.config['scenarios']:
+                        created_pods = await self.create_resource_stress(scenario)
+                        total_stress_pods += len(created_pods)
+                        
+                        # Brief delay between scenarios
+                        await asyncio.sleep(5)
+                    
+                    if total_stress_pods == 0:
+                        logger.warning("No stress pods were created. Experiment may be misconfigured.")
+                        self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'no_stress_created'})
+                        return False
+                    
+                    # Monitor impact during stress
+                    max_duration = max(
+                        self._parse_duration(scenario.get('duration', '5m')) 
+                        for scenario in self.config['scenarios']
+                    )
+                    
+                    await self.monitor_stress_impact(max_duration)
+                    
+                    # Cleanup stress pods (auto-rollback)
+                    cleanup_success = await self.cleanup_stress_pods()
+                    
+                    if not cleanup_success:
+                        logger.error("Failed to cleanup all stress pods")
+                        self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'cleanup_failed'})
+                        return False
+                        
+                else:
+                    logger.info("DRY RUN: Would have created resource stress but dry_run=true")
+                    self.emit_metric('chaos_experiment_status', 1, {'status': 'dry_run'})
+                
+                # Wait for system to stabilize
+                logger.info("Waiting for system stabilization...")
+                await asyncio.sleep(60)
+                
+                # Verify system recovery
+                post_experiment_healthy = True
+                for check in self.config['safety']['health_checks']:
+                    healthy, response_time = await self.perform_health_check(check)
+                    if not healthy:
+                        post_experiment_healthy = False
+                        logger.warning(f"Service {check['name']} not healthy after experiment")
+                
+                if not post_experiment_healthy:
+                    logger.error("System not fully healthy after experiment")
+                    self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'post_experiment_unhealthy'})
+                    return False
+                
+                # Mark experiment as successful
+                experiment_duration = (datetime.utcnow() - self.start_time).total_seconds()
+                self.emit_metric('chaos_experiment_duration_seconds', experiment_duration)
+                self.emit_metric('chaos_experiment_status', 1, {'status': 'completed'})
+                
+                logger.info(f"Resource exhaustion experiment completed successfully in {experiment_duration:.2f} seconds")
+                
+                # Generate experiment report
+                report = {
+                    'experiment_id': self.experiment_id,
+                    'start_time': self.start_time.isoformat(),
+                    'duration_seconds': experiment_duration,
+                    'baseline_metrics': baseline,
+                    'stress_pods_created': self.active_stress_pods,
+                    'status': 'success'
+                }
+                
+                logger.info(f"Experiment report: {json.dumps(report, indent=2)}")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Resource exhaustion experiment failed: {e}")
+                self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'exception'})
+                
+                # Attempt cleanup on failure
+                try:
+                    await self.cleanup_stress_pods()
+                except:
+                    pass
+                    
+                return False
+                
+            finally:
+                await self.stop()
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
+        experiment = ResourceExhaustionChaosExperiment(config_path)
+        
+        success = await experiment.run_experiment()
+        
+        if not success:
+            exit(1)
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# Quarterly Resource Exhaustion Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chaos-resource-exhaustion-quarterly
+  namespace: chaos-testing
+  labels:
+    app: chaos-resource-exhaustion
+    schedule: quarterly
+    chaos-type: resource-exhaustion
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: chaos-resource-exhaustion
+        schedule: quarterly
+        chaos-type: resource-exhaustion
+      annotations:
+        chaos.engineering/experiment: 'resource-exhaustion'
+        chaos.engineering/schedule: 'quarterly'
+    spec:
+      serviceAccountName: chaos-engineering
+      restartPolicy: OnFailure
+      containers:
+        - name: resource-exhaustion-chaos
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir kubernetes pyyaml aiohttp requests
+              exec python /scripts/resource-exhaustion.py
+          env:
+            - name: CONFIG_PATH
+              value: '/etc/config/config.yaml'
+            - name: CHAOS_EXPERIMENT_TYPE
+              value: 'resource-exhaustion'
+            - name: CHAOS_SCHEDULE
+              value: 'quarterly'
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: config
+          configMap:
+            name: chaos-resource-exhaustion-config
+        - name: scripts
+          configMap:
+            name: chaos-resource-exhaustion-config
+            defaultMode: 0755
+      nodeSelector:
+        workload: chaos-testing
+
+---
+# Annual Extreme Resource Exhaustion Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chaos-resource-exhaustion-annual
+  namespace: chaos-testing
+  labels:
+    app: chaos-resource-exhaustion
+    schedule: annual
+    chaos-type: resource-exhaustion
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: chaos-resource-exhaustion
+        schedule: annual
+        chaos-type: resource-exhaustion
+      annotations:
+        chaos.engineering/experiment: 'extreme-resource-exhaustion'
+        chaos.engineering/schedule: 'annual'
+    spec:
+      serviceAccountName: chaos-engineering
+      restartPolicy: OnFailure
+      containers:
+        - name: resource-exhaustion-chaos
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir kubernetes pyyaml aiohttp requests
+
+              # Create extreme annual test config
+              cat > /tmp/annual-config.yaml << 'EOF'
+              chaos:
+                name: "extreme-resource-exhaustion"
+                description: "Annual extreme resource exhaustion testing"
+                experiment:
+                  duration: "15m"
+                  dry_run: false
+                  safety_checks: true
+                  auto_rollback: true
+                scenarios:
+                  - name: "api-cpu-memory-combo"
+                    description: "Combined CPU and memory stress on API"
+                    duration: "6m"
+                    resource_type: "cpu"
+                    target:
+                      namespace: "pake-api"
+                      selector:
+                        app: "pake-api"
+                      container: "pake-api"
+                    stress_config:
+                      cpu_percentage: 95
+                      cpu_cores: 4
+                      memory_percentage: 80
+                      memory_size: "4Gi"
+                  - name: "database-full-stress"
+                    description: "Full resource stress on database replicas"
+                    duration: "8m"
+                    resource_type: "disk"
+                    target:
+                      namespace: "database"
+                      selector:
+                        app: "postgresql"
+                        role: "replica"
+                      container: "postgresql"
+                    stress_config:
+                      cpu_percentage: 85
+                      memory_percentage: 75
+                      disk_percentage: 80
+                      io_size: "5G"
+                      io_workers: 8
+                  - name: "ai-extreme-memory"
+                    description: "Extreme memory pressure on AI workers"
+                    duration: "5m"
+                    resource_type: "memory"
+                    target:
+                      namespace: "pake-ai"
+                      selector:
+                        app: "pake-ai-worker"
+                      container: "ai-worker"
+                    stress_config:
+                      memory_percentage: 90
+                      memory_size: "8Gi"
+                      memory_workers: 4
+                safety:
+                  protected_pods:
+                    - "etcd"
+                    - "kube-apiserver"
+                    - "kube-scheduler"
+                    - "kube-controller-manager"
+                  node_limits:
+                    max_cpu_usage: 95.0
+                    max_memory_usage: 90.0
+                    min_free_disk: "2Gi"
+                  health_checks:
+                    - name: "api-health"
+                      url: "http://pake-api.pake-api.svc.cluster.local:8080/health"
+                      timeout: 20
+                    - name: "ai-health"
+                      url: "http://pake-ai.pake-ai.svc.cluster.local:8080/health"
+                      timeout: 20
+                  success_criteria:
+                    max_error_rate: 35.0
+                    max_response_time: 15000
+                    min_availability: 65.0
+                monitoring:
+                  metrics_interval: 5
+                  trace_tags:
+                    experiment: "extreme-resource-exhaustion"
+                    environment: "production"
+                    team: "platform"
+                    schedule: "annual"
+              EOF
+
+              export CONFIG_PATH="/tmp/annual-config.yaml"
+              exec python /scripts/resource-exhaustion.py
+          env:
+            - name: CHAOS_EXPERIMENT_TYPE
+              value: 'resource-exhaustion-extreme'
+            - name: CHAOS_SCHEDULE
+              value: 'annual'
+          resources:
+            requests:
+              cpu: 300m
+              memory: 1Gi
+            limits:
+              cpu: 1500m
+              memory: 4Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: config
+          configMap:
+            name: chaos-resource-exhaustion-config
+        - name: scripts
+          configMap:
+            name: chaos-resource-exhaustion-config
+            defaultMode: 0755

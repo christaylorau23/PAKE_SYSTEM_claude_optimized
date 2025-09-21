@@ -1,0 +1,818 @@
+/**
+ * OllamaProvider - Local Ollama instance integration
+ * 
+ * Optimized for local Ollama deployments with:
+ * - Connection health monitoring and reconnection
+ * - Model availability checking and loading
+ * - Optimized retry logic for local network issues
+ * - Memory and GPU resource awareness
+ * - Stream processing for real-time responses
+ * - Fallback model selection
+ */
+
+import { 
+  AgentProvider, 
+  AgentCapability, 
+  AgentProviderConfig,
+  AgentExecutionError,
+  AgentErrorCode 
+} from './AgentProvider';
+import { 
+  AgentTask, 
+  AgentResult, 
+  AgentTaskType, 
+  AgentResultStatus,
+  EntityResult,
+  SentimentResult,
+  TrendResult
+} from '../types';
+
+/**
+ * Ollama-specific configuration
+ */
+export interface OllamaProviderConfig extends AgentProviderConfig {
+  /** Ollama server host */
+  host?: string;
+  /** Ollama server port */
+  port?: number;
+  /** Primary model to use */
+  model?: string;
+  /** Fallback models in priority order */
+  fallbackModels?: string[];
+  /** Enable streaming responses */
+  stream?: boolean;
+  /** Connection timeout for local network */
+  connectionTimeout?: number;
+  /** Model loading timeout */
+  modelLoadTimeout?: number;
+  /** Keep alive duration for model in memory */
+  keepAlive?: string;
+  /** Number of threads to use */
+  numThread?: number;
+  /** Context window size */
+  numCtx?: number;
+  /** GPU layers to offload (0 = CPU only) */
+  numGpu?: number;
+  /** Temperature for generation */
+  temperature?: number;
+  /** Top-p sampling */
+  topP?: number;
+  /** Top-k sampling */
+  topK?: number;
+  /** Repeat penalty */
+  repeatPenalty?: number;
+  /** Auto-download missing models */
+  autoDownload?: boolean;
+  /** Health check interval */
+  healthCheckInterval?: number;
+}
+
+/**
+ * Ollama API response structures
+ */
+interface OllamaGenerateResponse {
+  model: string;
+  created_at: string;
+  response: string;
+  done: boolean;
+  context?: number[];
+  total_duration?: number;
+  load_duration?: number;
+  prompt_eval_count?: number;
+  prompt_eval_duration?: number;
+  eval_count?: number;
+  eval_duration?: number;
+}
+
+interface OllamaModel {
+  name: string;
+  modified_at: string;
+  size: number;
+  digest: string;
+  details: {
+    format: string;
+    family: string;
+    families?: string[];
+    parameter_size: string;
+    quantization_level: string;
+  };
+}
+
+interface OllamaModelInfo {
+  general: {
+    architecture: string;
+    file_type: number;
+  };
+  [key: string]: any;
+}
+
+/**
+ * Connection monitor for Ollama instance
+ */
+class OllamaConnectionMonitor {
+  private isHealthy = true;
+  private lastHealthCheck = 0;
+  private readonly healthCheckInterval: number;
+  private readonly baseUrl: string;
+  private healthCheckTimer?: NodeJS.Timeout;
+
+  constructor(baseUrl: string, healthCheckInterval: number = 30000) {
+    this.baseUrl = baseUrl;
+    this.healthCheckInterval = healthCheckInterval;
+    this.startHealthChecking();
+  }
+
+  private startHealthChecking(): void {
+    this.healthCheckTimer = setInterval(async () => {
+      await this.performHealthCheck();
+    }, this.healthCheckInterval);
+  }
+
+  private async performHealthCheck(): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/tags`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      this.isHealthy = response.ok;
+      this.lastHealthCheck = Date.now();
+    } catch (error) {
+      this.isHealthy = false;
+      this.lastHealthCheck = Date.now();
+      console.warn(`Ollama health check failed: ${error}`);
+    }
+  }
+
+  async waitForHealth(maxWaitMs: number = 30000): Promise<boolean> {
+    const startTime = Date.now();
+    
+    while (!this.isHealthy && (Date.now() - startTime) < maxWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (Date.now() - this.lastHealthCheck > 5000) {
+        await this.performHealthCheck();
+      }
+    }
+    
+    return this.isHealthy;
+  }
+
+  getHealthStatus() {
+    return {
+      isHealthy: this.isHealthy,
+      lastCheck: this.lastHealthCheck,
+      timeSinceLastCheck: Date.now() - this.lastHealthCheck
+    };
+  }
+
+  dispose(): void {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+    }
+  }
+}
+
+/**
+ * OllamaProvider implementation
+ */
+export class OllamaProvider implements AgentProvider {
+  public readonly name = 'OllamaProvider';
+  public readonly version = '1.0.0';
+  public readonly capabilities: AgentCapability[] = [
+    AgentCapability.TEXT_ANALYSIS,
+    AgentCapability.SENTIMENT_ANALYSIS,
+    AgentCapability.ENTITY_EXTRACTION,
+    AgentCapability.TREND_DETECTION,
+    AgentCapability.CONTENT_GENERATION,
+    AgentCapability.DATA_SYNTHESIS,
+    AgentCapability.REAL_TIME_PROCESSING
+  ];
+
+  private readonly config: Required<OllamaProviderConfig>;
+  private readonly baseUrl: string;
+  private readonly connectionMonitor: OllamaConnectionMonitor;
+  private disposed = false;
+  private executionCount = 0;
+  private totalTokensGenerated = 0;
+  private availableModels: Set<string> = new Set();
+  private currentModel: string;
+
+  constructor(config: OllamaProviderConfig = {}) {
+    this.config = {
+      host: config.host || 'localhost',
+      port: config.port || 11434,
+      model: config.model || 'llama3.2',
+      fallbackModels: config.fallbackModels || ['llama3.2:latest', 'llama3.1', 'mistral', 'codellama'],
+      stream: config.stream ?? false,
+      connectionTimeout: config.connectionTimeout || 10000,
+      modelLoadTimeout: config.modelLoadTimeout || 300000, // 5 minutes for model loading
+      keepAlive: config.keepAlive || '5m',
+      numThread: config.numThread || -1, // Use all available
+      numCtx: config.numCtx || 4096,
+      numGpu: config.numGpu ?? -1, // Auto-detect
+      temperature: config.temperature || 0.7,
+      topP: config.topP || 0.9,
+      topK: config.topK || 40,
+      repeatPenalty: config.repeatPenalty || 1.1,
+      autoDownload: config.autoDownload ?? false,
+      healthCheckInterval: config.healthCheckInterval || 30000,
+      timeout: config.timeout || 120000, // Longer timeout for local processing
+      retries: config.retries || 2, // Fewer retries for local
+      concurrency: config.concurrency || 3,
+      ...config
+    };
+
+    this.baseUrl = `http://${this.config.host}:${this.config.port}`;
+    this.currentModel = this.config.model;
+    
+    this.connectionMonitor = new OllamaConnectionMonitor(
+      this.baseUrl,
+      this.config.healthCheckInterval
+    );
+
+    // Initialize by checking available models
+    this.initializeModels();
+  }
+
+  /**
+   * Execute agent task using Ollama
+   */
+  async run(task: AgentTask): Promise<AgentResult> {
+    if (this.disposed) {
+      throw new AgentExecutionError(
+        'Provider has been disposed',
+        AgentErrorCode.PROVIDER_UNAVAILABLE,
+        this.name,
+        task
+      );
+    }
+
+    const startTime = new Date().toISOString();
+    const startTimestamp = Date.now();
+    
+    try {
+      // Ensure Ollama is healthy
+      if (!await this.connectionMonitor.waitForHealth(10000)) {
+        throw new AgentExecutionError(
+          'Ollama instance is not available',
+          AgentErrorCode.PROVIDER_UNAVAILABLE,
+          this.name,
+          task
+        );
+      }
+
+      // Validate task input
+      this.validateTask(task);
+
+      // Select appropriate model and ensure it's loaded
+      const modelToUse = await this.selectAndLoadModel(task);
+      
+      // Generate prompt for the task
+      const prompt = this.generatePrompt(task);
+
+      // Execute with retry logic
+      const response = await this.executeWithRetry(prompt, modelToUse, task);
+      
+      // Parse response into structured output
+      const output = await this.parseResponse(response, task);
+      
+      const endTime = new Date().toISOString();
+      const duration = Date.now() - startTimestamp;
+      
+      // Update metrics
+      this.executionCount++;
+      this.totalTokensGenerated += response.eval_count || 0;
+
+      return {
+        taskId: task.id,
+        status: AgentResultStatus.SUCCESS,
+        output,
+        metadata: {
+          provider: this.name,
+          startTime,
+          endTime,
+          duration,
+          confidence: this.calculateConfidence(response, task),
+          usage: {
+            tokens: (response.prompt_eval_count || 0) + (response.eval_count || 0),
+            apiCalls: 1,
+            memoryMb: this.estimateMemoryUsage(modelToUse)
+          }
+        }
+      };
+
+    } catch (error) {
+      const endTime = new Date().toISOString();
+      const duration = Date.now() - startTimestamp;
+
+      if (error instanceof AgentExecutionError) {
+        throw error;
+      }
+
+      const executionError = this.convertToExecutionError(error, task);
+      
+      return {
+        taskId: task.id,
+        status: AgentResultStatus.ERROR,
+        output: {},
+        metadata: {
+          provider: this.name,
+          startTime,
+          endTime,
+          duration,
+          usage: {
+            tokens: 0,
+            apiCalls: 1,
+            memoryMb: this.estimateMemoryUsage(this.currentModel)
+          }
+        },
+        error: {
+          code: executionError.code,
+          message: executionError.message,
+          details: { originalError: error instanceof Error ? error.message : String(error) }
+        }
+      };
+    }
+  }
+
+  /**
+   * Health check for Ollama instance
+   */
+  async healthCheck(): Promise<boolean> {
+    if (this.disposed) {
+      return false;
+    }
+
+    try {
+      // Check if Ollama is running and has available models
+      await this.getAvailableModels();
+      return this.connectionMonitor.getHealthStatus().isHealthy;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Dispose provider and clean up resources
+   */
+  async dispose(): Promise<void> {
+    this.disposed = true;
+    this.connectionMonitor.dispose();
+    
+    // Optionally unload model to free GPU memory
+    try {
+      await this.unloadModel(this.currentModel);
+    } catch (error) {
+      console.warn(`Failed to unload model on dispose: ${error}`);
+    }
+  }
+
+  /**
+   * Get provider statistics
+   */
+  getStats() {
+    return {
+      executionCount: this.executionCount,
+      totalTokensGenerated: this.totalTokensGenerated,
+      avgTokensPerExecution: this.executionCount > 0 ? this.totalTokensGenerated / this.executionCount : 0,
+      currentModel: this.currentModel,
+      availableModels: Array.from(this.availableModels),
+      disposed: this.disposed,
+      connectionHealth: this.connectionMonitor.getHealthStatus(),
+      config: {
+        host: this.config.host,
+        port: this.config.port,
+        model: this.config.model,
+        numGpu: this.config.numGpu,
+        numCtx: this.config.numCtx
+      }
+    };
+  }
+
+  /**
+   * Initialize available models
+   */
+  private async initializeModels(): Promise<void> {
+    try {
+      const models = await this.getAvailableModels();
+      this.availableModels = new Set(models.map(m => m.name));
+      
+      // Verify primary model is available
+      if (!this.availableModels.has(this.currentModel)) {
+        // Try to find a fallback
+        for (const fallback of this.config.fallbackModels) {
+          if (this.availableModels.has(fallback)) {
+            this.currentModel = fallback;
+            console.warn(`Primary model ${this.config.model} not available, using ${fallback}`);
+            break;
+          }
+        }
+        
+        if (!this.availableModels.has(this.currentModel)) {
+          console.warn(`No configured models available. Available models: ${Array.from(this.availableModels).join(', ')}`);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to initialize Ollama models:', error);
+    }
+  }
+
+  /**
+   * Get available models from Ollama
+   */
+  private async getAvailableModels(): Promise<OllamaModel[]> {
+    const response = await fetch(`${this.baseUrl}/api/tags`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(this.config.connectionTimeout)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get models: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.models || [];
+  }
+
+  /**
+   * Select and ensure model is loaded
+   */
+  private async selectAndLoadModel(task: AgentTask): Promise<string> {
+    // Check if current model is appropriate for task
+    let selectedModel = this.currentModel;
+    
+    // Task-specific model selection logic
+    if (task.type === AgentTaskType.CONTENT_GENERATION && this.availableModels.has('codellama')) {
+      selectedModel = 'codellama';
+    }
+    
+    // Ensure model is loaded and ready
+    await this.ensureModelLoaded(selectedModel);
+    
+    return selectedModel;
+  }
+
+  /**
+   * Ensure a model is loaded in Ollama
+   */
+  private async ensureModelLoaded(modelName: string): Promise<void> {
+    try {
+      // Check if model is already loaded by making a small generation request
+      const testResponse = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          prompt: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED',
+          stream: false,
+          options: {
+            num_ctx: 10,
+            temperature: 0
+          }
+        }),
+        signal: AbortSignal.timeout(this.config.modelLoadTimeout)
+      });
+
+      if (!testResponse.ok) {
+        throw new Error(`Model ${modelName} failed to load: ${testResponse.status}`);
+      }
+
+      this.currentModel = modelName;
+    } catch (error) {
+      // Try fallback models
+      for (const fallback of this.config.fallbackModels) {
+        if (this.availableModels.has(fallback) && fallback !== modelName) {
+          try {
+            await this.ensureModelLoaded(fallback);
+            console.warn(`Switched to fallback model ${fallback} due to error with ${modelName}`);
+            return;
+          } catch (fallbackError) {
+            continue;
+          }
+        }
+      }
+      
+      throw new AgentExecutionError(
+        `No suitable model available. Primary model ${modelName} failed to load.`,
+        AgentErrorCode.PROVIDER_UNAVAILABLE,
+        this.name
+      );
+    }
+  }
+
+  /**
+   * Unload model to free resources
+   */
+  private async unloadModel(modelName: string): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          keep_alive: 0 // Unload immediately
+        })
+      });
+    } catch (error) {
+      // Unload failures are not critical
+      console.warn(`Failed to unload model ${modelName}:`, error);
+    }
+  }
+
+  /**
+   * Validate task input
+   */
+  private validateTask(task: AgentTask): void {
+    if (!task.input.content && !task.input.data) {
+      throw new AgentExecutionError(
+        'Task must have either content or data input',
+        AgentErrorCode.INVALID_INPUT,
+        this.name,
+        task
+      );
+    }
+
+    // Check content length for local model constraints
+    const content = task.input.content || JSON.stringify(task.input.data);
+    const estimatedTokens = this.estimateTokens(content);
+    
+    if (estimatedTokens > this.config.numCtx * 0.8) { // Leave 20% for response
+      throw new AgentExecutionError(
+        `Content too long for model context (${estimatedTokens} tokens, max ${Math.floor(this.config.numCtx * 0.8)})`,
+        AgentErrorCode.INVALID_INPUT,
+        this.name,
+        task
+      );
+    }
+  }
+
+  /**
+   * Generate prompt based on task type (similar to ClaudeProvider but optimized for local models)
+   */
+  private generatePrompt(task: AgentTask): string {
+    const content = task.input.content || JSON.stringify(task.input.data);
+    
+    // Use more concise prompts for local models
+    switch (task.type) {
+      case AgentTaskType.SENTIMENT_ANALYSIS:
+        return `Analyze the sentiment of this text and respond with JSON format:
+{"sentiment": {"score": <-1 to 1>, "label": "<positive|negative|neutral>", "confidence": <0-1>}}
+
+Text: ${content}
+
+JSON Response:`;
+
+      case AgentTaskType.ENTITY_EXTRACTION:
+        return `Extract named entities (PERSON, ORGANIZATION, LOCATION, DATE, MONEY) from this text in JSON format:
+{"entities": [{"type": "<type>", "value": "<entity>", "confidence": <0-1>}]}
+
+Text: ${content}
+
+JSON Response:`;
+
+      case AgentTaskType.CONTENT_ANALYSIS:
+        return `Analyze this content and provide insights in JSON format:
+{"data": {"wordCount": <number>, "keyTopics": ["<topic>"], "complexity": "<low|medium|high>", "summary": "<summary>"}}
+
+Content: ${content}
+
+JSON Response:`;
+
+      case AgentTaskType.CONTENT_SYNTHESIS:
+        return `Summarize this content concisely in JSON format:
+{"content": "<summary>", "data": {"compressionRatio": <number>, "keyPoints": <number>}}
+
+Content: ${content}
+
+JSON Response:`;
+
+      default:
+        return `Analyze this content and provide relevant insights in JSON format:
+{"data": {"analysis": "<analysis>", "insights": ["<insight>"], "confidence": <0-1>}}
+
+Content: ${content}
+
+JSON Response:`;
+    }
+  }
+
+  /**
+   * Execute with retry logic optimized for local instances
+   */
+  private async executeWithRetry(prompt: string, model: string, task: AgentTask): Promise<OllamaGenerateResponse> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt < this.config.retries; attempt++) {
+      try {
+        return await this.makeOllamaCall(prompt, model, task);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // Check if we should try a different model
+        if (this.shouldTryFallbackModel(error) && attempt === 0) {
+          const fallbackModel = this.findFallbackModel(model);
+          if (fallbackModel) {
+            try {
+              await this.ensureModelLoaded(fallbackModel);
+              model = fallbackModel;
+              continue; // Retry with fallback model
+            } catch (fallbackError) {
+              // Continue with original retry logic
+            }
+          }
+        }
+        
+        // Wait before retry (shorter delays for local)
+        if (attempt < this.config.retries - 1) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.warn(`Ollama call failed (attempt ${attempt + 1}), retrying in ${delay}ms:`, error);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Max retry attempts exceeded');
+  }
+
+  /**
+   * Make actual call to Ollama
+   */
+  private async makeOllamaCall(prompt: string, model: string, task: AgentTask): Promise<OllamaGenerateResponse> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          prompt,
+          stream: this.config.stream,
+          options: {
+            temperature: this.config.temperature,
+            top_p: this.config.topP,
+            top_k: this.config.topK,
+            repeat_penalty: this.config.repeatPenalty,
+            num_ctx: this.config.numCtx,
+            num_thread: this.config.numThread,
+            num_gpu: this.config.numGpu
+          },
+          keep_alive: this.config.keepAlive
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+      }
+
+      const result = await response.json();
+      return result as OllamaGenerateResponse;
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new AgentExecutionError(
+          'Ollama call timed out',
+          AgentErrorCode.TIMEOUT,
+          this.name
+        );
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Parse Ollama response into structured output
+   */
+  private async parseResponse(response: OllamaGenerateResponse, task: AgentTask): Promise<AgentResult['output']> {
+    const content = response.response || '';
+    
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = content.match(/\{[\s\S]*?\}(?=\s*$|$)/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return parsed;
+      }
+    } catch (error) {
+      console.warn('Failed to parse structured output from Ollama response:', error);
+    }
+
+    // Fallback to unstructured content
+    return {
+      content,
+      data: {
+        rawResponse: content,
+        structured: false,
+        model: response.model,
+        totalDuration: response.total_duration,
+        loadDuration: response.load_duration,
+        promptEvalCount: response.prompt_eval_count,
+        evalCount: response.eval_count
+      }
+    };
+  }
+
+  /**
+   * Calculate confidence based on response characteristics
+   */
+  private calculateConfidence(response: OllamaGenerateResponse, task: AgentTask): number {
+    let confidence = 0.75; // Base confidence for local models
+    
+    // Adjust based on response quality
+    const responseLength = response.response?.length || 0;
+    if (responseLength < 20) {
+      confidence -= 0.2; // Penalize very short responses
+    }
+    
+    // Adjust based on processing time (very fast might indicate cached/simple response)
+    const totalTime = response.total_duration || 0;
+    if (totalTime > 0) {
+      const seconds = totalTime / 1000000000; // Convert nanoseconds to seconds
+      if (seconds < 0.5) {
+        confidence -= 0.1; // Slightly penalize very fast responses
+      } else if (seconds > 30) {
+        confidence -= 0.15; // Penalize very slow responses
+      }
+    }
+    
+    // Check for JSON structure if expected
+    const hasValidJson = /\{[\s\S]*?\}/.test(response.response || '');
+    if (!hasValidJson) {
+      confidence -= 0.1;
+    }
+    
+    return Math.max(0.1, Math.min(1.0, confidence));
+  }
+
+  /**
+   * Estimate token count
+   */
+  private estimateTokens(text: string): number {
+    // More conservative estimation for local models
+    return Math.ceil(text.length / 3.5);
+  }
+
+  /**
+   * Estimate memory usage based on model
+   */
+  private estimateMemoryUsage(model: string): number {
+    // Rough estimates based on common model sizes
+    if (model.includes('7b') || model.includes('llama3.2')) return 4000;
+    if (model.includes('13b') || model.includes('llama3.1')) return 8000;
+    if (model.includes('70b')) return 35000;
+    return 2000; // Default estimate
+  }
+
+  /**
+   * Check if error suggests trying fallback model
+   */
+  private shouldTryFallbackModel(error: any): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.includes('model') || 
+           message.includes('not found') || 
+           message.includes('failed to load');
+  }
+
+  /**
+   * Find appropriate fallback model
+   */
+  private findFallbackModel(currentModel: string): string | null {
+    for (const fallback of this.config.fallbackModels) {
+      if (fallback !== currentModel && this.availableModels.has(fallback)) {
+        return fallback;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Convert unknown errors to AgentExecutionError
+   */
+  private convertToExecutionError(error: any, task?: AgentTask): AgentExecutionError {
+    const message = error instanceof Error ? error.message : String(error);
+    
+    if (message.includes('timeout') || message.includes('AbortError')) {
+      return new AgentExecutionError('Request timeout', AgentErrorCode.TIMEOUT, this.name, task);
+    }
+    
+    if (message.includes('not found') || message.includes('model')) {
+      return new AgentExecutionError('Model not available', AgentErrorCode.CONFIGURATION_ERROR, this.name, task);
+    }
+    
+    if (message.includes('connection') || message.includes('fetch')) {
+      return new AgentExecutionError('Connection to Ollama failed', AgentErrorCode.PROVIDER_UNAVAILABLE, this.name, task);
+    }
+    
+    return new AgentExecutionError(`Ollama error: ${message}`, AgentErrorCode.INTERNAL_ERROR, this.name, task);
+  }
+}

@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PAKE System - Advanced Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'SF Pro Display',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Oxygen,
+          Ubuntu,
+          Cantarell,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .dashboard {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .header .subtitle {
+        color: #718096;
+        font-size: 14px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-top: 15px;
+        flex-wrap: wrap;
+      }
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      select,
+      button {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+      }
+
+      button {
+        background: #4299e1;
+        color: white;
+        border: none;
+        transition: all 0.2s ease;
+      }
+
+      button:hover {
+        background: #3182ce;
+        transform: translateY(-1px);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      .stat-label {
+        color: #718096;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .stat-trend {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 12px;
+      }
+
+      .trend-up {
+        background: #c6f6d5;
+        color: #2f855a;
+      }
+      .trend-down {
+        background: #fed7d7;
+        color: #c53030;
+      }
+      .trend-stable {
+        background: #e6fffa;
+        color: #319795;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .chart-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #2d3748;
+      }
+
+      .insights-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        max-height: 600px;
+        overflow-y: auto;
+      }
+
+      .insight-card {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 4px solid;
+      }
+
+      .insight-critical {
+        background: #fff5f5;
+        border-color: #f56565;
+      }
+
+      .insight-high {
+        background: #fffaf0;
+        border-color: #ed8936;
+      }
+
+      .insight-medium {
+        background: #f7fafc;
+        border-color: #4299e1;
+      }
+
+      .insight-low {
+        background: #f0fff4;
+        border-color: #48bb78;
+      }
+
+      .insight-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .insight-description {
+        color: #718096;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .insight-actions {
+        font-size: 12px;
+        color: #4a5568;
+      }
+
+      .bottom-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #4299e1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error {
+        color: #e53e3e;
+        background: #fed7d7;
+        padding: 10px;
+        border-radius: 6px;
+        margin: 10px 0;
+      }
+
+      .health-meter {
+        position: relative;
+        width: 150px;
+        height: 75px;
+        margin: 20px auto;
+      }
+
+      .health-arc {
+        stroke-width: 12;
+        fill: none;
+      }
+
+      .health-text {
+        text-anchor: middle;
+        font-weight: 600;
+        font-size: 18px;
+      }
+
+      .anomaly-alert {
+        background: #fed7d7;
+        border: 1px solid #f56565;
+        color: #c53030;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: 600;
+      }
+
+      .last-updated {
+        text-align: center;
+        color: #718096;
+        font-size: 12px;
+        margin-top: 20px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="header">
+        <h1>🚀 PAKE System - Advanced Analytics Dashboard</h1>
+        <p class="subtitle">
+          Real-time system intelligence with predictive insights and anomaly
+          detection
+        </p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label for="timeRange">Time Range:</label>
+            <select id="timeRange">
+              <option value="1h">Last Hour</option>
+              <option value="6h" selected>Last 6 Hours</option>
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label>
+              <input type="checkbox" id="autoRefresh" checked />
+              Auto Refresh (10s)
+            </label>
+          </div>
+
+          <button onclick="refreshData()">🔄 Refresh Now</button>
+          <button onclick="generateReport()">📊 Generate Report</button>
+        </div>
+      </div>
+
+      <!-- System Health Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="systemHealth">--</div>
+          <div class="stat-label">System Health Score</div>
+          <div class="stat-trend stable" id="healthTrend">Analyzing...</div>
+          <div class="health-meter">
+            <svg width="150" height="75" viewBox="0 0 150 75">
+              <path
+                d="M 25 50 A 50 50 0 0 1 125 50"
+                class="health-arc"
+                id="healthArc"
+                stroke="#e2e8f0"
+              ></path>
+              <text x="75" y="65" class="health-text" id="healthText">--</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value" id="anomalyCount">0</div>
+          <div class="stat-label">Active Anomalies</div>
+          <div class="stat-trend stable" id="anomalyTrend">Normal</div>
+          <div id="anomalyAlert" style="display: none"></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value" id="insightCount">0</div>
+          <div class="stat-label">New Insights</div>
+          <div class="stat-trend stable" id="insightTrend">Generated</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value" id="criticalIssues">0</div>
+          <div class="stat-label">Critical Issues</div>
+          <div class="stat-trend stable" id="criticalTrend">Monitored</div>
+        </div>
+      </div>
+
+      <!-- Main Analytics Grid -->
+      <div class="main-grid">
+        <div class="chart-container">
+          <div class="chart-title">📈 System Performance Trends</div>
+          <canvas id="performanceChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="insights-panel">
+          <div class="chart-title">🎯 Key Insights & Recommendations</div>
+          <div id="insightsList">
+            <div class="loading"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Analytics Grid -->
+      <div class="bottom-grid">
+        <div class="chart-container">
+          <div class="chart-title">🔍 Usage Pattern Analysis</div>
+          <canvas id="usageChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">⚠️ Anomaly Detection</div>
+          <canvas id="anomalyChart" width="400" height="200"></canvas>
+        </div>
+      </div>
+
+      <div class="last-updated" id="lastUpdated">Last updated: Never</div>
+    </div>
+
+    <script>
+      // Global state
+      let charts = {};
+      let refreshInterval = null;
+      let currentTimeRange = '6h';
+
+      // Initialize dashboard
+      document.addEventListener('DOMContentLoaded', function () {
+        initializeCharts();
+        refreshData();
+        setupAutoRefresh();
+        setupEventListeners();
+      });
+
+      function setupEventListeners() {
+        document
+          .getElementById('timeRange')
+          .addEventListener('change', function () {
+            currentTimeRange = this.value;
+            refreshData();
+          });
+
+        document
+          .getElementById('autoRefresh')
+          .addEventListener('change', function () {
+            if (this.checked) {
+              setupAutoRefresh();
+            } else {
+              clearInterval(refreshInterval);
+            }
+          });
+      }
+
+      function setupAutoRefresh() {
+        clearInterval(refreshInterval);
+        refreshInterval = setInterval(refreshData, 10000); // 10 seconds
+      }
+
+      function initializeCharts() {
+        // Performance Chart
+        const perfCtx = document
+          .getElementById('performanceChart')
+          .getContext('2d');
+        charts.performance = new Chart(perfCtx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Response Time (ms)',
+                data: [],
+                borderColor: '#4299e1',
+                backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                tension: 0.4,
+              },
+              {
+                label: 'Throughput (req/s)',
+                data: [],
+                borderColor: '#48bb78',
+                backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Response Time (ms)' },
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'Throughput (req/s)' },
+                grid: { drawOnChartArea: false },
+              },
+            },
+          },
+        });
+
+        // Usage Chart
+        const usageCtx = document.getElementById('usageChart').getContext('2d');
+        charts.usage = new Chart(usageCtx, {
+          type: 'doughnut',
+          data: {
+            labels: [
+              'Research Queries',
+              'Semantic Search',
+              'Content Summarization',
+              'Knowledge Graph',
+            ],
+            datasets: [
+              {
+                data: [45, 30, 15, 10],
+                backgroundColor: ['#4299e1', '#48bb78', '#ed8936', '#9f7aea'],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'bottom' },
+            },
+          },
+        });
+
+        // Anomaly Chart
+        const anomalyCtx = document
+          .getElementById('anomalyChart')
+          .getContext('2d');
+        charts.anomaly = new Chart(anomalyCtx, {
+          type: 'scatter',
+          data: {
+            datasets: [
+              {
+                label: 'Normal',
+                data: [],
+                backgroundColor: '#48bb78',
+              },
+              {
+                label: 'Anomalies',
+                data: [],
+                backgroundColor: '#f56565',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: { title: { display: true, text: 'Time' } },
+              y: { title: { display: true, text: 'Metric Value' } },
+            },
+          },
+        });
+      }
+
+      async function refreshData() {
+        try {
+          // Fetch all data in parallel
+          const [healthData, anomalies, insights, usageData] =
+            await Promise.all([
+              fetchJSON(
+                `/analytics/system-health?time_range=${currentTimeRange}`
+              ),
+              fetchJSON(`/analytics/anomalies?time_range=${currentTimeRange}`),
+              fetchJSON(`/analytics/insights?time_range=${currentTimeRange}`),
+              fetchJSON(
+                `/analytics/usage-patterns?time_range=${currentTimeRange}`
+              ),
+            ]);
+
+          updateHealthMetrics(healthData);
+          updateAnomalyData(anomalies);
+          updateInsights(insights);
+          updateUsagePatterns(usageData);
+          updatePerformanceChart();
+
+          document.getElementById('lastUpdated').textContent =
+            `Last updated: ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+          console.error('Failed to refresh data:', error);
+          showError('Failed to refresh dashboard data');
+        }
+      }
+
+      async function fetchJSON(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return await response.json();
+      }
+
+      function updateHealthMetrics(data) {
+        const health = data.system_health;
+        const score = Math.round(health.overall_score);
+
+        document.getElementById('systemHealth').textContent = `${score}/100`;
+        document.getElementById('healthText').textContent = `${score}%`;
+
+        // Update health meter color
+        const healthArc = document.getElementById('healthArc');
+        let color = '#48bb78'; // Green
+        if (score < 70)
+          color = '#f56565'; // Red
+        else if (score < 85) color = '#ed8936'; // Orange
+
+        healthArc.setAttribute('stroke', color);
+
+        // Update health trend
+        const criticalCount = health.critical_issues.length;
+        document.getElementById('criticalIssues').textContent = criticalCount;
+
+        if (criticalCount > 0) {
+          document.getElementById('healthTrend').textContent = 'Critical';
+          document.getElementById('healthTrend').className =
+            'stat-trend trend-down';
+        } else {
+          document.getElementById('healthTrend').textContent = 'Healthy';
+          document.getElementById('healthTrend').className =
+            'stat-trend trend-up';
+        }
+      }
+
+      function updateAnomalyData(data) {
+        const anomalyData = data.anomaly_detection;
+        const count = anomalyData.anomalies_detected;
+
+        document.getElementById('anomalyCount').textContent = count;
+
+        const alertDiv = document.getElementById('anomalyAlert');
+        if (count > 0) {
+          document.getElementById('anomalyTrend').textContent = 'Active';
+          document.getElementById('anomalyTrend').className =
+            'stat-trend trend-down';
+
+          alertDiv.style.display = 'block';
+          alertDiv.className = 'anomaly-alert';
+          alertDiv.textContent = `${count} anomal${count === 1 ? 'y' : 'ies'} detected!`;
+        } else {
+          document.getElementById('anomalyTrend').textContent = 'Normal';
+          document.getElementById('anomalyTrend').className =
+            'stat-trend trend-up';
+          alertDiv.style.display = 'none';
+        }
+
+        // Update anomaly chart with synthetic data
+        const normalPoints = [];
+        const anomalyPoints = [];
+
+        for (let i = 0; i < 50; i++) {
+          const x = i;
+          const y = Math.random() * 100 + Math.sin(i * 0.1) * 20 + 50;
+          normalPoints.push({ x, y });
+        }
+
+        anomalyData.anomalies.forEach((anomaly, index) => {
+          anomalyPoints.push({
+            x: 40 + index * 5,
+            y: Math.random() * 150 + 100,
+          });
+        });
+
+        charts.anomaly.data.datasets[0].data = normalPoints;
+        charts.anomaly.data.datasets[1].data = anomalyPoints;
+        charts.anomaly.update();
+      }
+
+      function updateInsights(data) {
+        const insights = data.insights;
+        document.getElementById('insightCount').textContent = insights.length;
+
+        const insightsList = document.getElementById('insightsList');
+        insightsList.innerHTML = '';
+
+        if (insights.length === 0) {
+          insightsList.innerHTML =
+            '<p style="color: #718096; text-align: center;">No new insights available</p>';
+          return;
+        }
+
+        insights.slice(0, 5).forEach(insight => {
+          const card = document.createElement('div');
+          card.className = `insight-card insight-${insight.priority}`;
+
+          card.innerHTML = `
+                    <div class="insight-title">${insight.title}</div>
+                    <div class="insight-description">${insight.description}</div>
+                    <div class="insight-actions">
+                        <strong>Actions:</strong> ${insight.recommended_actions.slice(0, 2).join(', ')}
+                    </div>
+                `;
+
+          insightsList.appendChild(card);
+        });
+      }
+
+      function updateUsagePatterns(data) {
+        const usage = data.usage_analysis.usage_patterns;
+        if (usage.usage_distribution) {
+          const labels = Object.keys(usage.usage_distribution);
+          const values = Object.values(usage.usage_distribution);
+
+          charts.usage.data.labels = labels.map(label =>
+            label.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+          );
+          charts.usage.data.datasets[0].data = values;
+          charts.usage.update();
+        }
+      }
+
+      function updatePerformanceChart() {
+        // Generate synthetic performance data
+        const now = new Date();
+        const labels = [];
+        const responseTime = [];
+        const throughput = [];
+
+        for (let i = 23; i >= 0; i--) {
+          const time = new Date(now - i * 60 * 60 * 1000);
+          labels.push(time.getHours() + ':00');
+
+          // Synthetic data with some variation
+          responseTime.push(Math.random() * 50 + 100 + Math.sin(i * 0.5) * 20);
+          throughput.push(Math.random() * 30 + 50 + Math.cos(i * 0.3) * 15);
+        }
+
+        charts.performance.data.labels = labels;
+        charts.performance.data.datasets[0].data = responseTime;
+        charts.performance.data.datasets[1].data = throughput;
+        charts.performance.update();
+      }
+
+      function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = message;
+
+        document
+          .querySelector('.dashboard')
+          .insertBefore(errorDiv, document.querySelector('.stats-grid'));
+
+        setTimeout(() => errorDiv.remove(), 5000);
+      }
+
+      async function generateReport() {
+        try {
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = '⏳ Generating...';
+          button.disabled = true;
+
+          const report = await fetchJSON(
+            `/analytics/comprehensive-report?time_range=${currentTimeRange}&include_predictions=true&include_recommendations=true`
+          );
+
+          // Create and download report
+          const reportText = JSON.stringify(report, null, 2);
+          const blob = new Blob([reportText], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `pake-analytics-report-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+
+          URL.revokeObjectURL(url);
+
+          button.textContent = originalText;
+          button.disabled = false;
+        } catch (error) {
+          console.error('Failed to generate report:', error);
+          showError('Failed to generate analytics report');
+        }
+      }
+    </script>
+  </body>
+</html>

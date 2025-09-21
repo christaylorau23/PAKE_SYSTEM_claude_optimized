@@ -1,0 +1,348 @@
+# PAKE AI Services - Production Values
+# GPU-optimized AI inference and training services
+
+# Global configuration
+global:
+  imageRegistry: ''
+  imagePullSecrets: []
+  storageClass: ''
+
+# Image configuration
+image:
+  registry: ghcr.io
+  repository: pake-system/pake-ai
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment configuration
+replicaCount: 5
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+
+# Resource configuration - GPU optimized
+resources:
+  limits:
+    cpu: 4000m
+    memory: 16Gi
+    nvidia.com/gpu: 1
+  requests:
+    cpu: 1000m
+    memory: 8Gi
+    nvidia.com/gpu: 1
+
+# Pod configuration
+podAnnotations:
+  prometheus.io/scrape: 'true'
+  prometheus.io/port: '8080'
+  prometheus.io/path: '/metrics'
+
+podLabels:
+  app.kubernetes.io/component: ai-service
+  app.kubernetes.io/part-of: pake-system
+  tier: ai
+  gpu-workload: 'true'
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '8080'
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/rate-limit: '50'
+    nginx.ingress.kubernetes.io/rate-limit-window: '1m'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '300'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '300'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: ai.pake-system.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pake-ai-tls
+      hosts:
+        - ai.pake-system.com
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600 # Longer for AI workloads
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 120
+    scaleUp:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+
+# Vertical Pod Autoscaler
+verticalPodAutoscaler:
+  enabled: true
+  updateMode: 'Off' # Recommendation only for GPU workloads
+  minAllowed:
+    cpu: 500m
+    memory: 4Gi
+  maxAllowed:
+    cpu: 8000m
+    memory: 32Gi
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 60%
+
+# Node assignment - GPU nodes
+nodeSelector:
+  workload: ai-inference
+  node-type: gpu
+  gpu-type: nvidia-v100
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Equal
+    value: 'true'
+    effect: NoSchedule
+  - key: workload
+    operator: Equal
+    value: ai-services
+    effect: NoSchedule
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pake-ai
+          topologyKey: kubernetes.io/hostname
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: workload
+              operator: In
+              values:
+                - ai-inference
+                - ai-services
+
+# Health checks - longer timeouts for AI initialization
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  initialDelaySeconds: 120 # AI models take time to load
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 60 # Allow up to 10 minutes for startup
+  successThreshold: 1
+
+# Environment variables
+env:
+  - name: ENVIRONMENT
+    value: 'production'
+  - name: LOG_LEVEL
+    value: 'INFO'
+  - name: GPU_MEMORY_FRACTION
+    value: '0.9'
+  - name: MODEL_CACHE_SIZE
+    value: '10GB'
+  - name: BATCH_SIZE
+    value: '8'
+  - name: MAX_SEQUENCE_LENGTH
+    value: '4096'
+  - name: INFERENCE_TIMEOUT
+    value: '300'
+
+# Environment variables from secrets
+envFrom:
+  - secretRef:
+      name: pake-ai-secrets
+  - configMapRef:
+      name: pake-ai-config
+
+# Volume mounts
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: model-cache
+    mountPath: /app/models
+  - name: logs
+    mountPath: /app/logs
+  - name: gpu-drivers
+    mountPath: /usr/local/nvidia
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: model-cache
+    persistentVolumeClaim:
+      claimName: pake-ai-models
+  - name: logs
+    emptyDir:
+      sizeLimit: 5Gi
+  - name: gpu-drivers
+    hostPath:
+      path: /usr/local/nvidia
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ''
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 15s
+  labels:
+    prometheus: kube-prometheus
+  annotations: {}
+
+# External secrets
+externalSecrets:
+  enabled: true
+  secretStore:
+    kind: ClusterSecretStore
+    name: vault-backend
+  secrets:
+    - name: pake-ai-secrets
+      refreshInterval: '15m'
+      data:
+        - secretKey: HUGGINGFACE_API_KEY
+          remoteRef:
+            key: pake/ai
+            property: huggingface_api_key
+        - secretKey: OPENAI_API_KEY
+          remoteRef:
+            key: pake/ai
+            property: openai_api_key
+        - secretKey: MODEL_REGISTRY_TOKEN
+          remoteRef:
+            key: pake/ai
+            property: model_registry_token
+        - secretKey: WANDB_API_KEY
+          remoteRef:
+            key: pake/ai
+            property: wandb_api_key
+
+# Persistent volumes for model storage
+persistence:
+  enabled: true
+  storageClass: 'fast-ssd'
+  accessModes:
+    - ReadWriteOnce
+  size: 100Gi
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: kubernetes.io/aws-ebs
+
+# Model cache configuration
+modelCache:
+  size: 50Gi
+  storageClass: 'fast-ssd'
+  accessMode: ReadWriteMany
+
+# Network policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - namespaceSelector:
+            matchLabels:
+              name: pake-system
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: database
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    - to: {} # Allow external AI API calls
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+        - protocol: UDP
+          port: 53
+
+# Priority class for GPU workloads
+priorityClassName: 'high-priority'
+
+# Runtime class for GPU
+runtimeClassName: 'nvidia'

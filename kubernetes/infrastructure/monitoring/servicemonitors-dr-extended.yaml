@@ -1,0 +1,563 @@
+# Extended ServiceMonitors for DR System Components
+# Comprehensive monitoring of disaster recovery, backup, chaos, and compliance services
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dr-backup-services
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: dr-monitoring
+    team: sre
+spec:
+  selector:
+    matchLabels:
+      monitoring: 'dr-enabled'
+  namespaceSelector:
+    matchNames:
+      - database
+      - backup-validation
+      - chaos-testing
+      - compliance-system
+      - disaster-recovery
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(backup_.*|restore_.*|failover_.*|rto_.*|rpo_.*)'
+          targetLabel: component
+          replacement: 'disaster-recovery'
+
+---
+# ServiceMonitor for DR Metrics Exporter
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dr-metrics-exporter
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: dr-exporter
+spec:
+  selector:
+    matchLabels:
+      app: dr-metrics-exporter
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: dr-metrics-exporter.monitoring.svc.cluster.local:8080
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(replication_lag_seconds|last_export_timestamp|object_sync_lag_seconds|backup_restore_.*)'
+          targetLabel: category
+          replacement: 'replication'
+
+---
+# ServiceMonitor for Chaos Engineering Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: chaos-engineering-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: chaos-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      params:
+        job: ['chaos-experiments']
+      scrapeTimeout: 15s
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: prometheus-pushgateway.monitoring.svc.cluster.local:9091
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'chaos_.*'
+          targetLabel: category
+          replacement: 'chaos-engineering'
+        - sourceLabels: [job]
+          regex: 'chaos-experiments'
+          targetLabel: __tmp_chaos_job
+          replacement: 'true'
+        - sourceLabels: [__tmp_chaos_job]
+          regex: 'true'
+          targetLabel: component
+          replacement: 'chaos'
+
+---
+# ServiceMonitor for Compliance and Audit Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: compliance-audit-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: compliance-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      params:
+        job: ['compliance-audit', 'compliance-attestation']
+      scrapeTimeout: 15s
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: prometheus-pushgateway.monitoring.svc.cluster.local:9091
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(attestation_.*|audit_.*|compliance_.*)'
+          targetLabel: category
+          replacement: 'compliance'
+        - sourceLabels: [job]
+          regex: 'compliance-.*'
+          targetLabel: component
+          replacement: 'compliance'
+
+---
+# ServiceMonitor for Backup Validation Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backup-validation-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: backup-validation
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      params:
+        job: ['backup-validation']
+      scrapeTimeout: 15s
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: prometheus-pushgateway.monitoring.svc.cluster.local:9091
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'backup_restore_.*'
+          targetLabel: category
+          replacement: 'backup-validation'
+        - sourceLabels: [job]
+          regex: 'backup-validation'
+          targetLabel: component
+          replacement: 'validation'
+
+---
+# ServiceMonitor for Database Backup Jobs
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: database-backup-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: database-backup
+spec:
+  selector:
+    matchLabels:
+      backup-type: database
+  namespaceSelector:
+    matchNames:
+      - database
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(pg_.*|redis_.*|chromadb_.*)'
+          targetLabel: database_type
+          replacement: '${1}'
+        - sourceLabels: [__name__]
+          regex: '.*backup.*'
+          targetLabel: category
+          replacement: 'database-backup'
+
+---
+# ServiceMonitor for Kubernetes Job Metrics (DR-related)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: k8s-job-metrics-dr
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: k8s-jobs
+spec:
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  endpoints:
+    - port: http-metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__, job_name]
+          regex: 'kube_job_.*;(.*backup.*|.*restore.*|.*failover.*|.*chaos.*|.*compliance.*|.*attestation.*)'
+          targetLabel: dr_job_type
+          replacement: 'dr-related'
+        - sourceLabels: [__name__]
+          regex: 'kube_job_.*'
+          targetLabel: category
+          replacement: 'kubernetes-jobs'
+
+---
+# ServiceMonitor for ArgoCD Applications (DR-related)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-dr-applications
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: argocd-dr
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-metrics
+  namespaceSelector:
+    matchNames:
+      - argocd
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__, name]
+          regex: 'argocd_app_.*;(.*disaster.*|.*backup.*|.*chaos.*|.*compliance.*)'
+          targetLabel: dr_app_type
+          replacement: 'dr-application'
+        - sourceLabels: [__name__]
+          regex: 'argocd_.*'
+          targetLabel: category
+          replacement: 'gitops'
+
+---
+# ServiceMonitor for Node Exporter (Infrastructure Health)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: node-exporter-dr-focus
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: node-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        # Focus on DR-relevant node metrics
+        - sourceLabels: [__name__]
+          regex: '(node_filesystem_.*|node_memory_.*|node_cpu_.*|node_disk_.*|node_network_.*)'
+          targetLabel: infrastructure_metric
+          replacement: 'node-health'
+        - sourceLabels: [__name__]
+          regex: 'node_.*'
+          targetLabel: category
+          replacement: 'infrastructure'
+
+---
+# ServiceMonitor for Container Metrics (DR Workloads)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: container-metrics-dr-workloads
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: container-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: cadvisor
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      metricRelabelings:
+        # Filter for DR-related containers
+        - sourceLabels: [__name__, container_label_app]
+          regex: 'container_.*;(.*backup.*|.*restore.*|.*chaos.*|.*compliance.*|.*disaster.*)'
+          targetLabel: dr_container_type
+          replacement: 'dr-workload'
+        - sourceLabels: [__name__]
+          regex: 'container_.*'
+          targetLabel: category
+          replacement: 'containers'
+
+---
+# ServiceMonitor for etcd Backup Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: etcd-backup-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: etcd-backup
+spec:
+  selector:
+    matchLabels:
+      component: etcd
+  namespaceSelector:
+    matchNames:
+      - kube-system
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(etcd_mvcc_db_total_size_in_bytes|etcd_disk_wal_fsync_duration_seconds|etcd_disk_backend_commit_duration_seconds)'
+          targetLabel: etcd_health_metric
+          replacement: 'storage-health'
+        - sourceLabels: [__name__]
+          regex: 'etcd_.*'
+          targetLabel: category
+          replacement: 'etcd'
+
+---
+# ServiceMonitor for S3 Storage Metrics (via custom exporter)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: s3-storage-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: s3-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: s3-exporter
+  endpoints:
+    - port: metrics
+      interval: 300s # 5 minutes for S3 metrics
+      path: /metrics
+      scrapeTimeout: 60s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 's3_.*'
+          targetLabel: category
+          replacement: 'object-storage'
+        - sourceLabels: [bucket]
+          regex: '(.*backup.*|.*compliance.*|.*disaster.*)'
+          targetLabel: storage_type
+          replacement: 'dr-storage'
+
+---
+# ServiceMonitor for Custom DR Webhook Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dr-webhook-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: dr-webhooks
+spec:
+  selector:
+    matchLabels:
+      component: webhook
+  namespaceSelector:
+    matchNames:
+      - compliance-system
+      - disaster-recovery
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(webhook_.*|http_.*)'
+          targetLabel: category
+          replacement: 'webhook'
+
+---
+# ServiceMonitor for Network Policies (Chaos Testing)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: network-policy-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: network-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  endpoints:
+    - port: http-metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'kube_networkpolicy_.*'
+          targetLabel: category
+          replacement: 'network-policies'
+        - sourceLabels: [__name__, networkpolicy]
+          regex: 'kube_networkpolicy_.*;(.*chaos.*|.*disaster.*)'
+          targetLabel: network_policy_type
+          replacement: 'dr-related'
+
+---
+# ServiceMonitor for Volume Backup Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: volume-backup-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: volume-backup
+spec:
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  endpoints:
+    - port: http-metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'kube_persistentvolume_.*'
+          targetLabel: category
+          replacement: 'persistent-volumes'
+        - sourceLabels: [__name__, persistentvolume]
+          regex: 'kube_persistentvolume_.*;(.*backup.*|.*snapshot.*)'
+          targetLabel: volume_type
+          replacement: 'backup-volume'
+
+---
+# ServiceMonitor for DNS Failover Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dns-failover-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: dns-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: external-dns
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 30s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'external_dns_.*'
+          targetLabel: category
+          replacement: 'dns'
+        - sourceLabels: [__name__]
+          regex: '.*registry.*'
+          targetLabel: dns_component
+          replacement: 'registry'
+
+---
+# ServiceMonitor for Ingress Controller (Failover)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ingress-failover-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: ingress-monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 15s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'nginx_ingress_controller_.*'
+          targetLabel: category
+          replacement: 'ingress'
+        - sourceLabels: [ingress]
+          regex: '(.*disaster.*|.*backup.*|.*failover.*)'
+          targetLabel: ingress_type
+          replacement: 'dr-related'
+
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dr-dashboard-config
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+    dashboard-type: 'disaster-recovery'
+data:
+  dr-backups-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "uid": "dr-backups-dashboard",
+        "title": "DR & Backups - PAKE System",
+        "description": "Comprehensive monitoring for Disaster Recovery, Backups, Chaos Engineering, and Compliance",
+        "tags": ["disaster-recovery", "backups", "chaos-engineering", "compliance", "sre"],
+        "timezone": "utc",
+        "schemaVersion": 30,
+        "version": 1,
+        "refresh": "30s",
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        }
+      }
+    }

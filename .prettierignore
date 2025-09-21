@@ -1,0 +1,79 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+frontend/.next/
+frontend/build/
+frontend/dist/
+frontend/out/
+
+# Cache directories
+.pytest_cache/
+.coverage/
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.min.js
+*.bundle.js
+*.chunk.js
+
+# Documentation that should preserve formatting
+*.md
+!README.md
+
+# Config files that have specific formatting requirements
+package-lock.json
+yarn.lock
+*.lock
+
+# Test environment
+test_env/
+
+# Backup files
+*.backup
+*.bak
+backups/
+
+# Security and sensitive files
+security_backups/

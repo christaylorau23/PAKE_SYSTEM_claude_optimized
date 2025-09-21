@@ -1,0 +1,25 @@
+apiVersion: v2
+name: pake-ai
+description: PAKE AI Services Helm Chart - GPU-optimized AI inference and training services
+type: application
+version: 0.1.0
+appVersion: '1.0.0'
+keywords:
+  - pake
+  - ai
+  - gpu
+  - inference
+  - machine-learning
+home: https://github.com/pake-system/kubernetes-infrastructure
+sources:
+  - https://github.com/pake-system/pake-ai
+maintainers:
+  - name: PAKE Team
+    email: infrastructure@pake-system.com
+dependencies:
+  - name: common
+    version: 0.1.0
+    repository: 'file://../common'
+annotations:
+  category: AI/ML
+  licenses: MIT

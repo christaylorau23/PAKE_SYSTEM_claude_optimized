@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Personal Wealth Intelligence Dashboard | PAKE System</title>
+
+    <!-- Styles -->
+    <style>
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+
+      body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+          color: #ffffff;
+          overflow-x: hidden;
+      }
+
+      .dashboard {
+          min-height: 100vh;
+          padding: 20px;
+          max-width: 1800px;
+          margin: 0 auto;
+      }
+
+      /* Header */
+      .header {
+          text-align: center;
+          margin-bottom: 30px;
+          padding: 20px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .header h1 {
+          font-size: 2.5em;
+          font-weight: 700;
+          margin-bottom: 10px;
+          background: linear-gradient(45deg, #FFD700, #FFA500);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+      }
+
+      .header p {
+          font-size: 1.2em;
+          opacity: 0.9;
+      }
+
+      .last-updated {
+          margin-top: 10px;
+          font-size: 0.9em;
+          opacity: 0.7;
+      }
+
+      /* Grid Layout */
+      .grid-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+      }
+
+      .full-width {
+          grid-column: 1 / -1;
+      }
+
+      /* Cards */
+      .card {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          padding: 25px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+      }
+
+      .card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .card h2 {
+          font-size: 1.5em;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+      }
+
+      .card h3 {
+          font-size: 1.2em;
+          margin-bottom: 15px;
+          color: #FFD700;
+      }
+
+      /* Opportunity Cards */
+      .opportunity-item {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          padding: 15px;
+          margin-bottom: 15px;
+          border-left: 4px solid #FFD700;
+          transition: all 0.3s ease;
+      }
+
+      .opportunity-item:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateX(5px);
+      }
+
+      .opportunity-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+      }
+
+      .opportunity-symbol {
+          font-size: 1.3em;
+          font-weight: bold;
+          color: #FFD700;
+      }
+
+      .opportunity-signal {
+          padding: 5px 10px;
+          border-radius: 15px;
+          font-size: 0.8em;
+          font-weight: bold;
+          text-transform: uppercase;
+      }
+
+      .signal-buy {
+          background: #4CAF50;
+          color: white;
+      }
+
+      .signal-sell {
+          background: #F44336;
+          color: white;
+      }
+
+      .signal-strong-buy {
+          background: #2E7D32;
+          color: white;
+          animation: pulse 2s infinite;
+      }
+
+      .opportunity-details {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 10px;
+          font-size: 0.9em;
+      }
+
+      .detail-item {
+          text-align: center;
+      }
+
+      .detail-label {
+          opacity: 0.7;
+          font-size: 0.8em;
+      }
+
+      .detail-value {
+          font-weight: bold;
+          margin-top: 2px;
+      }
+
+      .positive {
+          color: #4CAF50;
+      }
+
+      .negative {
+          color: #F44336;
+      }
+
+      /* Trend Cards */
+      .trend-item {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          padding: 15px;
+          margin-bottom: 15px;
+          border-left: 4px solid #9C27B0;
+          transition: all 0.3s ease;
+      }
+
+      .trend-item:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateX(5px);
+      }
+
+      .trend-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+      }
+
+      .trend-name {
+          font-size: 1.2em;
+          font-weight: bold;
+          color: #E1BEE7;
+      }
+
+      .trend-stage {
+          padding: 3px 8px;
+          border-radius: 10px;
+          font-size: 0.7em;
+          font-weight: bold;
+          text-transform: uppercase;
+      }
+
+      .stage-emergence {
+          background: #FF9800;
+          color: white;
+      }
+
+      .stage-early-adoption {
+          background: #2196F3;
+          color: white;
+      }
+
+      /* Trends Tabs */
+      .trends-tabs {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 20px;
+          padding: 5px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+      }
+
+      .tab-button {
+          flex: 1;
+          padding: 10px 15px;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          border-radius: 5px;
+          font-size: 0.9em;
+          font-weight: 500;
+          transition: all 0.3s ease;
+      }
+
+      .tab-button:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+      }
+
+      .tab-button.active {
+          background: linear-gradient(45deg, #FFD700, #FFA500);
+          color: #1a1a1a;
+          font-weight: bold;
+      }
+
+      .google-trends-item {
+          background: rgba(66, 165, 245, 0.1);
+          border-left: 4px solid #42A5F5;
+      }
+
+      .trends-source-tag {
+          display: inline-block;
+          background: rgba(66, 165, 245, 0.2);
+          color: #42A5F5;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 0.7em;
+          font-weight: bold;
+          margin-left: 10px;
+      }
+      }
+
+      .stage-growth {
+          background: #4CAF50;
+          color: white;
+      }
+
+      .trend-description {
+          font-size: 0.9em;
+          opacity: 0.9;
+          margin-bottom: 10px;
+          line-height: 1.4;
+      }
+
+      .trend-metrics {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          gap: 10px;
+          font-size: 0.8em;
+      }
+
+      /* Performance Summary */
+      .performance-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 15px;
+      }
+
+      .metric-card {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          padding: 20px;
+          text-align: center;
+          border: 2px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .metric-value {
+          font-size: 2em;
+          font-weight: bold;
+          margin-bottom: 5px;
+      }
+
+      .metric-label {
+          opacity: 0.8;
+          font-size: 0.9em;
+      }
+
+      /* Alerts */
+      .alert {
+          background: linear-gradient(45deg, #FF6B6B, #FF8E8E);
+          border: none;
+          color: white;
+          animation: slideIn 0.5s ease;
+      }
+
+      .alert-high {
+          animation: pulse 2s infinite;
+      }
+
+      /* Animations */
+      @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+      }
+
+      @keyframes slideIn {
+          from { transform: translateX(-100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1200px) {
+          .grid-container {
+              grid-template-columns: 1fr;
+          }
+
+          .opportunity-details {
+              grid-template-columns: 1fr 1fr;
+          }
+
+          .trend-metrics {
+              grid-template-columns: 1fr 1fr;
+          }
+      }
+
+      @media (max-width: 768px) {
+          .dashboard {
+              padding: 10px;
+          }
+
+          .header h1 {
+              font-size: 2em;
+          }
+
+          .opportunity-details {
+              grid-template-columns: 1fr;
+          }
+
+          .trend-metrics {
+              grid-template-columns: 1fr;
+          }
+      }
+
+      /* Auto-refresh indicator */
+      .refresh-indicator {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: rgba(76, 175, 80, 0.9);
+          color: white;
+          padding: 8px 15px;
+          border-radius: 20px;
+          font-size: 0.8em;
+          font-weight: bold;
+          z-index: 1000;
+          transition: all 0.3s ease;
+      }
+
+      .refresh-indicator.updating {
+          background: rgba(255, 193, 7, 0.9);
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+          width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <!-- Header -->
+      <div class="header">
+        <h1>🧠 Personal Wealth Intelligence Dashboard</h1>
+        <p>
+          Omnipotent Knowledge & Trend Recognition for Maximum Profit Generation
+        </p>
+        <div class="last-updated" id="lastUpdated">
+          Last updated: <span id="updateTime">Loading...</span>
+        </div>
+      </div>
+
+      <!-- Auto-refresh indicator -->
+      <div class="refresh-indicator" id="refreshIndicator">
+        🔄 Auto-refresh: ON
+      </div>
+
+      <!-- Performance Summary -->
+      <div class="card full-width">
+        <h2>📊 Today's Performance Summary</h2>
+        <div class="performance-grid" id="performanceGrid">
+          <div class="metric-card">
+            <div class="metric-value positive" id="opportunitiesFound">12</div>
+            <div class="metric-label">High-Probability Opportunities</div>
+          </div>
+          <div class="metric-card">
+            <div
+              class="metric-value"
+              style="color: #e1bee7"
+              id="trendsDetected"
+            >
+              7
+            </div>
+            <div class="metric-label">Emerging Trends Detected</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" style="color: #ffd700" id="avgConfidence">
+              87%
+            </div>
+            <div class="metric-label">Average Confidence Score</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value positive" id="potentialReturn">+24.7%</div>
+            <div class="metric-label">Expected Portfolio Alpha</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <!-- High-Probability Opportunities -->
+        <div class="card">
+          <h2>🚨 High-Probability Opportunities</h2>
+          <div id="opportunitiesList">
+            <!-- Opportunities will be dynamically loaded here -->
+          </div>
+        </div>
+
+        <!-- Emerging Trends with Google Trends Integration -->
+        <div class="card">
+          <h2>🔮 Emerging Trends (Multi-Source + Google Trends)</h2>
+          <div class="trends-tabs">
+            <button class="tab-button active" onclick="showTrendsTab('all')">
+              All Sources
+            </button>
+            <button class="tab-button" onclick="showTrendsTab('google')">
+              📈 Google Trends
+            </button>
+            <button class="tab-button" onclick="showTrendsTab('traditional')">
+              🔬 Research + Patents
+            </button>
+          </div>
+          <div id="trendsList">
+            <!-- Trends will be dynamically loaded here -->
+          </div>
+          <div id="googleTrendsList" style="display: none">
+            <!-- Google Trends specific analysis will be loaded here -->
+          </div>
+          <div id="traditionalTrendsList" style="display: none">
+            <!-- Traditional trend analysis will be loaded here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts -->
+      <div class="card full-width">
+        <h2>⚡ Real-Time Intelligence Alerts</h2>
+        <div id="alertsList">
+          <!-- Alerts will be dynamically loaded here -->
+        </div>
+      </div>
+
+      <!-- Market Analysis -->
+      <div class="card full-width">
+        <h2>📈 Cross-Market Pattern Analysis</h2>
+        <div id="patternAnalysis">
+          <div class="trend-item">
+            <div class="trend-header">
+              <div class="trend-name">AI Infrastructure Convergence</div>
+              <div class="trend-stage stage-early-adoption">Early Adoption</div>
+            </div>
+            <div class="trend-description">
+              Multiple signals indicate accelerating convergence of AI compute,
+              networking, and storage infrastructure. Patent filings up 340%
+              YoY, with $12.8B in funding across 47 startups in Q4 2024.
+            </div>
+            <div class="trend-metrics">
+              <div class="detail-item">
+                <div class="detail-label">Confidence</div>
+                <div class="detail-value">94%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Market Size</div>
+                <div class="detail-value">$580B</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Growth Rate</div>
+                <div class="detail-value">156%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Mainstream ETA</div>
+                <div class="detail-value">18 months</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="trend-item">
+            <div class="trend-header">
+              <div class="trend-name">Longevity Biotech Breakthrough</div>
+              <div class="trend-stage stage-emergence">Emergence</div>
+            </div>
+            <div class="trend-description">
+              Breakthrough research in cellular reprogramming and senescence
+              reversal gaining momentum. 147 research papers published in last
+              quarter, with major pharma partnerships emerging.
+            </div>
+            <div class="trend-metrics">
+              <div class="detail-item">
+                <div class="detail-label">Confidence</div>
+                <div class="detail-value">78%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Market Size</div>
+                <div class="detail-value">$280B</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Growth Rate</div>
+                <div class="detail-value">89%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Mainstream ETA</div>
+                <div class="detail-value">36 months</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Dashboard JavaScript
+      class WealthDashboard {
+        constructor() {
+          this.updateInterval = 30000; // 30 seconds
+          this.isUpdating = false;
+          this.mockData = this.generateMockData();
+
+          this.initialize();
+        }
+
+        initialize() {
+          this.updateDashboard();
+          this.startAutoRefresh();
+          this.updateTimestamp();
+
+          // Update timestamp every second
+          setInterval(() => this.updateTimestamp(), 1000);
+        }
+
+        generateMockData() {
+          // Generate realistic mock data for demonstration
+          const opportunities = [
+            {
+              symbol: 'NVDA',
+              signal: 'STRONG_BUY',
+              confidence: 0.94,
+              expectedReturn: 18.5,
+              currentPrice: 875.43,
+              targetPrice: 1037.82,
+              catalyst: 'AI infrastructure demand surge + earnings beat',
+              timeHorizon: '2-3 weeks',
+              riskLevel: 'medium',
+            },
+            {
+              symbol: 'TSLA',
+              signal: 'BUY',
+              confidence: 0.87,
+              expectedReturn: 12.3,
+              currentPrice: 248.67,
+              targetPrice: 279.28,
+              catalyst: 'FSD beta expansion + China delivery numbers',
+              timeHorizon: '1-2 weeks',
+              riskLevel: 'high',
+            },
+            {
+              symbol: 'GOOGL',
+              signal: 'BUY',
+              confidence: 0.82,
+              expectedReturn: 14.7,
+              currentPrice: 142.89,
+              targetPrice: 164.0,
+              catalyst: 'Gemini AI breakthrough + cloud growth',
+              timeHorizon: '3-4 weeks',
+              riskLevel: 'medium',
+            },
+            {
+              symbol: 'BTC',
+              signal: 'STRONG_BUY',
+              confidence: 0.91,
+              expectedReturn: 23.8,
+              currentPrice: 51234.56,
+              targetPrice: 63464.42,
+              catalyst: 'ETF inflows + institutional adoption',
+              timeHorizon: '1-2 months',
+              riskLevel: 'high',
+            },
+            {
+              symbol: 'MSFT',
+              signal: 'BUY',
+              confidence: 0.79,
+              expectedReturn: 9.4,
+              currentPrice: 378.94,
+              targetPrice: 414.56,
+              catalyst: 'Copilot adoption + Azure growth',
+              timeHorizon: '4-6 weeks',
+              riskLevel: 'low',
+            },
+          ];
+
+          const trends = [
+            {
+              name: 'Quantum Computing Infrastructure',
+              stage: 'emergence',
+              confidence: 0.86,
+              score: 0.82,
+              momentum: 0.74,
+              description:
+                'Quantum error correction breakthroughs accelerating commercial viability timeline.',
+              marketSize: 450,
+              growthRate: 187,
+              mainstreamETA: '24 months',
+              source: 'traditional',
+            },
+            {
+              name: 'AI Agent Ecosystems',
+              stage: 'early_adoption',
+              confidence: 0.93,
+              score: 0.89,
+              momentum: 0.81,
+              description:
+                'Autonomous AI agents creating new trillion-dollar software category.',
+              marketSize: 680,
+              growthRate: 234,
+              mainstreamETA: '14 months',
+              source: 'traditional',
+            },
+            {
+              name: 'Cellular Reprogramming Therapy',
+              stage: 'emergence',
+              confidence: 0.71,
+              score: 0.68,
+              momentum: 0.58,
+              description:
+                'Breakthrough aging reversal treatments entering clinical trials globally.',
+              marketSize: 340,
+              growthRate: 156,
+              mainstreamETA: '42 months',
+              source: 'traditional',
+            },
+          ];
+
+          // Google Trends specific data
+          const googleTrends = [
+            {
+              name: 'Artificial Intelligence',
+              stage: 'early_adoption',
+              confidence: 0.91,
+              score: 0.87,
+              momentum: 0.92,
+              description:
+                'Search interest up 340% YoY. Peak interest: 89/100. Strong correlation with NVDA (+0.78).',
+              marketSize: 820,
+              growthRate: 280,
+              mainstreamETA: '8 months',
+              source: 'google_trends',
+              symbols: ['NVDA', 'GOOGL', 'MSFT'],
+              searchVolume: 89,
+              trendDirection: 'explosive_growth',
+              relatedQueries: ['generative ai', 'chatgpt', 'machine learning'],
+            },
+            {
+              name: 'Electric Vehicles',
+              stage: 'growth',
+              confidence: 0.84,
+              score: 0.79,
+              momentum: 0.65,
+              description:
+                'Sustained high search interest (72/100). Regional growth in Asia-Pacific markets.',
+              marketSize: 560,
+              growthRate: 145,
+              mainstreamETA: '12 months',
+              source: 'google_trends',
+              symbols: ['TSLA', 'NIO', 'RIVN'],
+              searchVolume: 72,
+              trendDirection: 'rising',
+              relatedQueries: [
+                'tesla model y',
+                'ev charging',
+                'battery technology',
+              ],
+            },
+            {
+              name: 'Gene Therapy',
+              stage: 'emergence',
+              confidence: 0.76,
+              score: 0.71,
+              momentum: 0.83,
+              description:
+                'Emerging search trend (45/100) with accelerating momentum (+156% momentum score).',
+              marketSize: 280,
+              growthRate: 198,
+              mainstreamETA: '36 months',
+              source: 'google_trends',
+              symbols: ['GILD', 'MRNA', 'CRSP'],
+              searchVolume: 45,
+              trendDirection: 'rising',
+              relatedQueries: [
+                'crispr',
+                'personalized medicine',
+                'longevity research',
+              ],
+            },
+          ];
+
+          const alerts = [
+            {
+              type: 'opportunity',
+              priority: 'high',
+              title: 'NVDA Technical Breakout Confirmed',
+              message:
+                'Strong volume surge (+340%) with breakout above $870 resistance. Target: $1,040',
+              timestamp: new Date(Date.now() - 5 * 60000),
+            },
+            {
+              type: 'trend',
+              priority: 'medium',
+              title: 'AI Infrastructure Funding Surge',
+              message:
+                'Q4 funding in AI infrastructure startups up 280% QoQ. 12 new unicorns created.',
+              timestamp: new Date(Date.now() - 18 * 60000),
+            },
+            {
+              type: 'risk',
+              priority: 'high',
+              title: 'Regulatory Risk Alert: AI',
+              message:
+                'EU AI Act implementation accelerating. Potential impact on AI stocks in 2025.',
+              timestamp: new Date(Date.now() - 25 * 60000),
+            },
+          ];
+
+          return { opportunities, trends, googleTrends, alerts };
+        }
+
+        updateDashboard() {
+          if (this.isUpdating) return;
+
+          this.isUpdating = true;
+          this.updateRefreshIndicator(true);
+
+          // Simulate API call delay
+          setTimeout(
+            () => {
+              try {
+                this.renderOpportunities();
+                this.renderTrends();
+                this.renderAlerts();
+                this.updatePerformanceMetrics();
+
+                // Add some randomness to make it feel live
+                this.addRandomVariation();
+              } catch (error) {
+                console.error('Dashboard update error:', error);
+              } finally {
+                this.isUpdating = false;
+                this.updateRefreshIndicator(false);
+              }
+            },
+            500 + Math.random() * 1000
+          ); // 0.5-1.5s delay
+        }
+
+        renderOpportunities() {
+          const container = document.getElementById('opportunitiesList');
+          container.innerHTML = '';
+
+          this.mockData.opportunities.forEach(opp => {
+            const oppElement = document.createElement('div');
+            oppElement.className = 'opportunity-item';
+
+            const signalClass = opp.signal.toLowerCase().replace('_', '-');
+            const returnClass =
+              opp.expectedReturn > 0 ? 'positive' : 'negative';
+
+            oppElement.innerHTML = `
+                        <div class="opportunity-header">
+                            <div class="opportunity-symbol">${opp.symbol}</div>
+                            <div class="opportunity-signal signal-${signalClass}">${opp.signal.replace('_', ' ')}</div>
+                        </div>
+                        <div class="opportunity-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Expected Return</div>
+                                <div class="detail-value ${returnClass}">${opp.expectedReturn > 0 ? '+' : ''}${opp.expectedReturn.toFixed(1)}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Confidence</div>
+                                <div class="detail-value">${(opp.confidence * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Time Horizon</div>
+                                <div class="detail-value">${opp.timeHorizon}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.85em; opacity: 0.9;">
+                            💡 ${opp.catalyst}
+                        </div>
+                    `;
+
+            container.appendChild(oppElement);
+          });
+        }
+
+        renderTrends() {
+          // Render all trends (combined view)
+          this.renderTrendsToContainer('trendsList', [
+            ...this.mockData.trends,
+            ...this.mockData.googleTrends,
+          ]);
+
+          // Render Google Trends specific
+          this.renderTrendsToContainer(
+            'googleTrendsList',
+            this.mockData.googleTrends,
+            true
+          );
+
+          // Render traditional trends
+          this.renderTrendsToContainer(
+            'traditionalTrendsList',
+            this.mockData.trends
+          );
+        }
+
+        renderTrendsToContainer(containerId, trends, isGoogleTrends = false) {
+          const container = document.getElementById(containerId);
+          container.innerHTML = '';
+
+          trends.forEach(trend => {
+            const trendElement = document.createElement('div');
+            trendElement.className = `trend-item ${isGoogleTrends ? 'google-trends-item' : ''}`;
+
+            const stageClass = trend.stage.replace('_', '-');
+            const sourceTag =
+              trend.source === 'google_trends'
+                ? '<span class="trends-source-tag">📈 Google Trends</span>'
+                : '<span class="trends-source-tag" style="background: rgba(156, 39, 176, 0.2); color: #E1BEE7;">🔬 Multi-Source</span>';
+
+            // Enhanced content for Google Trends
+            let additionalContent = '';
+            if (isGoogleTrends && trend.symbols) {
+              additionalContent = `
+                            <div style="margin-top: 10px; padding: 8px; background: rgba(66, 165, 245, 0.1); border-radius: 5px;">
+                                <div style="font-size: 0.8em; margin-bottom: 5px; color: #42A5F5; font-weight: bold;">📈 Investment Plays:</div>
+                                <div style="font-size: 0.85em;">${trend.symbols.join(', ')}</div>
+                                <div style="font-size: 0.8em; margin-top: 5px; color: #42A5F5;">
+                                    Search Volume: ${trend.searchVolume}/100 | Trend: ${trend.trendDirection.replace('_', ' ')}
+                                </div>
+                                <div style="font-size: 0.8em; color: #42A5F5;">
+                                    Related: ${trend.relatedQueries.join(', ')}
+                                </div>
+                            </div>
+                        `;
+            }
+
+            trendElement.innerHTML = `
+                        <div class="trend-header">
+                            <div class="trend-name">${trend.name}${sourceTag}</div>
+                            <div class="trend-stage stage-${stageClass}">${trend.stage.replace('_', ' ')}</div>
+                        </div>
+                        <div class="trend-description">${trend.description}</div>
+                        <div class="trend-metrics">
+                            <div class="detail-item">
+                                <div class="detail-label">Confidence</div>
+                                <div class="detail-value">${(trend.confidence * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Market Size</div>
+                                <div class="detail-value">$${trend.marketSize}B</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Growth</div>
+                                <div class="detail-value">${trend.growthRate}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Mainstream</div>
+                                <div class="detail-value">${trend.mainstreamETA}</div>
+                            </div>
+                        </div>
+                        ${additionalContent}
+                    `;
+
+            container.appendChild(trendElement);
+          });
+        }
+
+        renderAlerts() {
+          const container = document.getElementById('alertsList');
+          container.innerHTML = '';
+
+          this.mockData.alerts.forEach(alert => {
+            const alertElement = document.createElement('div');
+            alertElement.className = `opportunity-item alert ${alert.priority === 'high' ? 'alert-high' : ''}`;
+
+            const timeAgo = this.getTimeAgo(alert.timestamp);
+            const icon =
+              alert.type === 'opportunity'
+                ? '💰'
+                : alert.type === 'trend'
+                  ? '🚀'
+                  : '⚠️';
+
+            alertElement.innerHTML = `
+                        <div class="opportunity-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span>${icon}</span>
+                                <span style="font-weight: bold;">${alert.title}</span>
+                            </div>
+                            <div style="font-size: 0.8em; opacity: 0.8;">${timeAgo}</div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            ${alert.message}
+                        </div>
+                    `;
+
+            container.appendChild(alertElement);
+          });
+        }
+
+        updatePerformanceMetrics() {
+          // Update metrics with some realistic variation
+          const opportunities = this.mockData.opportunities.length;
+          const trends = this.mockData.trends.length;
+          const avgConfidence =
+            this.mockData.opportunities.reduce(
+              (sum, opp) => sum + opp.confidence,
+              0
+            ) / opportunities;
+          const expectedReturn =
+            this.mockData.opportunities.reduce(
+              (sum, opp) => sum + opp.expectedReturn,
+              0
+            ) / opportunities;
+
+          document.getElementById('opportunitiesFound').textContent =
+            opportunities;
+          document.getElementById('trendsDetected').textContent = trends;
+          document.getElementById('avgConfidence').textContent =
+            (avgConfidence * 100).toFixed(0) + '%';
+          document.getElementById('potentialReturn').textContent =
+            '+' + expectedReturn.toFixed(1) + '%';
+        }
+
+        addRandomVariation() {
+          // Add small random variations to make the dashboard feel "live"
+          this.mockData.opportunities.forEach(opp => {
+            // Small price variations
+            const variation = (Math.random() - 0.5) * 0.02; // ±1%
+            opp.currentPrice *= 1 + variation;
+            opp.targetPrice = opp.currentPrice * (1 + opp.expectedReturn / 100);
+
+            // Small confidence variations
+            const confVariation = (Math.random() - 0.5) * 0.04; // ±2%
+            opp.confidence = Math.max(
+              0.5,
+              Math.min(1.0, opp.confidence + confVariation)
+            );
+          });
+        }
+
+        startAutoRefresh() {
+          setInterval(() => {
+            if (!this.isUpdating) {
+              this.updateDashboard();
+            }
+          }, this.updateInterval);
+        }
+
+        updateRefreshIndicator(isUpdating) {
+          const indicator = document.getElementById('refreshIndicator');
+          if (isUpdating) {
+            indicator.textContent = '🔄 Updating...';
+            indicator.className = 'refresh-indicator updating';
+          } else {
+            indicator.textContent = '🔄 Auto-refresh: ON';
+            indicator.className = 'refresh-indicator';
+          }
+        }
+
+        updateTimestamp() {
+          const now = new Date();
+          const timeString = now.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+          document.getElementById('updateTime').textContent = timeString;
+        }
+
+        getTimeAgo(timestamp) {
+          const now = new Date();
+          const diffMs = now - timestamp;
+          const diffMins = Math.floor(diffMs / 60000);
+
+          if (diffMins < 1) return 'just now';
+          if (diffMins < 60) return `${diffMins}m ago`;
+
+          const diffHours = Math.floor(diffMins / 60);
+          if (diffHours < 24) return `${diffHours}h ago`;
+
+          const diffDays = Math.floor(diffHours / 24);
+          return `${diffDays}d ago`;
+        }
+      }
+
+      // Google Trends tab switching functionality
+      function showTrendsTab(tabName) {
+        // Hide all trend containers
+        document.getElementById('trendsList').style.display = 'none';
+        document.getElementById('googleTrendsList').style.display = 'none';
+        document.getElementById('traditionalTrendsList').style.display = 'none';
+
+        // Remove active class from all buttons
+        document
+          .querySelectorAll('.tab-button')
+          .forEach(btn => btn.classList.remove('active'));
+
+        // Show selected container and activate button
+        if (tabName === 'all') {
+          document.getElementById('trendsList').style.display = 'block';
+          document
+            .querySelector('.tab-button[onclick="showTrendsTab(\'all\')"]')
+            .classList.add('active');
+        } else if (tabName === 'google') {
+          document.getElementById('googleTrendsList').style.display = 'block';
+          document
+            .querySelector('.tab-button[onclick="showTrendsTab(\'google\')"]')
+            .classList.add('active');
+        } else if (tabName === 'traditional') {
+          document.getElementById('traditionalTrendsList').style.display =
+            'block';
+          document
+            .querySelector(
+              '.tab-button[onclick="showTrendsTab(\'traditional\')"]'
+            )
+            .classList.add('active');
+        }
+      }
+
+      // Initialize dashboard when page loads
+      document.addEventListener('DOMContentLoaded', () => {
+        new WealthDashboard();
+      });
+
+      // Add some interactive features
+      document.addEventListener('click', e => {
+        if (e.target.closest('.opportunity-item')) {
+          const item = e.target.closest('.opportunity-item');
+          item.style.transform = item.style.transform ? '' : 'scale(1.02)';
+          setTimeout(() => {
+            item.style.transform = '';
+          }, 200);
+        }
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', e => {
+        if (e.ctrlKey || e.metaKey) {
+          switch (e.key) {
+            case 'r':
+              e.preventDefault();
+              if (window.dashboard && !window.dashboard.isUpdating) {
+                window.dashboard.updateDashboard();
+              }
+              break;
+          }
+        }
+      });
+
+      // Store dashboard instance globally for debugging
+      document.addEventListener('DOMContentLoaded', () => {
+        window.dashboard = new WealthDashboard();
+      });
+    </script>
+  </body>
+</html>

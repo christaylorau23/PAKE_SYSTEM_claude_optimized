@@ -1,0 +1,666 @@
+# Jaeger Distributed Tracing Stack for PAKE System
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    name: observability
+    istio-injection: enabled
+
+---
+# Jaeger Operator
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: jaeger-production
+  namespace: observability
+spec:
+  strategy: production
+
+  # Storage configuration using Elasticsearch
+  storage:
+    type: elasticsearch
+    elasticsearch:
+      server-urls: http://elasticsearch.observability.svc.cluster.local:9200
+      index-prefix: jaeger
+
+      # Index management
+      create-index-templates: true
+      index-date-separator: '-'
+
+      # Performance tuning
+      num-shards: 3
+      num-replicas: 1
+      bulk:
+        actions: 1000
+        size: 5MB
+        workers: 5
+        flush-interval: 200ms
+
+      # Security
+      tls:
+        enabled: false
+
+      # Tags configuration
+      tags-as-fields:
+        all: true
+        dot-replacement: '_'
+
+      # Adaptive sampling
+      adaptive-sampling:
+        sampling-store-type: elasticsearch
+
+  # Jaeger components configuration
+  collector:
+    replicas: 3
+    maxReplicas: 10
+
+    # Resource configuration
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+    # Configuration
+    config:
+      collector:
+        queue-size: 10000
+        queue-size-memory: 100
+        num-workers: 50
+
+      sampling:
+        # High sampling rate for detailed tracing
+        default_strategy:
+          type: adaptive
+          max_traces_per_second: 10000
+          param: 1.0
+
+        strategies:
+          - service: 'pake-api'
+            type: adaptive
+            max_traces_per_second: 5000
+            param: 1.0
+          - service: 'pake-ai'
+            type: adaptive
+            max_traces_per_second: 2000
+            param: 1.0
+          - service: 'pake-workers'
+            type: adaptive
+            max_traces_per_second: 3000
+            param: 0.8
+
+    # Node placement
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: workload
+                  operator: In
+                  values:
+                    - api-services
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: jaeger-collector
+              topologyKey: kubernetes.io/hostname
+
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: api-services
+        effect: NoSchedule
+
+    # Service configuration
+    service:
+      type: ClusterIP
+
+  # Query service configuration
+  query:
+    replicas: 2
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+    # Base path for ingress
+    basePath: /jaeger
+
+    # UI configuration
+    config:
+      ui:
+        dependencies:
+          menuEnabled: true
+          dagMaxServicesLen: 200
+
+        # Search configuration
+        search:
+          maxLookback: '720h' # 30 days
+          defaultResultLimit: 100
+
+        # Feature flags
+        archiveEnabled: true
+        tracking:
+          gaID: 'UA-000000-2'
+
+    # Node placement
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: workload
+                  operator: In
+                  values:
+                    - api-services
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: jaeger-query
+              topologyKey: kubernetes.io/hostname
+
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: api-services
+        effect: NoSchedule
+
+  # Ingester configuration for Kafka (if used)
+  ingester:
+    enabled: false
+
+---
+# Jaeger Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-query
+  namespace: observability
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: jaeger-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'PAKE System - Jaeger Tracing'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - jaeger.pake-system.com
+      secretName: jaeger-tls
+  rules:
+    - host: jaeger.pake-system.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger-production-query
+                port:
+                  number: 16686
+
+---
+# Elasticsearch for Jaeger storage
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: observability
+spec:
+  version: 8.8.0
+
+  # Node sets configuration
+  nodeSets:
+    # Master nodes
+    - name: master
+      count: 3
+      config:
+        node.roles: ['master']
+        node.store.allow_mmap: false
+        cluster.max_shards_per_node: 2000
+
+        # Memory configuration
+        ES_JAVA_OPTS: '-Xms2g -Xmx2g'
+
+        # Index settings for Jaeger
+        index.number_of_shards: 3
+        index.number_of_replicas: 1
+        index.refresh_interval: 30s
+        index.translog.flush_threshold_size: 512mb
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: 1000m
+                  memory: 4Gi
+                requests:
+                  cpu: 200m
+                  memory: 2Gi
+
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - data-services
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: elasticsearch
+                    topologyKey: kubernetes.io/hostname
+
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: data-services
+              effect: NoSchedule
+
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: ['ReadWriteOnce']
+            storageClassName: fast-ssd
+            resources:
+              requests:
+                storage: 100Gi
+
+    # Data nodes
+    - name: data
+      count: 3
+      config:
+        node.roles: ['data', 'ingest']
+        node.store.allow_mmap: false
+        ES_JAVA_OPTS: '-Xms4g -Xmx4g'
+
+        # Jaeger-specific optimizations
+        indices.fielddata.cache.size: 30%
+        indices.queries.cache.size: 30%
+        indices.requests.cache.size: 5%
+
+        # Hot/warm architecture
+        node.attr.data: hot
+        cluster.routing.allocation.awareness.attributes: data
+
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: 2000m
+                  memory: 8Gi
+                requests:
+                  cpu: 500m
+                  memory: 4Gi
+
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: workload
+                        operator: In
+                        values:
+                          - data-services
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: elasticsearch
+                    topologyKey: kubernetes.io/hostname
+
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: data-services
+              effect: NoSchedule
+
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: ['ReadWriteOnce']
+            storageClassName: fast-ssd
+            resources:
+              requests:
+                storage: 500Gi
+
+  # HTTP service
+  http:
+    service:
+      spec:
+        type: ClusterIP
+    tls:
+      selfSignedCertificate:
+        disabled: true
+
+---
+# Elasticsearch Index Lifecycle Management for Jaeger
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-ilm-policy
+  namespace: observability
+data:
+  policy.json: |
+    {
+      "policy": {
+        "phases": {
+          "hot": {
+            "actions": {
+              "rollover": {
+                "max_size": "10GB",
+                "max_docs": 10000000,
+                "max_age": "1d"
+              }
+            }
+          },
+          "warm": {
+            "min_age": "2d",
+            "actions": {
+              "allocate": {
+                "number_of_replicas": 0,
+                "require": {
+                  "data": "warm"
+                }
+              },
+              "forcemerge": {
+                "max_num_segments": 1
+              }
+            }
+          },
+          "cold": {
+            "min_age": "7d",
+            "actions": {
+              "allocate": {
+                "number_of_replicas": 0,
+                "require": {
+                  "data": "cold"
+                }
+              }
+            }
+          },
+          "delete": {
+            "min_age": "30d"
+          }
+        }
+      }
+    }
+
+---
+# Service Monitor for Jaeger metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jaeger
+  namespace: observability
+  labels:
+    app: jaeger
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jaeger-collector
+  endpoints:
+    - port: admin-http
+      interval: 15s
+      path: /metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jaeger-query
+  namespace: observability
+  labels:
+    app: jaeger-query
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jaeger-query
+  endpoints:
+    - port: admin-http
+      interval: 15s
+      path: /metrics
+
+---
+# OpenTelemetry Collector for advanced trace processing
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-collector
+  namespace: observability
+spec:
+  mode: deployment
+  replicas: 3
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+          thrift_compact:
+            endpoint: 0.0.0.0:6831
+          thrift_binary:
+            endpoint: 0.0.0.0:6832
+      
+      zipkin:
+        endpoint: 0.0.0.0:9411
+
+    processors:
+      # Memory limiter
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 1024
+      
+      # Batch processor for performance
+      batch:
+        send_batch_size: 1024
+        timeout: 1s
+        send_batch_max_size: 2048
+      
+      # Resource processor to add metadata
+      resource:
+        attributes:
+        - key: cluster
+          value: pake-production
+          action: insert
+        - key: environment
+          value: production
+          action: insert
+      
+      # Span processor for filtering
+      span:
+        name:
+          # Include all spans from PAKE services
+          include:
+            match_type: regexp
+            regexp: "pake-.*"
+      
+      # Tail sampling for intelligent trace selection
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 50000
+        expected_new_traces_per_sec: 1000
+        policies:
+        - name: errors
+          type: status_code
+          status_code: {status_codes: [ERROR]}
+        - name: slow_requests
+          type: latency
+          latency: {threshold_ms: 1000}
+        - name: pake_services
+          type: string_attribute
+          string_attribute: {key: service.name, values: ["pake-api", "pake-ai", "pake-workers"]}
+        - name: probabilistic
+          type: probabilistic
+          probabilistic: {sampling_percentage: 10}
+
+    exporters:
+      # Export to Jaeger
+      jaeger:
+        endpoint: jaeger-production-collector.observability.svc.cluster.local:14250
+        tls:
+          insecure: true
+      
+      # Export metrics to Prometheus
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        const_labels:
+          cluster: pake-production
+      
+      # Export to stdout for debugging
+      logging:
+        loglevel: warn
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp, jaeger, zipkin]
+          processors: [memory_limiter, resource, span, tail_sampling, batch]
+          exporters: [jaeger]
+        
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheus]
+      
+      extensions: [health_check, pprof, zpages]
+
+  # Pod template
+  podTemplate:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: In
+                    values:
+                      - api-services
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: otel-collector
+                topologyKey: kubernetes.io/hostname
+
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api-services
+          effect: NoSchedule
+
+---
+# Service for OpenTelemetry Collector
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    app.kubernetes.io/name: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    - name: jaeger-grpc
+      port: 14250
+      targetPort: 14250
+      protocol: TCP
+    - name: jaeger-thrift-http
+      port: 14268
+      targetPort: 14268
+      protocol: TCP
+    - name: jaeger-thrift-compact
+      port: 6831
+      targetPort: 6831
+      protocol: UDP
+    - name: jaeger-thrift-binary
+      port: 6832
+      targetPort: 6832
+      protocol: UDP
+    - name: zipkin
+      port: 9411
+      targetPort: 9411
+      protocol: TCP
+    - name: metrics
+      port: 8889
+      targetPort: 8889
+      protocol: TCP
+
+---
+# ServiceMonitor for OpenTelemetry Collector
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app: otel-collector
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics

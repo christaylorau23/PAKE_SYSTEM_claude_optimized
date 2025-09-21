@@ -1,0 +1,82 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pake-backend-vpa
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: autoscaling
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pake-backend
+  updatePolicy:
+    updateMode: 'Auto'
+    minReplicas: 2
+  resourcePolicy:
+    containerPolicies:
+      - containerName: pake-backend
+        minAllowed:
+          cpu: '250m'
+          memory: '512Mi'
+        maxAllowed:
+          cpu: '2000m'
+          memory: '4Gi'
+        controlledResources: ['cpu', 'memory']
+        controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pake-frontend-vpa
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-frontend
+    app.kubernetes.io/component: autoscaling
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pake-frontend
+  updatePolicy:
+    updateMode: 'Auto'
+    minReplicas: 2
+  resourcePolicy:
+    containerPolicies:
+      - containerName: pake-frontend
+        minAllowed:
+          cpu: '100m'
+          memory: '256Mi'
+        maxAllowed:
+          cpu: '1000m'
+          memory: '2Gi'
+        controlledResources: ['cpu', 'memory']
+        controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: postgres-vpa
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: autoscaling
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: postgres
+  updatePolicy:
+    updateMode: 'Off' # Manual review for database scaling
+  resourcePolicy:
+    containerPolicies:
+      - containerName: postgres
+        minAllowed:
+          cpu: '250m'
+          memory: '512Mi'
+        maxAllowed:
+          cpu: '4000m'
+          memory: '8Gi'
+        controlledResources: ['cpu', 'memory']
+        controlledValues: RequestsAndLimits

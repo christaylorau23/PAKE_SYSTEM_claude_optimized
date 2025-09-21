@@ -1,0 +1,722 @@
+# Service Failover Policies for PAKE System
+# Automated service-level failover configurations and policies
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-failover-policies
+  namespace: disaster-recovery
+  labels:
+    app: service-failover
+    component: policies
+data:
+  failover-policies.yaml: |
+    failover_policies:
+      name: "pake-service-failover-policies"
+      description: "Service-level failover policies and automated traffic management"
+      
+      # Global failover settings
+      global:
+        default_rto_seconds: 900      # 15 minutes
+        default_rpo_seconds: 300      # 5 minutes
+        health_check_interval: 30     # seconds
+        failure_threshold: 3          # consecutive failures
+        recovery_threshold: 2         # consecutive successes
+        dns_ttl: 60                   # seconds
+        
+      # Service-specific failover policies
+      services:
+        pake-api:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2", "eu-west-1"]
+          rto_seconds: 300             # 5 minutes for API
+          rpo_seconds: 60              # 1 minute for API
+          health_check:
+            endpoint: "/health"
+            port: 8080
+            timeout: 5
+            interval: 10
+          scaling:
+            min_replicas: 2
+            max_replicas: 10
+            target_cpu: 70
+          traffic_routing:
+            strategy: "weighted"
+            weights:
+              primary: 100
+              secondary: 0
+            failover_weights:
+              primary: 0
+              secondary: 100
+              
+        pake-ai-service:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2"]
+          rto_seconds: 600             # 10 minutes for AI service
+          rpo_seconds: 300             # 5 minutes for AI service
+          health_check:
+            endpoint: "/health"
+            port: 8080
+            timeout: 10
+            interval: 30
+          scaling:
+            min_replicas: 1
+            max_replicas: 5
+            target_cpu: 80
+          traffic_routing:
+            strategy: "active_passive"
+            
+        pake-worker:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2"]
+          rto_seconds: 900             # 15 minutes for workers
+          rpo_seconds: 600             # 10 minutes for workers
+          health_check:
+            endpoint: "/metrics"
+            port: 9090
+            timeout: 5
+            interval: 60
+          scaling:
+            min_replicas: 3
+            max_replicas: 20
+            target_cpu: 75
+          traffic_routing:
+            strategy: "load_balanced"
+            
+        postgres-database:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2"]
+          rto_seconds: 600             # 10 minutes for database
+          rpo_seconds: 300             # 5 minutes for database
+          health_check:
+            endpoint: "tcp://5432"
+            timeout: 5
+            interval: 30
+          replication:
+            type: "streaming"
+            lag_threshold: 300         # 5 minutes
+            promotion_strategy: "automatic"
+            
+        redis-cache:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2"]
+          rto_seconds: 300             # 5 minutes for cache
+          rpo_seconds: 900             # 15 minutes acceptable for cache
+          health_check:
+            endpoint: "tcp://6379"
+            timeout: 3
+            interval: 15
+          replication:
+            type: "sentinel"
+            promotion_strategy: "automatic"
+            
+        chromadb-vector:
+          primary_region: "us-east-1"
+          secondary_regions: ["us-west-2"]
+          rto_seconds: 1800            # 30 minutes for vector DB
+          rpo_seconds: 3600            # 1 hour for vector DB
+          health_check:
+            endpoint: "/api/v1/heartbeat"
+            port: 8000
+            timeout: 10
+            interval: 60
+          replication:
+            type: "export_import"
+            export_schedule: "0 */6 * * *"  # Every 6 hours
+            
+      # DNS failover configuration
+      dns_failover:
+        provider: "route53"
+        hosted_zone_id: "Z1234567890"
+        records:
+          - name: "api.pake-system.com"
+            type: "A"
+            primary_ip: "10.0.1.100"
+            secondary_ip: "10.0.2.100"
+            health_check_id: "api-health-check"
+            
+          - name: "app.pake-system.com"
+            type: "A"
+            primary_ip: "10.0.1.101"
+            secondary_ip: "10.0.2.101"
+            health_check_id: "app-health-check"
+            
+          - name: "ai.pake-system.com"
+            type: "A"
+            primary_ip: "10.0.1.102"
+            secondary_ip: "10.0.2.102"
+            health_check_id: "ai-health-check"
+            
+      # Load balancer failover policies
+      load_balancer:
+        provider: "aws_alb"
+        health_check:
+          protocol: "HTTP"
+          port: 80
+          path: "/health"
+          interval: 30
+          timeout: 5
+          healthy_threshold: 2
+          unhealthy_threshold: 3
+        target_groups:
+          primary:
+            region: "us-east-1"
+            port: 80
+            protocol: "HTTP"
+          secondary:
+            region: "us-west-2"
+            port: 80
+            protocol: "HTTP"
+            
+      # Notification policies
+      notifications:
+        failover_started:
+          channels: ["slack", "pagerduty", "email"]
+          urgency: "high"
+          template: "failover_initiated"
+          
+        failover_completed:
+          channels: ["slack", "email"]
+          urgency: "medium"
+          template: "failover_completed"
+          
+        failback_recommended:
+          channels: ["slack", "email"]
+          urgency: "low"
+          template: "failback_ready"
+
+---
+# Service Failover Manager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-failover-manager
+  namespace: disaster-recovery
+  labels:
+    app: service-failover-manager
+    component: traffic-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-failover-manager
+  template:
+    metadata:
+      labels:
+        app: service-failover-manager
+        component: traffic-management
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8080'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: service-failover-manager
+      containers:
+        - name: manager
+          image: python:3.11-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir kubernetes pyyaml boto3 requests
+              exec python /scripts/service-failover-manager.py
+          env:
+            - name: CONFIG_PATH
+              value: '/etc/config/failover-policies.yaml'
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: aws-credentials
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: webhook
+              containerPort: 8090
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            - name: scripts
+              mountPath: /scripts
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: service-failover-policies
+        - name: scripts
+          configMap:
+            name: service-failover-manager-scripts
+            defaultMode: 0755
+
+---
+# Service Failover Manager Scripts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-failover-manager-scripts
+  namespace: disaster-recovery
+  labels:
+    app: service-failover-manager
+data:
+  service-failover-manager.py: |
+    #!/usr/bin/env python3
+    """
+    Service Failover Manager
+    Manages service-level failover policies and traffic routing
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import yaml
+    from datetime import datetime, timezone
+    from typing import Dict, List, Optional
+
+    import boto3
+    from kubernetes import client, config
+    import requests
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    class ServiceFailoverManager:
+        def __init__(self, config_path: str):
+            with open(config_path, 'r') as f:
+                self.config = yaml.safe_load(f)['failover_policies']
+            
+            # Initialize clients
+            try:
+                config.load_incluster_config()
+            except:
+                config.load_kube_config()
+            
+            self.k8s_client = client.CoreV1Api()
+            self.apps_client = client.AppsV1Api()
+            self.route53_client = boto3.client('route53')
+            self.elbv2_client = boto3.client('elbv2')
+            
+            # State tracking
+            self.service_states = {}
+            self.failover_events = {}
+            
+        def emit_metric(self, metric_name: str, value: float, labels: Dict[str, str] = None):
+            """Emit metric to Prometheus pushgateway"""
+            try:
+                if labels is None:
+                    labels = {}
+                    
+                labels.update({
+                    'component': 'service-failover-manager'
+                })
+                
+                label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
+                metric_data = f"{metric_name}{{{label_str}}} {value}"
+                
+                response = requests.post(
+                    "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/service-failover/instance/manager",
+                    data=metric_data,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=10
+                )
+                
+            except Exception as e:
+                logger.error(f"Error emitting metric {metric_name}: {e}")
+                
+        async def check_service_health(self, service_name: str, service_config: Dict) -> bool:
+            """Check health of a specific service"""
+            try:
+                health_config = service_config['health_check']
+                endpoint = health_config['endpoint']
+                timeout = health_config.get('timeout', 5)
+                
+                if endpoint.startswith('tcp://'):
+                    # TCP health check
+                    port = int(endpoint.split(':')[2])
+                    # Implement TCP health check
+                    return True  # Placeholder
+                    
+                elif endpoint.startswith('/'):
+                    # HTTP health check
+                    port = health_config.get('port', 80)
+                    url = f"http://{service_name}.default.svc.cluster.local:{port}{endpoint}"
+                    
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
+                        async with session.get(url) as response:
+                            healthy = response.status == 200
+                            
+                    self.emit_metric('service_health_check_result', 1 if healthy else 0, {
+                        'service': service_name,
+                        'endpoint': endpoint
+                    })
+                    
+                    return healthy
+                    
+                return False
+                
+            except Exception as e:
+                logger.error(f"Health check failed for {service_name}: {e}")
+                self.emit_metric('service_health_check_result', 0, {
+                    'service': service_name,
+                    'error': 'check_failed'
+                })
+                return False
+                
+        async def update_dns_record(self, record_name: str, new_ip: str) -> bool:
+            """Update DNS record for failover"""
+            try:
+                dns_config = self.config['dns_failover']
+                hosted_zone_id = dns_config['hosted_zone_id']
+                
+                # Find the record configuration
+                record_config = None
+                for record in dns_config['records']:
+                    if record['name'] == record_name:
+                        record_config = record
+                        break
+                
+                if not record_config:
+                    logger.error(f"DNS record configuration not found: {record_name}")
+                    return False
+                
+                # Update the record
+                change_batch = {
+                    'Changes': [{
+                        'Action': 'UPSERT',
+                        'ResourceRecordSet': {
+                            'Name': record_name,
+                            'Type': record_config['type'],
+                            'TTL': self.config['global']['dns_ttl'],
+                            'ResourceRecords': [{'Value': new_ip}]
+                        }
+                    }]
+                }
+                
+                response = self.route53_client.change_resource_record_sets(
+                    HostedZoneId=hosted_zone_id,
+                    ChangeBatch=change_batch
+                )
+                
+                change_id = response['ChangeInfo']['Id']
+                logger.info(f"DNS record updated: {record_name} -> {new_ip} (Change: {change_id})")
+                
+                self.emit_metric('dns_record_update_success', 1, {
+                    'record_name': record_name,
+                    'new_ip': new_ip
+                })
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Failed to update DNS record {record_name}: {e}")
+                self.emit_metric('dns_record_update_success', 0, {
+                    'record_name': record_name,
+                    'error': str(e)
+                })
+                return False
+                
+        async def scale_service(self, service_name: str, target_replicas: int) -> bool:
+            """Scale a service to target replica count"""
+            try:
+                # Scale the deployment
+                scale_patch = {
+                    "spec": {
+                        "replicas": target_replicas
+                    }
+                }
+                
+                self.apps_client.patch_namespaced_deployment_scale(
+                    name=service_name,
+                    namespace="default",
+                    body=scale_patch
+                )
+                
+                logger.info(f"Scaled {service_name} to {target_replicas} replicas")
+                
+                self.emit_metric('service_scale_operation_success', 1, {
+                    'service': service_name,
+                    'target_replicas': str(target_replicas)
+                })
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Failed to scale {service_name}: {e}")
+                self.emit_metric('service_scale_operation_success', 0, {
+                    'service': service_name,
+                    'error': str(e)
+                })
+                return False
+                
+        async def execute_service_failover(self, service_name: str) -> bool:
+            """Execute failover for a specific service"""
+            try:
+                service_config = self.config['services'][service_name]
+                failover_start_time = time.time()
+                
+                logger.critical(f"Starting failover for service: {service_name}")
+                
+                # Update service state
+                self.service_states[service_name] = {
+                    'status': 'failing_over',
+                    'start_time': datetime.now(timezone.utc),
+                    'primary_region': service_config['primary_region'],
+                    'target_region': service_config['secondary_regions'][0]
+                }
+                
+                success_steps = []
+                failed_steps = []
+                
+                # Step 1: Scale up secondary region
+                target_replicas = service_config['scaling']['min_replicas']
+                if await self.scale_service(f"{service_name}-dr", target_replicas):
+                    success_steps.append('scale_secondary')
+                else:
+                    failed_steps.append('scale_secondary')
+                
+                # Step 2: Update DNS if configured
+                dns_config = self.config.get('dns_failover', {})
+                for record in dns_config.get('records', []):
+                    if service_name in record['name']:
+                        if await self.update_dns_record(record['name'], record['secondary_ip']):
+                            success_steps.append('dns_update')
+                        else:
+                            failed_steps.append('dns_update')
+                
+                # Step 3: Update traffic routing
+                if service_config.get('traffic_routing', {}).get('strategy') == 'weighted':
+                    # Implement weighted routing update
+                    success_steps.append('traffic_routing')
+                
+                # Step 4: Scale down primary region
+                if await self.scale_service(service_name, 0):
+                    success_steps.append('scale_primary_down')
+                else:
+                    failed_steps.append('scale_primary_down')
+                
+                # Calculate RTO
+                failover_duration = time.time() - failover_start_time
+                target_rto = service_config['rto_seconds']
+                
+                # Determine overall success
+                overall_success = len(failed_steps) == 0 and failover_duration <= target_rto
+                
+                # Update service state
+                self.service_states[service_name].update({
+                    'status': 'failed_over' if overall_success else 'failover_failed',
+                    'end_time': datetime.now(timezone.utc),
+                    'duration_seconds': failover_duration,
+                    'rto_achieved': failover_duration,
+                    'rto_target': target_rto,
+                    'success_steps': success_steps,
+                    'failed_steps': failed_steps
+                })
+                
+                # Emit metrics
+                self.emit_metric('service_failover_duration_seconds', failover_duration, {
+                    'service': service_name,
+                    'success': str(overall_success).lower()
+                })
+                
+                self.emit_metric('service_failover_rto_achievement', 1 if failover_duration <= target_rto else 0, {
+                    'service': service_name
+                })
+                
+                if overall_success:
+                    logger.info(f"Failover completed for {service_name}: {failover_duration:.1f}s (target: {target_rto}s)")
+                else:
+                    logger.error(f"Failover failed for {service_name}: {len(failed_steps)} steps failed")
+                
+                return overall_success
+                
+            except Exception as e:
+                logger.error(f"Service failover failed for {service_name}: {e}")
+                return False
+                
+        async def monitor_services(self):
+            """Monitor all configured services"""
+            try:
+                for service_name, service_config in self.config['services'].items():
+                    try:
+                        # Check service health
+                        healthy = await self.check_service_health(service_name, service_config)
+                        
+                        # Track health status
+                        if service_name not in self.service_states:
+                            self.service_states[service_name] = {
+                                'status': 'healthy' if healthy else 'unhealthy',
+                                'consecutive_failures': 0,
+                                'consecutive_successes': 0
+                            }
+                        
+                        state = self.service_states[service_name]
+                        
+                        if healthy:
+                            state['consecutive_successes'] += 1
+                            state['consecutive_failures'] = 0
+                            if state['status'] == 'unhealthy':
+                                recovery_threshold = self.config['global']['recovery_threshold']
+                                if state['consecutive_successes'] >= recovery_threshold:
+                                    state['status'] = 'healthy'
+                                    logger.info(f"Service {service_name} recovered")
+                        else:
+                            state['consecutive_failures'] += 1
+                            state['consecutive_successes'] = 0
+                            
+                            failure_threshold = self.config['global']['failure_threshold']
+                            if state['consecutive_failures'] >= failure_threshold and state['status'] != 'failing_over':
+                                logger.warning(f"Service {service_name} failed health checks {state['consecutive_failures']} times")
+                                state['status'] = 'unhealthy'
+                                
+                                # Trigger failover if configured
+                                if len(service_config.get('secondary_regions', [])) > 0:
+                                    await self.execute_service_failover(service_name)
+                        
+                        # Emit service status metrics
+                        self.emit_metric('service_status', 1 if healthy else 0, {
+                            'service': service_name,
+                            'status': state['status']
+                        })
+                        
+                        self.emit_metric('service_consecutive_failures', state['consecutive_failures'], {
+                            'service': service_name
+                        })
+                        
+                    except Exception as e:
+                        logger.error(f"Error monitoring service {service_name}: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error in service monitoring: {e}")
+                
+        async def run_manager(self):
+            """Main service failover manager loop"""
+            logger.info("Starting service failover manager")
+            
+            # Emit startup metrics
+            self.emit_metric('service_failover_manager_start_timestamp', int(time.time()))
+            
+            while True:
+                try:
+                    # Monitor all services
+                    await self.monitor_services()
+                    
+                    # Update manager status
+                    self.emit_metric('service_failover_manager_healthy', 1)
+                    
+                    # Wait for next check
+                    interval = self.config['global']['health_check_interval']
+                    await asyncio.sleep(interval)
+                    
+                except Exception as e:
+                    logger.error(f"Manager loop error: {e}")
+                    self.emit_metric('service_failover_manager_errors_total', 1)
+                    await asyncio.sleep(60)
+
+    async def main():
+        config_path = os.getenv('CONFIG_PATH', '/etc/config/failover-policies.yaml')
+        manager = ServiceFailoverManager(config_path)
+        await manager.run_manager()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+---
+# ServiceAccount and RBAC for Service Failover Manager
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-failover-manager
+  namespace: disaster-recovery
+  labels:
+    app: service-failover-manager
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: service-failover-manager
+  labels:
+    app: service-failover-manager
+rules:
+  # Service and deployment management
+  - apiGroups: ['']
+    resources: ['services']
+    verbs: ['get', 'list', 'patch', 'update']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'deployments/scale']
+    verbs: ['get', 'list', 'patch', 'update']
+  # Pod access for health checks
+  - apiGroups: ['']
+    resources: ['pods']
+    verbs: ['get', 'list']
+  # Events for monitoring
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['create', 'patch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: service-failover-manager
+  labels:
+    app: service-failover-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: service-failover-manager
+subjects:
+  - kind: ServiceAccount
+    name: service-failover-manager
+    namespace: disaster-recovery
+
+---
+# Service for Service Failover Manager
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-failover-manager
+  namespace: disaster-recovery
+  labels:
+    app: service-failover-manager
+    monitoring: dr-enabled
+spec:
+  type: ClusterIP
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: webhook
+      port: 8090
+      targetPort: 8090
+      protocol: TCP
+  selector:
+    app: service-failover-manager

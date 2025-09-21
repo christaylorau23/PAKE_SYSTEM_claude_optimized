@@ -1,0 +1,133 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wealth-platform-hpa
+  namespace: wealth-platform
+  labels:
+    app: wealth-platform
+    component: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wealth-platform-api
+  minReplicas: 3 # Minimum 3 replicas for high availability
+  maxReplicas: 20 # Scale up to 20 replicas under high load
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # Scale when CPU > 70%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80 # Scale when memory > 80%
+    - type: Pods
+      pods:
+        metric:
+          name: requests_per_second
+        target:
+          type: AverageValue
+          averageValue: '100' # Scale when RPS > 100 per pod
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60 # Wait 60s before scaling up
+      policies:
+        - type: Percent
+          value: 100 # Double the number of replicas
+          periodSeconds: 60
+        - type: Pods
+          value: 4 # Or add 4 pods at once
+          periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300 # Wait 5m before scaling down
+      policies:
+        - type: Percent
+          value: 50 # Remove 50% of replicas
+          periodSeconds: 300
+        - type: Pods
+          value: 2 # Or remove 2 pods at once
+          periodSeconds: 300
+      selectPolicy: Min
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: redis-hpa
+  namespace: wealth-platform
+  labels:
+    app: redis-enterprise
+    component: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: redis-enterprise
+  minReplicas: 3
+  maxReplicas: 6 # Redis cluster with up to 6 nodes
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 85
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300 # Redis scaling needs more stability
+      policies:
+        - type: Pods
+          value: 1 # Add one Redis node at a time
+          periodSeconds: 300
+    scaleDown:
+      stabilizationWindowSeconds: 600 # Very conservative scaling down
+      policies:
+        - type: Pods
+          value: 1 # Remove one Redis node at a time
+          periodSeconds: 600
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wealth-platform-pdb
+  namespace: wealth-platform
+spec:
+  minAvailable: 2 # Always keep at least 2 replicas available
+  selector:
+    matchLabels:
+      app: wealth-platform
+      component: api-server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: wealth-platform
+spec:
+  minAvailable: 2 # Always keep at least 2 Redis nodes available
+  selector:
+    matchLabels:
+      app: redis-enterprise
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgresql-pdb
+  namespace: wealth-platform
+spec:
+  minAvailable: 1 # Always keep the primary PostgreSQL available
+  selector:
+    matchLabels:
+      app: postgresql
+      role: primary

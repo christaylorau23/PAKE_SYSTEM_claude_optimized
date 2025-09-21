@@ -1,0 +1,803 @@
+# Comprehensive Grafana Dashboards for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+  labels:
+    app: grafana
+data:
+  # System Overview Dashboard
+  system-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "PAKE System Overview",
+        "tags": ["pake", "overview", "golden-signals"],
+        "timezone": "UTC",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Golden Signals - Latency",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:api_latency_p95",
+                "legendFormat": "API P95",
+                "refId": "A"
+              },
+              {
+                "expr": "pake:ai_latency_p95", 
+                "legendFormat": "AI P95",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 0.5},
+                    {"color": "red", "value": 2}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Golden Signals - Throughput",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:api_throughput",
+                "legendFormat": "Requests/sec",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 10},
+                    {"color": "green", "value": 100}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Golden Signals - Errors",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "1 - pake:api_success_rate",
+                "legendFormat": "Error Rate",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 0.01},
+                    {"color": "red", "value": 0.05}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "Golden Signals - Saturation",
+            "type": "stat", 
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+            "targets": [
+              {
+                "expr": "avg(pake:gpu_utilization_avg)",
+                "legendFormat": "GPU Utilization",
+                "refId": "A"
+              },
+              {
+                "expr": "avg(pake:db_connection_utilization)",
+                "legendFormat": "DB Connections",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 70},
+                    {"color": "red", "value": 90}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 5,
+            "title": "Request Rate by Service",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_api_requests_total[5m])) by (service)",
+                "legendFormat": "{{service}}",
+                "refId": "A"
+              }
+            ],
+            "yAxes": [
+              {"label": "Requests/sec", "min": 0}
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Error Rate by Service", 
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_api_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(pake_api_requests_total[5m])) by (service)",
+                "legendFormat": "{{service}}",
+                "refId": "A"
+              }
+            ],
+            "yAxes": [
+              {"label": "Error Rate", "min": 0, "max": 1}
+            ]
+          }
+        ]
+      }
+    }
+
+  # AI Performance Dashboard
+  ai-performance.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AI Performance Dashboard",
+        "tags": ["pake", "ai", "performance", "gpu"],
+        "timezone": "UTC", 
+        "refresh": "15s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "AI Inference Metrics",
+            "type": "row",
+            "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Inference Latency Distribution",
+            "type": "heatmap",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_ai_inference_duration_seconds_bucket[5m])) by (le)",
+                "format": "heatmap",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Token Usage Over Time",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_ai_tokens_total[5m])) by (model)",
+                "legendFormat": "{{model}} - Tokens/sec",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "GPU Utilization",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 9},
+            "targets": [
+              {
+                "expr": "nvidia_gpu_utilization",
+                "legendFormat": "GPU {{instance}}",
+                "refId": "A"
+              }
+            ],
+            "yAxes": [
+              {"label": "Utilization %", "min": 0, "max": 100}
+            ]
+          },
+          {
+            "id": 5,
+            "title": "GPU Memory Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 8, "x": 8, "y": 9},
+            "targets": [
+              {
+                "expr": "nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes * 100",
+                "legendFormat": "GPU {{instance}} Memory %",
+                "refId": "A"
+              }
+            ],
+            "yAxes": [
+              {"label": "Memory %", "min": 0, "max": 100}
+            ]
+          },
+          {
+            "id": 6,
+            "title": "AI Cost Tracking",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 8, "x": 16, "y": 9},
+            "targets": [
+              {
+                "expr": "pake:ai_cost_per_hour",
+                "legendFormat": "Cost/Hour",
+                "refId": "A"
+              },
+              {
+                "expr": "sum(pake_ai_cost_total)",
+                "legendFormat": "Total Cost",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "currencyUSD",
+                "decimals": 4
+              }
+            }
+          },
+          {
+            "id": 7,
+            "title": "Model Performance Comparison",
+            "type": "table",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 17},
+            "targets": [
+              {
+                "expr": "avg_over_time(pake_ai_inference_duration_seconds[1h]) * 1000",
+                "legendFormat": "{{model}}",
+                "refId": "A",
+                "format": "table"
+              },
+              {
+                "expr": "sum_over_time(pake_ai_tokens_total[1h])",
+                "legendFormat": "{{model}}",
+                "refId": "B",
+                "format": "table"
+              },
+              {
+                "expr": "sum_over_time(pake_ai_cost_total[1h])",
+                "legendFormat": "{{model}}",
+                "refId": "C",
+                "format": "table"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # Security Operations Dashboard
+  security-operations.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Security Operations Dashboard",
+        "tags": ["pake", "security", "threats", "attacks"],
+        "timezone": "UTC",
+        "refresh": "30s",
+        "time": {
+          "from": "now-4h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Security Alert Rate",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:security_alert_rate",
+                "legendFormat": "Alerts/min",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 5},
+                    {"color": "red", "value": 20}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Failed Authentication Attempts",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(increase(pake_security_auth_failures_total[5m]))",
+                "legendFormat": "Failed Auths",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Rate Limited Requests",
+            "type": "stat", 
+            "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_api_requests_total{status=\"429\"}[5m]))",
+                "legendFormat": "Rate Limited/sec",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Blocked IPs",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+            "targets": [
+              {
+                "expr": "count(pake_security_blocked_ips)",
+                "legendFormat": "Blocked IPs",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Security Events Timeline",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_security_events_total[5m])) by (event_type)",
+                "legendFormat": "{{event_type}}",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Top Attack Sources",
+            "type": "table",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+            "targets": [
+              {
+                "expr": "topk(10, sum(pake_security_attacks_total) by (source_ip))",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Attack Types Distribution",
+            "type": "piechart",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+            "targets": [
+              {
+                "expr": "sum(pake_security_attacks_total) by (attack_type)",
+                "refId": "A"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # Business Metrics Dashboard
+  business-metrics.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Business Metrics Dashboard",
+        "tags": ["pake", "business", "revenue", "users"],
+        "timezone": "UTC",
+        "refresh": "1m",
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Business KPIs",
+            "type": "row",
+            "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Daily Active Users",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 0, "y": 1},
+            "targets": [
+              {
+                "expr": "pake:daily_active_users",
+                "legendFormat": "DAU",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 1000},
+                    {"color": "green", "value": 10000}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Revenue Today",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 6, "y": 1},
+            "targets": [
+              {
+                "expr": "sum(increase(pake_business_revenue_total[24h]))",
+                "legendFormat": "Revenue",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "currencyUSD"
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "API Calls Today",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 12, "y": 1},
+            "targets": [
+              {
+                "expr": "sum(increase(pake_api_requests_total[24h]))",
+                "legendFormat": "API Calls",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short"
+              }
+            }
+          },
+          {
+            "id": 5,
+            "title": "Profit Margin",
+            "type": "stat",
+            "gridPos": {"h": 6, "w": 6, "x": 18, "y": 1},
+            "targets": [
+              {
+                "expr": "(pake:revenue_per_hour - pake:total_cost_per_hour) / pake:revenue_per_hour * 100",
+                "legendFormat": "Profit %",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 20},
+                    {"color": "green", "value": 50}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 6,
+            "title": "Revenue Trend",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
+            "targets": [
+              {
+                "expr": "pake:revenue_per_hour",
+                "legendFormat": "Revenue/Hour",
+                "refId": "A"
+              },
+              {
+                "expr": "pake:total_cost_per_hour",
+                "legendFormat": "Cost/Hour",
+                "refId": "B"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "title": "User Activity Heatmap",
+            "type": "heatmap",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 7},
+            "targets": [
+              {
+                "expr": "sum(rate(pake_api_requests_total[1h])) by (hour)",
+                "format": "heatmap",
+                "refId": "A"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # Cost Optimization Dashboard
+  cost-optimization.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Cost Optimization Dashboard", 
+        "tags": ["pake", "cost", "optimization", "efficiency"],
+        "timezone": "UTC",
+        "refresh": "5m",
+        "time": {
+          "from": "now-7d",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Cost Breakdown",
+            "type": "piechart",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:infrastructure_cost_per_hour",
+                "legendFormat": "Infrastructure",
+                "refId": "A"
+              },
+              {
+                "expr": "pake:ai_api_cost_per_hour",
+                "legendFormat": "AI APIs",
+                "refId": "B"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Cost Efficiency Metrics",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:cost_per_request",
+                "legendFormat": "Cost per Request",
+                "refId": "A"
+              },
+              {
+                "expr": "pake:revenue_cost_ratio",
+                "legendFormat": "Revenue/Cost Ratio",
+                "refId": "B"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Resource Utilization",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "avg(rate(container_cpu_usage_seconds_total[5m])) by (pod)",
+                "legendFormat": "CPU - {{pod}}",
+                "refId": "A"
+              },
+              {
+                "expr": "avg(container_memory_working_set_bytes) by (pod) / 1024 / 1024 / 1024",
+                "legendFormat": "Memory GB - {{pod}}",
+                "refId": "B"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Right-sizing Recommendations",
+            "type": "table", 
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "avg_over_time(container_cpu_usage_seconds_total[24h]) / on(pod) kube_pod_container_resource_requests_cpu_cores * 100",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  # SLO Dashboard
+  slo-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "SLO Dashboard",
+        "tags": ["pake", "slo", "sli", "reliability"],
+        "timezone": "UTC",
+        "refresh": "30s",
+        "time": {
+          "from": "now-7d",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "API Availability SLO",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:api_success_rate * 100",
+                "legendFormat": "Current",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 99,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 99},
+                    {"color": "yellow", "value": 99.5},
+                    {"color": "green", "value": 99.9}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "API Latency SLO",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:api_latency_p95 * 1000",
+                "legendFormat": "P95 Latency",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ms",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 200},
+                    {"color": "red", "value": 500}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Error Budget Remaining",
+            "type": "gauge",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "pake:error_budget_remaining_api * 100",
+                "legendFormat": "Error Budget %",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 25},
+                    {"color": "green", "value": 50}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "SLO Compliance Over Time",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "pake:slo_api_availability",
+                "legendFormat": "API Availability SLO",
+                "refId": "A"
+              },
+              {
+                "expr": "pake:slo_api_latency",
+                "legendFormat": "API Latency SLO",
+                "refId": "B"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+# Grafana Dashboard Provisioning ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+  namespace: monitoring
+  labels:
+    app: grafana
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'pake-dashboards'
+      orgId: 1
+      folder: 'PAKE System'
+      type: file
+      disableDeletion: false
+      editable: true
+      updateIntervalSeconds: 30
+      allowUiUpdates: true
+      options:
+        path: /var/lib/grafana/dashboards/pake
+    - name: 'istio-dashboards'
+      orgId: 1
+      folder: 'Istio'
+      type: file
+      disableDeletion: false
+      editable: true
+      updateIntervalSeconds: 30
+      options:
+        path: /var/lib/grafana/dashboards/istio
+    - name: 'kubernetes-dashboards'
+      orgId: 1
+      folder: 'Kubernetes'
+      type: file
+      disableDeletion: false
+      editable: true
+      updateIntervalSeconds: 30
+      options:
+        path: /var/lib/grafana/dashboards/kubernetes

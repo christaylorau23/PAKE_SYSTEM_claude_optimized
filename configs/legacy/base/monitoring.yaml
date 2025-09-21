@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: pake-backend-monitor
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pake-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pake-system-alerts
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-system
+    app.kubernetes.io/component: monitoring
+spec:
+  groups:
+    - name: pake-system.rules
+      rules:
+        - alert: PakeBackendDown
+          expr: up{job="pake-backend-service"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'PAKE Backend is down'
+            description: 'PAKE Backend has been down for more than 1 minute.'
+
+        - alert: PakeHighLatency
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="pake-backend-service"}[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'PAKE Backend high latency'
+            description: '95th percentile latency is above 500ms for 5 minutes.'
+
+        - alert: PakeHighCPU
+          expr: rate(container_cpu_usage_seconds_total{container="pake-backend"}[5m]) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'PAKE Backend high CPU usage'
+            description: 'CPU usage is above 80% for 10 minutes.'
+
+        - alert: PakeHighMemory
+          expr: container_memory_usage_bytes{container="pake-backend"} / container_spec_memory_limit_bytes{container="pake-backend"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'PAKE Backend high memory usage'
+            description: 'Memory usage is above 90% for 5 minutes.'
+
+        - alert: PakeHighErrorRate
+          expr: rate(http_requests_total{job="pake-backend-service",status=~"5.."}[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'PAKE Backend high error rate'
+            description: 'Error rate is above 10% for 5 minutes.'
+
+        - alert: PakeDatabaseConnectionFailed
+          expr: postgresql_up{job="postgres-service"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'PAKE Database connection failed'
+            description: 'Unable to connect to PostgreSQL database.'
+
+        - alert: PakeRedisConnectionFailed
+          expr: redis_up{job="redis-service"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'PAKE Redis connection failed'
+            description: 'Unable to connect to Redis cache.'
+
+        - alert: PakePodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total{namespace="pake-system"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'PAKE Pod crash looping'
+            description: 'Pod {{ $labels.pod }} is crash looping.'
+
+        - alert: PakeHPAScaling
+          expr: kube_horizontalpodautoscaler_status_current_replicas{namespace="pake-system"} >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="pake-system"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'PAKE HPA at maximum scale'
+            description: 'HPA {{ $labels.horizontalpodautoscaler }} has reached maximum replicas.'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-pake
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-system
+    app.kubernetes.io/component: monitoring
+    grafana_dashboard: '1'
+data:
+  pake-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "PAKE System Dashboard",
+        "tags": ["pake", "enterprise"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"pake-backend-service\"}[5m])",
+                "legendFormat": "{{ method }} {{ status }}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"pake-backend-service\"}[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Pod Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "kube_pod_status_ready{namespace=\"pake-system\"}",
+                "legendFormat": "{{ pod }}"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }

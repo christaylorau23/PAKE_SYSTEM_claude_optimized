@@ -1,0 +1,533 @@
+name: Security Audit and Vulnerability Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+  packages: read
+
+jobs:
+  npm-audit:
+    name: Node.js Security Audit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          [
+            'frontend',
+            'src/services/voice-agents',
+            'src/services/orchestrator',
+            'src/services/auth',
+            'src/services/audit',
+          ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if service exists
+        id: check-service
+        run: |
+          if [ -d "${{ matrix.service }}" ] && [ -f "${{ matrix.service }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Service ${{ matrix.service }} found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Service ${{ matrix.service }} not found, skipping"
+          fi
+
+      - name: Install Node.js manually
+        if: steps.check-service.outputs.exists == 'true'
+        run: |
+          echo "Installing Node.js 22..."
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+
+      - name: Install dependencies for ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        run: |
+          if [ -f "${{ matrix.service }}/package.json" ]; then
+            echo "Installing dependencies for ${{ matrix.service }}..."
+            cd "${{ matrix.service }}"
+
+            # Generate package-lock.json if it doesn't exist
+            if [ ! -f "package-lock.json" ]; then
+              echo "::notice::Generating package-lock.json for ${{ matrix.service }}"
+              npm install --package-lock-only
+            fi
+
+            # Now install dependencies
+            npm ci || npm install
+            echo "Dependencies installed successfully for ${{ matrix.service }}"
+          else
+            echo "::error::No package.json found in ${{ matrix.service }}"
+            exit 1
+          fi
+
+      - name: Run npm audit
+        if: steps.check-service.outputs.exists == 'true'
+        working-directory: ${{ matrix.service }}
+        run: |
+          echo "Running npm audit for ${{ matrix.service }}..."
+
+          # Ensure output directory exists
+          mkdir -p ../audit-results
+
+          # Run audit and save results
+          npm audit --audit-level=moderate --json > ../audit-results/audit-results-${{ matrix.service }}.json || true
+
+          # Check if there are any vulnerabilities
+          VULN_COUNT=$(cat ../audit-results/audit-results-${{ matrix.service }}.json | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+          echo "Found $VULN_COUNT vulnerabilities in ${{ matrix.service }}"
+
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "::warning::Found $VULN_COUNT vulnerabilities in ${{ matrix.service }}"
+            npm audit --audit-level=moderate || true
+          else
+            echo "::notice::No vulnerabilities found in ${{ matrix.service }}"
+          fi
+
+      - name: Upload audit results
+        if: always() && steps.check-service.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ matrix.service }}-${{ github.sha }}
+          path: audit-results/audit-results-${{ matrix.service }}.json
+          retention-days: 30
+
+  python-security:
+    name: Python Security Audit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ['mcp-servers', 'configs']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if Python service exists
+        id: check-python-service
+        run: |
+          if [ -d "${{ matrix.service }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Python service ${{ matrix.service }} found"
+            
+            # Check for Python files
+            if find "${{ matrix.service }}" -name "*.py" | head -1 | grep -q ".py"; then
+              echo "has_python=true" >> $GITHUB_OUTPUT
+              echo "Python files found in ${{ matrix.service }}"
+            else
+              echo "has_python=false" >> $GITHUB_OUTPUT
+              echo "::warning::No Python files found in ${{ matrix.service }}"
+            fi
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "has_python=false" >> $GITHUB_OUTPUT
+            echo "::warning::Python service ${{ matrix.service }} not found, skipping"
+          fi
+
+      - name: Setup Python
+        if: steps.check-python-service.outputs.exists == 'true' && steps.check-python-service.outputs.has_python == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install security tools
+        if: steps.check-python-service.outputs.exists == 'true' && steps.check-python-service.outputs.has_python == 'true'
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install safety bandit semgrep pip-audit --use-deprecated=legacy-resolver
+
+      - name: Install service dependencies
+        if: steps.check-python-service.outputs.exists == 'true' && steps.check-python-service.outputs.has_python == 'true'
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "::notice::No requirements.txt found in ${{ matrix.service }}"
+          fi
+
+      - name: Run safety audit
+        if: steps.check-python-service.outputs.exists == 'true' && steps.check-python-service.outputs.has_python == 'true'
+        working-directory: ${{ matrix.service }}
+        run: |
+          echo "Running safety audit for ${{ matrix.service }}..."
+
+          # Ensure output directory exists
+          mkdir -p ../python-security-results
+
+          if [ -f requirements.txt ]; then
+            safety scan -r requirements.txt --json --output ../python-security-results/safety-results-${{ matrix.service }}.json || true
+
+            # Check results
+            if [ -f ../python-security-results/safety-results-${{ matrix.service }}.json ]; then
+              SCANNED_COUNT=$(cat ../python-security-results/safety-results-${{ matrix.service }}.json | jq '.scanned_packages // 0' 2>/dev/null || echo "0")
+              echo "Scanned $SCANNED_COUNT packages in ${{ matrix.service }}"
+
+              # Check for vulnerabilities in the output
+              safety scan -r requirements.txt || echo "::notice::Safety scan completed"
+            fi
+          else
+            echo "::notice::No requirements.txt found in ${{ matrix.service }}, creating placeholder result"
+            echo '{"scanned_packages": 0, "vulnerabilities": []}' > ../python-security-results/safety-results-${{ matrix.service }}.json
+          fi
+
+      - name: Run bandit security linter
+        if: steps.check-python-service.outputs.exists == 'true' && steps.check-python-service.outputs.has_python == 'true'
+        working-directory: ${{ matrix.service }}
+        run: |
+          echo "Running bandit security linter for ${{ matrix.service }}..."
+
+          mkdir -p ../python-security-results
+
+          if find . -name "*.py" | head -1 | grep -q ".py"; then
+            bandit -r . -f json -o ../python-security-results/bandit-results-${{ matrix.service }}.json || true
+            bandit -r . || echo "::notice::Bandit scan completed"
+          else
+            echo "::notice::No Python files found in ${{ matrix.service }}"
+            echo '{"results": [], "errors": []}' > ../python-security-results/bandit-results-${{ matrix.service }}.json
+          fi
+
+      - name: Upload Python security results
+        if: always() && steps.check-python-service.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-security-${{ matrix.service }}-${{ github.sha }}
+          path: |
+            python-security-results/safety-results-${{ matrix.service }}.json
+            python-security-results/bandit-results-${{ matrix.service }}.json
+          retention-days: 30
+
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find Dockerfiles
+        id: find-dockerfiles
+        run: |
+          echo "Scanning for Dockerfiles..."
+          DOCKERFILES=$(find . -name "Dockerfile" -type f | head -10)
+
+          if [ -z "$DOCKERFILES" ]; then
+            echo "scan_needed=false" >> $GITHUB_OUTPUT
+            echo "::notice::No Dockerfiles found, skipping Docker security scan"
+          else
+            echo "scan_needed=true" >> $GITHUB_OUTPUT
+            echo "Found Dockerfiles:"
+            echo "$DOCKERFILES"
+            
+            # Create list for matrix (if we had one)
+            echo "$DOCKERFILES" > dockerfiles.txt
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.find-dockerfiles.outputs.scan_needed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Docker Scout
+        if: steps.find-dockerfiles.outputs.scan_needed == 'true'
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan Dockerfiles with Hadolint
+        if: steps.find-dockerfiles.outputs.scan_needed == 'true'
+        run: |
+          mkdir -p docker-security-results
+
+          # Scan each Dockerfile found
+          while IFS= read -r dockerfile; do
+            if [ -f "$dockerfile" ]; then
+              echo "Scanning $dockerfile with Hadolint..."
+              BASENAME=$(basename "$(dirname "$dockerfile")")
+              docker run --rm -i hadolint/hadolint < "$dockerfile" > "docker-security-results/hadolint-${BASENAME}.txt" 2>&1 || true
+            fi
+          done < dockerfiles.txt
+
+      - name: Build and scan Docker images
+        if: steps.find-dockerfiles.outputs.scan_needed == 'true'
+        run: |
+          mkdir -p docker-security-results
+
+          # Scan MCP Servers if Dockerfile exists
+          if [ -f "mcp-servers/Dockerfile" ]; then
+            echo "Building and scanning MCP Servers..."
+            cd mcp-servers
+            docker build -t pake-mcp-servers:latest . || true
+            docker scout cves pake-mcp-servers:latest --format json --output ../docker-security-results/mcp-servers-cves.json || true
+            cd ..
+          fi
+
+          # Scan Voice Agents if Dockerfile exists
+          if [ -f "services/voice-agents/Dockerfile" ]; then
+            echo "Building and scanning Voice Agents..."
+            cd services/voice-agents
+            docker build -t pake-voice-agents:latest . || true
+            docker scout cves pake-voice-agents:latest --format json --output ../../docker-security-results/voice-agents-cves.json || true
+            cd ../..
+          fi
+
+      - name: Upload Docker security results
+        if: always() && steps.find-dockerfiles.outputs.scan_needed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-security-${{ github.sha }}
+          path: docker-security-results/
+          retention-days: 30
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+        with:
+          fail-on-severity: moderate
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+      - name: Notice on dependency review failure
+        if: failure()
+        run: |
+          echo "::notice::Dependency review failed - may require GitHub Advanced Security to be enabled"
+          echo "::notice::Enable Dependency graph and GitHub Advanced Security in repository settings"
+
+  secrets-detection:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for better diff analysis
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          # Check if this is a scheduled run or if there are actual changes
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "scan_mode=full" >> $GITHUB_OUTPUT
+            echo "Running full repository scan (scheduled)"
+          else
+            # Check if there are changes between base and head
+            CHANGES=$(git diff --name-only ${{ github.event.repository.default_branch }}...HEAD 2>/dev/null || echo "changes")
+            if [ -z "$CHANGES" ] || [ "$CHANGES" = "" ]; then
+              echo "scan_mode=full" >> $GITHUB_OUTPUT
+              echo "::notice::No changes detected, running full repository scan"
+            else
+              echo "scan_mode=diff" >> $GITHUB_OUTPUT
+              echo "Changes detected, running differential scan"
+            fi
+          fi
+
+      - name: Run TruffleHog (Full Scan)
+        if: steps.check-changes.outputs.scan_mode == 'full'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+
+      - name: Run TruffleHog (Differential Scan)
+        if: steps.check-changes.outputs.scan_mode == 'diff'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [npm-audit, python-security, docker-security]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-results/
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find security-results/ -type f -name "*.json" | head -20
+
+      - name: Generate comprehensive security report
+        run: |
+          echo "# PAKE System Security Audit Report" > SECURITY_REPORT.md
+          echo "**Generated:** $(date -u)" >> SECURITY_REPORT.md
+          echo "**Commit:** ${{ github.sha }}" >> SECURITY_REPORT.md
+          echo "**Workflow:** Security Audit and Vulnerability Scanning" >> SECURITY_REPORT.md
+          echo "" >> SECURITY_REPORT.md
+
+          # Node.js audit summary
+          echo "## Node.js Dependencies" >> SECURITY_REPORT.md
+          NODEJS_SCANNED=0
+          for service_dir in security-results/npm-audit-*-${{ github.sha }}; do
+            if [ -d "$service_dir" ]; then
+              SERVICE_NAME=$(basename "$service_dir" | sed 's/npm-audit-//' | sed 's/-${{ github.sha }}//')
+              echo "### $SERVICE_NAME" >> SECURITY_REPORT.md
+              
+              # Look for audit results file
+              AUDIT_FILE=$(find "$service_dir" -name "audit-results-*.json" -o -name "audit-results.json" | head -1)
+              if [ -f "$AUDIT_FILE" ]; then
+                TOTAL_VULNS=$(cat "$AUDIT_FILE" | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+                if [ "$TOTAL_VULNS" -eq 0 ]; then
+                  echo "✅ No vulnerabilities found" >> SECURITY_REPORT.md
+                else
+                  echo "🔴 $TOTAL_VULNS vulnerabilities found" >> SECURITY_REPORT.md
+                  # Add severity breakdown if available
+                  HIGH=$(cat "$AUDIT_FILE" | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
+                  MODERATE=$(cat "$AUDIT_FILE" | jq '.metadata.vulnerabilities.moderate // 0' 2>/dev/null || echo "0")
+                  if [ "$HIGH" -gt 0 ] || [ "$MODERATE" -gt 0 ]; then
+                    echo "  - High: $HIGH, Moderate: $MODERATE" >> SECURITY_REPORT.md
+                  fi
+                fi
+                NODEJS_SCANNED=$((NODEJS_SCANNED + 1))
+              else
+                echo "⚠️  No audit results available" >> SECURITY_REPORT.md
+              fi
+              echo "" >> SECURITY_REPORT.md
+            fi
+          done
+
+          if [ "$NODEJS_SCANNED" -eq 0 ]; then
+            echo "⚠️  No Node.js services were scanned" >> SECURITY_REPORT.md
+            echo "" >> SECURITY_REPORT.md
+          fi
+
+          # Python audit summary
+          echo "## Python Dependencies" >> SECURITY_REPORT.md
+          PYTHON_SCANNED=0
+          for service_dir in security-results/python-security-*-${{ github.sha }}; do
+            if [ -d "$service_dir" ]; then
+              SERVICE_NAME=$(basename "$service_dir" | sed 's/python-security-//' | sed 's/-${{ github.sha }}//')
+              echo "### $SERVICE_NAME" >> SECURITY_REPORT.md
+              
+              # Check safety results
+              SAFETY_FILE=$(find "$service_dir" -name "safety-results-*.json" | head -1)
+              BANDIT_FILE=$(find "$service_dir" -name "bandit-results-*.json" | head -1)
+              
+              if [ -f "$SAFETY_FILE" ]; then
+                SCANNED_PACKAGES=$(cat "$SAFETY_FILE" | jq '.scanned_packages // 0' 2>/dev/null || echo "0")
+                VULNERABILITIES=$(cat "$SAFETY_FILE" | jq '.vulnerabilities | length' 2>/dev/null || echo "0")
+                echo "📦 Scanned $SCANNED_PACKAGES packages" >> SECURITY_REPORT.md
+                if [ "$VULNERABILITIES" -eq 0 ]; then
+                  echo "✅ No known vulnerabilities found" >> SECURITY_REPORT.md
+                else
+                  echo "🔴 $VULNERABILITIES vulnerabilities found" >> SECURITY_REPORT.md
+                fi
+              fi
+              
+              if [ -f "$BANDIT_FILE" ]; then
+                BANDIT_ISSUES=$(cat "$BANDIT_FILE" | jq '.results | length' 2>/dev/null || echo "0")
+                if [ "$BANDIT_ISSUES" -eq 0 ]; then
+                  echo "✅ No security issues found by Bandit" >> SECURITY_REPORT.md
+                else
+                  echo "⚠️  $BANDIT_ISSUES potential security issues found" >> SECURITY_REPORT.md
+                fi
+              fi
+              
+              echo "" >> SECURITY_REPORT.md
+              PYTHON_SCANNED=$((PYTHON_SCANNED + 1))
+            fi
+          done
+
+          if [ "$PYTHON_SCANNED" -eq 0 ]; then
+            echo "⚠️  No Python services were scanned" >> SECURITY_REPORT.md
+            echo "" >> SECURITY_REPORT.md
+          fi
+
+          # Docker summary
+          echo "## Container Security" >> SECURITY_REPORT.md
+          if [ -d "security-results/docker-security-${{ github.sha }}" ]; then
+            CVE_FILES=$(find "security-results/docker-security-${{ github.sha }}" -name "*-cves.json" | wc -l)
+            HADOLINT_FILES=$(find "security-results/docker-security-${{ github.sha }}" -name "hadolint-*.txt" | wc -l)
+            
+            if [ "$CVE_FILES" -gt 0 ] || [ "$HADOLINT_FILES" -gt 0 ]; then
+              echo "✅ Docker security scan completed" >> SECURITY_REPORT.md
+              echo "  - $CVE_FILES CVE scans performed" >> SECURITY_REPORT.md
+              echo "  - $HADOLINT_FILES Dockerfile linting results" >> SECURITY_REPORT.md
+            else
+              echo "⚠️  Docker security scan completed but no results found" >> SECURITY_REPORT.md
+            fi
+          else
+            echo "⚠️  Docker security scan not available" >> SECURITY_REPORT.md
+          fi
+
+          echo "" >> SECURITY_REPORT.md
+          echo "## Summary" >> SECURITY_REPORT.md
+          echo "- **Node.js Services Scanned:** $NODEJS_SCANNED" >> SECURITY_REPORT.md
+          echo "- **Python Services Scanned:** $PYTHON_SCANNED" >> SECURITY_REPORT.md
+          echo "- **Docker Images Scanned:** $(find security-results/ -name "*-cves.json" | wc -l)" >> SECURITY_REPORT.md
+          echo "" >> SECURITY_REPORT.md
+          echo "## Recommendations" >> SECURITY_REPORT.md
+          echo "1. Review and address any high/critical vulnerabilities immediately" >> SECURITY_REPORT.md
+          echo "2. Update dependencies to latest secure versions regularly" >> SECURITY_REPORT.md
+          echo "3. Ensure all secrets are managed through HashiCorp Vault" >> SECURITY_REPORT.md
+          echo "4. Keep container base images updated with latest security patches" >> SECURITY_REPORT.md
+          echo "5. Run security scans on every pull request and before deployments" >> SECURITY_REPORT.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ github.sha }}
+          path: SECURITY_REPORT.md
+          retention-days: 90
+
+      - name: Comment PR with security report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const fs = require('fs');
+              if (fs.existsSync('SECURITY_REPORT.md')) {
+                const report = fs.readFileSync('SECURITY_REPORT.md', 'utf8');
+                
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `## 🛡️ Security Audit Results\n\n${report}`
+                });
+                
+                console.log('Security report comment posted successfully');
+              } else {
+                console.log('SECURITY_REPORT.md not found, skipping comment');
+              }
+            } catch (error) {
+              console.log('Failed to post security report comment:', error.message);
+              console.log('This is not a critical failure, continuing...');
+            }

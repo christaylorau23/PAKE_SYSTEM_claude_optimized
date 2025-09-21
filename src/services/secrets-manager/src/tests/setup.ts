@@ -1,0 +1,196 @@
+import { beforeAll, afterAll, vi } from 'vitest';
+
+// Global test setup
+beforeAll(() => {
+  // Set test environment
+  process.env.NODE_ENV = process.env.UNKNOWN;
+  process.env.VAULT_ADDR = 'https://vault-test.example.com:8200';
+  process.env.VAULT_TOKEN = 'test-token';
+
+  // Mock console methods to reduce noise in tests
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(console, 'info').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+  // Keep error logs for debugging
+  const originalError = console.error;
+  vi.spyOn(console, 'error').mockImplementation((...args) => {
+    if (process.env.VITEST_DEBUG) {
+      originalError(...args);
+    }
+  });
+
+  // Global performance timing
+  if (!global.performance) {
+    const perfHooks = await import('perf_hooks');
+    global.performance = perfHooks.performance;
+  }
+
+  // Mock crypto.randomBytes for consistent test results
+  const crypto = await import('crypto');
+  const originalRandomBytes = crypto.randomBytes;
+  crypto.randomBytes = vi.fn().mockImplementation((size: number) => {
+    // Return predictable bytes for testing
+    return Buffer.alloc(size, 0x42);
+  });
+
+  // Store original for restoration
+  (global as any).__originalRandomBytes = originalRandomBytes;
+});
+
+afterAll(() => {
+  // Restore original methods
+  vi.restoreAllMocks();
+
+  // Restore crypto.randomBytes if needed
+  if ((global as any).__originalRandomBytes) {
+    const crypto = await import('crypto');
+    crypto.randomBytes = (global as any).__originalRandomBytes;
+  }
+});
+
+// Global test utilities
+declare global {
+  namespace Vi {
+    interface TestContext {
+      testSecrets: Map<string, any>;
+      performanceMetrics: Map<string, number>;
+    }
+  }
+}
+
+// Helper function to generate test secrets
+export function generateTestSecret(path: string, overrides: any = {}) {
+  return {
+    metadata: {
+      path,
+      version: 1,
+      createdAt: new Date('2023-01-01T00:00:00Z'),
+      updatedAt: new Date('2023-01-01T00:00:00Z'),
+      tags: ['test'],
+      ...overrides.metadata,
+    },
+    value: overrides.value || { key: `value-${path}` },
+    encrypted: overrides.encrypted || false,
+  };
+}
+
+// Helper function to measure performance
+export function measurePerformance<T>(
+  name: string,
+  fn: () => Promise<T>
+): Promise<{ result: T; duration: number }> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const startTime = performance.now();
+      const result = await fn();
+      const duration = performance.now() - startTime;
+
+      // Store metric for analysis
+      if (!global.performanceMetrics) {
+        global.performanceMetrics = new Map();
+      }
+      global.performanceMetrics.set(name, duration);
+
+      resolve({ result, duration });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Helper function to create mock HSM responses
+export function createMockHSMResponse(keyId: string, algorithm: string) {
+  return {
+    keyId,
+    algorithm,
+    createdAt: new Date(),
+    status: 'active' as const,
+    keyType: 'symmetric' as const,
+    keySize: algorithm.includes('256') ? 256 : 128,
+  };
+}
+
+// Helper function to create mock Vault responses
+export function createMockVaultResponse(path: string, data: any) {
+  return {
+    data: {
+      data,
+      metadata: {
+        version: 1,
+        created_time: '2023-01-01T00:00:00Z',
+        deletion_time: '',
+        destroyed: false,
+      },
+    },
+  };
+}
+
+// Helper function to simulate network delay
+export function simulateNetworkDelay(ms: number = 50): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Helper function to create test certificates
+export function createTestCertificate() {
+  return {
+    certificate: '-----BEGIN CERTIFICATE-----\nMIIC...test...CERTIFICATE-----',
+    privateKey:
+      '-----BEGIN RSA PRIVATE KEY-----\nMIIE...test...PRIVATE KEY-----',
+    caChain: ['-----BEGIN CERTIFICATE-----\nMIIC...ca...CERTIFICATE-----'],
+    serialNumber: '12345678901234567890',
+  };
+}
+
+// Helper function to validate performance requirements
+export function validatePerformanceRequirement(
+  operationName: string,
+  duration: number,
+  maxAllowedMs: number = 10
+) {
+  if (duration > maxAllowedMs) {
+    throw new Error(
+      `Performance requirement violated: ${operationName} took ${duration.toFixed(2)}ms, ` +
+        `but should be less than ${maxAllowedMs}ms`
+    );
+  }
+  return true;
+}
+
+// Helper function to create audit event
+export function createTestAuditEvent(
+  operation: string,
+  path: string,
+  success: boolean = true
+) {
+  return {
+    timestamp: new Date(),
+    operation,
+    path,
+    userId: 'test-user',
+    sessionId: 'test-session',
+    success,
+    duration: Math.random() * 10, // Random duration under 10ms
+    metadata: {
+      userAgent: 'test-agent',
+      sourceIP: '127.0.0.1',
+    },
+  };
+}
+
+// Global error handler for unhandled promises in tests
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit in tests, but log the error
+});
+
+export default {
+  generateTestSecret,
+  measurePerformance,
+  createMockHSMResponse,
+  createMockVaultResponse,
+  simulateNetworkDelay,
+  createTestCertificate,
+  validatePerformanceRequirement,
+  createTestAuditEvent,
+};

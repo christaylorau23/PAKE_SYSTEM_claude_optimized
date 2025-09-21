@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "graphiti": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "pake_system_claude_optimized-graphiti-mcp-1",
+        "python",
+        "-m",
+        "mcp_server"
+      ],
+      "env": {
+        "PROJECT_NAME": "PAKE_SYSTEM",
+        "WORKSPACE_ID": "claude_code"
+      }
+    }
+  }
+}

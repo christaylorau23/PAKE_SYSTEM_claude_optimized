@@ -1,0 +1,84 @@
+# Legacy Production Kustomization - DEPRECATED
+#
+# ⚠️  NOTICE: This file is deprecated and has been replaced by the new
+# standardized configuration management system.
+#
+# 🔄 MIGRATION PATH:
+# 1. Use the new standardized deployment: deploy/scripts/deploy.sh -e production
+# 2. New configuration location: deploy/k8s/overlays/production/
+# 3. Validation: deploy/scripts/validate-config.sh
+#
+# 📋 NEW STRUCTURE BENEFITS:
+# - ✅ Zero configuration duplication
+# - ✅ Drift prevention with Kustomize
+# - ✅ External secret management (Vault/ESO)
+# - ✅ Automated validation and deployment
+# - ✅ Environment consistency
+#
+# 📁 NEW LOCATION: deploy/k8s/overlays/production/kustomization.yaml
+#
+# For migration guide, see: deploy/MIGRATION.md
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: pake-system-production-legacy
+  annotations:
+    config.kubernetes.io/warning: 'This configuration is deprecated. Use deploy/k8s/overlays/production/ instead'
+    migration.kubernetes.io/new-location: 'deploy/k8s/overlays/production/'
+    migration.kubernetes.io/guide: 'deploy/MIGRATION.md'
+
+# DEPRECATED: Use deploy/k8s/base/ instead
+resources:
+  - ../../base
+
+# DEPRECATED: Additional resources moved to deploy/k8s/overlays/production/
+# resources:
+#   - vertical-pod-autoscaler.yaml
+#   - cluster-autoscaler.yaml
+#   - service-mesh.yaml
+#   - backup-jobs.yaml
+
+# DEPRECATED: Image management moved to new structure
+images:
+  - name: pake-system
+    newName: your-registry.com/pake-system
+    newTag: v8.0.0-prod
+  - name: pake-frontend
+    newName: your-registry.com/pake-frontend
+    newTag: v8.0.0-prod
+
+# DEPRECATED: Strategic merge patches replaced with modern approach
+patchesStrategicMerge:
+  - production-resources.yaml
+  - production-storage.yaml
+
+# DEPRECATED: ConfigMap generation moved to new structure
+configMapGenerator:
+  - name: pake-production-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=warn
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+      - MAX_WORKERS=8
+      - CACHE_TTL=3600
+      - MIGRATION_NOTICE=This configuration is deprecated - use deploy/k8s/overlays/production/
+
+# DEPRECATED: External secret management now in deploy/k8s/overlays/production/external-secrets.yaml
+
+namespace: pake-system
+
+commonLabels:
+  environment: production
+  tier: enterprise
+  config.status: deprecated
+
+commonAnnotations:
+  deployment.kubernetes.io/revision: '1'
+  kubernetes.io/managed-by: 'kustomize'
+  backup.kubernetes.io/enabled: 'true'
+  config.kubernetes.io/deprecated: 'true'
+  config.kubernetes.io/migration-target: 'deploy/k8s/overlays/production/'

@@ -1,0 +1,55 @@
+# Development Security Configuration - Relaxed for local development
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pake-ingress
+  annotations:
+    # Remove SSL requirements for development
+    nginx.ingress.kubernetes.io/ssl-redirect: 'false'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'false'
+    # Increase rate limits for development
+    nginx.ingress.kubernetes.io/rate-limit: '1000'
+    nginx.ingress.kubernetes.io/rate-limit-window: '1m'
+    # Remove cert-manager for development
+    cert-manager.io/cluster-issuer: ''
+spec:
+  tls: [] # Remove TLS for development
+  rules:
+    # Development local routing
+    - host: pake.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pake-frontend-service
+                port:
+                  number: 3000
+    - host: api.pake.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pake-backend-service
+                port:
+                  number: 8000
+---
+# Relaxed Network Policy for development
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow all ingress for development
+    - {}
+  egress:
+    # Allow all egress for development
+    - {}

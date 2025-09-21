@@ -1,0 +1,481 @@
+{
+  "name": "PAKE Social Media Publishing Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-social-media-publishing",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "social-media-webhook",
+      "name": "Social Media Publishing Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "social-media-publishing-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract and validate social media publishing parameters\nconst contentId = $json.content_id;\nconst content = $json.content;\nconst contentType = $json.contentType || 'social_media';\nconst autoPublish = $json.auto_publish || false;\nconst platforms = $json.platforms || ['twitter', 'linkedin', 'facebook'];\nconst scheduledTime = $json.scheduled_time; // Optional\n\n// Validate required fields\nif (!contentId || !content) {\n  throw new Error('Content ID and content are required for publishing');\n}\n\n// Optimize content for different platforms\nconst platformContent = {};\n\n// Twitter optimization (280 characters)\nconst twitterContent = content.length > 250 ? \n  content.substring(0, 245) + '... 🧵' : content;\nplatformContent.twitter = {\n  content: twitterContent + '\\n\\n#PAKE #AI #Automation',\n  maxLength: 280,\n  hashtagCount: 3\n};\n\n// LinkedIn optimization (3000 characters, professional tone)\nplatformContent.linkedin = {\n  content: content + '\\n\\n#AI #Innovation #Technology #PAKE',\n  maxLength: 3000,\n  hashtagCount: 4\n};\n\n// Facebook optimization (63,206 characters, casual tone)\nplatformContent.facebook = {\n  content: content + '\\n\\nLearn more about our AI-powered solutions! 🚀',\n  maxLength: 63206,\n  emojiCount: 1\n};\n\n// Instagram optimization (2200 characters, visual focus)\nplatformContent.instagram = {\n  content: content.substring(0, 2000) + '\\n\\n#PAKE #AI #Tech #Innovation #Automation',\n  maxLength: 2200,\n  hashtagCount: 5\n};\n\n// TikTok optimization (150 characters for description)\nplatformContent.tiktok = {\n  content: content.length > 120 ? content.substring(0, 115) + '...' : content,\n  maxLength: 150,\n  description: 'Short-form content description'\n};\n\n// YouTube optimization (5000 characters for description)\nplatformContent.youtube = {\n  content: content,\n  maxLength: 5000,\n  title: content.split('\\n')[0] || 'PAKE System Update'\n};\n\nreturn {\n  contentId,\n  originalContent: content,\n  contentType,\n  autoPublish,\n  platforms,\n  scheduledTime,\n  platformContent,\n  timestamp: new Date().toISOString(),\n  publishRequestId: `publish_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`\n};"
+      },
+      "id": "prepare-platform-content",
+      "name": "Prepare Platform Content",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.platforms.includes('twitter')}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "twitter-condition",
+      "name": "Publish to Twitter?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.platforms.includes('linkedin')}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "linkedin-condition",
+      "name": "Publish to LinkedIn?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.platforms.includes('facebook')}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "facebook-condition",
+      "name": "Publish to Facebook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "oAuth2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.TWITTER_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$json.platformContent.twitter.content}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "twitter-post",
+      "name": "Post to Twitter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 120]
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "oAuth2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.LINKEDIN_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "author",
+              "value": "={{$env.LINKEDIN_COMPANY_ID}}"
+            },
+            {
+              "name": "lifecycleState",
+              "value": "PUBLISHED"
+            },
+            {
+              "name": "specificContent",
+              "value": "={\"com.linkedin.ugc.ShareContent\": {\"shareCommentary\": {\"text\": $json.platformContent.linkedin.content}, \"shareMediaCategory\": \"NONE\"}}"
+            },
+            {
+              "name": "visibility",
+              "value": "{\"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "linkedin-post",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 270]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/{{$env.FACEBOOK_PAGE_ID}}/feed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{$json.platformContent.facebook.content}}"
+            },
+            {
+              "name": "access_token",
+              "value": "{{$env.FACEBOOK_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "facebook-post",
+      "name": "Post to Facebook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Aggregate publishing results\nconst results = [];\nconst errors = [];\n\n// Check Twitter result\nif ($('twitter-condition').item && $('Post to Twitter').item) {\n  const twitterResult = $('Post to Twitter').item.json;\n  if (twitterResult.data && twitterResult.data.id) {\n    results.push({\n      platform: 'twitter',\n      status: 'success',\n      post_id: twitterResult.data.id,\n      url: `https://twitter.com/user/status/${twitterResult.data.id}`\n    });\n  } else {\n    errors.push({\n      platform: 'twitter',\n      error: twitterResult.errors || 'Unknown Twitter API error'\n    });\n  }\n}\n\n// Check LinkedIn result\nif ($('linkedin-condition').item && $('Post to LinkedIn').item) {\n  const linkedinResult = $('Post to LinkedIn').item.json;\n  if (linkedinResult.id) {\n    results.push({\n      platform: 'linkedin',\n      status: 'success',\n      post_id: linkedinResult.id,\n      url: `https://linkedin.com/posts/${linkedinResult.id}`\n    });\n  } else {\n    errors.push({\n      platform: 'linkedin',\n      error: linkedinResult.message || 'Unknown LinkedIn API error'\n    });\n  }\n}\n\n// Check Facebook result\nif ($('facebook-condition').item && $('Post to Facebook').item) {\n  const facebookResult = $('Post to Facebook').item.json;\n  if (facebookResult.id) {\n    results.push({\n      platform: 'facebook',\n      status: 'success',\n      post_id: facebookResult.id,\n      url: `https://facebook.com/${facebookResult.id}`\n    });\n  } else {\n    errors.push({\n      platform: 'facebook',\n      error: facebookResult.error || 'Unknown Facebook API error'\n    });\n  }\n}\n\n// Calculate success metrics\nconst totalAttempts = results.length + errors.length;\nconst successRate = totalAttempts > 0 ? (results.length / totalAttempts) : 0;\n\nreturn {\n  publishRequestId: $('Prepare Platform Content').item.json.publishRequestId,\n  contentId: $('Prepare Platform Content').item.json.contentId,\n  publishingResults: {\n    successful: results,\n    failed: errors,\n    totalAttempts,\n    successRate,\n    publishedAt: new Date().toISOString()\n  },\n  status: errors.length === 0 ? 'fully_successful' : (results.length > 0 ? 'partially_successful' : 'failed')\n};"
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Publishing Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/social-media/publishing-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "log_data",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-publishing-results",
+      "name": "Log Publishing Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "operation": "notEqual",
+              "value2": "fully_successful"
+            }
+          ]
+        }
+      },
+      "id": "check-for-errors",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/notifications/send-alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "alert_type",
+              "value": "social_media_publishing_error"
+            },
+            {
+              "name": "content_id",
+              "value": "={{$json.contentId}}"
+            },
+            {
+              "name": "errors",
+              "value": "={{JSON.stringify($json.publishingResults.failed)}}"
+            },
+            {
+              "name": "success_rate",
+              "value": "={{$json.publishingResults.successRate}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-error-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={\n  \"status\": \"completed\",\n  \"publish_request_id\": $json.publishRequestId,\n  \"content_id\": $json.contentId,\n  \"results\": {\n    \"successful_platforms\": $json.publishingResults.successful.map(r => r.platform),\n    \"failed_platforms\": $json.publishingResults.failed.map(e => e.platform),\n    \"success_rate\": $json.publishingResults.successRate,\n    \"total_attempts\": $json.publishingResults.totalAttempts\n  },\n  \"published_urls\": $json.publishingResults.successful.map(r => ({\n    \"platform\": r.platform,\n    \"url\": r.url\n  })),\n  \"published_at\": $json.publishingResults.publishedAt\n}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Social Media Publishing Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Platform Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Platform Content": {
+      "main": [
+        [
+          {
+            "node": "Publish to Twitter?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Publish to LinkedIn?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Publish to Facebook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to Twitter?": {
+      "main": [
+        [
+          {
+            "node": "Post to Twitter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to LinkedIn?": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to Facebook?": {
+      "main": [
+        [
+          {
+            "node": "Post to Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Twitter": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Facebook": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Publishing Results": {
+      "main": [
+        [
+          {
+            "node": "Log Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Publishing Results": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error_handler_workflow"
+  },
+  "staticData": {},
+  "meta": {
+    "created": "2024-08-30T23:15:00.000Z",
+    "description": "Multi-platform social media publishing automation with error handling and success tracking",
+    "tags": ["social-media", "publishing", "automation", "multi-platform"]
+  }
+}

@@ -1,0 +1,964 @@
+openapi: 3.0.3
+info:
+  title: PAKE Intelligent Content Curation API
+  description: |
+    Advanced content curation and recommendation system that automatically discovers, 
+    analyzes, and recommends relevant content to users based on their interests, 
+    behavior patterns, and preferences.
+  version: 1.0.0
+  contact:
+    name: PAKE System Team
+    email: support@pake-system.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8001
+    description: Development server
+  - url: https://api.pake-system.com/curation
+    description: Production server
+
+paths:
+  /curate:
+    post:
+      summary: Get personalized content recommendations
+      description: |
+        Analyzes user preferences and behavior to generate personalized content 
+        recommendations with explanations and confidence scores.
+      operationId: curateContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurationRequest'
+            examples:
+              basic_request:
+                summary: Basic recommendation request
+                value:
+                  user_id: "user123"
+                  query: "machine learning"
+                  interests: ["AI", "ML", "Data Science"]
+                  max_results: 10
+                  include_explanations: true
+              advanced_request:
+                summary: Advanced recommendation request
+                value:
+                  user_id: "user456"
+                  interests: ["healthcare", "AI"]
+                  content_types: ["article", "paper"]
+                  max_results: 20
+                  freshness_days: 7
+                  min_quality_score: 0.7
+                  include_explanations: true
+      responses:
+        '200':
+          description: Successful recommendation generation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurationResponse'
+              examples:
+                success_response:
+                  summary: Successful recommendations
+                  value:
+                    request_id: "req-123e4567-e89b-12d3-a456-426614174000"
+                    user_id: "user123"
+                    recommendations:
+                      - id: "rec-123e4567-e89b-12d3-a456-426614174001"
+                        content_id: "content-789"
+                        user_id: "user123"
+                        relevance_score: 0.92
+                        confidence_score: 0.88
+                        reasoning: "Matches your interests in AI and ML, high-quality content from authoritative source"
+                        created_at: "2025-01-23T10:30:00Z"
+                    total_content_analyzed: 150
+                    processing_time_ms: 245.5
+                    cache_hit_rate: 0.75
+                    model_confidence: 0.88
+                    created_at: "2025-01-23T10:30:00Z"
+        '400':
+          description: Bad request - invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /feedback:
+    post:
+      summary: Submit user feedback for learning
+      description: |
+        Processes user feedback on recommendations to improve future suggestions.
+        Supports both explicit feedback (ratings, comments) and implicit feedback 
+        (interaction patterns, session duration).
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            examples:
+              explicit_feedback:
+                summary: Explicit user feedback
+                value:
+                  user_id: "user123"
+                  content_id: "content-789"
+                  feedback_type: "like"
+                  feedback_data:
+                    session_duration: 120
+                    explicit_rating: 5
+                    feedback_text: "Great article, very informative"
+              implicit_feedback:
+                summary: Implicit user feedback
+                value:
+                  user_id: "user123"
+                  content_id: "content-789"
+                  feedback_type: "view"
+                  feedback_data:
+                    session_duration: 300
+                    context:
+                      source: "recommendation"
+                      position: 1
+      responses:
+        '200':
+          description: Feedback processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '400':
+          description: Bad request - invalid feedback data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /recommendations/{user_id}:
+    get:
+      summary: Get recommendations for a specific user
+      description: |
+        Retrieves the most recent recommendations for a specific user,
+        with optional filtering by content type and recency.
+      operationId: getUserRecommendations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+            example: "user123"
+        - name: limit
+          in: query
+          description: Maximum number of recommendations to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 10
+        - name: content_types
+          in: query
+          description: Comma-separated list of content types to filter by
+          schema:
+            type: string
+            example: "article,paper"
+        - name: days_back
+          in: query
+          description: Number of days back to look for recommendations
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+            example: 7
+      responses:
+        '200':
+          description: User recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRecommendationsResponse'
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: Get system health status
+      description: |
+        Returns comprehensive health information about the curation system,
+        including service status, model availability, and performance metrics.
+      operationId: getSystemHealth
+      responses:
+        '200':
+          description: System health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: System health check failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /retrain:
+    post:
+      summary: Retrain ML models
+      description: |
+        Triggers retraining of ML models with the latest data.
+        Can be forced to retrain even if models are recent.
+      operationId: retrainModels
+      parameters:
+        - name: force
+          in: query
+          description: Force retraining even if models are recent
+          schema:
+            type: boolean
+            default: false
+            example: true
+      responses:
+        '200':
+          description: Model retraining completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrainResponse'
+        '400':
+          description: Bad request - retraining not needed or failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /stats:
+    get:
+      summary: Get system performance statistics
+      description: |
+        Returns detailed performance statistics including response times,
+        cache hit rates, model accuracy, and system resource usage.
+      operationId: getSystemStats
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '401':
+          description: Unauthorized - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user/{user_id}/profile:
+    get:
+      summary: Get user profile and preferences
+      description: |
+        Retrieves user profile information including interests, preferences,
+        and personalization settings.
+      operationId: getUserProfile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+            example: "user123"
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user/{user_id}/profile:
+    put:
+      summary: Update user profile and preferences
+      description: |
+        Updates user profile information including interests, preferences,
+        and personalization settings.
+      operationId: updateUserProfile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+            example: "user123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Bad request - invalid profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CurationRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          description: User identifier for personalization
+          example: "user123"
+        query:
+          type: string
+          description: Search query for content discovery
+          example: "machine learning"
+          maxLength: 500
+        interests:
+          type: array
+          items:
+            type: string
+          description: User interest categories
+          example: ["AI", "ML", "Data Science"]
+          maxItems: 50
+        content_types:
+          type: array
+          items:
+            type: string
+            enum: [article, blog, paper, news, tutorial, review]
+          description: Preferred content types
+          example: ["article", "paper"]
+        max_results:
+          type: integer
+          description: Maximum number of recommendations to return
+          minimum: 1
+          maximum: 100
+          default: 20
+          example: 10
+        include_explanations:
+          type: boolean
+          description: Include reasoning for recommendations
+          default: true
+          example: true
+        freshness_days:
+          type: integer
+          description: Maximum content age in days
+          minimum: 1
+          maximum: 365
+          default: 30
+          example: 7
+        min_quality_score:
+          type: number
+          description: Minimum content quality score
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.3
+          example: 0.7
+
+    CurationResponse:
+      type: object
+      required:
+        - request_id
+        - user_id
+        - recommendations
+        - total_content_analyzed
+        - processing_time_ms
+        - cache_hit_rate
+        - model_confidence
+        - created_at
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          description: Unique request identifier
+          example: "req-123e4567-e89b-12d3-a456-426614174000"
+        user_id:
+          type: string
+          description: User identifier
+          example: "user123"
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+          description: Generated recommendations
+        total_content_analyzed:
+          type: integer
+          description: Total number of content items analyzed
+          example: 150
+        processing_time_ms:
+          type: number
+          description: Request processing time in milliseconds
+          example: 245.5
+        cache_hit_rate:
+          type: number
+          description: Cache hit rate for this request
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.75
+        model_confidence:
+          type: number
+          description: Average model confidence score
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.88
+        created_at:
+          type: string
+          format: date-time
+          description: Response creation timestamp
+          example: "2025-01-23T10:30:00Z"
+
+    Recommendation:
+      type: object
+      required:
+        - id
+        - content_id
+        - user_id
+        - relevance_score
+        - confidence_score
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique recommendation identifier
+          example: "rec-123e4567-e89b-12d3-a456-426614174001"
+        content_id:
+          type: string
+          description: Recommended content identifier
+          example: "content-789"
+        user_id:
+          type: string
+          description: Target user identifier
+          example: "user123"
+        relevance_score:
+          type: number
+          description: Relevance score (0.0-1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.92
+        confidence_score:
+          type: number
+          description: Confidence score (0.0-1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.88
+        reasoning:
+          type: string
+          description: Human-readable explanation for recommendation
+          example: "Matches your interests in AI and ML, high-quality content from authoritative source"
+        created_at:
+          type: string
+          format: date-time
+          description: Recommendation creation timestamp
+          example: "2025-01-23T10:30:00Z"
+
+    FeedbackRequest:
+      type: object
+      required:
+        - user_id
+        - content_id
+        - feedback_type
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: "user123"
+        content_id:
+          type: string
+          description: Content identifier
+          example: "content-789"
+        feedback_type:
+          type: string
+          enum: [view, like, dislike, share, save, click, dismiss]
+          description: Type of user feedback
+          example: "like"
+        feedback_data:
+          type: object
+          description: Additional feedback data
+          properties:
+            session_duration:
+              type: integer
+              description: Session duration in seconds
+              example: 120
+            explicit_rating:
+              type: integer
+              description: Explicit user rating (1-5)
+              minimum: 1
+              maximum: 5
+              example: 5
+            feedback_text:
+              type: string
+              description: User feedback text
+              example: "Great article, very informative"
+            context:
+              type: object
+              description: Additional context data
+              example:
+                source: "recommendation"
+                position: 1
+
+    FeedbackResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+          description: Processing status
+          example: "success"
+        message:
+          type: string
+          description: Status message
+          example: "Feedback processed successfully"
+        feedback_id:
+          type: string
+          format: uuid
+          description: Unique feedback identifier
+          example: "feedback-123e4567-e89b-12d3-a456-426614174000"
+
+    UserRecommendationsResponse:
+      type: object
+      required:
+        - user_id
+        - recommendations
+        - total_recommendations
+        - processing_time_ms
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: "user123"
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+          description: User recommendations
+        total_recommendations:
+          type: integer
+          description: Total number of recommendations
+          example: 15
+        processing_time_ms:
+          type: number
+          description: Request processing time in milliseconds
+          example: 45.2
+
+    HealthResponse:
+      type: object
+      required:
+        - services_healthy
+        - models_loaded
+        - cache_status
+        - performance_metrics
+        - last_updated
+      properties:
+        services_healthy:
+          type: object
+          description: Health status of individual services
+          properties:
+            content_analysis:
+              type: boolean
+              example: true
+            recommendation:
+              type: boolean
+              example: true
+            user_preference:
+              type: boolean
+              example: true
+            feedback_processing:
+              type: boolean
+              example: true
+        models_loaded:
+          type: object
+          description: ML model loading status
+          properties:
+            content_quality:
+              type: boolean
+              example: true
+            user_preference:
+              type: boolean
+              example: true
+            recommendation:
+              type: boolean
+              example: true
+        cache_status:
+          type: object
+          description: Cache system status
+          properties:
+            total_predictions:
+              type: integer
+              example: 15420
+            cached_predictions:
+              type: integer
+              example: 11565
+            cache_hit_rate:
+              type: number
+              example: 0.75
+            cache_size:
+              type: integer
+              example: 8542
+        performance_metrics:
+          type: object
+          description: System performance metrics
+          properties:
+            avg_prediction_time_ms:
+              type: number
+              example: 45.2
+            avg_response_time_ms:
+              type: number
+              example: 125.8
+            requests_per_second:
+              type: number
+              example: 45.6
+        last_updated:
+          type: string
+          format: date-time
+          description: Last health check timestamp
+          example: "2025-01-23T10:30:00Z"
+
+    RetrainResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum: [success, skipped, error]
+          description: Retraining status
+          example: "success"
+        message:
+          type: string
+          description: Status message
+          example: "Models retrained successfully"
+        results:
+          type: object
+          description: Retraining results
+          properties:
+            content_quality:
+              type: object
+              properties:
+                accuracy:
+                  type: number
+                  example: 0.87
+                training_time:
+                  type: number
+                  example: 125.5
+            user_preference:
+              type: object
+              properties:
+                accuracy:
+                  type: number
+                  example: 0.92
+                training_time:
+                  type: number
+                  example: 98.3
+            recommendation:
+              type: object
+              properties:
+                accuracy:
+                  type: number
+                  example: 0.89
+                training_time:
+                  type: number
+                  example: 156.7
+
+    StatsResponse:
+      type: object
+      required:
+        - system_health
+        - performance
+        - cache
+        - last_updated
+      properties:
+        system_health:
+          type: object
+          description: Overall system health
+          properties:
+            services_healthy:
+              type: object
+            models_loaded:
+              type: object
+        performance:
+          type: object
+          description: Performance metrics
+          properties:
+            avg_prediction_time_ms:
+              type: number
+              example: 45.2
+            avg_response_time_ms:
+              type: number
+              example: 125.8
+            requests_per_second:
+              type: number
+              example: 45.6
+            error_rate:
+              type: number
+              example: 0.02
+        cache:
+          type: object
+          description: Cache performance
+          properties:
+            hit_rate:
+              type: number
+              example: 0.75
+            total_size:
+              type: integer
+              example: 8542
+            memory_usage_mb:
+              type: number
+              example: 125.6
+        last_updated:
+          type: string
+          format: date-time
+          description: Last statistics update
+          example: "2025-01-23T10:30:00Z"
+
+    UserProfileResponse:
+      type: object
+      required:
+        - user_id
+        - interests
+        - preference_weights
+        - created_at
+        - updated_at
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: "user123"
+        interests:
+          type: array
+          items:
+            type: string
+          description: User interest categories
+          example: ["AI", "ML", "Data Science"]
+        preference_weights:
+          type: object
+          description: Content type preference weights
+          properties:
+            academic:
+              type: number
+              example: 0.4
+            news:
+              type: number
+              example: 0.3
+            blog:
+              type: number
+              example: 0.2
+            tutorial:
+              type: number
+              example: 0.1
+        learning_rate:
+          type: number
+          description: ML learning rate
+          example: 0.1
+        exploration_factor:
+          type: number
+          description: Exploration vs exploitation balance
+          example: 0.15
+        created_at:
+          type: string
+          format: date-time
+          description: Profile creation timestamp
+          example: "2025-01-20T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-01-23T10:30:00Z"
+
+    UserProfileUpdateRequest:
+      type: object
+      properties:
+        interests:
+          type: array
+          items:
+            type: string
+          description: Updated interest categories
+          example: ["AI", "ML", "Healthcare"]
+        preference_weights:
+          type: object
+          description: Updated preference weights
+          properties:
+            academic:
+              type: number
+              example: 0.5
+            news:
+              type: number
+              example: 0.3
+            blog:
+              type: number
+              example: 0.2
+        learning_rate:
+          type: number
+          description: Updated learning rate
+          example: 0.15
+        exploration_factor:
+          type: number
+          description: Updated exploration factor
+          example: 0.2
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "ValidationError"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid user_id format"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2025-01-23T10:30:00Z"
+        details:
+          type: object
+          description: Additional error details
+          example:
+            field: "user_id"
+            value: "invalid-id"
+            constraint: "Must be valid UUID format"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Recommendations
+    description: Content recommendation operations
+  - name: Feedback
+    description: User feedback processing
+  - name: User Management
+    description: User profile and preference management
+  - name: System
+    description: System health and administration

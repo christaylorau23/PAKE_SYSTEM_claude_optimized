@@ -1,0 +1,403 @@
+{
+  "name": "PAKE Knowledge Management Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trigger-knowledge-processing",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "knowledge-webhook",
+      "name": "Knowledge Processing Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "knowledge-processing-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract and validate knowledge processing parameters\nconst documentType = $json.document_type; // 'pdf', 'markdown', 'text', 'url', 'code'\nconst source = $json.source; // file path, URL, or content\nconst metadata = $json.metadata || {};\nconst processingOptions = $json.options || {};\nconst autoIndex = $json.auto_index !== false; // Default to true\nconst confidenceThreshold = $json.confidence_threshold || 0.7;\n\n// Validate required fields\nif (!documentType || !source) {\n  throw new Error('Document type and source are required for knowledge processing');\n}\n\n// Generate processing request ID\nconst requestId = `knowledge_${documentType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Determine processing strategy based on document type\nlet processingStrategy = {};\nswitch (documentType) {\n  case 'pdf':\n    processingStrategy = {\n      extraction: 'pdf_parser',\n      chunking: 'semantic',\n      embedding: 'sentence_transformer',\n      maxChunkSize: 1000\n    };\n    break;\n  case 'markdown':\n    processingStrategy = {\n      extraction: 'markdown_parser',\n      chunking: 'heading_based',\n      embedding: 'sentence_transformer',\n      maxChunkSize: 800\n    };\n    break;\n  case 'text':\n    processingStrategy = {\n      extraction: 'plain_text',\n      chunking: 'paragraph',\n      embedding: 'sentence_transformer',\n      maxChunkSize: 600\n    };\n    break;\n  case 'url':\n    processingStrategy = {\n      extraction: 'web_scraper',\n      chunking: 'semantic',\n      embedding: 'sentence_transformer',\n      maxChunkSize: 1000\n    };\n    break;\n  case 'code':\n    processingStrategy = {\n      extraction: 'code_parser',\n      chunking: 'function_based',\n      embedding: 'code_transformer',\n      maxChunkSize: 1200\n    };\n    break;\n  default:\n    throw new Error(`Unsupported document type: ${documentType}`);\n}\n\n// Prepare document metadata\nconst enrichedMetadata = {\n  title: metadata.title || `Untitled ${documentType}`,\n  author: metadata.author || 'Unknown',\n  tags: metadata.tags || [],\n  category: metadata.category || 'General',\n  language: metadata.language || 'en',\n  sourceType: documentType,\n  createdAt: new Date().toISOString(),\n  ...metadata\n};\n\nreturn {\n  requestId,\n  documentType,\n  source,\n  metadata: enrichedMetadata,\n  processingOptions,\n  processingStrategy,\n  autoIndex,\n  confidenceThreshold,\n  timestamp: new Date().toISOString(),\n  status: 'queued'\n};"
+      },
+      "id": "prepare-knowledge-request",
+      "name": "Prepare Knowledge Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/knowledge/extract-content",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "document_type",
+              "value": "={{$json.documentType}}"
+            },
+            {
+              "name": "source",
+              "value": "={{$json.source}}"
+            },
+            {
+              "name": "processing_strategy",
+              "value": "={{JSON.stringify($json.processingStrategy)}}"
+            },
+            {
+              "name": "options",
+              "value": "={{JSON.stringify($json.processingOptions)}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "extract-content",
+      "name": "Extract Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process extracted content and prepare for analysis\nconst extractionResult = $json;\nconst requestData = $('Prepare Knowledge Request').item.json;\n\n// Validate extraction success\nif (!extractionResult.content || extractionResult.content.length === 0) {\n  throw new Error('Failed to extract content from source');\n}\n\n// Chunk content based on processing strategy\nconst chunks = [];\nconst content = extractionResult.content;\nconst maxChunkSize = requestData.processingStrategy.maxChunkSize;\n\nswitch (requestData.processingStrategy.chunking) {\n  case 'semantic':\n    // Split by sentences and group to maintain semantic meaning\n    const sentences = content.split(/[.!?]+/);\n    let currentChunk = '';\n    for (const sentence of sentences) {\n      if ((currentChunk + sentence).length > maxChunkSize && currentChunk.length > 0) {\n        chunks.push(currentChunk.trim());\n        currentChunk = sentence;\n      } else {\n        currentChunk += sentence + '.';\n      }\n    }\n    if (currentChunk.length > 0) chunks.push(currentChunk.trim());\n    break;\n\n  case 'paragraph':\n    const paragraphs = content.split(/\\n\\s*\\n/);\n    for (const paragraph of paragraphs) {\n      if (paragraph.length > maxChunkSize) {\n        // Split long paragraphs\n        const subChunks = paragraph.match(new RegExp(`.{1,${maxChunkSize}}`, 'g'));\n        chunks.push(...subChunks);\n      } else if (paragraph.trim().length > 0) {\n        chunks.push(paragraph.trim());\n      }\n    }\n    break;\n\n  case 'heading_based':\n    const sections = content.split(/\\n#+\\s/);\n    chunks.push(...sections.filter(section => section.trim().length > 0));\n    break;\n\n  case 'function_based':\n    // For code documents, split by functions/methods\n    const codeBlocks = content.match(/function\\s+\\w+|def\\s+\\w+|class\\s+\\w+/g) || [content];\n    chunks.push(...codeBlocks);\n    break;\n\n  default:\n    // Simple character-based chunking\n    for (let i = 0; i < content.length; i += maxChunkSize) {\n      chunks.push(content.substring(i, i + maxChunkSize));\n    }\n}\n\n// Prepare chunks for embedding\nconst preparedChunks = chunks.map((chunk, index) => ({\n  id: `${requestData.requestId}_chunk_${index}`,\n  content: chunk,\n  metadata: {\n    chunkIndex: index,\n    totalChunks: chunks.length,\n    documentId: requestData.requestId,\n    chunkType: requestData.processingStrategy.chunking,\n    wordCount: chunk.split(/\\s+/).length\n  }\n}));\n\nreturn {\n  requestId: requestData.requestId,\n  documentType: requestData.documentType,\n  documentMetadata: requestData.metadata,\n  extractedContent: content,\n  chunks: preparedChunks,\n  extractionMetadata: {\n    originalSize: content.length,\n    chunkCount: preparedChunks.length,\n    processingStrategy: requestData.processingStrategy,\n    extractedAt: new Date().toISOString()\n  },\n  status: 'chunked'\n};"
+      },
+      "id": "process-extracted-content",
+      "name": "Process Extracted Content",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/knowledge/generate-embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chunks",
+              "value": "={{JSON.stringify($json.chunks)}}"
+            },
+            {
+              "name": "embedding_model",
+              "value": "={{$json.extractionMetadata.processingStrategy.embedding}}"
+            },
+            {
+              "name": "document_metadata",
+              "value": "={{JSON.stringify($json.documentMetadata)}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "generate-embeddings",
+      "name": "Generate Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"You are a knowledge analyst. Analyze the provided document content and generate: 1) A comprehensive summary, 2) Key topics and themes, 3) Important entities (people, places, concepts), 4) Suggested tags, 5) Quality assessment score (0-1).\"}, {\"role\": \"user\", \"content\": \"Analyze this document:\\n\\nTitle: \" + $('Process Extracted Content').item.json.documentMetadata.title + \"\\n\\nContent: \" + $('Process Extracted Content').item.json.extractedContent.substring(0, 3000)}]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "1500"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "analyze-content",
+      "name": "AI Content Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process embeddings and analysis results\nconst embeddingResult = $json;\nconst contentData = $('Process Extracted Content').item.json;\nconst analysisResult = $('AI Content Analysis').item.json;\n\n// Parse AI analysis\nlet aiAnalysis = {};\ntry {\n  const analysisContent = analysisResult.choices[0].message.content;\n  // Extract structured information from AI analysis\n  aiAnalysis = {\n    summary: analysisContent.match(/Summary[:\\s]*([^\\n]*(?:\\n(?!\\w+:)[^\\n]*)*)/i)?.[1]?.trim() || 'No summary available',\n    topics: analysisContent.match(/Topics?[:\\s]*([^\\n]*(?:\\n(?!\\w+:)[^\\n]*)*)/i)?.[1]?.split(',').map(t => t.trim()) || [],\n    entities: analysisContent.match(/Entities[:\\s]*([^\\n]*(?:\\n(?!\\w+:)[^\\n]*)*)/i)?.[1]?.split(',').map(e => e.trim()) || [],\n    suggestedTags: analysisContent.match(/Tags?[:\\s]*([^\\n]*(?:\\n(?!\\w+:)[^\\n]*)*)/i)?.[1]?.split(',').map(t => t.trim()) || [],\n    qualityScore: parseFloat(analysisContent.match(/Quality[:\\s]*([0-9.]+)/i)?.[1]) || 0.7\n  };\n} catch (error) {\n  console.warn('Failed to parse AI analysis:', error);\n  aiAnalysis = {\n    summary: 'Analysis failed',\n    topics: [],\n    entities: [],\n    suggestedTags: [],\n    qualityScore: 0.5\n  };\n}\n\n// Calculate confidence score based on multiple factors\nlet confidenceScore = 0.5; // Base confidence\n\n// Content quality factors\nif (contentData.extractedContent.length > 500) confidenceScore += 0.1;\nif (contentData.extractedContent.length > 2000) confidenceScore += 0.1;\nif (contentData.chunks.length >= 3) confidenceScore += 0.1;\n\n// AI analysis factors\nconfidenceScore += aiAnalysis.qualityScore * 0.3;\nif (aiAnalysis.topics.length >= 2) confidenceScore += 0.1;\nif (aiAnalysis.entities.length >= 1) confidenceScore += 0.05;\n\n// Embedding quality (assume success adds confidence)\nif (embeddingResult.embeddings && embeddingResult.embeddings.length > 0) {\n  confidenceScore += 0.15;\n}\n\nconfidenceScore = Math.min(confidenceScore, 1.0);\n\n// Combine all processed data\nconst processedKnowledge = {\n  requestId: contentData.requestId,\n  document: {\n    id: contentData.requestId,\n    type: contentData.documentType,\n    metadata: {\n      ...contentData.documentMetadata,\n      processedAt: new Date().toISOString(),\n      confidenceScore,\n      aiAnalysis\n    },\n    content: {\n      original: contentData.extractedContent,\n      chunks: contentData.chunks,\n      embeddings: embeddingResult.embeddings || []\n    }\n  },\n  metrics: {\n    processingTime: Date.now() - new Date(contentData.extractionMetadata.extractedAt).getTime(),\n    contentLength: contentData.extractedContent.length,\n    chunkCount: contentData.chunks.length,\n    embeddingCount: embeddingResult.embeddings?.length || 0,\n    confidenceScore,\n    qualityScore: aiAnalysis.qualityScore\n  },\n  status: 'processed'\n};\n\nreturn processedKnowledge;"
+      },
+      "id": "combine-processing-results",
+      "name": "Combine Processing Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.metrics.confidenceScore}}",
+              "operation": "larger",
+              "value2": "={{$('Prepare Knowledge Request').item.json.confidenceThreshold}}"
+            }
+          ]
+        }
+      },
+      "id": "confidence-gate",
+      "name": "Confidence Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/knowledge/store-document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "document_data",
+              "value": "={{JSON.stringify($json.document)}}"
+            },
+            {
+              "name": "auto_index",
+              "value": "={{$('Prepare Knowledge Request').item.json.autoIndex}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-knowledge",
+      "name": "Store in Knowledge Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/knowledge/review-queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "document_id",
+              "value": "={{$json.document.id}}"
+            },
+            {
+              "name": "reason",
+              "value": "Low confidence score - requires manual review"
+            },
+            {
+              "name": "confidence_score",
+              "value": "={{$json.metrics.confidenceScore}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-to-review-queue",
+      "name": "Send to Review Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={\n  \"status\": \"success\",\n  \"request_id\": $json.requestId,\n  \"document_id\": $json.document.id,\n  \"processing_result\": {\n    \"confidence_score\": $json.metrics.confidenceScore,\n    \"quality_score\": $json.metrics.qualityScore,\n    \"content_length\": $json.metrics.contentLength,\n    \"chunk_count\": $json.metrics.chunkCount,\n    \"embedding_count\": $json.metrics.embeddingCount,\n    \"processing_time_ms\": $json.metrics.processingTime\n  },\n  \"ai_analysis\": $json.document.metadata.aiAnalysis,\n  \"next_action\": $json.metrics.confidenceScore >= $('Prepare Knowledge Request').item.json.confidenceThreshold ? \"auto_indexed\" : \"manual_review\",\n  \"indexed\": $json.metrics.confidenceScore >= $('Prepare Knowledge Request').item.json.confidenceThreshold && $('Prepare Knowledge Request').item.json.autoIndex\n}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Knowledge Processing Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Knowledge Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Knowledge Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Content": {
+      "main": [
+        [
+          {
+            "node": "Process Extracted Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Extracted Content": {
+      "main": [
+        [
+          {
+            "node": "Generate Embeddings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Content Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Combine Processing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Content Analysis": {
+      "main": [
+        [
+          {
+            "node": "Combine Processing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Processing Results": {
+      "main": [
+        [
+          {
+            "node": "Confidence Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confidence Gate": {
+      "main": [
+        [
+          {
+            "node": "Store in Knowledge Base",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to Review Queue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error_handler_workflow"
+  },
+  "staticData": {},
+  "meta": {
+    "created": "2024-08-30T23:45:00.000Z",
+    "description": "Automated knowledge processing with content extraction, AI analysis, and intelligent indexing",
+    "tags": ["knowledge", "processing", "ai", "embeddings", "automation"]
+  }
+}

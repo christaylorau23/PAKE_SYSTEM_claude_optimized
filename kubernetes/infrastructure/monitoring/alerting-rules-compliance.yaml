@@ -1,0 +1,830 @@
+# Compliance and Audit Trail Alerting Rules for PAKE System
+# Monitoring for missing attestations, audit log gaps, and compliance violations
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: compliance-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alerting-rules
+    prometheus: kube-prometheus
+    role: alert-rules
+    compliance-type: disaster-recovery
+spec:
+  groups:
+    - name: compliance.rules
+      interval: 60s
+      rules:
+        # Attestation Generation Rules
+        - alert: ComplianceAttestationMissing
+          expr: |
+            (
+              time() - attestation_generation_start_timestamp > 86400 * 32
+            ) or (
+              absent(attestation_generation_start_timestamp)
+            )
+          for: 15m
+          labels:
+            severity: critical
+            component: compliance
+            category: attestation
+            runbook_url: 'https://runbooks.pake-system.com/compliance-attestation-missing'
+          annotations:
+            summary: 'Compliance attestation has not been generated recently'
+            description: |
+              Monthly compliance attestation has not been generated in over 32 days or metrics are missing.
+
+              **Details:**
+              - Expected frequency: Monthly (1st of each month)
+              - Last successful generation: {{ with query "attestation_generation_start_timestamp" }}{{ if . }}{{ . | first | value | humanizeTimestamp }}{{ else }}Never{{ end }}{{ end }}
+              - Missing attestation indicates compliance monitoring failure
+
+              **Immediate Actions:**
+              1. Check attestation CronJob status: `kubectl get cronjobs -n compliance-system`
+              2. Review CronJob history: `kubectl get jobs -n compliance-system --sort-by=.metadata.creationTimestamp`
+              3. Check attestation generator logs: `kubectl logs -n compliance-system -l app=compliance-attestation --tail=100`
+              4. Manually trigger attestation: `kubectl create job manual-attestation-$(date +%s) --from=cronjob/compliance-attestation-monthly -n compliance-system`
+
+              **Impact:** CRITICAL - Compliance posture unknown, audit requirements may be violated
+
+        - alert: QuarterlyAttestationOverdue
+          expr: |
+            (
+              time() - attestation_generation_start_timestamp{attestation_type="quarterly"} > 86400 * 95
+            ) or (
+              absent(attestation_generation_start_timestamp{attestation_type="quarterly"})
+            )
+          for: 30m
+          labels:
+            severity: warning
+            component: compliance
+            category: attestation
+          annotations:
+            summary: 'Quarterly compliance attestation is overdue'
+            description: |
+              Quarterly compliance attestation has not been generated in over 95 days.
+
+              **Actions:**
+              1. Check quarterly attestation job: `kubectl get job -n compliance-system -l schedule=quarterly`
+              2. Review attestation generation logs
+              3. Verify quarterly schedule configuration
+
+              **Impact:** Quarterly compliance reporting may be delayed
+
+        - alert: AnnualAttestationOverdue
+          expr: |
+            (
+              time() - attestation_generation_start_timestamp{attestation_type="annual"} > 86400 * 370
+            ) or (
+              absent(attestation_generation_start_timestamp{attestation_type="annual"})
+            )
+          for: 1h
+          labels:
+            severity: critical
+            component: compliance
+            category: attestation
+          annotations:
+            summary: 'Annual compliance attestation is critically overdue'
+            description: |
+              Annual compliance attestation has not been generated in over 370 days.
+
+              **Actions:**
+              1. **IMMEDIATE**: Escalate to compliance team
+              2. Review annual attestation process
+              3. Generate manual attestation if needed
+              4. Update stakeholders on compliance status
+
+              **Impact:** CRITICAL - Annual compliance requirements not met
+
+        - alert: AttestationGenerationFailed
+          expr: attestation_generation_status{status="failed"} == 1
+          for: 5m
+          labels:
+            severity: critical
+            component: compliance
+            category: attestation
+          annotations:
+            summary: 'Compliance attestation generation failed'
+            description: |
+              Compliance attestation generation has failed.
+
+              **Details:**
+              - Attestation ID: {{ $labels.attestation_id }}
+              - Failure reason: {{ $labels.reason }}
+              - Generator: {{ $labels.generator }}
+
+              **Actions:**
+              1. Check attestation generator logs: `kubectl logs -n compliance-system -l app=compliance-attestation -c attestation-generator --tail=200`
+              2. Verify AWS credentials and S3 access
+              3. Check Prometheus connectivity for metrics collection
+              4. Review evidence collection status
+              5. Retry attestation generation if transient failure
+
+              **Impact:** Compliance attestation incomplete - regulatory requirements at risk
+
+        - alert: AttestationGenerationSlow
+          expr: attestation_generation_duration_seconds > 7200
+          for: 10m
+          labels:
+            severity: warning
+            component: compliance
+            category: performance
+          annotations:
+            summary: 'Compliance attestation generation is taking too long'
+            description: |
+              Compliance attestation generation is taking longer than expected.
+
+              **Details:**
+              - Duration: {{ $value | humanizeDuration }}
+              - Expected: < 2 hours
+              - Attestation ID: {{ $labels.attestation_id }}
+
+              **Possible Causes:**
+              - Large volume of audit logs to process
+              - Slow S3 operations
+              - Prometheus query performance issues
+              - Resource constraints
+
+              **Actions:**
+              1. Monitor generation progress: `kubectl logs -n compliance-system -l app=compliance-attestation -f`
+              2. Check resource usage: `kubectl top pods -n compliance-system`
+              3. Verify S3 and Prometheus performance
+
+              **Impact:** Delayed compliance reporting
+
+        # Audit Log Integrity Rules
+        - alert: AuditLogGapDetected
+          expr: |
+            (
+              increase(audit_events_stored_total[1h]) == 0
+            ) and (
+              increase(kube_job_status_start_time{job_name=~".*backup.*|.*restore.*|.*failover.*"}[1h]) > 0
+            )
+          for: 30m
+          labels:
+            severity: critical
+            component: audit
+            category: integrity
+            runbook_url: 'https://runbooks.pake-system.com/audit-log-gap'
+          annotations:
+            summary: 'Audit log gap detected during DR operations'
+            description: |
+              No audit events have been stored in the last hour despite DR operations occurring.
+
+              **Details:**
+              - Last audit event: {{ with query "audit_events_stored_total" }}{{ . | first | value | humanizeTimestamp }}{{ end }}
+              - Recent DR operations detected in Kubernetes
+              - Potential audit log collection failure
+
+              **Immediate Actions:**
+              1. Check audit collector status: `kubectl get pods -n compliance-system -l app=dr-audit-collector`
+              2. Review audit collector logs: `kubectl logs -n compliance-system -l app=dr-audit-collector --tail=100`
+              3. Verify S3 connectivity and credentials
+              4. Check Kubernetes event watching functionality
+              5. Restart audit collector if necessary: `kubectl rollout restart deployment/dr-audit-collector -n compliance-system`
+
+              **Impact:** CRITICAL - Audit trail incomplete, compliance and forensic capabilities compromised
+
+        - alert: AuditCollectorDown
+          expr: up{job="compliance-audit"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: audit
+            category: availability
+          annotations:
+            summary: 'DR audit collector is down'
+            description: |
+              The disaster recovery audit collector is not responding.
+
+              **Actions:**
+              1. Check pod status: `kubectl get pods -n compliance-system -l app=dr-audit-collector`
+              2. Check deployment status: `kubectl get deployment -n compliance-system dr-audit-collector`
+              3. Review pod logs: `kubectl logs -n compliance-system -l app=dr-audit-collector`
+              4. Check resource constraints and health checks
+
+              **Impact:** Audit events not being collected - compliance trail broken
+
+        - alert: AuditSignatureValidationFailing
+          expr: audit_signature_validation_rate < 95
+          for: 10m
+          labels:
+            severity: warning
+            component: audit
+            category: integrity
+          annotations:
+            summary: 'High rate of audit signature validation failures'
+            description: |
+              Audit event signature validation is failing at high rate.
+
+              **Details:**
+              - Validation success rate: {{ $value }}%
+              - Expected: > 95%
+
+              **Possible Causes:**
+              - Certificate expiration or rotation
+              - Clock skew issues
+              - Signing key corruption
+              - Malicious tampering attempts
+
+              **Actions:**
+              1. Check certificate validity: `kubectl get secret audit-signing-certs -n compliance-system -o yaml`
+              2. Verify system time synchronization
+              3. Review signing key rotation process
+              4. Investigate potential security incidents
+
+              **Impact:** Audit log integrity questionable - forensic reliability compromised
+
+        - alert: AuditStorageErrors
+          expr: increase(audit_storage_errors_total[10m]) > 5
+          for: 5m
+          labels:
+            severity: warning
+            component: audit
+            category: storage
+          annotations:
+            summary: 'Multiple audit storage errors detected'
+            description: |
+              Multiple errors storing audit events to S3.
+
+              **Details:**
+              - Errors in last 10 minutes: {{ $value }}
+              - Error type: {{ $labels.error_type }}
+
+              **Actions:**
+              1. Check S3 bucket accessibility and permissions
+              2. Verify AWS credentials and IAM policies
+              3. Check network connectivity to S3
+              4. Review S3 bucket configuration and object lock settings
+
+              **Impact:** Audit events may be lost - compliance retention at risk
+
+        # Evidence Collection Rules
+        - alert: EvidenceCollectionFailed
+          expr: attestation_evidence_collection_success_rate < 80
+          for: 15m
+          labels:
+            severity: warning
+            component: compliance
+            category: evidence
+          annotations:
+            summary: 'Evidence collection success rate below threshold'
+            description: |
+              Evidence collection for compliance attestation has low success rate.
+
+              **Details:**
+              - Success rate: {{ $value }}%
+              - Expected: > 80%
+              - Attestation ID: {{ $labels.attestation_id }}
+
+              **Possible Causes:**
+              - Prometheus query failures
+              - S3 access issues
+              - Kubernetes API connectivity problems
+              - Missing or corrupted source data
+
+              **Actions:**
+              1. Review evidence collection logs in attestation generator
+              2. Test connectivity to evidence sources (Prometheus, S3, K8s API)
+              3. Verify data availability in source systems
+              4. Check access permissions and credentials
+
+              **Impact:** Incomplete compliance evidence - attestation quality reduced
+
+        - alert: BackupEvidenceStale
+          expr: backup_age_hours > 72
+          for: 30m
+          labels:
+            severity: critical
+            component: compliance
+            category: evidence
+          annotations:
+            summary: 'Backup evidence is critically stale'
+            description: |
+              Backup evidence used for compliance is too old.
+
+              **Details:**
+              - Backup type: {{ $labels.backup_type }}
+              - Age: {{ $value }} hours
+              - Maximum acceptable age: 72 hours
+
+              **Actions:**
+              1. Investigate backup system status
+              2. Check backup CronJob execution
+              3. Verify backup storage and retention
+              4. Generate fresh backups if needed
+
+              **Impact:** Compliance evidence outdated - current system state not represented
+
+        - alert: MonitoringMetricsUnavailable
+          expr: attestation_monitoring_queries_success_rate < 90
+          for: 20m
+          labels:
+            severity: warning
+            component: compliance
+            category: evidence
+          annotations:
+            summary: 'Monitoring metrics unavailable for compliance'
+            description: |
+              Prometheus metrics required for compliance attestation are unavailable.
+
+              **Details:**
+              - Query success rate: {{ $value }}%
+              - Expected: > 90%
+
+              **Actions:**
+              1. Check Prometheus availability and performance
+              2. Verify metric existence and query syntax
+              3. Review Prometheus retention and storage
+              4. Test manual queries for compliance metrics
+
+              **Impact:** Compliance metrics missing - technical attestation incomplete
+
+        # Compliance Framework Rules
+        - alert: SOC2ComplianceViolation
+          expr: |
+            (
+              backup_age_hours{backup_type="postgresql"} > 24
+            ) or (
+              backup_restore_validation_overall_success == 0
+            ) or (
+              avg_over_time(up{job="pake-api"}[24h]) < 0.99
+            )
+          for: 1h
+          labels:
+            severity: critical
+            component: compliance
+            category: soc2
+            framework: 'SOC2'
+          annotations:
+            summary: 'SOC2 compliance violation detected'
+            description: |
+              System state violates SOC2 Type II requirements.
+
+              **Potential Violations:**
+              - CC6.7: Backup age exceeds policy (> 24 hours)
+              - CC7.1: Backup validation failures
+              - CC1.1: System availability below SLA (< 99%)
+
+              **Actions:**
+              1. **IMMEDIATE**: Document incident for SOC2 audit
+              2. Investigate root cause of violation
+              3. Implement corrective measures
+              4. Update risk register and control documentation
+              5. Notify compliance team and auditors if required
+
+              **Impact:** CRITICAL - SOC2 compliance at risk, audit findings likely
+
+        - alert: GDPRDataProcessingIncident
+          expr: |
+            increase(audit_events_stored_total{event_type=~".*data.*", severity="high"}[4h]) > 0
+          for: 10m
+          labels:
+            severity: critical
+            component: compliance
+            category: gdpr
+            framework: 'GDPR'
+          annotations:
+            summary: 'Potential GDPR data processing incident'
+            description: |
+              High-severity audit events related to data processing detected.
+
+              **Actions:**
+              1. **IMMEDIATE**: Assess if personal data is involved
+              2. Determine breach severity and scope
+              3. Document incident per GDPR Article 33 requirements
+              4. Notify DPO and legal team within 1 hour
+              5. Prepare breach notification if required (72-hour deadline)
+
+              **Impact:** CRITICAL - Potential GDPR breach, regulatory notification may be required
+
+        - alert: ISO27001ControlFailure
+          expr: |
+            (
+              chaos_experiment_status{status="failed"} == 1
+            ) or (
+              attestation_generation_status{status="failed"} == 1
+            )
+          for: 30m
+          labels:
+            severity: warning
+            component: compliance
+            category: iso27001
+            framework: 'ISO27001'
+          annotations:
+            summary: 'ISO 27001 control effectiveness issue'
+            description: |
+              ISO 27001 controls showing effectiveness issues.
+
+              **Controls Affected:**
+              - A.17.1.2: Business continuity testing failures
+              - A.12.6.1: Vulnerability management process issues
+
+              **Actions:**
+              1. Review control implementation and testing
+              2. Update risk assessment and treatment
+              3. Document corrective actions
+              4. Schedule management review
+
+              **Impact:** ISO 27001 compliance effectiveness reduced
+
+        # Retention and Lifecycle Rules
+        - alert: AuditLogRetentionViolation
+          expr: |
+            time() - audit_events_stored_total > 86400 * 2555
+          for: 1d
+          labels:
+            severity: warning
+            component: compliance
+            category: retention
+          annotations:
+            summary: 'Audit log retention period approaching'
+            description: |
+              Audit logs approaching 7-year retention limit.
+
+              **Actions:**
+              1. Review retention policy and legal requirements
+              2. Archive or migrate old audit logs if needed
+              3. Update storage lifecycle policies
+              4. Coordinate with legal team on retention requirements
+
+              **Impact:** Compliance retention requirements may be violated
+
+        - alert: AttestationStorageFailure
+          expr: attestation_bundle_stored == 0
+          for: 10m
+          labels:
+            severity: critical
+            component: compliance
+            category: storage
+          annotations:
+            summary: 'Attestation bundle storage failed'
+            description: |
+              Failed to store compliance attestation bundle.
+
+              **Actions:**
+              1. Check S3 bucket accessibility and permissions
+              2. Verify encryption and object lock configuration
+              3. Review storage quotas and limits
+              4. Retry attestation storage manually if needed
+
+              **Impact:** Compliance documentation not preserved - audit evidence lost
+
+        # Kubernetes Job Monitoring for Compliance
+        - alert: ComplianceJobFailed
+          expr: kube_job_status_failed{job_name=~"compliance-.*|.*-attestation.*"} > 0
+          for: 2m
+          labels:
+            severity: critical
+            component: compliance
+            category: infrastructure
+          annotations:
+            summary: 'Compliance-related Kubernetes job failed'
+            description: |
+              Kubernetes job for compliance processing has failed.
+
+              **Details:**
+              - Job: {{ $labels.job_name }}
+              - Namespace: {{ $labels.namespace }}
+
+              **Actions:**
+              1. Check job logs: `kubectl logs -n {{ $labels.namespace }} job/{{ $labels.job_name }}`
+              2. Review job configuration and resources
+              3. Check for infrastructure issues
+              4. Retry job if transient failure
+
+              **Impact:** Compliance process incomplete - regulatory obligations at risk
+
+        - alert: ComplianceJobStuck
+          expr: |
+            (
+              kube_job_status_active{job_name=~"compliance-.*|.*-attestation.*"} > 0
+            ) and (
+              time() - kube_job_status_start_time{job_name=~"compliance-.*|.*-attestation.*"} > 7200
+            )
+          for: 15m
+          labels:
+            severity: warning
+            component: compliance
+            category: infrastructure
+          annotations:
+            summary: 'Compliance job appears stuck'
+            description: |
+              Compliance job has been running for over 2 hours.
+
+              **Details:**
+              - Job: {{ $labels.job_name }}
+              - Running time: {{ with query "time() - kube_job_status_start_time" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Actions:**
+              1. Check job progress and resource usage
+              2. Review logs for hang or deadlock
+              3. Consider terminating if truly stuck
+              4. Investigate performance bottlenecks
+
+              **Impact:** Compliance processing delayed
+
+        # Certificate and Key Management
+        - alert: AuditSigningCertificateExpiring
+          expr: |
+            (
+              cert_expiry_timestamp{secret_name="audit-signing-certs"} - time()
+            ) / 86400 < 30
+          for: 1h
+          labels:
+            severity: warning
+            component: compliance
+            category: certificates
+          annotations:
+            summary: 'Audit signing certificate expiring soon'
+            description: |
+              Certificate used for audit log signing expires in less than 30 days.
+
+              **Details:**
+              - Days until expiry: {{ with query "(cert_expiry_timestamp - time()) / 86400" }}{{ . | first | value | printf "%.0f" }}{{ end }}
+              - Certificate: {{ $labels.secret_name }}
+
+              **Actions:**
+              1. Generate new signing certificate
+              2. Plan certificate rotation
+              3. Update audit collector configuration
+              4. Test signature validation with new certificate
+
+              **Impact:** Audit log signing will fail after expiry - compliance integrity lost
+
+        - alert: AuditSigningCertificateExpired
+          expr: cert_expiry_timestamp{secret_name="audit-signing-certs"} < time()
+          for: 5m
+          labels:
+            severity: critical
+            component: compliance
+            category: certificates
+          annotations:
+            summary: 'Audit signing certificate has expired'
+            description: |
+              Certificate used for audit log signing has expired.
+
+              **Actions:**
+              1. **IMMEDIATE**: Replace expired certificate
+              2. Restart audit collector with new certificate
+              3. Verify audit log signing functionality
+              4. Document certificate rotation incident
+
+              **Impact:** CRITICAL - Audit logs cannot be signed, compliance integrity broken
+
+---
+# ServiceMonitor for Compliance Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: compliance-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: compliance
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      params:
+        job: ['compliance-audit', 'compliance-attestation']
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: prometheus-pushgateway.monitoring.svc.cluster.local:9091
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '(attestation_.*|audit_.*|compliance_.*)'
+          targetLabel: __name__
+          replacement: '${1}'
+
+---
+# Grafana Dashboard ConfigMap for Compliance Monitoring
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+data:
+  compliance-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Compliance and Audit Dashboard",
+        "description": "Monitoring compliance attestations, audit logs, and regulatory adherence",
+        "tags": ["compliance", "audit", "governance", "soc2", "gdpr", "iso27001"],
+        "timezone": "utc",
+        "time": {
+          "from": "now-90d",
+          "to": "now"
+        },
+        "refresh": "5m",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Attestation Generation Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "attestation_generation_status",
+                "legendFormat": "{{status}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Days Since Last Attestation",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "(time() - attestation_generation_start_timestamp) / 86400",
+                "legendFormat": "Days"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "days",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 25},
+                    {"color": "red", "value": 32}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Audit Events Stored Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(audit_events_stored_total[1h])",
+                "legendFormat": "{{event_type}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "events/hour",
+                "label": "Events per Hour"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Evidence Collection Success Rate",
+            "type": "bargauge",
+            "targets": [
+              {
+                "expr": "attestation_evidence_collection_success_rate",
+                "legendFormat": "Evidence Collection"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 80},
+                    {"color": "green", "value": 95}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Audit Signature Validation Rate",
+            "type": "gauge",
+            "targets": [
+              {
+                "expr": "audit_signature_validation_rate",
+                "legendFormat": "Validation Rate"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 95},
+                    {"color": "green", "value": 99}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "Compliance Framework Status",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "compliance_framework_status",
+                "legendFormat": "{{framework}} - {{status}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "custom": {
+                  "displayMode": "color-background"
+                },
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 0.5},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8}
+          },
+          {
+            "id": 7,
+            "title": "Backup Evidence Freshness",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "backup_age_hours",
+                "legendFormat": "{{backup_type}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "h",
+                "label": "Hours"
+              }
+            ],
+            "alert": {
+              "conditions": [
+                {
+                  "query": {"params": ["A", "5m", "now"]},
+                  "reducer": {"params": [], "type": "last"},
+                  "evaluator": {"params": [72], "type": "gt"}
+                }
+              ],
+              "executionErrorState": "alerting",
+              "for": "30m",
+              "frequency": "1m",
+              "handler": 1,
+              "name": "Backup Evidence Stale",
+              "noDataState": "no_data"
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 8,
+            "title": "Compliance Job Status",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "kube_job_status_succeeded{job_name=~\"compliance-.*\"}",
+                "legendFormat": "{{job_name}} - Success"
+              },
+              {
+                "expr": "kube_job_status_failed{job_name=~\"compliance-.*\"}",
+                "legendFormat": "{{job_name}} - Failed"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ]
+      }
+    }

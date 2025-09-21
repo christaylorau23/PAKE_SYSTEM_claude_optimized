@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PAKE Intelligent Content Curation Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .header p {
+        font-size: 1.2rem;
+        color: #7f8c8d;
+        margin-bottom: 20px;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .status-online {
+        background: #2ecc71;
+        color: white;
+      }
+
+      .status-offline {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      .card h2 {
+        font-size: 1.5rem;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card-icon {
+        width: 24px;
+        height: 24px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      .btn {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+        width: 100%;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn-secondary {
+        background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+      }
+
+      .btn-success {
+        background: linear-gradient(45deg, #2ecc71, #27ae60);
+      }
+
+      .btn-danger {
+        background: linear-gradient(45deg, #e74c3c, #c0392b);
+      }
+
+      .results {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+      }
+
+      .results h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+      }
+
+      .recommendation-item {
+        background: white;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border-left: 3px solid #667eea;
+      }
+
+      .recommendation-item h4 {
+        color: #2c3e50;
+        margin-bottom: 8px;
+      }
+
+      .recommendation-item p {
+        color: #7f8c8d;
+        margin-bottom: 5px;
+      }
+
+      .score {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      .score-high {
+        background: #2ecc71;
+        color: white;
+      }
+
+      .score-medium {
+        background: #f39c12;
+        color: white;
+      }
+
+      .score-low {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .metric {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+      }
+
+      .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .metric-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        margin-top: 5px;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error {
+        background: #e74c3c;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .success {
+        background: #2ecc71;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .tabs {
+        display: flex;
+        margin-bottom: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 5px;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 10px 20px;
+        text-align: center;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.3s ease;
+      }
+
+      .tab.active {
+        background: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .health-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .health-item {
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .health-item.healthy {
+        background: #d5f4e6;
+        color: #27ae60;
+      }
+
+      .health-item.unhealthy {
+        background: #fadbd8;
+        color: #e74c3c;
+      }
+
+      .health-item h4 {
+        margin-bottom: 5px;
+      }
+
+      .health-item p {
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .container {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧠 PAKE Intelligent Content Curation</h1>
+        <p>Advanced ML-powered content discovery and recommendation system</p>
+        <div class="status-indicator" id="systemStatus">Checking Status...</div>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Recommendation Request Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">🎯</div>
+            Get Recommendations
+          </h2>
+          <form id="recommendationForm">
+            <div class="form-group">
+              <label for="userId">User ID</label>
+              <input type="text" id="userId" value="test-user-001" required />
+            </div>
+            <div class="form-group">
+              <label for="query">Search Query</label>
+              <input
+                type="text"
+                id="query"
+                placeholder="e.g., machine learning, AI, healthcare"
+              />
+            </div>
+            <div class="form-group">
+              <label for="interests">Interests (comma-separated)</label>
+              <input
+                type="text"
+                id="interests"
+                value="AI, Machine Learning, Data Science"
+                placeholder="AI, ML, Healthcare"
+              />
+            </div>
+            <div class="form-group">
+              <label for="contentTypes">Content Types</label>
+              <select id="contentTypes" multiple>
+                <option value="article">Article</option>
+                <option value="blog">Blog</option>
+                <option value="paper">Paper</option>
+                <option value="news">News</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="review">Review</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="maxResults">Max Results</label>
+              <input
+                type="number"
+                id="maxResults"
+                value="10"
+                min="1"
+                max="100"
+              />
+            </div>
+            <div class="form-group">
+              <label for="minQuality">Min Quality Score</label>
+              <input
+                type="number"
+                id="minQuality"
+                value="0.3"
+                min="0"
+                max="1"
+                step="0.1"
+              />
+            </div>
+            <button type="submit" class="btn">Get Recommendations</button>
+          </form>
+          <div class="loading" id="recommendationLoading">
+            <div class="spinner"></div>
+            <p>Generating personalized recommendations...</p>
+          </div>
+          <div id="recommendationResults"></div>
+        </div>
+
+        <!-- User Feedback Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">💬</div>
+            Submit Feedback
+          </h2>
+          <form id="feedbackForm">
+            <div class="form-group">
+              <label for="feedbackUserId">User ID</label>
+              <input
+                type="text"
+                id="feedbackUserId"
+                value="test-user-001"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="contentId">Content ID</label>
+              <input
+                type="text"
+                id="contentId"
+                placeholder="e.g., content-789"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="feedbackType">Feedback Type</label>
+              <select id="feedbackType" required>
+                <option value="like">👍 Like</option>
+                <option value="dislike">👎 Dislike</option>
+                <option value="share">📤 Share</option>
+                <option value="save">💾 Save</option>
+                <option value="view">👁️ View</option>
+                <option value="click">🖱️ Click</option>
+                <option value="dismiss">❌ Dismiss</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sessionDuration">Session Duration (seconds)</label>
+              <input type="number" id="sessionDuration" placeholder="120" />
+            </div>
+            <div class="form-group">
+              <label for="explicitRating">Explicit Rating (1-5)</label>
+              <input
+                type="number"
+                id="explicitRating"
+                min="1"
+                max="5"
+                placeholder="5"
+              />
+            </div>
+            <div class="form-group">
+              <label for="feedbackText">Feedback Text</label>
+              <textarea
+                id="feedbackText"
+                placeholder="Optional feedback text..."
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">
+              Submit Feedback
+            </button>
+          </form>
+          <div class="loading" id="feedbackLoading">
+            <div class="spinner"></div>
+            <p>Processing feedback...</p>
+          </div>
+          <div id="feedbackResults"></div>
+        </div>
+
+        <!-- System Health Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">🏥</div>
+            System Health
+          </h2>
+          <button class="btn btn-secondary" onclick="checkSystemHealth()">
+            Check Health
+          </button>
+          <div class="loading" id="healthLoading">
+            <div class="spinner"></div>
+            <p>Checking system health...</p>
+          </div>
+          <div id="healthResults"></div>
+        </div>
+
+        <!-- User Profile Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">👤</div>
+            User Profile
+          </h2>
+          <div class="tabs">
+            <div class="tab active" onclick="switchTab('profile', 'view')">
+              View
+            </div>
+            <div class="tab" onclick="switchTab('profile', 'edit')">Edit</div>
+          </div>
+
+          <div id="profileView" class="tab-content active">
+            <div class="form-group">
+              <label for="profileUserId">User ID</label>
+              <input type="text" id="profileUserId" value="test-user-001" />
+            </div>
+            <button class="btn btn-secondary" onclick="getUserProfile()">
+              Get Profile
+            </button>
+            <div class="loading" id="profileLoading">
+              <div class="spinner"></div>
+              <p>Loading user profile...</p>
+            </div>
+            <div id="profileResults"></div>
+          </div>
+
+          <div id="profileEdit" class="tab-content">
+            <form id="profileForm">
+              <div class="form-group">
+                <label for="editUserId">User ID</label>
+                <input
+                  type="text"
+                  id="editUserId"
+                  value="test-user-001"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="editInterests">Interests (comma-separated)</label>
+                <input
+                  type="text"
+                  id="editInterests"
+                  placeholder="AI, ML, Healthcare"
+                />
+              </div>
+              <div class="form-group">
+                <label for="academicWeight">Academic Weight</label>
+                <input
+                  type="number"
+                  id="academicWeight"
+                  value="0.4"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                />
+              </div>
+              <div class="form-group">
+                <label for="newsWeight">News Weight</label>
+                <input
+                  type="number"
+                  id="newsWeight"
+                  value="0.3"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                />
+              </div>
+              <div class="form-group">
+                <label for="blogWeight">Blog Weight</label>
+                <input
+                  type="number"
+                  id="blogWeight"
+                  value="0.2"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                />
+              </div>
+              <div class="form-group">
+                <label for="tutorialWeight">Tutorial Weight</label>
+                <input
+                  type="number"
+                  id="tutorialWeight"
+                  value="0.1"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                />
+              </div>
+              <button type="submit" class="btn btn-success">
+                Update Profile
+              </button>
+            </form>
+            <div class="loading" id="profileUpdateLoading">
+              <div class="spinner"></div>
+              <p>Updating profile...</p>
+            </div>
+            <div id="profileUpdateResults"></div>
+          </div>
+        </div>
+
+        <!-- System Statistics Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">📊</div>
+            System Statistics
+          </h2>
+          <button class="btn btn-secondary" onclick="getSystemStats()">
+            Get Stats
+          </button>
+          <div class="loading" id="statsLoading">
+            <div class="spinner"></div>
+            <p>Loading statistics...</p>
+          </div>
+          <div id="statsResults"></div>
+        </div>
+
+        <!-- Model Management Card -->
+        <div class="card">
+          <h2>
+            <div class="card-icon">🤖</div>
+            Model Management
+          </h2>
+          <button class="btn btn-secondary" onclick="retrainModels(false)">
+            Retrain Models
+          </button>
+          <button class="btn btn-danger" onclick="retrainModels(true)">
+            Force Retrain
+          </button>
+          <div class="loading" id="retrainLoading">
+            <div class="spinner"></div>
+            <p>Retraining models...</p>
+          </div>
+          <div id="retrainResults"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = 'http://localhost:8001';
+
+      // Initialize dashboard
+      document.addEventListener('DOMContentLoaded', function () {
+        checkSystemStatus();
+        setupEventListeners();
+      });
+
+      function setupEventListeners() {
+        document
+          .getElementById('recommendationForm')
+          .addEventListener('submit', handleRecommendationRequest);
+        document
+          .getElementById('feedbackForm')
+          .addEventListener('submit', handleFeedbackSubmission);
+        document
+          .getElementById('profileForm')
+          .addEventListener('submit', handleProfileUpdate);
+      }
+
+      async function checkSystemStatus() {
+        try {
+          const response = await fetch(`${API_BASE_URL}/health`);
+          const data = await response.json();
+
+          const statusElement = document.getElementById('systemStatus');
+          if (response.ok) {
+            statusElement.textContent = 'System Online';
+            statusElement.className = 'status-indicator status-online';
+          } else {
+            statusElement.textContent = 'System Offline';
+            statusElement.className = 'status-indicator status-offline';
+          }
+        } catch (error) {
+          const statusElement = document.getElementById('systemStatus');
+          statusElement.textContent = 'System Offline';
+          statusElement.className = 'status-indicator status-offline';
+        }
+      }
+
+      async function handleRecommendationRequest(e) {
+        e.preventDefault();
+
+        const loading = document.getElementById('recommendationLoading');
+        const results = document.getElementById('recommendationResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const formData = {
+            user_id: document.getElementById('userId').value,
+            query: document.getElementById('query').value || null,
+            interests: document
+              .getElementById('interests')
+              .value.split(',')
+              .map(s => s.trim())
+              .filter(s => s),
+            content_types: Array.from(
+              document.getElementById('contentTypes').selectedOptions
+            ).map(o => o.value),
+            max_results: parseInt(document.getElementById('maxResults').value),
+            min_quality_score: parseFloat(
+              document.getElementById('minQuality').value
+            ),
+            include_explanations: true,
+          };
+
+          const response = await fetch(`${API_BASE_URL}/curate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            displayRecommendations(data);
+          } else {
+            showError(results, data.message || 'Failed to get recommendations');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function displayRecommendations(data) {
+        const results = document.getElementById('recommendationResults');
+
+        let html = `
+                <div class="results">
+                    <h3>Recommendations Generated</h3>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-value">${data.recommendations.length}</div>
+                            <div class="metric-label">Recommendations</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.processing_time_ms.toFixed(1)}ms</div>
+                            <div class="metric-label">Response Time</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${(data.cache_hit_rate * 100).toFixed(1)}%</div>
+                            <div class="metric-label">Cache Hit Rate</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${(data.model_confidence * 100).toFixed(1)}%</div>
+                            <div class="metric-label">Model Confidence</div>
+                        </div>
+                    </div>
+            `;
+
+        if (data.recommendations.length > 0) {
+          html += '<h4>Recommendations:</h4>';
+          data.recommendations.forEach((rec, index) => {
+            const scoreClass =
+              rec.relevance_score > 0.8
+                ? 'score-high'
+                : rec.relevance_score > 0.6
+                  ? 'score-medium'
+                  : 'score-low';
+
+            html += `
+                        <div class="recommendation-item">
+                            <h4>Recommendation ${index + 1}</h4>
+                            <p><strong>Content ID:</strong> ${rec.content_id}</p>
+                            <p><strong>Relevance:</strong> <span class="score ${scoreClass}">${(rec.relevance_score * 100).toFixed(1)}%</span></p>
+                            <p><strong>Confidence:</strong> <span class="score ${scoreClass}">${(rec.confidence_score * 100).toFixed(1)}%</span></p>
+                            <p><strong>Reasoning:</strong> ${rec.reasoning || 'No explanation provided'}</p>
+                        </div>
+                    `;
+          });
+        } else {
+          html += '<p>No recommendations found matching your criteria.</p>';
+        }
+
+        html += '</div>';
+        results.innerHTML = html;
+      }
+
+      async function handleFeedbackSubmission(e) {
+        e.preventDefault();
+
+        const loading = document.getElementById('feedbackLoading');
+        const results = document.getElementById('feedbackResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const formData = {
+            user_id: document.getElementById('feedbackUserId').value,
+            content_id: document.getElementById('contentId').value,
+            feedback_type: document.getElementById('feedbackType').value,
+            feedback_data: {
+              session_duration: document.getElementById('sessionDuration').value
+                ? parseInt(document.getElementById('sessionDuration').value)
+                : null,
+              explicit_rating: document.getElementById('explicitRating').value
+                ? parseInt(document.getElementById('explicitRating').value)
+                : null,
+              feedback_text:
+                document.getElementById('feedbackText').value || null,
+            },
+          };
+
+          const response = await fetch(`${API_BASE_URL}/feedback`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showSuccess(results, 'Feedback submitted successfully!');
+          } else {
+            showError(results, data.message || 'Failed to submit feedback');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      async function checkSystemHealth() {
+        const loading = document.getElementById('healthLoading');
+        const results = document.getElementById('healthResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/health`);
+          const data = await response.json();
+
+          if (response.ok) {
+            displayHealthStatus(data);
+          } else {
+            showError(results, 'Health check failed');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function displayHealthStatus(data) {
+        const results = document.getElementById('healthResults');
+
+        let html = `
+                <div class="results">
+                    <h3>System Health Status</h3>
+                    <div class="health-status">
+            `;
+
+        // Services health
+        Object.entries(data.services_healthy).forEach(([service, healthy]) => {
+          html += `
+                    <div class="health-item ${healthy ? 'healthy' : 'unhealthy'}">
+                        <h4>${service.replace('_', ' ').toUpperCase()}</h4>
+                        <p>${healthy ? 'Healthy' : 'Unhealthy'}</p>
+                    </div>
+                `;
+        });
+
+        html += '</div>';
+
+        // Models status
+        html += '<h4>ML Models:</h4><div class="health-status">';
+        Object.entries(data.models_loaded).forEach(([model, loaded]) => {
+          html += `
+                    <div class="health-item ${loaded ? 'healthy' : 'unhealthy'}">
+                        <h4>${model.replace('_', ' ').toUpperCase()}</h4>
+                        <p>${loaded ? 'Loaded' : 'Not Loaded'}</p>
+                    </div>
+                `;
+        });
+
+        html += '</div>';
+
+        // Performance metrics
+        html += `
+                <h4>Performance Metrics:</h4>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value">${data.performance_metrics.avg_prediction_time_ms?.toFixed(1) || 'N/A'}ms</div>
+                        <div class="metric-label">Avg Prediction Time</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${data.cache_status.cache_hit_rate ? (data.cache_status.cache_hit_rate * 100).toFixed(1) : 'N/A'}%</div>
+                        <div class="metric-label">Cache Hit Rate</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${data.cache_status.total_predictions || 0}</div>
+                        <div class="metric-label">Total Predictions</div>
+                    </div>
+                </div>
+            `;
+
+        html += '</div>';
+        results.innerHTML = html;
+      }
+
+      async function getUserProfile() {
+        const userId = document.getElementById('profileUserId').value;
+        const loading = document.getElementById('profileLoading');
+        const results = document.getElementById('profileResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/user/${userId}/profile`
+          );
+          const data = await response.json();
+
+          if (response.ok) {
+            displayUserProfile(data);
+          } else {
+            showError(results, data.message || 'Failed to get user profile');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function displayUserProfile(data) {
+        const results = document.getElementById('profileResults');
+
+        let html = `
+                <div class="results">
+                    <h3>User Profile</h3>
+                    <p><strong>User ID:</strong> ${data.user_id}</p>
+                    <p><strong>Interests:</strong> ${data.interests.join(', ') || 'None'}</p>
+                    <p><strong>Preference Weights:</strong></p>
+                    <ul>
+                        ${Object.entries(data.preference_weights)
+                          .map(
+                            ([key, value]) =>
+                              `<li>${key}: ${(value * 100).toFixed(1)}%</li>`
+                          )
+                          .join('')}
+                    </ul>
+                    <p><strong>Learning Rate:</strong> ${data.learning_rate}</p>
+                    <p><strong>Exploration Factor:</strong> ${data.exploration_factor}</p>
+                    <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+                    <p><strong>Updated:</strong> ${new Date(data.updated_at).toLocaleString()}</p>
+                </div>
+            `;
+
+        results.innerHTML = html;
+      }
+
+      async function handleProfileUpdate(e) {
+        e.preventDefault();
+
+        const loading = document.getElementById('profileUpdateLoading');
+        const results = document.getElementById('profileUpdateResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const formData = {
+            interests: document
+              .getElementById('editInterests')
+              .value.split(',')
+              .map(s => s.trim())
+              .filter(s => s),
+            preference_weights: {
+              academic: parseFloat(
+                document.getElementById('academicWeight').value
+              ),
+              news: parseFloat(document.getElementById('newsWeight').value),
+              blog: parseFloat(document.getElementById('blogWeight').value),
+              tutorial: parseFloat(
+                document.getElementById('tutorialWeight').value
+              ),
+            },
+          };
+
+          const userId = document.getElementById('editUserId').value;
+          const response = await fetch(
+            `${API_BASE_URL}/user/${userId}/profile`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(formData),
+            }
+          );
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showSuccess(results, 'Profile updated successfully!');
+          } else {
+            showError(results, data.message || 'Failed to update profile');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      async function getSystemStats() {
+        const loading = document.getElementById('statsLoading');
+        const results = document.getElementById('statsResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/stats`);
+          const data = await response.json();
+
+          if (response.ok) {
+            displaySystemStats(data);
+          } else {
+            showError(results, 'Failed to get system statistics');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function displaySystemStats(data) {
+        const results = document.getElementById('statsResults');
+
+        let html = `
+                <div class="results">
+                    <h3>System Statistics</h3>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-value">${data.performance.avg_prediction_time_ms?.toFixed(1) || 'N/A'}ms</div>
+                            <div class="metric-label">Avg Prediction Time</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.performance.avg_response_time_ms?.toFixed(1) || 'N/A'}ms</div>
+                            <div class="metric-label">Avg Response Time</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.performance.requests_per_second?.toFixed(1) || 'N/A'}</div>
+                            <div class="metric-label">Requests/sec</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.cache.hit_rate ? (data.cache.hit_rate * 100).toFixed(1) : 'N/A'}%</div>
+                            <div class="metric-label">Cache Hit Rate</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.cache.total_size || 0}</div>
+                            <div class="metric-label">Cache Size</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.cache.memory_usage_mb?.toFixed(1) || 'N/A'}MB</div>
+                            <div class="metric-label">Memory Usage</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        results.innerHTML = html;
+      }
+
+      async function retrainModels(force = false) {
+        const loading = document.getElementById('retrainLoading');
+        const results = document.getElementById('retrainResults');
+
+        loading.style.display = 'block';
+        results.innerHTML = '';
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/retrain?force=${force}`,
+            {
+              method: 'POST',
+            }
+          );
+
+          const data = await response.json();
+
+          if (response.ok) {
+            if (data.status === 'success') {
+              showSuccess(results, 'Models retrained successfully!');
+            } else {
+              showSuccess(results, data.message);
+            }
+          } else {
+            showError(results, data.message || 'Failed to retrain models');
+          }
+        } catch (error) {
+          showError(results, 'Network error: ' + error.message);
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function switchTab(container, tabName) {
+        // Hide all tab contents
+        const contents = document.querySelectorAll(
+          `#${container}View, #${container}Edit`
+        );
+        contents.forEach(content => content.classList.remove('active'));
+
+        // Remove active class from all tabs
+        const tabs = document
+          .querySelectorAll(`#${container}View, #${container}Edit`)[0]
+          .parentElement.querySelectorAll('.tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+
+        // Show selected tab content
+        document
+          .getElementById(
+            `${container}${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`
+          )
+          .classList.add('active');
+
+        // Add active class to clicked tab
+        event.target.classList.add('active');
+      }
+
+      function showError(container, message) {
+        container.innerHTML = `<div class="error">Error: ${message}</div>`;
+      }
+
+      function showSuccess(container, message) {
+        container.innerHTML = `<div class="success">${message}</div>`;
+      }
+
+      // Auto-refresh system status every 30 seconds
+      setInterval(checkSystemStatus, 30000);
+    </script>
+  </body>
+</html>

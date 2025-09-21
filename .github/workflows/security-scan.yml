@@ -1,0 +1,253 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  dependency-scan:
+    name: 'Dependency Security Scan'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry install --with dev
+          else
+            python -m pip install --upgrade pip setuptools wheel
+            pip install safety bandit --use-deprecated=legacy-resolver
+          fi
+
+      - name: Run Safety check
+        run: |
+          echo "Running Safety dependency check..."
+          if [ -f "pyproject.toml" ]; then
+            poetry run safety check --json --output safety-report.json || echo "Safety issues found"
+          else
+            safety check --json --output safety-report.json || echo "Safety issues found"
+          fi
+
+      - name: Upload Safety report
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: safety-report.json
+
+  code-scan:
+    name: 'Code Security Scan'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry install --with dev
+          else
+            python -m pip install --upgrade pip setuptools wheel
+            pip install bandit semgrep --use-deprecated=legacy-resolver
+          fi
+
+      - name: Run Bandit security linter
+        run: |
+          echo "Running Bandit security linter..."
+          if [ -f "pyproject.toml" ]; then
+            poetry run bandit -r src/ pkgs/ -f json -o bandit-report.json || echo "Security issues found"
+          else
+            bandit -r src/ -f json -o bandit-report.json || echo "Security issues found"
+          fi
+
+      - name: Run Semgrep
+        run: |
+          echo "Running Semgrep security scan..."
+          if [ -f "pyproject.toml" ]; then
+            poetry run semgrep --config=auto --json --output=semgrep-report.json src/ pkgs/ || echo "Semgrep issues found"
+          else
+            semgrep --config=auto --json --output=semgrep-report.json src/ || echo "Semgrep issues found"
+          fi
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            semgrep-report.json
+
+  container-scan:
+    name: 'Container Security Scan'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: pake-system:security-scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'pake-system:security-scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+
+      - name: Upload Trivy filesystem scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+  secrets-scan:
+    name: 'Secrets Detection'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better secret detection
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  license-scan:
+    name: 'License Compliance Scan'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry install --with dev
+          else
+            python -m pip install --upgrade pip setuptools wheel
+            pip install pip-licenses --use-deprecated=legacy-resolver
+          fi
+
+      - name: Generate license report
+        run: |
+          echo "Generating license compliance report..."
+          if [ -f "pyproject.toml" ]; then
+            poetry run pip-licenses --format=json --output-file=license-report.json || echo "License scan completed"
+          else
+            pip-licenses --format=json --output-file=license-report.json || echo "License scan completed"
+          fi
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.json
+
+  security-summary:
+    name: 'Security Summary'
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, container-scan, secrets-scan, license-scan]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate security summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scan Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dependency Scan**: ${{ needs.dependency-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Code Security Scan**: ${{ needs.code-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Container Scan**: ${{ needs.container-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Secrets Detection**: ${{ needs.secrets-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **License Compliance**: ${{ needs.license-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review any failed security scans" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address high and critical vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "3. Update dependencies with known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "4. Review and remediate any detected secrets" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PAKE System - Real-Time Analytics Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+      }
+
+      .dashboard-header {
+        background: white;
+        padding: 20px 30px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        border-bottom: 2px solid #e3f2fd;
+      }
+
+      .header-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+      }
+
+      .header-subtitle {
+        color: #7f8c8d;
+        font-size: 0.95rem;
+      }
+
+      .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #27ae60;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .dashboard-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+      }
+
+      .metric-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 35px rgba(0, 0, 0, 0.15);
+      }
+
+      .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .metric-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .metric-icon {
+        font-size: 1.2rem;
+      }
+
+      .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 8px;
+      }
+
+      .metric-trend {
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .trend-up {
+        color: #27ae60;
+      }
+      .trend-down {
+        color: #e74c3c;
+      }
+      .trend-neutral {
+        color: #95a5a6;
+      }
+
+      .charts-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+      }
+
+      .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 20px;
+      }
+
+      .chart-container {
+        height: 300px;
+        width: 100%;
+      }
+
+      .activity-feed {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        max-height: 600px;
+        overflow-y: auto;
+      }
+
+      .activity-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f8f9fa;
+      }
+
+      .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid #f8f9fa;
+        animation: fadeIn 0.5s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .activity-icon {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-top: 8px;
+        flex-shrink: 0;
+      }
+
+      .activity-search {
+        background: #3498db;
+      }
+      .activity-insight {
+        background: #9b59b6;
+      }
+      .activity-analysis {
+        background: #e67e22;
+      }
+      .activity-correlation {
+        background: #1abc9c;
+      }
+      .activity-enhancement {
+        background: #f39c12;
+      }
+
+      .activity-content {
+        flex: 1;
+      }
+
+      .activity-description {
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 4px;
+      }
+
+      .activity-meta {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+        display: flex;
+        gap: 15px;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-left: 5px;
+      }
+
+      .status-success {
+        background: #27ae60;
+      }
+      .status-error {
+        background: #e74c3c;
+      }
+
+      @media (max-width: 768px) {
+        .charts-section {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header class="dashboard-header">
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        <div>
+          <h1 class="header-title">🎯 PAKE System Analytics</h1>
+          <p class="header-subtitle">
+            Real-time AI-powered knowledge management insights
+          </p>
+        </div>
+        <div class="live-indicator">
+          <div class="live-dot"></div>
+          LIVE
+        </div>
+      </div>
+    </header>
+
+    <div class="dashboard-container">
+      <!-- Real-time Metrics -->
+      <div class="metrics-grid" id="metricsGrid">
+        <!-- Metrics will be populated here -->
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts-section">
+        <div class="chart-card">
+          <h3 class="chart-title">📈 Performance Trends</h3>
+          <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3 class="chart-title">🔗 Metric Correlations</h3>
+          <div class="chart-container">
+            <canvas id="correlationChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Activity Feed -->
+      <div class="activity-feed">
+        <div class="activity-header">
+          <h3 class="chart-title">⚡ Live Activity Stream</h3>
+          <span class="live-indicator">
+            <div class="live-dot"></div>
+            Auto-refresh: 5s
+          </span>
+        </div>
+        <div id="activityFeed">
+          <!-- Activity items will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Dashboard Configuration
+      const CONFIG = {
+        API_BASE: 'http://localhost:8000',
+        REFRESH_INTERVAL: 5000, // 5 seconds
+        MAX_ACTIVITY_ITEMS: 50,
+      };
+
+      // Dashboard State
+      let dashboardState = {
+        charts: {},
+        lastUpdate: null,
+        activityItems: [],
+      };
+
+      // API Functions
+      async function fetchEnhancedDashboard() {
+        try {
+          const response = await fetch(
+            `${CONFIG.API_BASE}/analytics/enhanced-dashboard`
+          );
+          const data = await response.json();
+          return data.success ? data.dashboard_data : null;
+        } catch (error) {
+          console.error('Error fetching dashboard data:', error);
+          return null;
+        }
+      }
+
+      async function fetchTimeSeriesData(
+        metric = 'throughput',
+        timeRange = '6h'
+      ) {
+        try {
+          const response = await fetch(
+            `${CONFIG.API_BASE}/analytics/time-series?metric=${metric}&time_range=${timeRange}&granularity=hour`
+          );
+          const data = await response.json();
+          return data.success ? data.time_series : [];
+        } catch (error) {
+          console.error('Error fetching time series data:', error);
+          return [];
+        }
+      }
+
+      async function fetchCorrelationData() {
+        try {
+          const response = await fetch(
+            `${CONFIG.API_BASE}/analytics/correlations?metrics=response_time,throughput,error_rate,cache_hits`
+          );
+          const data = await response.json();
+          return data.success ? data.correlations : null;
+        } catch (error) {
+          console.error('Error fetching correlation data:', error);
+          return null;
+        }
+      }
+
+      // UI Update Functions
+      function updateMetrics(dashboardData) {
+        if (!dashboardData || !dashboardData.performance_metrics) return;
+
+        const metrics = dashboardData.performance_metrics;
+        const intelligence = dashboardData.intelligence_metrics || {};
+        const usage = dashboardData.usage_analytics || {};
+
+        const metricsHTML = [
+          {
+            title: 'Response Time',
+            value: `${Math.round(metrics.response_time?.current || 0)}ms`,
+            trend: metrics.response_time?.trend || 'stable',
+            change: metrics.response_time?.change_percent || 0,
+            icon: '⚡',
+          },
+          {
+            title: 'Throughput',
+            value: `${Math.round(metrics.throughput?.current || 0)}/min`,
+            trend: metrics.throughput?.trend || 'stable',
+            change: metrics.throughput?.change_percent || 0,
+            icon: '🚀',
+          },
+          {
+            title: 'Error Rate',
+            value: `${(metrics.error_rate?.current || 0).toFixed(2)}%`,
+            trend: metrics.error_rate?.trend || 'stable',
+            change: metrics.error_rate?.change_percent || 0,
+            icon: '❌',
+          },
+          {
+            title: 'ML Enhancement',
+            value: `${Math.round(intelligence.ml_enhancement_rate || 0)}%`,
+            trend: 'up',
+            change: 5.2,
+            icon: '🧠',
+          },
+          {
+            title: 'Total Searches',
+            value: usage.total_searches || 0,
+            trend: 'up',
+            change: 12.5,
+            icon: '🔍',
+          },
+          {
+            title: 'Active Users',
+            value: usage.unique_users || 0,
+            trend: 'up',
+            change: 8.3,
+            icon: '👤',
+          },
+        ]
+          .map(
+            metric => `
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">${metric.title}</span>
+                        <span class="metric-icon">${metric.icon}</span>
+                    </div>
+                    <div class="metric-value">${metric.value}</div>
+                    <div class="metric-trend trend-${metric.trend}">
+                        ${metric.change > 0 ? '↗' : metric.change < 0 ? '↘' : '→'}
+                        ${Math.abs(metric.change).toFixed(1)}%
+                    </div>
+                </div>
+            `
+          )
+          .join('');
+
+        document.getElementById('metricsGrid').innerHTML = metricsHTML;
+      }
+
+      function updatePerformanceChart(timeSeriesData) {
+        const ctx = document
+          .getElementById('performanceChart')
+          .getContext('2d');
+
+        if (dashboardState.charts.performance) {
+          dashboardState.charts.performance.destroy();
+        }
+
+        const data = timeSeriesData.map(point => ({
+          x: new Date(point.timestamp),
+          y: point.value,
+        }));
+
+        dashboardState.charts.performance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              {
+                label: 'Performance Metric',
+                data: data,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'hour' },
+                grid: { color: '#f8f9fa' },
+              },
+              y: {
+                grid: { color: '#f8f9fa' },
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      function updateCorrelationChart(correlationData) {
+        if (!correlationData || !correlationData.correlation_pairs) return;
+
+        const ctx = document
+          .getElementById('correlationChart')
+          .getContext('2d');
+
+        if (dashboardState.charts.correlation) {
+          dashboardState.charts.correlation.destroy();
+        }
+
+        const pairs = correlationData.correlation_pairs.slice(0, 6);
+        const labels = pairs.map(
+          pair => `${pair.metric_a} vs ${pair.metric_b}`
+        );
+        const values = pairs.map(pair =>
+          Math.abs(pair.correlation_coefficient)
+        );
+        const colors = pairs.map(pair =>
+          Math.abs(pair.correlation_coefficient) > 0.7
+            ? '#e74c3c'
+            : Math.abs(pair.correlation_coefficient) > 0.5
+              ? '#f39c12'
+              : '#27ae60'
+        );
+
+        dashboardState.charts.correlation = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Correlation Strength',
+                data: values,
+                backgroundColor: colors,
+                borderColor: colors,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 1,
+                grid: { color: '#f8f9fa' },
+              },
+              x: {
+                grid: { color: '#f8f9fa' },
+              },
+            },
+          },
+        });
+      }
+
+      function updateActivityFeed(dashboardData) {
+        if (!dashboardData || !dashboardData.real_time_activity) return;
+
+        const activities = dashboardData.real_time_activity.slice(0, 20);
+
+        const activityHTML = activities
+          .map(
+            activity => `
+                <div class="activity-item">
+                    <div class="activity-icon activity-${activity.activity_type}"></div>
+                    <div class="activity-content">
+                        <div class="activity-description">
+                            ${activity.description}
+                            <span class="status-indicator status-${activity.metadata.success ? 'success' : 'error'}"></span>
+                        </div>
+                        <div class="activity-meta">
+                            <span>User: ${activity.metadata.user_id}</span>
+                            <span>Time: ${activity.metadata.processing_time_ms}ms</span>
+                            <span>${new Date(activity.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `
+          )
+          .join('');
+
+        document.getElementById('activityFeed').innerHTML = activityHTML;
+      }
+
+      // Main Dashboard Functions
+      async function loadDashboard() {
+        try {
+          console.log('📊 Loading real-time dashboard data...');
+
+          const [dashboardData, timeSeriesData, correlationData] =
+            await Promise.all([
+              fetchEnhancedDashboard(),
+              fetchTimeSeriesData('throughput', '6h'),
+              fetchCorrelationData(),
+            ]);
+
+          if (dashboardData) {
+            updateMetrics(dashboardData);
+            updateActivityFeed(dashboardData);
+            dashboardState.lastUpdate = new Date();
+          }
+
+          if (timeSeriesData && timeSeriesData.length > 0) {
+            updatePerformanceChart(timeSeriesData);
+          }
+
+          if (correlationData) {
+            updateCorrelationChart(correlationData);
+          }
+
+          console.log('✅ Dashboard updated successfully');
+        } catch (error) {
+          console.error('❌ Error loading dashboard:', error);
+        }
+      }
+
+      // Initialize Dashboard
+      document.addEventListener('DOMContentLoaded', async function () {
+        console.log('🚀 Initializing real-time analytics dashboard...');
+
+        // Initial load
+        await loadDashboard();
+
+        // Setup auto-refresh
+        setInterval(loadDashboard, CONFIG.REFRESH_INTERVAL);
+
+        console.log('✅ Real-time dashboard initialized');
+      });
+    </script>
+  </body>
+</html>

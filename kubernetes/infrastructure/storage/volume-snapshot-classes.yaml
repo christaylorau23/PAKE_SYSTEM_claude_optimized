@@ -1,0 +1,47 @@
+# Volume Snapshot Classes for backup and recovery
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: fast-ssd-snapshots
+  labels:
+    storage-class: fast-ssd
+    backup-tier: primary
+  annotations:
+    snapshot.storage.kubernetes.io/is-default-class: 'true'
+driver: ebs.csi.aws.com
+deletionPolicy: Retain
+parameters:
+  tagSpecification_1: 'Key=Environment,Value=production'
+  tagSpecification_2: 'Key=Team,Value=pake-infrastructure'
+  tagSpecification_3: 'Key=BackupTier,Value=primary'
+
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: database-snapshots
+  labels:
+    storage-class: high-iops
+    backup-tier: critical
+driver: ebs.csi.aws.com
+deletionPolicy: Retain
+parameters:
+  tagSpecification_1: 'Key=Environment,Value=production'
+  tagSpecification_2: 'Key=Team,Value=pake-infrastructure'
+  tagSpecification_3: 'Key=BackupTier,Value=critical'
+  tagSpecification_4: 'Key=DataClassification,Value=sensitive'
+
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: archive-snapshots
+  labels:
+    storage-class: archive
+    backup-tier: long-term
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+parameters:
+  tagSpecification_1: 'Key=Environment,Value=production'
+  tagSpecification_2: 'Key=Team,Value=pake-infrastructure'
+  tagSpecification_3: 'Key=BackupTier,Value=long-term'

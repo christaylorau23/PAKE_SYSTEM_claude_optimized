@@ -1,0 +1,289 @@
+/**
+ * Jest test setup configuration
+ * Configures global test environment for the audit system
+ */
+
+import { config } from 'dotenv';
+
+// Load test environment variables
+config({ path: '.env.test' });
+
+// Set test timeout
+jest.setTimeout(30000);
+
+// Global test configuration
+beforeAll(() => {
+  // Set test environment
+  process.env.NODE_ENV = process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED';
+  process.env.LOG_LEVEL = 'error'; // Reduce log noise during tests
+  
+  // Mock console methods to reduce test output
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  jest.spyOn(console, 'info').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  
+  // Only show errors in tests
+  const originalError = console.error;
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (process.env.SHOW_TEST_ERRORS === 'true') {
+      originalError(...args);
+    }
+  });
+});
+
+afterAll(() => {
+  // Restore console methods
+  jest.restoreAllMocks();
+});
+
+// Global error handler for unhandled promises
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit process in tests
+});
+
+// Global uncaught exception handler
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit process in tests
+});
+
+// Helper functions for tests
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeValidAuditEvent(): R;
+      toHaveValidSignature(): R;
+      toBeWithinTimeRange(start: Date, end: Date): R;
+    }
+  }
+}
+
+// Custom Jest matchers
+expect.extend({
+  toBeValidAuditEvent(received: any) {
+    const requiredFields = ['id', 'timestamp', 'actor', 'action', 'context', 'version'];
+    const missingFields = requiredFields.filter(field => !(field in received));
+    
+    if (missingFields.length > 0) {
+      return {
+        message: () => `Expected audit event to have required fields. Missing: ${missingFields.join(', ')}`,
+        pass: false,
+      };
+    }
+
+    // Check actor structure
+    if (!received.actor.id || !received.actor.type) {
+      return {
+        message: () => 'Expected audit event actor to have id and type',
+        pass: false,
+      };
+    }
+
+    // Check action structure
+    if (!received.action.type || !received.action.resource || !received.action.result) {
+      return {
+        message: () => 'Expected audit event action to have type, resource, and result',
+        pass: false,
+      };
+    }
+
+    // Check context structure
+    if (!received.context.environment || !received.context.application) {
+      return {
+        message: () => 'Expected audit event context to have environment and application',
+        pass: false,
+      };
+    }
+
+    return {
+      message: () => 'Expected audit event to be invalid',
+      pass: true,
+    };
+  },
+
+  toHaveValidSignature(received: any) {
+    if (!received.signature) {
+      return {
+        message: () => 'Expected audit event to have a signature',
+        pass: false,
+      };
+    }
+
+    if (typeof received.signature !== 'string') {
+      return {
+        message: () => 'Expected signature to be a string',
+        pass: false,
+      };
+    }
+
+    if (received.signature.length !== 64) {
+      return {
+        message: () => 'Expected signature to be 64 characters (SHA256 hex)',
+        pass: false,
+      };
+    }
+
+    return {
+      message: () => 'Expected audit event to have invalid signature',
+      pass: true,
+    };
+  },
+
+  toBeWithinTimeRange(received: any, start: Date, end: Date) {
+    const timestamp = new Date(received.timestamp || received);
+    
+    if (timestamp < start || timestamp > end) {
+      return {
+        message: () => `Expected timestamp ${timestamp.toISOString()} to be within range ${start.toISOString()} - ${end.toISOString()}`,
+        pass: false,
+      };
+    }
+
+    return {
+      message: () => `Expected timestamp to be outside range`,
+      pass: true,
+    };
+  },
+});
+
+// Test utilities
+export class TestHelpers {
+  /**
+   * Create a mock audit event for testing
+   */
+  static createMockAuditEvent(overrides: Partial<any> = {}): any {
+    return {
+      id: `test-event-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      actor: {
+        id: 'test-user',
+        type: 'user',
+        ip: '192.168.1.100',
+        ...overrides.actor
+      },
+      action: {
+        type: 'create',
+        resource: 'test-resource',
+        result: 'success',
+        ...overrides.action
+      },
+      context: {
+        environment: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED',
+        application: 'test-app',
+        version: '1.0.0',
+        ...overrides.context
+      },
+      version: '1.0.0',
+      ...overrides
+    };
+  }
+
+  /**
+   * Create multiple mock audit events
+   */
+  static createMockAuditEvents(count: number, baseOverrides: Partial<any> = {}): any[] {
+    return Array.from({ length: count }, (_, i) =>
+      this.createMockAuditEvent({
+        id: `test-event-${i.toString().padStart(3, '0')}`,
+        timestamp: new Date(Date.now() + i * 1000).toISOString(),
+        ...baseOverrides
+      })
+    );
+  }
+
+  /**
+   * Wait for a specified amount of time
+   */
+  static async wait(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Generate a random string
+   */
+  static randomString(length: number = 10): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * Generate a random UUID-like string
+   */
+  static randomUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Create a date range for testing
+   */
+  static createDateRange(daysBack: number = 7): { start: Date; end: Date } {
+    const end = new Date();
+    const start = new Date(end.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+    return { start, end };
+  }
+
+  /**
+   * Validate audit event structure
+   */
+  static validateAuditEvent(event: any): boolean {
+    try {
+      expect(event).toBeValidAuditEvent();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Create mock database query result
+   */
+  static createMockQueryResult(rows: any[] = []): { rows: any[] } {
+    return { rows };
+  }
+
+  /**
+   * Create mock AWS response
+   */
+  static createMockAWSResponse(data: any = {}): { promise: () => Promise<any> } {
+    return {
+      promise: () => Promise.resolve(data)
+    };
+  }
+}
+
+// Environment-specific test configuration
+if (process.env.NODE_ENV === 'test') {
+  // Disable external network calls in tests
+  process.env.DISABLE_EXTERNAL_CALLS = 'true';
+  
+  // Use in-memory storage for tests
+  process.env.USE_MEMORY_STORAGE = 'true';
+  
+  // Reduce timeouts for faster tests
+  process.env.TEST_TIMEOUT = '5000';
+}
+
+// Export commonly used test values
+export const TEST_CONSTANTS = {
+  VALID_SIGNING_KEY: 'test-signing-key-for-audit-system',
+  VALID_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  INVALID_ENCRYPTION_KEY: 'invalid-key',
+  TEST_USER_ID: 'test-user-123',
+  TEST_IP_ADDRESS: '192.168.1.100',
+  TEST_SESSION_ID: 'test-session-abc-123',
+  TEST_REQUEST_ID: 'test-request-xyz-789',
+  MOCK_TIMESTAMP: '2024-01-01T12:00:00.000Z'
+};
+
+// Test data factories
+export const createTestAuditEvent = TestHelpers.createMockAuditEvent;
+export const createTestAuditEvents = TestHelpers.createMockAuditEvents;

@@ -1,0 +1,168 @@
+[tool.poetry]
+name = "pake-service-template"
+version = "1.0.0"
+description = "Template for PAKE System microservices"
+authors = ["PAKE Team <team@pake-system.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+# Core FastAPI dependencies
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+pydantic = "^2.9.0"
+pydantic-settings = "^2.1.0"
+
+# Database
+sqlalchemy = "^2.0.25"
+asyncpg = "^0.29.0"
+alembic = "^1.13.1"
+
+# Caching
+redis = {extras = ["streams"], version = "^5.2.0"}
+
+# HTTP clients
+httpx = "^0.28.0"
+
+# Authentication & Security
+pyjwt = {extras = ["crypto"], version = "^2.10.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+
+# Monitoring
+structlog = "^23.2.0"
+prometheus-client = "^0.19.0"
+
+# Background tasks
+celery = "^5.3.4"
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^7.4.4"
+pytest-asyncio = "^0.23.2"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+httpx = "^0.28.0"
+
+# Code quality
+black = "^23.12.1"
+isort = "^5.13.2"
+mypy = "^1.8.0"
+ruff = "^0.1.0"
+pre-commit = "^3.6.0"
+
+# Security
+bandit = "^1.7.5"
+safety = "^2.3.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+select = [
+    "E4", "E7", "E9", "F", "W", "B", "C4", "UP", "ARG", "SIM", 
+    "TCH", "TID", "Q", "I", "N", "D", "S", "A", "COM", "DTZ", 
+    "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE", "T20", 
+    "PYI", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "TCH", "TID", 
+    "UP", "YTT"
+]
+ignore = [
+    "B027", "FBT003", "S105", "S106", "S107", "C901", "PLR0911", 
+    "PLR0912", "PLR0913", "PLR0915", "PLR2004", "D100", "D101", 
+    "D102", "D103", "D104", "D105", "D106", "D107", "T201", 
+    "TID252", "COM812"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S106", "PLR2004", "TID252", "D"]
+"scripts/**/*.py" = ["PLR2004", "D"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra", "-v", "--strict-markers", "--strict-config", 
+    "--tb=short", "--maxfail=5", "--durations=10",
+    "--cov=app", "--cov-report=term-missing", 
+    "--cov-report=html:htmlcov", "--cov-report=xml",
+    "--cov-fail-under=80", "--asyncio-mode=auto"
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+markers = [
+    "unit: Unit tests - test individual functions/methods in isolation",
+    "integration: Integration tests - test service-to-service interactions",
+    "e2e: End-to-end tests - complete user workflows",
+    "slow: Slow running tests (> 5 seconds)",
+    "requires_db: Tests requiring database connection",
+    "requires_redis: Tests requiring Redis connection",
+    "requires_network: Tests requiring network access",
+]
+
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+timeout = 300
+timeout_method = "thread"
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*", "*/test_*", "*/__pycache__/*", "*/venv/*", 
+    "*/.venv/*", "*/mcp-env/*", "*/test_env/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover", "def __repr__", "if self.debug:",
+    "if settings.DEBUG", "raise AssertionError", "raise NotImplementedError",
+    "if 0:", "if __name__ == .__main__.:", "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]

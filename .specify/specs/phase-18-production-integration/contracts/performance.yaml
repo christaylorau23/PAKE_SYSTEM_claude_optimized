@@ -1,0 +1,1597 @@
+openapi: 3.1.0
+info:
+  title: PAKE System Performance & SLA Management API
+  description: |
+    Performance optimization and SLA management contracts for Phase 18 Production System Integration.
+
+    This specification defines comprehensive performance management for enterprise-grade operations:
+    - SLA definitions and performance metrics validation
+    - Auto-scaling trigger conditions and resource allocation
+    - Database performance optimization and connection management
+    - Cache coherency and distributed system performance
+    - Load testing and benchmark validation procedures
+
+    Performance Targets (Production SLA):
+    - API Response Time: 95% of requests <500ms under 1000 concurrent users
+    - Database Operations: 90% of queries <100ms execution time
+    - Cache Hit Rate: ≥95% for frequently accessed data
+    - System Throughput: ≥10,000 requests per minute during peak usage
+    - Auto-scaling Response: <30 seconds from threshold breach to scale activation
+
+    Enterprise Requirements:
+    - Zero-downtime deployments with blue-green strategies
+    - Point-in-time recovery with ≤15 minute RPO
+    - 99.9% uptime SLA (maximum 8.76 hours downtime per year)
+    - Horizontal scaling supporting up to 5000 concurrent users
+  version: 18.0.0
+  contact:
+    name: PAKE System Performance Engineering
+    email: performance@pake-system.com
+  license:
+    name: Enterprise License
+    url: https://pake-system.com/license
+
+servers:
+  - url: https://performance.pake-system.com/api/v1
+    description: Production Performance API
+  - url: https://staging-performance.pake-system.com/api/v1
+    description: Staging Environment
+  - url: http://localhost:8080/api/v1
+    description: Local Development
+
+paths:
+  # SLA Management Endpoints
+  /sla:
+    get:
+      summary: Get SLA Status and Metrics
+      description: |
+        Retrieve current SLA compliance status and historical performance metrics.
+
+        SLA Categories:
+        - Response Time SLA: API and service response time compliance
+        - Availability SLA: Uptime and service availability tracking
+        - Throughput SLA: Request processing capacity and limits
+        - Data Integrity SLA: Data consistency and durability metrics
+      operationId: getSLAStatus
+      tags:
+        - SLA
+      parameters:
+        - name: timeframe
+          in: query
+          description: Time period for SLA analysis
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d, 30d]
+            default: 24h
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: sla_type
+          in: query
+          description: Filter by SLA category
+          schema:
+            type: string
+            enum: [response_time, availability, throughput, data_integrity]
+      responses:
+        '200':
+          description: SLA status and metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAStatus'
+
+  /sla/violations:
+    get:
+      summary: Query SLA Violations
+      description: |
+        Retrieve SLA violations and breach incidents with detailed analysis.
+
+        Violation Analysis:
+        - Breach duration and impact assessment
+        - Root cause identification and correlation
+        - Business impact quantification
+        - Recovery time and resolution metrics
+      operationId: getSLAViolations
+      tags:
+        - SLA
+      parameters:
+        - name: start_time
+          in: query
+          description: Start time for violation query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for violation query
+          schema:
+            type: string
+            format: date-time
+        - name: severity
+          in: query
+          description: Filter by violation severity
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+        - name: service
+          in: query
+          description: Filter by affected service
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by violation status
+          schema:
+            type: string
+            enum: [active, resolved, acknowledged]
+      responses:
+        '200':
+          description: SLA violations found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SLAViolation'
+                  summary:
+                    type: object
+                    properties:
+                      total_violations:
+                        type: integer
+                      by_severity:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                      affected_services:
+                        type: array
+                        items:
+                          type: string
+
+  # Performance Metrics Endpoints
+  /metrics/performance:
+    get:
+      summary: Real-time Performance Metrics
+      description: |
+        Retrieve comprehensive real-time performance metrics across all system components.
+
+        Metric Categories:
+        - API Performance: Request latency, throughput, error rates
+        - Database Performance: Query execution, connection pool utilization
+        - Cache Performance: Hit rates, eviction statistics, memory usage
+        - Infrastructure Performance: CPU, memory, network, disk utilization
+      operationId: getPerformanceMetrics
+      tags:
+        - Performance
+      parameters:
+        - name: metric_type
+          in: query
+          description: Type of performance metric
+          schema:
+            type: string
+            enum: [api, database, cache, infrastructure, all]
+            default: all
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: aggregation
+          in: query
+          description: Metric aggregation period
+          schema:
+            type: string
+            enum: [1m, 5m, 15m, 1h]
+            default: 1m
+        - name: percentile
+          in: query
+          description: Percentile for latency metrics
+          schema:
+            type: array
+            items:
+              type: integer
+              enum: [50, 90, 95, 99]
+            default: [95]
+      responses:
+        '200':
+          description: Performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceMetrics'
+
+  /metrics/performance/historical:
+    get:
+      summary: Historical Performance Analysis
+      description: |
+        Retrieve historical performance data for trend analysis and capacity planning.
+
+        Analysis Capabilities:
+        - Performance trend identification
+        - Capacity planning projections
+        - Seasonal pattern analysis
+        - Performance regression detection
+      operationId: getHistoricalPerformance
+      tags:
+        - Performance
+      parameters:
+        - name: start_time
+          in: query
+          required: true
+          description: Start time for historical analysis
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          required: true
+          description: End time for historical analysis
+          schema:
+            type: string
+            format: date-time
+        - name: resolution
+          in: query
+          description: Data point resolution
+          schema:
+            type: string
+            enum: [1m, 5m, 15m, 1h, 6h, 24h]
+            default: 15m
+        - name: metrics
+          in: query
+          description: Specific metrics to include
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [response_time, throughput, error_rate, cpu_usage, memory_usage, cache_hit_rate]
+      responses:
+        '200':
+          description: Historical performance data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalPerformance'
+
+  # Auto-scaling Management
+  /autoscaling:
+    get:
+      summary: Get Auto-scaling Configuration
+      description: |
+        Retrieve current auto-scaling configuration and status for all services.
+
+        Auto-scaling Features:
+        - Horizontal Pod Autoscaler (HPA) configuration
+        - Vertical Pod Autoscaler (VPA) settings
+        - Custom metrics-based scaling policies
+        - Cluster auto-scaling integration
+      operationId: getAutoScalingConfig
+      tags:
+        - AutoScaling
+      parameters:
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: scaling_type
+          in: query
+          description: Type of auto-scaling
+          schema:
+            type: string
+            enum: [horizontal, vertical, cluster]
+      responses:
+        '200':
+          description: Auto-scaling configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoScalingConfig'
+
+    put:
+      summary: Update Auto-scaling Configuration
+      description: Update auto-scaling policies and thresholds for services
+      operationId: updateAutoScalingConfig
+      tags:
+        - AutoScaling
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoScalingUpdateRequest'
+      responses:
+        '200':
+          description: Auto-scaling configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoScalingConfig'
+        '400':
+          description: Invalid configuration
+
+  /autoscaling/events:
+    get:
+      summary: Auto-scaling Event History
+      description: |
+        Retrieve auto-scaling events and decisions for analysis and troubleshooting.
+
+        Event Analysis:
+        - Scaling trigger identification
+        - Resource allocation decisions
+        - Scaling effectiveness measurement
+        - Cost impact analysis
+      operationId: getAutoScalingEvents
+      tags:
+        - AutoScaling
+      parameters:
+        - name: start_time
+          in: query
+          description: Start time for event query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for event query
+          schema:
+            type: string
+            format: date-time
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: event_type
+          in: query
+          description: Filter by event type
+          schema:
+            type: string
+            enum: [scale_up, scale_down, scale_out, scale_in]
+      responses:
+        '200':
+          description: Auto-scaling events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AutoScalingEvent'
+                  summary:
+                    type: object
+                    properties:
+                      total_events:
+                        type: integer
+                      scale_up_events:
+                        type: integer
+                      scale_down_events:
+                        type: integer
+                      cost_impact:
+                        type: number
+
+  # Load Testing and Benchmarking
+  /benchmarks:
+    get:
+      summary: List Available Benchmarks
+      description: |
+        Retrieve list of available performance benchmarks and testing scenarios.
+
+        Benchmark Categories:
+        - Baseline Performance: Standard load testing scenarios
+        - Stress Testing: Maximum capacity and breaking point analysis
+        - Spike Testing: Sudden load increase response validation
+        - Endurance Testing: Long-term stability and performance consistency
+      operationId: getBenchmarks
+      tags:
+        - Benchmarks
+      parameters:
+        - name: category
+          in: query
+          description: Filter by benchmark category
+          schema:
+            type: string
+            enum: [baseline, stress, spike, endurance]
+        - name: service
+          in: query
+          description: Filter by target service
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Available benchmarks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  benchmarks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Benchmark'
+
+    post:
+      summary: Execute Performance Benchmark
+      description: |
+        Execute performance benchmark test with specified parameters.
+
+        Test Execution Features:
+        - Configurable user load and ramp-up patterns
+        - Multi-scenario testing with mixed workloads
+        - Real-time monitoring during test execution
+        - Comprehensive performance analysis and reporting
+      operationId: executeBenchmark
+      tags:
+        - Benchmarks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenchmarkRequest'
+      responses:
+        '202':
+          description: Benchmark test started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkExecution'
+        '400':
+          description: Invalid benchmark configuration
+
+  /benchmarks/{execution_id}:
+    get:
+      summary: Get Benchmark Results
+      description: Retrieve benchmark test results and performance analysis
+      operationId: getBenchmarkResults
+      tags:
+        - Benchmarks
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          description: Benchmark execution identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Benchmark results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkResults'
+        '404':
+          description: Benchmark execution not found
+
+  # Database Performance Management
+  /database/performance:
+    get:
+      summary: Database Performance Metrics
+      description: |
+        Retrieve comprehensive database performance metrics and analysis.
+
+        Database Metrics:
+        - Query performance and execution plans
+        - Connection pool utilization and efficiency
+        - Index usage and optimization recommendations
+        - Lock contention and blocking analysis
+      operationId: getDatabasePerformance
+      tags:
+        - Database
+      parameters:
+        - name: database
+          in: query
+          description: Filter by database instance
+          schema:
+            type: string
+        - name: timeframe
+          in: query
+          description: Analysis timeframe
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 1h
+        - name: metric_type
+          in: query
+          description: Type of database metric
+          schema:
+            type: string
+            enum: [query, connection, index, lock, all]
+            default: all
+      responses:
+        '200':
+          description: Database performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabasePerformance'
+
+  /database/slow-queries:
+    get:
+      summary: Slow Query Analysis
+      description: |
+        Retrieve slow query analysis with optimization recommendations.
+
+        Analysis Features:
+        - Query execution plan analysis
+        - Index usage recommendations
+        - Query optimization suggestions
+        - Historical performance comparison
+      operationId: getSlowQueries
+      tags:
+        - Database
+      parameters:
+        - name: threshold_ms
+          in: query
+          description: Minimum execution time threshold
+          schema:
+            type: integer
+            minimum: 100
+            default: 1000
+        - name: start_time
+          in: query
+          description: Start time for query analysis
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End time for query analysis
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of queries to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Slow query analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SlowQuery'
+                  optimization_recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OptimizationRecommendation'
+
+  # Cache Performance Management
+  /cache/performance:
+    get:
+      summary: Cache Performance Metrics
+      description: |
+        Retrieve comprehensive cache performance metrics and analysis.
+
+        Cache Metrics:
+        - Hit rate and miss ratio analysis
+        - Eviction patterns and memory usage
+        - Key distribution and hotspot identification
+        - Cache coherency and consistency metrics
+      operationId: getCachePerformance
+      tags:
+        - Cache
+      parameters:
+        - name: cache_type
+          in: query
+          description: Filter by cache type
+          schema:
+            type: string
+            enum: [l1, l2, redis_cluster]
+        - name: timeframe
+          in: query
+          description: Analysis timeframe
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 1h
+      responses:
+        '200':
+          description: Cache performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CachePerformance'
+
+  /cache/optimization:
+    get:
+      summary: Cache Optimization Recommendations
+      description: |
+        Get intelligent cache optimization recommendations based on usage patterns.
+
+        Optimization Areas:
+        - Cache size and eviction policy tuning
+        - Key distribution optimization
+        - Cache warming strategies
+        - Performance bottleneck identification
+      operationId: getCacheOptimization
+      tags:
+        - Cache
+      parameters:
+        - name: service
+          in: query
+          description: Filter by service name
+          schema:
+            type: string
+        - name: analysis_depth
+          in: query
+          description: Depth of analysis
+          schema:
+            type: string
+            enum: [basic, detailed, comprehensive]
+            default: detailed
+      responses:
+        '200':
+          description: Cache optimization recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheOptimization'
+
+components:
+  schemas:
+    SLAStatus:
+      type: object
+      required:
+        - overall_compliance
+        - timestamp
+        - sla_metrics
+      properties:
+        overall_compliance:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Overall SLA compliance percentage
+        timestamp:
+          type: string
+          format: date-time
+        timeframe:
+          type: string
+          description: Analysis timeframe
+        sla_metrics:
+          type: object
+          properties:
+            response_time:
+              $ref: '#/components/schemas/SLAMetric'
+            availability:
+              $ref: '#/components/schemas/SLAMetric'
+            throughput:
+              $ref: '#/components/schemas/SLAMetric'
+            data_integrity:
+              $ref: '#/components/schemas/SLAMetric'
+        service_compliance:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+        trending:
+          type: object
+          properties:
+            direction:
+              type: string
+              enum: [improving, stable, degrading]
+            change_percentage:
+              type: number
+              format: float
+
+    SLAMetric:
+      type: object
+      required:
+        - target
+        - current
+        - compliance_percentage
+      properties:
+        target:
+          type: number
+          format: float
+          description: SLA target value
+        current:
+          type: number
+          format: float
+          description: Current measured value
+        compliance_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        unit:
+          type: string
+          description: Metric unit (ms, %, requests/min, etc.)
+        breach_count:
+          type: integer
+          description: Number of breaches in timeframe
+        last_breach:
+          type: string
+          format: date-time
+
+    SLAViolation:
+      type: object
+      required:
+        - violation_id
+        - sla_type
+        - severity
+        - start_time
+        - status
+      properties:
+        violation_id:
+          type: string
+          format: uuid
+        sla_type:
+          type: string
+          enum: [response_time, availability, throughput, data_integrity]
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        service:
+          type: string
+        description:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+        status:
+          type: string
+          enum: [active, resolved, acknowledged]
+        impact:
+          type: object
+          properties:
+            affected_users:
+              type: integer
+            business_impact:
+              type: string
+              enum: [low, medium, high, critical]
+            estimated_cost:
+              type: number
+        resolution:
+          type: object
+          properties:
+            action_taken:
+              type: string
+            resolved_by:
+              type: string
+            resolution_time_minutes:
+              type: integer
+
+    PerformanceMetrics:
+      type: object
+      required:
+        - timestamp
+        - api_metrics
+        - database_metrics
+        - cache_metrics
+        - infrastructure_metrics
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        aggregation_period:
+          type: string
+        api_metrics:
+          type: object
+          properties:
+            response_time:
+              type: object
+              properties:
+                p50_ms:
+                  type: number
+                p90_ms:
+                  type: number
+                p95_ms:
+                  type: number
+                p99_ms:
+                  type: number
+            throughput:
+              type: object
+              properties:
+                requests_per_minute:
+                  type: number
+                requests_per_second:
+                  type: number
+            error_rate:
+              type: object
+              properties:
+                percentage:
+                  type: number
+                total_errors:
+                  type: integer
+                by_status_code:
+                  type: object
+                  additionalProperties:
+                    type: integer
+        database_metrics:
+          type: object
+          properties:
+            query_performance:
+              type: object
+              properties:
+                average_execution_ms:
+                  type: number
+                slow_query_count:
+                  type: integer
+                deadlock_count:
+                  type: integer
+            connection_pool:
+              type: object
+              properties:
+                active_connections:
+                  type: integer
+                pool_utilization_percentage:
+                  type: number
+                wait_time_ms:
+                  type: number
+        cache_metrics:
+          type: object
+          properties:
+            hit_rate:
+              type: object
+              properties:
+                l1_percentage:
+                  type: number
+                l2_percentage:
+                  type: number
+                overall_percentage:
+                  type: number
+            memory_usage:
+              type: object
+              properties:
+                used_mb:
+                  type: number
+                available_mb:
+                  type: number
+                utilization_percentage:
+                  type: number
+            operations:
+              type: object
+              properties:
+                gets_per_second:
+                  type: number
+                sets_per_second:
+                  type: number
+                evictions_per_second:
+                  type: number
+        infrastructure_metrics:
+          type: object
+          properties:
+            cpu_usage:
+              type: object
+              properties:
+                average_percentage:
+                  type: number
+                peak_percentage:
+                  type: number
+                by_service:
+                  type: object
+                  additionalProperties:
+                    type: number
+            memory_usage:
+              type: object
+              properties:
+                average_percentage:
+                  type: number
+                peak_percentage:
+                  type: number
+                available_gb:
+                  type: number
+            network:
+              type: object
+              properties:
+                bandwidth_utilization_percentage:
+                  type: number
+                latency_ms:
+                  type: number
+                packet_loss_percentage:
+                  type: number
+
+    HistoricalPerformance:
+      type: object
+      required:
+        - start_time
+        - end_time
+        - resolution
+        - data_points
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        resolution:
+          type: string
+        data_points:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              metrics:
+                type: object
+                additionalProperties:
+                  type: number
+        trends:
+          type: object
+          properties:
+            response_time_trend:
+              type: string
+              enum: [improving, stable, degrading]
+            throughput_trend:
+              type: string
+              enum: [increasing, stable, decreasing]
+            error_rate_trend:
+              type: string
+              enum: [improving, stable, degrading]
+        projections:
+          type: object
+          properties:
+            capacity_exhaustion_date:
+              type: string
+              format: date-time
+            recommended_scaling_actions:
+              type: array
+              items:
+                type: string
+
+    AutoScalingConfig:
+      type: object
+      required:
+        - services
+      properties:
+        services:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              horizontal_scaling:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  min_replicas:
+                    type: integer
+                  max_replicas:
+                    type: integer
+                  target_cpu_percentage:
+                    type: integer
+                  target_memory_percentage:
+                    type: integer
+                  scale_up_cooldown_seconds:
+                    type: integer
+                  scale_down_cooldown_seconds:
+                    type: integer
+                  custom_metrics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metric_name:
+                          type: string
+                        target_value:
+                          type: number
+                        threshold_type:
+                          type: string
+                          enum: [average, maximum]
+              vertical_scaling:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  cpu_request_millicores:
+                    type: integer
+                  cpu_limit_millicores:
+                    type: integer
+                  memory_request_mb:
+                    type: integer
+                  memory_limit_mb:
+                    type: integer
+                  update_mode:
+                    type: string
+                    enum: [auto, off, initial]
+
+    AutoScalingUpdateRequest:
+      type: object
+      required:
+        - service_name
+        - scaling_config
+      properties:
+        service_name:
+          type: string
+        scaling_config:
+          type: object
+          properties:
+            horizontal_scaling:
+              type: object
+              properties:
+                min_replicas:
+                  type: integer
+                  minimum: 1
+                max_replicas:
+                  type: integer
+                  minimum: 1
+                target_cpu_percentage:
+                  type: integer
+                  minimum: 10
+                  maximum: 90
+                target_memory_percentage:
+                  type: integer
+                  minimum: 10
+                  maximum: 90
+            vertical_scaling:
+              type: object
+              properties:
+                cpu_request_millicores:
+                  type: integer
+                  minimum: 100
+                memory_request_mb:
+                  type: integer
+                  minimum: 128
+
+    AutoScalingEvent:
+      type: object
+      required:
+        - event_id
+        - service_name
+        - event_type
+        - timestamp
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        event_type:
+          type: string
+          enum: [scale_up, scale_down, scale_out, scale_in]
+        timestamp:
+          type: string
+          format: date-time
+        trigger_metric:
+          type: string
+        trigger_value:
+          type: number
+        threshold_value:
+          type: number
+        scaling_action:
+          type: object
+          properties:
+            from_replicas:
+              type: integer
+            to_replicas:
+              type: integer
+            from_cpu_millicores:
+              type: integer
+            to_cpu_millicores:
+              type: integer
+            from_memory_mb:
+              type: integer
+            to_memory_mb:
+              type: integer
+        success:
+          type: boolean
+        error_message:
+          type: string
+        cost_impact:
+          type: object
+          properties:
+            estimated_hourly_cost_change:
+              type: number
+            resource_efficiency:
+              type: number
+
+    Benchmark:
+      type: object
+      required:
+        - benchmark_id
+        - name
+        - category
+        - description
+      properties:
+        benchmark_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+          enum: [baseline, stress, spike, endurance]
+        description:
+          type: string
+        target_services:
+          type: array
+          items:
+            type: string
+        default_parameters:
+          type: object
+          properties:
+            concurrent_users:
+              type: integer
+            duration_minutes:
+              type: integer
+            ramp_up_seconds:
+              type: integer
+            think_time_ms:
+              type: integer
+        success_criteria:
+          type: object
+          properties:
+            max_response_time_ms:
+              type: integer
+            min_throughput_rps:
+              type: number
+            max_error_rate_percentage:
+              type: number
+
+    BenchmarkRequest:
+      type: object
+      required:
+        - benchmark_id
+        - parameters
+      properties:
+        benchmark_id:
+          type: string
+          format: uuid
+        parameters:
+          type: object
+          properties:
+            concurrent_users:
+              type: integer
+              minimum: 1
+              maximum: 10000
+            duration_minutes:
+              type: integer
+              minimum: 1
+              maximum: 1440
+            ramp_up_seconds:
+              type: integer
+              minimum: 0
+              maximum: 3600
+            target_services:
+              type: array
+              items:
+                type: string
+            scenarios:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  weight_percentage:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+        notifications:
+          type: object
+          properties:
+            email:
+              type: array
+              items:
+                type: string
+                format: email
+            slack_webhook:
+              type: string
+              format: uri
+
+    BenchmarkExecution:
+      type: object
+      required:
+        - execution_id
+        - benchmark_id
+        - status
+        - created_at
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        benchmark_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        parameters:
+          type: object
+        progress:
+          type: object
+          properties:
+            percentage_complete:
+              type: integer
+              minimum: 0
+              maximum: 100
+            current_users:
+              type: integer
+            elapsed_seconds:
+              type: integer
+            estimated_remaining_seconds:
+              type: integer
+
+    BenchmarkResults:
+      type: object
+      required:
+        - execution_id
+        - status
+        - summary
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        summary:
+          type: object
+          properties:
+            total_requests:
+              type: integer
+            successful_requests:
+              type: integer
+            failed_requests:
+              type: integer
+            average_response_time_ms:
+              type: number
+            p95_response_time_ms:
+              type: number
+            p99_response_time_ms:
+              type: number
+            throughput_rps:
+              type: number
+            error_rate_percentage:
+              type: number
+        detailed_metrics:
+          type: object
+          properties:
+            response_time_distribution:
+              type: object
+              additionalProperties:
+                type: integer
+            error_distribution:
+              type: object
+              additionalProperties:
+                type: integer
+            service_performance:
+              type: object
+              additionalProperties:
+                type: object
+        sla_compliance:
+          type: object
+          properties:
+            response_time_sla_met:
+              type: boolean
+            throughput_sla_met:
+              type: boolean
+            error_rate_sla_met:
+              type: boolean
+            overall_success:
+              type: boolean
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    DatabasePerformance:
+      type: object
+      required:
+        - timestamp
+        - database_instances
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        timeframe:
+          type: string
+        database_instances:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              query_metrics:
+                type: object
+                properties:
+                  total_queries:
+                    type: integer
+                  average_execution_time_ms:
+                    type: number
+                  slow_queries_count:
+                    type: integer
+                  failed_queries_count:
+                    type: integer
+                  query_types:
+                    type: object
+                    additionalProperties:
+                      type: integer
+              connection_metrics:
+                type: object
+                properties:
+                  active_connections:
+                    type: integer
+                  max_connections:
+                    type: integer
+                  connection_utilization_percentage:
+                    type: number
+                  average_connection_wait_time_ms:
+                    type: number
+                  connection_pool_efficiency:
+                    type: number
+              performance_metrics:
+                type: object
+                properties:
+                  cache_hit_ratio:
+                    type: number
+                  index_scan_ratio:
+                    type: number
+                  lock_wait_time_ms:
+                    type: number
+                  deadlock_count:
+                    type: integer
+
+    SlowQuery:
+      type: object
+      required:
+        - query_hash
+        - sql_text
+        - execution_count
+        - average_duration_ms
+      properties:
+        query_hash:
+          type: string
+        sql_text:
+          type: string
+        execution_count:
+          type: integer
+        average_duration_ms:
+          type: number
+        max_duration_ms:
+          type: number
+        min_duration_ms:
+          type: number
+        total_duration_ms:
+          type: number
+        first_seen:
+          type: string
+          format: date-time
+        last_seen:
+          type: string
+          format: date-time
+        affected_tables:
+          type: array
+          items:
+            type: string
+        execution_plan:
+          type: object
+          properties:
+            plan_text:
+              type: string
+            cost_estimate:
+              type: number
+            index_usage:
+              type: array
+              items:
+                type: string
+
+    OptimizationRecommendation:
+      type: object
+      required:
+        - type
+        - description
+        - impact
+      properties:
+        type:
+          type: string
+          enum: [index_creation, query_rewrite, schema_optimization, configuration_tuning]
+        description:
+          type: string
+        impact:
+          type: string
+          enum: [high, medium, low]
+        estimated_improvement:
+          type: object
+          properties:
+            performance_gain_percentage:
+              type: number
+            resource_reduction_percentage:
+              type: number
+        implementation:
+          type: object
+          properties:
+            complexity:
+              type: string
+              enum: [simple, moderate, complex]
+            estimated_time_hours:
+              type: number
+            sql_statements:
+              type: array
+              items:
+                type: string
+        affected_queries:
+          type: array
+          items:
+            type: string
+
+    CachePerformance:
+      type: object
+      required:
+        - timestamp
+        - cache_instances
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        timeframe:
+          type: string
+        cache_instances:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              hit_rate_metrics:
+                type: object
+                properties:
+                  overall_hit_rate:
+                    type: number
+                  read_hit_rate:
+                    type: number
+                  write_through_rate:
+                    type: number
+                  cache_misses:
+                    type: integer
+                  cache_hits:
+                    type: integer
+              memory_metrics:
+                type: object
+                properties:
+                  used_memory_mb:
+                    type: number
+                  available_memory_mb:
+                    type: number
+                  memory_utilization_percentage:
+                    type: number
+                  eviction_count:
+                    type: integer
+                  fragmentation_ratio:
+                    type: number
+              performance_metrics:
+                type: object
+                properties:
+                  average_get_latency_ms:
+                    type: number
+                  average_set_latency_ms:
+                    type: number
+                  operations_per_second:
+                    type: number
+                  connection_count:
+                    type: integer
+              key_metrics:
+                type: object
+                properties:
+                  total_keys:
+                    type: integer
+                  expired_keys:
+                    type: integer
+                  key_distribution:
+                    type: object
+                    additionalProperties:
+                      type: integer
+
+    CacheOptimization:
+      type: object
+      required:
+        - recommendations
+        - analysis_summary
+      properties:
+        analysis_summary:
+          type: object
+          properties:
+            overall_efficiency:
+              type: string
+              enum: [excellent, good, fair, poor]
+            primary_bottlenecks:
+              type: array
+              items:
+                type: string
+            optimization_potential:
+              type: string
+              enum: [high, medium, low]
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+                enum: [memory_optimization, eviction_policy, key_distribution, network_optimization]
+              priority:
+                type: string
+                enum: [high, medium, low]
+              description:
+                type: string
+              implementation:
+                type: string
+              expected_improvement:
+                type: object
+                properties:
+                  hit_rate_increase:
+                    type: number
+                  latency_reduction_ms:
+                    type: number
+                  memory_efficiency_gain:
+                    type: number
+        cache_warming_strategy:
+          type: object
+          properties:
+            recommended_keys:
+              type: array
+              items:
+                type: string
+            warming_schedule:
+              type: string
+            estimated_improvement:
+              type: number
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for service authentication
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for performance monitoring tools
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: SLA
+    description: Service Level Agreement management and monitoring
+  - name: Performance
+    description: Real-time and historical performance metrics
+  - name: AutoScaling
+    description: Auto-scaling configuration and event management
+  - name: Benchmarks
+    description: Load testing and performance benchmarking
+  - name: Database
+    description: Database performance optimization and analysis
+  - name: Cache
+    description: Cache performance and optimization management
+
+externalDocs:
+  description: PAKE System Performance Engineering Documentation
+  url: https://docs.pake-system.com/performance

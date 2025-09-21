@@ -1,0 +1,51 @@
+{
+  "vault": {
+    "default_vault_name": "Knowledge-Vault",
+    "folder_structure": {
+      "SourceNote": "00-Inbox",
+      "DailyNote": "01-Daily",
+      "ProjectNote": "01-Projects",
+      "InsightNote": "02-Areas"
+    },
+    "max_filename_length": 50,
+    "default_file_extension": ".md",
+    "summary_truncate_length": 200,
+    "default_confidence_score": 0.7,
+    "default_note_status": "Raw",
+    "default_verification_status": "pending"
+  },
+  "search": {
+    "default_search_limit": 10,
+    "max_search_limit": 100,
+    "min_confidence_threshold": 0.0,
+    "max_confidence_threshold": 1.0
+  },
+  "cache": {
+    "default_ttl_seconds": 300,
+    "production_ttl_seconds": 300,
+    "development_ttl_seconds": 0,
+    "max_ttl_seconds": 3600
+  },
+  "logging": {
+    "default_level": "INFO",
+    "json_formatting": true,
+    "include_stack_trace": false,
+    "max_stack_trace_lines": 5,
+    "log_to_file": false,
+    "log_file_name": "pake_system.log"
+  },
+  "security": {
+    "enable_path_traversal_protection": true,
+    "allowed_filename_chars": " -_",
+    "filename_replacement_char": "-",
+    "max_path_depth": 10
+  },
+  "server": {
+    "server_name": "pake-server",
+    "server_version": "1.0.0",
+    "mcp_server_port": 8000,
+    "bridge_port": 3000,
+    "health_check_path": "/health",
+    "api_timeout_seconds": 30
+  }
+}

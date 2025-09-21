@@ -1,0 +1,34 @@
+[
+  {
+    "file": "ultra-automation-test.md",
+    "full_path": "D:\\Knowledge-Vault\\00-Inbox\\ultra-automation-test.md",
+    "processed_at": "2025-08-23T05:04:36.865210",
+    "analysis": {
+      "word_count": 77,
+      "line_count": 27,
+      "confidence_score": 0.8,
+      "features": {
+        "has_frontmatter": true,
+        "has_headers": true,
+        "has_code": true,
+        "has_lists": true
+      }
+    }
+  },
+  {
+    "file": "instant-detection-test.md",
+    "full_path": "D:\\Knowledge-Vault\\00-Inbox\\instant-detection-test.md",
+    "processed_at": "2025-08-23T05:06:56.980703",
+    "analysis": {
+      "word_count": 39,
+      "line_count": 16,
+      "confidence_score": 0.6,
+      "features": {
+        "has_frontmatter": false,
+        "has_headers": true,
+        "has_code": true,
+        "has_lists": true
+      }
+    }
+  }
+]

@@ -1,0 +1,924 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "dr-backups-dashboard",
+    "title": "DR & Backups - PAKE System",
+    "description": "Comprehensive monitoring for Disaster Recovery, Backups, Chaos Engineering, and Compliance",
+    "tags": [
+      "disaster-recovery",
+      "backups",
+      "chaos-engineering",
+      "compliance",
+      "sre"
+    ],
+    "timezone": "utc",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "query",
+          "query": "label_values(up, namespace)",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "includeAll": true,
+          "multi": true,
+          "options": [],
+          "refresh": 1,
+          "regex": "",
+          "sort": 1
+        },
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(backup_operations_total, service)",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "includeAll": true,
+          "multi": true,
+          "options": [],
+          "refresh": 1,
+          "regex": "",
+          "sort": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Incidents",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\"}",
+          "iconColor": "red",
+          "tagKeys": "alertname,severity",
+          "titleFormat": "{{alertname}}",
+          "textFormat": "{{severity}}: {{description}}"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "kube_deployment_status_replicas_updated",
+          "iconColor": "blue",
+          "tagKeys": "deployment,namespace",
+          "titleFormat": "Deployment: {{deployment}}",
+          "textFormat": "{{namespace}}/{{deployment}} updated"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "🚨 DR System Health Overview",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "up{job=~\".*backup.*|.*disaster.*|.*compliance.*\"}",
+            "legendFormat": "{{job}} - {{instance}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "green", "value": 1 }
+              ]
+            },
+            "mappings": [
+              { "options": { "0": { "text": "DOWN" } }, "type": "value" },
+              { "options": { "1": { "text": "UP" } }, "type": "value" }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "⏱️ RTO Performance (Recovery Time Objective)",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(failover_duration_seconds_bucket[24h]))",
+            "legendFormat": "95th Percentile RTO",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(failover_duration_seconds_bucket[24h]))",
+            "legendFormat": "Median RTO",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 900 },
+                { "color": "red", "value": 1800 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 3,
+        "title": "📊 RPO Performance (Recovery Point Objective)",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 8, "y": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(data_loss_seconds_bucket[24h]))",
+            "legendFormat": "95th Percentile RPO",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(data_loss_seconds_bucket[24h]))",
+            "legendFormat": "Median RPO",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 300 },
+                { "color": "red", "value": 600 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 4,
+        "title": "✅ Backup Success Rate (24h)",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 16, "y": 8 },
+        "targets": [
+          {
+            "expr": "rate(backup_operations_total{status=\"success\"}[24h]) / rate(backup_operations_total[24h]) * 100",
+            "legendFormat": "{{service}} Success Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 95 },
+                { "color": "green", "value": 99 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 5,
+        "title": "🕐 Backup Freshness by Service",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+        "targets": [
+          {
+            "expr": "backup_age_hours",
+            "legendFormat": "{{backup_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "h",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 24 },
+                { "color": "orange", "value": 48 },
+                { "color": "red", "value": 72 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "🔄 Replication Lag (Real-time)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+        "targets": [
+          {
+            "expr": "replication_lag_seconds",
+            "legendFormat": "{{service}} - {{replica}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Lag (seconds)",
+            "unit": "s",
+            "min": 0
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 300,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "lineColor": "rgba(245, 54, 54, 0.9)",
+            "yAxis": "left"
+          },
+          {
+            "value": 60,
+            "colorMode": "warning",
+            "op": "gt",
+            "fill": true,
+            "lineColor": "rgba(237, 129, 40, 0.9)",
+            "yAxis": "left"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": { "params": ["A", "5m", "now"] },
+              "reducer": { "params": [], "type": "avg" },
+              "evaluator": { "params": [300], "type": "gt" }
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Replication Lag",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 7,
+        "title": "⏪ PITR Headroom (Point-in-Time Recovery)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+        "targets": [
+          {
+            "expr": "pitr_available_window_hours",
+            "legendFormat": "{{service}} - Available PITR Window",
+            "refId": "A"
+          },
+          {
+            "expr": "pitr_retention_policy_hours",
+            "legendFormat": "{{service}} - Retention Policy",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Hours",
+            "unit": "h",
+            "min": 0
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 168,
+            "colorMode": "warning",
+            "op": "lt",
+            "fill": true,
+            "lineColor": "rgba(237, 129, 40, 0.9)",
+            "yAxis": "left"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "🎯 Chaos Engineering Success Rate",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
+        "targets": [
+          {
+            "expr": "rate(chaos_experiments_total{status=\"success\"}[24h]) / rate(chaos_experiments_total[24h]) * 100",
+            "legendFormat": "{{experiment_type}} Success Rate",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Success Rate (%)",
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 80,
+            "colorMode": "warning",
+            "op": "lt",
+            "fill": true,
+            "lineColor": "rgba(237, 129, 40, 0.9)",
+            "yAxis": "left"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "🧪 Chaos Experiments Status",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
+        "targets": [
+          {
+            "expr": "chaos_experiment_status",
+            "legendFormat": "{{experiment_type}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "green", "value": 1 }
+              ]
+            },
+            "mappings": [
+              { "options": { "0": { "text": "FAILED" } }, "type": "value" },
+              { "options": { "1": { "text": "SUCCESS" } }, "type": "value" },
+              { "options": { "0.5": { "text": "RUNNING" } }, "type": "value" }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 10,
+        "title": "📋 Compliance Attestation Status",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 0, "y": 38 },
+        "targets": [
+          {
+            "expr": "attestation_generation_status",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "green", "value": 1 }
+              ]
+            },
+            "mappings": [
+              { "options": { "0": { "text": "FAILED" } }, "type": "value" },
+              { "options": { "1": { "text": "SUCCESS" } }, "type": "value" }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 11,
+        "title": "📅 Days Since Last Attestation",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 8, "y": 38 },
+        "targets": [
+          {
+            "expr": "(time() - attestation_generation_start_timestamp) / 86400",
+            "legendFormat": "Days",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "days",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 25 },
+                { "color": "orange", "value": 30 },
+                { "color": "red", "value": 35 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 12,
+        "title": "🔐 Audit Log Integrity",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 16, "y": 38 },
+        "targets": [
+          {
+            "expr": "audit_signature_validation_rate",
+            "legendFormat": "Signature Validation Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 95 },
+                { "color": "green", "value": 99 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 13,
+        "title": "💾 Backup Operations Timeline",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 44 },
+        "targets": [
+          {
+            "expr": "rate(backup_operations_total{status=\"success\"}[5m])",
+            "legendFormat": "{{service}} - Success",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(backup_operations_total{status=\"failed\"}[5m])",
+            "legendFormat": "{{service}} - Failed",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Operations/sec",
+            "unit": "ops",
+            "min": 0
+          }
+        ],
+        "seriesOverrides": [
+          {
+            "alias": "/.*Failed.*/",
+            "color": "#F2495C",
+            "fill": 0,
+            "lineWidth": 2
+          },
+          {
+            "alias": "/.*Success.*/",
+            "color": "#73BF69",
+            "fill": 1,
+            "fillGradient": 3
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "🔄 Restore Validation Results",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+        "targets": [
+          {
+            "expr": "backup_restore_validation_overall_success",
+            "legendFormat": "Overall Validation Success",
+            "refId": "A"
+          },
+          {
+            "expr": "backup_validation_success_rate",
+            "legendFormat": "{{service}} Success Rate",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Success Rate",
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": { "params": ["A", "5m", "now"] },
+              "reducer": { "params": [], "type": "last" },
+              "evaluator": { "params": [1], "type": "lt" }
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "Backup Validation Failed",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 15,
+        "title": "⚡ Failover Events & Duration",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+        "targets": [
+          {
+            "expr": "increase(failover_events_total[1h])",
+            "legendFormat": "{{type}} Failovers/hour",
+            "refId": "A"
+          },
+          {
+            "expr": "failover_duration_seconds",
+            "legendFormat": "{{type}} Duration",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Count",
+            "unit": "short",
+            "min": 0
+          },
+          {
+            "label": "Duration (seconds)",
+            "unit": "s",
+            "min": 0
+          }
+        ],
+        "seriesOverrides": [
+          {
+            "alias": "/.*Duration.*/",
+            "yAxis": 2
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "🔧 Infrastructure Health Matrix",
+        "type": "heatmap",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 60 },
+        "targets": [
+          {
+            "expr": "up{job=~\".*backup.*|.*disaster.*|.*compliance.*\"}",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "yAxis": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "xAxis": {
+          "show": true
+        },
+        "tooltip": {
+          "show": true,
+          "shared": false
+        },
+        "cards": {
+          "cardPadding": null,
+          "cardRound": null
+        },
+        "color": {
+          "mode": "spectrum",
+          "cardColor": "#b4ff00",
+          "colorScale": "sqrt",
+          "exponent": 0.5,
+          "colorScheme": "interpolateRdYlGn"
+        }
+      },
+      {
+        "id": 17,
+        "title": "📊 Resource Usage - DR Components",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 68 },
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{namespace=~\".*backup.*|.*disaster.*|.*compliance.*\"}[5m])",
+            "legendFormat": "{{namespace}}/{{pod}} CPU",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "CPU Usage",
+            "unit": "percent",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "💾 Memory Usage - DR Components",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 68 },
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{namespace=~\".*backup.*|.*disaster.*|.*compliance.*\"}",
+            "legendFormat": "{{namespace}}/{{pod}} Memory",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Memory Usage",
+            "unit": "bytes",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "🌐 Multi-Region Status",
+        "type": "worldmap",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 76 },
+        "targets": [
+          {
+            "expr": "up{job=\"region-health\"}",
+            "legendFormat": "{{region}}",
+            "refId": "A"
+          }
+        ],
+        "circleMaxSize": 30,
+        "circleMinSize": 2,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "decimals": 0,
+        "esMetric": "Count",
+        "hideEmpty": false,
+        "hideZero": false,
+        "initialZoom": 1,
+        "locationData": "countries",
+        "mapCenter": "North America",
+        "mapCenterLatitude": 40,
+        "mapCenterLongitude": -100,
+        "maxDataPoints": 1,
+        "mouseWheelZoom": false,
+        "showLegend": true,
+        "stickyLabels": false,
+        "tableQueryOptions": {
+          "geohashField": "geohash",
+          "latitudeField": "latitude",
+          "longitudeField": "longitude",
+          "metricField": "metric",
+          "queryType": ""
+        },
+        "thresholds": "0,1",
+        "unitPlural": "",
+        "unitSingle": "",
+        "valueName": "current"
+      },
+      {
+        "id": 20,
+        "title": "🚨 Active Alerts Summary",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 84 },
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\"}",
+            "legendFormat": "",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "Time": true,
+                "job": true,
+                "instance": true
+              },
+              "indexByName": {
+                "alertname": 0,
+                "severity": 1,
+                "summary": 2,
+                "description": 3,
+                "runbook_url": 4
+              },
+              "renameByName": {
+                "alertname": "Alert",
+                "severity": "Severity",
+                "summary": "Summary",
+                "description": "Description",
+                "runbook_url": "Runbook"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "displayMode": "auto"
+            },
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 2 }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Severity" },
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": { "critical": { "color": "red", "index": 2 } },
+                      "type": "value"
+                    },
+                    {
+                      "options": {
+                        "warning": { "color": "yellow", "index": 1 }
+                      },
+                      "type": "value"
+                    },
+                    {
+                      "options": { "info": { "color": "blue", "index": 0 } },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Runbook" },
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "url"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+# Development Configuration Patches
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-backend
+          env:
+            # Add development-specific environment variables
+            - name: DEBUG
+              value: 'true'
+            - name: DEVELOPMENT_MODE
+              value: 'true'
+            - name: HOT_RELOAD
+              value: 'true'
+            - name: VERBOSE_LOGGING
+              value: 'true'
+            - name: DISABLE_AUTH
+              value: 'false' # Keep auth enabled but relaxed
+            - name: ALLOW_CORS_ALL
+              value: 'true'
+          # Add volume mounts for development
+          volumeMounts:
+            - name: dev-source
+              mountPath: /app/src
+              readOnly: true
+      volumes:
+        - name: dev-source
+          hostPath:
+            path: /host/src # Mount source code for hot reload
+            type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-frontend
+spec:
+  template:
+    spec:
+      containers:
+        - name: pake-frontend
+          env:
+            - name: NODE_ENV
+              value: 'development'
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: 'http://localhost:8000' # For local development
+            - name: FAST_REFRESH
+              value: 'true'
+            - name: CHOKIDAR_USEPOLLING
+              value: 'true'
+---
+# Development-specific PVC sizes (smaller)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  resources:
+    requests:
+      storage: 5Gi # Reduced for development
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+spec:
+  resources:
+    requests:
+      storage: 1Gi # Reduced for development

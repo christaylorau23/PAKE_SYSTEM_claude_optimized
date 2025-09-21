@@ -1,0 +1,73 @@
+# Core PAKE System Dependencies - Resolved for VS Code Integration
+# This file contains the essential dependencies without version conflicts
+
+# Web Framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+starlette>=0.27.0
+
+# Data Validation
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+asyncpg>=0.28.0
+alembic>=1.11.0
+
+# Caching
+redis>=5.0.0
+hiredis>=2.2.0
+
+# HTTP Client
+aiohttp>=3.8.0
+httpx>=0.24.0
+
+# Authentication & Security
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
+argon2-cffi>=23.1.0
+cryptography>=41.0.0
+python-multipart>=0.0.6
+
+# WebSocket Support
+websockets>=11.0
+python-socketio>=5.8.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+aiofiles>=23.2.0
+
+# Monitoring & Logging
+structlog>=23.2.0
+prometheus-client>=0.17.0
+
+# Development Tools
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+black>=23.7.0
+isort>=5.12.0
+mypy>=1.5.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Async Support
+uvloop>=0.17.0
+
+# Testing Utilities
+factory-boy>=3.3.0
+faker>=19.0.0
+httpx>=0.24.0
+
+# Optional: Additional packages that may be needed
+# Uncomment as needed for specific features
+# feedparser>=6.0.0
+# beautifulsoup4>=4.12.0
+# requests>=2.31.0
+# psutil>=5.9.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
+

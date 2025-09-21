@@ -1,0 +1,276 @@
+# ==========================================
+# PAKE System Frontend - Enterprise .gitignore
+# ==========================================
+# Comprehensive exclusions for Next.js/React/TypeScript frontend
+# Enterprise-grade patterns for production deployment
+
+# ==========================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# ==========================================
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+yarn-debug.log*
+yarn-error.log*
+
+# npm
+npm-debug.log*
+.npm
+
+# pnpm
+.pnpm-debug.log*
+.pnpm-store/
+pnpm-lock.yaml
+
+# Package lock files (choose one per project)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ==========================================
+# NEXT.JS FRAMEWORK
+# ==========================================
+# Next.js build output
+/.next/
+/out/
+
+# Next.js static exports
+out/
+
+# Next.js incremental static regeneration
+.next/cache/
+
+# Next.js trace files
+.next/trace
+
+# Turbopack cache
+.turbo/
+
+# Next.js bundle analysis
+.analyze/
+bundle-analyzer-report.html
+
+# ==========================================
+# BUILD & PRODUCTION
+# ==========================================
+# Production builds
+/build
+/dist
+build/
+dist/
+
+# Static assets
+/static
+/public/generated
+
+# ==========================================
+# TESTING
+# ==========================================
+# Coverage
+/coverage
+coverage/
+*.lcov
+
+# Jest
+jest.config.local.js
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+cypress/fixtures/generated/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Testing artifacts
+test-artifacts/
+screenshots/
+videos/
+
+# E2E test data
+e2e-test-data/
+
+# ==========================================
+# TYPESCRIPT
+# ==========================================
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# TypeScript cache
+.tscache/
+
+# Type checking cache
+.tsc-cache/
+
+# ==========================================
+# DEVELOPMENT TOOLS
+# ==========================================
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettierCache
+
+# StyleLint cache
+.stylelintcache
+
+# ==========================================
+# BUNDLERS & BUILD TOOLS
+# ==========================================
+# Webpack
+.webpack/
+webpack-stats.json
+
+# Rollup
+.rollup.cache/
+
+# Vite
+.vite/
+
+# Parcel
+.parcel-cache/
+
+# SWC
+.swc/
+
+# ==========================================
+# STORYBOOK
+# ==========================================
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static/
+
+# Storybook cache
+.storybook/cache/
+
+# ==========================================
+# MONITORING & ANALYTICS
+# ==========================================
+# Bundle analyzers
+.analyze/
+bundle-report.html
+webpack-bundle-analyzer-report.html
+
+# Performance monitoring
+.performance/
+lighthouse-reports/
+
+# ==========================================
+# ENVIRONMENT & SECRETS
+# ==========================================
+# Environment files
+.env*
+!.env.example
+!.env.template
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==========================================
+# DEPLOYMENT PLATFORMS
+# ==========================================
+# Vercel
+.vercel
+.vercel.json
+
+# Netlify
+.netlify
+_redirects
+_headers
+
+# AWS Amplify
+amplify/
+.amplifyrc
+
+# ==========================================
+# MISCELLANEOUS
+# ==========================================
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Security files
+*.pem
+*.key
+
+# ==========================================
+# PAKE SYSTEM SPECIFIC
+# ==========================================
+# AI/ML frontend cache
+ai-cache/
+model-cache/
+
+# Research interface cache
+research-cache/
+knowledge-cache/
+
+# Dashboard data cache
+dashboard-cache/
+analytics-cache/
+
+# Voice/Audio artifacts
+audio-cache/
+voice-models/
+
+# Video generation cache
+video-cache/
+video-artifacts/
+
+# Social media integration cache
+social-cache/
+feed-cache/
+
+# Authentication tokens (frontend)
+auth-cache/
+session-cache/
+
+# ==========================================
+# RUNTIME & CACHE
+# ==========================================
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cache directories
+.cache/
+.next/cache/
+.turbo/
+
+# Temporary folders
+tmp/
+temp/

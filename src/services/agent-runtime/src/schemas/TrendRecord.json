@@ -1,0 +1,593 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pake.ai/schemas/TrendRecord.json",
+  "title": "Trend Record Schema",
+  "description": "Schema for trend analysis records from compendium schema alignment",
+  "type": "object",
+  "required": ["id", "timestamp", "topic", "sentiment", "source", "metrics"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Unique trend record identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this trend data was recorded"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Primary topic or subject of the trend"
+    },
+    "sentiment": {
+      "$ref": "#/$defs/SentimentAnalysis",
+      "description": "Sentiment analysis for this trend record"
+    },
+    "source": {
+      "$ref": "#/$defs/TrendSource",
+      "description": "Source information for this trend data"
+    },
+    "metrics": {
+      "$ref": "#/$defs/TrendMetrics",
+      "description": "Quantitative metrics for trend analysis"
+    },
+    "entities": {
+      "type": "array",
+      "description": "Extracted entities related to this trend",
+      "items": {
+        "$ref": "#/$defs/TrendEntity"
+      },
+      "maxItems": 100
+    },
+    "context": {
+      "type": "object",
+      "description": "Additional contextual information",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "technology",
+            "business",
+            "politics",
+            "health",
+            "environment",
+            "entertainment",
+            "sports",
+            "education",
+            "finance",
+            "social"
+          ],
+          "description": "Trend category classification"
+        },
+        "geography": {
+          "type": "object",
+          "description": "Geographic context",
+          "properties": {
+            "country": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$",
+              "description": "ISO 3166-1 alpha-2 country code"
+            },
+            "region": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Geographic region or state"
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "City name"
+            }
+          },
+          "additionalProperties": false
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+          "description": "Language code (ISO 639-1 with optional region)"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "maxItems": 20,
+          "uniqueItems": true,
+          "description": "Descriptive tags for this trend"
+        }
+      },
+      "additionalProperties": false
+    },
+    "relationships": {
+      "type": "array",
+      "description": "Relationships to other trend records",
+      "items": {
+        "$ref": "#/$defs/TrendRelationship"
+      },
+      "maxItems": 50
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Processing and system metadata",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Schema version"
+        },
+        "processingTime": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Processing time in milliseconds"
+        },
+        "dataQuality": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Data quality score (0-1)"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Overall confidence in trend analysis (0-1)"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "SentimentAnalysis": {
+      "type": "object",
+      "required": ["overall", "confidence"],
+      "properties": {
+        "overall": {
+          "type": "object",
+          "required": ["score", "label"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1,
+              "description": "Overall sentiment score (-1 to 1)"
+            },
+            "label": {
+              "type": "string",
+              "enum": ["very_negative", "negative", "neutral", "positive", "very_positive"],
+              "description": "Sentiment label"
+            }
+          },
+          "additionalProperties": false
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence in sentiment analysis (0-1)"
+        },
+        "emotions": {
+          "type": "object",
+          "description": "Detailed emotion breakdown",
+          "properties": {
+            "joy": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "sadness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "anger": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fear": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "surprise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "disgust": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "temporal": {
+          "type": "object",
+          "description": "Sentiment changes over time",
+          "properties": {
+            "trend": {
+              "type": "string",
+              "enum": ["improving", "declining", "stable", "volatile"],
+              "description": "Overall sentiment trend direction"
+            },
+            "volatility": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Sentiment volatility score (0-1)"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrendSource": {
+      "type": "object",
+      "required": ["type", "identifier"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "social_media",
+            "news_article",
+            "blog_post",
+            "research_paper",
+            "forum_discussion",
+            "product_review",
+            "survey_response",
+            "government_report",
+            "press_release",
+            "academic_publication"
+          ],
+          "description": "Source type classification"
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Unique source identifier (URL, ID, etc.)"
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Platform or website name"
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Content author or publisher"
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Original publication timestamp"
+        },
+        "credibilityScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Source credibility assessment (0-1)"
+        },
+        "reach": {
+          "type": "object",
+          "description": "Source reach and engagement metrics",
+          "properties": {
+            "followers": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of followers/subscribers"
+            },
+            "views": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Content view count"
+            },
+            "engagement": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total engagement (likes, shares, comments)"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrendMetrics": {
+      "type": "object",
+      "required": ["volume", "velocity", "acceleration"],
+      "properties": {
+        "volume": {
+          "type": "object",
+          "required": ["current", "baseline"],
+          "description": "Mention volume metrics",
+          "properties": {
+            "current": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Current mention count"
+            },
+            "baseline": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Baseline mention count for comparison"
+            },
+            "percentChange": {
+              "type": "number",
+              "description": "Percentage change from baseline"
+            }
+          },
+          "additionalProperties": false
+        },
+        "velocity": {
+          "type": "object",
+          "required": ["current", "direction"],
+          "description": "Rate of change metrics",
+          "properties": {
+            "current": {
+              "type": "number",
+              "description": "Current rate of change (mentions per hour)"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["increasing", "decreasing", "stable"],
+              "description": "Velocity direction"
+            },
+            "peak": {
+              "type": "number",
+              "description": "Peak velocity observed"
+            }
+          },
+          "additionalProperties": false
+        },
+        "acceleration": {
+          "type": "number",
+          "description": "Rate of velocity change (second derivative)"
+        },
+        "reach": {
+          "type": "object",
+          "description": "Audience reach metrics",
+          "properties": {
+            "unique": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Unique audience reached"
+            },
+            "potential": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Potential total reach"
+            },
+            "amplification": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Amplification factor (viral coefficient)"
+            }
+          },
+          "additionalProperties": false
+        },
+        "engagement": {
+          "type": "object",
+          "description": "Engagement quality metrics",
+          "properties": {
+            "rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Engagement rate (0-1)"
+            },
+            "quality": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Engagement quality score (0-1)"
+            },
+            "types": {
+              "type": "object",
+              "properties": {
+                "likes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "shares": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "comments": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mentions": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrendEntity": {
+      "type": "object",
+      "required": ["type", "value", "relevance"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "PERSON",
+            "ORGANIZATION",
+            "LOCATION",
+            "PRODUCT",
+            "EVENT",
+            "TECHNOLOGY",
+            "CONCEPT",
+            "HASHTAG",
+            "MENTION",
+            "URL"
+          ],
+          "description": "Entity type classification"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Entity value or name"
+        },
+        "relevance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Relevance to the main trend topic (0-1)"
+        },
+        "frequency": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Frequency of entity occurrence"
+        },
+        "sentiment": {
+          "type": "object",
+          "description": "Entity-specific sentiment",
+          "properties": {
+            "score": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            },
+            "label": {
+              "type": "string",
+              "enum": ["positive", "negative", "neutral"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional entity metadata",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrendRelationship": {
+      "type": "object",
+      "required": ["type", "targetId", "strength"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "related",
+            "caused_by",
+            "causes",
+            "correlates_with",
+            "contradicts",
+            "supports",
+            "part_of",
+            "followed_by",
+            "precedes"
+          ],
+          "description": "Relationship type"
+        },
+        "targetId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "ID of related trend record"
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Relationship strength (0-1)"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence in relationship (0-1)"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Human-readable relationship description"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "id": "trend_ai_2024_001",
+      "timestamp": "2024-01-01T12:00:00Z",
+      "topic": "artificial intelligence adoption in healthcare",
+      "sentiment": {
+        "overall": {
+          "score": 0.6,
+          "label": "positive"
+        },
+        "confidence": 0.85,
+        "emotions": {
+          "joy": 0.4,
+          "surprise": 0.3,
+          "fear": 0.2
+        }
+      },
+      "source": {
+        "type": "news_article",
+        "identifier": "https://example.com/ai-healthcare-news",
+        "platform": "TechNews",
+        "author": "Dr. Jane Smith",
+        "publishedAt": "2024-01-01T10:00:00Z",
+        "credibilityScore": 0.9
+      },
+      "metrics": {
+        "volume": {
+          "current": 1500,
+          "baseline": 800,
+          "percentChange": 87.5
+        },
+        "velocity": {
+          "current": 125.5,
+          "direction": "increasing",
+          "peak": 200.0
+        },
+        "acceleration": 15.2
+      },
+      "entities": [
+        {
+          "type": "TECHNOLOGY",
+          "value": "machine learning",
+          "relevance": 0.9,
+          "frequency": 45
+        },
+        {
+          "type": "ORGANIZATION",
+          "value": "Mayo Clinic",
+          "relevance": 0.7,
+          "frequency": 12
+        }
+      ],
+      "context": {
+        "category": "technology",
+        "language": "en-US",
+        "tags": ["AI", "healthcare", "innovation"]
+      }
+    }
+  ]
+}

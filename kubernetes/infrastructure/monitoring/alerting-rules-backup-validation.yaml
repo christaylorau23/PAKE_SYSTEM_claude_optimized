@@ -1,0 +1,646 @@
+# Backup Validation Alerting Rules for PAKE System
+# Comprehensive alerts for backup validation failures and stale backups
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backup-validation-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alerting-rules
+    prometheus: kube-prometheus
+    role: alert-rules
+    validation-type: backup-restore
+spec:
+  groups:
+    - name: backup-validation.rules
+      interval: 60s
+      rules:
+        # Backup Restore Validation Status Rules
+        - alert: BackupRestoreValidationFailed
+          expr: backup_restore_validation_overall_success == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: backup-validation
+            category: disaster-recovery
+            runbook_url: 'https://runbooks.pake-system.com/backup-validation-failure'
+          annotations:
+            summary: 'Backup restore validation has failed'
+            description: |
+              The backup restore validation process has failed.
+
+              **Details:**
+              - Validation ID: {{ $labels.validation_id }}
+              - Last run: {{ with query "time() - backup_restore_validation_start_timestamp" }}{{ . | first | value | humanizeDuration }}{{ end }} ago
+              - Failed validation may indicate corrupted backups or restore process issues
+
+              **Immediate Actions:**
+              1. Check validation job logs: `kubectl logs -n backup-validation -l app=restore-validation --tail=100`
+              2. Review failed tests in Grafana backup validation dashboard
+              3. Manually test backup restore for critical services
+              4. Escalate to on-call engineer if validation continues to fail
+
+              **Impact:** Backup integrity uncertain - disaster recovery capability may be compromised
+
+        - alert: BackupRestoreValidationMissing
+          expr: |
+            (
+              time() - backup_restore_validation_start_timestamp > 86400 * 35
+            ) or (
+              absent(backup_restore_validation_start_timestamp)
+            )
+          for: 15m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: disaster-recovery
+            runbook_url: 'https://runbooks.pake-system.com/backup-validation-missing'
+          annotations:
+            summary: 'Backup restore validation has not run recently'
+            description: |
+              Backup restore validation has not run in over 35 days or metrics are missing.
+
+              **Details:**
+              - Expected frequency: Monthly (1st of each month)
+              - Last successful run: {{ with query "backup_restore_validation_start_timestamp" }}{{ if . }}{{ . | first | value | humanizeTimestamp }}{{ else }}Never{{ end }}{{ end }}
+              - Missing validation indicates potential issues with scheduled jobs
+
+              **Actions:**
+              1. Check CronJob status: `kubectl get cronjobs -n backup-validation`
+              2. Review CronJob history: `kubectl get jobs -n backup-validation --sort-by=.metadata.creationTimestamp`
+              3. Manually trigger validation: `kubectl create job manual-restore-validation-$(date +%s) --from=cronjob/restore-validation-monthly -n backup-validation`
+
+              **Impact:** Unknown backup integrity - disaster recovery validation overdue
+
+        # Individual Service Backup Validation Rules
+        - alert: PostgreSQLBackupRestoreFailed
+          expr: backup_restore_success{service="postgresql-primary"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: postgresql
+            category: backup-validation
+            service: postgresql
+          annotations:
+            summary: 'PostgreSQL backup restore validation failed'
+            description: |
+              PostgreSQL backup restore test has failed during validation.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Backup type: {{ $labels.backup_type }}
+              - Restore duration: {{ with query "restore_duration_seconds{service=\"postgresql-primary\"}" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Possible Causes:**
+              - Corrupted backup files
+              - Missing backup dependencies
+              - PostgreSQL version compatibility issues
+              - Insufficient resources for restore test
+
+              **Actions:**
+              1. Check backup files in S3: `aws s3 ls s3://pake-backups/postgresql/ --recursive | tail -10`
+              2. Manually test restore: `kubectl exec -it pake-postgresql-primary-0 -n database -- pg_dump -U postgres | head -20`
+              3. Verify backup integrity: `gunzip -t latest-backup.sql.gz`
+
+              **Impact:** PostgreSQL disaster recovery capability uncertain
+
+        - alert: RedisBackupRestoreFailed
+          expr: backup_restore_success{service="redis-master"} == 0
+          for: 2m
+          labels:
+            severity: warning
+            component: redis
+            category: backup-validation
+            service: redis
+          annotations:
+            summary: 'Redis backup restore validation failed'
+            description: |
+              Redis backup restore test has failed during validation.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Backup type: {{ $labels.backup_type }}
+
+              **Possible Causes:**
+              - Corrupted RDB backup files
+              - Redis version compatibility issues
+              - Memory constraints during restore
+
+              **Actions:**
+              1. Check Redis backup files: `aws s3 ls s3://pake-backups/redis/ --recursive | tail -5`
+              2. Validate RDB file: `redis-check-rdb backup.rdb`
+              3. Test manual restore in staging environment
+
+              **Impact:** Redis cache disaster recovery capability uncertain
+
+        - alert: VectorDBBackupRestoreFailed
+          expr: backup_restore_success{service="chromadb"} == 0
+          for: 2m
+          labels:
+            severity: warning
+            component: vector-database
+            category: backup-validation
+            service: chromadb
+          annotations:
+            summary: 'Vector database backup restore validation failed'
+            description: |
+              ChromaDB/Vector database backup restore test has failed.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Backup type: {{ $labels.backup_type }}
+
+              **Actions:**
+              1. Check vector export files: `aws s3 ls s3://pake-backups/vector-exports/ --recursive | tail -5`
+              2. Validate export format: Check JSON structure
+              3. Test collection import manually
+
+              **Impact:** Vector search disaster recovery capability uncertain
+
+        # Backup Age and Staleness Rules
+        - alert: BackupTooOld
+          expr: backup_age_hours > 48
+          for: 10m
+          labels:
+            severity: warning
+            component: backup-system
+            category: disaster-recovery
+          annotations:
+            summary: 'Backup is too old'
+            description: |
+              Latest backup for {{ $labels.backup_type }} is {{ $value | humanizeDuration }} old.
+
+              **Details:**
+              - Backup type: {{ $labels.backup_type }}
+              - Age: {{ $value }} hours
+              - Expected frequency: Daily (24 hours)
+
+              **Actions:**
+              1. Check backup CronJob status: `kubectl get cronjobs -n database -l backup-type={{ $labels.backup_type }}`
+              2. Review backup job logs: `kubectl logs -n database -l app={{ $labels.backup_type }}-backup --tail=50`
+              3. Manually trigger backup if needed
+
+              **Impact:** Recent data may not be backed up - increased RPO risk
+
+        - alert: BackupStaleCritical
+          expr: backup_age_hours > 72
+          for: 5m
+          labels:
+            severity: critical
+            component: backup-system
+            category: disaster-recovery
+          annotations:
+            summary: 'Critical: Backup extremely stale'
+            description: |
+              Latest backup for {{ $labels.backup_type }} is critically old ({{ $value | humanizeDuration }}).
+
+              **Actions:**
+              1. **IMMEDIATE**: Investigate backup system failure
+              2. Check storage connectivity and credentials
+              3. Verify backup process hasn't been disabled
+              4. Escalate to on-call immediately
+
+              **Impact:** CRITICAL - Significant data loss risk in disaster scenario
+
+        # Validation Performance Rules
+        - alert: BackupRestoreValidationSlow
+          expr: backup_restore_validation_duration_seconds > 3600
+          for: 5m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: performance
+          annotations:
+            summary: 'Backup validation taking too long'
+            description: |
+              Backup restore validation is taking longer than expected.
+
+              **Details:**
+              - Duration: {{ $value | humanizeDuration }}
+              - Expected: < 1 hour
+              - Validation ID: {{ $labels.validation_id }}
+
+              **Possible Causes:**
+              - Large backup files
+              - Slow network/storage
+              - Resource constraints
+              - Test complexity increased
+
+              **Actions:**
+              1. Monitor validation progress: `kubectl logs -n backup-validation -l app=restore-validation -f`
+              2. Check resource usage: `kubectl top pods -n backup-validation`
+              3. Consider optimization if consistently slow
+
+        - alert: RestoreOperationSlow
+          expr: restore_duration_seconds > 1800
+          for: 2m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: performance
+          annotations:
+            summary: 'Backup restore operation is slow'
+            description: |
+              Individual backup restore for {{ $labels.service }} is taking longer than expected.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Duration: {{ $value | humanizeDuration }}
+              - Expected: < 30 minutes
+
+              **Actions:**
+              1. Check if this affects actual disaster recovery RTO
+              2. Consider backup format optimization
+              3. Monitor for consistent slowness patterns
+
+        # Test Success Rate Rules
+        - alert: BackupValidationTestsFailingHighRate
+          expr: backup_validation_success_rate < 80
+          for: 5m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: quality
+          annotations:
+            summary: 'High failure rate in backup validation tests'
+            description: |
+              Backup validation tests for {{ $labels.service }} have low success rate.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Success rate: {{ $value }}%
+              - Threshold: 80%
+
+              **Actions:**
+              1. Review individual test failures in validation logs
+              2. Check if test expectations need adjustment
+              3. Investigate data quality issues in backups
+
+              **Impact:** Reduced confidence in backup integrity
+
+        - alert: BackupValidationTestsFailingCritical
+          expr: backup_validation_success_rate < 50
+          for: 2m
+          labels:
+            severity: critical
+            component: backup-validation
+            category: quality
+          annotations:
+            summary: 'Critical: Very high failure rate in backup validation'
+            description: |
+              Backup validation tests for {{ $labels.service }} have critically low success rate.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Success rate: {{ $value }}%
+
+              **Actions:**
+              1. **IMMEDIATE**: Investigate backup integrity
+              2. Consider backups potentially corrupted
+              3. Review backup process for issues
+              4. Escalate to on-call immediately
+
+              **Impact:** CRITICAL - Backup integrity highly questionable
+
+        # Query Performance During Validation
+        - alert: BackupValidationQuerySlow
+          expr: restore_validation_query_time_seconds > 10
+          for: 2m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: performance
+            test_type: '{{ $labels.test_type }}'
+          annotations:
+            summary: 'Slow query performance during backup validation'
+            description: |
+              Query performance during backup validation is degraded.
+
+              **Details:**
+              - Service: {{ $labels.service }}
+              - Test type: {{ $labels.test_type }}
+              - Query time: {{ $value }}s
+              - Expected: < 10s
+
+              **Possible Causes:**
+              - Degraded backup data quality
+              - Missing indexes after restore
+              - Resource constraints in test environment
+
+              **Actions:**
+              1. Compare with baseline performance metrics
+              2. Check if production performance is similarly affected
+              3. Review backup/restore process for optimization
+
+        # Validation Job Status Rules
+        - alert: BackupValidationJobFailed
+          expr: kube_job_status_failed{job_name=~"restore-validation-.*"} > 0
+          for: 1m
+          labels:
+            severity: critical
+            component: backup-validation
+            category: infrastructure
+          annotations:
+            summary: 'Backup validation job failed'
+            description: |
+              Kubernetes job for backup validation has failed.
+
+              **Details:**
+              - Job: {{ $labels.job_name }}
+              - Namespace: {{ $labels.namespace }}
+
+              **Actions:**
+              1. Check job logs: `kubectl logs -n {{ $labels.namespace }} job/{{ $labels.job_name }}`
+              2. Review job status: `kubectl describe job -n {{ $labels.namespace }} {{ $labels.job_name }}`
+              3. Check for resource constraints or configuration issues
+
+              **Impact:** Backup validation not completing - integrity unknown
+
+        - alert: BackupValidationJobStuck
+          expr: |
+            (
+              kube_job_status_active{job_name=~"restore-validation-.*"} > 0
+            ) and (
+              time() - kube_job_status_start_time{job_name=~"restore-validation-.*"} > 3600
+            )
+          for: 5m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: infrastructure
+          annotations:
+            summary: 'Backup validation job appears stuck'
+            description: |
+              Backup validation job has been running for over 1 hour.
+
+              **Details:**
+              - Job: {{ $labels.job_name }}
+              - Running time: {{ with query "time() - kube_job_status_start_time" }}{{ . | first | value | humanizeDuration }}{{ end }}
+
+              **Actions:**
+              1. Check job progress: `kubectl logs -n {{ $labels.namespace }} job/{{ $labels.job_name }} -f`
+              2. Consider terminating if truly stuck: `kubectl delete job -n {{ $labels.namespace }} {{ $labels.job_name }}`
+              3. Investigate cause of hang
+
+        # S3 and Storage Rules
+        - alert: BackupValidationS3AccessFailed
+          expr: increase(backup_restore_s3_errors_total[10m]) > 3
+          for: 2m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: storage
+          annotations:
+            summary: 'S3 access errors during backup validation'
+            description: |
+              Multiple S3 access errors encountered during backup validation.
+
+              **Actions:**
+              1. Check AWS credentials and permissions
+              2. Verify S3 bucket accessibility
+              3. Check network connectivity to S3
+              4. Review IAM policies for backup validation service account
+
+        # Resource Usage Rules
+        - alert: BackupValidationHighResourceUsage
+          expr: |
+            (
+              max(container_memory_usage_bytes{namespace="backup-validation"}) / 
+              max(container_spec_memory_limit_bytes{namespace="backup-validation"}) * 100
+            ) > 90
+          for: 5m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: resources
+          annotations:
+            summary: 'High memory usage during backup validation'
+            description: |
+              Backup validation is using excessive memory resources.
+
+              **Details:**
+              - Memory usage: {{ $value }}%
+              - Threshold: 90%
+
+              **Actions:**
+              1. Check if validation is processing unusually large backups
+              2. Consider increasing memory limits if needed
+              3. Monitor for memory leaks in validation process
+
+        # Cleanup Rules
+        - alert: BackupValidationCleanupFailed
+          expr: backup_validation_cleanup_errors_total > 0
+          for: 2m
+          labels:
+            severity: warning
+            component: backup-validation
+            category: cleanup
+          annotations:
+            summary: 'Backup validation cleanup errors'
+            description: |
+              Errors occurred during backup validation cleanup process.
+
+              **Actions:**
+              1. Check for orphaned test namespaces: `kubectl get ns | grep restore-test`
+              2. Manual cleanup if needed: `kubectl delete ns restore-test-*`
+              3. Review cleanup process for improvements
+
+              **Impact:** Resource leakage - may affect future validations
+
+---
+# ServiceMonitor for Backup Validation Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backup-validation-metrics
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: backup-validation
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      params:
+        job: ['backup-validation']
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __address__
+          replacement: prometheus-pushgateway.monitoring.svc.cluster.local:9091
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'backup_.*'
+          targetLabel: __name__
+          replacement: '${1}'
+
+---
+# Grafana Dashboard ConfigMap for Backup Validation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-validation-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: grafana
+data:
+  backup-validation-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Backup Validation Dashboard",
+        "description": "Monitoring backup restore validation and testing",
+        "tags": ["backup", "validation", "disaster-recovery"],
+        "timezone": "utc",
+        "time": {
+          "from": "now-30d",
+          "to": "now"
+        },
+        "refresh": "5m",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Backup Validation Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "backup_restore_validation_overall_success",
+                "legendFormat": "Overall Success"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Validation Duration",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "backup_restore_validation_duration_seconds",
+                "legendFormat": "Duration (seconds)"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s"
+              }
+            },
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Service Backup Success Rate",
+            "type": "bargauge",
+            "targets": [
+              {
+                "expr": "backup_validation_success_rate",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 80},
+                    {"color": "green", "value": 95}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Backup Age by Type",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "backup_age_hours",
+                "legendFormat": "{{backup_type}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "h",
+                "label": "Hours"
+              }
+            ],
+            "alert": {
+              "conditions": [
+                {
+                  "query": {"params": ["A", "5m", "now"]},
+                  "reducer": {"params": [], "type": "last"},
+                  "evaluator": {"params": [48], "type": "gt"}
+                }
+              ],
+              "executionErrorState": "alerting",
+              "for": "5m",
+              "frequency": "10s",
+              "handler": 1,
+              "name": "Backup Too Old",
+              "noDataState": "no_data"
+            },
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Restore Duration by Service",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "restore_duration_seconds",
+                "legendFormat": "{{service}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "s",
+                "label": "Seconds"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Test Results by Type",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "backup_validation_test_result",
+                "legendFormat": "{{service}} - {{test_name}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "min": 0,
+                "max": 1,
+                "label": "Success (1) / Failure (0)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ]
+      }
+    }

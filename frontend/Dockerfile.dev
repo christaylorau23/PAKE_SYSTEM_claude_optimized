@@ -1,0 +1,47 @@
+# PAKE Frontend - Development Docker Container
+# Optimized for development with hot reload
+
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache libc6-compat curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* package-lock.json* yarn.lock* ./
+
+# Install dependencies
+RUN \
+  if [ -f pnpm-lock.yaml ]; then \
+    corepack enable pnpm && pnpm install; \
+  elif [ -f package-lock.json ]; then \
+    npm install; \
+  elif [ -f yarn.lock ]; then \
+    yarn install; \
+  else \
+    npm install; \
+  fi
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Change ownership
+RUN chown -R nextjs:nodejs /app
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Environment variables for development
+ENV NODE_ENV development
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Development command (overridden in docker-compose.dev.yml)
+CMD ["npm", "run", "dev"]

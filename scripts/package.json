@@ -1,0 +1,53 @@
+{
+  "name": "@pake/scripts",
+  "version": "2.0.0",
+  "description": "PAKE+ System automation scripts and utilities",
+  "main": "obsidian_bridge.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node obsidian_bridge.js",
+    "start:ts": "ts-node obsidian_bridge.ts",
+    "dev": "nodemon obsidian_bridge.js",
+    "dev:ts": "ts-node-dev obsidian_bridge.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts,.js",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "pake",
+    "obsidian",
+    "knowledge-management",
+    "api",
+    "bridge"
+  ],
+  "author": "PAKE+ System",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "gray-matter": "^4.0.3",
+    "uuid": "^9.0.1",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.10.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.15",
+    "@types/uuid": "^9.0.7",
+    "ts-node": "^10.9.0",
+    "ts-node-dev": "^2.0.0",
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "supertest": "^6.3.3",
+    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

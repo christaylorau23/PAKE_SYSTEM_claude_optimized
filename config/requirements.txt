@@ -1,0 +1,8 @@
+# Secret Management Dependencies
+boto3==1.35.73             # AWS SDK for Secrets Manager (pinned for security)
+aiohttp==3.11.15           # Async HTTP client for Vault (pinned for security)
+cryptography==44.0.0      # Encryption utilities (pinned for security)
+
+# Optional: Azure Key Vault support
+# azure-keyvault-secrets>=4.7.0
+# azure-identity>=1.15.0

@@ -1,0 +1,451 @@
+openapi: 3.0.3
+info:
+  title: Live Trend Data Feed API
+  description: Real-time trend intelligence from multiple platforms for investment analysis
+  version: 1.0.0
+  contact:
+    name: PAKE System
+    email: support@pake.system
+
+servers:
+  - url: http://localhost:8000/api/trends
+    description: Development server
+  - url: https://api.pake.system/trends
+    description: Production server
+
+paths:
+  /stream/start:
+    post:
+      summary: Start trend data streaming
+      description: Initialize real-time trend data collection from specified platforms
+      tags:
+        - Streaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                platforms:
+                  type: array
+                  items:
+                    type: string
+                    enum: [google_trends, youtube, twitter, tiktok]
+                  description: Platforms to stream from
+                keywords:
+                  type: array
+                  items:
+                    type: string
+                  description: Keywords to track across platforms
+                regions:
+                  type: array
+                  items:
+                    type: string
+                  description: Geographic regions to monitor
+              required:
+                - platforms
+                - keywords
+      responses:
+        '200':
+          description: Streaming started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stream_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [active, initializing]
+                  platforms_active:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid request parameters
+        '429':
+          description: Rate limit exceeded
+
+  /analyze:
+    post:
+      summary: Analyze trend signals
+      description: Perform real-time analysis on collected trend data
+      tags:
+        - Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trend_signals:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrendSignal'
+                analysis_type:
+                  type: string
+                  enum: [correlation, geographic, momentum, prediction]
+                time_window:
+                  type: string
+                  description: Analysis time window (e.g., "24h", "7d", "30d")
+              required:
+                - trend_signals
+                - analysis_type
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendAnalysisResult'
+        '400':
+          description: Invalid analysis parameters
+        '500':
+          description: Analysis processing error
+
+  /correlate:
+    post:
+      summary: Cross-platform trend correlation
+      description: Correlate trends across multiple platforms for enhanced intelligence
+      tags:
+        - Correlation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                primary_trend:
+                  $ref: '#/components/schemas/TrendSignal'
+                comparison_trends:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrendSignal'
+                correlation_method:
+                  type: string
+                  enum: [pearson, spearman, cross_correlation]
+                  default: pearson
+              required:
+                - primary_trend
+                - comparison_trends
+      responses:
+        '200':
+          description: Correlation analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendCorrelation'
+        '400':
+          description: Invalid correlation parameters
+
+  /investments:
+    get:
+      summary: Get investment opportunities
+      description: Retrieve investment opportunities based on trend analysis
+      tags:
+        - Investment
+      parameters:
+        - name: trend_correlation_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Specific correlation to analyze for investments
+        - name: asset_classes
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [stock, etf, crypto, commodity]
+          description: Asset classes to consider
+        - name: risk_level
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high]
+          description: Maximum risk level acceptable
+        - name: min_confidence
+          in: query
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+          description: Minimum confidence score for opportunities
+      responses:
+        '200':
+          description: Investment opportunities retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  opportunities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InvestmentOpportunity'
+                  total_count:
+                    type: integer
+                  analysis_timestamp:
+                    type: string
+                    format: date-time
+        '404':
+          description: No opportunities found for criteria
+
+  /geographic/{region}:
+    get:
+      summary: Geographic trend analysis
+      description: Get trend analysis for specific geographic region
+      tags:
+        - Geographic
+      parameters:
+        - name: region
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ISO country code or region identifier
+        - name: trend_keyword
+          in: query
+          schema:
+            type: string
+          description: Specific trend to analyze regionally
+        - name: time_period
+          in: query
+          schema:
+            type: string
+            default: '30d'
+          description: Time period for analysis
+      responses:
+        '200':
+          description: Geographic analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeographicTrendData'
+        '404':
+          description: Region not found or no data available
+
+  /health:
+    get:
+      summary: API health check
+      description: Check health status of trend data feed system
+      tags:
+        - Health
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  platforms:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                        last_update:
+                          type: string
+                          format: date-time
+                        rate_limit_status:
+                          type: string
+                  uptime:
+                    type: string
+                  performance_metrics:
+                    type: object
+                    properties:
+                      avg_response_time:
+                        type: number
+                      trends_processed_per_hour:
+                        type: integer
+
+components:
+  schemas:
+    TrendSignal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum: [google_trends, youtube, twitter, tiktok]
+        keyword:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        region:
+          type: string
+        interest_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        engagement_metrics:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - platform
+        - keyword
+        - timestamp
+        - interest_score
+
+    TrendCorrelation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trend_signals:
+          type: array
+          items:
+            type: string
+            format: uuid
+        correlation_strength:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        time_window:
+          type: string
+        geographic_overlap:
+          type: array
+          items:
+            type: string
+        momentum_score:
+          type: number
+          minimum: -1.0
+          maximum: 1.0
+      required:
+        - id
+        - trend_signals
+        - correlation_strength
+        - confidence_score
+
+    InvestmentOpportunity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trend_correlation_id:
+          type: string
+          format: uuid
+        symbol:
+          type: string
+        asset_class:
+          type: string
+          enum: [stock, etf, crypto, commodity]
+        relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        risk_assessment:
+          type: string
+          enum: [low, medium, high]
+        timing_signal:
+          type: object
+          properties:
+            entry_recommendation:
+              type: string
+              enum: [immediate, wait_2_weeks, wait_1_month, wait_3_months]
+            exit_recommendation:
+              type: string
+            confidence_interval:
+              type: object
+              properties:
+                lower_bound:
+                  type: number
+                upper_bound:
+                  type: number
+        market_sector:
+          type: string
+      required:
+        - id
+        - trend_correlation_id
+        - symbol
+        - asset_class
+        - relevance_score
+        - risk_assessment
+
+    GeographicTrendData:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trend_signal_id:
+          type: string
+          format: uuid
+        country_code:
+          type: string
+        region_type:
+          type: string
+          enum: [country, state, city]
+        adoption_rate:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        penetration_velocity:
+          type: number
+        demographic_profile:
+          type: object
+          properties:
+            age_distribution:
+              type: object
+            gender_distribution:
+              type: object
+        market_readiness_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+      required:
+        - id
+        - trend_signal_id
+        - country_code
+        - adoption_rate
+
+    TrendAnalysisResult:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+        analysis_type:
+          type: string
+        results:
+          type: object
+          additionalProperties: true
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        processing_time_ms:
+          type: integer
+        recommendations:
+          type: array
+          items:
+            type: string
+      required:
+        - analysis_id
+        - analysis_type
+        - results
+        - confidence_score

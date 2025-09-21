@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "pake-obsidian": {
+      "command": "node",
+      "args": ["mcp-servers/pake_node_mcp_server.js"],
+      "env": {
+        "VAULT_PATH": "/home/chris/projects/PAKE_SYSTEM_claude_optimized/vault"
+      }
+    },
+    "pake-server": {
+      "command": "python",
+      "args": ["mcp-servers/pake_mcp_server.py"],
+      "env": {
+        "VAULT_PATH": "/home/chris/projects/PAKE_SYSTEM_claude_optimized/vault"
+      }
+    }
+  }
+}

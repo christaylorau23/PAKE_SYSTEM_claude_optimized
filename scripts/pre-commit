@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+"""
+PAKE+ Pre-commit Hook for Schema Validation
+Validates YAML frontmatter in markdown files before commit
+"""
+
+import json
+import os
+import re
+import sys
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import yaml
+
+# Configuration
+REQUIRED_FIELDS = {
+    'pake_id': str,
+    'confidence_score': float,
+    'verification_status': str,
+    'source_uri': str,
+    'created': str,
+    'modified': str
+}
+
+VALID_STATUSES = ['draft', 'processing', 'verified', 'archived']
+VALID_VERIFICATION_STATUSES = ['pending', 'verified', 'rejected']
+VALID_TYPES = ['note', 'project', 'resource', 'daily', 'system']
+VAULT_PATH = Path('vault')
+
+def validate_uuid(uuid_string: str) -> bool:
+    """Validate UUID format"""
+    try:
+        uuid.UUID(uuid_string)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+def validate_datetime(date_string: str) -> bool:
+    """Validate datetime format"""
+    try:
+        datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+        return True
+    except (ValueError, TypeError):
+        return False
+
+def validate_frontmatter(file_path: Path) -> Tuple[bool, str]:
+    """Validate YAML frontmatter in markdown files"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        return False, f"Cannot read file: {str(e)}"
+    
+    if not content.startswith('---'):
+        return False, "Missing frontmatter delimiter"
+    
+    try:
+        # Extract frontmatter
+        parts = content.split('---', 2)
+        if len(parts) < 3:
+            return False, "Invalid frontmatter structure"
+        
+        frontmatter = parts[1]
+        data = yaml.safe_load(frontmatter)
+        
+        if not isinstance(data, dict):
+            return False, "Frontmatter must be a dictionary"
+        
+        # Validate required fields
+        for field, expected_type in REQUIRED_FIELDS.items():
+            if field not in data:
+                return False, f"Missing required field: {field}"
+            
+            if not isinstance(data[field], expected_type):
+                return False, f"Invalid type for {field}: expected {expected_type.__name__}, got {type(data[field]).__name__}"
+        
+        # Validate specific field formats
+        if not validate_uuid(data['pake_id']):
+            return False, f"Invalid UUID format for pake_id: {data['pake_id']}"
+        
+        if not validate_datetime(data['created']):
+            return False, f"Invalid datetime format for created: {data['created']}"
+        
+        if not validate_datetime(data['modified']):
+            return False, f"Invalid datetime format for modified: {data['modified']}"
+        
+        # Validate confidence score range
+        confidence = data['confidence_score']
+        if not isinstance(confidence, (int, float)) or not (0.0 <= confidence <= 1.0):
+            return False, f"Confidence score must be between 0.0 and 1.0, got: {confidence}"
+        
+        # Validate status fields
+        if 'status' in data and data['status'] not in VALID_STATUSES:
+            return False, f"Invalid status: {data['status']}. Must be one of: {', '.join(VALID_STATUSES)}"
+        
+        if data['verification_status'] not in VALID_VERIFICATION_STATUSES:
+            return False, f"Invalid verification_status: {data['verification_status']}. Must be one of: {', '.join(VALID_VERIFICATION_STATUSES)}"
+        
+        if 'type' in data and data['type'] not in VALID_TYPES:
+            return False, f"Invalid type: {data['type']}. Must be one of: {', '.join(VALID_TYPES)}"
+        
+        # Validate arrays
+        for array_field in ['tags', 'connections']:
+            if array_field in data and not isinstance(data[array_field], list):
+                return False, f"{array_field} must be an array"
+        
+        # Validate connections are valid UUIDs
+        if 'connections' in data:
+            for connection in data['connections']:
+                if not validate_uuid(connection):
+                    return False, f"Invalid UUID in connections: {connection}"
+        
+        # Content validation
+        content_body = parts[2].strip()
+        if not content_body:
+            return False, "Note content cannot be empty"
+        
+        # Validate minimum content structure for notes
+        if data.get('type', 'note') == 'note':
+            if len(content_body) < 50:
+                return False, "Note content too short (minimum 50 characters)"
+        
+        return True, "Valid frontmatter"
+        
+    except yaml.YAMLError as e:
+        return False, f"YAML parsing error: {str(e)}"
+    except Exception as e:
+        return False, f"Validation error: {str(e)}"
+
+def auto_fix_frontmatter(file_path: Path, data: Dict[str, Any]) -> bool:
+    """Attempt to auto-fix common frontmatter issues"""
+    try:
+        fixed = False
+        
+        # Auto-generate missing pake_id
+        if 'pake_id' not in data or not validate_uuid(data.get('pake_id', '')):
+            data['pake_id'] = str(uuid.uuid4())
+            fixed = True
+        
+        # Auto-set created date if missing
+        if 'created' not in data:
+            data['created'] = datetime.now().isoformat()
+            fixed = True
+        
+        # Auto-update modified date
+        data['modified'] = datetime.now().isoformat()
+        fixed = True
+        
+        # Set default confidence score
+        if 'confidence_score' not in data or not isinstance(data['confidence_score'], (int, float)):
+            data['confidence_score'] = 0.0
+            fixed = True
+        
+        # Set default verification status
+        if 'verification_status' not in data:
+            data['verification_status'] = 'pending'
+            fixed = True
+        
+        # Set default source_uri
+        if 'source_uri' not in data:
+            data['source_uri'] = 'local://manual'
+            fixed = True
+        
+        # Ensure arrays are arrays
+        for field in ['tags', 'connections']:
+            if field in data and not isinstance(data[field], list):
+                if isinstance(data[field], str):
+                    data[field] = [data[field]] if data[field] else []
+                else:
+                    data[field] = []
+                fixed = True
+        
+        if fixed:
+            # Write back to file
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            parts = content.split('---', 2)
+            new_frontmatter = yaml.dump(data, default_flow_style=False, sort_keys=False)
+            new_content = f"---\n{new_frontmatter}---{parts[2]}"
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+        
+        return fixed
+    
+    except Exception as e:
+        print(f"Warning: Could not auto-fix {file_path}: {str(e)}")
+        return False
+
+def validate_cross_references(file_path: Path) -> Tuple[bool, str]:
+    """Validate that referenced connections exist"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        parts = content.split('---', 2)
+        data = yaml.safe_load(parts[1])
+        
+        if 'connections' not in data or not data['connections']:
+            return True, "No connections to validate"
+        
+        # Check if connected files exist
+        missing_connections = []
+        vault_files = list(VAULT_PATH.rglob('*.md'))
+        existing_pake_ids = set()
+        
+        for vault_file in vault_files:
+            try:
+                with open(vault_file, 'r', encoding='utf-8') as f:
+                    vault_content = f.read()
+                if vault_content.startswith('---'):
+                    vault_parts = vault_content.split('---', 2)
+                    vault_data = yaml.safe_load(vault_parts[1])
+                    if 'pake_id' in vault_data:
+                        existing_pake_ids.add(vault_data['pake_id'])
+            except:
+                continue
+        
+        for connection in data['connections']:
+            if connection not in existing_pake_ids:
+                missing_connections.append(connection)
+        
+        if missing_connections:
+            return False, f"Missing connection targets: {', '.join(missing_connections)}"
+        
+        return True, "All connections valid"
+    
+    except Exception as e:
+        return False, f"Connection validation error: {str(e)}"
+
+def get_staged_files() -> List[Path]:
+    """Get list of staged markdown files"""
+    import subprocess
+    
+    try:
+        result = subprocess.run(
+            ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACM'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        staged_files = []
+        for line in result.stdout.strip().split('\n'):
+            if line and line.endswith('.md') and line.startswith('vault/'):
+                file_path = Path(line)
+                if file_path.exists():
+                    staged_files.append(file_path)
+        
+        return staged_files
+    
+    except subprocess.CalledProcessError:
+        return []
+
+def generate_validation_report(results: List[Tuple[Path, bool, str]]) -> str:
+    """Generate a detailed validation report"""
+    total_files = len(results)
+    valid_files = sum(1 for _, valid, _ in results if valid)
+    invalid_files = total_files - valid_files
+    
+    report = f"""
+PAKE+ Schema Validation Report
+==============================
+Total files: {total_files}
+Valid files: {valid_files}
+Invalid files: {invalid_files}
+
+"""
+    
+    if invalid_files > 0:
+        report += "❌ VALIDATION ERRORS:\n"
+        for file_path, valid, message in results:
+            if not valid:
+                report += f"  • {file_path}: {message}\n"
+        
+        report += f"\n💡 Fix these issues or use 'git commit --no-verify' to bypass validation.\n"
+    else:
+        report += "✅ All files passed validation!\n"
+    
+    return report
+
+def main():
+    """Main validation function"""
+    print("🔍 Running PAKE+ schema validation...")
+    
+    staged_files = get_staged_files()
+    
+    if not staged_files:
+        print("✅ No markdown files to validate")
+        sys.exit(0)
+    
+    results = []
+    auto_fixes = 0
+    
+    for file_path in staged_files:
+        # First pass: validation
+        valid, message = validate_frontmatter(file_path)
+        
+        if not valid:
+            # Attempt auto-fix
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                if content.startswith('---'):
+                    parts = content.split('---', 2)
+                    data = yaml.safe_load(parts[1])
+                    
+                    if auto_fix_frontmatter(file_path, data):
+                        auto_fixes += 1
+                        # Re-validate after fix
+                        valid, message = validate_frontmatter(file_path)
+            except:
+                pass
+        
+        # Validate cross-references
+        if valid:
+            cross_ref_valid, cross_ref_message = validate_cross_references(file_path)
+            if not cross_ref_valid:
+                valid = False
+                message = cross_ref_message
+        
+        results.append((file_path, valid, message))
+    
+    # Generate report
+    report = generate_validation_report(results)
+    print(report)
+    
+    if auto_fixes > 0:
+        print(f"🔧 Auto-fixed {auto_fixes} files. Please review and re-add to staging area.")
+        
+        # Re-add fixed files to staging area
+        import subprocess
+        for file_path, _, _ in results:
+            subprocess.run(['git', 'add', str(file_path)], check=False)
+    
+    # Exit with error code if any files are invalid
+    invalid_count = sum(1 for _, valid, _ in results if not valid)
+    if invalid_count > 0:
+        print(f"\n❌ {invalid_count} file(s) failed validation")
+        sys.exit(1)
+    else:
+        print(f"✅ All {len(results)} file(s) passed validation")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main()

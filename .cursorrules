@@ -1,0 +1,157 @@
+# PAKE System - Cursor IDE Rules
+# Enterprise-Grade Knowledge Management & AI Research Platform
+
+## Project Context
+This is the PAKE System, an enterprise-grade knowledge management and AI research platform with multi-source ingestion capabilities. The system is production-ready and uses GitHub Spec-Kit for structured development workflows.
+
+## Core Development Principles
+
+### Service-First Architecture (NON-NEGOTIABLE)
+- Every feature must be implemented as a self-contained service within `src/services/[category]/`
+- Services must be independently testable with comprehensive type annotations
+- Follow established async/await patterns for all I/O operations
+- Implement graceful degradation and circuit breaker patterns for external API dependencies
+
+### Code Quality Standards
+- **Python**: Use dataclasses, comprehensive type hints, async/await patterns
+- **TypeScript**: Strict mode mandatory, comprehensive error handling
+- **Testing**: 100% test coverage requirement before deployment
+- **Performance**: Sub-second response times for multi-source operations
+- **Security**: Never commit secrets, environment-based configuration only
+
+### File Organization
+```
+src/
+├── services/[category]/     # All new services go here
+├── bridge/                  # TypeScript Obsidian Bridge v2.0
+├── utils/                   # Shared utilities and helpers
+└── api/                     # API endpoints and GraphQL schemas
+```
+
+## Spec-Kit Integration
+
+### Available Commands
+When working with specifications, use these commands in Claude Code:
+- `/specify [feature_name]` - Create comprehensive feature specifications
+- `/plan [feature_name]` - Generate technical implementation plans
+- `/tasks [feature_name]` - Break down into actionable development tasks
+
+### Development Workflow
+1. **Planning Phase (Claude Code)**: Use `/specify`, `/plan`, `/tasks` for systematic planning
+2. **Implementation Phase (Cursor)**: Focus on hands-on coding with real-time feedback
+3. **Review Phase (Claude Code)**: Complex refactoring and architectural review
+
+## Coding Standards
+
+### Python Services
+```python
+# Use dataclasses for immutable data structures
+@dataclass(frozen=True)
+class ServiceResult:
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+# Async/await patterns for concurrent operations
+async def process_multiple_sources(sources: List[str]) -> List[Result]:
+    tasks = [process_source(source) for source in sources]
+    return await asyncio.gather(*tasks, return_exceptions=True)
+```
+
+### TypeScript Standards
+```typescript
+// Use strict typing for all API interactions
+interface ApiResponse<T = any> {
+    success: boolean;
+    data: T | null;
+    error: string | null;
+    timestamp: string;
+}
+
+// Comprehensive error handling
+const handleApiRequest = async <T>(operation: () => Promise<T>): Promise<ApiResponse<T>> => {
+    try {
+        const data = await operation();
+        return createApiResponse(true, data);
+    } catch (error) {
+        return createApiResponse(false, null, error.message);
+    }
+};
+```
+
+## Technology Stack Requirements
+- **Python 3.12+**: Core backend services with async/await patterns
+- **TypeScript/Node.js v22+**: Bridge services and frontend components
+- **Redis**: Enterprise multi-level caching (L1: in-memory, L2: Redis)
+- **PostgreSQL**: Primary database with async SQLAlchemy
+- **Docker**: Containerization for all deployments
+
+## Performance Requirements
+- Sub-second multi-source research operations
+- Sub-millisecond response times for cached queries
+- 100% test success rate maintenance
+- Graceful degradation under load
+
+## Security Requirements
+- Never commit secrets to version control
+- All configuration through environment variables with proper validation
+- Implement proper authentication patterns (JWT for API access)
+- Input validation and audit logging for all external integrations
+
+## Testing Requirements
+- Unit tests for individual service functionality
+- Integration tests for cross-service coordination
+- Performance tests for sub-second execution validation
+- Production tests for real API integration verification
+
+### Test Execution Commands
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run specific service tests
+python -m pytest tests/test_[service_name].py -v
+
+# Run production API validation
+python scripts/test_production_pipeline.py
+```
+
+## Development Commands
+```bash
+# Health checks
+python scripts/test_apis_simple.py
+curl http://localhost:3001/health
+
+# Start TypeScript bridge
+cd src/bridge && npm run start
+
+# Development environment
+npm run setup
+npm run doctor
+```
+
+## Error Handling Patterns
+- Use established patterns with proper logging
+- Implement exponential backoff with circuit breaker patterns
+- Provide graceful degradation with partial results
+- Comprehensive monitoring and alerting
+
+## Constitutional Compliance
+All development must align with the project constitution (`.specify/memory/constitution.md`):
+- Enterprise production standards
+- Service-first architecture
+- Type safety and documentation requirements
+- Security and environment management
+- Performance and scalability standards
+
+## When to Switch Tools
+- **Use Cursor for**: Implementation, debugging, refactoring, real-time coding
+- **Use Claude Code for**: Planning, specifications, complex architectural decisions, documentation
+- **Handoff Points**: After specification completion, before complex refactoring, during architectural reviews
+
+## Quick Reference
+- **Constitution**: `.specify/memory/constitution.md`
+- **Project Context**: `CLAUDE.md` (this file provides comprehensive project context)
+- **Specs Directory**: `.specify/specs/[feature]/`
+- **Scripts**: `.specify/scripts/bash/`
+- **Templates**: `.specify/templates/`

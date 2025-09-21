@@ -1,0 +1,1091 @@
+openapi: 3.0.3
+info:
+  title: PAKE System API
+  description: |
+    Enterprise knowledge management system with multi-source ingestion, AI intelligence, 
+    advanced analytics, and enhanced Obsidian integration.
+
+    ## Features
+    - Multi-source research (Web, ArXiv, PubMed)
+    - AI-powered semantic search and content summarization
+    - Advanced analytics with insights and anomaly detection
+    - Real-time bidirectional Obsidian vault integration
+    - ML-powered auto-tagging and metadata extraction
+    - Knowledge graph visualization and management
+    - GraphQL API with comprehensive schema
+    - Enterprise-grade caching and performance optimization
+
+    ## Authentication
+    The API uses JWT-based authentication for protected endpoints.
+
+    ## Rate Limiting
+    API requests are rate-limited to ensure system stability.
+
+    ## Versioning
+    Current API version: 10.2.0
+  version: 10.2.0
+  contact:
+    name: PAKE System Development Team
+    email: support@pake-system.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.pake-system.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: System health and status endpoints
+  - name: Search
+    description: Multi-source search and research endpoints
+  - name: Analytics
+    description: Advanced analytics and insights endpoints
+  - name: ML Services
+    description: Machine learning and AI-powered services
+  - name: Obsidian Integration
+    description: Enhanced Obsidian vault integration endpoints
+  - name: Knowledge Graph
+    description: Knowledge graph management endpoints
+  - name: Dashboards
+    description: Dashboard and visualization endpoints
+  - name: GraphQL
+    description: GraphQL API endpoints
+
+paths:
+  # Health Endpoints
+  /health:
+    get:
+      tags:
+        - Health
+      summary: System health check
+      description: Returns comprehensive system health status including all components
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  version:
+                    type: string
+                    example: 10.2.0
+                  timestamp:
+                    type: string
+                    format: date-time
+                  components:
+                    type: object
+                    properties:
+                      orchestrator:
+                        type: string
+                        example: healthy
+                      firecrawl_api:
+                        type: string
+                        example: configured
+                      arxiv_api:
+                        type: string
+                        example: available
+                      pubmed_api:
+                        type: string
+                        example: available
+                      neo4j_graph_db:
+                        type: string
+                        example: healthy
+                  capabilities:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      [
+                        'Multi-source research',
+                        'Real-time web scraping',
+                        'Academic paper search',
+                      ]
+
+  # Search Endpoints
+  /search:
+    post:
+      tags:
+        - Search
+      summary: Multi-source search with ML enhancement
+      description: |
+        Performs comprehensive multi-source research across Web, ArXiv, and PubMed sources
+        with optional ML-powered semantic search and content summarization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+
+  /quick:
+    post:
+      tags:
+        - Search
+      summary: Quick search with optimized performance
+      description: Fast search endpoint optimized for quick results with minimal processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickSearchRequest'
+      responses:
+        '200':
+          description: Quick search completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  # Analytics Endpoints
+  /analytics/comprehensive-report:
+    get:
+      tags:
+        - Analytics
+      summary: Generate comprehensive analytics report
+      description: |
+        Generates a comprehensive analytics report with insights, predictions, 
+        and actionable recommendations for system optimization.
+      parameters:
+        - name: time_range
+          in: query
+          description: Time range for analysis
+          required: false
+          schema:
+            type: string
+            enum: [1h, 6h, 12h, 24h, 7d, 30d]
+            default: 24h
+        - name: include_predictions
+          in: query
+          description: Include predictive analytics
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: include_recommendations
+          in: query
+          description: Include actionable recommendations
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Comprehensive report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComprehensiveReport'
+
+  /analytics/system-health:
+    get:
+      tags:
+        - Analytics
+      summary: System health analysis
+      description: Detailed system health analysis with component-level scoring
+      parameters:
+        - name: time_range
+          in: query
+          description: Time range for health analysis
+          required: false
+          schema:
+            type: string
+            enum: [1h, 6h, 12h, 24h]
+            default: 6h
+      responses:
+        '200':
+          description: System health analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealthReport'
+
+  /analytics/insights:
+    get:
+      tags:
+        - Analytics
+      summary: Get AI-generated insights
+      description: Retrieve AI-generated insights filtered by priority and category
+      parameters:
+        - name: priority
+          in: query
+          description: Filter insights by priority level
+          required: false
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+        - name: category
+          in: query
+          description: Filter insights by category
+          required: false
+          schema:
+            type: string
+            enum: [performance, usage, trend, correlation, prediction, anomaly]
+        - name: limit
+          in: query
+          description: Maximum number of insights to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Insights retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Insight'
+                  total_count:
+                    type: integer
+                  filtered_count:
+                    type: integer
+
+  /analytics/anomalies:
+    get:
+      tags:
+        - Analytics
+      summary: Detect system anomalies
+      description: Advanced anomaly detection with confidence scoring and severity classification
+      parameters:
+        - name: time_range
+          in: query
+          description: Time range for anomaly detection
+          required: false
+          schema:
+            type: string
+            enum: [1h, 6h, 12h, 24h]
+            default: 12h
+        - name: severity_threshold
+          in: query
+          description: Minimum severity threshold
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+            default: medium
+      responses:
+        '200':
+          description: Anomaly detection completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anomalies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Anomaly'
+                  total_detected:
+                    type: integer
+                  confidence_score:
+                    type: number
+                    format: float
+
+  # ML Services Endpoints
+  /ml/auto-tag:
+    post:
+      tags:
+        - ML Services
+      summary: Generate automatic tags using ML
+      description: |
+        Generates automatic tags for content using machine learning algorithms
+        with confidence scoring and customizable parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Content to analyze for tag generation
+                  example: 'This document discusses machine learning algorithms and artificial intelligence applications'
+                max_tags:
+                  type: integer
+                  description: Maximum number of tags to generate
+                  minimum: 1
+                  maximum: 20
+                  default: 5
+      responses:
+        '200':
+          description: Tags generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      [
+                        'machine',
+                        'learning',
+                        'algorithms',
+                        'artificial',
+                        'intelligence',
+                      ]
+                  confidence:
+                    type: number
+                    format: float
+                    description: Confidence score for tag generation
+                    example: 0.85
+                  method:
+                    type: string
+                    description: Method used for tag generation
+                    example: 'keyword_extraction'
+                  processed_at:
+                    type: string
+                    format: date-time
+
+  /ml/extract-metadata:
+    post:
+      tags:
+        - ML Services
+      summary: Extract enhanced metadata from content
+      description: |
+        Extracts comprehensive metadata from content including entities, topics,
+        sentiment analysis, and reading metrics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Content to analyze
+                  example: 'Dr. John Smith published a groundbreaking paper on AI at https://arxiv.org/abs/2023.12345'
+                include_entities:
+                  type: boolean
+                  description: Extract entities (URLs, emails, names)
+                  default: true
+                include_topics:
+                  type: boolean
+                  description: Extract topics and keywords
+                  default: true
+                include_sentiment:
+                  type: boolean
+                  description: Perform sentiment analysis
+                  default: true
+      responses:
+        '200':
+          description: Metadata extracted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  basic_stats:
+                    type: object
+                    properties:
+                      word_count:
+                        type: integer
+                      character_count:
+                        type: integer
+                      line_count:
+                        type: integer
+                      estimated_reading_time:
+                        type: integer
+                  entities:
+                    type: object
+                    properties:
+                      urls:
+                        type: array
+                        items:
+                          type: string
+                      emails:
+                        type: array
+                        items:
+                          type: string
+                      potential_names:
+                        type: array
+                        items:
+                          type: string
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        term:
+                          type: string
+                        frequency:
+                          type: integer
+                  sentiment:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                        format: float
+                      label:
+                        type: string
+                        enum: [positive, negative, neutral]
+                  extracted_at:
+                    type: string
+                    format: date-time
+
+  # Obsidian Integration Endpoints
+  /obsidian/sync:
+    post:
+      tags:
+        - Obsidian Integration
+      summary: Handle real-time sync events from Obsidian vault
+      description: |
+        Processes real-time sync events from Obsidian vault including file creation,
+        updates, and deletions with automatic metadata extraction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event
+                - vault_path
+              properties:
+                event:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [create, update, delete, move]
+                    filepath:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+                    metadata:
+                      type: object
+                vault_path:
+                  type: string
+                  description: Path to Obsidian vault
+      responses:
+        '200':
+          description: Sync event processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processed:
+                    type: boolean
+                  event_type:
+                    type: string
+                  filepath:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  vault_path:
+                    type: string
+                  metadata:
+                    type: object
+                    properties:
+                      file_size:
+                        type: integer
+                      line_count:
+                        type: integer
+                      word_count:
+                        type: integer
+                      processed_at:
+                        type: string
+                        format: date-time
+
+  # Knowledge Graph Endpoints
+  /knowledge-graph:
+    get:
+      tags:
+        - Knowledge Graph
+      summary: Get knowledge graph data
+      description: Retrieves current knowledge graph structure with nodes and relationships
+      responses:
+        '200':
+          description: Knowledge graph data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeNode'
+                  edges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeEdge'
+                  metadata:
+                    type: object
+                    properties:
+                      total_nodes:
+                        type: integer
+                      total_edges:
+                        type: integer
+                      last_updated:
+                        type: string
+                        format: date-time
+                      status:
+                        type: string
+
+  /knowledge-graph/update:
+    post:
+      tags:
+        - Knowledge Graph
+      summary: Update knowledge graph with new node data
+      description: Adds or updates nodes in the knowledge graph with relationship mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeNode'
+      responses:
+        '200':
+          description: Knowledge graph updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  node_id:
+                    type: string
+                  message:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # Dashboard Endpoints
+  /dashboard/realtime:
+    get:
+      tags:
+        - Dashboards
+      summary: Real-time analytics dashboard
+      description: Serves the real-time analytics dashboard with live system metrics
+      responses:
+        '200':
+          description: Dashboard served successfully
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /dashboard/advanced:
+    get:
+      tags:
+        - Dashboards
+      summary: Advanced analytics dashboard
+      description: Serves the advanced analytics dashboard with insights and predictions
+      responses:
+        '200':
+          description: Advanced dashboard served successfully
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /dashboard/obsidian:
+    get:
+      tags:
+        - Dashboards
+      summary: Enhanced Obsidian integration dashboard
+      description: Serves the comprehensive Obsidian integration dashboard
+      responses:
+        '200':
+          description: Obsidian dashboard served successfully
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # GraphQL Endpoint
+  /graphql:
+    post:
+      tags:
+        - GraphQL
+      summary: GraphQL API endpoint
+      description: |
+        Comprehensive GraphQL API with full schema support for advanced queries
+        and mutations. Use GraphiQL interface for interactive exploration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: GraphQL query string
+                variables:
+                  type: object
+                  description: GraphQL variables
+                operationName:
+                  type: string
+                  description: GraphQL operation name
+      responses:
+        '200':
+          description: GraphQL query executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                        locations:
+                          type: array
+                        path:
+                          type: array
+
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Search query string
+          example: 'machine learning algorithms'
+        sources:
+          type: array
+          items:
+            type: string
+            enum: [web, arxiv, pubmed]
+          default: ['web', 'arxiv', 'pubmed']
+          description: Data sources to search
+        max_results:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: Maximum number of results to return
+        enable_ml_enhancement:
+          type: boolean
+          default: true
+          description: Enable semantic search and ML enhancements
+        enable_content_summarization:
+          type: boolean
+          default: false
+          description: Enable advanced content summarization for results
+
+    QuickSearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Quick search query
+        enable_ml_enhancement:
+          type: boolean
+          default: true
+          description: Enable ML enhancements
+        enable_content_summarization:
+          type: boolean
+          default: false
+          description: Enable content summarization
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        summary:
+          type: object
+          properties:
+            total_results:
+              type: integer
+            execution_time_seconds:
+              type: number
+              format: float
+            performance:
+              type: string
+              enum: [excellent, good, fair, poor]
+            sources_queried:
+              type: array
+              items:
+                type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        source:
+          type: string
+          enum: [web, arxiv, pubmed]
+        url:
+          type: string
+          format: uri
+        authors:
+          type: array
+          items:
+            type: string
+        published_date:
+          type: string
+          format: date-time
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        metadata:
+          type: object
+
+    ComprehensiveReport:
+      type: object
+      properties:
+        report_id:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        time_range:
+          type: string
+        executive_summary:
+          type: object
+          properties:
+            overall_status:
+              type: string
+              enum: [healthy, warning, critical]
+            key_findings:
+              type: array
+              items:
+                type: string
+            critical_count:
+              type: integer
+            high_priority_count:
+              type: integer
+            total_insights:
+              type: integer
+            recommendations_count:
+              type: integer
+        system_health:
+          $ref: '#/components/schemas/SystemHealthReport'
+        performance_trends:
+          type: object
+          properties:
+            performance_score:
+              type: number
+              format: float
+            trend_direction:
+              type: string
+              enum: [improving, stable, declining]
+            metric_trends:
+              type: object
+        insights:
+          type: array
+          items:
+            $ref: '#/components/schemas/Insight'
+        predictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prediction'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+
+    SystemHealthReport:
+      type: object
+      properties:
+        overall_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        component_scores:
+          type: object
+          properties:
+            api_health:
+              type: number
+              format: float
+            database_health:
+              type: number
+              format: float
+            cache_health:
+              type: number
+              format: float
+            ml_services:
+              type: number
+              format: float
+            ingestion_pipeline:
+              type: number
+              format: float
+        health_trends:
+          type: object
+          properties:
+            api_health:
+              type: string
+              enum: [improving, stable, declining]
+            database_health:
+              type: string
+              enum: [improving, stable, declining]
+            cache_health:
+              type: string
+              enum: [improving, stable, declining]
+            ml_services:
+              type: string
+              enum: [improving, stable, declining]
+            ingestion_pipeline:
+              type: string
+              enum: [improving, stable, declining]
+        critical_issues:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Insight:
+      type: object
+      properties:
+        insight_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [performance, usage, trend, correlation, prediction, anomaly]
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        severity:
+          type: string
+          enum: [urgent, warning, info, success]
+        recommended_actions:
+          type: array
+          items:
+            type: string
+        time_sensitivity:
+          type: string
+          enum: [immediate, daily, weekly, monthly]
+        generated_at:
+          type: string
+          format: date-time
+
+    Anomaly:
+      type: object
+      properties:
+        anomaly_id:
+          type: string
+        metric_name:
+          type: string
+        detected_value:
+          type: number
+          format: float
+        expected_range:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+            max:
+              type: number
+              format: float
+        confidence:
+          type: number
+          format: float
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        detected_at:
+          type: string
+          format: date-time
+
+    Prediction:
+      type: object
+      properties:
+        prediction_id:
+          type: string
+        metric:
+          type: string
+        predicted_value:
+          type: number
+          format: float
+        confidence_interval:
+          type: object
+          properties:
+            lower:
+              type: number
+              format: float
+            upper:
+              type: number
+              format: float
+        time_horizon:
+          type: string
+        confidence:
+          type: number
+          format: float
+        generated_at:
+          type: string
+          format: date-time
+
+    Recommendation:
+      type: object
+      properties:
+        recommendation_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [performance, security, scalability, maintenance]
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        estimated_impact:
+          type: string
+          enum: [high, medium, low]
+        implementation_effort:
+          type: string
+          enum: [high, medium, low]
+        generated_at:
+          type: string
+          format: date-time
+
+    KnowledgeNode:
+      type: object
+      required:
+        - id
+        - title
+        - type
+      properties:
+        id:
+          type: string
+          description: Unique node identifier
+        title:
+          type: string
+          description: Node title
+        type:
+          type: string
+          enum: [note, project, resource, daily, system]
+          description: Node type
+        connections:
+          type: array
+          items:
+            type: string
+          description: Connected node IDs
+        metadata:
+          type: object
+          description: Additional node metadata
+          properties:
+            confidence_score:
+              type: number
+              format: float
+            tags:
+              type: array
+              items:
+                type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    KnowledgeEdge:
+      type: object
+      properties:
+        id:
+          type: string
+        source_id:
+          type: string
+        target_id:
+          type: string
+        relationship_type:
+          type: string
+          enum: [relates_to, contains, references, similar_to]
+        properties:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for API authentication
+
+security:
+  - BearerAuth: []

@@ -1,0 +1,597 @@
+openapi: 3.0.0
+info:
+  title: Intelligent Content Curation API
+  description: API for personalized content discovery, recommendation, and curation
+  version: 1.0.0
+  contact:
+    name: PAKE System Development Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+paths:
+  /curation/recommendations:
+    get:
+      summary: Get personalized content recommendations
+      description: Returns a ranked list of content recommendations for the authenticated user
+      parameters:
+        - name: limit
+          in: query
+          description: Number of recommendations to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Offset for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: topic_filter
+          in: query
+          description: Filter by topic categories
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: source_filter
+          in: query
+          description: Filter by content sources
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: content_type
+          in: query
+          description: Filter by content type
+          required: false
+          schema:
+            type: string
+            enum: [paper, article, blog, video, podcast]
+        - name: min_quality
+          in: query
+          description: Minimum quality score
+          required: false
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+        - name: include_explanation
+          in: query
+          description: Include recommendation explanations
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecommendationResponse'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+                  total_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /curation/content/{content_id}/analyze:
+    post:
+      summary: Analyze content for curation
+      description: Analyze and classify content for the curation system
+      parameters:
+        - name: content_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Content analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentAnalysisResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /curation/user/preferences:
+    get:
+      summary: Get user preferences
+      description: Retrieve current user preference settings
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update user preferences
+      description: Update user preference settings and interests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /curation/feedback:
+    post:
+      summary: Submit content feedback
+      description: Provide feedback on content or recommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackSubmission'
+      responses:
+        '201':
+          description: Feedback recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /curation/topics:
+    get:
+      summary: Get topic categories
+      description: Retrieve available topic categories for content classification
+      parameters:
+        - name: parent_id
+          in: query
+          description: Get subcategories of specified parent
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: level
+          in: query
+          description: Get categories at specific hierarchy level
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Topic categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopicCategory'
+
+  /curation/analytics/user-activity:
+    get:
+      summary: Get user activity analytics
+      description: Retrieve user interaction analytics and engagement metrics
+      parameters:
+        - name: days
+          in: query
+          description: Number of days to include in analytics
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: User activity analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    RecommendationResponse:
+      type: object
+      required:
+        - recommendation_id
+        - content
+        - relevance_score
+        - ranking_position
+      properties:
+        recommendation_id:
+          type: string
+          format: uuid
+        content:
+          $ref: '#/components/schemas/ContentSummary'
+        relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        ranking_position:
+          type: integer
+          minimum: 1
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        explanation:
+          type: object
+          properties:
+            quick_tags:
+              type: array
+              items:
+                type: string
+            detailed_reasoning:
+              type: string
+            feature_weights:
+              type: object
+              additionalProperties:
+                type: number
+
+    ContentSummary:
+      type: object
+      required:
+        - id
+        - title
+        - url
+        - source
+        - content_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 500
+        url:
+          type: string
+          format: uri
+        source:
+          type: string
+        content_type:
+          type: string
+          enum: [paper, article, blog, video, podcast]
+        summary:
+          type: string
+        author:
+          type: string
+        published_date:
+          type: string
+          format: date-time
+        domain:
+          type: string
+        quality_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        topic_tags:
+          type: array
+          items:
+            type: string
+
+    ContentAnalysisResponse:
+      type: object
+      required:
+        - content_id
+        - analysis_status
+      properties:
+        content_id:
+          type: string
+          format: uuid
+        analysis_status:
+          type: string
+          enum: [completed, in_progress, failed]
+        quality_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        authority_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        topic_tags:
+          type: array
+          items:
+            type: string
+        domain:
+          type: string
+        confidence_metrics:
+          type: object
+          additionalProperties:
+            type: number
+
+    UserPreferences:
+      type: object
+      required:
+        - user_id
+        - interests
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        interests:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        diversity_preference:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        quality_threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        source_preferences:
+          type: object
+          properties:
+            preferred_sources:
+              type: array
+              items:
+                type: string
+            avoided_sources:
+              type: array
+              items:
+                type: string
+        temporal_preferences:
+          type: object
+          properties:
+            recency_weight:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+            authority_weight:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+
+    UserPreferencesUpdate:
+      type: object
+      properties:
+        interests:
+          type: array
+          items:
+            type: string
+        diversity_preference:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        quality_threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        source_preferences:
+          type: object
+          properties:
+            preferred_sources:
+              type: array
+              items:
+                type: string
+            avoided_sources:
+              type: array
+              items:
+                type: string
+        temporal_preferences:
+          type: object
+          properties:
+            recency_weight:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+            authority_weight:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+
+    FeedbackSubmission:
+      type: object
+      required:
+        - content_id
+        - feedback_type
+        - feedback_value
+      properties:
+        content_id:
+          type: string
+          format: uuid
+        recommendation_id:
+          type: string
+          format: uuid
+        feedback_type:
+          type: string
+          enum: [rating, relevance, quality, not_interested]
+        feedback_value:
+          type: number
+          minimum: 0.0
+          maximum: 5.0
+        feedback_reason:
+          type: string
+          maxLength: 500
+
+    FeedbackResponse:
+      type: object
+      properties:
+        feedback_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [recorded, processed]
+        message:
+          type: string
+
+    TopicCategory:
+      type: object
+      required:
+        - id
+        - name
+        - level
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+        level:
+          type: integer
+          minimum: 0
+        keywords:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        content_count:
+          type: integer
+          minimum: 0
+
+    UserAnalytics:
+      type: object
+      properties:
+        interaction_summary:
+          type: object
+          properties:
+            total_interactions:
+              type: integer
+            content_views:
+              type: integer
+            content_saves:
+              type: integer
+            feedback_given:
+              type: integer
+        engagement_patterns:
+          type: object
+          properties:
+            preferred_content_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  content_type:
+                    type: string
+                  percentage:
+                    type: number
+            active_hours:
+              type: array
+              items:
+                type: integer
+            top_domains:
+              type: array
+              items:
+                type: string
+        recommendation_performance:
+          type: object
+          properties:
+            click_through_rate:
+              type: number
+            average_relevance_rating:
+              type: number
+            recommendations_accepted:
+              type: integer
+
+    PaginationInfo:
+      type: object
+      properties:
+        offset:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        has_more:
+          type: boolean
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: 'Authentication required'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: 'Resource not found'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              request_id:
+                type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

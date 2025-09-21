@@ -1,0 +1,140 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: production
+  namespace: argocd
+  labels:
+    environment: production
+    team: pake-infrastructure
+spec:
+  description: 'PAKE System Production Environment'
+
+  # Source repositories
+  sourceRepos:
+    - 'https://github.com/pake-system/kubernetes-infrastructure'
+    - 'https://github.com/pake-system/pake-api'
+    - 'https://github.com/pake-system/pake-ai'
+    - 'https://github.com/pake-system/pake-workers'
+    - 'https://charts.bitnami.com/bitnami'
+    - 'https://helm.elastic.co'
+
+  # Allowed destinations
+  destinations:
+    - namespace: 'pake-system'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'database'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'monitoring'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'ingress-nginx'
+      server: 'https://kubernetes.default.svc'
+    - namespace: 'cert-manager'
+      server: 'https://kubernetes.default.svc'
+
+  # Cluster resource whitelist
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: policy
+      kind: PodSecurityPolicy
+    - group: storage.k8s.io
+      kind: StorageClass
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionWebhook
+    - group: admissionregistration.k8s.io
+      kind: MutatingAdmissionWebhook
+
+  # Namespace resource whitelist
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: ''
+      kind: PersistentVolumeClaim
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
+    - group: apps
+      kind: DaemonSet
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: autoscaling.k8s.io
+      kind: VerticalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+    - group: external-secrets.io
+      kind: ExternalSecret
+
+  # Roles for project access
+  roles:
+    # DevOps team - full access
+    - name: devops
+      description: DevOps team with full production access
+      policies:
+        - p, proj:production:devops, applications, *, production/*, allow
+        - p, proj:production:devops, repositories, *, *, allow
+        - p, proj:production:devops, exec, create, */*, allow
+      groups:
+        - pake-system:devops
+
+    # Developers - limited access
+    - name: developers
+      description: Developers with read access and limited deployment rights
+      policies:
+        - p, proj:production:developers, applications, get, production/*, allow
+        - p, proj:production:developers, applications, sync, production/pake-api, allow
+        - p, proj:production:developers, applications, sync, production/pake-workers, allow
+        - p, proj:production:developers, repositories, get, *, allow
+      groups:
+        - pake-system:developers
+
+    # SRE team - monitoring and troubleshooting
+    - name: sre
+      description: SRE team with monitoring and troubleshooting access
+      policies:
+        - p, proj:production:sre, applications, get, production/*, allow
+        - p, proj:production:sre, applications, sync, production/*, allow
+        - p, proj:production:sre, exec, create, */*, allow
+        - p, proj:production:sre, repositories, get, *, allow
+      groups:
+        - pake-system:sre
+
+  # Sync windows - maintenance windows
+  syncWindows:
+    - kind: allow
+      schedule: '0 2-6 * * *' # Allow syncs between 2-6 AM UTC
+      duration: 4h
+      applications:
+        - 'pake-*'
+      manualSync: false
+
+    - kind: deny
+      schedule: '0 8-20 * * 1-5' # Block syncs during business hours on weekdays
+      duration: 12h
+      applications:
+        - 'pake-data'
+      manualSync: true
+
+  # Signature keys for secure deployments
+  signatureKeys:
+    - keyID: 12345ABCDE67890F

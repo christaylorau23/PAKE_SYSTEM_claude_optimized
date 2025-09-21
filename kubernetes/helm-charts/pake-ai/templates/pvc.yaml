@@ -1,0 +1,45 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pake-ai-models
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pake-ai.labels" . | nindent 4 }}
+  {{- with .Values.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- range .Values.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.modelCache }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pake-ai-model-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pake-ai.labels" . | nindent 4 }}
+    component: model-cache
+spec:
+  accessModes:
+    - {{ .Values.modelCache.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.modelCache.size | quote }}
+  {{- if .Values.modelCache.storageClass }}
+  storageClassName: {{ .Values.modelCache.storageClass | quote }}
+  {{- end }}
+{{- end }}

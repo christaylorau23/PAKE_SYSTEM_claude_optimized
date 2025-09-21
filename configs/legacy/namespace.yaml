@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wealth-platform
+  labels:
+    name: wealth-platform
+    purpose: personal-wealth-generation
+    tier: production
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: wealth-platform-quota
+  namespace: wealth-platform
+spec:
+  hard:
+    requests.cpu: '32' # 32 CPU cores
+    requests.memory: 256Gi # 256GB RAM
+    limits.cpu: '64' # Burst to 64 cores
+    limits.memory: 512Gi # Burst to 512GB RAM
+    persistentvolumeclaims: '20'
+    services: '20'
+    secrets: '10'
+    configmaps: '10'
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: wealth-platform-limits
+  namespace: wealth-platform
+spec:
+  limits:
+    - default:
+        cpu: '4' # Default 4 CPUs per container
+        memory: '8Gi' # Default 8GB per container
+      defaultRequest:
+        cpu: '1' # Default request 1 CPU
+        memory: '2Gi' # Default request 2GB
+      type: Container

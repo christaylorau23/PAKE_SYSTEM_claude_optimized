@@ -1,0 +1,30 @@
+# Elasticsearch Configuration for AI Security Monitoring
+
+# Cluster settings
+cluster.name: 'pake-security-cluster'
+node.name: 'pake-security-node'
+
+# Network settings
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# Discovery settings (single node)
+discovery.type: single-node
+
+# Security settings (disabled for development)
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+
+# Monitoring settings
+xpack.monitoring.collection.enabled: true
+
+# Index settings
+action.auto_create_index: '+logs-*,+security-*,+audit-*,-*'
+
+# Performance settings
+indices.memory.index_buffer_size: 10%
+thread_pool.write.queue_size: 200
+
+# Logging
+logger.org.elasticsearch.deprecation: warn

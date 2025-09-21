@@ -1,0 +1,448 @@
+# Istio Service Mesh Installation for PAKE System
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    istio-injection: disabled
+
+---
+# Istio Operator for managing Istio installation
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: pake-istio-control-plane
+  namespace: istio-system
+spec:
+  # Istio configuration for production
+  hub: docker.io/istio
+  tag: 1.19.0
+
+  # Global mesh configuration
+  meshConfig:
+    # Enable automatic mTLS
+    defaultConfig:
+      # Telemetry settings
+      proxyMetadata:
+        PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION: true
+        PILOT_TRACE_SAMPLING: '1.0' # 100% sampling for detailed tracing
+        BOOTSTRAP_XDS_AGENT: true
+      # Tracing configuration
+      tracing:
+        sampling: 100.0 # 100% sampling
+        max_path_tag_length: 256
+        custom_tags:
+          cluster_name:
+            literal:
+              value: pake-production
+          environment:
+            literal:
+              value: production
+      # Enable access logging
+      accessLogFile: /dev/stdout
+      accessLogFormat: |
+        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%"
+        %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT%
+        %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%"
+        "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+        %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+
+    # Default providers for telemetry
+    defaultProviders:
+      metrics:
+        - prometheus
+      tracing:
+        - jaeger
+      accessLogging:
+        - envoy
+
+    # Extension providers
+    extensionProviders:
+      - name: jaeger
+        envoyOtelAls:
+          service: jaeger-collector.observability.svc.cluster.local
+          port: 4317
+      - name: prometheus
+        prometheus:
+          configOverride:
+            metric_relabeling_configs:
+              - source_labels: [__name__]
+                regex: 'istio_.*'
+                target_label: __tmp_istio_metric
+                replacement: 'true'
+
+  # Control plane components
+  components:
+    # Pilot (Istiod) configuration
+    pilot:
+      k8s:
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        hpaSpec:
+          minReplicas: 3
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+        env:
+          - name: PILOT_TRACE_SAMPLING
+            value: '100'
+          - name: PILOT_ENABLE_ALPHA_GATEWAY_API
+            value: 'true'
+          - name: PILOT_ENABLE_STATUS
+            value: 'true'
+          - name: PILOT_ENABLE_CROSS_CLUSTER_WORKLOAD_ENTRY
+            value: 'true'
+        nodeSelector:
+          workload: api-services
+          node-type: standard
+        tolerations:
+          - key: workload
+            operator: Equal
+            value: api-services
+            effect: NoSchedule
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchLabels:
+                      app: istiod
+                  topologyKey: kubernetes.io/hostname
+
+    # Ingress Gateway configuration
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: LoadBalancer
+            ports:
+              - port: 15021
+                targetPort: 15021
+                name: status-port
+                protocol: TCP
+              - port: 80
+                targetPort: 8080
+                name: http2
+                protocol: TCP
+              - port: 443
+                targetPort: 8443
+                name: https
+                protocol: TCP
+              - port: 31400
+                targetPort: 31400
+                name: tcp
+                protocol: TCP
+              - port: 15443
+                targetPort: 15443
+                name: tls
+                protocol: TCP
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          hpaSpec:
+            minReplicas: 3
+            maxReplicas: 10
+            metrics:
+              - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: 80
+          nodeSelector:
+            workload: api-services
+            node-type: standard
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: api-services
+              effect: NoSchedule
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        app: istio-ingressgateway
+                    topologyKey: kubernetes.io/hostname
+
+    # Egress Gateway for external traffic control
+    egressGateways:
+      - name: istio-egressgateway
+        enabled: true
+        k8s:
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          hpaSpec:
+            minReplicas: 2
+            maxReplicas: 5
+          nodeSelector:
+            workload: api-services
+            node-type: standard
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: api-services
+              effect: NoSchedule
+
+  # Global configuration values
+  values:
+    global:
+      # Mesh ID for multi-cluster
+      meshID: pake-mesh
+      multiCluster:
+        clusterName: pake-production
+      network: pake-network
+
+      # Proxy configuration
+      proxy:
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        # Lifecycle hooks for graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - sleep 15
+
+      # Logging configuration
+      logging:
+        level: 'default:info'
+
+      # Image pull policy
+      imagePullPolicy: IfNotPresent
+
+    # Pilot specific values
+    pilot:
+      traceSampling: 100.0
+      env:
+        PILOT_ENABLE_ALPHA_GATEWAY_API: true
+        PILOT_ENABLE_STATUS: true
+        PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION: true
+
+    # Sidecar injector configuration
+    sidecarInjectorWebhook:
+      enableNamespacesByDefault: false
+      rewriteAppHTTPProbe: true
+      # Custom injection template for PAKE services
+      injectionTemplates:
+        pake: |
+          spec:
+            containers:
+            - name: istio-proxy
+              env:
+              - name: PILOT_TRACE_SAMPLING
+                value: "100"
+              - name: BOOTSTRAP_XDS_AGENT
+                value: "true"
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+
+---
+# Istio Gateway for PAKE services
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: pake-gateway
+  namespace: pake-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    # HTTP (redirect to HTTPS)
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - api.pake-system.com
+        - ai.pake-system.com
+        - grafana.pake-system.com
+        - jaeger.pake-system.com
+        - kiali.pake-system.com
+      tls:
+        httpsRedirect: true
+
+    # HTTPS
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: pake-tls-secret
+      hosts:
+        - api.pake-system.com
+        - ai.pake-system.com
+        - grafana.pake-system.com
+        - jaeger.pake-system.com
+        - kiali.pake-system.com
+
+---
+# Istio Service Monitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-mesh
+  namespace: istio-system
+  labels:
+    app: istiod
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: istiod
+  endpoints:
+    - port: http-monitoring
+      interval: 15s
+      path: /stats/prometheus
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-proxy
+  namespace: istio-system
+  labels:
+    app: istio-proxy
+    release: prometheus
+spec:
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - istio-ingressgateway
+          - istio-egressgateway
+  endpoints:
+    - port: http-envoy-prom
+      interval: 15s
+      path: /stats/prometheus
+
+---
+# Kiali for service mesh observability
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+  namespace: istio-system
+spec:
+  installation_tag: 'v1.73.0'
+
+  auth:
+    strategy: 'openid'
+    openid:
+      client_id: 'kiali'
+      issuer_uri: 'https://auth.pake-system.com'
+      scopes: ['openid', 'profile', 'email', 'groups']
+      username_claim: 'preferred_username'
+
+  deployment:
+    accessible_namespaces:
+      - '**'
+    namespace: istio-system
+    ingress:
+      enabled: true
+      class_name: 'nginx'
+      override_yaml:
+        metadata:
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+            cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+        spec:
+          rules:
+            - host: kiali.pake-system.com
+              http:
+                paths:
+                  - path: '/'
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: kiali
+                        port:
+                          number: 20001
+          tls:
+            - secretName: kiali-tls
+              hosts:
+                - kiali.pake-system.com
+
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+    node_selector:
+      workload: api-services
+      node-type: standard
+
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: api-services
+        effect: NoSchedule
+
+  external_services:
+    istio:
+      config_map_name: 'istio'
+      istio_sidecar_annotation: 'sidecar.istio.io/status'
+      url_service_version: 'http://istiod:15014/version'
+
+    prometheus:
+      url: 'http://prometheus.monitoring:9090'
+
+    grafana:
+      enabled: true
+      in_cluster_url: 'http://grafana.monitoring:3000'
+      url: 'https://grafana.pake-system.com'
+      dashboards:
+        - name: 'Istio Service Dashboard'
+          variables:
+            namespace: 'var-namespace'
+            service: 'var-service'
+        - name: 'Istio Workload Dashboard'
+          variables:
+            namespace: 'var-namespace'
+            workload: 'var-workload'
+
+    tracing:
+      enabled: true
+      in_cluster_url: 'http://jaeger-query.observability:16686'
+      url: 'https://jaeger.pake-system.com'
+      use_grpc: false

@@ -1,0 +1,68 @@
+/**
+ * Jest Test Setup
+ * 
+ * Global configuration and utilities for test suite
+ */
+
+import { jest } from '@jest/globals';
+
+// Increase timeout for integration tests
+jest.setTimeout(30000);
+
+// Suppress console.log in tests unless explicitly testing logging
+const originalConsole = console;
+
+beforeAll(() => {
+  // Suppress console output during tests
+  global.console = {
+    ...originalConsole,
+    log: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  } as any;
+});
+
+afterAll(() => {
+  // Restore console
+  global.console = originalConsole;
+});
+
+// Global test utilities
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeWithinRange(floor: number, ceiling: number): R;
+    }
+  }
+}
+
+// Custom matchers
+expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () => `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+});
+
+// Environment setup for tests
+process.env.NODE_ENV = process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED';
+process.env.LOG_LEVEL = 'error';
+process.env.FEATURE_TASK_SUBMISSION_API_ENABLED = 'true';
+process.env.FEATURE_CLAUDE_PROVIDER_ENABLED = 'true';
+process.env.FEATURE_OLLAMA_PROVIDER_ENABLED = 'true';
+process.env.FEATURE_NULL_PROVIDER_ENABLED = 'true';
+
+// Mock external services by default
+process.env.MOCK_EXTERNAL_SERVICES = 'true';

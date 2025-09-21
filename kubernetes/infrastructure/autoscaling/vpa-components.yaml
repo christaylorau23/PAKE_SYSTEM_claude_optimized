@@ -1,0 +1,325 @@
+# Vertical Pod Autoscaler Components
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:vpa-admission-controller
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'configmaps', 'nodes', 'limitranges']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['autoscaling.k8s.io']
+    resources: ['verticalpodautoscalers']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['coordination.k8s.io']
+    resources: ['leases']
+    verbs: ['get', 'list', 'create', 'update', 'delete', 'watch']
+  - apiGroups: ['admissionregistration.k8s.io']
+    resources: ['mutatingadmissionwebhooks']
+    verbs: ['get', 'list', 'create', 'delete', 'update']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:vpa-recommender
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'nodes', 'limitranges']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'daemonsets', 'replicasets', 'statefulsets']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['autoscaling.k8s.io']
+    resources: ['verticalpodautoscalers']
+    verbs: ['get', 'list', 'watch', 'patch']
+  - apiGroups: ['metrics.k8s.io']
+    resources: ['pods', 'nodes']
+    verbs: ['get', 'list']
+  - apiGroups: ['coordination.k8s.io']
+    resources: ['leases']
+    verbs: ['get', 'list', 'create', 'update', 'delete', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:vpa-updater
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'events']
+    verbs: ['get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'daemonsets', 'replicasets', 'statefulsets']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['autoscaling.k8s.io']
+    resources: ['verticalpodautoscalers']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['coordination.k8s.io']
+    resources: ['leases']
+    verbs: ['get', 'list', 'create', 'update', 'delete', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-admission-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-admission-controller
+subjects:
+  - kind: ServiceAccount
+    name: vpa-admission-controller
+    namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-recommender
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-recommender
+subjects:
+  - kind: ServiceAccount
+    name: vpa-recommender
+    namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-updater
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-updater
+subjects:
+  - kind: ServiceAccount
+    name: vpa-updater
+    namespace: kube-system
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+  labels:
+    app: vpa-recommender
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-recommender
+  template:
+    metadata:
+      labels:
+        app: vpa-recommender
+    spec:
+      serviceAccountName: vpa-recommender
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: recommender
+          image: k8s.gcr.io/autoscaling/vpa-recommender:0.14.0
+          imagePullPolicy: Always
+          args:
+            - --v=4
+            - --stderrthreshold=info
+            - --pod-recommendation-min-cpu-millicores=25
+            - --pod-recommendation-min-memory-mb=250
+            - --recommendation-margin-fraction=0.15
+            - --checkpoints-gc-interval=10m0s
+          resources:
+            limits:
+              cpu: 200m
+              memory: 1000Mi
+            requests:
+              cpu: 50m
+              memory: 500Mi
+          ports:
+            - name: prometheus
+              containerPort: 8942
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8942
+            failureThreshold: 6
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+  labels:
+    app: vpa-updater
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-updater
+  template:
+    metadata:
+      labels:
+        app: vpa-updater
+    spec:
+      serviceAccountName: vpa-updater
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: updater
+          image: k8s.gcr.io/autoscaling/vpa-updater:0.14.0
+          imagePullPolicy: Always
+          args:
+            - --v=4
+            - --stderrthreshold=info
+            - --min-replicas=1
+            - --eviction-rate-limit=10
+            - --eviction-rate-burst=100
+          resources:
+            limits:
+              cpu: 200m
+              memory: 1000Mi
+            requests:
+              cpu: 50m
+              memory: 500Mi
+          ports:
+            - name: prometheus
+              containerPort: 8943
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8943
+            failureThreshold: 6
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+  labels:
+    app: vpa-admission-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-admission-controller
+  template:
+    metadata:
+      labels:
+        app: vpa-admission-controller
+    spec:
+      serviceAccountName: vpa-admission-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: admission-controller
+          image: k8s.gcr.io/autoscaling/vpa-admission-controller:0.14.0
+          imagePullPolicy: Always
+          args:
+            - --v=4
+            - --stderrthreshold=info
+            - --client-ca-file=/etc/tls-certs/caCert.pem
+            - --tls-cert-file=/etc/tls-certs/serverCert.pem
+            - --tls-private-key=/etc/tls-certs/serverKey.pem
+            - --webhook-timeout-seconds=30
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/tls-certs
+              readOnly: true
+          resources:
+            limits:
+              cpu: 200m
+              memory: 500Mi
+            requests:
+              cpu: 50m
+              memory: 200Mi
+          ports:
+            - containerPort: 8000
+            - name: prometheus
+              containerPort: 8944
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8944
+            failureThreshold: 6
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: vpa-tls-certs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpa-webhook
+  namespace: kube-system
+spec:
+  ports:
+    - port: 443
+      targetPort: 8000
+  selector:
+    app: vpa-admission-controller

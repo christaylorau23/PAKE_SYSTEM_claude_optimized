@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+  namespace: pake-system
+spec:
+  replicas: 5 # Production scale
+  template:
+    spec:
+      containers:
+        - name: pake-backend
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '4Gi'
+              cpu: '2000m'
+          env:
+            - name: MAX_WORKERS
+              value: '8'
+            - name: WORKER_CONNECTIONS
+              value: '2000'
+            - name: CACHE_TTL
+              value: '3600'
+            - name: ENABLE_METRICS
+              value: 'true'
+            - name: ENABLE_TRACING
+              value: 'true'
+            - name: LOG_LEVEL
+              value: 'warn'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-frontend
+  namespace: pake-system
+spec:
+  replicas: 4 # Production scale
+  template:
+    spec:
+      containers:
+        - name: pake-frontend
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '200m'
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+          env:
+            - name: NODE_ENV
+              value: 'production'
+            - name: NEXT_TELEMETRY_DISABLED
+              value: '1'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: pake-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1000m'
+            limits:
+              memory: '8Gi'
+              cpu: '4000m'
+          env:
+            - name: POSTGRES_SHARED_BUFFERS
+              value: '1GB'
+            - name: POSTGRES_EFFECTIVE_CACHE_SIZE
+              value: '4GB'
+            - name: POSTGRES_MAINTENANCE_WORK_MEM
+              value: '256MB'
+            - name: POSTGRES_CHECKPOINT_COMPLETION_TARGET
+              value: '0.9'
+            - name: POSTGRES_WAL_BUFFERS
+              value: '16MB'
+            - name: POSTGRES_DEFAULT_STATISTICS_TARGET
+              value: '100'
+            - name: POSTGRES_RANDOM_PAGE_COST
+              value: '1.1'
+            - name: POSTGRES_EFFECTIVE_IO_CONCURRENCY
+              value: '200'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: pake-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '250m'
+            limits:
+              memory: '4Gi'
+              cpu: '1000m'
+          command:
+            - redis-server
+            - --appendonly
+            - 'yes'
+            - --requirepass
+            - '$(REDIS_PASSWORD)'
+            - --maxmemory
+            - '3gb'
+            - --maxmemory-policy
+            - 'allkeys-lru'
+            - --save
+            - '300 1'
+            - --tcp-keepalive
+            - '60'

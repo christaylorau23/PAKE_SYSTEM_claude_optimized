@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PAKE Analytics - Enhanced Dashboard</title>
+    <style>
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #e74c3c;
+        --success-color: #27ae60;
+        --warning-color: #f39c12;
+        --background-dark: #1a1a1a;
+        --background-light: #f8f9fa;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --border-color: #ecf0f1;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: var(--text-primary);
+      }
+
+      .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .dashboard-header {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: var(--shadow-lg);
+        text-align: center;
+      }
+
+      .dashboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 10px;
+      }
+
+      .dashboard-header .subtitle {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+      }
+
+      .status-indicators {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+
+      .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--success-color);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .chart-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: var(--shadow-lg);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .chart-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      }
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .chart-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+
+      .chart-subtitle {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        margin: 10px 0;
+      }
+
+      .metric-change {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 6px;
+        display: inline-block;
+      }
+
+      .metric-change.positive {
+        background: rgba(39, 174, 96, 0.1);
+        color: var(--success-color);
+      }
+
+      .metric-change.negative {
+        background: rgba(231, 76, 60, 0.1);
+        color: var(--accent-color);
+      }
+
+      .chart-container {
+        height: 300px;
+        width: 100%;
+      }
+
+      .large-chart-container {
+        height: 400px;
+        width: 100%;
+      }
+
+      .wide-card {
+        grid-column: 1 / -1;
+      }
+
+      .controls-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        align-items: center;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .control-label {
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 0.9rem;
+      }
+
+      select,
+      input,
+      button {
+        padding: 10px 15px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s ease;
+      }
+
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+      }
+
+      button {
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s ease;
+      }
+
+      button:hover {
+        background: #2980b9;
+      }
+
+      .refresh-button {
+        background: var(--success-color);
+      }
+
+      .refresh-button:hover {
+        background: #219a52;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .data-table th,
+      .data-table td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .data-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+
+      .data-table tr:hover {
+        background: #f8f9fa;
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--border-color);
+        border-top: 4px solid var(--secondary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+
+      .alert-info {
+        background: rgba(52, 152, 219, 0.1);
+        border: 1px solid rgba(52, 152, 219, 0.3);
+        color: var(--secondary-color);
+      }
+
+      .alert-success {
+        background: rgba(39, 174, 96, 0.1);
+        border: 1px solid rgba(39, 174, 96, 0.3);
+        color: var(--success-color);
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 8px;
+        background: var(--secondary-color);
+        color: white;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin: 2px;
+      }
+
+      .footer {
+        text-align: center;
+        padding: 30px;
+        color: white;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .controls-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .status-indicators {
+          flex-direction: column;
+          gap: 15px;
+        }
+      }
+    </style>
+
+    <!-- Include Chart.js and D3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Header -->
+      <div class="dashboard-header">
+        <h1>🧠 PAKE Analytics Dashboard</h1>
+        <p class="subtitle">Enhanced Visualization & Real-time Intelligence</p>
+
+        <div class="status-indicators">
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>System Healthy</span>
+          </div>
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>Real-time Updates</span>
+          </div>
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>ML Intelligence Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Panel -->
+      <div class="controls-panel">
+        <div class="controls-grid">
+          <div class="control-group">
+            <label class="control-label">Time Range</label>
+            <select id="timeRange">
+              <option value="1h">Last Hour</option>
+              <option value="24h" selected>Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Metrics</label>
+            <select id="metricsType">
+              <option value="performance">Performance</option>
+              <option value="usage">Usage Analytics</option>
+              <option value="intelligence">ML Intelligence</option>
+              <option value="correlation">Correlations</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Auto-refresh</label>
+            <select id="refreshInterval">
+              <option value="0">Manual</option>
+              <option value="30" selected>30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="300">5 minutes</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <button id="refreshButton" class="refresh-button">
+              🔄 Refresh Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Performance Metrics -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Response Time</div>
+              <div class="chart-subtitle">Average API response time</div>
+            </div>
+          </div>
+          <div class="metric-value" id="responseTimeValue">--ms</div>
+          <div class="metric-change positive" id="responseTimeChange">+0%</div>
+          <div class="chart-container">
+            <canvas id="responseTimeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Search Analytics -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Search Volume</div>
+              <div class="chart-subtitle">Searches processed</div>
+            </div>
+          </div>
+          <div class="metric-value" id="searchVolumeValue">--</div>
+          <div class="metric-change positive" id="searchVolumeChange">+0%</div>
+          <div class="chart-container">
+            <canvas id="searchVolumeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ML Intelligence Metrics -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">ML Enhancement Rate</div>
+              <div class="chart-subtitle">Queries enhanced by ML</div>
+            </div>
+          </div>
+          <div class="metric-value" id="mlEnhancementValue">--%</div>
+          <div class="metric-change positive" id="mlEnhancementChange">+0%</div>
+          <div class="chart-container">
+            <canvas id="mlEnhancementChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Source Distribution -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Source Distribution</div>
+              <div class="chart-subtitle">Results by source</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="sourceDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Real-time Analytics -->
+        <div class="chart-card wide-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Real-time Activity Stream</div>
+              <div class="chart-subtitle">
+                Live system activity and patterns
+              </div>
+            </div>
+          </div>
+          <div class="large-chart-container" id="realTimeActivity"></div>
+        </div>
+
+        <!-- Correlation Heatmap -->
+        <div class="chart-card wide-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Correlation Heatmap</div>
+              <div class="chart-subtitle">Relationships between metrics</div>
+            </div>
+          </div>
+          <div class="large-chart-container" id="correlationHeatmap"></div>
+        </div>
+
+        <!-- Top Searches -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Top Search Queries</div>
+              <div class="chart-subtitle">Most frequent searches</div>
+            </div>
+          </div>
+          <div id="topSearchesList"></div>
+        </div>
+
+        <!-- System Health -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">System Health</div>
+              <div class="chart-subtitle">Component status</div>
+            </div>
+          </div>
+          <div id="systemHealthStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        🚀 PAKE System Enhanced Analytics Dashboard | Real-time Intelligence &
+        Visualization
+      </p>
+    </div>
+
+    <script>
+      // Dashboard Configuration
+      const CONFIG = {
+        API_BASE: 'http://localhost:8000',
+        BRIDGE_API: 'http://localhost:3001',
+        REFRESH_INTERVAL: 30000,
+        CHART_COLORS: {
+          primary: '#3498db',
+          secondary: '#e74c3c',
+          success: '#27ae60',
+          warning: '#f39c12',
+          info: '#8e44ad',
+          dark: '#2c3e50',
+        },
+      };
+
+      // Global Dashboard State
+      let dashboardState = {
+        isLoading: false,
+        refreshInterval: null,
+        charts: {},
+        lastUpdate: null,
+        data: {
+          metrics: {},
+          searches: [],
+          correlations: [],
+          activity: [],
+        },
+      };
+
+      // Chart.js Global Configuration
+      Chart.defaults.font.family = 'Inter, sans-serif';
+      Chart.defaults.font.size = 12;
+      Chart.defaults.color = '#7f8c8d';
+
+      // Initialize Dashboard
+      document.addEventListener('DOMContentLoaded', function () {
+        console.log('🎨 Initializing Enhanced Analytics Dashboard...');
+        initializeDashboard();
+        setupEventListeners();
+        loadDashboardData();
+      });
+
+      function initializeDashboard() {
+        // Initialize all charts
+        initializeCharts();
+
+        // Setup auto-refresh
+        setupAutoRefresh();
+
+        // Display initial loading state
+        showLoadingState();
+      }
+
+      function setupEventListeners() {
+        // Refresh button
+        document
+          .getElementById('refreshButton')
+          .addEventListener('click', () => {
+            loadDashboardData();
+          });
+
+        // Time range selector
+        document.getElementById('timeRange').addEventListener('change', e => {
+          loadDashboardData();
+        });
+
+        // Metrics type selector
+        document.getElementById('metricsType').addEventListener('change', e => {
+          updateMetricsDisplay(e.target.value);
+        });
+
+        // Auto-refresh interval
+        document
+          .getElementById('refreshInterval')
+          .addEventListener('change', e => {
+            setupAutoRefresh(parseInt(e.target.value));
+          });
+      }
+
+      function setupAutoRefresh(interval = 30) {
+        // Clear existing interval
+        if (dashboardState.refreshInterval) {
+          clearInterval(dashboardState.refreshInterval);
+        }
+
+        // Set new interval if not manual
+        if (interval > 0) {
+          dashboardState.refreshInterval = setInterval(() => {
+            loadDashboardData();
+          }, interval * 1000);
+        }
+      }
+
+      function showLoadingState() {
+        const loadingHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading dashboard data...</p>
+                </div>
+            `;
+
+        // Show loading in main containers
+        document
+          .querySelectorAll('.chart-container, .large-chart-container')
+          .forEach(container => {
+            if (!container.querySelector('canvas')) {
+              container.innerHTML = loadingHTML;
+            }
+          });
+      }
+
+      async function loadDashboardData() {
+        if (dashboardState.isLoading) return;
+
+        dashboardState.isLoading = true;
+        const refreshButton = document.getElementById('refreshButton');
+        refreshButton.textContent = '⟳ Loading...';
+        refreshButton.disabled = true;
+
+        try {
+          console.log('📊 Loading dashboard data...');
+
+          // Load data from multiple endpoints in parallel
+          const [healthData, dashboardData, searchData] = await Promise.all([
+            fetchHealthData(),
+            fetchDashboardData(),
+            fetchSearchAnalytics(),
+          ]);
+
+          // Update dashboard state
+          dashboardState.data = {
+            health: healthData,
+            dashboard: dashboardData,
+            searches: searchData,
+            lastUpdate: new Date(),
+          };
+
+          // Update all visualizations
+          updateAllVisualizations();
+
+          console.log('✅ Dashboard data loaded successfully');
+        } catch (error) {
+          console.error('❌ Error loading dashboard data:', error);
+          showErrorState(error.message);
+        } finally {
+          dashboardState.isLoading = false;
+          refreshButton.textContent = '🔄 Refresh Now';
+          refreshButton.disabled = false;
+        }
+      }
+
+      async function fetchHealthData() {
+        const response = await fetch(`${CONFIG.API_BASE}/health`);
+        if (!response.ok) throw new Error('Health check failed');
+        return response.json();
+      }
+
+      async function fetchDashboardData() {
+        try {
+          // Use the new enhanced analytics dashboard endpoint
+          const response = await fetch(
+            `${CONFIG.API_BASE}/analytics/enhanced-dashboard`
+          );
+          if (!response.ok)
+            throw new Error('Enhanced dashboard data fetch failed');
+          const data = await response.json();
+          return data.success ? data.dashboard_data : null;
+        } catch (error) {
+          console.error('Error fetching enhanced dashboard data:', error);
+          // Fallback to the existing ML dashboard
+          const response = await fetch(`${CONFIG.API_BASE}/ml/dashboard`);
+          if (!response.ok) throw new Error('Dashboard data fetch failed');
+          return response.json();
+        }
+      }
+
+      async function fetchSearchAnalytics() {
+        // Simulate search analytics data
+        return {
+          recent_searches: [
+            'machine learning',
+            'artificial intelligence',
+            'deep learning',
+          ],
+          volume_today: Math.floor(Math.random() * 100) + 50,
+          avg_response_time: Math.floor(Math.random() * 200) + 100,
+          ml_enhancement_rate: Math.floor(Math.random() * 30) + 70,
+        };
+      }
+
+      function updateAllVisualizations() {
+        updateMetrics();
+        updateCharts();
+        updateTables();
+        updateRealTimeVisualizations();
+      }
+
+      function updateMetrics() {
+        const data = dashboardState.data;
+
+        // Update response time
+        const responseTime = data.searches?.avg_response_time || 150;
+        document.getElementById('responseTimeValue').textContent =
+          `${responseTime}ms`;
+
+        // Update search volume
+        const volume = data.searches?.volume_today || 0;
+        document.getElementById('searchVolumeValue').textContent = volume;
+
+        // Update ML enhancement rate
+        const mlRate = data.searches?.ml_enhancement_rate || 0;
+        document.getElementById('mlEnhancementValue').textContent =
+          `${mlRate}%`;
+      }
+
+      function initializeCharts() {
+        // Response Time Chart
+        const responseCtx = document
+          .getElementById('responseTimeChart')
+          .getContext('2d');
+        dashboardState.charts.responseTime = new Chart(responseCtx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Response Time (ms)',
+                data: [],
+                borderColor: CONFIG.CHART_COLORS.primary,
+                backgroundColor: CONFIG.CHART_COLORS.primary + '20',
+                tension: 0.4,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: '#f1f3f4',
+                },
+              },
+              x: {
+                grid: {
+                  color: '#f1f3f4',
+                },
+              },
+            },
+          },
+        });
+
+        // Search Volume Chart
+        const volumeCtx = document
+          .getElementById('searchVolumeChart')
+          .getContext('2d');
+        dashboardState.charts.searchVolume = new Chart(volumeCtx, {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Searches',
+                data: [],
+                backgroundColor: CONFIG.CHART_COLORS.success + '80',
+                borderColor: CONFIG.CHART_COLORS.success,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: '#f1f3f4',
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+              },
+            },
+          },
+        });
+
+        // ML Enhancement Chart (Doughnut)
+        const mlCtx = document
+          .getElementById('mlEnhancementChart')
+          .getContext('2d');
+        dashboardState.charts.mlEnhancement = new Chart(mlCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Enhanced', 'Standard'],
+            datasets: [
+              {
+                data: [75, 25],
+                backgroundColor: [CONFIG.CHART_COLORS.info, '#ecf0f1'],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+            },
+          },
+        });
+
+        // Source Distribution Chart
+        const sourceCtx = document
+          .getElementById('sourceDistributionChart')
+          .getContext('2d');
+        dashboardState.charts.sourceDistribution = new Chart(sourceCtx, {
+          type: 'pie',
+          data: {
+            labels: ['Web', 'ArXiv', 'PubMed', 'Gmail'],
+            datasets: [
+              {
+                data: [40, 30, 20, 10],
+                backgroundColor: [
+                  CONFIG.CHART_COLORS.primary,
+                  CONFIG.CHART_COLORS.success,
+                  CONFIG.CHART_COLORS.warning,
+                  CONFIG.CHART_COLORS.secondary,
+                ],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+            },
+          },
+        });
+      }
+
+      function updateCharts() {
+        // Generate sample time series data
+        const now = new Date();
+        const timeLabels = [];
+        const responseTimeData = [];
+        const volumeData = [];
+
+        for (let i = 23; i >= 0; i--) {
+          const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+          timeLabels.push(time.getHours() + ':00');
+          responseTimeData.push(Math.floor(Math.random() * 100) + 100);
+          volumeData.push(Math.floor(Math.random() * 20) + 5);
+        }
+
+        // Update charts
+        dashboardState.charts.responseTime.data.labels = timeLabels;
+        dashboardState.charts.responseTime.data.datasets[0].data =
+          responseTimeData;
+        dashboardState.charts.responseTime.update();
+
+        dashboardState.charts.searchVolume.data.labels = timeLabels;
+        dashboardState.charts.searchVolume.data.datasets[0].data = volumeData;
+        dashboardState.charts.searchVolume.update();
+
+        // Update ML enhancement rate
+        const mlRate = dashboardState.data.searches?.ml_enhancement_rate || 75;
+        dashboardState.charts.mlEnhancement.data.datasets[0].data = [
+          mlRate,
+          100 - mlRate,
+        ];
+        dashboardState.charts.mlEnhancement.update();
+      }
+
+      function updateTables() {
+        updateTopSearches();
+        updateSystemHealth();
+      }
+
+      function updateTopSearches() {
+        const container = document.getElementById('topSearchesList');
+        const searches = dashboardState.data.searches?.recent_searches || [
+          'machine learning',
+          'artificial intelligence',
+          'data science',
+        ];
+
+        const html = searches
+          .map(
+            (query, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #ecf0f1;">
+                    <div>
+                        <strong>${query}</strong>
+                        <div style="font-size: 0.8rem; color: #7f8c8d;">
+                            ${Math.floor(Math.random() * 50) + 10} searches
+                        </div>
+                    </div>
+                    <span class="tag">#${index + 1}</span>
+                </div>
+            `
+          )
+          .join('');
+
+        container.innerHTML = html;
+      }
+
+      function updateSystemHealth() {
+        const container = document.getElementById('systemHealthStatus');
+        const health = dashboardState.data.health;
+
+        const components = [
+          { name: 'MCP Server', status: 'healthy', icon: '🖥️' },
+          { name: 'TypeScript Bridge', status: 'healthy', icon: '🌉' },
+          { name: 'ML Services', status: 'healthy', icon: '🧠' },
+          { name: 'Database', status: 'healthy', icon: '💾' },
+          { name: 'Cache Layer', status: 'healthy', icon: '⚡' },
+        ];
+
+        const html = components
+          .map(
+            comp => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>${comp.icon}</span>
+                        <span>${comp.name}</span>
+                    </div>
+                    <span style="color: ${comp.status === 'healthy' ? '#27ae60' : '#e74c3c'}; font-weight: 600;">
+                        ${comp.status === 'healthy' ? '✅ Healthy' : '❌ Error'}
+                    </span>
+                </div>
+            `
+          )
+          .join('');
+
+        container.innerHTML = html;
+      }
+
+      function updateRealTimeVisualizations() {
+        updateRealTimeActivity();
+        updateCorrelationHeatmap();
+      }
+
+      function updateRealTimeActivity() {
+        // Create a real-time activity visualization using D3.js
+        const container = d3.select('#realTimeActivity');
+        container.selectAll('*').remove();
+
+        const width = container.node().clientWidth;
+        const height = 400;
+
+        const svg = container
+          .append('svg')
+          .attr('width', width)
+          .attr('height', height);
+
+        // Generate sample activity data
+        const activities = [];
+        const now = Date.now();
+
+        for (let i = 0; i < 50; i++) {
+          activities.push({
+            timestamp: now - Math.random() * 3600000,
+            type: ['search', 'analysis', 'enhancement'][
+              Math.floor(Math.random() * 3)
+            ],
+            value: Math.random() * 100,
+            id: i,
+          });
+        }
+
+        // Create scales
+        const xScale = d3
+          .scaleTime()
+          .domain(d3.extent(activities, d => d.timestamp))
+          .range([50, width - 50]);
+
+        const yScale = d3
+          .scaleLinear()
+          .domain([0, 100])
+          .range([height - 50, 50]);
+
+        const colorScale = d3
+          .scaleOrdinal()
+          .domain(['search', 'analysis', 'enhancement'])
+          .range([
+            CONFIG.CHART_COLORS.primary,
+            CONFIG.CHART_COLORS.success,
+            CONFIG.CHART_COLORS.warning,
+          ]);
+
+        // Add axes
+        svg
+          .append('g')
+          .attr('transform', `translate(0, ${height - 50})`)
+          .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat('%H:%M')));
+
+        svg
+          .append('g')
+          .attr('transform', 'translate(50, 0)')
+          .call(d3.axisLeft(yScale));
+
+        // Add data points
+        svg
+          .selectAll('circle')
+          .data(activities)
+          .enter()
+          .append('circle')
+          .attr('cx', d => xScale(d.timestamp))
+          .attr('cy', d => yScale(d.value))
+          .attr('r', 4)
+          .attr('fill', d => colorScale(d.type))
+          .attr('opacity', 0.7)
+          .on('mouseover', function (event, d) {
+            d3.select(this).attr('r', 6);
+          })
+          .on('mouseout', function (event, d) {
+            d3.select(this).attr('r', 4);
+          });
+
+        // Add legend
+        const legend = svg
+          .append('g')
+          .attr('transform', `translate(${width - 150}, 20)`);
+
+        ['search', 'analysis', 'enhancement'].forEach((type, i) => {
+          const g = legend
+            .append('g')
+            .attr('transform', `translate(0, ${i * 20})`);
+
+          g.append('circle').attr('r', 4).attr('fill', colorScale(type));
+
+          g.append('text')
+            .attr('x', 10)
+            .attr('y', 5)
+            .attr('font-size', '12px')
+            .text(type);
+        });
+      }
+
+      function updateCorrelationHeatmap() {
+        // Create correlation heatmap using Plotly
+        const metrics = [
+          'Response Time',
+          'Search Volume',
+          'ML Enhancement',
+          'Cache Hit Rate',
+          'Error Rate',
+        ];
+
+        // Generate sample correlation data
+        const correlationData = [];
+        for (let i = 0; i < metrics.length; i++) {
+          const row = [];
+          for (let j = 0; j < metrics.length; j++) {
+            if (i === j) {
+              row.push(1);
+            } else {
+              row.push((Math.random() - 0.5) * 2);
+            }
+          }
+          correlationData.push(row);
+        }
+
+        const data = [
+          {
+            z: correlationData,
+            x: metrics,
+            y: metrics,
+            type: 'heatmap',
+            colorscale: 'RdYlBu',
+            reversescale: true,
+            hoverongaps: false,
+          },
+        ];
+
+        const layout = {
+          title: '',
+          margin: { t: 20, l: 100, r: 20, b: 100 },
+          font: { family: 'Inter, sans-serif', size: 12 },
+        };
+
+        Plotly.newPlot('correlationHeatmap', data, layout, {
+          responsive: true,
+          displayModeBar: false,
+        });
+      }
+
+      function updateMetricsDisplay(type) {
+        console.log(`Switching to ${type} metrics view`);
+        // This would filter/update visualizations based on metrics type
+        // Implementation would depend on specific requirements
+      }
+
+      function showErrorState(message) {
+        const errorHTML = `
+                <div class="alert alert-info">
+                    <strong>⚠️ Data Loading Issue:</strong> ${message}
+                    <br>
+                    <small>The dashboard will retry automatically. Check that the PAKE server is running on port 8000.</small>
+                </div>
+            `;
+
+        document
+          .querySelector('.dashboard-grid')
+          .insertAdjacentHTML('afterbegin', errorHTML);
+
+        // Remove error after 10 seconds
+        setTimeout(() => {
+          const alert = document.querySelector('.alert');
+          if (alert) alert.remove();
+        }, 10000);
+      }
+
+      // Utility functions
+      function formatTimestamp(timestamp) {
+        return new Date(timestamp).toLocaleTimeString();
+      }
+
+      function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+      }
+
+      // Initialize dashboard
+      console.log('🎨 Enhanced Analytics Dashboard loaded successfully!');
+    </script>
+  </body>
+</html>

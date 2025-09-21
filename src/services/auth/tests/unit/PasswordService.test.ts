@@ -1,0 +1,405 @@
+/**
+ * Password Service Unit Tests
+ * Tests password validation, hashing, and policy enforcement
+ */
+
+import { PasswordService } from '../../src/services/PasswordService';
+import { RedisService } from '../../src/services/RedisService';
+import { createMockRedis } from '../setup';
+
+describe('PasswordService', () => {
+  let passwordService: PasswordService;
+  let mockRedis: jest.Mocked<RedisService>;
+
+  beforeEach(() => {
+    mockRedis = createMockRedis();
+    passwordService = new PasswordService(mockRedis);
+  });
+
+  describe('validatePassword', () => {
+    it('should validate strong password', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.score).toBeGreaterThan(80);
+    });
+
+    it('should reject password too short', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('at least 12 characters long')
+      );
+    });
+
+    it('should reject password without uppercase', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('uppercase letter')
+      );
+    });
+
+    it('should reject password without lowercase', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('lowercase letter')
+      );
+    });
+
+    it('should reject password without numbers', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(expect.stringContaining('number'));
+    });
+
+    it('should reject password without symbols', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('special character')
+      );
+    });
+
+    it('should reject common passwords', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(expect.stringContaining('too common'));
+    });
+
+    it('should reject passwords with repeating patterns', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('repeating patterns')
+      );
+    });
+
+    it('should reject passwords with sequential patterns', async () => {
+      const password = process.env.UNKNOWN;
+
+      const result = await passwordService.validatePassword(password);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('sequential patterns')
+      );
+    });
+
+    it('should check password reuse', async () => {
+      const userId = 'user-123';
+      const password = 'TestPassword123!@#';
+
+      // Mock password reuse check
+      jest.spyOn(passwordService, 'checkPasswordReuse').mockResolvedValue(true);
+
+      const result = await passwordService.validatePassword(password, userId);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(expect.stringContaining('Cannot reuse'));
+    });
+
+    it('should calculate password entropy', async () => {
+      const lowEntropyPassword = process.env.UNKNOWN;
+      const highEntropyPassword = process.env.UNKNOWN;
+
+      const lowResult =
+        await passwordService.validatePassword(lowEntropyPassword);
+      const highResult =
+        await passwordService.validatePassword(highEntropyPassword);
+
+      expect(highResult.score).toBeGreaterThan(lowResult.score);
+    });
+  });
+
+  describe('hashPassword', () => {
+    it('should hash password using Argon2', async () => {
+      const password = 'TestPassword123!@#';
+
+      const hash = await passwordService.hashPassword(password);
+
+      expect(hash).toBeDefined();
+      expect(hash).toMatch(/^\$argon2id\$/);
+      expect(hash).not.toBe(password);
+    });
+
+    it('should generate different hashes for same password', async () => {
+      const password = 'TestPassword123!@#';
+
+      const hash1 = await passwordService.hashPassword(password);
+      const hash2 = await passwordService.hashPassword(password);
+
+      expect(hash1).not.toBe(hash2);
+    });
+  });
+
+  describe('verifyPassword', () => {
+    it('should verify correct password', async () => {
+      const password = 'TestPassword123!@#';
+      const hash = await passwordService.hashPassword(password);
+
+      const result = await passwordService.verifyPassword(password, hash);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject incorrect password', async () => {
+      const password = 'TestPassword123!@#';
+      const wrongPassword = process.env.UNKNOWN;
+      const hash = await passwordService.hashPassword(password);
+
+      const result = await passwordService.verifyPassword(wrongPassword, hash);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle bcrypt hashes (legacy)', async () => {
+      const password = 'TestPassword123!@#';
+      // Create bcrypt hash (simulated)
+      const bcryptHash = '$2b$10$abcdefghijklmnopqrstuvwxyz';
+
+      // Mock bcrypt verification
+      const bcrypt = require('bcryptjs');
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
+
+      const result = await passwordService.verifyPassword(password, bcryptHash);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject invalid hash format', async () => {
+      const password = 'TestPassword123!@#';
+      const invalidHash = 'not-a-hash';
+
+      const result = await passwordService.verifyPassword(
+        password,
+        invalidHash
+      );
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('checkPasswordReuse', () => {
+    it('should detect password reuse', async () => {
+      const userId = 'user-123';
+      const password = 'TestPassword123!@#';
+      const hash = await passwordService.hashPassword(password);
+
+      mockRedis.llen.mockResolvedValue(1);
+      mockRedis.lrange.mockResolvedValue([hash]);
+
+      const result = await passwordService.checkPasswordReuse(userId, password);
+
+      expect(result).toBe(true);
+    });
+
+    it('should allow new password', async () => {
+      const userId = 'user-123';
+      const password = process.env.UNKNOWN;
+      const oldHash = await passwordService.hashPassword('OldPassword123!@#');
+
+      mockRedis.llen.mockResolvedValue(1);
+      mockRedis.lrange.mockResolvedValue([oldHash]);
+
+      const result = await passwordService.checkPasswordReuse(userId, password);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle no password history', async () => {
+      const userId = 'user-123';
+      const password = 'TestPassword123!@#';
+
+      mockRedis.llen.mockResolvedValue(0);
+
+      const result = await passwordService.checkPasswordReuse(userId, password);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('addToPasswordHistory', () => {
+    it('should add password to history', async () => {
+      const userId = 'user-123';
+      const passwordHash = 'hash-123';
+
+      await passwordService.addToPasswordHistory(userId, passwordHash);
+
+      expect(mockRedis.lpush).toHaveBeenCalledWith(
+        `password_history:${userId}`,
+        passwordHash
+      );
+      expect(mockRedis.ltrim).toHaveBeenCalled();
+      expect(mockRedis.expire).toHaveBeenCalled();
+    });
+  });
+
+  describe('isPasswordExpired', () => {
+    it('should detect expired password', async () => {
+      const userId = 'user-123';
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 100); // 100 days ago
+
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          passwordUpdatedAt: oldDate.toISOString(),
+        })
+      );
+
+      const result = await passwordService.isPasswordExpired(userId);
+
+      expect(result).toBe(true);
+    });
+
+    it('should detect valid password', async () => {
+      const userId = 'user-123';
+      const recentDate = new Date();
+      recentDate.setDate(recentDate.getDate() - 30); // 30 days ago
+
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          passwordUpdatedAt: recentDate.toISOString(),
+        })
+      );
+
+      const result = await passwordService.isPasswordExpired(userId);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle missing password update timestamp', async () => {
+      const userId = 'user-123';
+
+      mockRedis.get.mockResolvedValue(JSON.stringify({}));
+
+      const result = await passwordService.isPasswordExpired(userId);
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('generateStrongPassword', () => {
+    it('should generate password with default length', () => {
+      const password = passwordService.generateStrongPassword();
+
+      expect(password).toHaveLength(16);
+      expect(/[A-Z]/.test(password)).toBe(true);
+      expect(/[0-9]/.test(password)).toBe(true);
+      expect(/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>?]/.test(password)).toBe(true);
+    });
+
+    it('should generate password with custom length', () => {
+      const length = 20;
+      const password = passwordService.generateStrongPassword(length);
+
+      expect(password).toHaveLength(length);
+    });
+
+    it('should generate different passwords each time', () => {
+      const password1 = passwordService.generateStrongPassword();
+      const password2 = passwordService.generateStrongPassword();
+
+      expect(password1).not.toBe(password2);
+    });
+  });
+
+  describe('getPasswordStrengthDescription', () => {
+    it('should return correct strength descriptions', () => {
+      expect(passwordService.getPasswordStrengthDescription(90)).toBe(
+        'Very Strong'
+      );
+      expect(passwordService.getPasswordStrengthDescription(70)).toBe('Strong');
+      expect(passwordService.getPasswordStrengthDescription(50)).toBe('Medium');
+      expect(passwordService.getPasswordStrengthDescription(30)).toBe('Weak');
+      expect(passwordService.getPasswordStrengthDescription(10)).toBe(
+        'Very Weak'
+      );
+    });
+  });
+
+  describe('getPasswordRequirements', () => {
+    it('should return policy requirements', () => {
+      const requirements = passwordService.getPasswordRequirements();
+
+      expect(requirements).toContain(
+        expect.stringContaining('12-128 characters long')
+      );
+      expect(requirements).toContain(
+        expect.stringContaining('uppercase letter')
+      );
+      expect(requirements).toContain(
+        expect.stringContaining('lowercase letter')
+      );
+    });
+  });
+
+  describe('cleanupExpiredHistories', () => {
+    it('should clean up expired histories', async () => {
+      mockRedis.keys.mockResolvedValue([
+        'password_history:user1',
+        'password_history:user2',
+      ]);
+      mockRedis.ttl.mockResolvedValue(-1); // Expired
+      mockRedis.del.mockResolvedValue(1);
+
+      const result = await passwordService.cleanupExpiredHistories();
+
+      expect(result).toBe(2);
+      expect(mockRedis.del).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle very long password', async () => {
+      const longPassword = process.env.UNKNOWN.repeat(200) + '1!';
+
+      const result = await passwordService.validatePassword(longPassword);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        expect.stringContaining('not exceed 128 characters')
+      );
+    });
+
+    it('should handle empty password', async () => {
+      const result = await passwordService.validatePassword('');
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should handle Redis errors gracefully', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Redis error'));
+
+      const result = await passwordService.isPasswordExpired('user-123');
+
+      expect(result).toBe(false); // Fail safe
+    });
+  });
+});

@@ -1,0 +1,376 @@
+# Prometheus Alerting Rules for PAKE System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  api-rules.yml: |
+    groups:
+    - name: pake-api-alerts
+      rules:
+      # High error rate
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{service="pake-api",status=~"5.."}[5m])) /
+            sum(rate(http_requests_total{service="pake-api"}[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "High API error rate detected"
+          description: "PAKE API error rate is {{ $value | humanizePercentage }} over the last 5 minutes, which exceeds the 5% threshold"
+          runbook_url: "https://wiki.pake-system.com/runbooks/high-error-rate"
+      
+      # High response time
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="pake-api"}[5m]))
+            by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "High API latency detected"
+          description: "PAKE API 95th percentile latency is {{ $value }}s, which exceeds the 500ms threshold"
+          
+      # Low throughput
+      - alert: LowAPIThroughput
+        expr: |
+          sum(rate(http_requests_total{service="pake-api"}[5m])) < 10
+        for: 10m
+        labels:
+          severity: warning
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "Low API throughput detected"
+          description: "PAKE API request rate is {{ $value }} requests/second, which is unusually low"
+          
+      # API service down
+      - alert: APIServiceDown
+        expr: |
+          up{service="pake-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "PAKE API service is down"
+          description: "PAKE API service has been down for more than 1 minute"
+          
+      # High memory usage
+      - alert: HighAPIMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{pod=~"pake-api.*"} /
+            container_spec_memory_limit_bytes{pod=~"pake-api.*"}
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          service: pake-api
+          team: backend
+        annotations:
+          summary: "High API memory usage"
+          description: "PAKE API pod {{ $labels.pod }} memory usage is {{ $value | humanizePercentage }}"
+
+  ai-rules.yml: |
+    groups:
+    - name: pake-ai-alerts
+      rules:
+      # GPU utilization too low
+      - alert: LowGPUUtilization
+        expr: |
+          nvidia_gpu_utilization{service="pake-ai"} < 30
+        for: 15m
+        labels:
+          severity: warning
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "Low GPU utilization detected"
+          description: "GPU utilization on {{ $labels.instance }} is {{ $value }}%, which may indicate underutilized resources"
+          
+      # GPU memory exhaustion
+      - alert: HighGPUMemoryUsage
+        expr: |
+          (
+            nvidia_gpu_memory_used_bytes{service="pake-ai"} /
+            nvidia_gpu_memory_total_bytes{service="pake-ai"}
+          ) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "GPU memory exhaustion"
+          description: "GPU memory usage on {{ $labels.instance }} is {{ $value | humanizePercentage }}"
+          
+      # AI inference latency
+      - alert: HighAIInferenceLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(ai_inference_duration_seconds_bucket{service="pake-ai"}[5m]))
+            by (le)
+          ) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "High AI inference latency"
+          description: "AI inference 95th percentile latency is {{ $value }}s"
+          
+      # Model loading failures
+      - alert: ModelLoadingFailures
+        expr: |
+          increase(model_load_failures_total{service="pake-ai"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "AI model loading failures"
+          description: "{{ $value }} model loading failures detected in the last 5 minutes"
+          
+      # AI service queue backup
+      - alert: AIServiceQueueBackup
+        expr: |
+          ai_queue_length{service="pake-ai"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: pake-ai
+          team: ai-ml
+        annotations:
+          summary: "AI service queue backup"
+          description: "AI service queue length is {{ $value }}, indicating potential performance issues"
+
+  worker-rules.yml: |
+    groups:
+    - name: pake-worker-alerts
+      rules:
+      # High queue length
+      - alert: HighWorkerQueueLength
+        expr: |
+          celery_queue_length{service="pake-workers"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: pake-workers
+          team: backend
+        annotations:
+          summary: "High worker queue length"
+          description: "Queue {{ $labels.queue }} has {{ $value }} pending tasks"
+          
+      # Worker failures
+      - alert: WorkerTaskFailures
+        expr: |
+          increase(celery_task_failure_total{service="pake-workers"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: pake-workers
+          team: backend
+        annotations:
+          summary: "High worker task failure rate"
+          description: "{{ $value }} worker task failures in the last 5 minutes"
+          
+      # Dead letter queue growth
+      - alert: DeadLetterQueueGrowth
+        expr: |
+          increase(celery_dead_letter_queue_total{service="pake-workers"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: pake-workers
+          team: backend
+        annotations:
+          summary: "Dead letter queue growth detected"
+          description: "{{ $value }} tasks moved to dead letter queue"
+          
+      # Worker memory exhaustion
+      - alert: WorkerMemoryExhaustion
+        expr: |
+          (
+            container_memory_working_set_bytes{pod=~"pake-workers.*"} /
+            container_spec_memory_limit_bytes{pod=~"pake-workers.*"}
+          ) > 0.95
+        for: 3m
+        labels:
+          severity: critical
+          service: pake-workers
+          team: backend
+        annotations:
+          summary: "Worker memory exhaustion"
+          description: "Worker pod {{ $labels.pod }} memory usage is {{ $value | humanizePercentage }}"
+
+  database-rules.yml: |
+    groups:
+    - name: pake-database-alerts
+      rules:
+      # PostgreSQL connection exhaustion
+      - alert: PostgreSQLConnectionExhaustion
+        expr: |
+          (
+            pg_stat_activity_count{service="postgresql"} /
+            pg_settings_max_connections{service="postgresql"}
+          ) > 0.90
+        for: 2m
+        labels:
+          severity: critical
+          service: postgresql
+          team: database
+        annotations:
+          summary: "PostgreSQL connection exhaustion"
+          description: "PostgreSQL is using {{ $value | humanizePercentage }} of available connections"
+          
+      # High database CPU
+      - alert: HighDatabaseCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total{pod=~".*postgresql.*"}[5m]) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+          team: database
+        annotations:
+          summary: "High database CPU usage"
+          description: "Database CPU usage is {{ $value | humanizePercentage }}"
+          
+      # Redis memory usage
+      - alert: HighRedisMemoryUsage
+        expr: |
+          (
+            redis_memory_used_bytes{service="redis"} /
+            redis_memory_max_bytes{service="redis"}
+          ) > 0.90
+        for: 3m
+        labels:
+          severity: warning
+          service: redis
+          team: database
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+          
+      # Database replication lag
+      - alert: DatabaseReplicationLag
+        expr: |
+          pg_stat_replication_lag_seconds{service="postgresql"} > 60
+        for: 2m
+        labels:
+          severity: warning
+          service: postgresql
+          team: database
+        annotations:
+          summary: "Database replication lag"
+          description: "PostgreSQL replication lag is {{ $value }}s"
+
+  kubernetes-rules.yml: |
+    groups:
+    - name: kubernetes-alerts
+      rules:
+      # Node not ready
+      - alert: NodeNotReady
+        expr: |
+          kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 10m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Node not ready"
+          description: "Node {{ $labels.node }} has been not ready for more than 10 minutes"
+          
+      # High node CPU usage
+      - alert: HighNodeCPU
+        expr: |
+          (
+            1 - avg by (instance) (
+              irate(node_cpu_seconds_total{mode="idle"}[5m])
+            )
+          ) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High node CPU usage"
+          description: "Node {{ $labels.instance }} CPU usage is {{ $value | humanizePercentage }}"
+          
+      # High node memory usage
+      - alert: HighNodeMemory
+        expr: |
+          (
+            1 - (
+              node_memory_MemAvailable_bytes /
+              node_memory_MemTotal_bytes
+            )
+          ) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "High node memory usage"
+          description: "Node {{ $labels.instance }} memory usage is {{ $value | humanizePercentage }}"
+          
+      # Disk space usage
+      - alert: HighDiskUsage
+        expr: |
+          (
+            1 - (
+              node_filesystem_free_bytes{fstype!="tmpfs"} /
+              node_filesystem_size_bytes{fstype!="tmpfs"}
+            )
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }} is {{ $value | humanizePercentage }}"
+          
+      # Pod crash looping
+      - alert: PodCrashLooping
+        expr: |
+          increase(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Pod crash looping"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+          
+      # PVC usage high
+      - alert: PVCUsageHigh
+        expr: |
+          (
+            kubelet_volume_stats_used_bytes /
+            kubelet_volume_stats_capacity_bytes
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "PVC usage high"
+          description: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} usage is {{ $value | humanizePercentage }}"

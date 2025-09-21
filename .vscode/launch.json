@@ -1,0 +1,109 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🔧 Debug: TypeScript Bridge",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/bridge/obsidian_bridge.ts",
+      "outFiles": [
+        "${workspaceFolder}/src/bridge/**/*.js"
+      ],
+      "runtimeArgs": [
+        "--loader",
+        "ts-node/esm"
+      ],
+      "env": {
+        "NODE_ENV": "development",
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
+      },
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "cwd": "${workspaceFolder}/src/bridge"
+    },
+    {
+      "name": "🐍 Debug: Python Ingestion Pipeline",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/services/ingestion/orchestrator.py",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src",
+        "ENVIRONMENT": "development"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": ["--debug"]
+    },
+    {
+      "name": "🧪 Debug: Python Tests",
+      "type": "python", 
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "${workspaceFolder}/tests/",
+        "-v",
+        "-s",
+        "--tb=short"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "🚀 Debug: Production Pipeline Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/test_production_pipeline.py",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src",
+        "DEBUG": "true"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🔍 Debug: API Health Check",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/test_apis_simple.py",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🌐 Attach: Running Node Process",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/app",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🚀 Start: Full Stack Debug",
+      "configurations": [
+        "🔧 Debug: TypeScript Bridge",
+        "🐍 Debug: Python Ingestion Pipeline"
+      ],
+      "presentation": {
+        "hidden": false,
+        "group": "PAKE System",
+        "order": 1
+      },
+      "stopAll": true
+    }
+  ]
+}
