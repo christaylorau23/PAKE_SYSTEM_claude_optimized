@@ -169,9 +169,9 @@ class FeatureEngineeringConfig:
     """Configuration for feature engineering service"""
 
     # Storage settings
-    feature_storage_path: str = "/features"
-    pipeline_storage_path: str = "/pipelines"
-    cache_storage_path: str = "/cache"
+    feature_storage_path: str = "/tmp/pake_features"
+    pipeline_storage_path: str = "/tmp/pake_pipelines"
+    cache_storage_path: str = "/tmp/pake_cache"
 
     # Processing settings
     max_concurrent_pipelines: int = 10
@@ -953,9 +953,9 @@ class FeatureEngineer:
 def create_production_feature_engineer() -> FeatureEngineer:
     """Create production-ready feature engineer"""
     config = FeatureEngineeringConfig(
-        feature_storage_path="/features/production",
-        pipeline_storage_path="/pipelines/production",
-        cache_storage_path="/cache/production",
+        feature_storage_path="/tmp/pake_features/production",
+        pipeline_storage_path="/tmp/pake_pipelines/production",
+        cache_storage_path="/tmp/pake_cache/production",
         max_concurrent_pipelines=20,
         enable_caching=True,
         cache_ttl_hours=48,
