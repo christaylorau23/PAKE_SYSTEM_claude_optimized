@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, env="DEBUG")
     
     # Server settings
-    HOST: str = Field(default="0.0.0.0", env="HOST")
+    HOST: str = Field(default="127.0.0.1", env="HOST")
     PORT: int = Field(default=8000, env="PORT")
     
     # Security settings

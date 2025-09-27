@@ -7,6 +7,7 @@ training orchestration, feature engineering, prediction services, and monitoring
 """
 
 import asyncio
+import json
 import logging
 import time
 from pathlib import Path
@@ -144,10 +145,10 @@ class MLPipelineDemo:
                 "target_name": "target",
             }
 
-            # Save demo data
-            demo_data_path = Path("/tmp/pake_demo_data.pkl")
-            with open(demo_data_path, "wb") as f:
-                pickle.dump(self.demo_data, f)
+            # Save demo data (using secure JSON serialization)
+            demo_data_path = Path("/tmp/pake_demo_data.json")
+            with open(demo_data_path, "w") as f:
+                json.dump(self.demo_data, f, default=str)
 
             logger.info(
                 f"Generated demo data with {n_samples} samples, {len(X_df.columns)} features",
@@ -210,10 +211,10 @@ class MLPipelineDemo:
                 "y_val": self.demo_data["y_train"].tolist()[:100],
             }
 
-            # Save training data
-            training_data_path = Path("/tmp/pake_training_data.pkl")
-            with open(training_data_path, "wb") as f:
-                pickle.dump(training_data, f)
+            # Save training data (using secure JSON serialization)
+            training_data_path = Path("/tmp/pake_training_data.json")
+            with open(training_data_path, "w") as f:
+                json.dump(training_data, f, default=str)
 
             # Create training job
             job = TrainingJob(
