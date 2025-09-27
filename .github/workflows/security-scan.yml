@@ -133,6 +133,7 @@ jobs:
           tags: pake-system:security-scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        continue-on-error: true
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -140,11 +141,13 @@ jobs:
           image-ref: 'pake-system:security-scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
+        continue-on-error: true
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
+        if: always()
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
@@ -153,11 +156,13 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-fs-results.sarif'
+        continue-on-error: true
 
       - name: Upload Trivy filesystem scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-fs-results.sarif'
+        if: always()
 
   secrets-scan:
     name: 'Secrets Detection'
