@@ -1,0 +1,47 @@
+# TruffleHog ignore patterns for PAKE System
+# Exclude example and template files that contain placeholder secrets
+
+# Environment example files
+.env.example
+.env.template
+env.example
+**/.env.example
+**/.env.template
+
+# Development and build directories
+**/node_modules/**
+**/venv/**
+**/.git/**
+**/dist/**
+**/build/**
+**/coverage/**
+
+# Documentation and examples
+**/docs/**
+**/examples/**
+**/templates/**
+
+# Test files that might contain mock secrets
+**/test*/**
+**/tests/**
+
+# Backup and temporary files
+**/*.backup
+**/*.bak
+**/*.tmp
+**/*.temp
+
+# IDE and editor files
+**/.vscode/**
+**/.idea/**
+**/*.swp
+**/*.swo
+
+# Log files
+**/*.log
+**/logs/**
+
+# Package lock files (can contain URLs that look like secrets)
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml

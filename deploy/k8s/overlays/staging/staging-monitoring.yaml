@@ -1,0 +1,15 @@
+# Staging Monitoring Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: staging-monitoring-config
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: staging-monitoring
+    app.kubernetes.io/component: monitoring
+data:
+  # Staging-specific monitoring configuration
+  MONITORING_ENABLED: "true"
+  METRICS_RETENTION: "7d"
+  ALERT_LEVEL: "warning"
+  LOG_AGGREGATION: "enabled"

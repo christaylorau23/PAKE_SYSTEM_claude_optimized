@@ -1,0 +1,5 @@
+packages:
+  - 'src/bridge'
+  - 'frontend'
+  - 'scripts'
+  - 'src/services/*'

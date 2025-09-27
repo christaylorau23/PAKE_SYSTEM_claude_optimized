@@ -1,0 +1,44 @@
+# Production Vertical Pod Autoscaler Configuration
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pake-backend-vpa
+  namespace: pake-system
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pake-backend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: pake-backend
+      maxAllowed:
+        cpu: 2
+        memory: 4Gi
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pake-frontend-vpa
+  namespace: pake-system
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pake-frontend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: pake-frontend
+      maxAllowed:
+        cpu: 1
+        memory: 2Gi
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi

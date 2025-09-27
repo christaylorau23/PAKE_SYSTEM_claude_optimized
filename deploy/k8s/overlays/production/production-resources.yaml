@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pake-backend
+  namespace: pake-system
 spec:
   template:
     spec:
@@ -32,6 +33,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pake-frontend
+  namespace: pake-system
 spec:
   template:
     spec:
@@ -52,6 +54,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
+  namespace: pake-system
 spec:
   template:
     spec:
@@ -80,6 +83,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
+  namespace: pake-system
 spec:
   template:
     spec:
