@@ -1,0 +1,18 @@
+# Staging ConfigMap Patch
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-config
+  namespace: pake-system
+data:
+  # Override base values for staging
+  LOG_LEVEL: 'info'
+  ENVIRONMENT: 'staging'
+  ENABLE_DEBUG: 'false'
+  ENABLE_HOT_RELOAD: 'false'
+  MAX_WORKERS: '4'
+  CACHE_TTL: '3600'
+  CORS_ORIGINS: 'https://staging.pake.yourdomain.com'
+  RATE_LIMIT_MAX_REQUESTS: '200'
+  ENABLE_METRICS: 'true'
+  ENABLE_TRACING: 'true'

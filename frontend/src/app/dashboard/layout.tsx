@@ -83,8 +83,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [activeItem, setActiveItem] = React.useState('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  const isSidebarCollapsed = ui.sidebarCollapsed;
-  const animationsEnabled = !user.reducedMotion;
+  // Safe state access with fallbacks for SSR
+  const isSidebarCollapsed = ui?.sidebarCollapsed ?? false;
+  const animationsEnabled = !(user?.reducedMotion ?? false);
 
   // Handle navigation
   const handleNavigation = (item: (typeof menuItems)[0]) => {
@@ -99,7 +100,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Toggle sidebar
   const toggleSidebar = () => {
-    useStore.getState().toggleSidebar();
+    const store = useStore.getState();
+    if (store?.toggleSidebar) {
+      store.toggleSidebar();
+    }
   };
 
   return (

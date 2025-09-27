@@ -1,0 +1,34 @@
+# Production Monitoring Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: production-monitoring-config
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: production-monitoring
+    app.kubernetes.io/component: monitoring
+data:
+  # Production-specific monitoring configuration
+  MONITORING_ENABLED: "true"
+  METRICS_RETENTION: "30d"
+  ALERT_LEVEL: "critical"
+  LOG_AGGREGATION: "enabled"
+  PROMETHEUS_ENABLED: "true"
+  GRAFANA_ENABLED: "true"
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: pake-backend-monitor
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pake-backend
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

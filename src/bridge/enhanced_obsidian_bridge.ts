@@ -6,7 +6,7 @@
  * knowledge graph integration, and ML-powered auto-tagging capabilities.
  */
 
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -89,7 +89,7 @@ const CONFIG = {
   KNOWLEDGE_GRAPH_ENABLED: process.env.KNOWLEDGE_GRAPH_ENABLED === 'true',
 };
 
-const app = express();
+const app: Express = express();
 const syncEmitter = new EventEmitter();
 
 // Enhanced middleware
@@ -203,10 +203,11 @@ const errorHandler = (
     return;
   }
 
-  const statusCode = error.name === 'ValidationError' ? 400 : 500;
+  const statusCode = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
+  const message = error instanceof Error ? error.message : 'An unknown error occurred';
   res
     .status(statusCode)
-    .json(createApiResponse(false, null, error.message, requestId));
+    .json(createApiResponse(false, null, message, requestId));
 };
 
 // File watcher for real-time sync
@@ -510,20 +511,24 @@ app.post(
               true,
               {
                 query: query.trim(),
-                results: mcpResponse.data.results.map((result: unknown) => ({
-                  id:
-                    result.id ||
-                    Date.now().toString() + Math.random().toString(36),
-                  title: result.title || 'Untitled',
-                  content: result.content || result.description || '',
-                  source: result.source || 'web',
-                  url: result.url || result.source_url,
-                  authors: result.authors || [],
-                  publishedDate: result.published_date || result.date,
-                  confidence: result.confidence || result.quality_score,
-                  metadata: result.metadata || {},
-                  semantic_score: result.semantic_score || 0,
-                })),
+                results: mcpResponse.data.results.map((result: unknown) => {
+                  // Type guard to safely access properties
+                  const safeResult = result && typeof result === 'object' ? result as Record<string, any> : {};
+                  return {
+                    id:
+                      safeResult.id ||
+                      Date.now().toString() + Math.random().toString(36),
+                    title: safeResult.title || 'Untitled',
+                    content: safeResult.content || safeResult.description || '',
+                    source: safeResult.source || 'web',
+                    url: safeResult.url || safeResult.source_url,
+                    authors: safeResult.authors || [],
+                    publishedDate: safeResult.published_date || safeResult.date,
+                    confidence: safeResult.confidence || safeResult.quality_score,
+                    metadata: safeResult.metadata || {},
+                    semantic_score: safeResult.semantic_score || 0,
+                  };
+                }),
                 metrics: {
                   totalResults: mcpResponse.data.results.length,
                   processingTime,

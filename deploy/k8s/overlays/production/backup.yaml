@@ -1,0 +1,78 @@
+# Production Backup Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: production-backup-config
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: production-backup
+    app.kubernetes.io/component: backup
+data:
+  # Production backup configuration
+  BACKUP_ENABLED: "true"
+  BACKUP_SCHEDULE: "0 2 * * *"  # Daily at 2 AM
+  BACKUP_RETENTION: "30d"
+  BACKUP_STORAGE_CLASS: "fast-ssd"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: postgres-backup
+    app.kubernetes.io/component: backup
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/bash
+            - -c
+            - |
+              pg_dump -h postgres-service -U $(POSTGRES_USER) -d $(POSTGRES_DB) > /backup/postgres-$(date +%Y%m%d-%H%M%S).sql
+            env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-pvc
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: backup-storage
+    app.kubernetes.io/component: backup
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd

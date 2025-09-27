@@ -6,63 +6,40 @@ metadata:
 
 # Base configuration
 resources:
-  - ../../base
-  - hpa.yaml
-  - vpa.yaml
-  - monitoring.yaml
-  - backup.yaml
-  - external-secrets.yaml
+- ../../base
+- hpa.yaml
+- vpa.yaml
+- monitoring.yaml
+- backup.yaml
+- external-secrets.yaml
 
 # Production-specific labels
-commonLabels:
-  environment: production
-  tier: enterprise
 
 # Production-specific annotations
 commonAnnotations:
-  config.kubernetes.io/environment: 'production'
-  deployment.kubernetes.io/note: 'Production environment with enterprise features'
-  backup.kubernetes.io/enabled: 'true'
-  monitoring.kubernetes.io/enabled: 'true'
+  backup.kubernetes.io/enabled: "true"
+  config.kubernetes.io/environment: production
+  deployment.kubernetes.io/note: Production environment with enterprise features
+  monitoring.kubernetes.io/enabled: "true"
 
 # Production images with specific stable tags
 images:
-  - name: pake-backend
-    newName: your-registry.com/pake-system/backend
-    newTag: v1.0.0
-  - name: pake-frontend
-    newName: your-registry.com/pake-system/frontend
-    newTag: v1.0.0
-  - name: postgres
-    newName: postgres
-    newTag: '15-alpine'
-  - name: redis
-    newName: redis
-    newTag: '7-alpine'
+- name: pake-backend
+  newName: your-registry.com/pake-system/backend
+  newTag: v1.0.0
+- name: pake-frontend
+  newName: your-registry.com/pake-system/frontend
+  newTag: v1.0.0
+- name: postgres
+  newName: postgres
+  newTag: 15-alpine
+- name: redis
+  newName: redis
+  newTag: 7-alpine
 
 # Production configuration patches
-patchesStrategicMerge:
-  - production-resources.yaml
-  - production-security.yaml
-  - production-storage.yaml
-  - production-replicas.yaml
 
-# Production-specific ConfigMap
-configMapGenerator:
-  - name: pake-config
-    behavior: merge
-    literals:
-      - LOG_LEVEL=warn
-      - ENVIRONMENT=production
-      - ENABLE_DEBUG=false
-      - ENABLE_HOT_RELOAD=false
-      - MAX_WORKERS=8
-      - CACHE_TTL=7200
-      - CORS_ORIGINS=https://pake.yourdomain.com
-      - RATE_LIMIT_MAX_REQUESTS=100
-      - ENABLE_METRICS=true
-      - ENABLE_TRACING=true
-      - SECURITY_HEADERS_ENABLED=true
+# Production-specific ConfigMap patches
 
 # Production secrets - Use External Secrets Operator
 # secretGenerator is commented out - use external-secrets.yaml instead
@@ -76,28 +53,38 @@ configMapGenerator:
 
 # Production replicas (high availability)
 replicas:
-  - name: pake-backend
-    count: 3
-  - name: pake-frontend
-    count: 3
-  - name: postgres
-    count: 1 # Use managed database service or cluster setup
-  - name: redis
-    count: 3 # Redis cluster
+- count: 3
+  name: pake-backend
+- count: 3
+  name: pake-frontend
+- count: 1
+  name: postgres
+- count: 3
+  name: redis
 
 # Production namespace
 namespace: pake-system
 
 # JSON patches for fine-grained production modifications
-patchesJson6902:
-  - target:
-      version: v1
-      kind: Service
-      name: pake-backend-service
-    patch: |-
-      - op: add
-        path: /metadata/annotations/service.beta.kubernetes.io~1aws-load-balancer-type
-        value: nlb
-      - op: add
-        path: /metadata/annotations/service.beta.kubernetes.io~1aws-load-balancer-backend-protocol
-        value: tcp
+labels:
+- includeSelectors: true
+  pairs:
+    environment: production
+    tier: enterprise
+patches:
+- path: production-configmap-patch.yaml
+- patch: |-
+    - op: add
+      path: /metadata/annotations/service.beta.kubernetes.io~1aws-load-balancer-type
+      value: nlb
+    - op: add
+      path: /metadata/annotations/service.beta.kubernetes.io~1aws-load-balancer-backend-protocol
+      value: tcp
+  target:
+    kind: Service
+    name: pake-backend-service
+    version: v1
+- path: production-resources.yaml
+- path: production-security.yaml
+- path: production-storage.yaml
+- path: production-replicas.yaml

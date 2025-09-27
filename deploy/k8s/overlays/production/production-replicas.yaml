@@ -1,0 +1,24 @@
+# Production Replicas Patches
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-backend
+  namespace: pake-system
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-frontend
+  namespace: pake-system
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: pake-system
+spec:
+  replicas: 3

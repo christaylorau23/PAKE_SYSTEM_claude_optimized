@@ -6,68 +6,50 @@ metadata:
 
 # Base configuration
 resources:
-  - ../../base
+- ../../base
 
 # Development-specific labels
-commonLabels:
-  environment: development
-  tier: development
 
 # Development-specific annotations
 commonAnnotations:
-  config.kubernetes.io/environment: 'development'
-  deployment.kubernetes.io/note: 'Development environment with debug features enabled'
+  config.kubernetes.io/environment: development
+  deployment.kubernetes.io/note: Development environment with debug features enabled
 
 # Development images (use latest or specific dev tags)
 images:
-  - name: pake-backend
-    newName: pake-system/backend
-    newTag: dev-latest
-  - name: pake-frontend
-    newName: pake-system/frontend
-    newTag: dev-latest
+- name: pake-backend
+  newName: pake-system/backend
+  newTag: dev-latest
+- name: pake-frontend
+  newName: pake-system/frontend
+  newTag: dev-latest
 
 # Development configuration patches
-patchesStrategicMerge:
-  - dev-config-patch.yaml
-  - dev-resources-patch.yaml
-  - dev-security-patch.yaml
 
-# Development-specific ConfigMap
-configMapGenerator:
-  - name: pake-config
-    behavior: merge
-    literals:
-      - LOG_LEVEL=debug
-      - ENVIRONMENT=development
-      - ENABLE_DEBUG=true
-      - ENABLE_HOT_RELOAD=true
-      - CORS_ORIGINS=*
-      - RATE_LIMIT_MAX_REQUESTS=1000
-      - CACHE_TTL=300
+# Development-specific ConfigMap patches
+patches:
+- path: dev-configmap-patch.yaml
 
-# Development secrets (use placeholder values)
-secretGenerator:
-  - name: pake-secrets
-    behavior: replace
-    literals:
-      - DATABASE_PASSWORD=dev-REDACTED_SECRET
-      - REDIS_PASSWORD=dev-redis-REDACTED_SECRET
-      - JWT_SECRET_KEY=dev-jwt-secret-key-not-for-production
-      - FIRECRAWL_API_KEY=dev-firecrawl-key
-      - OPENAI_API_KEY=dev-openai-key
-      - ANTHROPIC_API_KEY=dev-anthropic-key
+# Development secrets patches
 
 # Replicas for development (reduced)
 replicas:
-  - name: pake-backend
-    count: 1
-  - name: pake-frontend
-    count: 1
-  - name: postgres
-    count: 1
-  - name: redis
-    count: 1
+- count: 1
+  name: pake-backend
+- count: 1
+  name: pake-frontend
+- count: 1
+  name: postgres
+- count: 1
+  name: redis
 
 # Development namespace
 namespace: pake-system
+labels:
+- includeSelectors: true
+  pairs:
+    environment: development
+    tier: development
+patches:
+- path: dev-configmap-patch.yaml
+- path: dev-secrets-patch.yaml

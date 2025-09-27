@@ -1,0 +1,19 @@
+# Production ConfigMap Patch
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-config
+  namespace: pake-system
+data:
+  # Override base values for production
+  LOG_LEVEL: 'warn'
+  ENVIRONMENT: 'production'
+  ENABLE_DEBUG: 'false'
+  ENABLE_HOT_RELOAD: 'false'
+  MAX_WORKERS: '8'
+  CACHE_TTL: '7200'
+  CORS_ORIGINS: 'https://pake.yourdomain.com'
+  RATE_LIMIT_MAX_REQUESTS: '100'
+  ENABLE_METRICS: 'true'
+  ENABLE_TRACING: 'true'
+  SECURITY_HEADERS_ENABLED: 'true'

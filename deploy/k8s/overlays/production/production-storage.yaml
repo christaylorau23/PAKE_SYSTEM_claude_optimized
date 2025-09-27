@@ -1,0 +1,22 @@
+# Production Storage Patches
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: pake-system
+spec:
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: pake-system
+spec:
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
