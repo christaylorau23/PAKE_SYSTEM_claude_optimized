@@ -6,7 +6,7 @@
  * error handling, and logging based on monorepo improvements.
  */
 
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -55,7 +55,7 @@ const CONFIG = {
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 };
 
-const app = express();
+const app: Express = express();
 
 // Enhanced middleware with error handling
 app.use(
@@ -131,8 +131,9 @@ const errorHandler = (
     return;
   }
 
-  const statusCode = error.name === 'ValidationError' ? 400 : 500;
-  res.status(statusCode).json(createApiResponse(false, null, error.message));
+  const statusCode = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
+  const message = error instanceof Error ? error.message : 'An unknown error occurred';
+  res.status(statusCode).json(createApiResponse(false, null, message));
 };
 
 // API Routes with enhanced error handling and validation
@@ -259,7 +260,7 @@ app.post(
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status || 500;
-        const message = error.response?.data?.error || error.message;
+        const message = error.response?.data?.error || (error instanceof Error ? error.message : 'An unknown error occurred');
         res
           .status(status)
           .json(createApiResponse(false, null, `MCP Server Error: ${message}`));

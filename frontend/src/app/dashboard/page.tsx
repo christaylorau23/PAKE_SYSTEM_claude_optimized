@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
-import { useScreenReader } from '@/lib/accessibility/screen-reader';
 
 // Dashboard animation variants
 const containerVariants = {
@@ -44,7 +43,31 @@ const itemVariants = {
 
 export default function DashboardPage() {
   const { user, performance, device, errors, features } = useStore();
-  const { announce } = useScreenReader();
+
+  // Safe state access with fallbacks for SSR
+  const safePerformance = performance || {
+    renderTime: 0,
+    memoryUsage: null,
+    bundleSize: null,
+    interactionLatency: 0,
+  };
+  
+  const safeDevice = device || {
+    connectionType: null,
+    batteryLevel: null,
+    screenWidth: 1920,
+    screenHeight: 1080,
+    platform: null,
+  };
+  
+  const safeErrors = errors || { errors: [] };
+  const safeFeatures = features || {
+    enableAdvancedAnalytics: true,
+    enableVoiceCommands: false,
+    enableDarkMode: true,
+    enableNotifications: true,
+    enableOfflineMode: false,
+  };
 
   // Simulate real-time data updates
   const [realTimeData, setRealTimeData] = React.useState({
@@ -71,40 +94,37 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Announce dashboard ready
+  // Dashboard ready effect
   React.useEffect(() => {
-    announce('Dashboard loaded with real-time analytics', {
-      priority: 'polite',
-      delay: 1000,
-    });
-  }, [announce]);
+    // Dashboard loaded with real-time analytics
+  }, []);
 
   const performanceMetrics = [
     {
       label: 'Render Time',
-      value: performance.renderTime.toFixed(2),
+      value: safePerformance.renderTime.toFixed(2),
       unit: 'ms',
       trend: 'down' as const,
     },
     {
       label: 'Memory Usage',
-      value: performance.memoryUsage
-        ? (performance.memoryUsage.used / 1024 / 1024).toFixed(1)
+      value: safePerformance.memoryUsage
+        ? (safePerformance.memoryUsage.used / 1024 / 1024).toFixed(1)
         : '0',
       unit: 'MB',
       trend: 'up' as const,
     },
     {
       label: 'Bundle Size',
-      value: performance.bundleSize
-        ? (performance.bundleSize / 1024).toFixed(1)
+      value: safePerformance.bundleSize
+        ? (safePerformance.bundleSize / 1024).toFixed(1)
         : '0',
       unit: 'KB',
       trend: 'neutral' as const,
     },
     {
       label: 'Interaction Latency',
-      value: performance.interactionLatency.toFixed(2),
+      value: safePerformance.interactionLatency.toFixed(2),
       unit: 'ms',
       trend: 'down' as const,
     },
@@ -113,24 +133,24 @@ export default function DashboardPage() {
   const deviceMetrics = [
     {
       label: 'Connection',
-      value: device.connectionType || 'Unknown',
+      value: safeDevice.connectionType || 'Unknown',
       trend: 'neutral' as const,
     },
     {
       label: 'Battery Level',
-      value: device.batteryLevel
-        ? `${(device.batteryLevel * 100).toFixed(0)}%`
+      value: safeDevice.batteryLevel
+        ? `${(safeDevice.batteryLevel * 100).toFixed(0)}%`
         : 'N/A',
       trend: 'neutral' as const,
     },
     {
       label: 'Screen Size',
-      value: `${device.screenWidth}×${device.screenHeight}`,
+      value: `${safeDevice.screenWidth}×${safeDevice.screenHeight}`,
       trend: 'neutral' as const,
     },
     {
       label: 'Platform',
-      value: device.platform || 'Unknown',
+      value: safeDevice.platform || 'Unknown',
       trend: 'neutral' as const,
     },
   ];
@@ -249,8 +269,8 @@ export default function DashboardPage() {
                     Features Enabled
                   </span>
                   <span className='text-sm font-medium'>
-                    {Object.values(features).filter(Boolean).length}/
-                    {Object.keys(features).length}
+                    {Object.values(safeFeatures).filter(Boolean).length}/
+                    {Object.keys(safeFeatures).length}
                   </span>
                 </div>
                 <div className='flex items-center justify-between'>
@@ -258,9 +278,9 @@ export default function DashboardPage() {
                     Active Errors
                   </span>
                   <span
-                    className={`text-sm font-medium ${errors.errors.length > 0 ? 'text-error-600' : 'text-success-600'}`}
+                    className={`text-sm font-medium ${safeErrors.errors.length > 0 ? 'text-error-600' : 'text-success-600'}`}
                   >
-                    {errors.errors.length}
+                    {safeErrors.errors.length}
                   </span>
                 </div>
                 <div className='flex items-center justify-between'>
@@ -268,7 +288,7 @@ export default function DashboardPage() {
                     Theme
                   </span>
                   <span className='text-sm font-medium capitalize'>
-                    {user.theme}
+                    {user?.theme || 'system'}
                   </span>
                 </div>
                 <div className='flex items-center justify-between'>
@@ -276,7 +296,7 @@ export default function DashboardPage() {
                     Reduced Motion
                   </span>
                   <span className='text-sm font-medium'>
-                    {user.reducedMotion ? 'Enabled' : 'Disabled'}
+                    {user?.reducedMotion ? 'Enabled' : 'Disabled'}
                   </span>
                 </div>
               </div>
@@ -292,7 +312,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-                {Object.entries(features).map(([feature, enabled]) => (
+                {Object.entries(safeFeatures).map(([feature, enabled]) => (
                   <div
                     key={feature}
                     className='flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg'

@@ -1,0 +1,15 @@
+# Development ConfigMap Patch
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-config
+  namespace: pake-system
+data:
+  # Override base values for development
+  LOG_LEVEL: 'debug'
+  ENVIRONMENT: 'development'
+  ENABLE_DEBUG: 'true'
+  ENABLE_HOT_RELOAD: 'true'
+  CORS_ORIGINS: '*'
+  RATE_LIMIT_MAX_REQUESTS: '1000'
+  CACHE_TTL: '300'

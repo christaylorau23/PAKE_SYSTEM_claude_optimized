@@ -13,7 +13,7 @@ python = "^3.12"
 # ===== CORE WEB FRAMEWORK =====
 fastapi = "^0.115.0"
 uvicorn = {extras = ["standard"], version = "^0.32.0"}
-starlette = "^0.36.0"
+starlette = "^0.37.2"
 
 # ===== DATA VALIDATION & CONFIGURATION =====
 pydantic = "^2.9.0"
@@ -31,20 +31,20 @@ pgvector = "^0.2.4"
 # ===== CACHING & PERFORMANCE =====
 redis = {extras = ["streams"], version = "^5.2.0"}
 hiredis = "^2.3.2"
-aioredis = "^2.0.1"
-asyncio-redis = "^1.15.1"
-redis-py-cluster = "^2.1.3"
+# aioredis = "^2.0.1"  # Deprecated: Use redis package with async support
+# asyncio-redis = "^1.15.1"  # Deprecated: Use redis package with async support
+# redis-py-cluster = "^2.1.3"  # Deprecated: Use redis package with cluster support
 
 # ===== HTTP CLIENTS =====
 aiohttp = "^3.9.1"
 httpx = "^0.28.0"
 
 # ===== AUTHENTICATION & SECURITY =====
-pyjwt = {extras = ["crypto"], version = "^2.10.0"}
+# pyjwt = {extras = ["crypto"], version = "^2.10.0"}  # Removed: Let fastapi-users manage this dependency
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 argon2-cffi = "^23.1.0"
 cryptography = "^44.0.1"
-python-multipart = "^0.0.18"
+# python-multipart = "^0.0.18"  # Removed: Let fastapi-users manage this dependency
 python-jose = "^3.3.0"
 email-validator = "^2.1.0"
 itsdangerous = "^2.1.2"
