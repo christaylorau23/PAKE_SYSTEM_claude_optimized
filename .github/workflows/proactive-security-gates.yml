@@ -1,0 +1,259 @@
+name: Proactive Security Gates
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  pre-push:
+    branches: [main, develop, feature/*]
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+  actions: read
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  pre-commit-security-scan:
+    name: 'Pre-Commit Security Scan'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pre-push' || github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install trufflehog detect-secrets pre-commit --use-deprecated=legacy-resolver
+
+      - name: Run TruffleHog (Pre-Commit)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --no-verification --exclude-paths .trufflehog-ignore
+        continue-on-error: false
+
+      - name: Run detect-secrets
+        run: |
+          echo "Running detect-secrets scan..."
+          detect-secrets scan --all-files --exclude-files '.*\.lock$|.*\.log$|.*\.tmp$' --exclude-lines '.*test.*|.*example.*|.*placeholder.*' . > .secrets.baseline || true
+          
+          # Check if any new secrets were detected
+          if detect-secrets audit .secrets.baseline --fail-on-unaudited; then
+            echo "❌ New secrets detected! Please review and audit."
+            exit 1
+          else
+            echo "✅ No new secrets detected"
+          fi
+
+      - name: Fail on hardcoded secrets
+        run: |
+          echo "Scanning for hardcoded secrets patterns..."
+          
+          # Patterns that should NEVER be in code
+          FORBIDDEN_PATTERNS=(
+            "api-key"
+            "default-api-key"
+            "your-secret-key"
+            "password.*=.*[\"'][^\"']+[\"']"
+            "secret.*=.*[\"'][^\"']+[\"']"
+            "key.*=.*[\"'][^\"']+[\"']"
+            "token.*=.*[\"'][^\"']+[\"']"
+          )
+          
+          FAILED=false
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            if grep -r -n -E "$pattern" src/ scripts/ --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=.git; then
+              echo "❌ FORBIDDEN PATTERN FOUND: $pattern"
+              echo "This pattern indicates a potential hardcoded secret."
+              echo "Please use environment variables or Azure Key Vault instead."
+              FAILED=true
+            fi
+          done
+          
+          if [ "$FAILED" = true ]; then
+            echo ""
+            echo "🚨 SECURITY VIOLATION DETECTED!"
+            echo "Hardcoded secrets are not allowed in this codebase."
+            echo "Please use the enterprise secrets manager instead."
+            exit 1
+          else
+            echo "✅ No hardcoded secrets detected"
+          fi
+
+  blocking-secret-scan:
+    name: 'Blocking Secret Detection'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install trufflehog detect-secrets bandit safety --use-deprecated=legacy-resolver
+
+      - name: Run comprehensive secret scan
+        run: |
+          echo "🔍 Running comprehensive secret detection..."
+          
+          # Create comprehensive ignore patterns
+          cat > .comprehensive-ignore << EOF
+          # Ignore test files
+          tests/
+          test/
+          *test*.py
+          *test*.js
+          *test*.ts
+          
+          # Ignore example files
+          examples/
+          example/
+          *example*.py
+          *example*.js
+          *example*.ts
+          
+          # Ignore documentation
+          docs/
+          *.md
+          README*
+          
+          # Ignore lockfiles
+          *.lock
+          package-lock.json
+          yarn.lock
+          pnpm-lock.yaml
+          
+          # Ignore build artifacts
+          dist/
+          build/
+          node_modules/
+          venv/
+          .git/
+          
+          # Ignore environment examples
+          .env.example
+          env.example
+          .env.template
+          EOF
+
+      - name: Run TruffleHog (Comprehensive)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          extra_args: --no-verification --exclude-paths .comprehensive-ignore
+        continue-on-error: false
+
+      - name: Run detect-secrets (Comprehensive)
+        run: |
+          echo "Running comprehensive detect-secrets scan..."
+          detect-secrets scan --all-files --exclude-files '.*\.lock$|.*\.log$|.*\.tmp$|.*test.*|.*example.*' . > .secrets.baseline
+          
+          # Audit the baseline
+          if detect-secrets audit .secrets.baseline --fail-on-unaudited; then
+            echo "❌ Unaudited secrets detected in PR!"
+            echo "Please review and audit all detected secrets."
+            exit 1
+          else
+            echo "✅ All secrets have been audited"
+          fi
+
+      - name: Check for hardcoded secrets in PR
+        run: |
+          echo "🔍 Checking PR for hardcoded secrets..."
+          
+          # Get changed files in PR
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          
+          echo "Changed files: $CHANGED_FILES"
+          
+          # Check each changed file for hardcoded secrets
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+              echo "Checking file: $file"
+              
+              # Check for hardcoded secrets patterns
+              if grep -n -E "(api-key|default-api-key|your-secret-key|password\s*=\s*[\"'][^\"']+[\"']|secret\s*=\s*[\"'][^\"']+[\"']|key\s*=\s*[\"'][^\"']+[\"']|token\s*=\s*[\"'][^\"']+[\"'])" "$file"; then
+                echo "❌ HARDCODED SECRET DETECTED in $file"
+                echo "This file contains potential hardcoded secrets."
+                echo "Please use environment variables or Azure Key Vault instead."
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ No hardcoded secrets detected in PR"
+
+      - name: Validate secrets manager usage
+        run: |
+          echo "🔍 Validating secrets manager usage..."
+          
+          # Check if any Python files use os.getenv with hardcoded fallbacks
+          if grep -r -n "os\.getenv.*,.*[\"'][^\"']+[\"']" src/ --include="*.py" | grep -v "test" | grep -v "example"; then
+            echo "❌ HARDCODED FALLBACKS DETECTED!"
+            echo "Files using os.getenv with hardcoded fallbacks:"
+            grep -r -n "os\.getenv.*,.*[\"'][^\"']+[\"']" src/ --include="*.py" | grep -v "test" | grep -v "example"
+            echo ""
+            echo "Please use the enterprise secrets manager instead:"
+            echo "from src.services.secrets_manager.enterprise_secrets_manager import get_api_key"
+            exit 1
+          else
+            echo "✅ No hardcoded fallbacks detected"
+          fi
+
+  security-validation:
+    name: 'Security Validation'
+    runs-on: ubuntu-latest
+    needs: [pre-commit-security-scan, blocking-secret-scan]
+    if: always()
+    
+    steps:
+      - name: Check security scan results
+        run: |
+          if [ "${{ needs.pre-commit-security-scan.result }}" != "success" ]; then
+            echo "❌ Pre-commit security scan failed"
+            exit 1
+          fi
+          
+          if [ "${{ needs.blocking-secret-scan.result }}" != "success" ]; then
+            echo "❌ Blocking secret scan failed"
+            exit 1
+          fi
+          
+          echo "✅ All security scans passed"
+
+      - name: Generate security report
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pre-Commit Security Scan: ${{ needs.pre-commit-security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Blocking Secret Scan: ${{ needs.blocking-secret-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Status: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No hardcoded secrets detected. All security gates passed." >> $GITHUB_STEP_SUMMARY

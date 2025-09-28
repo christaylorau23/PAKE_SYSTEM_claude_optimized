@@ -22,13 +22,17 @@ from sqlalchemy import String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
-# Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
+# Security configuration with enterprise secrets management
+from ..secrets_manager.enterprise_secrets_manager import get_jwt_secret, get_api_key
+
+# Initialize secrets manager
+import asyncio
+try:
+    SECRET_KEY = asyncio.run(get_jwt_secret())
+except Exception as e:
     raise ValueError(
-        "The SECRET_KEY environment variable is not set. "
-        "Please configure it before running the application. "
-        "This is a security requirement."
+        f"Failed to initialize JWT secret: {e}. "
+        "Please configure Azure Key Vault or SECRET_KEY environment variable."
     )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
@@ -207,19 +211,15 @@ class SecurityMiddleware:
     
     @staticmethod
     async def validate_api_key(api_key: str) -> bool:
-        """Validate API key with fail-fast security posture"""
-        # SECURITY: Fail-fast approach - no hardcoded fallbacks
-        expected_api_key = os.getenv("API_KEY")
-        if not expected_api_key:
-            raise ValueError(
-                "The API_KEY environment variable is not set. "
-                "Please configure it before running the application. "
-                "This is a security requirement."
-            )
-        
-        # In production, this would validate against a database of API keys
-        # For now, we'll use a simple check with proper environment variable
-        return api_key == expected_api_key
+        """Validate API key with enterprise secrets management"""
+        try:
+            expected_api_key = await get_api_key()
+            # In production, this would validate against a database of API keys
+            # For now, we'll use a simple check with proper secrets management
+            return api_key == expected_api_key
+        except Exception as e:
+            logger.error(f"Failed to validate API key: {e}")
+            return False
     
     @staticmethod
     async def check_rate_limit(user_id: str, endpoint: str) -> bool:
