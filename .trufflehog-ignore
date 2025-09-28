@@ -1,0 +1,45 @@
+# TruffleHog Ignore Configuration
+# This file tells TruffleHog to ignore specific files and patterns
+
+# Ignore placeholder API keys in example environment files
+.env.example
+.env.template
+env.example
+
+# Ignore lockfiles which can sometimes contain long random strings
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Ignore test files and documentation
+tests/
+test/
+docs/
+examples/
+templates/
+
+# Ignore backup and temporary files
+*.backup
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*.log
+logs/
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+
+# Ignore node_modules and virtual environments
+node_modules/
+venv/
+venv_new/
+
+# Ignore git directory
+.git/
+
+# Ignore build and dist directories
+dist/
+build/

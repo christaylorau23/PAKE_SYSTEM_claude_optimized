@@ -99,14 +99,24 @@ class SecurityTester:
                     message="No vulnerable dependencies found"
                 ))
             else:
-                vulnerabilities = json.loads(result.stdout) if result.stdout else []
-                self.results.append(SecurityTestResult(
-                    test_name="dependency_vulnerabilities",
-                    passed=False,
-                    severity=SecuritySeverity.MEDIUM,
-                    message=f"Found {len(vulnerabilities)} vulnerable dependencies",
-                    details={"vulnerabilities": vulnerabilities}
-                ))
+                try:
+                    vulnerabilities = json.loads(result.stdout) if result.stdout else []
+                    self.results.append(SecurityTestResult(
+                        test_name="dependency_vulnerabilities",
+                        passed=False,
+                        severity=SecuritySeverity.MEDIUM,
+                        message=f"Found {len(vulnerabilities)} vulnerable dependencies",
+                        details={"vulnerabilities": vulnerabilities}
+                    ))
+                except json.JSONDecodeError:
+                    # Handle case where safety returns non-JSON output
+                    self.results.append(SecurityTestResult(
+                        test_name="dependency_vulnerabilities",
+                        passed=False,
+                        severity=SecuritySeverity.MEDIUM,
+                        message="Dependency check found issues (non-JSON output)",
+                        details={"raw_output": result.stdout[:500] if result.stdout else "No output"}
+                    ))
                 
         except subprocess.TimeoutExpired:
             self.results.append(SecurityTestResult(

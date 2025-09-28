@@ -56,15 +56,17 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Set up Node.js with cache
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Cache Python dependencies
         uses: actions/cache@v3
@@ -97,7 +99,7 @@ jobs:
         run: |
           if [ -d "src/bridge" ]; then
             cd src/bridge
-            npm ci
+            pnpm install --frozen-lockfile
           else
             echo "Bridge directory not found, skipping Node.js setup"
           fi
@@ -134,7 +136,7 @@ jobs:
           if [ -d "src/bridge" ] && [ -f "src/bridge/package.json" ]; then
             echo "Running Node.js tests..."
             cd src/bridge
-            npm test || echo "Node.js tests failed, but continuing..."
+            pnpm test || echo "Node.js tests failed, but continuing..."
           else
             echo "Node.js tests not available, skipping"
           fi
@@ -243,7 +245,7 @@ jobs:
       - name: Install security tools
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install bandit safety --use-deprecated=legacy-resolver
+          pip install bandit>=1.7.5 safety>=2.3.5 --use-deprecated=legacy-resolver
 
       - name: Run Bandit security linter
         run: |

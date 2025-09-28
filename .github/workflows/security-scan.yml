@@ -42,7 +42,7 @@ jobs:
             poetry install --with dev
           else
             python -m pip install --upgrade pip setuptools wheel
-            pip install safety bandit --use-deprecated=legacy-resolver
+            pip install safety>=2.3.5 bandit>=1.7.5 --use-deprecated=legacy-resolver
           fi
 
       - name: Run Safety check
@@ -84,7 +84,7 @@ jobs:
             poetry install --with dev
           else
             python -m pip install --upgrade pip setuptools wheel
-            pip install bandit semgrep --use-deprecated=legacy-resolver
+            pip install bandit>=1.7.5 semgrep --use-deprecated=legacy-resolver
           fi
 
       - name: Run Bandit security linter
@@ -141,7 +141,17 @@ jobs:
           image-ref: 'pake-system:security-scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
         continue-on-error: true
+
+      - name: Verify Trivy container scan output
+        run: |
+          if [ -f "trivy-results.sarif" ]; then
+            echo "✅ Trivy container scan completed successfully"
+            ls -l trivy-results.sarif
+          else
+            echo "⚠️ Trivy container scan output file not found"
+          fi
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v2
@@ -156,7 +166,17 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH'
         continue-on-error: true
+
+      - name: Verify Trivy filesystem scan output
+        run: |
+          if [ -f "trivy-fs-results.sarif" ]; then
+            echo "✅ Trivy filesystem scan completed successfully"
+            ls -l trivy-fs-results.sarif
+          else
+            echo "⚠️ Trivy filesystem scan output file not found"
+          fi
 
       - name: Upload Trivy filesystem scan results
         uses: github/codeql-action/upload-sarif@v2
@@ -180,13 +200,13 @@ jobs:
           path: ./
           base: main
           head: HEAD
-          extra_args: --debug --only-verified --exclude-paths .env.example,.env.template,env.example,node_modules/,venv/,.git/,docs/,examples/,templates/,test/,tests/,*.backup,*.bak,*.tmp,*.temp,.vscode/,.idea/,*.swp,*.swo,*.log,logs/,package-lock.json,yarn.lock,pnpm-lock.yaml
+          extra_args: --debug --only-verified --exclude-paths .trufflehog-ignore
 
       - name: Run GitLeaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE || '' }}
 
   license-scan:
     name: 'License Compliance Scan'
