@@ -1,37 +1,61 @@
-# Pre-commit hooks for PAKE System
-# Prevents hardcoded secrets from being committed
+# Pre-commit hooks configuration
+# This runs locally before commits are pushed to catch issues early
 
 repos:
+  # Python code formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.8
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-added-large-files
+      - id: check-json
       - id: check-merge-conflict
-      - id: debug-statements
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
 
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+  # TypeScript/JavaScript
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
     hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: |
-          (?x)^(
-            .*\.lock$|
-            .*\.log$|
-            .*\.tmp$|
-            .*test.*|
-            .*example.*|
-            .*\.md$|
-            README.*|
-            docs/.*|
-            examples/.*|
-            tests/.*|
-            test/.*
-          )$
+      - id: eslint
+        files: \.(js|ts|jsx|tsx)$
+        additional_dependencies:
+          - eslint@8.56.0
 
+  # Custom security checks
   - repo: local
     hooks:
       - id: check-hardcoded-secrets
@@ -39,33 +63,11 @@ repos:
         entry: python scripts/check_hardcoded_secrets.py
         language: system
         files: \.(py|js|ts|yaml|yml|json)$
-        exclude: |
-          (?x)^(
-            .*test.*|
-            .*example.*|
-            .*\.md$|
-            README.*|
-            docs/.*|
-            examples/.*|
-            tests/.*|
-            test/.*|
-            .*\.lock$|
-            .*\.log$
-          )$
+        pass_filenames: true
 
-      - id: validate-secrets-manager-usage
-        name: Validate secrets manager usage
+      - id: validate-env-vars
+        name: Validate environment variable usage
         entry: python scripts/validate_secrets_manager.py
         language: system
-        files: \.py$
-        exclude: |
-          (?x)^(
-            .*test.*|
-            .*example.*|
-            .*\.md$|
-            README.*|
-            docs/.*|
-            examples/.*|
-            tests/.*|
-            test/.*
-          )$
+        files: \.(py)$
+        pass_filenames: true
