@@ -162,7 +162,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-fs-results.sarif'
-        if: always()
+        if: always() && hashFiles('trivy-fs-results.sarif') != ''
 
   secrets-scan:
     name: 'Secrets Detection'
@@ -180,7 +180,7 @@ jobs:
           path: ./
           base: main
           head: HEAD
-          extra_args: --debug --only-verified --exclude-paths .env.example,.env.template,env.example,**/node_modules/**,**/venv/**,**/.git/**,**/docs/**,**/examples/**,**/templates/**,**/test*/**,**/tests/**,**/*.backup,**/*.bak,**/*.tmp,**/*.temp,**/.vscode/**,**/.idea/**,**/*.swp,**/*.swo,**/*.log,**/logs/**,**/package-lock.json,**/yarn.lock,**/pnpm-lock.yaml
+          extra_args: --debug --only-verified --exclude-paths .env.example,.env.template,env.example,node_modules/,venv/,.git/,docs/,examples/,templates/,test/,tests/,*.backup,*.bak,*.tmp,*.temp,.vscode/,.idea/,*.swp,*.swo,*.log,logs/,package-lock.json,yarn.lock,pnpm-lock.yaml
 
       - name: Run GitLeaks
         uses: gitleaks/gitleaks-action@v2

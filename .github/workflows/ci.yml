@@ -63,6 +63,9 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
