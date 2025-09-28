@@ -88,17 +88,156 @@ class SecretsManager:
     
     Provides secure storage, retrieval, and lifecycle management of secrets
     with support for multiple cloud providers and local storage.
+    
+    Architecture: Refactored to follow Single Responsibility Principle
+    - Constructor orchestrates setup process
+    - Parameter validation handled by dedicated method
+    - Provider selection handled by dedicated method
+    - Client initialization handled by dedicated method
     """
     
     def __init__(self, provider: SecretProvider = SecretProvider.LOCAL_FILE):
+        """
+        Initialize the Secrets Manager.
+        
+        The constructor's primary responsibility is to orchestrate the setup process.
+        It delegates the detailed work to specialized helper methods.
+        
+        Args:
+            provider: The secret provider to use (default: LOCAL_FILE)
+            
+        Raises:
+            ValueError: If provider configuration is invalid
+            RuntimeError: If provider initialization fails
+        """
         self.provider = provider
+        
+        # Orchestrate the initialization process
+        self._validate_provider_parameter()
+        self._configure_logging()
+        self._initialize_data_structures()
+        self._configure_provider()
+        self._initialize_provider_client()
+    
+    def _validate_provider_parameter(self) -> None:
+        """
+        Validate the provider parameter.
+        
+        Handles all input validation. Raises ValueError on invalid input.
+        Its only responsibility is to ensure parameters are correct.
+        """
+        if not isinstance(self.provider, SecretProvider):
+            raise ValueError(
+                f"Provider must be a SecretProvider enum value, got {type(self.provider)}"
+            )
+        
+        # Validate provider-specific requirements
+        if self.provider == SecretProvider.AZURE_KEY_VAULT:
+            if not os.getenv('AZURE_KEY_VAULT_URL'):
+                raise ValueError(
+                    "AZURE_KEY_VAULT_URL environment variable is required for Azure Key Vault provider"
+                )
+        elif self.provider == SecretProvider.GOOGLE_SECRET_MANAGER:
+            if not os.getenv('GOOGLE_CLOUD_PROJECT_ID'):
+                raise ValueError(
+                    "GOOGLE_CLOUD_PROJECT_ID environment variable is required for Google Secret Manager provider"
+                )
+    
+    def _configure_logging(self) -> None:
+        """
+        Configure logging for the secrets manager.
+        
+        Its only responsibility is to set up logging infrastructure.
+        """
         self.logger = self._setup_logger()
+    
+    def _initialize_data_structures(self) -> None:
+        """
+        Initialize internal data structures.
+        
+        Its only responsibility is to set up data containers.
+        """
         self.secrets_cache: Dict[str, str] = {}
         self.access_logs: List[SecretAccessLog] = []
         self.metadata_store: Dict[str, SecretMetadata] = {}
+    
+    def _configure_provider(self) -> None:
+        """
+        Configure provider-specific settings.
         
-        # Initialize provider-specific client
-        self._initialize_provider()
+        Handles the complex logic of selecting and setting up the
+        provider configuration. Its only responsibility is provider configuration.
+        """
+        if self.provider == SecretProvider.AWS_SECRETS_MANAGER:
+            self._configure_aws_provider()
+        elif self.provider == SecretProvider.AZURE_KEY_VAULT:
+            self._configure_azure_provider()
+        elif self.provider == SecretProvider.GOOGLE_SECRET_MANAGER:
+            self._configure_google_provider()
+        elif self.provider == SecretProvider.LOCAL_FILE:
+            self._configure_local_provider()
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+    
+    def _configure_aws_provider(self) -> None:
+        """Configure AWS Secrets Manager provider settings."""
+        self.provider_config = {
+            "region": os.getenv('AWS_DEFAULT_REGION', 'us-east-1'),
+            "profile": os.getenv('AWS_PROFILE'),
+            "endpoint_url": os.getenv('AWS_ENDPOINT_URL')
+        }
+        self.logger.info("AWS Secrets Manager provider configured")
+    
+    def _configure_azure_provider(self) -> None:
+        """Configure Azure Key Vault provider settings."""
+        self.provider_config = {
+            "vault_url": os.getenv('AZURE_KEY_VAULT_URL'),
+            "tenant_id": os.getenv('AZURE_TENANT_ID'),
+            "client_id": os.getenv('AZURE_CLIENT_ID'),
+            "client_secret": os.getenv('AZURE_CLIENT_SECRET')
+        }
+        self.logger.info("Azure Key Vault provider configured")
+    
+    def _configure_google_provider(self) -> None:
+        """Configure Google Secret Manager provider settings."""
+        self.provider_config = {
+            "project_id": os.getenv('GOOGLE_CLOUD_PROJECT_ID'),
+            "credentials_path": os.getenv('GOOGLE_APPLICATION_CREDENTIALS'),
+            "location": os.getenv('GOOGLE_CLOUD_LOCATION', 'global')
+        }
+        self.logger.info("Google Secret Manager provider configured")
+    
+    def _configure_local_provider(self) -> None:
+        """Configure local file storage provider settings."""
+        self.provider_config = {
+            "secrets_dir": Path("secrets"),
+            "encryption_key": os.getenv('LOCAL_SECRETS_ENCRYPTION_KEY'),
+            "backup_enabled": os.getenv('LOCAL_SECRETS_BACKUP', 'true').lower() == 'true'
+        }
+        self.logger.info("Local file storage provider configured")
+    
+    def _initialize_provider_client(self) -> None:
+        """
+        Initialize the provider-specific client.
+        
+        Handles the final client instantiation using the pre-configured
+        provider settings. Its only responsibility is client creation.
+        """
+        try:
+            if self.provider == SecretProvider.AWS_SECRETS_MANAGER:
+                self._initialize_aws_client()
+            elif self.provider == SecretProvider.AZURE_KEY_VAULT:
+                self._initialize_azure_client()
+            elif self.provider == SecretProvider.GOOGLE_SECRET_MANAGER:
+                self._initialize_google_client()
+            elif self.provider == SecretProvider.LOCAL_FILE:
+                self._initialize_local_client()
+            
+            self.logger.info(f"✅ {self.provider.value} client initialized successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize {self.provider.value} client: {str(e)}")
+            raise RuntimeError(f"Provider initialization failed: {str(e)}") from e
     
     def _setup_logger(self) -> logging.Logger:
         """Set up secrets management logger"""
@@ -136,22 +275,35 @@ class SecretsManager:
             self.logger.error(f"Failed to initialize secrets provider: {str(e)}")
             raise
     
-    def _init_aws_client(self):
-        """Initialize AWS Secrets Manager client"""
+    def _initialize_aws_client(self):
+        """Initialize AWS Secrets Manager client using provider configuration."""
         try:
-            self.aws_client = boto3.client('secretsmanager')
+            # Configure boto3 session with provider settings
+            session_kwargs = {}
+            if self.provider_config.get('profile'):
+                session_kwargs['profile_name'] = self.provider_config['profile']
+            
+            session = boto3.Session(**session_kwargs)
+            
+            # Initialize client with region and endpoint
+            client_kwargs = {
+                'service_name': 'secretsmanager',
+                'region_name': self.provider_config['region']
+            }
+            if self.provider_config.get('endpoint_url'):
+                client_kwargs['endpoint_url'] = self.provider_config['endpoint_url']
+            
+            self.aws_client = session.client(**client_kwargs)
             self.logger.info("AWS Secrets Manager client initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize AWS client: {str(e)}")
             raise
     
-    def _init_azure_client(self):
-        """Initialize Azure Key Vault client"""
+    def _initialize_azure_client(self):
+        """Initialize Azure Key Vault client using provider configuration."""
         try:
             credential = DefaultAzureCredential()
-            vault_url = os.getenv('AZURE_KEY_VAULT_URL')
-            if not vault_url:
-                raise ValueError("AZURE_KEY_VAULT_URL environment variable not set")
+            vault_url = self.provider_config['vault_url']
             
             self.azure_client = SecretClient(vault_url=vault_url, credential=credential)
             self.logger.info("Azure Key Vault client initialized")
@@ -159,23 +311,21 @@ class SecretsManager:
             self.logger.error(f"Failed to initialize Azure client: {str(e)}")
             raise
     
-    def _init_google_client(self):
-        """Initialize Google Secret Manager client"""
+    def _initialize_google_client(self):
+        """Initialize Google Secret Manager client using provider configuration."""
         try:
             self.google_client = secretmanager.SecretManagerServiceClient()
-            self.project_id = os.getenv('GOOGLE_CLOUD_PROJECT_ID')
-            if not self.project_id:
-                raise ValueError("GOOGLE_CLOUD_PROJECT_ID environment variable not set")
+            self.project_id = self.provider_config['project_id']
             
             self.logger.info("Google Secret Manager client initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize Google client: {str(e)}")
             raise
     
-    def _init_local_storage(self):
-        """Initialize local file storage"""
+    def _initialize_local_client(self):
+        """Initialize local file storage client using provider configuration."""
         try:
-            self.secrets_dir = Path("secrets")
+            self.secrets_dir = self.provider_config['secrets_dir']
             self.secrets_dir.mkdir(exist_ok=True)
             
             # Create metadata file
