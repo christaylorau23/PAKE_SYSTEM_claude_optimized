@@ -1022,11 +1022,20 @@ if __name__ == "__main__":
     import os
 
     async def main():
+        # SECURITY: Fail-fast approach - no hardcoded fallbacks
+        neo4j_REDACTED_SECRET = os.getenv("NEO4J_PASSWORD")
+        if not neo4j_REDACTED_SECRET:
+            raise ValueError(
+                "The NEO4J_PASSWORD environment variable is not set. "
+                "Please configure it before running the application. "
+                "This is a security requirement."
+            )
+        
         service = await create_intelligence_graphql_service(
             obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH", "/path/to/vault"),
             neo4j_uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             neo4j_user=os.getenv("NEO4J_USER", "neo4j"),
-            neo4j_REDACTED_SECRET=os.getenv("NEO4J_PASSWORD", "REDACTED_SECRET"),
+            neo4j_REDACTED_SECRET=neo4j_REDACTED_SECRET,
             postgres_url=os.getenv(
                 "DATABASE_URL",
                 "postgresql+asyncpg://user:REDACTED_SECRET@localhost/pake_intelligence",

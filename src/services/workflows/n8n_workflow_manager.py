@@ -70,10 +70,18 @@ class N8nWorkflowManager:
             "N8N_BASE_URL",
             "http://localhost:5678",
         )
-        self.auth = auth_credentials or (
-            os.getenv("N8N_USER", "admin"),
-            os.getenv("N8N_PASSWORD", "REDACTED_SECRET"),
-        )
+        # SECURITY: Fail-fast approach - no hardcoded fallbacks
+        n8n_user = os.getenv("N8N_USER")
+        n8n_REDACTED_SECRET = os.getenv("N8N_PASSWORD")
+        
+        if not n8n_user or not n8n_REDACTED_SECRET:
+            raise ValueError(
+                "The N8N_USER and N8N_PASSWORD environment variables are not set. "
+                "Please configure them before running the application. "
+                "This is a security requirement."
+            )
+        
+        self.auth = auth_credentials or (n8n_user, n8n_REDACTED_SECRET)
 
         # Workflow endpoint mappings
         self.workflow_endpoints = {

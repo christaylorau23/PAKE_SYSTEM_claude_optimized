@@ -23,7 +23,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "REDACTED_SECRET")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError(
+        "The SECRET_KEY environment variable is not set. "
+        "Please configure it before running the application. "
+        "This is a security requirement."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
@@ -201,10 +207,19 @@ class SecurityMiddleware:
     
     @staticmethod
     async def validate_api_key(api_key: str) -> bool:
-        """Validate API key (placeholder for enterprise implementation)"""
+        """Validate API key with fail-fast security posture"""
+        # SECURITY: Fail-fast approach - no hardcoded fallbacks
+        expected_api_key = os.getenv("API_KEY")
+        if not expected_api_key:
+            raise ValueError(
+                "The API_KEY environment variable is not set. "
+                "Please configure it before running the application. "
+                "This is a security requirement."
+            )
+        
         # In production, this would validate against a database of API keys
-        # For now, we'll use a simple check
-        return api_key == os.getenv("API_KEY", "REDACTED_SECRET")
+        # For now, we'll use a simple check with proper environment variable
+        return api_key == expected_api_key
     
     @staticmethod
     async def check_rate_limit(user_id: str, endpoint: str) -> bool:
