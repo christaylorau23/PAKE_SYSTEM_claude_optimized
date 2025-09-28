@@ -308,7 +308,9 @@ class CurationOrchestrator:
         # For now, return mock results
         logger.info(f"Searching content for query: {query}")
 
-        # TODO: Integrate with existing PAKE search services
+        # INTEGRATION NEEDED: Connect with PAKE search services
+        # This method should integrate with the existing Orchestrator service
+        # to leverage the multi-source research capabilities for content discovery
         # from src.services.ingestion.orchestrator import Orchestrator
         # orchestrator = Orchestrator()
         # results = await orchestrator.research_topic(query)
@@ -323,8 +325,10 @@ class CurationOrchestrator:
         """Discover content based on user interests"""
         logger.info(f"Discovering content for interests: {interests}")
 
-        # TODO: Integrate with existing PAKE content sources
-        # This would query the database for content matching these interests
+        # INTEGRATION NEEDED: Connect with PAKE content database
+        # This method should query the existing PAKE database for content
+        # that matches user interests using the content categorization system
+        # Implementation should leverage existing content tagging and metadata
 
         return []  # Placeholder
 

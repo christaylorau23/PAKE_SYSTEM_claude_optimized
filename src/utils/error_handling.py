@@ -73,7 +73,33 @@ class RetryPolicy:
 
 
 class PAKEException(Exception):
-    """Base exception class for PAKE system"""
+    """Base exception class for the PAKE system.
+    
+    This exception class provides a standardized way to handle errors across the
+    PAKE system. It includes severity levels, error categorization, and rich context
+    information for better error tracking and debugging.
+    
+    Attributes:
+        message: The primary error message describing what went wrong.
+        severity: The severity level of the error (LOW, MEDIUM, HIGH, CRITICAL).
+        category: The category of error for better classification and handling.
+        context: Additional context information including timestamps, service names,
+            and correlation IDs for debugging.
+        original_exception: The original exception that caused this error, if any.
+        user_message: A user-friendly error message for display to end users.
+        
+    Example:
+        >>> try:
+        ...     risky_operation()
+        ... except ValueError as e:
+        ...     raise PAKEException(
+        ...         message="Invalid input provided",
+        ...         severity=ErrorSeverity.MEDIUM,
+        ...         category=ErrorCategory.VALIDATION,
+        ...         original_exception=e,
+        ...         user_message="Please check your input and try again"
+        ...     )
+    """
 
     def __init__(
         self,
@@ -141,7 +167,25 @@ class ExternalAPIError(PAKEException):
 
 
 class ErrorHandler:
-    """Enhanced error handler with comprehensive logging and metrics"""
+    """Enhanced error handler with comprehensive logging and metrics.
+    
+    This class provides centralized error handling for the PAKE system, including
+    automatic exception conversion, structured logging, and metrics collection.
+    It ensures consistent error handling patterns across all services.
+    
+    Attributes:
+        service_name: The name of the service using this error handler.
+        logger: Logger instance for error logging and tracking.
+        metrics: Metrics store for error statistics and monitoring.
+        
+    Example:
+        >>> error_handler = ErrorHandler("my-service")
+        >>> try:
+        ...     risky_operation()
+        ... except Exception as e:
+        ...     pake_error = error_handler.handle_exception(e)
+        ...     # Error is logged and metrics are updated
+    """
 
     def __init__(self, service_name: str = "pake-system"):
         self.service_name = service_name
@@ -267,7 +311,30 @@ def with_error_handling(
     category: ErrorCategory | None = None,
     reraise: bool = True,
 ):
-    """Decorator for automatic error handling"""
+    """Decorator for automatic error handling.
+    
+    This decorator wraps functions with automatic error handling, converting
+    standard exceptions to PAKEException subclasses and providing structured
+    logging and metrics collection.
+    
+    Args:
+        operation_name: The name of the operation for logging and metrics.
+        severity: Optional severity level override for errors.
+        category: Optional error category override for errors.
+        reraise: Whether to re-raise exceptions after handling.
+        
+    Returns:
+        Decorated function with automatic error handling.
+        
+    Example:
+        >>> @with_error_handling("database_query", severity=ErrorSeverity.HIGH)
+        ... async def query_database(query: str):
+        ...     # Function implementation
+        ...     pass
+        >>> 
+        >>> # Any exception will be automatically converted to PAKEException
+        >>> # and logged with the operation name "database_query"
+    """
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)

@@ -24,16 +24,30 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
 # Security configuration with enterprise secrets management
 from ..secrets_manager.enterprise_secrets_manager import get_jwt_secret, get_api_key
+from utils.logger import get_logger
+
+# Initialize logger
+logger = get_logger(service_name="auth-service")
 
 # Initialize secrets manager
 import asyncio
 try:
     SECRET_KEY = asyncio.run(get_jwt_secret())
-except Exception as e:
+except (ImportError, ModuleNotFoundError) as e:
+    raise ImportError(
+        f"Failed to import secrets manager: {e}. "
+        "Please ensure enterprise_secrets_manager is properly installed."
+    ) from e
+except (ValueError, RuntimeError) as e:
     raise ValueError(
         f"Failed to initialize JWT secret: {e}. "
         "Please configure Azure Key Vault or SECRET_KEY environment variable."
-    )
+    ) from e
+except Exception as e:
+    raise RuntimeError(
+        f"Unexpected error initializing authentication: {e}. "
+        "Please check your secrets configuration."
+    ) from e
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))

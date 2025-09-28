@@ -159,13 +159,23 @@ class ServerConfig:
     DB_PORT: int = int(os.getenv("PAKE_DB_PORT", "5432"))
     DB_NAME: str = os.getenv("PAKE_DB_NAME", "pake_system")
     DB_USER: str = os.getenv("PAKE_DB_USER", "pake_user")
-    DB_PASSWORD: str = os.getenv("PAKE_DB_PASSWORD", "secure_REDACTED_SECRET")
+    DB_PASSWORD: str = os.getenv("PAKE_DB_PASSWORD")
+    if not DB_PASSWORD:
+        raise ValueError(
+            "PAKE_DB_PASSWORD environment variable is required. "
+            "Please configure this secret in your environment or Azure Key Vault."
+        )
 
     # Redis settings
     REDIS_URL: str = os.getenv("PAKE_REDIS_URL", "redis://localhost:6379")
 
     # Security settings
-    JWT_SECRET: str = os.getenv("PAKE_JWT_SECRET", "change-in-production-please")
+    JWT_SECRET: str = os.getenv("PAKE_JWT_SECRET")
+    if not JWT_SECRET:
+        raise ValueError(
+            "PAKE_JWT_SECRET environment variable is required. "
+            "Please configure this secret in your environment or Azure Key Vault."
+        )
     ALLOWED_HOSTS: list[str] = os.getenv("PAKE_ALLOWED_HOSTS", "*").split(",")
 
     # API settings
@@ -710,7 +720,8 @@ async def logout(current_user: dict = Depends(get_current_user)):
     try:
         # Extract token from request headers
         # This would typically come from the Bearer token
-        # TODO: Get actual token
+        # IMPLEMENTATION NEEDED: Extract actual Bearer token from Authorization header
+        # Current implementation uses placeholder - requires proper JWT token extraction
         result = await auth_service.logout_user("access_token_here")
         return result
 

@@ -235,8 +235,20 @@ class SecretsManager:
             
             self.logger.info(f"✅ {self.provider.value} client initialized successfully")
             
+        except (ImportError, ModuleNotFoundError) as e:
+            self.logger.error(f"Missing required dependencies for {self.provider.value}: {str(e)}")
+            raise ImportError(f"Required dependencies not installed for {self.provider.value}") from e
+        except (ValueError, KeyError) as e:
+            self.logger.error(f"Invalid configuration for {self.provider.value}: {str(e)}")
+            raise ValueError(f"Invalid provider configuration: {str(e)}") from e
+        except (ConnectionError, TimeoutError) as e:
+            self.logger.error(f"Network error initializing {self.provider.value}: {str(e)}")
+            raise ConnectionError(f"Failed to connect to {self.provider.value} service") from e
+        except PermissionError as e:
+            self.logger.error(f"Permission denied for {self.provider.value}: {str(e)}")
+            raise PermissionError(f"Insufficient permissions for {self.provider.value}") from e
         except Exception as e:
-            self.logger.error(f"Failed to initialize {self.provider.value} client: {str(e)}")
+            self.logger.error(f"Unexpected error initializing {self.provider.value}: {str(e)}")
             raise RuntimeError(f"Provider initialization failed: {str(e)}") from e
     
     def _setup_logger(self) -> logging.Logger:
@@ -295,9 +307,21 @@ class SecretsManager:
             
             self.aws_client = session.client(**client_kwargs)
             self.logger.info("AWS Secrets Manager client initialized")
+        except (ImportError, ModuleNotFoundError) as e:
+            self.logger.error(f"Missing boto3 dependency: {str(e)}")
+            raise ImportError("boto3 is required for AWS Secrets Manager integration") from e
+        except (ValueError, KeyError) as e:
+            self.logger.error(f"Invalid AWS configuration: {str(e)}")
+            raise ValueError(f"Invalid AWS configuration: {str(e)}") from e
+        except (ConnectionError, TimeoutError) as e:
+            self.logger.error(f"AWS connection error: {str(e)}")
+            raise ConnectionError(f"Failed to connect to AWS Secrets Manager: {str(e)}") from e
+        except PermissionError as e:
+            self.logger.error(f"AWS permission error: {str(e)}")
+            raise PermissionError(f"Insufficient AWS permissions: {str(e)}") from e
         except Exception as e:
-            self.logger.error(f"Failed to initialize AWS client: {str(e)}")
-            raise
+            self.logger.error(f"Unexpected AWS client initialization error: {str(e)}")
+            raise RuntimeError(f"AWS client initialization failed: {str(e)}") from e
     
     def _initialize_azure_client(self):
         """Initialize Azure Key Vault client using provider configuration."""
@@ -307,9 +331,21 @@ class SecretsManager:
             
             self.azure_client = SecretClient(vault_url=vault_url, credential=credential)
             self.logger.info("Azure Key Vault client initialized")
+        except (ImportError, ModuleNotFoundError) as e:
+            self.logger.error(f"Missing Azure SDK dependency: {str(e)}")
+            raise ImportError("azure-identity and azure-keyvault-secrets are required for Azure Key Vault integration") from e
+        except (ValueError, KeyError) as e:
+            self.logger.error(f"Invalid Azure configuration: {str(e)}")
+            raise ValueError(f"Invalid Azure Key Vault configuration: {str(e)}") from e
+        except (ConnectionError, TimeoutError) as e:
+            self.logger.error(f"Azure connection error: {str(e)}")
+            raise ConnectionError(f"Failed to connect to Azure Key Vault: {str(e)}") from e
+        except PermissionError as e:
+            self.logger.error(f"Azure permission error: {str(e)}")
+            raise PermissionError(f"Insufficient Azure Key Vault permissions: {str(e)}") from e
         except Exception as e:
-            self.logger.error(f"Failed to initialize Azure client: {str(e)}")
-            raise
+            self.logger.error(f"Unexpected Azure client initialization error: {str(e)}")
+            raise RuntimeError(f"Azure client initialization failed: {str(e)}") from e
     
     def _initialize_google_client(self):
         """Initialize Google Secret Manager client using provider configuration."""
@@ -318,9 +354,21 @@ class SecretsManager:
             self.project_id = self.provider_config['project_id']
             
             self.logger.info("Google Secret Manager client initialized")
+        except (ImportError, ModuleNotFoundError) as e:
+            self.logger.error(f"Missing Google Cloud SDK dependency: {str(e)}")
+            raise ImportError("google-cloud-secret-manager is required for Google Secret Manager integration") from e
+        except (ValueError, KeyError) as e:
+            self.logger.error(f"Invalid Google Cloud configuration: {str(e)}")
+            raise ValueError(f"Invalid Google Secret Manager configuration: {str(e)}") from e
+        except (ConnectionError, TimeoutError) as e:
+            self.logger.error(f"Google Cloud connection error: {str(e)}")
+            raise ConnectionError(f"Failed to connect to Google Secret Manager: {str(e)}") from e
+        except PermissionError as e:
+            self.logger.error(f"Google Cloud permission error: {str(e)}")
+            raise PermissionError(f"Insufficient Google Secret Manager permissions: {str(e)}") from e
         except Exception as e:
-            self.logger.error(f"Failed to initialize Google client: {str(e)}")
-            raise
+            self.logger.error(f"Unexpected Google client initialization error: {str(e)}")
+            raise RuntimeError(f"Google client initialization failed: {str(e)}") from e
     
     def _initialize_local_client(self):
         """Initialize local file storage client using provider configuration."""
@@ -337,9 +385,22 @@ class SecretsManager:
                     }
             
             self.logger.info("Local secrets storage initialized")
+        except (OSError, PermissionError) as e:
+            self.logger.error(f"File system error creating secrets directory: {str(e)}")
+            raise PermissionError(f"Cannot create secrets directory: {str(e)}") from e
+        except (ValueError, KeyError) as e:
+            self.logger.error(f"Invalid local storage configuration: {str(e)}")
+            raise ValueError(f"Invalid local storage configuration: {str(e)}") from e
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Metadata file JSON error: {str(e)}")
+            raise ValueError(f"Cannot parse metadata file JSON: {str(e)}") from e
+        except FileNotFoundError as e:
+            self.logger.error(f"Metadata file not found: {str(e)}")
+            # This is not an error - metadata file is optional
+            self.metadata_store = {}
         except Exception as e:
-            self.logger.error(f"Failed to initialize local storage: {str(e)}")
-            raise
+            self.logger.error(f"Unexpected local client initialization error: {str(e)}")
+            raise RuntimeError(f"Local client initialization failed: {str(e)}") from e
     
     # ========================================================================
     # Secret Operations
@@ -630,7 +691,13 @@ class SecretsManager:
         """Encrypt secret value"""
         try:
             # Generate encryption key from environment variable
-            master_key = os.getenv('PAKE_MASTER_KEY', 'default-master-key-for-development-only')
+            # Generate encryption key from environment variable
+            master_key = os.getenv('PAKE_MASTER_KEY')
+            if not master_key:
+                raise ValueError(
+                    "PAKE_MASTER_KEY environment variable is required for encryption. "
+                    "Please configure this secret in your environment or Azure Key Vault."
+                )
             
             # Derive key using PBKDF2
             kdf = PBKDF2HMAC(
@@ -655,7 +722,13 @@ class SecretsManager:
         """Decrypt secret value"""
         try:
             # Generate encryption key from environment variable
-            master_key = os.getenv('PAKE_MASTER_KEY', 'default-master-key-for-development-only')
+            # Generate encryption key from environment variable
+            master_key = os.getenv('PAKE_MASTER_KEY')
+            if not master_key:
+                raise ValueError(
+                    "PAKE_MASTER_KEY environment variable is required for encryption. "
+                    "Please configure this secret in your environment or Azure Key Vault."
+                )
             
             # Derive key using PBKDF2
             kdf = PBKDF2HMAC(
