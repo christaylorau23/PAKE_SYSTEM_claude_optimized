@@ -1,0 +1,47 @@
+{
+  "local": {
+    "name": "local",
+    "base_url": "http://localhost:8000",
+    "database_url": "postgresql://test_user:test_password@localhost:5432/pake_perf_test",
+    "redis_url": "redis://localhost:6379/2",
+    "max_concurrent_users": 50,
+    "test_duration_minutes": 5,
+    "resource_limits": {
+      "cpu": "2",
+      "memory": "4Gi",
+      "disk": "10Gi"
+    },
+    "monitoring_enabled": true,
+    "cleanup_after_test": true
+  },
+  "staging": {
+    "name": "staging",
+    "base_url": "https://staging.pake-system.com",
+    "database_url": "postgresql://staging_user:staging_password@staging-db:5432/pake_staging",
+    "redis_url": "redis://staging-redis:6379/0",
+    "max_concurrent_users": 200,
+    "test_duration_minutes": 15,
+    "resource_limits": {
+      "cpu": "4",
+      "memory": "8Gi",
+      "disk": "50Gi"
+    },
+    "monitoring_enabled": true,
+    "cleanup_after_test": false
+  },
+  "production": {
+    "name": "production",
+    "base_url": "https://pake-system.com",
+    "database_url": "postgresql://prod_user:prod_password@prod-db:5432/pake_production",
+    "redis_url": "redis://prod-redis:6379/0",
+    "max_concurrent_users": 1000,
+    "test_duration_minutes": 30,
+    "resource_limits": {
+      "cpu": "8",
+      "memory": "16Gi",
+      "disk": "100Gi"
+    },
+    "monitoring_enabled": true,
+    "cleanup_after_test": false
+  }
+}

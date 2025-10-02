@@ -1,0 +1,271 @@
+# PAKE System - Performance Testing Environment
+# Phase 5: Performance Under Pressure
+#
+# This is a dedicated staging environment for performance testing.
+# It is architecturally identical to production but scaled down for testing.
+#
+# Usage:
+#   docker-compose -f docker-compose.performance.yml up -d
+#   # Run performance tests
+#   docker-compose -f docker-compose.performance.yml down
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Performance Testing
+  postgres-perf:
+    image: postgres:16-alpine
+    container_name: pake-postgres-perf
+    environment:
+      POSTGRES_DB: pake_performance
+      POSTGRES_USER: perf_user
+      POSTGRES_PASSWORD: perf_test_password_2024
+      # Enable query logging for N+1 detection
+      POSTGRES_INITDB_ARGS: "-c log_statement=all -c log_duration=on"
+    volumes:
+      - postgres_perf_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Enable query logging
+      - ./configs/postgresql-perf.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - '5433:5432'
+    command:
+      - "postgres"
+      - "-c"
+      - "log_statement=all"
+      - "-c"
+      - "log_duration=on"
+      - "-c"
+      - "log_line_prefix=%m [%p] %q%u@%d "
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U perf_user -d pake_performance']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pake-perf-network
+
+  # Redis Cache - Performance Testing
+  redis-perf:
+    image: redis:7-alpine
+    container_name: pake-redis-perf
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_perf_data:/data
+      - ./configs/redis-perf.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pake-perf-network
+
+  # PAKE System Backend - Performance Testing
+  pake-backend-perf:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PYTHON_VERSION: "3.12"
+    container_name: pake-backend-perf
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://perf_user:perf_test_password_2024@postgres-perf:5432/pake_performance
+      REDIS_URL: redis://redis-perf:6379/0
+
+      # Application configuration
+      SECRET_KEY: perf-test-secret-key-2024-change-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+
+      # Performance testing flags
+      ENVIRONMENT: performance
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+
+      # SQL query logging for N+1 detection
+      SQL_ECHO: "true"
+      SQL_LOG_LEVEL: INFO
+
+      # Disable Vault for performance testing
+      USE_VAULT: "false"
+
+      # Performance optimizations
+      UVICORN_WORKERS: 4
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: 8000
+      UVICORN_BACKLOG: 2048
+
+      # Cache configuration
+      CACHE_ENABLED: "true"
+      CACHE_TTL: 300
+
+      # Rate limiting (relaxed for testing)
+      RATE_LIMIT_ENABLED: "false"
+    ports:
+      - '8001:8000'
+    depends_on:
+      postgres-perf:
+        condition: service_healthy
+      redis-perf:
+        condition: service_healthy
+    volumes:
+      - ./logs/performance:/app/logs
+      - ./performance_tests:/app/performance_tests
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - pake-perf-network
+    # Resource limits for consistent testing
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # Locust Load Testing Master
+  locust-master:
+    image: locustio/locust:2.20.0
+    container_name: pake-locust-master
+    environment:
+      LOCUST_MODE: master
+      LOCUST_HOST: http://pake-backend-perf:8000
+    ports:
+      - '8089:8089'
+      - '5557:5557'
+    volumes:
+      - ./performance_tests:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --master
+    depends_on:
+      - pake-backend-perf
+    networks:
+      - pake-perf-network
+
+  # Locust Load Testing Workers
+  locust-worker:
+    image: locustio/locust:2.20.0
+    environment:
+      LOCUST_MODE: worker
+      LOCUST_MASTER_NODE_HOST: locust-master
+      LOCUST_HOST: http://pake-backend-perf:8000
+    volumes:
+      - ./performance_tests:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host=locust-master
+    depends_on:
+      - locust-master
+      - pake-backend-perf
+    networks:
+      - pake-perf-network
+    # Scale workers for load testing
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # PostgreSQL Monitoring (pg_stat_statements)
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: pake-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://perf_user:perf_test_password_2024@postgres-perf:5432/pake_performance?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres_exporter/queries.yaml
+    ports:
+      - '9187:9187'
+    volumes:
+      - ./configs/postgres-exporter-queries.yaml:/etc/postgres_exporter/queries.yaml:ro
+    depends_on:
+      - postgres-perf
+    networks:
+      - pake-perf-network
+
+  # Redis Monitoring
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: pake-redis-exporter
+    environment:
+      REDIS_ADDR: redis-perf:6379
+    ports:
+      - '9121:9121'
+    depends_on:
+      - redis-perf
+    networks:
+      - pake-perf-network
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pake-prometheus-perf
+    volumes:
+      - ./configs/prometheus-perf.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_perf_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+    ports:
+      - '9090:9090'
+    networks:
+      - pake-perf-network
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pake-grafana-perf
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin_perf_2024
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_perf_data:/var/lib/grafana
+      - ./configs/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./configs/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+    ports:
+      - '3001:3000'
+    depends_on:
+      - prometheus
+    networks:
+      - pake-perf-network
+
+networks:
+  pake-perf-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_perf_data:
+    driver: local
+  redis_perf_data:
+    driver: local
+  prometheus_perf_data:
+    driver: local
+  grafana_perf_data:
+    driver: local

@@ -1,0 +1,54 @@
+{
+  "timestamp": 1759339556.0171046,
+  "base_url": "https://httpbin.org",
+  "tests": [
+    {
+      "name": "Authentication Bypass",
+      "status": "passed",
+      "details": "Authentication bypass attempts: 0/4",
+      "critical": true
+    },
+    {
+      "name": "SQL Injection",
+      "status": "passed",
+      "details": "SQL injection vulnerabilities found: 0",
+      "critical": true
+    },
+    {
+      "name": "XSS Vulnerabilities",
+      "status": "passed",
+      "details": "XSS vulnerabilities found: 0",
+      "critical": true
+    },
+    {
+      "name": "CSRF Protection",
+      "status": "failed",
+      "details": "CSRF protectiondisabled",
+      "critical": false
+    },
+    {
+      "name": "Rate Limiting",
+      "status": "failed",
+      "details": "Rate limiting disabled after 100 requests",
+      "critical": false
+    },
+    {
+      "name": "Security Headers",
+      "status": "failed",
+      "details": "Missing security headers: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Strict-Transport-Security, Content-Security-Policy",
+      "critical": false
+    },
+    {
+      "name": "Input Validation",
+      "status": "passed",
+      "details": "Input validation vulnerabilities: 0",
+      "critical": true
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 4,
+    "failed": 3,
+    "critical_failures": 0
+  }
+}

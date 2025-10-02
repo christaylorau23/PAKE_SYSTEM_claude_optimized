@@ -1,7 +1,7 @@
-# PAKE System - Comprehensive CI Pipeline with Quality Gates
-# Enterprise-grade continuous integration with automated quality gates
+# PAKE System - Comprehensive CI/CD Pipeline
+# Enterprise-grade continuous integration and deployment with quality gates
 
-name: CI Pipeline - Quality Gates
+name: Comprehensive CI/CD Pipeline
 
 on:
   pull_request:
@@ -9,6 +9,15 @@ on:
   push:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -74,6 +83,11 @@ jobs:
       
       - name: Run Prettier formatting check
         run: npm run format:check
+      
+      - name: Check commit message format
+        uses: commitlint/action@v1
+        with:
+          config: .commitlintrc.json
 
   static-analysis:
     name: 🔍 Static Analysis & Type Checking
@@ -591,11 +605,193 @@ jobs:
           image: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   # ============================================================================
-  # NOTIFICATIONS AND CLEANUP
+  # DEPLOYMENT PIPELINE - Run only on main branch
   # ============================================================================
   
+  build-and-push:
+    name: 🏗️ Build & Push Production Image
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, static-analysis, security-scan, unit-tests, integration-tests, e2e-tests, security-tests, test-coverage-gate, build-and-scan]
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image-tag: ${{ steps.build.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_COMMIT=${{ github.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+            VERSION=${{ github.ref_name }}
+
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: https://staging.pake-system.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Deploy to Kubernetes (Staging)
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/pake-backend \
+            pake-backend=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n staging
+          kubectl rollout status deployment/pake-backend -n staging --timeout=300s
+      
+      - name: Run smoke tests against staging
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Run basic health checks
+          curl -f https://staging.pake-system.com/health || exit 1
+          curl -f https://staging.pake-system.com/auth/generate-password || exit 1
+      
+      - name: Run E2E tests against staging
+        run: |
+          poetry run pytest tests/e2e/ \
+            --base-url=https://staging.pake-system.com \
+            --junitxml=staging-e2e-results.xml \
+            -v
+      
+      - name: Upload staging test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-e2e-results
+          path: staging-e2e-results.xml
+
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    environment:
+      name: production
+      url: https://pake-system.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Deploy to Kubernetes (Production)
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/pake-backend \
+            pake-backend=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n production
+          kubectl rollout status deployment/pake-backend -n production --timeout=600s
+      
+      - name: Run production health checks
+        run: |
+          # Wait for deployment to be ready
+          sleep 60
+          
+          # Run comprehensive health checks
+          curl -f https://pake-system.com/health || exit 1
+          curl -f https://pake-system.com/auth/generate-password || exit 1
+          
+          # Run security tests against production
+          poetry run python scripts/security_test_suite.py --base-url=https://pake-system.com
+      
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        if: success()
+        with:
+          status: success
+          text: "🚀 PAKE System successfully deployed to production!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Notify deployment failure
+        uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: failure
+          text: "❌ PAKE System deployment to production failed!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # CLEANUP AND NOTIFICATIONS
+  # ============================================================================
+  
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+    steps:
+      - name: Clean up old images
+        run: |
+          # Clean up old container images (keep last 10)
+          echo "Cleaning up old container images..."
+      
+      - name: Clean up test artifacts
+        run: |
+          # Clean up test artifacts older than 7 days
+          echo "Cleaning up old test artifacts..."
+
   notify-completion:
-    name: 📢 Notify CI Completion
+    name: 📢 Notify Completion
     runs-on: ubuntu-latest
     needs: [lint-and-format, static-analysis, security-scan, unit-tests, integration-tests, e2e-tests, security-tests, test-coverage-gate, build-and-scan]
     if: always()
@@ -605,7 +801,7 @@ jobs:
         with:
           status: ${{ job.status }}
           text: |
-            🎯 PAKE System CI Pipeline Complete
+            🎯 PAKE System CI/CD Pipeline Complete
             
             **Branch**: ${{ github.ref_name }}
             **Commit**: ${{ github.sha }}

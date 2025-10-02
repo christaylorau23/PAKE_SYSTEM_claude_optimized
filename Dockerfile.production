@@ -1,0 +1,127 @@
+# PAKE System Production Dockerfile - Multi-Stage Build
+# Enterprise-grade containerization with security hardening
+
+# =============================================================================
+# Stage 1: Builder - Install dependencies and build artifacts
+# =============================================================================
+FROM python:3.12.8-slim as builder
+
+# Set environment variables for build optimization
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VENV_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+# Install system dependencies required for building Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    pkg-config \
+    libpq-dev \
+    libffi-dev \
+    libssl-dev \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install Poetry for dependency management
+RUN pip install --no-cache-dir poetry==1.8.3
+
+# Set work directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies into virtual environment
+RUN poetry install --only=main --no-dev && \
+    poetry cache clear --all pypi
+
+# =============================================================================
+# Stage 2: Production - Minimal runtime image
+# =============================================================================
+FROM python:3.12.8-slim as production
+
+# Set environment variables for security and performance
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PATH="/app/.venv/bin:$PATH"
+
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user and group
+RUN groupadd -r pake && useradd -r -g pake -u 1000 -m pake
+
+# Set work directory
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder --chown=pake:pake /app/.venv /app/.venv
+
+# Copy application code
+COPY --chown=pake:pake . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/vault /app/logs /app/tmp && \
+    chown -R pake:pake /app && \
+    chmod -R 755 /app && \
+    chmod 700 /app/vault
+
+# Switch to non-root user
+USER pake
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# Start application
+CMD ["python", "mcp_server_standalone.py"]
+
+# =============================================================================
+# Stage 3: Security Scanner (Optional) - For vulnerability scanning
+# =============================================================================
+FROM production as security-scanner
+
+# Install security scanning tools
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip \
+    && pip install --no-cache-dir safety bandit
+
+# Switch back to non-root user
+USER pake
+
+# Run security scans
+RUN safety check --json --output /tmp/safety-report.json || true && \
+    bandit -r /app -f json -o /tmp/bandit-report.json || true
+
+# =============================================================================
+# Security Features Implemented:
+# =============================================================================
+# 1. Multi-stage build reduces attack surface
+# 2. Non-root user (pake:1000) for principle of least privilege
+# 3. Minimal base image with only runtime dependencies
+# 4. Proper file permissions and ownership
+# 5. Security updates applied during build
+# 6. No build tools in production image
+# 7. Virtual environment isolation
+# 8. Health checks for container monitoring
+# 9. Optional security scanning stage
+# 10. Proper cleanup of package caches

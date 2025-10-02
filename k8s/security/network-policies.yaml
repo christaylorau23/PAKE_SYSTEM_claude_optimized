@@ -1,0 +1,532 @@
+# ============================================================================
+# PAKE System - Kubernetes Network Policies
+# ============================================================================
+#
+# Purpose: Implement network segmentation and zero-trust networking
+#
+# Security Benefits:
+# - Default deny all traffic (whitelist approach)
+# - Explicit allow rules for required communication
+# - Prevents lateral movement in case of compromise
+# - Namespace isolation
+# - Ingress and egress control
+#
+# Prerequisites:
+# - Kubernetes cluster with Network Policy support (Calico, Cilium, etc.)
+# - Network plugin must support NetworkPolicy API
+#
+# Apply: kubectl apply -f k8s/security/network-policies.yaml
+# Verify: kubectl get networkpolicies -n pake-system
+# ============================================================================
+
+---
+# ============================================================================
+# Default Deny All Policy
+# ============================================================================
+# This policy blocks ALL ingress and egress traffic by default
+# Other policies will explicitly allow required traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: pake-system
+  labels:
+    policy: default-deny
+  annotations:
+    description: "Default deny all ingress and egress traffic - use whitelist approach"
+spec:
+  podSelector: {}  # Applies to all pods in namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# ============================================================================
+# Backend Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-backend-netpol
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-backend
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow backend to communicate with database, Redis, and accept ingress"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: pake-backend
+      app.kubernetes.io/component: api
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # --------------------------------------------------------------------------
+  # Ingress Rules - Who can connect TO the backend
+  # --------------------------------------------------------------------------
+  ingress:
+    # Allow from Ingress Controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 8001
+
+    # Allow from Frontend pods in same namespace
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-frontend
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Allow from Bridge service
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-bridge
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Allow from monitoring (Prometheus)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 8000
+
+  # --------------------------------------------------------------------------
+  # Egress Rules - Where the backend can connect TO
+  # --------------------------------------------------------------------------
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # Allow DNS resolution (required for all services)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow HTTPS to external APIs (ArXiv, PubMed, etc.)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+---
+# ============================================================================
+# Database (PostgreSQL) Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-netpol
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow only backend and specific services to access PostgreSQL"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # --------------------------------------------------------------------------
+  # Ingress Rules - Who can connect TO PostgreSQL
+  # --------------------------------------------------------------------------
+  ingress:
+    # Allow from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-backend
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow from bridge service (if needed)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-bridge
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow from backup jobs
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backup
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app: postgres-exporter
+      ports:
+        - protocol: TCP
+          port: 5432
+
+  # --------------------------------------------------------------------------
+  # Egress Rules - Where PostgreSQL can connect TO
+  # --------------------------------------------------------------------------
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# ============================================================================
+# Redis Cache Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-netpol
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow only backend to access Redis cache"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # --------------------------------------------------------------------------
+  # Ingress Rules
+  # --------------------------------------------------------------------------
+  ingress:
+    # Allow from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-backend
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+        - podSelector:
+            matchLabels:
+              app: redis-exporter
+      ports:
+        - protocol: TCP
+          port: 6379
+
+  # --------------------------------------------------------------------------
+  # Egress Rules
+  # --------------------------------------------------------------------------
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# ============================================================================
+# Frontend Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-frontend-netpol
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-frontend
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow frontend to communicate with backend API"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: pake-frontend
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # --------------------------------------------------------------------------
+  # Ingress Rules
+  # --------------------------------------------------------------------------
+  ingress:
+    # Allow from Ingress Controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 80
+
+  # --------------------------------------------------------------------------
+  # Egress Rules
+  # --------------------------------------------------------------------------
+  egress:
+    # Allow to backend API
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-backend
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 8001
+
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# ============================================================================
+# Bridge Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-bridge-netpol
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/name: pake-bridge
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow bridge service to communicate with backend and database"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: pake-bridge
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # --------------------------------------------------------------------------
+  # Ingress Rules
+  # --------------------------------------------------------------------------
+  ingress:
+    # Allow from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-backend
+      ports:
+        - protocol: TCP
+          port: 3000
+
+    # Allow from Ingress Controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+
+  # --------------------------------------------------------------------------
+  # Egress Rules
+  # --------------------------------------------------------------------------
+  egress:
+    # Allow to backend
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pake-backend
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Allow to PostgreSQL (if bridge needs direct access)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+    # Allow HTTPS to external services
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# ============================================================================
+# Monitoring Ingress Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-ingress
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow monitoring namespace to scrape metrics"
+spec:
+  podSelector:
+    matchLabels:
+      prometheus.io/scrape: 'true'
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    # Allow from monitoring namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9090
+
+---
+# ============================================================================
+# Allow Health Checks from Kubelet
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kubelet-health-checks
+  namespace: pake-system
+  labels:
+    app.kubernetes.io/component: network-policy
+  annotations:
+    description: "Allow kubelet to perform health checks on all pods"
+spec:
+  podSelector: {}  # All pods
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    # Allow health checks from any node
+    # Kubelet runs on the nodes themselves
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 3000

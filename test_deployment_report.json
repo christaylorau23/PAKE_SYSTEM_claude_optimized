@@ -1,0 +1,14 @@
+{
+  "deployment_info": {
+    "image_tag": "test-123",
+    "environment": "staging",
+    "deployed_by": "test-user",
+    "deployment_time": "2025-01-27T10:00:00Z",
+    "deployment_id": "staging-test-123-1759339732"
+  },
+  "quality_gates": {},
+  "performance_metrics": {},
+  "security_status": {},
+  "recommendations": [],
+  "generated_at": "2025-10-01T10:28:52.859158"
+}

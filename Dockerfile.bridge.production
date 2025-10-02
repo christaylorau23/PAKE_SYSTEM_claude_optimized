@@ -1,0 +1,132 @@
+# ============================================================================
+# PAKE System - TypeScript Bridge Service - Production Dockerfile
+# ============================================================================
+#
+# Security Features:
+# - Multi-stage build for minimal attack surface
+# - Non-root user execution
+# - Node.js 22 LTS with Alpine Linux (minimal base)
+# - No development dependencies in production
+# - Optimized layer caching
+#
+# Build: docker build -f Dockerfile.bridge.production -t pake-bridge:latest .
+# Run:   docker run -p 3000:3000 pake-bridge:latest
+# ============================================================================
+
+# ============================================================================
+# STAGE 1: Dependencies Stage
+# Purpose: Install and cache dependencies separately
+# ============================================================================
+FROM node:22-alpine AS dependencies
+
+# Install build dependencies for native modules
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    # Security: CA certificates
+    ca-certificates
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+# --omit=dev excludes devDependencies
+# --ignore-scripts prevents running potentially unsafe scripts
+RUN npm ci --omit=dev --ignore-scripts && \
+    npm cache clean --force
+
+# ============================================================================
+# STAGE 2: Builder Stage
+# Purpose: Compile TypeScript to JavaScript
+# ============================================================================
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files and install ALL dependencies (including dev)
+COPY package*.json ./
+RUN npm ci --include=dev && npm cache clean --force
+
+# Copy source code
+COPY src/ ./src/
+COPY tsconfig.json ./
+
+# Build TypeScript
+RUN npm run build
+
+# ============================================================================
+# STAGE 3: Production Stage
+# Purpose: Minimal runtime image
+# ============================================================================
+FROM node:22-alpine AS production
+
+# Security labels
+LABEL maintainer="PAKE System <christaylorau23@gmail.com>" \
+      description="PAKE Bridge Service - TypeScript API Bridge" \
+      version="1.0.0" \
+      security.hardened="true" \
+      security.non-root="true"
+
+# Environment variables
+ENV NODE_ENV=production \
+    PORT=3000
+
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    # Minimal utilities
+    curl \
+    # Security updates
+    ca-certificates \
+    # Timezone data for proper logging
+    tzdata && \
+    # Security: Remove unnecessary packages
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+# Alpine uses addgroup/adduser instead of groupadd/useradd
+RUN addgroup -g 1000 -S appuser && \
+    adduser -u 1000 -S appuser -G appuser -h /app -D
+
+WORKDIR /app
+
+# Copy production dependencies from dependencies stage
+COPY --from=dependencies --chown=appuser:appuser /app/node_modules ./node_modules
+
+# Copy compiled JavaScript from builder stage
+COPY --from=builder --chown=appuser:appuser /app/dist ./dist
+
+# Copy package.json for metadata
+COPY --chown=appuser:appuser package*.json ./
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/cache && \
+    chown -R appuser:appuser /app && \
+    # Security: Make application code read-only
+    chmod -R 555 /app/dist && \
+    # Writable directories
+    chmod 755 /app/logs /app/cache
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Run the application
+CMD ["node", "dist/index.js"]
+
+# Build arguments
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG VERSION
+
+ENV BUILD_DATE=${BUILD_DATE} \
+    GIT_COMMIT=${GIT_COMMIT} \
+    VERSION=${VERSION}

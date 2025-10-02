@@ -1,0 +1,334 @@
+# PAKE System Kubernetes Security Configuration
+# Enterprise-grade security policies and network segmentation
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pake-system
+  labels:
+    name: pake-system
+    security-level: high
+---
+# Security Context for Pods
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pake-security-config
+  namespace: pake-system
+data:
+  # Security policies
+  security-policy.yaml: |
+    apiVersion: v1
+    kind: PodSecurityPolicy
+    metadata:
+      name: pake-security-policy
+    spec:
+      # Prevent privilege escalation
+      allowPrivilegeEscalation: false
+      # Run as non-root user
+      runAsUser:
+        rule: MustRunAsNonRoot
+      # Prevent running as root
+      runAsGroup:
+        rule: MustRunAsNonRoot
+      # Read-only root filesystem
+      readOnlyRootFilesystem: true
+      # Drop all capabilities
+      requiredDropCapabilities:
+        - ALL
+      # Allow only specific volumes
+      volumes:
+        - 'configMap'
+        - 'emptyDir'
+        - 'projected'
+        - 'secret'
+        - 'downwardAPI'
+        - 'persistentVolumeClaim'
+      # Security context constraints
+      seLinux:
+        rule: RunAsAny
+      fsGroup:
+        rule: RunAsAny
+---
+# Network Policy for API Pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-api-network-policy
+  namespace: pake-system
+spec:
+  podSelector:
+    matchLabels:
+      app: pake-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow ingress from monitoring
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to database
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow egress to Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: cache
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS to external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+---
+# Network Policy for Database Pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-database-network-policy
+  namespace: pake-system
+spec:
+  podSelector:
+    matchLabels:
+      app: pake-database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress only from API pods
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: pake-system
+      podSelector:
+        matchLabels:
+          app: pake-api
+    ports:
+    - protocol: TCP
+      port: 5432
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+---
+# Network Policy for Redis Pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pake-redis-network-policy
+  namespace: pake-system
+spec:
+  podSelector:
+    matchLabels:
+      app: pake-redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress only from API pods
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: pake-system
+      podSelector:
+        matchLabels:
+          app: pake-api
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+---
+# Pod Security Policy
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: pake-security-policy
+  namespace: pake-system
+spec:
+  # Prevent privilege escalation
+  allowPrivilegeEscalation: false
+  # Run as non-root user
+  runAsUser:
+    rule: MustRunAsNonRoot
+  # Prevent running as root
+  runAsGroup:
+    rule: MustRunAsNonRoot
+  # Read-only root filesystem
+  readOnlyRootFilesystem: true
+  # Drop all capabilities
+  requiredDropCapabilities:
+    - ALL
+  # Allow only specific volumes
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  # Security context constraints
+  seLinux:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+---
+# Service Account with minimal permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pake-service-account
+  namespace: pake-system
+automountServiceAccountToken: false
+---
+# Role with minimal permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: pake-system
+  name: pake-role
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+# RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pake-role-binding
+  namespace: pake-system
+subjects:
+- kind: ServiceAccount
+  name: pake-service-account
+  namespace: pake-system
+roleRef:
+  kind: Role
+  name: pake-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Security Context for Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pake-api
+  namespace: pake-system
+  labels:
+    app: pake-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pake-api
+  template:
+    metadata:
+      labels:
+        app: pake-api
+    spec:
+      serviceAccountName: pake-service-account
+      securityContext:
+        # Pod-level security context
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: pake-api
+        image: pake-system:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        securityContext:
+          # Container-level security context
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: logs-volume
+          mountPath: /app/logs
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: logs-volume
+        emptyDir: {}
+      # Pod Security Policy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

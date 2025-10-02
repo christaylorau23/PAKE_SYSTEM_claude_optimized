@@ -1,0 +1,60 @@
+{
+  "timestamp": 1759339600.2830732,
+  "base_url": "https://httpbin.org",
+  "tests": [
+    {
+      "name": "Response Time",
+      "status": "failed",
+      "details": "Avg: 514.10ms, Max: 1172.46ms, Failed: 4",
+      "metrics": {
+        "avg_response_time_ms": 514.1026973724365,
+        "max_response_time_ms": 1172.4598407745361,
+        "failed_requests": 4,
+        "total_requests": 4
+      },
+      "performance_issue": true
+    },
+    {
+      "name": "Concurrent Requests",
+      "status": "failed",
+      "details": "Success: 0.00%, Avg: 0.00ms, Throughput: 0.00 req/s",
+      "metrics": {
+        "concurrent_requests": 50,
+        "successful_requests": 0,
+        "success_rate": 0.0,
+        "avg_response_time_ms": 0,
+        "throughput_req_per_sec": 0.0,
+        "total_time_ms": 1727.9636859893799
+      },
+      "performance_issue": true
+    },
+    {
+      "name": "Memory Usage",
+      "status": "passed",
+      "details": "Memory increase: 0.00%, Total: 22.60%",
+      "metrics": {
+        "initial_memory_percent": 22.6,
+        "final_memory_percent": 22.6,
+        "memory_increase_percent": 0.0
+      },
+      "performance_issue": false
+    },
+    {
+      "name": "Database Performance",
+      "status": "failed",
+      "details": "DB Avg: 866.15ms, Max: 1312.23ms, Failed: 3",
+      "metrics": {
+        "avg_db_response_time_ms": 866.1524454752604,
+        "max_db_response_time_ms": 1312.2315406799316,
+        "failed_db_requests": 3
+      },
+      "performance_issue": true
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 1,
+    "failed": 3,
+    "performance_issues": 3
+  }
+}

@@ -124,6 +124,7 @@ daphne = "^4.0.0"
 # ===== GEOGRAPHIC DATA PROCESSING =====
 geopy = "^2.4.1"
 pycountry = "^24.6.1"
+hvac = "^2.3.0"
 
 [tool.poetry.group.trends.dependencies]
 # ===== LIVE TREND DATA FEED SYSTEM =====
@@ -159,6 +160,7 @@ testcontainers = "^3.7.1"
 # ===== SECURITY TESTING =====
 safety = "^2.3.5"
 bandit = "^1.7.5"
+pip-audit = "^2.6.1"
 
 # ===== LOAD TESTING =====
 locust = "^2.20.0"
@@ -179,6 +181,7 @@ pylint = "^2.17.0"
 ipdb = "^0.13.0"
 memory-profiler = "^0.61.0"
 line-profiler = "^4.0.0"
+memray = "^1.11.0"  # Phase 5: Advanced memory profiling with flame graphs
 
 # ===== JUPYTER FOR EXPLORATION =====
 jupyter = "^1.0.0"

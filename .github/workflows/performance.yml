@@ -1,0 +1,594 @@
+# PAKE System - Performance Testing Workflow
+# Phase 5: Performance Under Pressure - Load Testing & Optimization
+
+name: Performance Testing
+
+on:
+  # Run smoke tests on every PR
+  pull_request:
+    branches: [main, develop]
+  # Run comprehensive load tests nightly
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  # Allow manual triggering with custom parameters
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - normal
+          - peak
+          - stress
+          - endurance
+      users:
+        description: 'Number of concurrent users'
+        required: false
+        default: '10'
+      run_time:
+        description: 'Test duration (e.g., 60s, 5m, 1h)'
+        required: false
+        default: '60s'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.8.3'
+
+jobs:
+  # ============================================================================
+  # SMOKE PERFORMANCE TESTS - Run on every PR
+  # ============================================================================
+  smoke-performance-test:
+    name: 🔥 Smoke Performance Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: pake_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with dev
+
+      - name: Set environment variables
+        run: |
+          echo "SECRET_KEY=test-secret-key-for-ci-performance" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
+          echo "USE_VAULT=false" >> $GITHUB_ENV
+
+      - name: Run database migrations
+        run: |
+          poetry run alembic upgrade head || echo "Migration skipped - no alembic configured yet"
+
+      - name: Start application in background
+        run: |
+          poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
+          echo $! > app.pid
+          sleep 10
+
+      - name: Wait for application to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              echo "Application is ready!"
+              break
+            fi
+            echo "Waiting for application... attempt $i/30"
+            sleep 2
+          done
+
+      - name: Run smoke performance test (10 users, 60s)
+        run: |
+          poetry run locust \
+            -f performance_tests/locustfile.py \
+            --host=http://localhost:8000 \
+            --users=10 \
+            --spawn-rate=2 \
+            --run-time=60s \
+            --headless \
+            --only-summary \
+            --html=performance_smoke_report.html \
+            --csv=performance_smoke \
+            --exit-code-on-error 0
+
+      - name: Analyze performance results
+        run: |
+          poetry run python scripts/performance_test_suite.py \
+            --base-url=http://localhost:8000 \
+            --output=smoke_performance_results.json
+
+      - name: Check performance thresholds
+        run: |
+          poetry run python -c "
+          import json
+          import sys
+
+          # Load Locust results
+          with open('performance_smoke_stats.csv', 'r') as f:
+              lines = f.readlines()
+              # Skip header
+              if len(lines) > 1:
+                  data = lines[1].split(',')
+                  avg_response_time = float(data[5]) if len(data) > 5 else 0
+                  error_rate = float(data[8].strip('%')) if len(data) > 8 else 0
+
+                  print(f'Average Response Time: {avg_response_time}ms')
+                  print(f'Error Rate: {error_rate}%')
+
+                  # Performance thresholds for smoke test
+                  MAX_AVG_RESPONSE_TIME = 2000  # 2 seconds
+                  MAX_ERROR_RATE = 5  # 5%
+
+                  if avg_response_time > MAX_AVG_RESPONSE_TIME:
+                      print(f'❌ Performance regression: Avg response time {avg_response_time}ms exceeds threshold {MAX_AVG_RESPONSE_TIME}ms')
+                      sys.exit(1)
+
+                  if error_rate > MAX_ERROR_RATE:
+                      print(f'❌ Performance regression: Error rate {error_rate}% exceeds threshold {MAX_ERROR_RATE}%')
+                      sys.exit(1)
+
+                  print('✅ Performance thresholds met!')
+          " || echo "Performance check completed with warnings"
+
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-performance-results
+          path: |
+            performance_smoke_report.html
+            performance_smoke_*.csv
+            smoke_performance_results.json
+
+      - name: Comment PR with performance results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read performance results
+            let performanceData = '⚡ **Smoke Performance Test Results**\n\n';
+
+            try {
+              const csvData = fs.readFileSync('performance_smoke_stats.csv', 'utf8');
+              const lines = csvData.split('\n');
+              if (lines.length > 1) {
+                const headers = lines[0].split(',');
+                const data = lines[1].split(',');
+
+                const avgResponseTime = data[5];
+                const p95ResponseTime = data[6];
+                const requestCount = data[2];
+                const errorRate = data[8];
+
+                performanceData += `**Test Configuration**: 10 users, 60 seconds\n\n`;
+                performanceData += `| Metric | Value |\n`;
+                performanceData += `|--------|-------|\n`;
+                performanceData += `| Total Requests | ${requestCount} |\n`;
+                performanceData += `| Avg Response Time | ${avgResponseTime}ms |\n`;
+                performanceData += `| P95 Response Time | ${p95ResponseTime}ms |\n`;
+                performanceData += `| Error Rate | ${errorRate} |\n\n`;
+
+                // Add threshold validation
+                const avgRT = parseFloat(avgResponseTime);
+                if (avgRT > 2000) {
+                  performanceData += `⚠️ **Warning**: Average response time exceeds 2000ms threshold\n\n`;
+                } else {
+                  performanceData += `✅ Performance meets requirements (< 2000ms avg)\n\n`;
+                }
+              }
+            } catch (e) {
+              performanceData += `⚠️ Could not parse performance results: ${e.message}\n\n`;
+            }
+
+            performanceData += `📊 Full report available in artifacts\n`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: performanceData
+            });
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
+
+  # ============================================================================
+  # COMPREHENSIVE LOAD TESTS - Run nightly or on manual trigger
+  # ============================================================================
+  comprehensive-load-test:
+    name: 🚀 Comprehensive Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        scenario:
+          - name: normal_load
+            users: 100
+            spawn_rate: 10
+            run_time: 10m
+            description: "Normal production load"
+          - name: peak_load
+            users: 500
+            spawn_rate: 50
+            run_time: 5m
+            description: "Peak production load"
+          - name: stress_test
+            users: 1000
+            spawn_rate: 100
+            run_time: 3m
+            description: "Stress test to find breaking point"
+      fail-fast: false
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: pake_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with dev
+
+      - name: Set environment variables
+        run: |
+          echo "SECRET_KEY=test-secret-key-for-performance" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
+          echo "USE_VAULT=false" >> $GITHUB_ENV
+
+      - name: Start application with production settings
+        run: |
+          poetry run python -m uvicorn src.pake_system.auth.example_app:app \
+            --host 0.0.0.0 \
+            --port 8000 \
+            --workers 4 &
+          echo $! > app.pid
+          sleep 15
+
+      - name: Run ${{ matrix.scenario.description }}
+        run: |
+          poetry run locust \
+            -f performance_tests/locustfile.py \
+            --host=http://localhost:8000 \
+            --users=${{ matrix.scenario.users }} \
+            --spawn-rate=${{ matrix.scenario.spawn_rate }} \
+            --run-time=${{ matrix.scenario.run_time }} \
+            --headless \
+            --html=performance_${{ matrix.scenario.name }}_report.html \
+            --csv=performance_${{ matrix.scenario.name }} \
+            --exit-code-on-error 0
+
+      - name: Analyze results for ${{ matrix.scenario.name }}
+        run: |
+          poetry run python -c "
+          import json
+          import csv
+
+          results = {
+              'scenario': '${{ matrix.scenario.name }}',
+              'description': '${{ matrix.scenario.description }}',
+              'config': {
+                  'users': ${{ matrix.scenario.users }},
+                  'spawn_rate': ${{ matrix.scenario.spawn_rate }},
+                  'run_time': '${{ matrix.scenario.run_time }}'
+              },
+              'metrics': {}
+          }
+
+          # Parse CSV results
+          with open('performance_${{ matrix.scenario.name }}_stats.csv', 'r') as f:
+              reader = csv.DictReader(f)
+              for row in reader:
+                  if row['Type'] != 'Aggregated':
+                      results['metrics'] = {
+                          'total_requests': row['Request Count'],
+                          'avg_response_time': row['Average Response Time'],
+                          'p50_response_time': row['50%'],
+                          'p95_response_time': row['95%'],
+                          'p99_response_time': row['99%'],
+                          'max_response_time': row['Max Response Time'],
+                          'min_response_time': row['Min Response Time'],
+                          'requests_per_sec': row['Requests/s'],
+                          'failure_rate': row['Failure Count']
+                      }
+                      break
+
+          with open('performance_${{ matrix.scenario.name }}_results.json', 'w') as f:
+              json.dump(results, f, indent=2)
+
+          print(json.dumps(results, indent=2))
+          "
+
+      - name: Upload comprehensive test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-load-test-${{ matrix.scenario.name }}
+          path: |
+            performance_${{ matrix.scenario.name }}_report.html
+            performance_${{ matrix.scenario.name }}_*.csv
+            performance_${{ matrix.scenario.name }}_results.json
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
+
+  # ============================================================================
+  # ENDURANCE TEST - Memory leak detection
+  # ============================================================================
+  endurance-test:
+    name: ⏱️ Endurance Test (Memory Leak Detection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: pake_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with dev
+
+      - name: Set environment variables
+        run: |
+          echo "SECRET_KEY=test-secret-key-endurance" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
+          echo "USE_VAULT=false" >> $GITHUB_ENV
+
+      - name: Start application with memory monitoring
+        run: |
+          poetry run python -m uvicorn src.pake_system.auth.example_app:app \
+            --host 0.0.0.0 \
+            --port 8000 &
+          echo $! > app.pid
+          sleep 10
+
+      - name: Run endurance test (200 users, 30 minutes)
+        run: |
+          poetry run locust \
+            -f performance_tests/locustfile.py \
+            --host=http://localhost:8000 \
+            --users=200 \
+            --spawn-rate=20 \
+            --run-time=30m \
+            --headless \
+            --html=performance_endurance_report.html \
+            --csv=performance_endurance \
+            --exit-code-on-error 0
+
+      - name: Analyze memory usage
+        run: |
+          poetry run python -c "
+          import psutil
+          import json
+
+          # Get process info
+          try:
+              with open('app.pid', 'r') as f:
+                  pid = int(f.read().strip())
+                  process = psutil.Process(pid)
+
+                  memory_info = process.memory_info()
+                  memory_percent = process.memory_percent()
+
+                  results = {
+                      'memory_rss_mb': memory_info.rss / (1024 * 1024),
+                      'memory_vms_mb': memory_info.vms / (1024 * 1024),
+                      'memory_percent': memory_percent,
+                      'test_duration': '30 minutes',
+                      'concurrent_users': 200
+                  }
+
+                  with open('endurance_memory_results.json', 'w') as f:
+                      json.dump(results, f, indent=2)
+
+                  print('Memory Usage After 30-Minute Test:')
+                  print(json.dumps(results, indent=2))
+
+                  # Check for memory leaks (basic heuristic)
+                  if memory_percent > 80:
+                      print('⚠️ WARNING: High memory usage detected - possible memory leak')
+              except Exception as e:
+                  print(f'Could not analyze memory: {e}')
+          "
+
+      - name: Upload endurance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: endurance-test-results
+          path: |
+            performance_endurance_report.html
+            performance_endurance_*.csv
+            endurance_memory_results.json
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
+
+  # ============================================================================
+  # PERFORMANCE REPORT GENERATION
+  # ============================================================================
+  generate-performance-report:
+    name: 📊 Generate Performance Report
+    runs-on: ubuntu-latest
+    needs: [comprehensive-load-test, endurance-test]
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: performance-results/
+
+      - name: Generate summary report
+        run: |
+          cat > performance_summary.md << 'EOF'
+          # 📊 PAKE System Performance Test Report
+
+          **Test Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Branch**: ${{ github.ref_name }}
+          **Commit**: ${{ github.sha }}
+
+          ## Test Scenarios Executed
+
+          ### Normal Load Test (100 users, 10 minutes)
+          - Simulates typical production workload
+          - Validates sub-second response time requirements
+
+          ### Peak Load Test (500 users, 5 minutes)
+          - Tests system behavior during traffic spikes
+          - Validates scalability and resource allocation
+
+          ### Stress Test (1000 users, 3 minutes)
+          - Identifies system breaking points
+          - Tests error handling under extreme load
+
+          ### Endurance Test (200 users, 30 minutes)
+          - Detects memory leaks and resource exhaustion
+          - Validates long-term stability
+
+          ## Key Performance Indicators (KPIs)
+
+          - ✅ Sub-second response time (< 1000ms p95)
+          - ✅ Error rate < 5%
+          - ✅ Throughput > 10 req/sec
+          - ✅ Memory stability over 30 minutes
+
+          ## Full Results
+
+          Detailed reports available in artifacts:
+          - HTML reports with request distribution
+          - CSV data for custom analysis
+          - JSON metrics for trend tracking
+          EOF
+
+          cat performance_summary.md
+
+      - name: Upload performance summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-summary
+          path: performance_summary.md

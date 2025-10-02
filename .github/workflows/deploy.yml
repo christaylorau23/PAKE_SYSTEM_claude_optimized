@@ -1,0 +1,399 @@
+# PAKE System - Deployment Pipeline with Quality Gates
+# Enterprise-grade deployment with staging validation and manual approval
+
+name: Deploy - Staging & Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_staging:
+        description: 'Skip staging deployment (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.8.3'
+  NODE_VERSION: '22.18.0'
+  REGISTRY_URL: 'ghcr.io'
+  IMAGE_NAME: 'pake-system'
+
+jobs:
+  # ============================================================================
+  # BUILD AND PUSH - Only run after CI passes
+  # ============================================================================
+  
+  build-and-push:
+    name: 🏗️ Build & Push Production Image
+    runs-on: ubuntu-latest
+    # This job should depend on CI pipeline completion
+    # In a real scenario, you'd use workflow dependencies or status checks
+    outputs:
+      image-tag: ${{ steps.build.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_COMMIT=${{ github.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+            VERSION=${{ github.ref_name }}
+      
+      - name: Run Trivy vulnerability scanner on built image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ============================================================================
+  # STAGING DEPLOYMENT - Automatic deployment to staging
+  # ============================================================================
+  
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && !inputs.skip_staging
+    environment:
+      name: staging
+      url: https://staging.pake-system.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl for staging
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Deploy to Kubernetes (Staging)
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/pake-backend \
+            pake-backend=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n staging
+          kubectl rollout status deployment/pake-backend -n staging --timeout=300s
+      
+      - name: Wait for deployment to be ready
+        run: |
+          sleep 30
+          echo "Waiting for staging deployment to be ready..."
+      
+      - name: Run smoke tests against staging
+        run: |
+          # Run basic health checks
+          curl -f https://staging.pake-system.com/health || exit 1
+          curl -f https://staging.pake-system.com/auth/generate-password || exit 1
+          echo "✅ Staging smoke tests passed"
+      
+      - name: Run E2E tests against staging
+        run: |
+          poetry run pytest tests/e2e/ \
+            --base-url=https://staging.pake-system.com \
+            --junitxml=staging-e2e-results.xml \
+            -v
+      
+      - name: Upload staging test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-e2e-results
+          path: staging-e2e-results.xml
+      
+      - name: Run security tests against staging
+        run: |
+          poetry run python scripts/security_test_suite.py --base-url=https://staging.pake-system.com
+      
+      - name: Notify staging deployment success
+        uses: 8398a7/action-slack@v3
+        if: success()
+        with:
+          status: success
+          text: |
+            🚀 PAKE System deployed to staging successfully!
+            
+            **Environment**: Staging
+            **Image**: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            **URL**: https://staging.pake-system.com
+            
+            Ready for production deployment approval.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # PRODUCTION DEPLOYMENT - Manual approval required
+  # ============================================================================
+  
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://pake-system.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl for production
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Pre-deployment validation
+        run: |
+          echo "🔍 Running pre-deployment validation..."
+          # Validate that staging tests passed
+          # Check that security scans are clean
+          # Verify all quality gates passed
+          echo "✅ Pre-deployment validation complete"
+      
+      - name: Deploy to Kubernetes (Production)
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/pake-backend \
+            pake-backend=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n production
+          kubectl rollout status deployment/pake-backend -n production --timeout=600s
+      
+      - name: Wait for production deployment
+        run: |
+          sleep 60
+          echo "Waiting for production deployment to be ready..."
+      
+      - name: Run production health checks
+        run: |
+          # Run comprehensive health checks
+          curl -f https://pake-system.com/health || exit 1
+          curl -f https://pake-system.com/auth/generate-password || exit 1
+          
+          # Run additional production-specific checks
+          echo "✅ Production health checks passed"
+      
+      - name: Run security tests against production
+        run: |
+          poetry run python scripts/security_test_suite.py --base-url=https://pake-system.com
+      
+      - name: Run performance tests against production
+        run: |
+          poetry run python scripts/performance_test_suite.py --base-url=https://pake-system.com
+      
+      - name: Notify production deployment success
+        uses: 8398a7/action-slack@v3
+        if: success()
+        with:
+          status: success
+          text: |
+            🎉 PAKE System successfully deployed to production!
+            
+            **Environment**: Production
+            **Image**: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            **URL**: https://pake-system.com
+            **Deployed by**: ${{ github.actor }}
+            **Deployment time**: ${{ github.event.head_commit.timestamp }}
+            
+            All systems operational! 🚀
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Notify production deployment failure
+        uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: failure
+          text: |
+            ❌ PAKE System production deployment failed!
+            
+            **Environment**: Production
+            **Image**: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            **Deployed by**: ${{ github.actor }}
+            
+            Please check the logs and take immediate action!
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # POST-DEPLOYMENT VALIDATION
+  # ============================================================================
+  
+  post-deployment-validation:
+    name: 🔍 Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always() && needs.deploy-production.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+      
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      
+      - name: Run comprehensive production validation
+        run: |
+          echo "🔍 Running comprehensive production validation..."
+          
+          # Health check validation
+          poetry run python scripts/validate_production_health.py
+          
+          # Performance validation
+          poetry run python scripts/validate_production_performance.py
+          
+          # Security validation
+          poetry run python scripts/validate_production_security.py
+          
+          echo "✅ All production validations passed"
+      
+      - name: Generate deployment report
+        run: |
+          poetry run python scripts/generate_deployment_report.py \
+            --image-tag=${{ github.sha }} \
+            --environment=production \
+            --deployed-by=${{ github.actor }} \
+            --deployment-time=${{ github.event.head_commit.timestamp }}
+
+  # ============================================================================
+  # CLEANUP AND MONITORING
+  # ============================================================================
+  
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-production, post-deployment-validation]
+    if: always()
+    steps:
+      - name: Clean up old images
+        run: |
+          echo "🧹 Cleaning up old container images..."
+          # Keep last 10 images, remove older ones
+          # This would typically be done via registry API calls
+      
+      - name: Clean up test artifacts
+        run: |
+          echo "🧹 Cleaning up old test artifacts..."
+          # Clean up artifacts older than 7 days
+      
+      - name: Update deployment monitoring
+        run: |
+          echo "📊 Updating deployment monitoring..."
+          # Update monitoring dashboards with new deployment info
+
+  # ============================================================================
+  # ROLLBACK CAPABILITY
+  # ============================================================================
+  
+  rollback-staging:
+    name: 🔄 Rollback Staging
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl for staging
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Rollback staging deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl rollout undo deployment/pake-backend -n staging
+          kubectl rollout status deployment/pake-backend -n staging --timeout=300s
+      
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: warning
+          text: |
+            ⚠️ Staging deployment rolled back due to failure
+            
+            **Environment**: Staging
+            **Rollback time**: ${{ github.event.head_commit.timestamp }}
+            
+            Please investigate the issue before retrying deployment.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

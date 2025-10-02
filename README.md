@@ -42,6 +42,7 @@ PAKE is a **production-ready enterprise knowledge management platform** that com
 #### 🏗️ **Enterprise Infrastructure**
 
 - **🔐 Enterprise Security**: JWT authentication, Argon2 hashing, rate limiting
+- **🔒 HashiCorp Vault Integration**: Centralized secrets management with zero hardcoded credentials
 - **💾 PostgreSQL Database**: Full ACID compliance with async SQLAlchemy
 - **🚀 WebSocket Support**: Real-time features and live notifications
 - **🐳 Kubernetes Native**: Auto-scaling, high availability, production-ready
@@ -229,6 +230,7 @@ docker-compose logs -f pake-backend
 
 - ✅ **JWT Authentication**: Access & refresh tokens with secure rotation
 - ✅ **Password Security**: Argon2 hashing with complexity validation
+- ✅ **HashiCorp Vault Integration**: Centralized secrets management with zero hardcoded credentials
 - ✅ **Rate Limiting**: API endpoint protection
 - ✅ **Account Security**: Lockout protection and session management
 - ✅ **Network Security**: Kubernetes network policies
@@ -275,6 +277,17 @@ docker-compose logs -f pake-backend
 ### **Development Commands**
 
 ```bash
+# Start Vault dev server for secrets management
+docker run --cap-add=IPC_LOCK -d -p 8200:8200 \
+  -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' \
+  --name vault-dev hashicorp/vault
+
+# Migrate secrets to Vault
+poetry run python scripts/migrate_secrets_to_vault.py
+
+# Test Vault integration
+poetry run python scripts/test_vault_integration.py
+
 # Run comprehensive tests
 python -m pytest tests/ -v --tb=short
 

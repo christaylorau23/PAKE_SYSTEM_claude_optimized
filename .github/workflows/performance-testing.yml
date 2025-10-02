@@ -1,0 +1,435 @@
+# PAKE System Performance Testing Pipeline
+# Automated performance testing with quality gates
+
+name: Performance Testing Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    # Run comprehensive performance tests nightly
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - local
+          - staging
+          - production
+      scenario:
+        description: 'Test scenario'
+        required: true
+        default: 'normal'
+        type: choice
+        options:
+          - smoke
+          - normal
+          - peak
+          - stress
+          - endurance
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.8.3'
+  REGISTRY_URL: 'ghcr.io'
+  IMAGE_NAME: 'pake-system'
+
+jobs:
+  # ============================================================================
+  # SMOKE TEST - Run on every PR and push
+  # ============================================================================
+  
+  performance-smoke-test:
+    name: 🚀 Performance Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: pake_perf_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+          poetry add locust
+      
+      - name: Wait for services
+        run: |
+          poetry run python -c "
+          import time
+          import psycopg2
+          import redis
+          
+          # Wait for PostgreSQL
+          for i in range(30):
+              try:
+                  conn = psycopg2.connect(
+                      host='localhost',
+                      port=5432,
+                      user='test_user',
+                      password='test_password',
+                      database='pake_perf_test'
+                  )
+                  conn.close()
+                  break
+              except:
+                  time.sleep(1)
+          
+          # Wait for Redis
+          for i in range(30):
+              try:
+                  r = redis.Redis(host='localhost', port=6379, db=2)
+                  r.ping()
+                  break
+              except:
+                  time.sleep(1)
+          "
+      
+      - name: Set environment variables
+        run: |
+          echo "SECRET_KEY=perf-test-secret-key" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_perf_test" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/2" >> $GITHUB_ENV
+          echo "USE_VAULT=false" >> $GITHUB_ENV
+      
+      - name: Start application
+        run: |
+          poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+      
+      - name: Run smoke test
+        run: |
+          poetry run locust -f performance_tests/locustfile.py \
+            --host=http://localhost:8000 \
+            --users=10 \
+            --spawn-rate=2 \
+            --run-time=60s \
+            --headless \
+            --html=performance_tests/results/smoke_test_${{ github.sha }}.html
+      
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-results
+          path: performance_tests/results/smoke_test_${{ github.sha }}.html
+      
+      - name: Comment smoke test results on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const comment = `## 🚀 Performance Smoke Test Results
+            
+            **Status**: ✅ Completed
+            
+            ### Test Summary
+            - **Users**: 10 concurrent users
+            - **Duration**: 60 seconds
+            - **Environment**: Local test environment
+            
+            ### Performance Metrics
+            - Response time threshold: < 2 seconds
+            - Error rate threshold: < 5%
+            - Throughput threshold: > 10 RPS
+            
+            📊 [View detailed results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            ---
+            *This test runs automatically on every pull request to ensure performance standards are maintained.*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # ============================================================================
+  # COMPREHENSIVE PERFORMANCE TEST - Run on schedule and manual dispatch
+  # ============================================================================
+  
+  performance-comprehensive-test:
+    name: 🎯 Comprehensive Performance Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+      url: ${{ github.event.inputs.environment == 'production' && 'https://pake-system.com' || 'https://staging.pake-system.com' }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: pake_perf_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+          poetry add locust
+      
+      - name: Wait for services
+        run: |
+          poetry run python -c "
+          import time
+          import psycopg2
+          import redis
+          
+          # Wait for PostgreSQL
+          for i in range(30):
+              try:
+                  conn = psycopg2.connect(
+                      host='localhost',
+                      port=5432,
+                      user='test_user',
+                      password='test_password',
+                      database='pake_perf_test'
+                  )
+                  conn.close()
+                  break
+              except:
+                  time.sleep(1)
+          
+          # Wait for Redis
+          for i in range(30):
+              try:
+                  r = redis.Redis(host='localhost', port=6379, db=2)
+                  r.ping()
+                  break
+              except:
+                  time.sleep(1)
+          "
+      
+      - name: Set environment variables
+        run: |
+          echo "SECRET_KEY=perf-test-secret-key" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_perf_test" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/2" >> $GITHUB_ENV
+          echo "USE_VAULT=false" >> $GITHUB_ENV
+      
+      - name: Start application
+        run: |
+          poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+      
+      - name: Run comprehensive performance test
+        run: |
+          SCENARIO="${{ github.event.inputs.scenario || 'normal' }}"
+          
+          case $SCENARIO in
+            "smoke")
+              poetry run locust -f performance_tests/locustfile.py \
+                --host=http://localhost:8000 \
+                --users=10 \
+                --spawn-rate=2 \
+                --run-time=60s \
+                --headless \
+                --html=performance_tests/results/comprehensive_smoke_${{ github.sha }}.html
+              ;;
+            "normal")
+              poetry run locust -f performance_tests/locustfile.py \
+                --host=http://localhost:8000 \
+                --users=100 \
+                --spawn-rate=10 \
+                --run-time=10m \
+                --headless \
+                --html=performance_tests/results/comprehensive_normal_${{ github.sha }}.html
+              ;;
+            "peak")
+              poetry run locust -f performance_tests/locustfile.py \
+                --host=http://localhost:8000 \
+                --users=500 \
+                --spawn-rate=50 \
+                --run-time=5m \
+                --headless \
+                --html=performance_tests/results/comprehensive_peak_${{ github.sha }}.html
+              ;;
+            "stress")
+              poetry run locust -f performance_tests/locustfile.py \
+                --host=http://localhost:8000 \
+                --users=1000 \
+                --spawn-rate=100 \
+                --run-time=3m \
+                --headless \
+                --html=performance_tests/results/comprehensive_stress_${{ github.sha }}.html
+              ;;
+            "endurance")
+              poetry run locust -f performance_tests/locustfile.py \
+                --host=http://localhost:8000 \
+                --users=200 \
+                --spawn-rate=20 \
+                --run-time=30m \
+                --headless \
+                --html=performance_tests/results/comprehensive_endurance_${{ github.sha }}.html
+              ;;
+          esac
+      
+      - name: Upload comprehensive test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-test-results-${{ github.event.inputs.scenario || 'normal' }}
+          path: performance_tests/results/comprehensive_*_${{ github.sha }}.html
+      
+      - name: Generate performance report
+        run: |
+          poetry run python performance_tests/scripts/generate_performance_report.py \
+            --scenario="${{ github.event.inputs.scenario || 'normal' }}" \
+            --environment="${{ github.event.inputs.environment || 'staging' }}" \
+            --results-dir=performance_tests/results
+      
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report-${{ github.event.inputs.scenario || 'normal' }}
+          path: performance_tests/results/performance_report_*.json
+      
+      - name: Notify performance test completion
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: |
+            🎯 PAKE System Performance Test Complete
+            
+            **Scenario**: ${{ github.event.inputs.scenario || 'normal' }}
+            **Environment**: ${{ github.event.inputs.environment || 'staging' }}
+            **Status**: ${{ job.status }}
+            
+            📊 [View Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # PERFORMANCE MONITORING AND ALERTING
+  # ============================================================================
+  
+  performance-monitoring:
+    name: 📊 Performance Monitoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+      
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      
+      - name: Run performance monitoring
+        run: |
+          poetry run python performance_tests/scripts/performance_monitor.py \
+            --environment=production \
+            --thresholds=performance_tests/config/performance_thresholds.json
+      
+      - name: Upload monitoring results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-monitoring-results
+          path: performance_tests/results/monitoring_*.json
+      
+      - name: Alert on performance degradation
+        uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: failure
+          text: |
+            🚨 PAKE System Performance Alert
+            
+            **Issue**: Performance degradation detected
+            **Environment**: Production
+            **Time**: $(date)
+            
+            ⚠️ Immediate attention required!
+            
+            📊 [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
