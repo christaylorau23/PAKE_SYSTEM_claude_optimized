@@ -112,8 +112,7 @@ class CosmicDemo:
             self.optimization_cycles += 1
 
             self.log(
-                f"[SUCCESS] Performance improved: {old_score:.3f} -> {
-                    self.performance_score:.3f}",
+                f"[SUCCESS] Performance improved: {old_score:.3f} -> {self.performance_score:.3f}",
             )
             self.log(f"[INFO] Optimization cycle #{self.optimization_cycles} completed")
         else:

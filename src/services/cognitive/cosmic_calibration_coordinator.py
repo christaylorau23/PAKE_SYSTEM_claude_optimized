@@ -751,9 +751,7 @@ components to achieve continuous improvement while maintaining system stability.
                 f"\n\n## COSMIC CALIBRATION PROTOCOL SHUTDOWN - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
             )
             f.write(
-                f"Final System Status: {
-                    json.dumps(final_status, indent=2, default=str)
-                }\n\n",
+                f"Final System Status: {json.dumps(final_status, indent=2, default=str)}\n\n",
             )
             f.write("=== END OF COSMIC CALIBRATION LOG ===\n")
 

@@ -606,9 +606,7 @@ class ElasticsearchLogConsumer:
                     [f"http://{elasticsearch_host}:{elasticsearch_port}"],
                 )
                 logger.info(
-                    f"Connected to Elasticsearch at {elasticsearch_host}:{
-                        elasticsearch_port
-                    }",
+                    f"Connected to Elasticsearch at {elasticsearch_host}:{elasticsearch_port}",
                 )
             except Exception as e:
                 logger.error(f"Failed to connect to Elasticsearch: {e}")

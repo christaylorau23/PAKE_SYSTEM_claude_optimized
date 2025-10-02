@@ -371,13 +371,10 @@ class CosmicCalibrationDemo:
         if self.coordinator.self_critique:
             critique_status = self.coordinator.self_critique.get_status()
             self.logger.info(
-                f"🔍 Total Critiques: {
-                    critique_status.get('total_critiques_performed', 0)
-                }",
+                f"🔍 Total Critiques: {critique_status.get('total_critiques_performed', 0)}",
             )
             self.logger.info(
-                f"📊 Quality Score: {
-                    critique_status.get('recent_average_quality', 0.0):.3f}",
+                f"📊 Quality Score: {critique_status.get('recent_average_quality', 0.0):.3f}",
             )
 
         self.logger.info("✅ Cognitive evolution demonstrated")

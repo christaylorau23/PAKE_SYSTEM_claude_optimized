@@ -435,9 +435,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
                 mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
 
                 print(
-                    f"  {i + 1}. {log_file.name} ({size_mb:.1f}MB, {
-                        mtime.strftime('%Y-%m-%d %H:%M:%S')
-                    })",
+                    f"  {i + 1}. {log_file.name} ({size_mb:.1f}MB, {mtime.strftime('%Y-%m-%d %H:%M:%S')})",
                 )
 
             if args.service:
@@ -503,8 +501,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
                     for service_name, result in results.items():
                         status_icon = monitor._get_status_icon(result.status)
                         print(
-                            f"  {status_icon} {service_name}: {result.status.value} ({
-                                result.response_time_ms:.1f}ms)",
+                            f"  {status_icon} {service_name}: {result.status.value} ({result.response_time_ms:.1f}ms)",
                         )
 
                         if result.error_message:
@@ -585,15 +582,11 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         if success_count == total_count:
             print(
-                f"\n{Colors.green('✅ All validations passed!')} ({success_count}/{
-                    total_count
-                })",
+                f"\n{Colors.green('✅ All validations passed!')} ({success_count}/{total_count})",
             )
             return 0
         print(
-            f"\n{Colors.red('❌ Some validations failed!')} ({success_count}/{
-                total_count
-            })",
+            f"\n{Colors.red('❌ Some validations failed!')} ({success_count}/{total_count})",
         )
         return 1
 
@@ -978,9 +971,7 @@ Environment Variables:
         """Print formatted status"""
         print(f"{Colors.blue('📊 PAKE+ System Status')}")
         print(
-            f"Overall Status: {
-                self._format_status(status.get('overall_status', 'unknown'))
-            }",
+            f"Overall Status: {self._format_status(status.get('overall_status', 'unknown'))}",
         )
 
         if "services" in status:
@@ -999,9 +990,7 @@ Environment Variables:
                 criticality = "🔥" if info.get("critical", False) else "ℹ️"
 
                 print(
-                    f"  {icon} {criticality} {info.get('display_name', service_name)}: {
-                        info.get('state', 'unknown').upper()
-                    }",
+                    f"  {icon} {criticality} {info.get('display_name', service_name)}: {info.get('state', 'unknown').upper()}",
                 )
 
                 if info.get("restart_attempts", 0) > 0:

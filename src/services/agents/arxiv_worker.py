@@ -302,9 +302,7 @@ class ArXivWorker(BaseWorkerAgent):
                 logger.info(f"ArXivWorker {self.worker_id} service test successful")
             else:
                 logger.warning(
-                    f"ArXivWorker {self.worker_id} service test warning: {
-                        test_result.error
-                    }",
+                    f"ArXivWorker {self.worker_id} service test warning: {test_result.error}",
                 )
 
         except Exception as e:

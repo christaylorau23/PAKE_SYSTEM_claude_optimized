@@ -17,10 +17,11 @@ import logging
 import time
 import zlib
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 import redis.asyncio as redis
 from redis.asyncio import default_backoff
@@ -135,7 +136,7 @@ class CacheLayer(ABC):
         """Get value from cache"""
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set value in cache"""
 
     @abstractmethod
@@ -157,9 +158,9 @@ class CacheLayer(ABC):
     def update_statistics(
         self,
         operation: CacheOperation,
-        hit: bool = None,
-        access_time: float = None,
-    ):
+        hit: Optional[bool] = None,
+        access_time: Optional[float] = None,
+    ) -> None:
         """Update cache statistics"""
         if operation == CacheOperation.GET:
             if hit:
@@ -253,7 +254,7 @@ class L1MemoryCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set value in L1 cache"""
         try:
             # Check if we need to evict
@@ -376,10 +377,10 @@ class L2DistributedCache(CacheLayer):
     def __init__(self, config: CacheConfig, redis_url: str = "redis://localhost:6379"):
         super().__init__(CacheLevel.L2_DISTRIBUTED, config)
         self.redis_url = redis_url
-        self.redis_pool = None
+        self.redis_pool: Optional[redis.ConnectionPool] = None
         self.key_prefix = "pake:l2:"
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Connect to Redis"""
         if self.redis_pool is None:
             self.redis_pool = redis.ConnectionPool.from_url(
@@ -430,7 +431,7 @@ class L2DistributedCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set value in L2 cache"""
         try:
             await self.connect()
@@ -541,10 +542,10 @@ class L3PersistentCache(CacheLayer):
     def __init__(self, config: CacheConfig, redis_url: str = "redis://localhost:6379"):
         super().__init__(CacheLevel.L3_PERSISTENT, config)
         self.redis_url = redis_url
-        self.redis_pool = None
+        self.redis_pool: Optional[redis.ConnectionPool] = None
         self.key_prefix = "pake:l3:"
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Connect to Redis"""
         if self.redis_pool is None:
             self.redis_pool = redis.ConnectionPool.from_url(
@@ -608,7 +609,7 @@ class L3PersistentCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set value in L3 cache"""
         try:
             await self.connect()
@@ -790,7 +791,7 @@ class MultiLayeredCacheStrategy:
         namespace: str,
         key: str,
         value: Any,
-        ttl_override: int = None,
+        ttl_override: Optional[int] = None,
     ) -> bool:
         """Set value in appropriate cache layers"""
         cache_key = f"{namespace}:{key}"
