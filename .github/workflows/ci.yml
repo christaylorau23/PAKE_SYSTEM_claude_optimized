@@ -25,7 +25,7 @@ jobs:
   # ============================================================================
   # QUALITY GATES - Run on every PR and push
   # ============================================================================
-  
+
   lint-and-format:
     name: 🎨 Code Quality & Formatting
     runs-on: ubuntu-latest
@@ -35,43 +35,43 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for better analysis
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
           virtualenvs-create: true
           virtualenvs-in-project: true
-      
+
       - name: Install dependencies
         run: |
           poetry install --no-interaction --only=dev
           npm ci
-      
+
       - name: Run Ruff linting
         run: poetry run ruff check src/ tests/ --output-format=github
-      
+
       - name: Run Black formatting check
         run: poetry run black --check src/ tests/
-      
+
       - name: Run isort import sorting check
         run: poetry run isort --check-only src/ tests/
-      
+
       - name: Run ESLint
         run: npm run lint
-      
+
       - name: Run Prettier formatting check
         run: npm run format:check
 
@@ -82,38 +82,38 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: |
           poetry install --no-interaction
           npm ci
-      
+
       - name: Run MyPy type checking
         run: poetry run mypy src/ --strict --show-error-codes
-      
+
       - name: Run TypeScript type checking
         run: npm run type-check
-      
+
       - name: Run Bandit security analysis
         run: poetry run bandit -r src/ -f json -o bandit-report.json
-      
+
       - name: Upload Bandit report
         uses: actions/upload-artifact@v4
         if: always()
@@ -130,24 +130,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for secret scanning
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Run pip-audit for vulnerable dependencies
         run: poetry run pip-audit --format=json --output=pip-audit-report.json
-      
+
       - name: Run TruffleHog secret scanning
         uses: trufflesecurity/trufflehog@main
         with:
@@ -155,10 +155,10 @@ jobs:
           base: main
           head: HEAD
           extra_args: --debug --only-verified
-      
+
       - name: Run Safety check
         run: poetry run safety check --json --output=safety-report.json
-      
+
       - name: Upload security reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -179,21 +179,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Run unit tests with coverage
         run: |
           poetry run pytest tests/unit/ \
@@ -204,7 +204,7 @@ jobs:
             --junitxml=unit-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
             -v
-      
+
       - name: Upload unit test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -248,28 +248,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Wait for services
         run: |
           poetry run python -c "
           import time
           import psycopg2
           import redis
-          
+
           # Wait for PostgreSQL
           for i in range(30):
               try:
@@ -284,7 +284,7 @@ jobs:
                   break
               except:
                   time.sleep(1)
-          
+
           # Wait for Redis
           for i in range(30):
               try:
@@ -294,14 +294,14 @@ jobs:
               except:
                   time.sleep(1)
           "
-      
+
       - name: Set environment variables
         run: |
           echo "SECRET_KEY=test-secret-key-for-ci" >> $GITHUB_ENV
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
-      
+
       - name: Run integration tests
         run: |
           poetry run pytest tests/integration/ \
@@ -312,7 +312,7 @@ jobs:
             --junitxml=integration-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
             -v
-      
+
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -356,33 +356,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Set environment variables
         run: |
           echo "SECRET_KEY=test-secret-key-for-ci" >> $GITHUB_ENV
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
-      
+
       - name: Start application
         run: |
           poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
           sleep 10
-      
+
       - name: Run E2E tests
         run: |
           poetry run pytest tests/e2e/ \
@@ -393,7 +393,7 @@ jobs:
             --junitxml=e2e-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
             -v
-      
+
       - name: Upload E2E test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -434,37 +434,37 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Set environment variables
         run: |
           echo "SECRET_KEY=test-secret-key-for-ci" >> $GITHUB_ENV
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
-      
+
       - name: Start application
         run: |
           poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
           sleep 10
-      
+
       - name: Run security test suite
         run: |
           poetry run python scripts/security_test_suite.py
-      
+
       - name: Upload security test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -480,33 +480,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
-      
+
       - name: Install dependencies
         run: poetry install --no-interaction
-      
+
       - name: Download all coverage reports
         uses: actions/download-artifact@v4
         with:
           path: coverage-reports/
-      
+
       - name: Combine coverage reports
         run: |
           poetry run coverage combine coverage-reports/*/coverage.xml
           poetry run coverage report --show-missing --fail-under=85
           poetry run coverage html -d htmlcov-combined
           poetry run coverage xml -o coverage-combined.xml
-      
+
       - name: Upload combined coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -514,7 +514,7 @@ jobs:
           path: |
             coverage-combined.xml
             htmlcov-combined/
-      
+
       - name: Comment coverage on PR
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
@@ -523,22 +523,22 @@ jobs:
             const fs = require('fs');
             const coverage = JSON.parse(fs.readFileSync('coverage-combined.xml', 'utf8'));
             const totalCoverage = coverage.coverage['@line-rate'] * 100;
-            
+
             const comment = `## 📊 Test Coverage Report
-            
+
             **Total Coverage**: ${totalCoverage.toFixed(2)}%
-            
+
             ### Coverage Breakdown
             - **Unit Tests**: 85%+ (Required)
-            - **Integration Tests**: 80%+ (Required)  
+            - **Integration Tests**: 80%+ (Required)
             - **E2E Tests**: 75%+ (Required)
-            
+
             ### Coverage Details
             - Lines: ${coverage.coverage['@lines-covered']}/${coverage.coverage['@lines-valid']}
             - Branches: ${coverage.coverage['@branches-covered']}/${coverage.coverage['@branches-valid']}
-            
+
             ${totalCoverage >= 85 ? '✅' : '❌'} Coverage ${totalCoverage >= 85 ? 'meets' : 'does not meet'} requirements`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -553,10 +553,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build production image
         uses: docker/build-push-action@v5
         with:
@@ -570,20 +570,20 @@ jobs:
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             GIT_COMMIT=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: 'sarif'
           output: 'trivy-results.sarif'
-      
+
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-      
+
       - name: Run Docker Scout
         uses: docker/scout-action@v1
         with:
@@ -593,7 +593,7 @@ jobs:
   # ============================================================================
   # NOTIFICATIONS AND CLEANUP
   # ============================================================================
-  
+
   notify-completion:
     name: 📢 Notify CI Completion
     runs-on: ubuntu-latest
@@ -606,11 +606,11 @@ jobs:
           status: ${{ job.status }}
           text: |
             🎯 PAKE System CI Pipeline Complete
-            
+
             **Branch**: ${{ github.ref_name }}
             **Commit**: ${{ github.sha }}
             **Status**: ${{ job.status }}
-            
+
             **Quality Gates**:
             - ✅ Lint & Format: ${{ needs.lint-and-format.result }}
             - ✅ Static Analysis: ${{ needs.static-analysis.result }}

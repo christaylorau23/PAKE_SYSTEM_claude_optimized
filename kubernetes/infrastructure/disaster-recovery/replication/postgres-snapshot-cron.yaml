@@ -233,7 +233,7 @@ data:
         EU_LSN=$(psql -h $EU_HOST -U postgres -d postgres -t -c "SELECT pg_last_wal_replay_lsn();" | tr -d ' ')
         EU_LAG=$(psql -h $EU_HOST -U postgres -d postgres -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()));" | tr -d ' ')
         log "EU Replica - LSN: $EU_LSN, Lag: ${EU_LAG}s"
-        
+
         curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-replication-validation/instance/eu-replica \
           --data-binary "postgres_replica_lag_seconds $EU_LAG"
     else
@@ -246,7 +246,7 @@ data:
         AP_LSN=$(psql -h $AP_HOST -U postgres -d postgres -t -c "SELECT pg_last_wal_replay_lsn();" | tr -d ' ')
         AP_LAG=$(psql -h $AP_HOST -U postgres -d postgres -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()));" | tr -d ' ')
         log "AP Replica - LSN: $AP_LSN, Lag: ${AP_LAG}s"
-        
+
         curl -X POST http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/postgres-replication-validation/instance/ap-replica \
           --data-binary "postgres_replica_lag_seconds $AP_LAG"
     else
@@ -521,7 +521,7 @@ spec:
 
                   # Generate database statistics
                   psql -h $POSTGRES_HOST -U postgres -d pake_production -c "
-                    SELECT 
+                    SELECT
                       schemaname,
                       tablename,
                       n_tup_ins,

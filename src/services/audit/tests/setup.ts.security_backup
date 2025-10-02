@@ -16,12 +16,12 @@ beforeAll(() => {
   // Set test environment
   process.env.NODE_ENV = process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED';
   process.env.LOG_LEVEL = 'error'; // Reduce log noise during tests
-  
+
   // Mock console methods to reduce test output
   jest.spyOn(console, 'log').mockImplementation(() => {});
   jest.spyOn(console, 'info').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});
-  
+
   // Only show errors in tests
   const originalError = console.error;
   jest.spyOn(console, 'error').mockImplementation((...args) => {
@@ -64,7 +64,7 @@ expect.extend({
   toBeValidAuditEvent(received: any) {
     const requiredFields = ['id', 'timestamp', 'actor', 'action', 'context', 'version'];
     const missingFields = requiredFields.filter(field => !(field in received));
-    
+
     if (missingFields.length > 0) {
       return {
         message: () => `Expected audit event to have required fields. Missing: ${missingFields.join(', ')}`,
@@ -132,7 +132,7 @@ expect.extend({
 
   toBeWithinTimeRange(received: any, start: Date, end: Date) {
     const timestamp = new Date(received.timestamp || received);
-    
+
     if (timestamp < start || timestamp > end) {
       return {
         message: () => `Expected timestamp ${timestamp.toISOString()} to be within range ${start.toISOString()} - ${end.toISOString()}`,
@@ -264,10 +264,10 @@ export class TestHelpers {
 if (process.env.NODE_ENV === 'test') {
   // Disable external network calls in tests
   process.env.DISABLE_EXTERNAL_CALLS = 'true';
-  
+
   // Use in-memory storage for tests
   process.env.USE_MEMORY_STORAGE = 'true';
-  
+
   // Reduce timeouts for faster tests
   process.env.TEST_TIMEOUT = '5000';
 }

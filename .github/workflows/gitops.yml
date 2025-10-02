@@ -30,7 +30,7 @@ jobs:
   update-gitops:
     name: 'Update GitOps Configuration'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
         run: |
           # Get the latest commit SHA for image tag
           IMAGE_TAG=${GITHUB_SHA:0:7}
-          
+
           # Update the image tag in the appropriate values file
           if [ -f "k8s/helm/pake-system/$VALUES_FILE" ]; then
             sed -i "s/tag: \".*\"/tag: \"$IMAGE_TAG\"/" k8s/helm/pake-system/$VALUES_FILE
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: update-gitops
     if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -172,7 +172,7 @@ jobs:
     needs: update-gitops
     if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
     environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -223,7 +223,7 @@ jobs:
     name: 'Rollback Deployment'
     runs-on: ubuntu-latest
     if: failure()
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

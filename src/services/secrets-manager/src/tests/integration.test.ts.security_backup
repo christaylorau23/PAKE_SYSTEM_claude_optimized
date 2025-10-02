@@ -6,14 +6,14 @@ import { RotationService } from '../services/RotationService';
 import { HSMService } from '../services/HSMService';
 import { BreakGlassService } from '../services/BreakGlassService';
 import { MTLSService } from '../services/MTLSService';
-import { 
-  VaultConfig, 
-  EncryptionConfig, 
-  SDKConfig, 
-  Secret, 
-  RotationPolicy, 
+import {
+  VaultConfig,
+  EncryptionConfig,
+  SDKConfig,
+  Secret,
+  RotationPolicy,
   BreakGlassRequest,
-  BreakGlassStatus 
+  BreakGlassStatus
 } from '../types/secrets.types';
 
 // Mock external dependencies
@@ -154,7 +154,7 @@ describe('Secrets Management Integration Tests', () => {
       ];
 
       const encryptedData = await encryptionService.encryptFields(secretData, fieldsToEncrypt);
-      
+
       expect(typeof encryptedData.REDACTED_SECRET).toBe('object');
       expect(typeof encryptedData.apiKey).toBe('object');
       expect(encryptedData.username).toBe('testuser'); // Should remain unencrypted
@@ -206,12 +206,12 @@ describe('Secrets Management Integration Tests', () => {
       await sdk.storeSecret(secretPath, secretData);
 
       // Simulate concurrent access
-      const concurrentPromises = Array.from({ length: 10 }, (_, i) => 
+      const concurrentPromises = Array.from({ length: 10 }, (_, i) =>
         sdk.getSecret(`${secretPath}-${i}`)
       );
 
       const results = await Promise.allSettled(concurrentPromises);
-      
+
       // All operations should complete without errors
       results.forEach(result => {
         expect(result.status).toBe('fulfilled');
@@ -222,13 +222,13 @@ describe('Secrets Management Integration Tests', () => {
   describe('Zero-Trust Architecture Validation', () => {
     it('should ensure no secrets in environment variables', () => {
       const envVars = Object.keys(process.env);
-      const suspiciousKeys = envVars.filter(key => 
+      const suspiciousKeys = envVars.filter(key =>
         key.toLowerCase().includes('REDACTED_SECRET') ||
         key.toLowerCase().includes('secret') ||
         (key.toLowerCase().includes('key') && !key.includes('PATH')) ||
         key.toLowerCase().includes('token')
-      ).filter(key => 
-        !key.includes('TEST_') && 
+      ).filter(key =>
+        !key.includes('TEST_') &&
         !key.includes('VITEST_') &&
         !key.includes('NODE_')
       );
@@ -244,7 +244,7 @@ describe('Secrets Management Integration Tests', () => {
 
       // Verify secret is fetched via Vault, not from environment
       const secret = await sdk.getSecret(secretPath);
-      
+
       expect(secret?.value).toEqual(secretData);
       expect(process.env[secretPath]).toBeUndefined();
     });
@@ -283,15 +283,15 @@ describe('Secrets Management Integration Tests', () => {
   describe('Performance Requirements', () => {
     it('should meet <10ms decryption overhead requirement', async () => {
       const testData = 'performance test data'.repeat(100); // ~2KB
-      
+
       // Encrypt data
       const encrypted = await encryptionService.encryptData(testData);
-      
+
       // Measure decryption time
       const startTime = performance.now();
       const decrypted = await encryptionService.decryptData(encrypted);
       const decryptionTime = performance.now() - startTime;
-      
+
       expect(decryptionTime).toBeLessThan(10); // <10ms requirement
       expect(decrypted).toBe(testData);
     });
@@ -375,7 +375,7 @@ describe('Secrets Management Integration Tests', () => {
     it('should validate backup and restore procedures', async () => {
       // This would typically involve backing up Vault data
       // For testing, we simulate the process
-      
+
       const testSecrets = [
         { path: 'backup/secret-1', value: { key: 'value1' } },
         { path: 'backup/secret-2', value: { key: 'value2' } },
@@ -411,7 +411,7 @@ describe('Secrets Management Integration Tests', () => {
 
       // Simulate restore
       await Promise.all(
-        backupData.map(item => 
+        backupData.map(item =>
           item.data ? sdk.storeSecret(item.path, item.data.value) : Promise.resolve(false)
         )
       );
@@ -451,7 +451,7 @@ describe('Secrets Management Integration Tests', () => {
 
     it('should maintain audit trail for all operations', async () => {
       const auditEvents: any[] = [];
-      
+
       // Listen for audit events
       vaultService.on('audit', (event) => {
         auditEvents.push(event);
@@ -474,7 +474,7 @@ describe('Secrets Management Integration Tests', () => {
     it('should validate certificate-based authentication', async () => {
       // Test mTLS certificate validation
       const testContext = await mtlsService.createContext('test-context');
-      
+
       expect(testContext).toBeTruthy();
       expect(testContext.server).toBeDefined();
       expect(testContext.client).toBeDefined();
@@ -483,7 +483,7 @@ describe('Secrets Management Integration Tests', () => {
 
     it('should ensure all critical operations are logged', async () => {
       const logEvents: any[] = [];
-      
+
       // Monitor all services for log events
       [sdk, vaultService, encryptionService, rotationService, breakGlassService].forEach(service => {
         service.on('audit', (event) => logEvents.push(event));
@@ -496,7 +496,7 @@ describe('Secrets Management Integration Tests', () => {
       await sdk.storeSecret(testPath, testValue);
       const secret = await sdk.getSecret(testPath);
       await encryptionService.encryptData('test-data');
-      
+
       // Trigger rotation
       await rotationService.setRotationPolicy({
         secretPath: testPath,
@@ -505,7 +505,7 @@ describe('Secrets Management Integration Tests', () => {
       });
 
       expect(logEvents.length).toBeGreaterThan(0);
-      
+
       // Verify critical operations are logged
       const operationTypes = logEvents.map(e => e.operation);
       expect(operationTypes).toContain('secret.write');
@@ -533,7 +533,7 @@ describe('Secrets Management Integration Tests', () => {
     it('should implement circuit breaker pattern', async () => {
       // This would test circuit breaker implementation
       // For now, we verify that repeated failures don't crash the service
-      
+
       const failingPath = 'integration/circuit-breaker-test';
       let attempts = 0;
 
@@ -560,7 +560,7 @@ describe('Secrets Management Integration Tests', () => {
 
       // Restore original method
       vaultService.getSecret = originalGetSecret;
-      
+
       // Cleanup
       await sdk.deleteSecret(failingPath);
     });

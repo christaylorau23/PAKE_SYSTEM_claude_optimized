@@ -43,13 +43,13 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting PAKE service", service=app.title)
-    
+
     # Initialize database
     await init_db()
     logger.info("Database initialized")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down PAKE service", service=app.title)
 
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     settings = get_settings()
-    
+
     app = FastAPI(
         title=settings.PROJECT_NAME,
         description=settings.PROJECT_DESCRIPTION,
@@ -67,7 +67,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None,
         lifespan=lifespan,
     )
-    
+
     # Add middleware
     app.add_middleware(
         CORSMiddleware,
@@ -76,19 +76,19 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=settings.ALLOWED_HOSTS,
     )
-    
+
     app.add_middleware(SecurityMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(MetricsMiddleware)
-    
+
     # Include routers
     app.include_router(api_router, prefix="/api/v1")
-    
+
     # Health check endpoint
     @app.get("/health")
     async def health_check() -> Dict[str, Any]:
@@ -99,7 +99,7 @@ def create_app() -> FastAPI:
             "version": settings.VERSION,
             "environment": settings.ENVIRONMENT,
         }
-    
+
     # Metrics endpoint
     @app.get("/metrics")
     async def metrics() -> Response:
@@ -108,7 +108,7 @@ def create_app() -> FastAPI:
             content=generate_latest(),
             media_type="text/plain",
         )
-    
+
     return app
 
 
@@ -118,7 +118,7 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     settings = get_settings()
     uvicorn.run(
         "app.main:app",

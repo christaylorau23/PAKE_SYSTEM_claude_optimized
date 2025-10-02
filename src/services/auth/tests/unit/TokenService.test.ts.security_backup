@@ -219,7 +219,7 @@ describe('TokenService', () => {
   describe('revokeAllUserTokens', () => {
     it('should revoke all tokens for user', async () => {
       const userId = 'user-123';
-      
+
       mockRedis.keys.mockResolvedValue(['refresh_token:token1', 'refresh_token:token2']);
       mockRedis.get
         .mockResolvedValueOnce(JSON.stringify({ userId }))
@@ -248,7 +248,7 @@ describe('TokenService', () => {
     it('should not clean up active tokens', async () => {
       mockRedis.keys.mockResolvedValue(['refresh_token:active']);
       mockRedis.ttl.mockResolvedValue(3600); // 1 hour remaining
-      
+
       const result = await tokenService.cleanupExpiredTokens();
 
       expect(result).toBe(0);

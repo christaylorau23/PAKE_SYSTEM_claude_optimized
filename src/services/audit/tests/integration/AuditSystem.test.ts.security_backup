@@ -10,11 +10,11 @@ import { StreamingService } from '../../src/services/StreamingService';
 import { RetentionPolicyService } from '../../src/services/RetentionPolicyService';
 import { ComplianceReportingService } from '../../src/services/ComplianceReportingService';
 import { AuditAnalyticsService } from '../../src/services/AuditAnalyticsService';
-import { 
-  AuditEvent, 
-  ActionType, 
-  ActionResult, 
-  ActorType, 
+import {
+  AuditEvent,
+  ActionType,
+  ActionResult,
+  ActorType,
   AuditConfig,
   ComplianceReportType,
   RetentionPolicy
@@ -104,7 +104,7 @@ describe('Audit System Integration', () => {
     await retentionService.initialize();
 
     complianceService = new ComplianceReportingService(storageService, cryptoService);
-    
+
     analyticsService = new AuditAnalyticsService(storageService);
     await analyticsService.initialize();
   });
@@ -172,7 +172,7 @@ describe('Audit System Integration', () => {
         actorId: 'test-user-001',
         limit: 10
       });
-      
+
       expect(queryResult).toHaveLength(1);
       expect(queryResult[0].id).toBe('integration-test-001');
       expect(queryResult[0].signature).toBe(signedEvent.signature);
@@ -180,7 +180,7 @@ describe('Audit System Integration', () => {
 
     it('should handle batch processing correctly', async () => {
       const batchEvents: Omit<AuditEvent, 'signature'>[] = [];
-      
+
       // Create multiple events
       for (let i = 0; i < 5; i++) {
         batchEvents.push({
@@ -234,7 +234,7 @@ describe('Audit System Integration', () => {
         resource: 'batch-resource',
         limit: 10
       });
-      
+
       expect(batchQuery).toHaveLength(5);
     });
   });
@@ -278,7 +278,7 @@ describe('Audit System Integration', () => {
       // Generate SOC2 report
       const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
       const endDate = new Date();
-      
+
       const report = await complianceService.generateSOC2Report(
         startDate,
         endDate,
@@ -342,7 +342,7 @@ describe('Audit System Integration', () => {
 
       // Clean up
       await retentionService.deletePolicy(policy.id);
-      
+
       const updatedPolicies = retentionService.getAllPolicies();
       expect(updatedPolicies.some(p => p.id === policy.id)).toBe(false);
     });
@@ -432,7 +432,7 @@ describe('Audit System Integration', () => {
     it('should validate audit trail integrity', async () => {
       // Create chain of events
       const events: AuditEvent[] = [];
-      
+
       for (let i = 0; i < 3; i++) {
         const event: Omit<AuditEvent, 'signature'> = {
           id: `chain-test-${i}`,
@@ -442,7 +442,7 @@ describe('Audit System Integration', () => {
           context: { environment: 'test', application: 'app', version: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' },
           version: '1.0.0'
         };
-        
+
         const signed = await cryptoService.signAuditEvent(event);
         events.push(signed);
       }
@@ -458,7 +458,7 @@ describe('Audit System Integration', () => {
       // Test tampering detection
       const tamperedEvent = { ...events[1], signature: 'tampered-signature' };
       const tamperedEvents = [events[0], tamperedEvent, events[2]];
-      
+
       const tamperedReport = await cryptoService.generateIntegrityReport(tamperedEvents);
       expect(tamperedReport.summary.integrityStatus).toBe('compromised');
       expect(tamperedReport.summary.issues.length).toBeGreaterThan(0);
@@ -487,7 +487,7 @@ describe('Audit System Integration', () => {
       }
 
       const signingTime = Date.now() - startTime;
-      
+
       // Store in batch
       const batchStartTime = Date.now();
       const batch = await cryptoService.createSignedBatch(events);
@@ -527,15 +527,15 @@ describe('Audit System Integration', () => {
       putObject: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) }),
       getObject: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Body: '{}' }) }),
       deleteObject: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) }),
-      listObjectsV2: jest.fn().mockReturnValue({ 
-        promise: jest.fn().mockResolvedValue({ Contents: [] }) 
+      listObjectsV2: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Contents: [] })
       })
     };
 
     // Mock AWS Glacier
     const mockGlacier = {
-      uploadArchive: jest.fn().mockReturnValue({ 
-        promise: jest.fn().mockResolvedValue({ archiveId: 'test-archive-id' }) 
+      uploadArchive: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ archiveId: 'test-archive-id' })
       }),
       describeVault: jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue({ NumberOfArchives: 0, SizeInBytes: 0 })

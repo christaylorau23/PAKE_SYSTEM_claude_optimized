@@ -129,7 +129,7 @@ jobs:
           if [ -d "${{ matrix.service }}" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "Python service ${{ matrix.service }} found"
-            
+
             # Check for Python files
             if find "${{ matrix.service }}" -name "*.py" | head -1 | grep -q ".py"; then
               echo "has_python=true" >> $GITHUB_OUTPUT
@@ -238,7 +238,7 @@ jobs:
             echo "scan_needed=true" >> $GITHUB_OUTPUT
             echo "Found Dockerfiles:"
             echo "$DOCKERFILES"
-            
+
             # Create list for matrix (if we had one)
             echo "$DOCKERFILES" > dockerfiles.txt
           fi
@@ -397,7 +397,7 @@ jobs:
             if [ -d "$service_dir" ]; then
               SERVICE_NAME=$(basename "$service_dir" | sed 's/npm-audit-//' | sed 's/-${{ github.sha }}//')
               echo "### $SERVICE_NAME" >> SECURITY_REPORT.md
-              
+
               # Look for audit results file
               AUDIT_FILE=$(find "$service_dir" -name "audit-results-*.json" -o -name "audit-results.json" | head -1)
               if [ -f "$AUDIT_FILE" ]; then
@@ -433,11 +433,11 @@ jobs:
             if [ -d "$service_dir" ]; then
               SERVICE_NAME=$(basename "$service_dir" | sed 's/python-security-//' | sed 's/-${{ github.sha }}//')
               echo "### $SERVICE_NAME" >> SECURITY_REPORT.md
-              
+
               # Check safety results
               SAFETY_FILE=$(find "$service_dir" -name "safety-results-*.json" | head -1)
               BANDIT_FILE=$(find "$service_dir" -name "bandit-results-*.json" | head -1)
-              
+
               if [ -f "$SAFETY_FILE" ]; then
                 SCANNED_PACKAGES=$(cat "$SAFETY_FILE" | jq '.scanned_packages // 0' 2>/dev/null || echo "0")
                 VULNERABILITIES=$(cat "$SAFETY_FILE" | jq '.vulnerabilities | length' 2>/dev/null || echo "0")
@@ -448,7 +448,7 @@ jobs:
                   echo "🔴 $VULNERABILITIES vulnerabilities found" >> SECURITY_REPORT.md
                 fi
               fi
-              
+
               if [ -f "$BANDIT_FILE" ]; then
                 BANDIT_ISSUES=$(cat "$BANDIT_FILE" | jq '.results | length' 2>/dev/null || echo "0")
                 if [ "$BANDIT_ISSUES" -eq 0 ]; then
@@ -457,7 +457,7 @@ jobs:
                   echo "⚠️  $BANDIT_ISSUES potential security issues found" >> SECURITY_REPORT.md
                 fi
               fi
-              
+
               echo "" >> SECURITY_REPORT.md
               PYTHON_SCANNED=$((PYTHON_SCANNED + 1))
             fi
@@ -473,7 +473,7 @@ jobs:
           if [ -d "security-results/docker-security-${{ github.sha }}" ]; then
             CVE_FILES=$(find "security-results/docker-security-${{ github.sha }}" -name "*-cves.json" | wc -l)
             HADOLINT_FILES=$(find "security-results/docker-security-${{ github.sha }}" -name "hadolint-*.txt" | wc -l)
-            
+
             if [ "$CVE_FILES" -gt 0 ] || [ "$HADOLINT_FILES" -gt 0 ]; then
               echo "✅ Docker security scan completed" >> SECURITY_REPORT.md
               echo "  - $CVE_FILES CVE scans performed" >> SECURITY_REPORT.md
@@ -515,14 +515,14 @@ jobs:
               const fs = require('fs');
               if (fs.existsSync('SECURITY_REPORT.md')) {
                 const report = fs.readFileSync('SECURITY_REPORT.md', 'utf8');
-                
+
                 await github.rest.issues.createComment({
                   issue_number: context.issue.number,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   body: `## 🛡️ Security Audit Results\n\n${report}`
                 });
-                
+
                 console.log('Security report comment posted successfully');
               } else {
                 console.log('SECURITY_REPORT.md not found, skipping comment');

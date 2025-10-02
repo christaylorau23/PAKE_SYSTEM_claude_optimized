@@ -60,7 +60,7 @@ Test-Result "Found $($yamlFiles.Count) YAML files"
 foreach ($file in $yamlFiles) {
     $name = $file.Name
     Test-Result "Validating: $name"
-    
+
     try {
         $null = kubectl apply --dry-run=client -f $file.FullName 2>&1
         if ($LASTEXITCODE -eq 0) {
@@ -78,7 +78,7 @@ Test-Header "Key Component Files"
 $keyFiles = @(
     "failover\failover-controller.yaml",
     "replication\postgres-replication.yaml",
-    "replication\postgres-snapshot-cron.yaml", 
+    "replication\postgres-snapshot-cron.yaml",
     "replication\vector-export-cron.yaml",
     "replication\object-sync-deployment.yaml",
     "chaos\random-pod-kill-cron.yaml",
@@ -102,7 +102,7 @@ try {
     $null = kubectl cluster-info 2>&1
     if ($LASTEXITCODE -eq 0) {
         Test-Result "Cluster accessible" "OK"
-        
+
         $null = kubectl get namespace $NAMESPACE 2>&1
         if ($LASTEXITCODE -eq 0) {
             Test-Result "Namespace '$NAMESPACE' exists" "OK"

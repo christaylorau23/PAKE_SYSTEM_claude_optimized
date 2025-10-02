@@ -414,12 +414,12 @@ export class DBConnector extends Connector {
 
     switch (request.type) {
       case ConnectorRequestType.SELECT: {
-        const columns = params.columns ? 
+        const columns = params.columns ?
           params.columns.map(col => this.sanitizeIdentifier(col)).join(', ') : '*';
         const whereClause = this.buildWhereClause(params.where);
-        const orderClause = params.orderBy ? 
+        const orderClause = params.orderBy ?
           `ORDER BY ${this.sanitizeIdentifier(params.orderBy)}` : '';
-        const limitClause = params.limit ? 
+        const limitClause = params.limit ?
           `LIMIT ${this.sanitizeNumericValue(params.limit)}` : '';
 
         return {

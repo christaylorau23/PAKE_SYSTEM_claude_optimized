@@ -4,12 +4,12 @@ import { EncryptionService } from '../services/EncryptionService';
 import { VaultService } from '../services/VaultService';
 import { BreakGlassService } from '../services/BreakGlassService';
 import { MTLSService } from '../services/MTLSService';
-import { 
-  SDKConfig, 
+import {
+  SDKConfig,
   EncryptionConfig,
-  BreakGlassRequest, 
+  BreakGlassRequest,
   BreakGlassStatus,
-  Secret 
+  Secret
 } from '../types/secrets.types';
 
 // Mock external dependencies
@@ -84,7 +84,7 @@ describe('Security Compliance Tests', () => {
     mtlsService = new MTLSService({
       certificates: {
         ca: '/path/to/ca.crt',
-        cert: '/path/to/server.crt', 
+        cert: '/path/to/server.crt',
         key: '/path/to/server.key'
       },
       validation: {
@@ -92,7 +92,7 @@ describe('Security Compliance Tests', () => {
         allowSelfSigned: false
       }
     });
-    
+
     sdk = new SecretsManagerSDK(sdkConfig);
     await sdk.initialize();
   });
@@ -140,7 +140,7 @@ describe('Security Compliance Tests', () => {
 
     it('should validate all secret operations', async () => {
       const maliciousPath = '../../../etc/passwd';
-      
+
       await expect(
         sdk.getSecret(maliciousPath)
       ).rejects.toThrow('Invalid path');
@@ -150,7 +150,7 @@ describe('Security Compliance Tests', () => {
   describe('Encryption Security', () => {
     it('should use strong encryption algorithms', () => {
       const config = encryptionService['config'];
-      
+
       expect(config.algorithms.symmetric).toBe('aes-256-gcm');
       expect(config.algorithms.asymmetric).toBe('rsa-4096');
       expect(config.algorithms.hash).toBe('sha256');
@@ -160,9 +160,9 @@ describe('Security Compliance Tests', () => {
     it('should generate cryptographically secure random values', async () => {
       const crypto = await import('crypto');
       const randomBytesSpy = vi.spyOn(crypto, 'randomBytes');
-      
+
       await encryptionService.encryptData('test data');
-      
+
       expect(randomBytesSpy).toHaveBeenCalledWith(16); // IV size
       expect(randomBytesSpy).toHaveBeenCalledWith(32); // Salt size for key derivation
     });
@@ -206,7 +206,7 @@ describe('Security Compliance Tests', () => {
 
     it('should enforce minimum key sizes', () => {
       const config = encryptionService['config'];
-      
+
       // Verify strong key sizes
       expect(config.algorithms.symmetric).toContain('256'); // 256-bit AES
       expect(config.algorithms.asymmetric).toContain('4096'); // 4096-bit RSA
@@ -215,7 +215,7 @@ describe('Security Compliance Tests', () => {
     it('should properly handle key derivation parameters', () => {
       const config = encryptionService['config'];
       const kdfParams = config.keys.keyDerivationParams;
-      
+
       // Verify strong Argon2id parameters
       expect(kdfParams.memory).toBeGreaterThanOrEqual(64 * 1024); // At least 64MB
       expect(kdfParams.iterations).toBeGreaterThanOrEqual(3);
@@ -271,7 +271,7 @@ describe('Security Compliance Tests', () => {
     it('should securely delete sensitive data from memory', async () => {
       const sensitiveData = 'extremely sensitive secret';
       const encrypted = await encryptionService.encryptData(sensitiveData);
-      
+
       // In a real implementation, we would verify that the plaintext
       // is securely overwritten in memory. For testing, we ensure
       // the encrypted result doesn't contain the plaintext
@@ -292,27 +292,27 @@ describe('Security Compliance Tests', () => {
       const internalFields = [
         { fieldName: 'internal', algorithm: 'aes-256-gcm' as const, keyId: 'internal-key' }
       ];
-      
+
       const confidentialFields = [
         { fieldName: 'confidential', algorithm: 'aes-256-gcm' as const, keyId: 'confidential-key' }
       ];
-      
+
       const restrictedFields = [
         { fieldName: 'restricted', algorithm: 'aes-256-gcm' as const, keyId: 'restricted-key' }
       ];
-      
+
       const secretFields = [
         { fieldName: 'secret', algorithm: 'aes-256-gcm' as const, keyId: 'secret-key' }
       ];
 
       const encryptedData = await encryptionService.encryptFields(
-        classifiedData, 
+        classifiedData,
         [...internalFields, ...confidentialFields, ...restrictedFields, ...secretFields]
       );
 
       // Public data should remain unencrypted
       expect(encryptedData.public).toBe('Public information');
-      
+
       // All other classifications should be encrypted
       expect(typeof encryptedData.internal).toBe('object');
       expect(typeof encryptedData.confidential).toBe('object');
@@ -324,7 +324,7 @@ describe('Security Compliance Tests', () => {
   describe('Access Control and Auditing', () => {
     it('should log all security-relevant events', async () => {
       const auditEvents: any[] = [];
-      
+
       // Listen for audit events
       vaultService.on('audit', (event) => auditEvents.push(event));
       encryptionService.on('audit', (event) => auditEvents.push(event));
@@ -340,7 +340,7 @@ describe('Security Compliance Tests', () => {
       await sdk.deleteSecret(testPath);
 
       expect(auditEvents.length).toBeGreaterThan(0);
-      
+
       // Verify audit event structure
       auditEvents.forEach(event => {
         expect(event).toHaveProperty('timestamp');
@@ -354,7 +354,7 @@ describe('Security Compliance Tests', () => {
     it('should implement role-based access control', async () => {
       // This would typically involve testing different user roles
       // For this test, we simulate different access levels
-      
+
       const adminPaths = ['/admin/*'];
       const userPaths = ['/users/*'];
       const publicPaths = ['/public/*'];
@@ -367,7 +367,7 @@ describe('Security Compliance Tests', () => {
           allowedPaths: [...adminPaths, ...userPaths, ...publicPaths]
         }
       });
-      
+
       const userSDK = new SecretsManagerSDK({
         ...sdk['config'],
         validation: {
@@ -382,7 +382,7 @@ describe('Security Compliance Tests', () => {
       // Admin should access all paths
       await expect(adminSDK.getSecret('/admin/secret')).resolves.not.toThrow();
       await expect(adminSDK.getSecret('/users/secret')).resolves.not.toThrow();
-      
+
       // User should not access admin paths
       await expect(userSDK.getSecret('/admin/secret')).rejects.toThrow('Access denied');
       await expect(userSDK.getSecret('/users/secret')).resolves.not.toThrow();
@@ -398,17 +398,17 @@ describe('Security Compliance Tests', () => {
       });
 
       await shortTimeoutSDK.initialize();
-      
+
       const testPath = '/security-test/session-test';
       await shortTimeoutSDK.storeSecret(testPath, { value: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' });
-      
+
       // First access should work
       const secret1 = await shortTimeoutSDK.getSecret(testPath);
       expect(secret1).toBeTruthy();
-      
+
       // Wait for session timeout
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Should still work due to automatic re-authentication
       const secret2 = await shortTimeoutSDK.getSecret(testPath);
       expect(secret2).toBeTruthy();
@@ -432,7 +432,7 @@ describe('Security Compliance Tests', () => {
 
       const sessionId = await breakGlassService.initiateBreakGlass(emergencyRequest);
       const session = breakGlassService.getSession(sessionId);
-      
+
       expect(session?.status).toBe(BreakGlassStatus.PENDING);
       expect(session?.requiredApprovals).toBeGreaterThan(1);
     });
@@ -455,9 +455,9 @@ describe('Security Compliance Tests', () => {
       };
 
       const sessionId = await breakGlassService.initiateBreakGlass(emergencyRequest);
-      
+
       expect(auditEvents.length).toBeGreaterThan(0);
-      
+
       const initiationEvent = auditEvents.find(e => e.operation === 'breakglass.initiate');
       expect(initiationEvent).toBeTruthy();
       expect(initiationEvent.sessionId).toBe(sessionId);
@@ -479,10 +479,10 @@ describe('Security Compliance Tests', () => {
       };
 
       const sessionId = await breakGlassService.initiateBreakGlass(emergencyRequest);
-      
+
       // Wait for expiration
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       const session = breakGlassService.getSession(sessionId);
       expect(session?.status).toBe(BreakGlassStatus.EXPIRED);
     });
@@ -491,7 +491,7 @@ describe('Security Compliance Tests', () => {
   describe('Transport Security', () => {
     it('should enforce TLS 1.3 for all communications', async () => {
       const tlsConfig = mtlsService['config'];
-      
+
       // Verify secure TLS configuration
       expect(tlsConfig.validation.verifyChain).toBe(true);
       expect(tlsConfig.validation.allowSelfSigned).toBe(false);
@@ -499,7 +499,7 @@ describe('Security Compliance Tests', () => {
 
     it('should implement certificate pinning', async () => {
       const context = await mtlsService.createContext('pinning-test');
-      
+
       expect(context).toHaveProperty('server');
       expect(context).toHaveProperty('client');
       expect(context).toHaveProperty('caCertificates');
@@ -528,11 +528,11 @@ describe('Security Compliance Tests', () => {
       ];
 
       const encryptedCard = await encryptionService.encryptFields(cardData, pciFields);
-      
+
       // Verify sensitive card data is encrypted
       expect(typeof encryptedCard.cardNumber).toBe('object');
       expect(typeof encryptedCard.cvv).toBe('object');
-      
+
       // Non-sensitive fields can remain unencrypted per PCI DSS
       expect(encryptedCard.holderName).toBe('John Doe');
     });
@@ -556,7 +556,7 @@ describe('Security Compliance Tests', () => {
       ];
 
       const encryptedPersonal = await encryptionService.encryptFields(personalData, gdprFields);
-      
+
       // Verify personal data is encrypted
       expect(typeof encryptedPersonal.email).toBe('object');
       expect(typeof encryptedPersonal.phone).toBe('object');
@@ -611,7 +611,7 @@ describe('Security Compliance Tests', () => {
 
       // Should handle reasonable concurrent load
       const results = await Promise.allSettled(rapidRequests.slice(0, 10));
-      
+
       // Some requests should succeed
       const successful = results.filter(r => r.status === 'fulfilled');
       expect(successful.length).toBeGreaterThan(0);

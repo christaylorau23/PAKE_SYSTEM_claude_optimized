@@ -7,7 +7,7 @@ import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class NetworkSecurityConfig:
     port: int
     enable_ssl: bool = True
     enable_cors: bool = True
-    cors_origins: list[str] = None
+    cors_origins: Optional[list[str]] = None
     enable_rate_limiting: bool = True
     max_connections: int = 1000
     timeout_seconds: int = 30

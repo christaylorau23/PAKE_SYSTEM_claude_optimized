@@ -489,7 +489,7 @@ data:
         annotations:
           summary: "RTO target exceeded"
           description: "Recovery Time Objective exceeded: {{ $value }}s > 900s (15 minutes)"
-          
+
       - alert: RPOTargetExceeded
         expr: pake_rpo_seconds > 300
         for: 5m
@@ -499,7 +499,7 @@ data:
         annotations:
           summary: "RPO target exceeded"
           description: "Recovery Point Objective exceeded: {{ $value }}s > 300s (5 minutes)"
-          
+
       # Cluster Health Alerts
       - alert: ClusterUnhealthy
         expr: pake_cluster_health == 0
@@ -510,7 +510,7 @@ data:
         annotations:
           summary: "Cluster {{ $labels.cluster }} is unhealthy"
           description: "Cluster {{ $labels.cluster }} in region {{ $labels.region }} has been unhealthy for more than 2 minutes"
-          
+
       # Failover Alerts
       - alert: AutomaticFailoverTriggered
         expr: increase(pake_failover_total{type="auto"}[5m]) > 0
@@ -521,7 +521,7 @@ data:
         annotations:
           summary: "Automatic failover triggered"
           description: "Automatic failover from {{ $labels.from_cluster }} to {{ $labels.to_cluster }}"
-          
+
       # Backup Alerts
       - alert: BackupTooOld
         expr: backup_age_hours > 48
@@ -532,7 +532,7 @@ data:
         annotations:
           summary: "Backup for {{ $labels.service }} is too old"
           description: "Last backup for {{ $labels.service }} is {{ $value }} hours old"
-          
+
       - alert: BackupValidationFailed
         expr: increase(backup_validation_failure_total[1h]) > 0
         for: 0s
@@ -542,7 +542,7 @@ data:
         annotations:
           summary: "Backup validation failed"
           description: "Backup validation failed for {{ $labels.service }} ({{ $labels.test_type }} test)"
-          
+
       - alert: BackupSizeAnomaly
         expr: abs(backup_size_bytes - backup_size_bytes offset 24h) / backup_size_bytes offset 24h > 0.5
         for: 5m
@@ -552,7 +552,7 @@ data:
         annotations:
           summary: "Backup size anomaly detected"
           description: "Backup size for {{ $labels.service }} changed by more than 50% compared to 24h ago"
-          
+
       # Replication Alerts
       - alert: PostgreSQLReplicationLag
         expr: postgres_replication_lag_seconds > 300
@@ -563,7 +563,7 @@ data:
         annotations:
           summary: "PostgreSQL replication lag high"
           description: "PostgreSQL replica {{ $labels.replica }} lag is {{ $value }}s"
-          
+
       - alert: RedisReplicationLag
         expr: redis_replication_lag_seconds > 60
         for: 2m
@@ -573,7 +573,7 @@ data:
         annotations:
           summary: "Redis replication lag high"
           description: "Redis replica {{ $labels.replica }} lag is {{ $value }}s"
-          
+
       - alert: ChromaDBSyncLag
         expr: chromadb_sync_lag_seconds > 600
         for: 5m
@@ -583,7 +583,7 @@ data:
         annotations:
           summary: "ChromaDB sync lag high"
           description: "ChromaDB replica {{ $labels.replica }} sync lag is {{ $value }}s"
-          
+
       # Chaos Engineering Alerts
       - alert: ChaosExperimentFailed
         expr: increase(chaos_failures_detected_total[10m]) > 3
@@ -594,7 +594,7 @@ data:
         annotations:
           summary: "Multiple chaos experiment failures"
           description: "{{ $value }} chaos experiment failures detected in {{ $labels.service }}"
-          
+
       - alert: SystemResilienceLow
         expr: system_resilience_score < 70
         for: 10m
@@ -604,7 +604,7 @@ data:
         annotations:
           summary: "System resilience score low"
           description: "System resilience score is {{ $value }}%, below 70% threshold"
-          
+
       # Compliance Alerts
       - alert: ComplianceViolation
         expr: increase(compliance_violations_total[5m]) > 0
@@ -615,7 +615,7 @@ data:
         annotations:
           summary: "Compliance violation detected"
           description: "{{ $labels.framework }} violation in control {{ $labels.control }}"
-          
+
       - alert: ComplianceScoreLow
         expr: compliance_score < 95
         for: 30m
@@ -625,7 +625,7 @@ data:
         annotations:
           summary: "Compliance score below threshold"
           description: "{{ $labels.framework }} compliance score is {{ $value }}%, below 95% threshold"
-          
+
       - alert: ExcessivePIIAccess
         expr: increase(pii_access_events_total[1h]) > 100
         for: 5m
@@ -652,7 +652,7 @@ data:
       smtp_from: 'alerts@pake-system.com'
       smtp_auth_username: 'alerts@pake-system.com'
       smtp_auth_REDACTED_SECRET: 'process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED''
-      
+
     route:
       group_by: ['alertname', 'service']
       group_wait: 10s
@@ -667,22 +667,22 @@ data:
         receiver: 'dr-critical'
         group_wait: 0s
         repeat_interval: 5m
-        
+
       # Backup alerts
       - match:
           service: backup
         receiver: 'backup-team'
-        
+
       # Compliance alerts
       - match:
           service: compliance
         receiver: 'compliance-team'
-        
+
       # Chaos engineering alerts
       - match:
           service: chaos-engineering
         receiver: 'sre-team'
-        
+
     receivers:
     - name: 'default-receiver'
       slack_configs:
@@ -690,7 +690,7 @@ data:
         channel: '#pake-alerts'
         title: 'PAKE System Alert'
         text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
-        
+
     - name: 'dr-critical'
       slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
@@ -711,7 +711,7 @@ data:
           Severity: {{ .Labels.severity }}
           Time: {{ .StartsAt }}
           {{ end }}
-          
+
     - name: 'backup-team'
       slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
@@ -721,7 +721,7 @@ data:
       email_configs:
       - to: 'backup-team@pake-system.com'
         subject: 'Backup Alert - {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        
+
     - name: 'compliance-team'
       slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
@@ -731,7 +731,7 @@ data:
       email_configs:
       - to: 'compliance-team@pake-system.com'
         subject: 'Compliance Alert - {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        
+
     - name: 'sre-team'
       slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
@@ -830,11 +830,11 @@ data:
         def __init__(self):
             self.prometheus_url = os.getenv('PROMETHEUS_URL', 'http://prometheus.monitoring.svc.cluster.local:9090')
             self.grafana_url = os.getenv('GRAFANA_URL', 'http://grafana.monitoring.svc.cluster.local:3000')
-            
+
         def query_prometheus(self, query):
             """Query Prometheus for metrics"""
             try:
-                response = requests.get(f"{self.prometheus_url}/api/v1/query", 
+                response = requests.get(f"{self.prometheus_url}/api/v1/query",
                                       params={'query': query}, timeout=10)
                 if response.status_code == 200:
                     return response.json()['data']['result']
@@ -842,7 +842,7 @@ data:
             except Exception as e:
                 logger.error(f"Error querying Prometheus: {e}")
                 return []
-        
+
         def get_dr_status(self):
             """Get comprehensive DR status"""
             status = {
@@ -850,14 +850,14 @@ data:
                 'overall_status': 'healthy',
                 'components': {}
             }
-            
+
             # RTO/RPO Status
             rto_result = self.query_prometheus('pake_rto_seconds')
             rpo_result = self.query_prometheus('pake_rpo_seconds')
-            
+
             rto_value = float(rto_result[0]['value'][1]) if rto_result else 0
             rpo_value = float(rpo_result[0]['value'][1]) if rpo_result else 0
-            
+
             status['components']['rto_rpo'] = {
                 'status': 'healthy' if rto_value <= 900 and rpo_value <= 300 else 'degraded',
                 'rto_seconds': rto_value,
@@ -865,12 +865,12 @@ data:
                 'rto_target': 900,
                 'rpo_target': 300
             }
-            
+
             # Cluster Health
             cluster_health = self.query_prometheus('pake_cluster_health')
             healthy_clusters = sum(1 for result in cluster_health if float(result['value'][1]) == 1)
             total_clusters = len(cluster_health)
-            
+
             status['components']['clusters'] = {
                 'status': 'healthy' if healthy_clusters == total_clusters else 'degraded',
                 'healthy_count': healthy_clusters,
@@ -883,12 +883,12 @@ data:
                     } for result in cluster_health
                 ]
             }
-            
+
             # Backup Status
             backup_age = self.query_prometheus('backup_age_hours')
             old_backups = sum(1 for result in backup_age if float(result['value'][1]) > 24)
             total_backups = len(backup_age)
-            
+
             status['components']['backups'] = {
                 'status': 'healthy' if old_backups == 0 else 'degraded',
                 'old_backup_count': old_backups,
@@ -901,17 +901,17 @@ data:
                     } for result in backup_age
                 ]
             }
-            
+
             # Replication Status
             pg_lag = self.query_prometheus('postgres_replication_lag_seconds')
             redis_lag = self.query_prometheus('redis_replication_lag_seconds')
             chroma_lag = self.query_prometheus('chromadb_sync_lag_seconds')
-            
+
             replication_issues = 0
             replication_issues += sum(1 for result in pg_lag if float(result['value'][1]) > 300)
             replication_issues += sum(1 for result in redis_lag if float(result['value'][1]) > 60)
             replication_issues += sum(1 for result in chroma_lag if float(result['value'][1]) > 600)
-            
+
             status['components']['replication'] = {
                 'status': 'healthy' if replication_issues == 0 else 'degraded',
                 'issues_count': replication_issues,
@@ -919,11 +919,11 @@ data:
                 'redis': [{'replica': r['metric']['replica'], 'lag': float(r['value'][1])} for r in redis_lag],
                 'chromadb': [{'replica': r['metric']['replica'], 'lag': float(r['value'][1])} for r in chroma_lag]
             }
-            
+
             # Compliance Status
             compliance_scores = self.query_prometheus('compliance_score')
             low_scores = sum(1 for result in compliance_scores if float(result['value'][1]) < 95)
-            
+
             status['components']['compliance'] = {
                 'status': 'healthy' if low_scores == 0 else 'degraded',
                 'low_score_count': low_scores,
@@ -934,12 +934,12 @@ data:
                     } for result in compliance_scores
                 ]
             }
-            
+
             # Determine overall status
             component_statuses = [comp['status'] for comp in status['components'].values()]
             if 'degraded' in component_statuses:
                 status['overall_status'] = 'degraded'
-            
+
             return status
 
     dashboard = DRStatusDashboard()
@@ -1036,11 +1036,11 @@ data:
             function refreshStatus() {
                 location.reload();
             }
-            
+
             function autoRefresh() {
                 setInterval(refreshStatus, 30000); // Refresh every 30 seconds
             }
-            
+
             window.onload = autoRefresh;
         </script>
     </head>
@@ -1051,7 +1051,7 @@ data:
             <button class="refresh-btn" onclick="refreshStatus()">🔄 Refresh</button>
             <a href="{{ grafana_url }}/d/dr-overview" target="_blank" class="refresh-btn">📊 Grafana</a>
         </div>
-        
+
         <div class="status-overview">
             <div class="status-card status-{{ status.overall_status }}">
                 <h2>Overall Status</h2>
@@ -1060,7 +1060,7 @@ data:
                     {{ status.overall_status.title() }}
                 </div>
             </div>
-            
+
             <div class="status-card">
                 <h2>RTO Target</h2>
                 <div style="font-size: 24px; margin: 10px 0;">
@@ -1070,7 +1070,7 @@ data:
                     {{ "✅ Within Target" if status.components.rto_rpo.rto_seconds <= 900 else "❌ Exceeds Target" }}
                 </div>
             </div>
-            
+
             <div class="status-card">
                 <h2>RPO Target</h2>
                 <div style="font-size: 24px; margin: 10px 0;">
@@ -1080,7 +1080,7 @@ data:
                     {{ "✅ Within Target" if status.components.rto_rpo.rpo_seconds <= 300 else "❌ Exceeds Target" }}
                 </div>
             </div>
-            
+
             <div class="status-card">
                 <h2>Healthy Clusters</h2>
                 <div style="font-size: 24px; margin: 10px 0;">
@@ -1088,7 +1088,7 @@ data:
                 </div>
             </div>
         </div>
-        
+
         <div class="component-grid">
             <div class="component-card">
                 <h3>🌐 Cluster Health</h3>
@@ -1102,7 +1102,7 @@ data:
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="component-card">
                 <h3>💾 Backup Status</h3>
                 {% for backup in status.components.backups.details %}
@@ -1114,7 +1114,7 @@ data:
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="component-card">
                 <h3>🔄 Replication Status</h3>
                 <h4>PostgreSQL</h4>
@@ -1126,7 +1126,7 @@ data:
                     </span>
                 </div>
                 {% endfor %}
-                
+
                 <h4>Redis</h4>
                 {% for replica in status.components.replication.redis %}
                 <div class="metric-item">
@@ -1137,7 +1137,7 @@ data:
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="component-card">
                 <h3>🛡️ Compliance Status</h3>
                 {% for score in status.components.compliance.scores %}
@@ -1150,7 +1150,7 @@ data:
                 {% endfor %}
             </div>
         </div>
-        
+
         <div class="timestamp">
             Last updated: {{ status.timestamp[:19] }} UTC
         </div>
@@ -1162,8 +1162,8 @@ data:
     def status_page():
         status = dashboard.get_dr_status()
         return render_template_string(
-            STATUS_PAGE_TEMPLATE, 
-            status=status, 
+            STATUS_PAGE_TEMPLATE,
+            status=status,
             grafana_url=dashboard.grafana_url
         )
 
@@ -1179,7 +1179,7 @@ data:
     if __name__ == '__main__':
         # Start Prometheus metrics server
         start_http_server(int(os.getenv('METRICS_PORT', 8080)))
-        
+
         # Start Flask dashboard
         app.run(
             host='0.0.0.0',

@@ -51,14 +51,14 @@ export class SecretsValidator {
     }
 
     if (missingSecrets.length > 0) {
-      const error = `CRITICAL SECURITY ERROR: Missing required secrets: ${missingSecrets.join(', ')}. 
+      const error = `CRITICAL SECURITY ERROR: Missing required secrets: ${missingSecrets.join(', ')}.
       Application cannot start without proper secret configuration.`;
       console.error(error);
       process.exit(1);
     }
 
     if (weakSecrets.length > 0) {
-      const error = `CRITICAL SECURITY ERROR: Weak secrets detected: ${weakSecrets.join(', ')}. 
+      const error = `CRITICAL SECURITY ERROR: Weak secrets detected: ${weakSecrets.join(', ')}.
       All secrets must be properly configured with strong values.`;
       console.error(error);
       process.exit(1);
@@ -75,14 +75,14 @@ export class SecretsValidator {
     const value = process.env[secretName];
 
     if (!value) {
-      const error = `CRITICAL SECURITY ERROR: Required secret '${secretName}' is not configured. 
+      const error = `CRITICAL SECURITY ERROR: Required secret '${secretName}' is not configured.
       Application cannot continue without this secret.`;
       console.error(error);
       process.exit(1);
     }
 
     if (this.isWeakSecret(value)) {
-      const error = `CRITICAL SECURITY ERROR: Secret '${secretName}' has a weak value. 
+      const error = `CRITICAL SECURITY ERROR: Secret '${secretName}' has a weak value.
       All secrets must be properly configured with strong values.`;
       console.error(error);
       process.exit(1);
@@ -102,7 +102,7 @@ export class SecretsValidator {
     }
 
     if (this.isWeakSecret(value)) {
-      const error = `CRITICAL SECURITY ERROR: Optional secret '${secretName}' has a weak value. 
+      const error = `CRITICAL SECURITY ERROR: Optional secret '${secretName}' has a weak value.
       If configured, secrets must have strong values.`;
       console.error(error);
       process.exit(1);

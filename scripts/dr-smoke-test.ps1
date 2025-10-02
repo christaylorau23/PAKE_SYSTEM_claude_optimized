@@ -121,7 +121,7 @@ Write-Info "Found $($yamlFiles.Count) YAML files to validate"
 foreach ($file in $yamlFiles) {
     $relativePath = $file.FullName.Replace($ROOT_DIR, "").TrimStart('\')
     Write-Info "Validating $relativePath"
-    
+
     try {
         $result = kubectl apply --dry-run=client -f $file.FullName 2>&1
         if ($LASTEXITCODE -eq 0) {
@@ -140,14 +140,14 @@ foreach ($file in $yamlFiles) {
 # Check monitoring files
 if (Test-Path $MONITORING_DIR) {
     Write-Info "Checking monitoring YAML files..."
-    $monitoringFiles = Get-ChildItem -Path $MONITORING_DIR -Filter "*.yaml" -Recurse | Where-Object { 
-        $_.Name -match "(dr|disaster|backup)" 
+    $monitoringFiles = Get-ChildItem -Path $MONITORING_DIR -Filter "*.yaml" -Recurse | Where-Object {
+        $_.Name -match "(dr|disaster|backup)"
     }
-    
+
     foreach ($file in $monitoringFiles) {
         $relativePath = $file.FullName.Replace($ROOT_DIR, "").TrimStart('\')
         Write-Info "Validating $relativePath"
-        
+
         try {
             $result = kubectl apply --dry-run=client -f $file.FullName 2>&1
             if ($LASTEXITCODE -eq 0) {
@@ -172,7 +172,7 @@ function Test-Component {
         [string]$Name,
         [bool]$Required = $true
     )
-    
+
     Write-Info "Checking $Type/$Name..."
     try {
         $result = kubectl get $Type -n $NAMESPACE $Name 2>&1
@@ -217,20 +217,20 @@ try {
         Write-Info "Checking core DR components..."
         Test-Component "deployment" "failover-controller"
         Test-Component "configmap" "failover-controller-config"
-        
+
         Write-Info "Checking replication components..."
         Test-Component "cronjob" "postgres-snapshot"
         Test-Component "cronjob" "vector-export"
         Test-Component "deployment" "object-sync"
-        
+
         Write-Info "Checking chaos components (optional)..."
         Test-Component "cronjob" "chaos-random-pod-kill" $false
         Test-Component "cronjob" "chaos-network-partition" $false
-        
+
         Write-Info "Checking validation components (optional)..."
         Test-Component "cronjob" "restore-validation-full" $false
         Test-Component "cronjob" "restore-validation-quick" $false
-        
+
         Write-Info "Checking compliance components (optional)..."
         Test-Component "cronjob" "compliance-attestation-monthly" $false
     }

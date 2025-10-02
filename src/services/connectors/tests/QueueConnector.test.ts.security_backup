@@ -1,6 +1,6 @@
 /**
  * PAKE System - QueueConnector Tests
- * 
+ *
  * Comprehensive tests for queue operations including publishing, consuming,
  * subscribing, and multi-backend support (Redis, RabbitMQ, SQS).
  */
@@ -69,17 +69,17 @@ describe('QueueConnector', () => {
 
     beforeEach(async () => {
       jest.clearAllMocks();
-      
+
       const redis = require('redis');
       mockRedisClient = redis.createClient();
-      
+
       connector = new QueueConnector('test-redis-queue', {
         ...testConfigs.redis,
         timeout: 5000,
         maxRetries: 2,
         retryDelay: 100
       });
-      
+
       await connector.connect();
     });
 
@@ -133,7 +133,7 @@ describe('QueueConnector', () => {
         const response = await connector.fetch(priorityRequest);
 
         expect(response.success).toBe(true);
-        
+
         // Should have called with priority queue name
         expect(mockRedisClient.lPush).toHaveBeenCalledWith(
           expect.stringContaining('priority'),
@@ -145,7 +145,7 @@ describe('QueueConnector', () => {
     describe('Consuming Messages', () => {
       it('should consume messages from Redis queue successfully', async () => {
         const mockMessages = [
-          'queue-name', 
+          'queue-name',
           JSON.stringify({
             id: 'msg-001',
             content: { event: 'trend_detected', data: { platform: 'twitter' } },
@@ -264,7 +264,7 @@ describe('QueueConnector', () => {
 
     beforeEach(async () => {
       jest.clearAllMocks();
-      
+
       const amqp = require('amqplib');
       mockChannel = {
         assertQueue: jest.fn().mockResolvedValue({ queue: 'test-queue' }),
@@ -278,13 +278,13 @@ describe('QueueConnector', () => {
         close: jest.fn(),
         on: jest.fn()
       };
-      
+
       mockConnection = {
         createChannel: jest.fn().mockResolvedValue(mockChannel),
         close: jest.fn(),
         on: jest.fn()
       };
-      
+
       amqp.connect.mockResolvedValue(mockConnection);
 
       connector = new QueueConnector('test-rabbitmq-queue', {
@@ -300,7 +300,7 @@ describe('QueueConnector', () => {
         maxRetries: 2,
         retryDelay: 100
       });
-      
+
       await connector.connect();
     });
 
@@ -450,13 +450,13 @@ describe('QueueConnector', () => {
 
     beforeEach(async () => {
       jest.clearAllMocks();
-      
+
       const { SQSClient } = require('@aws-sdk/client-sqs');
       mockSQSClient = {
         send: jest.fn(),
         destroy: jest.fn()
       };
-      
+
       SQSClient.mockImplementation(() => mockSQSClient);
 
       connector = new QueueConnector('test-sqs-queue', {
@@ -472,7 +472,7 @@ describe('QueueConnector', () => {
         maxRetries: 2,
         retryDelay: 100
       });
-      
+
       await connector.connect();
     });
 
@@ -672,7 +672,7 @@ describe('QueueConnector', () => {
 
     it('should retry on transient failures', async () => {
       const mockRedisClient = require('redis').createClient();
-      
+
       mockRedisClient.lPush
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Timeout'))
@@ -686,7 +686,7 @@ describe('QueueConnector', () => {
 
     it('should fail after max retries exceeded', async () => {
       const mockRedisClient = require('redis').createClient();
-      
+
       mockRedisClient.lPush.mockRejectedValue(new Error('Persistent error'));
 
       const response = await connector.fetch(sampleRequests.queue.publish);

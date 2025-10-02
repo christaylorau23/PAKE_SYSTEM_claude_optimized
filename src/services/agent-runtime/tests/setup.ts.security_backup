@@ -23,7 +23,7 @@ afterEach(() => {
   // Restore console methods
   console.warn = originalConsoleWarn;
   console.error = originalConsoleError;
-  
+
   // Clear all environment variable overrides
   delete process.env.FEATURE_TEST_FLAG;
 });
@@ -47,13 +47,13 @@ expect.extend({
       };
     }
   },
-  
+
   toMatchSchema(received: any, schema: any) {
     // This would integrate with a JSON schema validator
     // For now, just check that received is an object
     const pass = typeof received === 'object' && received !== null;
     return {
-      message: () => pass 
+      message: () => pass
         ? `expected object not to match schema`
         : `expected object to match schema`,
       pass,

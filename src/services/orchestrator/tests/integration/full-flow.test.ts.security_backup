@@ -1,6 +1,6 @@
 /**
  * Comprehensive Integration Tests
- * 
+ *
  * Tests the complete flow from API call to provider execution and audit logging
  * with mocked endpoints and failure scenarios.
  */
@@ -29,15 +29,15 @@ describe('Full Integration Flow', () => {
   let auditLog: AuditLog;
   let featureFlags: FeatureFlags;
   let taskSubmissionAPI: TaskSubmissionAPI;
-  
+
   // Test data directories
   const testDataDir = path.join(__dirname, 'test-data');
   const auditLogPath = path.join(testDataDir, 'audit-test.jsonl');
-  
+
   beforeAll(async () => {
     // Create test data directory
     await fs.mkdir(testDataDir, { recursive: true });
-    
+
     // Initialize feature flags with test configuration
     featureFlags = new FeatureFlags();
     featureFlags.setOverride('TASK_SUBMISSION_API_ENABLED', true);
@@ -46,14 +46,14 @@ describe('Full Integration Flow', () => {
     featureFlags.setOverride('NULL_PROVIDER_ENABLED', true);
     featureFlags.setOverride('ENABLE_RESPONSE_CACHING', true);
     featureFlags.setOverride('RESPONSE_CACHE_TTL_SECONDS', 300);
-    
+
     // Initialize audit log with test file
     auditLog = new AuditLog(auditLogPath);
     await auditLog.initialize();
-    
+
     // Initialize router with test providers
     router = new OrchestratorRouter(featureFlags);
-    
+
     // Register providers for testing
     const nullProvider = new NullProvider();
     const claudeProvider = new ClaudeProvider({
@@ -64,36 +64,36 @@ describe('Full Integration Flow', () => {
       baseUrl: 'http://localhost:11434',
       defaultModel: 'llama2'
     });
-    
+
     router.registerProvider('null', nullProvider, 1);
     router.registerProvider('claude', claudeProvider, 5);
     router.registerProvider('ollama', ollamaProvider, 3);
-    
+
     // Set up Express app with routes
     app = express();
     const apiRouter = createTaskSubmissionRouter(router, auditLog, featureFlags);
     app.use('/api/v1/tasks', apiRouter);
-    
+
     // Start test server
     server = app.listen(0);
   });
-  
+
   afterAll(async () => {
     // Cleanup
     server.close();
     await auditLog.close();
-    
+
     // Clean up test data
     try {
       await fs.rm(testDataDir, { recursive: true });
     } catch (error) {
       // Ignore cleanup errors
     }
-    
+
     // Clear nock interceptors
     nock.cleanAll();
   });
-  
+
   beforeEach(() => {
     // Reset metrics before each test
     jest.clearAllMocks();
@@ -150,7 +150,7 @@ describe('Full Integration Flow', () => {
       // Verify audit log entry was created
       const auditEntries = await auditLog.getEntriesByTaskId(response.body.taskId);
       expect(auditEntries.length).toBeGreaterThan(0);
-      
+
       const submissionEntry = auditEntries.find(e => e.eventType === 'TASK_SUBMITTED');
       expect(submissionEntry).toBeDefined();
       expect(submissionEntry?.data.taskType).toBe(AgentTaskType.SENTIMENT_ANALYSIS);
@@ -413,14 +413,14 @@ describe('Full Integration Flow', () => {
       }
 
       const responses = await Promise.all(requests);
-      
+
       // First 10 should succeed, last 2 should be rate limited
       const successCount = responses.filter(r => r.status === 200).length;
       const rateLimitedCount = responses.filter(r => r.status === 429).length;
-      
+
       expect(successCount).toBe(10);
       expect(rateLimitedCount).toBe(2);
-      
+
       // Verify rate limited responses have proper structure
       const rateLimitedResponse = responses.find(r => r.status === 429);
       expect(rateLimitedResponse?.body.error.code).toBe('RATE_LIMIT_EXCEEDED');
@@ -519,7 +519,7 @@ describe('Full Integration Flow', () => {
 
       // Results should be identical
       expect(response1.body.result.output).toEqual(response2.body.result.output);
-      
+
       // But audit information should be different
       expect(response1.body.audit.requestId).not.toBe(response2.body.audit.requestId);
     });

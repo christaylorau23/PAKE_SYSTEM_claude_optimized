@@ -13,14 +13,14 @@ data:
     chaos:
       name: "region-failover-drill"
       description: "Complete region failover drill to test multi-region disaster recovery"
-      
+
       # Experiment configuration
       experiment:
         duration: "30m"
         dry_run: false
         safety_checks: true
         auto_rollback: true
-        
+
       # Region configuration
       regions:
         primary:
@@ -36,7 +36,7 @@ data:
             - name: "pake-postgresql-primary"
               namespace: "database"
               traffic_weight: 100
-              
+
         secondary:
           name: "eu-west-1"
           description: "Secondary failover region"
@@ -50,7 +50,7 @@ data:
             - name: "pake-postgresql-replica-eu"
               namespace: "database"
               traffic_weight: 0
-              
+
         tertiary:
           name: "ap-southeast-1"
           description: "Tertiary failover region"
@@ -64,7 +64,7 @@ data:
             - name: "pake-postgresql-replica-ap"
               namespace: "database"
               traffic_weight: 0
-      
+
       # Failover scenarios
       scenarios:
         - name: "primary-region-complete-failure"
@@ -84,7 +84,7 @@ data:
               description: "Verify all services functional in EU"
             - type: "data_consistency_check"
               description: "Verify data consistency across services"
-              
+
         - name: "secondary-region-failover-test"
           description: "Test secondary to tertiary failover"
           duration: "10m"
@@ -99,7 +99,7 @@ data:
               description: "Failover to AP region"
             - type: "verify_functionality"
               description: "Verify functionality in AP region"
-              
+
         - name: "primary-region-recovery"
           description: "Test recovery back to primary region"
           duration: "12m"
@@ -114,54 +114,54 @@ data:
               description: "Gradually shift traffic back to primary"
             - type: "verify_full_recovery"
               description: "Verify complete system recovery"
-      
+
       # Safety constraints
       safety:
         # Always maintain one healthy region
         minimum_healthy_regions: 1
-        
+
         # Protected services that should never be failed
         protected_services:
           - "kube-system/kube-dns"
           - "kube-system/kube-apiserver"
           - "monitoring/prometheus"
           - "monitoring/grafana"
-          
+
         # Pre-experiment health checks
         health_checks:
           - name: "api-health-primary"
             url: "http://pake-api.pake-api.svc.cluster.local:8080/health"
             timeout: 10
             region: "us-east-1"
-            
+
           - name: "api-health-secondary"
             url: "http://pake-api-eu.pake-api.svc.cluster.local:8080/health"
             timeout: 10
             region: "eu-west-1"
-            
+
           - name: "api-health-tertiary"
             url: "http://pake-api-ap.pake-api.svc.cluster.local:8080/health"
             timeout: 10
             region: "ap-southeast-1"
-            
+
           - name: "database-primary-health"
             url: "tcp://pake-postgresql-primary.database.svc.cluster.local:5432"
             timeout: 5
             type: "tcp"
             region: "us-east-1"
-            
+
           - name: "database-eu-health"
             url: "tcp://pake-postgresql-replica-eu.database.svc.cluster.local:5432"
             timeout: 5
             type: "tcp"
             region: "eu-west-1"
-            
+
           - name: "database-ap-health"
             url: "tcp://pake-postgresql-replica-ap.database.svc.cluster.local:5432"
             timeout: 5
             type: "tcp"
             region: "ap-southeast-1"
-            
+
         # Success criteria during failover
         success_criteria:
           max_error_rate: 30.0        # 30% error rate acceptable during failover
@@ -169,7 +169,7 @@ data:
           min_availability: 70.0      # 70% availability during failover
           max_failover_time: 300      # 5 minutes max failover time
           max_data_loss_seconds: 300  # 5 minutes max acceptable data loss
-          
+
       # Monitoring configuration
       monitoring:
         metrics_interval: 10
@@ -208,17 +208,17 @@ data:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['chaos']
-            
+
             # Initialize Kubernetes client
             try:
                 config.load_incluster_config()
             except:
                 config.load_kube_config()
-            
+
             self.k8s_client = client.CoreV1Api()
             self.apps_client = client.AppsV1Api()
             self.networking_client = client.NetworkingV1Api()
-            
+
             # Experiment state
             self.experiment_id = f"region-failover-{int(time.time())}"
             self.start_time = None
@@ -230,85 +230,85 @@ data:
             }
             self.baseline_metrics = {}
             self.session = None
-            
+
         async def start(self):
             """Initialize the experiment"""
             self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
             logger.info(f"Starting region failover experiment: {self.experiment_id}")
-            
+
         async def stop(self):
             """Cleanup resources"""
             if self.session:
                 await self.session.close()
-                
+
         def emit_metric(self, metric_name, value, labels=None):
             """Emit metric to Prometheus pushgateway"""
             try:
                 if labels is None:
                     labels = {}
-                    
+
                 labels.update({
                     'experiment_id': self.experiment_id,
                     'experiment_type': 'region-failover',
                     **self.config['monitoring']['trace_tags']
                 })
-                
+
                 label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
                 metric_data = f"{metric_name}{{{label_str}}} {value}"
-                
+
                 response = requests.post(
                     "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/chaos-engineering/instance/region-failover",
                     data=metric_data,
                     headers={'Content-Type': 'text/plain'},
                     timeout=10
                 )
-                
+
                 if response.status_code != 200:
                     logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
-                    
+
             except Exception as e:
                 logger.error(f"Error emitting metric {metric_name}: {e}")
-                
+
         async def perform_health_check(self, check_config):
             """Perform health check on a service"""
             try:
                 start_time = time.time()
-                
+
                 if check_config.get('type') == 'tcp':
                     # TCP connection check
                     import socket
                     url = check_config['url'].replace('tcp://', '')
                     host, port = url.split(':')
-                    
+
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(check_config.get('timeout', 10))
                     result = sock.connect_ex((host, int(port)))
                     sock.close()
-                    
+
                     response_time = (time.time() - start_time) * 1000
                     return result == 0, response_time
                 else:
                     # HTTP health check
                     async with self.session.get(check_config['url']) as response:
                         response_time = (time.time() - start_time) * 1000
-                        
+
                         if response.status == 200:
                             return True, response_time
                         else:
                             logger.warning(f"Health check failed for {check_config['name']}: HTTP {response.status}")
                             return False, response_time
-                        
+
             except asyncio.TimeoutError:
                 logger.warning(f"Health check timeout for {check_config['name']}")
                 return False, check_config.get('timeout', 10) * 1000
             except Exception as e:
                 logger.error(f"Health check error for {check_config['name']}: {e}")
                 return False, 0
-                
+
         async def collect_baseline_metrics(self):
             """Collect baseline region and service metrics"""
             logger.info("Collecting baseline region metrics...")
-            
+
             baseline = {
                 'timestamp': datetime.utcnow().isoformat(),
                 'health_checks': {},
@@ -316,7 +316,7 @@ data:
                 'service_topology': {},
                 'traffic_distribution': {}
             }
-            
+
             # Perform health checks for all regions
             for check in self.config['safety']['health_checks']:
                 healthy, response_time = await self.perform_health_check(check)
@@ -325,7 +325,7 @@ data:
                     'response_time': response_time,
                     'region': check.get('region', 'unknown')
                 }
-                
+
                 self.emit_metric(
                     'chaos_baseline_region_health_status',
                     1 if healthy else 0,
@@ -334,7 +334,7 @@ data:
                         'region': check.get('region', 'unknown')
                     }
                 )
-                
+
                 self.emit_metric(
                     'chaos_baseline_region_response_time_ms',
                     response_time,
@@ -343,7 +343,7 @@ data:
                         'region': check.get('region', 'unknown')
                     }
                 )
-            
+
             # Collect service topology information
             for region_name, region_config in self.config['regions'].items():
                 region_status = {
@@ -353,7 +353,7 @@ data:
                     'healthy_services': 0,
                     'total_services': len(region_config['services'])
                 }
-                
+
                 for service_config in region_config['services']:
                     try:
                         # Get service information
@@ -361,19 +361,19 @@ data:
                             name=service_config['name'],
                             namespace=service_config['namespace']
                         )
-                        
+
                         # Get endpoints
                         endpoints = self.k8s_client.read_namespaced_endpoints(
                             name=service_config['name'],
                             namespace=service_config['namespace']
                         )
-                        
+
                         endpoint_count = 0
                         if endpoints.subsets:
                             for subset in endpoints.subsets:
                                 if subset.addresses:
                                     endpoint_count += len(subset.addresses)
-                        
+
                         service_info = {
                             'name': service_config['name'],
                             'namespace': service_config['namespace'],
@@ -382,11 +382,11 @@ data:
                             'cluster_ip': service.spec.cluster_ip,
                             'healthy': endpoint_count > 0
                         }
-                        
+
                         region_status['services'].append(service_info)
                         if service_info['healthy']:
                             region_status['healthy_services'] += 1
-                            
+
                     except Exception as e:
                         logger.error(f"Error collecting service info for {service_config['name']}: {e}")
                         service_info = {
@@ -397,9 +397,9 @@ data:
                             'error': str(e)
                         }
                         region_status['services'].append(service_info)
-                
+
                 baseline['region_status'][region_name] = region_status
-                
+
                 # Emit region health metrics
                 region_health = 1 if region_status['healthy_services'] == region_status['total_services'] else 0
                 self.emit_metric(
@@ -407,33 +407,33 @@ data:
                     region_health,
                     {'region': region_name}
                 )
-                
+
                 self.emit_metric(
                     'chaos_baseline_region_service_count',
                     region_status['healthy_services'],
                     {'region': region_name, 'status': 'healthy'}
                 )
-            
+
             # Initialize failover state
             self.failover_state['current_primary'] = 'primary'
             self.failover_state['active_regions'] = ['primary']
-            
+
             self.baseline_metrics = baseline
             logger.info(f"Baseline region metrics collected")
             return baseline
-            
+
         async def isolate_region(self, region_name):
             """Isolate a region by blocking external traffic"""
             try:
                 logger.info(f"Isolating region: {region_name}")
-                
+
                 region_config = self.config['regions'][region_name]
                 isolation_artifacts = []
-                
+
                 # Create network policies to block ingress traffic to region services
                 for service_config in region_config['services']:
                     policy_name = f"chaos-isolate-{service_config['name']}-{self.experiment_id[:8]}"
-                    
+
                     network_policy = client.V1NetworkPolicy(
                         api_version="networking.k8s.io/v1",
                         kind="NetworkPolicy",
@@ -454,20 +454,20 @@ data:
                             ingress=[]  # Empty list denies all ingress
                         )
                     )
-                    
+
                     created_policy = self.networking_client.create_namespaced_network_policy(
                         namespace=service_config['namespace'],
                         body=network_policy
                     )
-                    
+
                     isolation_artifacts.append({
                         'type': 'network_policy',
                         'name': created_policy.metadata.name,
                         'namespace': created_policy.metadata.namespace
                     })
-                    
+
                     logger.info(f"Created isolation policy for {service_config['name']}")
-                
+
                 # Scale down services in isolated region (non-destructive)
                 for service_config in region_config['services']:
                     try:
@@ -476,12 +476,12 @@ data:
                             namespace=service_config['namespace'],
                             label_selector=f"app={service_config['name'].split('-')[0]}"
                         )
-                        
+
                         for deployment in deployments.items:
                             if service_config['name'] in deployment.metadata.name:
                                 # Store original replica count
                                 original_replicas = deployment.spec.replicas
-                                
+
                                 # Scale to 0 replicas (simulate region failure)
                                 deployment.spec.replicas = 0
                                 self.apps_client.patch_namespaced_deployment(
@@ -489,85 +489,85 @@ data:
                                     namespace=deployment.metadata.namespace,
                                     body=deployment
                                 )
-                                
+
                                 isolation_artifacts.append({
                                     'type': 'deployment_scale',
                                     'name': deployment.metadata.name,
                                     'namespace': deployment.metadata.namespace,
                                     'original_replicas': original_replicas
                                 })
-                                
+
                                 logger.info(f"Scaled down deployment {deployment.metadata.name} from {original_replicas} to 0")
-                                
+
                     except Exception as e:
                         logger.error(f"Error scaling down service {service_config['name']}: {e}")
-                
+
                 # Update failover state
                 if region_name in self.failover_state['active_regions']:
                     self.failover_state['active_regions'].remove(region_name)
-                
+
                 # Emit metrics
                 self.emit_metric(
                     'chaos_region_isolation_status',
                     1,
                     {'region': region_name, 'status': 'isolated'}
                 )
-                
+
                 logger.info(f"Successfully isolated region: {region_name}")
                 return isolation_artifacts
-                
+
             except Exception as e:
                 logger.error(f"Error isolating region {region_name}: {e}")
                 self.emit_metric('chaos_region_isolation_failures_total', 1, {'region': region_name})
                 return []
-                
+
         async def promote_database_replica(self, target_region):
             """Promote database replica to primary in target region"""
             try:
                 logger.info(f"Promoting database replica in region: {target_region}")
-                
+
                 # This is a simplified simulation of database promotion
                 # In a real environment, this would involve complex database operations
-                
+
                 target_region_config = self.config['regions'][target_region]
-                
+
                 # Find database service in target region
                 db_service = None
                 for service_config in target_region_config['services']:
                     if 'postgresql' in service_config['name'] and 'replica' in service_config['name']:
                         db_service = service_config
                         break
-                
+
                 if not db_service:
                     logger.error(f"No database replica found in region {target_region}")
                     return False
-                
+
                 # Simulate promotion by updating service labels
                 try:
                     service = self.k8s_client.read_namespaced_service(
                         name=db_service['name'],
                         namespace=db_service['namespace']
                     )
-                    
+
                     # Add promotion label
                     if not service.metadata.labels:
                         service.metadata.labels = {}
                     service.metadata.labels['chaos-promoted'] = 'true'
                     service.metadata.labels['promotion-time'] = datetime.utcnow().isoformat()
-                    
+
                     self.k8s_client.patch_namespaced_service(
                         name=db_service['name'],
                         namespace=db_service['namespace'],
                         body=service
                     )
-                    
+
                     # Update failover state
                     self.failover_state['database_topology']['promoted_replica'] = {
                         'region': target_region,
                         'service': db_service['name'],
                         'promotion_time': datetime.utcnow().isoformat()
                     }
-                    
+
                     # Emit metrics
                     self.emit_metric(
                         'chaos_database_promotion_status',
@@ -578,29 +578,29 @@ data:
                             'status': 'promoted'
                         }
                     )
-                    
+
                     logger.info(f"Successfully promoted database replica {db_service['name']} in {target_region}")
                     return True
-                    
+
                 except Exception as e:
                     logger.error(f"Error promoting database replica: {e}")
                     self.emit_metric('chaos_database_promotion_failures_total', 1, {'region': target_region})
                     return False
-                    
+
             except Exception as e:
                 logger.error(f"Error in database promotion for {target_region}: {e}")
                 return False
-                
+
         async def redirect_traffic(self, source_region, target_region):
             """Redirect traffic from source region to target region"""
             try:
                 logger.info(f"Redirecting traffic from {source_region} to {target_region}")
-                
+
                 source_config = self.config['regions'][source_region]
                 target_config = self.config['regions'][target_region]
-                
+
                 traffic_redirections = []
-                
+
                 # Scale up services in target region
                 for target_service in target_config['services']:
                     try:
@@ -608,49 +608,49 @@ data:
                             namespace=target_service['namespace'],
                             label_selector=f"app={target_service['name'].split('-')[0]}"
                         )
-                        
+
                         for deployment in deployments.items:
                             if target_service['name'] in deployment.metadata.name:
                                 # Scale up to handle traffic
                                 target_replicas = max(deployment.spec.replicas, 2)  # Minimum 2 replicas
                                 deployment.spec.replicas = target_replicas
-                                
+
                                 self.apps_client.patch_namespaced_deployment(
                                     name=deployment.metadata.name,
                                     namespace=deployment.metadata.namespace,
                                     body=deployment
                                 )
-                                
+
                                 traffic_redirections.append({
                                     'type': 'scale_up',
                                     'service': target_service['name'],
                                     'region': target_region,
                                     'replicas': target_replicas
                                 })
-                                
+
                                 logger.info(f"Scaled up {deployment.metadata.name} to {target_replicas} replicas")
-                                
+
                     except Exception as e:
                         logger.error(f"Error scaling up service {target_service['name']}: {e}")
-                
+
                 # Update traffic weights (simulated)
                 for source_service in source_config['services']:
                     source_service['traffic_weight'] = 0
-                
+
                 for target_service in target_config['services']:
                     target_service['traffic_weight'] = 100
-                
+
                 # Update failover state
                 self.failover_state['current_primary'] = target_region
                 if target_region not in self.failover_state['active_regions']:
                     self.failover_state['active_regions'].append(target_region)
-                
+
                 self.failover_state['traffic_routing'] = {
                     'active_region': target_region,
                     'redirected_from': source_region,
                     'redirection_time': datetime.utcnow().isoformat()
                 }
-                
+
                 # Emit metrics
                 self.emit_metric(
                     'chaos_traffic_redirection_status',
@@ -661,44 +661,44 @@ data:
                         'status': 'redirected'
                     }
                 )
-                
+
                 logger.info(f"Successfully redirected traffic from {source_region} to {target_region}")
                 return traffic_redirections
-                
+
             except Exception as e:
                 logger.error(f"Error redirecting traffic from {source_region} to {target_region}: {e}")
-                self.emit_metric('chaos_traffic_redirection_failures_total', 1, 
+                self.emit_metric('chaos_traffic_redirection_failures_total', 1,
                                {'source_region': source_region, 'target_region': target_region})
                 return []
-                
+
         async def verify_functionality(self, region_name):
             """Verify that all services are functional in the specified region"""
             try:
                 logger.info(f"Verifying functionality in region: {region_name}")
-                
+
                 verification_results = {
                     'region': region_name,
                     'timestamp': datetime.utcnow().isoformat(),
                     'checks': {},
                     'overall_healthy': True
                 }
-                
+
                 # Check health endpoints for region
                 region_health_checks = [
                     check for check in self.config['safety']['health_checks']
                     if check.get('region') == self.config['regions'][region_name]['name']
                 ]
-                
+
                 for check in region_health_checks:
                     healthy, response_time = await self.perform_health_check(check)
                     verification_results['checks'][check['name']] = {
                         'healthy': healthy,
                         'response_time': response_time
                     }
-                    
+
                     if not healthy:
                         verification_results['overall_healthy'] = False
-                    
+
                     self.emit_metric(
                         'chaos_failover_verification_health_status',
                         1 if healthy else 0,
@@ -707,7 +707,7 @@ data:
                             'service': check['name']
                         }
                     )
-                
+
                 # Check service readiness
                 region_config = self.config['regions'][region_name]
                 for service_config in region_config['services']:
@@ -716,22 +716,22 @@ data:
                             name=service_config['name'],
                             namespace=service_config['namespace']
                         )
-                        
+
                         endpoint_count = 0
                         if endpoints.subsets:
                             for subset in endpoints.subsets:
                                 if subset.addresses:
                                     endpoint_count += len(subset.addresses)
-                        
+
                         service_healthy = endpoint_count > 0
                         verification_results['checks'][f"{service_config['name']}_endpoints"] = {
                             'healthy': service_healthy,
                             'endpoint_count': endpoint_count
                         }
-                        
+
                         if not service_healthy:
                             verification_results['overall_healthy'] = False
-                        
+
                         self.emit_metric(
                             'chaos_failover_service_endpoints',
                             endpoint_count,
@@ -740,7 +740,7 @@ data:
                                 'service': service_config['name']
                             }
                         )
-                        
+
                     except Exception as e:
                         logger.error(f"Error checking service {service_config['name']}: {e}")
                         verification_results['checks'][f"{service_config['name']}_endpoints"] = {
@@ -748,17 +748,17 @@ data:
                             'error': str(e)
                         }
                         verification_results['overall_healthy'] = False
-                
+
                 # Emit overall verification result
                 self.emit_metric(
                     'chaos_failover_verification_overall_status',
                     1 if verification_results['overall_healthy'] else 0,
                     {'region': region_name}
                 )
-                
+
                 logger.info(f"Functionality verification for {region_name}: {'PASSED' if verification_results['overall_healthy'] else 'FAILED'}")
                 return verification_results
-                
+
             except Exception as e:
                 logger.error(f"Error verifying functionality in {region_name}: {e}")
                 return {
@@ -766,12 +766,12 @@ data:
                     'overall_healthy': False,
                     'error': str(e)
                 }
-                
+
         async def execute_failover_scenario(self, scenario):
             """Execute a complete failover scenario"""
             try:
                 logger.info(f"Executing failover scenario: {scenario['name']}")
-                
+
                 scenario_results = {
                     'name': scenario['name'],
                     'start_time': datetime.utcnow().isoformat(),
@@ -779,44 +779,44 @@ data:
                     'verifications': [],
                     'success': True
                 }
-                
+
                 # Execute each step in the scenario
                 for step in scenario['steps']:
                     step_start_time = time.time()
                     logger.info(f"Executing step: {step['type']} - {step['description']}")
-                    
+
                     step_success = True
                     step_result = {}
-                    
+
                     if step['type'] == 'isolate_region':
                         artifacts = await self.isolate_region(scenario['target_region'])
                         step_result = {'artifacts': artifacts}
                         step_success = len(artifacts) > 0
-                        
+
                     elif step['type'] == 'promote_database_replica':
                         promotion_success = await self.promote_database_replica(scenario['failover_target'])
                         step_result = {'promotion_success': promotion_success}
                         step_success = promotion_success
-                        
+
                     elif step['type'] == 'redirect_traffic':
                         redirections = await self.redirect_traffic(scenario['target_region'], scenario['failover_target'])
                         step_result = {'redirections': redirections}
                         step_success = len(redirections) > 0
-                        
+
                     elif step['type'] == 'verify_functionality':
                         verification = await self.verify_functionality(scenario['failover_target'])
                         step_result = verification
                         step_success = verification['overall_healthy']
                         scenario_results['verifications'].append(verification)
-                        
+
                     elif step['type'] == 'data_consistency_check':
                         # Simplified data consistency check
                         logger.info("Performing data consistency check...")
                         await asyncio.sleep(5)  # Simulate check time
                         step_result = {'consistency_check': 'passed'}
-                        
+
                     step_duration = time.time() - step_start_time
-                    
+
                     step_record = {
                         'type': step['type'],
                         'description': step['description'],
@@ -824,37 +824,37 @@ data:
                         'duration_seconds': step_duration,
                         'result': step_result
                     }
-                    
+
                     scenario_results['steps_completed'].append(step_record)
-                    
+
                     if not step_success:
                         scenario_results['success'] = False
                         logger.error(f"Step failed: {step['type']}")
                         break
-                    
+
                     # Brief delay between steps
                     await asyncio.sleep(2)
-                
+
                 scenario_duration = (datetime.utcnow() - datetime.fromisoformat(scenario_results['start_time'])).total_seconds()
                 scenario_results['duration_seconds'] = scenario_duration
                 scenario_results['end_time'] = datetime.utcnow().isoformat()
-                
+
                 # Emit scenario metrics
                 self.emit_metric(
                     'chaos_failover_scenario_status',
                     1 if scenario_results['success'] else 0,
                     {'scenario': scenario['name']}
                 )
-                
+
                 self.emit_metric(
                     'chaos_failover_scenario_duration_seconds',
                     scenario_duration,
                     {'scenario': scenario['name']}
                 )
-                
+
                 logger.info(f"Failover scenario {scenario['name']} {'completed successfully' if scenario_results['success'] else 'failed'}")
                 return scenario_results
-                
+
             except Exception as e:
                 logger.error(f"Error executing failover scenario {scenario['name']}: {e}")
                 return {
@@ -862,13 +862,13 @@ data:
                     'success': False,
                     'error': str(e)
                 }
-                
+
         async def cleanup_failover_artifacts(self):
             """Clean up all failover-related artifacts"""
             logger.info("Cleaning up failover artifacts...")
-            
+
             cleanup_success = True
-            
+
             try:
                 # Remove all network policies created during experiment
                 all_namespaces = self.k8s_client.list_namespace()
@@ -878,18 +878,18 @@ data:
                             namespace=ns.metadata.name,
                             label_selector=f"chaos-experiment={self.experiment_id}"
                         )
-                        
+
                         for policy in policies.items:
                             logger.info(f"Deleting network policy: {policy.metadata.name}")
                             self.networking_client.delete_namespaced_network_policy(
                                 name=policy.metadata.name,
                                 namespace=policy.metadata.namespace
                             )
-                            
+
                     except Exception as e:
                         logger.error(f"Error cleaning policies in namespace {ns.metadata.name}: {e}")
                         cleanup_success = False
-                
+
                 # Restore original deployment replicas
                 for region_name, region_config in self.config['regions'].items():
                     for service_config in region_config['services']:
@@ -898,25 +898,25 @@ data:
                                 namespace=service_config['namespace'],
                                 label_selector=f"app={service_config['name'].split('-')[0]}"
                             )
-                            
+
                             for deployment in deployments.items:
                                 if service_config['name'] in deployment.metadata.name:
                                     # Restore to reasonable replica count
                                     original_replicas = 2 if 'primary' in service_config['name'] else 1
                                     deployment.spec.replicas = original_replicas
-                                    
+
                                     self.apps_client.patch_namespaced_deployment(
                                         name=deployment.metadata.name,
                                         namespace=deployment.metadata.namespace,
                                         body=deployment
                                     )
-                                    
+
                                     logger.info(f"Restored {deployment.metadata.name} to {original_replicas} replicas")
-                                    
+
                         except Exception as e:
                             logger.error(f"Error restoring deployment for {service_config['name']}: {e}")
                             cleanup_success = False
-                
+
                 # Remove promotion labels from services
                 for region_name, region_config in self.config['regions'].items():
                     for service_config in region_config['services']:
@@ -926,30 +926,30 @@ data:
                                     name=service_config['name'],
                                     namespace=service_config['namespace']
                                 )
-                                
+
                                 if service.metadata.labels and 'chaos-promoted' in service.metadata.labels:
                                     del service.metadata.labels['chaos-promoted']
                                     del service.metadata.labels['promotion-time']
-                                    
+
                                     self.k8s_client.patch_namespaced_service(
                                         name=service_config['name'],
                                         namespace=service_config['namespace'],
                                         body=service
                                     )
-                                    
+
                                     logger.info(f"Removed promotion labels from {service_config['name']}")
-                                    
+
                             except Exception as e:
                                 logger.error(f"Error cleaning service labels for {service_config['name']}: {e}")
                                 cleanup_success = False
-                
+
                 self.emit_metric('chaos_failover_cleanup_status', 1 if cleanup_success else 0)
                 return cleanup_success
-                
+
             except Exception as e:
                 logger.error(f"Error during failover cleanup: {e}")
                 return False
-                
+
         def _parse_duration(self, duration_str):
             """Parse duration string like '5m' to seconds"""
             if duration_str.endswith('s'):
@@ -960,103 +960,103 @@ data:
                 return int(duration_str[:-1]) * 3600
             else:
                 return int(duration_str)  # Assume seconds
-                
+
         async def run_experiment(self):
             """Run the complete region failover experiment"""
             try:
                 await self.start()
                 self.start_time = datetime.utcnow()
-                
+
                 logger.info(f"Starting region failover experiment: {self.config['name']}")
                 logger.info(f"Description: {self.config['description']}")
-                
+
                 # Emit experiment start metrics
                 self.emit_metric('chaos_experiment_start_timestamp', int(time.time()))
                 self.emit_metric('chaos_experiment_status', 1, {'status': 'running'})
-                
+
                 # Collect baseline metrics
                 baseline = await self.collect_baseline_metrics()
-                
+
                 # Perform safety checks
                 if self.config['experiment']['safety_checks']:
                     healthy_regions = 0
                     for check_name, check_result in baseline['health_checks'].items():
                         if check_result['healthy']:
                             healthy_regions += 1
-                    
+
                     min_healthy = self.config['safety']['minimum_healthy_regions']
                     if healthy_regions < min_healthy * 3:  # 3 checks per region (api, ai, db)
                         logger.error(f"Insufficient healthy regions. Required: {min_healthy}, Found: {healthy_regions//3}")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'aborted', 'reason': 'insufficient_healthy_regions'})
                         return False
-                
+
                 # Execute failover scenarios if not dry run
                 if not self.config['experiment']['dry_run']:
                     scenario_results = []
-                    
+
                     for scenario in self.config['scenarios']:
                         # Check prerequisite
                         if 'prerequisite' in scenario:
-                            prereq_found = any(r['name'] == scenario['prerequisite'] and r['success'] 
+                            prereq_found = any(r['name'] == scenario['prerequisite'] and r['success']
                                              for r in scenario_results)
                             if not prereq_found:
                                 logger.warning(f"Skipping scenario {scenario['name']} - prerequisite {scenario['prerequisite']} not met")
                                 continue
-                        
+
                         result = await self.execute_failover_scenario(scenario)
                         scenario_results.append(result)
-                        
+
                         if not result['success']:
                             logger.error(f"Failover scenario {scenario['name']} failed - stopping experiment")
                             break
-                        
+
                         # Brief delay between scenarios
                         await asyncio.sleep(10)
-                    
+
                     successful_scenarios = sum(1 for r in scenario_results if r['success'])
-                    
+
                     if successful_scenarios == 0:
                         logger.warning("No failover scenarios completed successfully")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'no_scenarios_completed'})
                         return False
-                    
+
                     # Cleanup (auto-rollback)
                     cleanup_success = await self.cleanup_failover_artifacts()
-                    
+
                     if not cleanup_success:
                         logger.error("Failed to cleanup all failover artifacts")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'cleanup_failed'})
                         return False
-                        
+
                 else:
                     logger.info("DRY RUN: Would have executed region failover but dry_run=true")
                     self.emit_metric('chaos_experiment_status', 1, {'status': 'dry_run'})
-                
+
                 # Wait for system to stabilize
                 logger.info("Waiting for system stabilization...")
                 await asyncio.sleep(120)  # 2 minutes for region recovery
-                
+
                 # Verify system recovery
                 recovery_checks = await self.collect_baseline_metrics()
                 post_experiment_healthy = True
-                
+
                 for check_name, check_result in recovery_checks['health_checks'].items():
                     if not check_result['healthy']:
                         post_experiment_healthy = False
                         logger.warning(f"Service {check_name} not healthy after experiment")
-                
+
                 if not post_experiment_healthy:
                     logger.error("System not fully healthy after experiment")
                     self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'post_experiment_unhealthy'})
                     return False
-                
+
                 # Mark experiment as successful
                 experiment_duration = (datetime.utcnow() - self.start_time).total_seconds()
                 self.emit_metric('chaos_experiment_duration_seconds', experiment_duration)
                 self.emit_metric('chaos_experiment_status', 1, {'status': 'completed'})
-                
+
                 logger.info(f"Region failover experiment completed successfully in {experiment_duration:.2f} seconds")
-                
+
                 # Generate experiment report
                 report = {
                     'experiment_id': self.experiment_id,
@@ -1067,31 +1067,31 @@ data:
                     'scenario_results': scenario_results if not self.config['experiment']['dry_run'] else [],
                     'status': 'success'
                 }
-                
+
                 logger.info(f"Experiment report: {json.dumps(report, indent=2)}")
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Region failover experiment failed: {e}")
                 self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'exception'})
-                
+
                 # Attempt cleanup on failure
                 try:
                     await self.cleanup_failover_artifacts()
                 except:
                     pass
-                    
+
                 return False
-                
+
             finally:
                 await self.stop()
 
     async def main():
         config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
         experiment = RegionFailoverChaosExperiment(config_path)
-        
+
         success = await experiment.run_experiment()
-        
+
         if not success:
             exit(1)
 

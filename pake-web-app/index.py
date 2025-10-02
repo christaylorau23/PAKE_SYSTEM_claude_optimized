@@ -70,7 +70,7 @@ async def root():
                 <h2>✅ System Online</h2>
                 <p>Enterprise Knowledge Management & AI Research Platform</p>
             </div>
-            
+
             <div class="feature">
                 <h3>🔧 Available Features</h3>
                 <ul>
@@ -81,7 +81,7 @@ async def root():
                     <li>Enterprise Security</li>
                 </ul>
             </div>
-            
+
             <div class="feature">
                 <h3>📚 API Documentation</h3>
                 <a href="/docs" class="api-link">📖 Swagger UI</a>
@@ -89,7 +89,7 @@ async def root():
                 <a href="/health" class="api-link">❤️ Health Check</a>
                 <a href="/system" class="api-link">ℹ️ System Info</a>
             </div>
-            
+
             <div class="feature">
                 <h3>🔗 Quick Links</h3>
                 <p>Explore the PAKE System API endpoints:</p>
@@ -149,7 +149,7 @@ async def search_knowledge(query: str = "", limit: int = 10):
         }
         for i in range(min(limit, 5))
     ]
-    
+
     return {
         "query": query,
         "results": results,
@@ -161,7 +161,7 @@ async def search_knowledge(query: str = "", limit: int = 10):
 async def analyze_content(data: dict):
     """AI content analysis endpoint"""
     content = data.get("content", "")
-    
+
     analysis = {
         "sentiment": "positive",
         "topics": ["AI", "Knowledge Management", "Enterprise"],
@@ -172,7 +172,7 @@ async def analyze_content(data: dict):
             "Include examples for better understanding"
         ]
     }
-    
+
     return {
         "analysis": analysis,
         "timestamp": datetime.now().isoformat()
@@ -203,7 +203,7 @@ async def list_services():
             "endpoints": ["/api/v1/metrics", "/api/v1/reports"]
         }
     ]
-    
+
     return {
         "services": services,
         "total": len(services),

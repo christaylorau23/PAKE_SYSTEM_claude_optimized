@@ -628,14 +628,14 @@ data:
       port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
       scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
       ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
-      
+
       index_name pake-api-logs
       type_name _doc
-      
+
       # ILM policy
       ilm_policy_id pake-logs-policy
       ilm_policy_override true
-      
+
       # Buffering
       <buffer>
         @type file
@@ -659,13 +659,13 @@ data:
       port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
       scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
       ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
-      
+
       index_name pake-ai-logs
       type_name _doc
-      
+
       ilm_policy_id pake-logs-policy
       ilm_policy_override true
-      
+
       <buffer>
         @type file
         path /var/log/fluentd-buffers/elasticsearch-ai
@@ -688,13 +688,13 @@ data:
       port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
       scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
       ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
-      
+
       index_name pake-errors
       type_name _doc
-      
+
       ilm_policy_id pake-errors-policy
       ilm_policy_override true
-      
+
       <buffer>
         @type file
         path /var/log/fluentd-buffers/elasticsearch-errors
@@ -716,13 +716,13 @@ data:
       port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
       scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
       ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
-      
+
       index_name pake-security-logs
       type_name _doc
-      
+
       ilm_policy_id pake-security-policy
       ilm_policy_override true
-      
+
       <buffer>
         @type file
         path /var/log/fluentd-buffers/elasticsearch-security
@@ -745,13 +745,13 @@ data:
       port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
       scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
       ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'false'}"
-      
+
       index_name pake-general-logs
       type_name _doc
-      
+
       ilm_policy_id pake-logs-policy
       ilm_policy_override true
-      
+
       <buffer>
         @type file
         path /var/log/fluentd-buffers/elasticsearch-general

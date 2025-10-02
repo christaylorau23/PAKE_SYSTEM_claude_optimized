@@ -847,7 +847,7 @@ Provide a JSON response with insights relevant to the task type.
    * Get default system prompt
    */
   private getDefaultSystemPrompt(): string {
-    return `You are an AI assistant specialized in analyzing content and providing structured insights. 
+    return `You are an AI assistant specialized in analyzing content and providing structured insights.
 
 Key principles:
 1. Always provide responses in the exact JSON format requested

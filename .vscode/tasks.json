@@ -114,7 +114,7 @@
     },
     {
       "label": "🔄 Reset: Full Environment",
-      "type": "npm", 
+      "type": "npm",
       "script": "reset",
       "group": "build",
       "presentation": {

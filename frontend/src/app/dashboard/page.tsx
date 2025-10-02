@@ -51,7 +51,7 @@ export default function DashboardPage() {
     bundleSize: null,
     interactionLatency: 0,
   };
-  
+
   const safeDevice = device || {
     connectionType: null,
     batteryLevel: null,
@@ -59,7 +59,7 @@ export default function DashboardPage() {
     screenHeight: 1080,
     platform: null,
   };
-  
+
   const safeErrors = errors || { errors: [] };
   const safeFeatures = features || {
     enableAdvancedAnalytics: true,

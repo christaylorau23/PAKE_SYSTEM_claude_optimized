@@ -1,6 +1,6 @@
 /**
  * PAKE System - APE (Automatic Prompt Experiments) Tests
- * 
+ *
  * Comprehensive test suite for A/B testing framework, prompt variants,
  * statistical analysis, and experiment lifecycle management.
  */
@@ -163,7 +163,7 @@ describe('APEEngine', () => {
       expect(variants).toHaveLength(4); // 3 + 1 control
       expect(variants.find(v => v.isControl)).toBeDefined();
       expect(variants.filter(v => !v.isControl)).toHaveLength(3);
-      
+
       // Check that variants are actually different
       const prompts = variants.map(v => v.prompt);
       const uniquePrompts = new Set(prompts);
@@ -178,22 +178,22 @@ describe('APEEngine', () => {
       );
 
       expect(variants).toHaveLength(3); // 2 + control
-      
+
       const nonControlVariants = variants.filter(v => !v.isControl);
       expect(nonControlVariants[0].name).toContain('temperature');
       expect(nonControlVariants[1].name).toContain('rephrase');
-      
+
       // Temperature variant should have different temperature
       const tempVariant = nonControlVariants.find(v => v.name.includes('temperature'));
       const controlVariant = variants.find(v => v.isControl);
-      
+
       expect(tempVariant?.parameters.temperature)
         .not.toBe(controlVariant?.parameters.temperature);
     });
 
     it('should handle empty or invalid base prompts', async () => {
       await expect(apeEngine.generateVariants('', 2)).resolves.toBeDefined();
-      
+
       const variants = await apeEngine.generateVariants('Very short', 1);
       expect(variants).toHaveLength(2); // 1 + control
     });
@@ -221,10 +221,10 @@ describe('APEEngine', () => {
 
     it('should start experiment successfully', async () => {
       await apeEngine.startExperiment(testExperiment.id);
-      
+
       const activeExperiments = apeEngine.getActiveExperiments();
       const startedExperiment = activeExperiments.find(e => e.id === testExperiment.id);
-      
+
       expect(startedExperiment).toBeDefined();
       expect(startedExperiment?.status).toBe(ExperimentStatus.RUNNING);
       expect(startedExperiment?.results.startTime).toBeDefined();
@@ -238,10 +238,10 @@ describe('APEEngine', () => {
 
     it('should evaluate prompts and record results', async () => {
       await apeEngine.startExperiment(testExperiment.id);
-      
+
       const input = 'Sample input for testing';
       const result = await apeEngine.evaluatePrompt(testExperiment.id, input);
-      
+
       expect(result).toBeDefined();
       expect(result.variantId).toBeDefined();
       expect(result.result).toBeDefined();
@@ -251,14 +251,14 @@ describe('APEEngine', () => {
 
     it('should stop experiment and analyze results', async () => {
       await apeEngine.startExperiment(testExperiment.id);
-      
+
       // Run some evaluations
       for (let i = 0; i < 10; i++) {
         await apeEngine.evaluatePrompt(testExperiment.id, `Test input ${i}`);
       }
-      
+
       const results = await apeEngine.stopExperiment(testExperiment.id, 'manual');
-      
+
       expect(results.status).toBe('completed');
       expect(results.endTime).toBeDefined();
       expect(results.totalSamples).toBeGreaterThan(0);
@@ -283,7 +283,7 @@ describe('APEEngine', () => {
           }
         }
       );
-      
+
       await apeEngine.startExperiment(testExperiment.id);
     });
 
@@ -299,11 +299,11 @@ describe('APEEngine', () => {
       await apeEngine.evaluatePrompt(testExperiment.id, 'test 3');
 
       const results = apeEngine.getExperimentResults(testExperiment.id);
-      
+
       expect(results).toBeDefined();
       expect(results?.totalSamples).toBe(3);
       expect(results?.variantMetrics.size).toBeGreaterThan(0);
-      
+
       // Check that metrics are being accumulated
       for (const [variantId, metrics] of results!.variantMetrics) {
         expect(metrics.sampleSize).toBeGreaterThan(0);
@@ -338,7 +338,7 @@ describe('APEEngine', () => {
       }
 
       const results = await apeEngine.stopExperiment(testExperiment.id);
-      
+
       expect(results.statisticalResults.significanceTest).toBeDefined();
       expect(results.statisticalResults.significanceTest.pValue).toBeGreaterThanOrEqual(0);
       expect(results.statisticalResults.significanceTest.pValue).toBeLessThanOrEqual(1);
@@ -394,7 +394,7 @@ describe('APEEngine', () => {
       const processingTime = Date.now() - startTime;
 
       expect(processingTime).toBeLessThan(10000); // Should complete within 10s
-      
+
       const results = apeEngine.getExperimentResults(experiment.id);
       expect(results?.totalSamples).toBe(20);
     });
@@ -411,7 +411,7 @@ describe('APEEngine', () => {
       await apeEngine.stopExperiment(experiment.id);
 
       const stats = apeEngine.getPerformanceStats();
-      
+
       expect(stats.totalExperiments).toBeGreaterThan(0);
       expect(stats.completedExperiments).toBeGreaterThan(0);
       expect(stats.averageSuccessRate).toBeGreaterThanOrEqual(0);
@@ -503,10 +503,10 @@ describe('APEEngine', () => {
       );
 
       await apeEngine.startExperiment(shortExperiment.id);
-      
+
       // Wait for duration to exceed
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Check if experiment auto-stops (implementation dependent)
       const results = apeEngine.getExperimentResults(shortExperiment.id);
       expect(results).toBeDefined();
@@ -534,7 +534,7 @@ describe('APEEngine', () => {
       expect(results).toHaveProperty('variantMetrics');
       expect(results).toHaveProperty('statisticalResults');
       expect(results).toHaveProperty('qualityMetrics');
-      
+
       expect(results.statisticalResults).toHaveProperty('significanceTest');
       expect(results.statisticalResults).toHaveProperty('recommendation');
     });
@@ -547,18 +547,18 @@ describe('APEEngine', () => {
       );
 
       await apeEngine.startExperiment(experiment.id);
-      
+
       // Run multiple evaluations
       const evaluationCount = 10;
       for (let i = 0; i < evaluationCount; i++) {
         await apeEngine.evaluatePrompt(experiment.id, `consistency test ${i}`);
       }
-      
+
       const results = apeEngine.getExperimentResults(experiment.id);
-      
+
       // Total samples should match evaluation count
       expect(results?.totalSamples).toBe(evaluationCount);
-      
+
       // Sum of variant samples should equal total samples
       const variantSampleSum = Array.from(results!.variantSamples.values())
         .reduce((sum, count) => sum + count, 0);
@@ -569,7 +569,7 @@ describe('APEEngine', () => {
 
 // Helper function to create deterministic test data
 function createTestPromptVariant(
-  id: string, 
+  id: string,
   overrides: Partial<Omit<PromptVariant, 'id'>> = {}
 ): Omit<PromptVariant, 'id'> {
   return {

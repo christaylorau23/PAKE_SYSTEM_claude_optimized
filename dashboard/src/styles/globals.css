@@ -66,19 +66,19 @@
   .status-indicator {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
-  
+
   .status-success {
     @apply bg-success-100 text-success-800;
   }
-  
+
   .status-warning {
     @apply bg-warning-100 text-warning-800;
   }
-  
+
   .status-danger {
     @apply bg-danger-100 text-danger-800;
   }
-  
+
   .status-info {
     @apply bg-primary-100 text-primary-800;
   }
@@ -88,7 +88,7 @@
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
+
   .text-shadow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }

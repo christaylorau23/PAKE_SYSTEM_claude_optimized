@@ -277,7 +277,7 @@ export class MultiModalPipelineIntegration extends EventEmitter {
     try {
       // Query graph for documents that need processing
       const query = `
-        MATCH (d:MultiModalDocument) 
+        MATCH (d:MultiModalDocument)
         WHERE d.graphProcessingStatus IS NULL OR d.graphProcessingStatus = 'pending'
         RETURN d
         LIMIT ${this.config.batchSize * 2}

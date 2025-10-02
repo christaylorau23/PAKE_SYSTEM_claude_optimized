@@ -478,7 +478,7 @@ spec:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
-      
+
       jaeger:
         protocols:
           grpc:
@@ -489,7 +489,7 @@ spec:
             endpoint: 0.0.0.0:6831
           thrift_binary:
             endpoint: 0.0.0.0:6832
-      
+
       zipkin:
         endpoint: 0.0.0.0:9411
 
@@ -498,13 +498,13 @@ spec:
       memory_limiter:
         check_interval: 1s
         limit_mib: 1024
-      
+
       # Batch processor for performance
       batch:
         send_batch_size: 1024
         timeout: 1s
         send_batch_max_size: 2048
-      
+
       # Resource processor to add metadata
       resource:
         attributes:
@@ -514,7 +514,7 @@ spec:
         - key: environment
           value: production
           action: insert
-      
+
       # Span processor for filtering
       span:
         name:
@@ -522,7 +522,7 @@ spec:
           include:
             match_type: regexp
             regexp: "pake-.*"
-      
+
       # Tail sampling for intelligent trace selection
       tail_sampling:
         decision_wait: 10s
@@ -548,13 +548,13 @@ spec:
         endpoint: jaeger-production-collector.observability.svc.cluster.local:14250
         tls:
           insecure: true
-      
+
       # Export metrics to Prometheus
       prometheus:
         endpoint: "0.0.0.0:8889"
         const_labels:
           cluster: pake-production
-      
+
       # Export to stdout for debugging
       logging:
         loglevel: warn
@@ -565,12 +565,12 @@ spec:
           receivers: [otlp, jaeger, zipkin]
           processors: [memory_limiter, resource, span, tail_sampling, batch]
           exporters: [jaeger]
-        
+
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
           exporters: [prometheus]
-      
+
       extensions: [health_check, pprof, zpages]
 
   # Pod template

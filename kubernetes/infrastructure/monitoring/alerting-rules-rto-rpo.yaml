@@ -337,7 +337,7 @@ spec:
         - alert: MTTRIncreasing
           expr: |
             (
-              rate(incident_resolution_duration_seconds[7d]) > 
+              rate(incident_resolution_duration_seconds[7d]) >
               rate(incident_resolution_duration_seconds[14d] offset 7d)
             )
           for: 30m
@@ -408,7 +408,7 @@ spec:
         - record: slo:rto_achievement_rate
           expr: |
             (
-              increase(failover_rto_success_total[30d]) / 
+              increase(failover_rto_success_total[30d]) /
               increase(failover_attempts_total[30d])
             )
           labels:
@@ -433,7 +433,7 @@ spec:
         - record: slo:rpo_achievement_rate
           expr: |
             (
-              increase(failover_rpo_success_total[30d]) / 
+              increase(failover_rpo_success_total[30d]) /
               increase(failover_attempts_total[30d])
             )
           labels:
@@ -467,7 +467,7 @@ spec:
           expr: |
             (
               1 - (
-                increase(failover_duration_seconds[30d]) / 
+                increase(failover_duration_seconds[30d]) /
                 increase(failover_attempts_total[30d]) / 900
               )
             ) * 100
@@ -478,7 +478,7 @@ spec:
         - record: slo:availability_error_budget_remaining
           expr: |
             (
-              (avg_over_time(up{job="pake-api"}[30d]) - 0.999) / 
+              (avg_over_time(up{job="pake-api"}[30d]) - 0.999) /
               (1 - 0.999)
             ) * 100
           labels:
@@ -488,7 +488,7 @@ spec:
         # MTTR Calculations
         - record: slo:mttr_7d
           expr: |
-            rate(incident_resolution_duration_seconds[7d]) / 
+            rate(incident_resolution_duration_seconds[7d]) /
             rate(incidents_total[7d])
           labels:
             slo: 'mttr'
@@ -496,7 +496,7 @@ spec:
 
         - record: slo:mttr_30d
           expr: |
-            rate(incident_resolution_duration_seconds[30d]) / 
+            rate(incident_resolution_duration_seconds[30d]) /
             rate(incidents_total[30d])
           labels:
             slo: 'mttr'

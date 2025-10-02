@@ -13,14 +13,14 @@ data:
     chaos:
       name: "dependency-failure"
       description: "Dependency failure chaos to test external service resilience"
-      
+
       # Experiment configuration
       experiment:
         duration: "10m"
         dry_run: false
         safety_checks: true
         auto_rollback: true
-        
+
       # Dependency failure scenarios
       scenarios:
         - name: "database-primary-failure"
@@ -35,7 +35,7 @@ data:
           fallback_verification:
             service: "pake-postgresql-replica-eu"
             expected_promotion: true
-            
+
         - name: "redis-cache-failure"
           description: "Simulate Redis cache complete failure"
           duration: "3m"
@@ -48,7 +48,7 @@ data:
           fallback_verification:
             degraded_mode: true
             cache_bypass_expected: true
-            
+
         - name: "vector-db-failure"
           description: "Simulate ChromaDB vector database failure"
           duration: "4m"
@@ -61,7 +61,7 @@ data:
           fallback_verification:
             fallback_search: true
             degraded_accuracy: true
-            
+
         - name: "external-api-failure"
           description: "Simulate external API dependency failure"
           duration: "6m"
@@ -76,7 +76,7 @@ data:
           fallback_verification:
             local_model_fallback: true
             response_quality_degradation: acceptable
-            
+
         - name: "s3-storage-failure"
           description: "Simulate S3 storage service failure"
           duration: "4m"
@@ -90,7 +90,7 @@ data:
           fallback_verification:
             local_cache_usage: true
             delayed_upload_queue: true
-            
+
       # Safety constraints
       safety:
         # Protected services that should never be failed
@@ -99,29 +99,29 @@ data:
           - "kube-system/kube-apiserver"
           - "monitoring/prometheus"
           - "monitoring/grafana"
-          
+
         # Pre-experiment health checks
         health_checks:
           - name: "api-health"
             url: "http://pake-api.pake-api.svc.cluster.local:8080/health"
             timeout: 10
-            
+
           - name: "ai-health"
             url: "http://pake-ai.pake-ai.svc.cluster.local:8080/health"
             timeout: 10
-            
+
           - name: "database-primary-health"
             url: "http://pake-postgresql-primary.database.svc.cluster.local:5432"
             timeout: 5
             type: "tcp"
-            
+
         # Success criteria during dependency failure
         success_criteria:
           max_error_rate: 25.0       # 25% error rate acceptable during dependency failure
           max_response_time: 10000   # 10s response time during dependency failure
           min_availability: 75.0     # 75% availability during dependency failure
           fallback_activation_time: 30  # 30s max time to activate fallbacks
-          
+
       # Monitoring configuration
       monitoring:
         metrics_interval: 15
@@ -129,14 +129,14 @@ data:
           experiment: "dependency-failure"
           environment: "production"
           team: "platform"
-          
+
   dependency-failure.py: |
     #!/usr/bin/env python3
     """
     Dependency Failure Chaos Experiment
     Simulates external dependency failures to test system resilience
     """
-    
+
     import asyncio
     import json
     import logging
@@ -148,79 +148,79 @@ data:
     from kubernetes.client.rest import ApiException
     import aiohttp
     import requests
-    
+
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(__name__)
-    
+
     class DependencyFailureChaosExperiment:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['chaos']
-            
+
             # Initialize Kubernetes client
             try:
                 config.load_incluster_config()
             except:
                 config.load_kube_config()
-            
+
             self.k8s_client = client.CoreV1Api()
             self.apps_client = client.AppsV1Api()
             self.networking_client = client.NetworkingV1Api()
-            
+
             # Experiment state
             self.experiment_id = f"dependency-failure-{int(time.time())}"
             self.start_time = None
             self.active_failures = []
             self.baseline_metrics = {}
             self.session = None
-            
+
         async def start(self):
             """Initialize the experiment"""
             self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
             logger.info(f"Starting dependency failure experiment: {self.experiment_id}")
-            
+
         async def stop(self):
             """Cleanup resources"""
             if self.session:
                 await self.session.close()
-                
+
         def emit_metric(self, metric_name, value, labels=None):
             """Emit metric to Prometheus pushgateway"""
             try:
                 if labels is None:
                     labels = {}
-                    
+
                 labels.update({
                     'experiment_id': self.experiment_id,
                     'experiment_type': 'dependency-failure',
                     **self.config['monitoring']['trace_tags']
                 })
-                
+
                 label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
                 metric_data = f"{metric_name}{{{label_str}}} {value}"
-                
+
                 response = requests.post(
                     "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/chaos-engineering/instance/dependency-failure",
                     data=metric_data,
                     headers={'Content-Type': 'text/plain'},
                     timeout=10
                 )
-                
+
                 if response.status_code != 200:
                     logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
-                    
+
             except Exception as e:
                 logger.error(f"Error emitting metric {metric_name}: {e}")
-                
+
         async def perform_health_check(self, check_config):
             """Perform health check on a service"""
             try:
                 start_time = time.time()
-                
+
                 if check_config.get('type') == 'tcp':
                     # TCP connection check
                     import socket
@@ -229,38 +229,38 @@ data:
                     sock.settimeout(check_config.get('timeout', 10))
                     result = sock.connect_ex((host, int(port)))
                     sock.close()
-                    
+
                     response_time = (time.time() - start_time) * 1000
                     return result == 0, response_time
                 else:
                     # HTTP health check
                     async with self.session.get(check_config['url']) as response:
                         response_time = (time.time() - start_time) * 1000
-                        
+
                         if response.status == 200:
                             return True, response_time
                         else:
                             logger.warning(f"Health check failed for {check_config['name']}: HTTP {response.status}")
                             return False, response_time
-                        
+
             except asyncio.TimeoutError:
                 logger.warning(f"Health check timeout for {check_config['name']}")
                 return False, check_config.get('timeout', 10) * 1000
             except Exception as e:
                 logger.error(f"Health check error for {check_config['name']}: {e}")
                 return False, 0
-                
+
         async def collect_baseline_metrics(self):
             """Collect baseline dependency metrics"""
             logger.info("Collecting baseline dependency metrics...")
-            
+
             baseline = {
                 'timestamp': datetime.utcnow().isoformat(),
                 'health_checks': {},
                 'service_endpoints': {},
                 'dependency_status': {}
             }
-            
+
             # Perform health checks
             for check in self.config['safety']['health_checks']:
                 healthy, response_time = await self.perform_health_check(check)
@@ -268,42 +268,42 @@ data:
                     'healthy': healthy,
                     'response_time': response_time
                 }
-                
+
                 self.emit_metric(
                     'chaos_baseline_dependency_health_status',
                     1 if healthy else 0,
                     {'service': check['name']}
                 )
-                
+
                 self.emit_metric(
                     'chaos_baseline_dependency_response_time_ms',
                     response_time,
                     {'service': check['name']}
                 )
-            
+
             # Check service endpoints for Kubernetes services
             try:
                 for scenario in self.config['scenarios']:
                     target = scenario['target']
-                    
+
                     if target['type'] == 'kubernetes_service':
                         # Get service and endpoint information
                         service = self.k8s_client.read_namespaced_service(
                             name=target['service'],
                             namespace=target['namespace']
                         )
-                        
+
                         endpoints = self.k8s_client.read_namespaced_endpoints(
                             name=target['service'],
                             namespace=target['namespace']
                         )
-                        
+
                         endpoint_count = 0
                         if endpoints.subsets:
                             for subset in endpoints.subsets:
                                 if subset.addresses:
                                     endpoint_count += len(subset.addresses)
-                        
+
                         service_key = f"{target['namespace']}/{target['service']}"
                         baseline['service_endpoints'][service_key] = {
                             'cluster_ip': service.spec.cluster_ip,
@@ -311,7 +311,7 @@ data:
                             'endpoint_count': endpoint_count,
                             'type': service.spec.type
                         }
-                        
+
                         self.emit_metric(
                             'chaos_baseline_service_endpoints',
                             endpoint_count,
@@ -320,28 +320,28 @@ data:
                                 'service': target['service']
                             }
                         )
-                        
+
             except Exception as e:
                 logger.error(f"Error collecting service endpoint metrics: {e}")
-            
+
             self.baseline_metrics = baseline
             logger.info(f"Baseline dependency metrics collected")
             return baseline
-            
+
         def create_service_failure_policy(self, scenario):
             """Create network policy to block access to a Kubernetes service"""
             target = scenario['target']
             policy_name = f"chaos-block-{target['service']}-{self.experiment_id[:8]}"
-            
+
             # Get service to determine selectors
             try:
                 service = self.k8s_client.read_namespaced_service(
                     name=target['service'],
                     namespace=target['namespace']
                 )
-                
+
                 service_selector = service.spec.selector or {}
-                
+
                 # Create network policy to block access to service
                 network_policy = client.V1NetworkPolicy(
                     api_version="networking.k8s.io/v1",
@@ -363,18 +363,18 @@ data:
                         ingress=[]  # Empty list denies all ingress traffic
                     )
                 )
-                
+
                 return network_policy
-                
+
             except Exception as e:
                 logger.error(f"Error creating service failure policy for {target['service']}: {e}")
                 return None
-                
+
         def create_fault_injection_pod(self, scenario):
             """Create fault injection pod for external dependencies"""
             target = scenario['target']
             pod_name = f"chaos-fault-injector-{scenario['name']}-{self.experiment_id[:8]}"
-            
+
             # Create fault injection script based on failure type
             if scenario['failure_type'] == 'http_error_injection':
                 # Use a proxy to inject HTTP errors
@@ -387,10 +387,10 @@ import json
 class FaultInjectionHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_error(503, "Service Unavailable")
-    
+
     def do_POST(self):
         self.send_error(503, "Service Unavailable")
-    
+
     def do_PUT(self):
         self.send_error(503, "Service Unavailable")
 
@@ -420,7 +420,7 @@ duration = {self._parse_duration(scenario['duration'])}
 time.sleep(duration)
 print("Fault injection completed")
 """
-            
+
             fault_pod = client.V1Pod(
                 api_version="v1",
                 kind="Pod",
@@ -461,14 +461,14 @@ print("Fault injection completed")
                     ]
                 )
             )
-            
+
             return fault_pod
-            
+
         async def create_dependency_failure(self, scenario):
             """Create dependency failure for a scenario"""
             try:
                 logger.info(f"Creating dependency failure for scenario: {scenario['name']}")
-                
+
                 failure_record = {
                     'scenario': scenario['name'],
                     'failure_type': scenario['failure_type'],
@@ -477,7 +477,7 @@ print("Fault injection completed")
                     'duration': scenario['duration'],
                     'artifacts_created': []
                 }
-                
+
                 if scenario['target']['type'] == 'kubernetes_service':
                     # Create network policy to block service access
                     policy = self.create_service_failure_policy(scenario)
@@ -486,15 +486,15 @@ print("Fault injection completed")
                             namespace=scenario['target']['namespace'],
                             body=policy
                         )
-                        
+
                         failure_record['artifacts_created'].append({
                             'type': 'network_policy',
                             'name': created_policy.metadata.name,
                             'namespace': created_policy.metadata.namespace
                         })
-                        
+
                         logger.info(f"Created network policy to block service: {scenario['target']['service']}")
-                
+
                 elif scenario['target']['type'] in ['external_endpoint', 'external_service']:
                     # Create fault injection pod
                     fault_pod = self.create_fault_injection_pod(scenario)
@@ -503,17 +503,17 @@ print("Fault injection completed")
                             namespace="chaos-testing",
                             body=fault_pod
                         )
-                        
+
                         failure_record['artifacts_created'].append({
                             'type': 'fault_injection_pod',
                             'name': created_pod.metadata.name,
                             'namespace': created_pod.metadata.namespace
                         })
-                        
+
                         logger.info(f"Created fault injection pod: {created_pod.metadata.name}")
-                
+
                 self.active_failures.append(failure_record)
-                
+
                 # Emit metrics
                 self.emit_metric(
                     'chaos_dependency_failures_created_total',
@@ -524,9 +524,9 @@ print("Fault injection completed")
                         'target_type': scenario['target']['type']
                     }
                 )
-                
+
                 return failure_record
-                
+
             except ApiException as e:
                 logger.error(f"Kubernetes API error creating failure {scenario['name']}: {e}")
                 self.emit_metric('chaos_dependency_failure_creation_failures_total', 1, {'scenario': scenario['name']})
@@ -535,24 +535,24 @@ print("Fault injection completed")
                 logger.error(f"Error creating failure {scenario['name']}: {e}")
                 self.emit_metric('chaos_dependency_failure_creation_failures_total', 1, {'scenario': scenario['name']})
                 return None
-                
+
         async def verify_fallback_behavior(self, scenario, failure_record):
             """Verify that fallback mechanisms are working"""
             try:
                 logger.info(f"Verifying fallback behavior for scenario: {scenario['name']}")
-                
+
                 fallback_config = scenario.get('fallback_verification', {})
                 verification_results = {
                     'scenario': scenario['name'],
                     'timestamp': datetime.utcnow().isoformat(),
                     'checks': {}
                 }
-                
+
                 # Wait for fallback activation
                 fallback_activation_time = self.config['safety']['success_criteria'].get('fallback_activation_time', 30)
                 logger.info(f"Waiting {fallback_activation_time}s for fallback activation...")
                 await asyncio.sleep(fallback_activation_time)
-                
+
                 # Verify specific fallback behaviors
                 if fallback_config.get('expected_promotion'):
                     # Check if replica was promoted to primary
@@ -564,19 +564,19 @@ print("Fault injection completed")
                                 name=service.split('/')[-1],
                                 namespace=service.split('/')[0] if '/' in service else 'database'
                             )
-                            
+
                             endpoint_count = 0
                             if endpoints.subsets:
                                 for subset in endpoints.subsets:
                                     if subset.addresses:
                                         endpoint_count += len(subset.addresses)
-                            
+
                             verification_results['checks']['replica_promotion'] = {
                                 'expected': True,
                                 'verified': endpoint_count > 0,
                                 'endpoint_count': endpoint_count
                             }
-                            
+
                     except Exception as e:
                         logger.error(f"Error verifying replica promotion: {e}")
                         verification_results['checks']['replica_promotion'] = {
@@ -584,11 +584,11 @@ print("Fault injection completed")
                             'verified': False,
                             'error': str(e)
                         }
-                
+
                 if fallback_config.get('degraded_mode'):
                     # Verify service is running in degraded mode
                     degraded_mode_checks = []
-                    
+
                     for check in self.config['safety']['health_checks']:
                         healthy, response_time = await self.perform_health_check(check)
                         degraded_mode_checks.append({
@@ -596,23 +596,23 @@ print("Fault injection completed")
                             'healthy': healthy,
                             'response_time': response_time
                         })
-                    
+
                     verification_results['checks']['degraded_mode'] = degraded_mode_checks
-                
+
                 if fallback_config.get('cache_bypass_expected'):
                     # Check if cache bypass is working (would need specific metrics)
                     verification_results['checks']['cache_bypass'] = {
                         'expected': True,
                         'note': 'Cache bypass verification requires application-specific metrics'
                     }
-                
+
                 if fallback_config.get('local_model_fallback'):
                     # Check if local model fallback is activated
                     verification_results['checks']['local_model_fallback'] = {
                         'expected': True,
                         'note': 'Local model fallback verification requires AI service metrics'
                     }
-                
+
                 # Emit fallback verification metrics
                 for check_name, check_result in verification_results['checks'].items():
                     verified = check_result.get('verified', True)  # Default to True for notes
@@ -624,10 +624,10 @@ print("Fault injection completed")
                             'check_type': check_name
                         }
                     )
-                
+
                 logger.info(f"Fallback verification completed for {scenario['name']}: {verification_results}")
                 return verification_results
-                
+
             except Exception as e:
                 logger.error(f"Error verifying fallback behavior for {scenario['name']}: {e}")
                 return {
@@ -635,51 +635,51 @@ print("Fault injection completed")
                     'error': str(e),
                     'timestamp': datetime.utcnow().isoformat()
                 }
-                
+
         async def monitor_dependency_impact(self, duration_seconds):
             """Monitor system behavior during dependency failures"""
             logger.info(f"Monitoring dependency failure impact for {duration_seconds} seconds...")
-            
+
             start_time = time.time()
-            
+
             while time.time() - start_time < duration_seconds:
                 try:
                     # Check health endpoints
                     for check in self.config['safety']['health_checks']:
                         healthy, response_time = await self.perform_health_check(check)
-                        
+
                         self.emit_metric(
                             'chaos_dependency_failure_health_status',
                             1 if healthy else 0,
                             {'service': check['name']}
                         )
-                        
+
                         self.emit_metric(
                             'chaos_dependency_failure_response_time_ms',
                             response_time,
                             {'service': check['name']}
                         )
-                        
+
                         # Check against success criteria
                         max_response_time = self.config['safety']['success_criteria']['max_response_time']
                         if response_time > max_response_time:
                             logger.warning(f"Response time {response_time}ms exceeds threshold {max_response_time}ms for {check['name']}")
-                    
+
                     # Wait before next check
                     await asyncio.sleep(self.config['monitoring']['metrics_interval'])
-                    
+
                 except Exception as e:
                     logger.error(f"Error during dependency failure monitoring: {e}")
                     await asyncio.sleep(10)
-            
+
             logger.info("Dependency failure impact monitoring completed")
-            
+
         async def cleanup_dependency_failures(self):
             """Remove all dependency failure artifacts"""
             logger.info("Cleaning up dependency failure artifacts...")
-            
+
             cleanup_success = True
-            
+
             for failure_record in self.active_failures:
                 for artifact in failure_record['artifacts_created']:
                     try:
@@ -689,7 +689,7 @@ print("Fault injection completed")
                                 namespace=artifact['namespace']
                             )
                             logger.info(f"Deleted network policy: {artifact['name']}")
-                            
+
                         elif artifact['type'] == 'fault_injection_pod':
                             self.k8s_client.delete_namespaced_pod(
                                 name=artifact['name'],
@@ -697,7 +697,7 @@ print("Fault injection completed")
                                 grace_period_seconds=0
                             )
                             logger.info(f"Deleted fault injection pod: {artifact['name']}")
-                            
+
                     except ApiException as e:
                         if e.status == 404:
                             logger.info(f"Artifact {artifact['name']} already deleted")
@@ -707,13 +707,13 @@ print("Fault injection completed")
                     except Exception as e:
                         logger.error(f"Error deleting artifact {artifact['name']}: {e}")
                         cleanup_success = False
-                
+
                 failure_record['end_time'] = datetime.utcnow().isoformat()
                 failure_record['status'] = 'cleaned_up'
-            
+
             self.emit_metric('chaos_dependency_failure_cleanup_status', 1 if cleanup_success else 0)
             return cleanup_success
-            
+
         def _parse_duration(self, duration_str):
             """Parse duration string like '5m' to seconds"""
             if duration_str.endswith('s'):
@@ -724,23 +724,23 @@ print("Fault injection completed")
                 return int(duration_str[:-1]) * 3600
             else:
                 return int(duration_str)  # Assume seconds
-                
+
         async def run_experiment(self):
             """Run the complete dependency failure experiment"""
             try:
                 await self.start()
                 self.start_time = datetime.utcnow()
-                
+
                 logger.info(f"Starting dependency failure experiment: {self.config['name']}")
                 logger.info(f"Description: {self.config['description']}")
-                
+
                 # Emit experiment start metrics
                 self.emit_metric('chaos_experiment_start_timestamp', int(time.time()))
                 self.emit_metric('chaos_experiment_status', 1, {'status': 'running'})
-                
+
                 # Collect baseline metrics
                 baseline = await self.collect_baseline_metrics()
-                
+
                 # Perform safety checks
                 if self.config['experiment']['safety_checks']:
                     all_healthy = all(check['healthy'] for check in baseline['health_checks'].values())
@@ -748,54 +748,54 @@ print("Fault injection completed")
                         logger.error("Pre-experiment health checks failed. Aborting experiment.")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'aborted', 'reason': 'health_check_failed'})
                         return False
-                
+
                 # Execute dependency failures if not dry run
                 if not self.config['experiment']['dry_run']:
                     failures_created = 0
                     fallback_verifications = []
-                    
+
                     for scenario in self.config['scenarios']:
                         failure = await self.create_dependency_failure(scenario)
                         if failure:
                             failures_created += 1
-                            
+
                             # Verify fallback behavior after brief delay
                             await asyncio.sleep(10)
                             verification = await self.verify_fallback_behavior(scenario, failure)
                             fallback_verifications.append(verification)
-                        
+
                         # Brief delay between failures
                         await asyncio.sleep(5)
-                    
+
                     if failures_created == 0:
                         logger.warning("No dependency failures were created. Experiment may be misconfigured.")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'no_failures_created'})
                         return False
-                    
+
                     # Monitor impact during failures
                     max_duration = max(
-                        self._parse_duration(scenario.get('duration', '5m')) 
+                        self._parse_duration(scenario.get('duration', '5m'))
                         for scenario in self.config['scenarios']
                     )
-                    
+
                     await self.monitor_dependency_impact(max_duration)
-                    
+
                     # Cleanup failures (auto-rollback)
                     cleanup_success = await self.cleanup_dependency_failures()
-                    
+
                     if not cleanup_success:
                         logger.error("Failed to cleanup all dependency failures")
                         self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'cleanup_failed'})
                         return False
-                        
+
                 else:
                     logger.info("DRY RUN: Would have created dependency failures but dry_run=true")
                     self.emit_metric('chaos_experiment_status', 1, {'status': 'dry_run'})
-                
+
                 # Wait for system to stabilize
                 logger.info("Waiting for system stabilization...")
                 await asyncio.sleep(60)
-                
+
                 # Verify system recovery
                 post_experiment_healthy = True
                 for check in self.config['safety']['health_checks']:
@@ -803,19 +803,19 @@ print("Fault injection completed")
                     if not healthy and check.get('type') != 'tcp':  # Skip TCP checks for failed services
                         post_experiment_healthy = False
                         logger.warning(f"Service {check['name']} not healthy after experiment")
-                
+
                 if not post_experiment_healthy:
                     logger.error("System not fully healthy after experiment")
                     self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'post_experiment_unhealthy'})
                     return False
-                
+
                 # Mark experiment as successful
                 experiment_duration = (datetime.utcnow() - self.start_time).total_seconds()
                 self.emit_metric('chaos_experiment_duration_seconds', experiment_duration)
                 self.emit_metric('chaos_experiment_status', 1, {'status': 'completed'})
-                
+
                 logger.info(f"Dependency failure experiment completed successfully in {experiment_duration:.2f} seconds")
-                
+
                 # Generate experiment report
                 report = {
                     'experiment_id': self.experiment_id,
@@ -826,34 +826,34 @@ print("Fault injection completed")
                     'fallback_verifications': fallback_verifications if not self.config['experiment']['dry_run'] else [],
                     'status': 'success'
                 }
-                
+
                 logger.info(f"Experiment report: {json.dumps(report, indent=2)}")
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Dependency failure experiment failed: {e}")
                 self.emit_metric('chaos_experiment_status', 0, {'status': 'failed', 'reason': 'exception'})
-                
+
                 # Attempt cleanup on failure
                 try:
                     await self.cleanup_dependency_failures()
                 except:
                     pass
-                    
+
                 return False
-                
+
             finally:
                 await self.stop()
-    
+
     async def main():
         config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
         experiment = DependencyFailureChaosExperiment(config_path)
-        
+
         success = await experiment.run_experiment()
-        
+
         if not success:
             exit(1)
-    
+
     if __name__ == "__main__":
         asyncio.run(main())
 
@@ -956,7 +956,7 @@ spec:
         - -c
         - |
           pip install --no-cache-dir kubernetes pyyaml aiohttp requests
-          
+
           # Create comprehensive annual test config
           cat > /tmp/annual-config.yaml << 'EOF'
           chaos:
@@ -1058,7 +1058,7 @@ spec:
                 team: "platform"
                 schedule: "annual"
           EOF
-          
+
           export CONFIG_PATH="/tmp/annual-config.yaml"
           exec python /scripts/dependency-failure.py
         env:

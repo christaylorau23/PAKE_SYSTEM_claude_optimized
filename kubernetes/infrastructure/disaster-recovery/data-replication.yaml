@@ -336,7 +336,7 @@ spec:
                   -U replicator \
                   -v -P -W -R \
                   -S pake_replica_1_slot
-                
+
                 # Configure replica
                 cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
                 cp /etc/postgresql/recovery.conf /var/lib/postgresql/data/recovery.conf
@@ -715,14 +715,14 @@ data:
             self.primary_url = primary_url
             self.replica_urls = replica_urls
             self.session = None
-            
+
         async def start(self):
             self.session = aiohttp.ClientSession()
-            
+
         async def stop(self):
             if self.session:
                 await self.session.close()
-                
+
         async def get_collections(self, base_url):
             """Get list of collections from ChromaDB instance"""
             try:
@@ -735,16 +735,16 @@ data:
             except Exception as e:
                 logger.error(f"Error getting collections from {base_url}: {e}")
                 return []
-                
+
         async def get_collection_data(self, base_url, collection_name):
             """Get all data from a collection"""
             try:
                 async with self.session.get(f"{base_url}/api/v1/collections/{collection_name}") as response:
                     if response.status == 200:
                         collection_info = await response.json()
-                        
+
                         # Get all vectors from collection
-                        async with self.session.post(f"{base_url}/api/v1/collections/{collection_name}/query", 
+                        async with self.session.post(f"{base_url}/api/v1/collections/{collection_name}/query",
                                                    json={"query_texts": [""], "n_results": 100000}) as query_response:
                             if query_response.status == 200:
                                 query_data = await query_response.json()
@@ -755,48 +755,48 @@ data:
             except Exception as e:
                 logger.error(f"Error getting collection data from {base_url}/{collection_name}: {e}")
                 return None
-                
+
         async def create_collection(self, base_url, collection_name, metadata=None):
             """Create a collection in ChromaDB"""
             try:
                 payload = {"name": collection_name}
                 if metadata:
                     payload["metadata"] = metadata
-                    
+
                 async with self.session.post(f"{base_url}/api/v1/collections", json=payload) as response:
                     return response.status == 200
             except Exception as e:
                 logger.error(f"Error creating collection {collection_name} in {base_url}: {e}")
                 return False
-                
+
         async def sync_collection(self, collection_name):
             """Sync a collection from primary to all replicas"""
             logger.info(f"Syncing collection: {collection_name}")
-            
+
             # Get data from primary
             primary_data = await self.get_collection_data(self.primary_url, collection_name)
             if not primary_data:
                 logger.error(f"Failed to get data for collection {collection_name} from primary")
                 return False
-                
+
             # Sync to each replica
             for replica_url in self.replica_urls:
                 try:
                     # Check if collection exists in replica
                     replica_collections = await self.get_collections(replica_url)
                     collection_exists = any(c["name"] == collection_name for c in replica_collections)
-                    
+
                     if not collection_exists:
                         # Create collection
                         success = await self.create_collection(
-                            replica_url, 
-                            collection_name, 
+                            replica_url,
+                            collection_name,
                             primary_data["info"].get("metadata")
                         )
                         if not success:
                             logger.error(f"Failed to create collection {collection_name} in {replica_url}")
                             continue
-                    
+
                     # Sync data (simplified - in production, implement differential sync)
                     if primary_data["data"].get("ids"):
                         async with self.session.post(
@@ -812,28 +812,28 @@ data:
                                 logger.info(f"Successfully synced {collection_name} to {replica_url}")
                             else:
                                 logger.error(f"Failed to sync {collection_name} to {replica_url}: {response.status}")
-                                
+
                 except Exception as e:
                     logger.error(f"Error syncing {collection_name} to {replica_url}: {e}")
-                    
+
         async def sync_all_collections(self):
             """Sync all collections from primary to replicas"""
             collections = await self.get_collections(self.primary_url)
-            
+
             for collection in collections:
                 await self.sync_collection(collection["name"])
-                
+
         async def health_check(self):
             """Check health of all ChromaDB instances"""
             results = {}
-            
+
             # Check primary
             try:
                 async with self.session.get(f"{self.primary_url}/api/v1/heartbeat") as response:
                     results["primary"] = response.status == 200
             except:
                 results["primary"] = False
-                
+
             # Check replicas
             for i, replica_url in enumerate(self.replica_urls):
                 try:
@@ -841,39 +841,39 @@ data:
                         results[f"replica_{i}"] = response.status == 200
                 except:
                     results[f"replica_{i}"] = False
-                    
+
             return results
-            
+
     async def main():
         primary_url = os.getenv("CHROMADB_PRIMARY_URL", "http://chromadb-primary.database.svc.cluster.local:8000")
         replica_urls = [
             os.getenv("CHROMADB_REPLICA_EU_URL", "http://chromadb-replica-eu.database.svc.cluster.local:8000"),
             os.getenv("CHROMADB_REPLICA_AP_URL", "http://chromadb-replica-ap.database.svc.cluster.local:8000")
         ]
-        
+
         replicator = ChromaDBReplicator(primary_url, replica_urls)
         await replicator.start()
-        
+
         try:
             # Run continuous sync
             while True:
                 logger.info("Starting ChromaDB replication cycle")
-                
+
                 # Health check
                 health = await replicator.health_check()
                 logger.info(f"Health status: {health}")
-                
+
                 # Sync collections
                 await replicator.sync_all_collections()
-                
+
                 logger.info("ChromaDB replication cycle completed")
                 await asyncio.sleep(300)  # 5 minutes
-                
+
         except KeyboardInterrupt:
             logger.info("Shutting down ChromaDB replicator")
         finally:
             await replicator.stop()
-            
+
     if __name__ == "__main__":
         asyncio.run(main())
 
@@ -1041,21 +1041,21 @@ data:
     class ReplicationMonitor:
         def __init__(self):
             self.session = None
-            
+
         async def start(self):
             self.session = aiohttp.ClientSession()
-            
+
             # Start monitoring tasks
             asyncio.create_task(self.monitor_postgres_replication())
             asyncio.create_task(self.monitor_redis_replication())
             asyncio.create_task(self.monitor_chromadb_sync())
-            
+
             # Start metrics server
             start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
-            
+
             # Start API server
             await self.start_api_server()
-            
+
         async def monitor_postgres_replication(self):
             """Monitor PostgreSQL replication lag"""
             while True:
@@ -1067,7 +1067,7 @@ data:
                         REDACTED_SECRET=os.getenv('POSTGRES_PASSWORD'),
                         database='postgres'
                     )
-                    
+
                     # Connect to replica
                     replica_conn = psycopg2.connect(
                         host=os.getenv('POSTGRES_REPLICA_HOST'),
@@ -1075,106 +1075,106 @@ data:
                         REDACTED_SECRET=os.getenv('POSTGRES_PASSWORD'),
                         database='postgres'
                     )
-                    
+
                     # Get primary LSN
                     primary_cur = primary_conn.cursor()
                     primary_cur.execute("SELECT pg_current_wal_lsn()")
                     primary_lsn = primary_cur.fetchone()[0]
-                    
+
                     # Get replica replay LSN
                     replica_cur = replica_conn.cursor()
                     replica_cur.execute("SELECT pg_last_wal_replay_lsn()")
                     replica_lsn = replica_cur.fetchone()[0]
-                    
+
                     # Calculate lag
                     primary_cur.execute(f"SELECT EXTRACT(EPOCH FROM ('{primary_lsn}'::pg_lsn - '{replica_lsn}'::pg_lsn) / 1024 / 1024)")
                     lag_mb = primary_cur.fetchone()[0] or 0
-                    
+
                     # Estimate lag in seconds (rough approximation)
                     lag_seconds = lag_mb * 0.1  # Assume 10MB/s average write rate
-                    
+
                     postgres_replication_lag.labels(replica='eu-west-1').set(lag_seconds)
-                    
+
                     primary_conn.close()
                     replica_conn.close()
-                    
+
                     await asyncio.sleep(30)
-                    
+
                 except Exception as e:
                     logger.error(f"Error monitoring PostgreSQL replication: {e}")
                     replication_errors.labels(service='postgresql', type='monitoring').inc()
                     await asyncio.sleep(60)
-                    
+
         async def monitor_redis_replication(self):
             """Monitor Redis replication through Sentinel"""
             while True:
                 try:
                     sentinel_hosts = os.getenv('REDIS_SENTINEL_HOSTS', '').split(',')
-                    
+
                     for sentinel_host in sentinel_hosts:
                         host, port = sentinel_host.split(':')
                         r = redis.Redis(host=host, port=int(port), decode_responses=True)
-                        
+
                         # Get master info
                         master_info = r.sentinel_masters()
                         if 'pake-redis-master' in master_info:
                             master = master_info['pake-redis-master']
-                            
+
                             # Get replica info
                             replicas = r.sentinel_slaves('pake-redis-master')
-                            
+
                             for replica in replicas:
                                 lag = int(replica.get('master-lag', 0))
                                 redis_replication_lag.labels(replica=replica['name']).set(lag)
-                        
+
                         break  # Use first working sentinel
-                        
+
                     await asyncio.sleep(30)
-                    
+
                 except Exception as e:
                     logger.error(f"Error monitoring Redis replication: {e}")
                     replication_errors.labels(service='redis', type='monitoring').inc()
                     await asyncio.sleep(60)
-                    
+
         async def monitor_chromadb_sync(self):
             """Monitor ChromaDB sync status"""
             while True:
                 try:
                     primary_url = os.getenv('CHROMADB_PRIMARY_URL')
-                    
+
                     # Get collections from primary
                     async with self.session.get(f"{primary_url}/api/v1/collections") as response:
                         if response.status == 200:
                             collections = await response.json()
-                            
+
                             # For each collection, check last sync time
                             # (This is simplified - would need to track sync timestamps)
                             chromadb_sync_lag.labels(replica='eu-west-1').set(0)
                             chromadb_sync_lag.labels(replica='ap-southeast-1').set(0)
-                            
+
                     await asyncio.sleep(60)
-                    
+
                 except Exception as e:
                     logger.error(f"Error monitoring ChromaDB sync: {e}")
                     replication_errors.labels(service='chromadb', type='monitoring').inc()
                     await asyncio.sleep(120)
-                    
+
         async def start_api_server(self):
             """Start API server for replication status"""
             app = web.Application()
-            
+
             app.router.add_get('/health', self.handle_health)
             app.router.add_get('/status', self.handle_status)
-            
+
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, '0.0.0.0', 8090)
             await site.start()
             logger.info("Replication monitor API started on port 8090")
-            
+
         async def handle_health(self, request):
             return web.json_response({'status': 'healthy'})
-            
+
         async def handle_status(self, request):
             return web.json_response({
                 'postgres_replication': 'monitoring',
@@ -1185,7 +1185,7 @@ data:
     async def main():
         monitor = ReplicationMonitor()
         await monitor.start()
-        
+
         # Keep running
         try:
             await asyncio.Future()

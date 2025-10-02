@@ -9,7 +9,7 @@ app:
   version: "1.0.0"
   debug: false
   log_level: "INFO"
-  
+
 # ============================================================================
 # API CONFIGURATION
 # ============================================================================
@@ -43,25 +43,25 @@ elasticsearch:
 # ============================================================================
 ai:
   provider: "mock"  # Options: mock, openai, anthropic, local
-  
+
   # OpenAI Configuration
   openai:
     model: "gpt-3.5-turbo"
     temperature: 0.1
     max_tokens: 1000
     timeout: 30
-  
+
   # Anthropic Configuration
   anthropic:
     model: "claude-3-haiku-20240307"
     max_tokens: 1000
     timeout: 30
-  
+
   # Local LLM Configuration (if using local models)
   local:
     model_path: "/app/models/security-model"
     device: "cpu"  # or "cuda" if GPU available
-    
+
   # Analysis settings
   analysis:
     confidence_threshold: 0.3
@@ -85,7 +85,7 @@ security_patterns:
     severity: "MEDIUM"
     threshold_count: 5  # Alert after 5 failures
     time_window: 300    # within 5 minutes
-  
+
   # SQL injection detection
   sql_injection:
     enabled: true
@@ -98,7 +98,7 @@ security_patterns:
     severity: "CRITICAL"
     threshold_count: 1  # Alert on first occurrence
     time_window: 60
-  
+
   # Slow query detection
   slow_query:
     enabled: true
@@ -111,7 +111,7 @@ security_patterns:
     threshold_ms: 1000  # Alert on queries >1 second
     threshold_count: 3
     time_window: 300
-  
+
   # XSS attempt detection
   xss_attempt:
     enabled: true
@@ -124,7 +124,7 @@ security_patterns:
     severity: "HIGH"
     threshold_count: 1
     time_window: 60
-  
+
   # Path traversal detection
   path_traversal:
     enabled: true
@@ -137,14 +137,14 @@ security_patterns:
     severity: "CRITICAL"
     threshold_count: 1
     time_window: 60
-  
+
   # Rate limiting violations
   rate_limiting:
     enabled: true
     max_requests_per_ip: 100
     time_window: 300  # 5 minutes
     severity: "HIGH"
-    
+
   # Suspicious user agents
   suspicious_user_agents:
     enabled: true
@@ -167,14 +167,14 @@ alerts:
     type: "memory"  # Options: memory, database, redis
     retention_days: 7
     max_alerts: 10000
-  
+
   # Alert correlation
   correlation:
     enabled: true
     time_window: 300  # 5 minutes
     similarity_threshold: 0.8
     max_correlated_alerts: 10
-  
+
   # Alert severity levels
   severity_levels:
     CRITICAL:
@@ -202,14 +202,14 @@ mcp:
   host: "mcp_server"
   port: 8000
   timeout: 30
-  
+
   # Features to use from MCP system
   features:
     threat_intelligence: true
     historical_analysis: true
     context_enrichment: true
     security_logging: true
-  
+
   # Vault integration
   vault:
     path: "/vault"
@@ -235,7 +235,7 @@ redis:
   port: 6379
   REDACTED_SECRET: "process.env.PAKE_HARDCODED_PASSWORD || 'SECURE_HARDCODED_PASSWORD_REQUIRED''SECURE_DB_PASSWORD_REQUIRED'"
   db: 1  # Use separate DB for security monitor
-  
+
   # Caching configuration
   cache:
     ip_reputation_ttl: 3600      # 1 hour
@@ -251,13 +251,13 @@ monitoring:
     enabled: true
     port: 8081
     path: "/metrics"
-  
+
   # Health check
   health_check:
     enabled: true
     path: "/health"
     include_components: true
-  
+
   # Performance metrics
   metrics:
     track_analysis_time: true
@@ -274,13 +274,13 @@ security:
     type: "bearer_token"  # Options: none, api_key, bearer_token
     api_key_header: "X-API-Key"
     token_secret: "your-secret-key-here"
-  
+
   # IP filtering (optional)
   ip_filtering:
     enabled: false
     allow_list: []
     deny_list: []
-  
+
   # Rate limiting
   rate_limiting:
     enabled: true
@@ -293,7 +293,7 @@ security:
 logging:
   level: "INFO"
   format: "json"
-  
+
   # Log destinations
   handlers:
     console:
@@ -308,7 +308,7 @@ logging:
     elasticsearch:
       enabled: false  # Set to true to send logs back to ELK
       index: "ai-security-monitor-logs"
-  
+
   # Structured logging
   structured:
     enabled: true
@@ -324,7 +324,7 @@ development:
     enabled: false  # Set to true for testing
     log_generation_rate: 10  # logs per minute
     include_attacks: true
-    
+
   # Debug features
   debug:
     log_analysis_details: false

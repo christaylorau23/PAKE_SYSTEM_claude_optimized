@@ -177,6 +177,18 @@ class InsufficientPermissionsException(AuthorizationException):
     """User lacks required permissions"""
 
 
+class SecurityException(PAKEException):
+    """Security-related errors"""
+
+    def __init__(self, message: str, **kwargs):
+        super().__init__(
+            message,
+            category=ErrorCategory.AUTHENTICATION,
+            severity=ErrorSeverity.HIGH,
+            **kwargs,
+        )
+
+
 # Validation Exceptions
 class ValidationException(PAKEException):
     """Data validation errors"""

@@ -155,11 +155,11 @@ export const sampleRequests = {
       target: 'analytics',
       parameters: {
         sql: `
-          SELECT 
+          SELECT
             DATE_TRUNC('day', created_at) as date,
             COUNT(*) as user_count,
             AVG(engagement_score) as avg_engagement
-          FROM user_analytics 
+          FROM user_analytics
           WHERE created_at >= $1 AND created_at <= $2
           GROUP BY DATE_TRUNC('day', created_at)
           ORDER BY date DESC

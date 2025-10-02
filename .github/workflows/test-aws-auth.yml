@@ -26,20 +26,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-session-name: test-basic-auth
-      
+
       - name: Test AWS STS access
         run: |
           echo "🔍 Testing AWS STS access..."
           aws sts get-caller-identity
           echo "✅ AWS STS access successful"
-      
+
       - name: Test AWS region access
         run: |
           echo "🔍 Testing AWS region access..."
@@ -53,20 +53,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-session-name: test-ecr-access
-      
+
       - name: Test ECR access
         run: |
           echo "🔍 Testing ECR access..."
           aws ecr describe-repositories --region ${{ secrets.AWS_REGION || 'us-west-2' }} || echo "⚠️ No ECR repositories found (this is expected if none exist)"
           echo "✅ ECR access test completed"
-      
+
       - name: Test ECR login
         run: |
           echo "🔍 Testing ECR login..."
@@ -80,14 +80,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-session-name: test-s3-access
-      
+
       - name: Test S3 access
         run: |
           echo "🔍 Testing S3 access..."
@@ -101,14 +101,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-session-name: test-eks-access
-      
+
       - name: Test EKS access
         run: |
           echo "🔍 Testing EKS access..."
@@ -122,49 +122,49 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-session-name: comprehensive-test
-      
+
       - name: Run comprehensive tests
         run: |
           echo "🧪 Running comprehensive AWS authentication tests..."
           echo ""
-          
+
           # Test 1: Basic STS access
           echo "1️⃣ Testing AWS STS access..."
           aws sts get-caller-identity
           echo "✅ STS access successful"
           echo ""
-          
+
           # Test 2: Check available services
           echo "2️⃣ Testing service access..."
           echo "ECR repositories:"
           aws ecr describe-repositories --region ${{ secrets.AWS_REGION || 'us-west-2' }} 2>/dev/null || echo "  No ECR repositories found"
           echo ""
-          
+
           echo "EKS clusters:"
           aws eks list-clusters --region ${{ secrets.AWS_REGION || 'us-west-2' }} 2>/dev/null || echo "  No EKS clusters found"
           echo ""
-          
+
           echo "S3 buckets (pake-system):"
           aws s3 ls | grep pake-system || echo "  No pake-system buckets found"
           echo ""
-          
+
           # Test 3: Check permissions
           echo "3️⃣ Testing specific permissions..."
           echo "ECR permissions:"
           aws ecr get-authorization-token --region ${{ secrets.AWS_REGION || 'us-west-2' }} >/dev/null 2>&1 && echo "  ✅ ECR authorization successful" || echo "  ❌ ECR authorization failed"
           echo ""
-          
+
           echo "SSM parameters:"
           aws ssm get-parameters-by-path --path "/pake-system" --region ${{ secrets.AWS_REGION || 'us-west-2' }} 2>/dev/null || echo "  No pake-system parameters found"
           echo ""
-          
+
           echo "🎉 Comprehensive authentication test completed!"
           echo ""
           echo "📋 Summary:"

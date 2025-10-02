@@ -277,8 +277,8 @@ export class TrendRepository {
       // Get records
       const sortClause = this.buildSortClause(query.sortBy, query.sortOrder);
       const searchQuery = `
-        SELECT * FROM ${this.tableName} 
-        ${whereClause} 
+        SELECT * FROM ${this.tableName}
+        ${whereClause}
         ${sortClause}
         LIMIT $${parameters.length + 1} OFFSET $${parameters.length + 2}
       `;
@@ -331,7 +331,7 @@ export class TrendRepository {
 
       // Basic metrics
       const metricsQuery = `
-        SELECT 
+        SELECT
           COUNT(*) as total_records,
           MIN(timestamp) as earliest,
           MAX(timestamp) as latest,
@@ -341,7 +341,7 @@ export class TrendRepository {
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY freshness_score) as p50_freshness,
           PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY freshness_score) as p95_freshness,
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY freshness_score) as p99_freshness
-        FROM ${this.tableName} 
+        FROM ${this.tableName}
         ${whereClause}
       `;
 
@@ -350,10 +350,10 @@ export class TrendRepository {
 
       // Platform distribution
       const platformQuery = `
-        SELECT platform, COUNT(*) as count 
-        FROM ${this.tableName} 
+        SELECT platform, COUNT(*) as count
+        FROM ${this.tableName}
         ${whereClause}
-        GROUP BY platform 
+        GROUP BY platform
         ORDER BY count DESC
       `;
       const platformResult = await client.query(platformQuery, parameters);
@@ -363,10 +363,10 @@ export class TrendRepository {
 
       // Category distribution
       const categoryQuery = `
-        SELECT category, COUNT(*) as count 
-        FROM ${this.tableName} 
+        SELECT category, COUNT(*) as count
+        FROM ${this.tableName}
         ${whereClause}
-        GROUP BY category 
+        GROUP BY category
         ORDER BY count DESC
       `;
       const categoryResult = await client.query(categoryQuery, parameters);
@@ -527,7 +527,7 @@ export class TrendRepository {
       // Delete related entities and anomalies first
       await client.query(
         `
-        DELETE FROM ${this.entitiesTableName} 
+        DELETE FROM ${this.entitiesTableName}
         WHERE trend_id IN (
           SELECT id FROM ${this.tableName} WHERE timestamp < $1
         )
@@ -537,7 +537,7 @@ export class TrendRepository {
 
       await client.query(
         `
-        DELETE FROM ${this.anomaliesTableName} 
+        DELETE FROM ${this.anomaliesTableName}
         WHERE trend_id IN (
           SELECT id FROM ${this.tableName} WHERE timestamp < $1
         )

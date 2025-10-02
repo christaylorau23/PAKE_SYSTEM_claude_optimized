@@ -14,7 +14,7 @@ readability-lxml==0.8.1
 requests==2.31.0
 lxml==4.9.3
 
-# Document processing  
+# Document processing
 # textract==1.6.4  # Temporarily disabled due to metadata issues
 python-magic-bin==0.4.14  # Windows binary for file type detection
 
@@ -43,6 +43,6 @@ prometheus-client==0.19.0
 scikit-learn==1.3.2
 numpy==1.24.3
 
-# Optional: Advanced text processing  
+# Optional: Advanced text processing
 spacy==3.7.2
 nltk==3.8.1

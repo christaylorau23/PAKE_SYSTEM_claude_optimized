@@ -30,7 +30,7 @@ asyncpg==0.29.0
 sqlalchemy[asyncio]==2.0.23
 alembic==1.12.1
 
-# Redis support  
+# Redis support
 redis[hiredis]==5.0.1
 aioredis==2.0.1
 

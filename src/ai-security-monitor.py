@@ -214,7 +214,10 @@ class MockLLMAnalyzer:
                 if pattern_name == "failed_login":
                     if log_entry.get("status_code") == 401:
                         confidence += 0.4
-                    if "REDACTED_SECRET" in message_lower or "username" in message_lower:
+                    if (
+                        "REDACTED_SECRET" in message_lower
+                        or "username" in message_lower
+                    ):
                         confidence += 0.2
 
                 elif pattern_name == "sql_injection":

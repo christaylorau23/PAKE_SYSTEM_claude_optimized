@@ -39,14 +39,14 @@ class PerformanceEnvironmentConfig:
 
 class PerformanceEnvironmentManager:
     """Manages performance testing environments"""
-    
+
     def __init__(self, config_path: str = "performance_tests/config/environments.json"):
         self.config_path = Path(config_path)
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.docker_client = docker.from_env()
         self.environments: Dict[str, PerformanceEnvironmentConfig] = {}
         self.load_configurations()
-    
+
     def load_configurations(self):
         """Load environment configurations from file"""
         if self.config_path.exists():
@@ -56,7 +56,7 @@ class PerformanceEnvironmentManager:
                     self.environments[name] = PerformanceEnvironmentConfig(**config)
         else:
             self.create_default_configurations()
-    
+
     def create_default_configurations(self):
         """Create default environment configurations"""
         default_configs = {
@@ -106,41 +106,41 @@ class PerformanceEnvironmentManager:
                 "cleanup_after_test": False
             }
         }
-        
+
         with open(self.config_path, 'w') as f:
             json.dump(default_configs, f, indent=2)
-        
+
         # Reload configurations
         self.load_configurations()
-    
+
     def provision_environment(self, env_name: str) -> bool:
         """Provision a performance testing environment"""
         if env_name not in self.environments:
             raise ValueError(f"Environment '{env_name}' not found")
-        
+
         config = self.environments[env_name]
         print(f"Provisioning environment: {config.name}")
-        
+
         try:
             # Start required services
             self._start_database(config)
             self._start_redis(config)
             self._start_application(config)
-            
+
             # Wait for services to be ready
             self._wait_for_services(config)
-            
+
             # Run health checks
             if not self._run_health_checks(config):
                 raise Exception("Health checks failed")
-            
+
             print(f"Environment '{env_name}' provisioned successfully")
             return True
-            
+
         except Exception as e:
             print(f"Failed to provision environment '{env_name}': {e}")
             return False
-    
+
     def _start_database(self, config: PerformanceEnvironmentConfig):
         """Start database service"""
         if config.name == "local":
@@ -161,7 +161,7 @@ class PerformanceEnvironmentManager:
                 print("PostgreSQL container started")
             except docker.errors.ContainerError:
                 print("PostgreSQL container already running")
-    
+
     def _start_redis(self, config: PerformanceEnvironmentConfig):
         """Start Redis service"""
         if config.name == "local":
@@ -176,7 +176,7 @@ class PerformanceEnvironmentManager:
                 print("Redis container started")
             except docker.errors.ContainerError:
                 print("Redis container already running")
-    
+
     def _start_application(self, config: PerformanceEnvironmentConfig):
         """Start application service"""
         if config.name == "local":
@@ -187,7 +187,7 @@ class PerformanceEnvironmentManager:
                 "SECRET_KEY": "perf-test-secret-key",
                 "USE_VAULT": "false"
             }
-            
+
             # Start application
             try:
                 subprocess.Popen([
@@ -199,11 +199,11 @@ class PerformanceEnvironmentManager:
                 print("Application started")
             except Exception as e:
                 print(f"Failed to start application: {e}")
-    
+
     def _wait_for_services(self, config: PerformanceEnvironmentConfig, timeout: int = 60):
         """Wait for services to be ready"""
         print("Waiting for services to be ready...")
-        
+
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
@@ -214,24 +214,24 @@ class PerformanceEnvironmentManager:
                     return True
             except:
                 pass
-            
+
             time.sleep(2)
-        
+
         raise Exception("Services failed to start within timeout")
-    
+
     def _run_health_checks(self, config: PerformanceEnvironmentConfig) -> bool:
         """Run comprehensive health checks"""
         print("Running health checks...")
-        
+
         try:
             import requests
-            
+
             # Basic health check
             response = requests.get(f"{config.base_url}/health", timeout=10)
             if response.status_code != 200:
                 print(f"Health check failed: {response.status_code}")
                 return False
-            
+
             # Authentication check
             auth_response = requests.post(
                 f"{config.base_url}/token",
@@ -242,24 +242,24 @@ class PerformanceEnvironmentManager:
             if auth_response.status_code != 200:
                 print(f"Authentication check failed: {auth_response.status_code}")
                 return False
-            
+
             print("All health checks passed")
             return True
-            
+
         except Exception as e:
             print(f"Health check error: {e}")
             return False
-    
+
     def cleanup_environment(self, env_name: str):
         """Clean up environment after testing"""
         if env_name not in self.environments:
             return
-        
+
         config = self.environments[env_name]
-        
+
         if config.cleanup_after_test and config.name == "local":
             print(f"Cleaning up environment: {env_name}")
-            
+
             # Stop containers
             try:
                 containers = ["pake-perf-db", "pake-perf-redis"]
@@ -276,22 +276,22 @@ class PerformanceEnvironmentManager:
 
 class PerformanceTestRunner:
     """Runs performance tests against configured environments"""
-    
+
     def __init__(self, env_manager: PerformanceEnvironmentManager):
         self.env_manager = env_manager
         self.results_dir = Path("performance_tests/results")
         self.results_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def run_smoke_test(self, env_name: str = "local") -> Dict[str, Any]:
         """Run smoke test for CI/CD pipeline"""
         print(f"Running smoke test on {env_name}")
-        
+
         config = self.env_manager.environments[env_name]
-        
+
         # Provision environment
         if not self.env_manager.provision_environment(env_name):
             return {"success": False, "error": "Environment provisioning failed"}
-        
+
         try:
             # Run smoke test
             cmd = [
@@ -304,41 +304,41 @@ class PerformanceTestRunner:
                 "--headless",
                 "--html", str(self.results_dir / f"smoke_test_{env_name}_{int(time.time())}.html")
             ]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
+
             # Parse results
             results = self._parse_locust_output(result.stdout)
             results["test_type"] = "smoke"
             results["environment"] = env_name
             results["success"] = result.returncode == 0
-            
+
             # Save results
             self._save_results(results, f"smoke_test_{env_name}")
-            
+
             return results
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
-        
+
         finally:
             # Cleanup
             self.env_manager.cleanup_environment(env_name)
-    
+
     def run_load_test(self, env_name: str = "staging", scenario: str = "normal") -> Dict[str, Any]:
         """Run comprehensive load test"""
         print(f"Running {scenario} load test on {env_name}")
-        
+
         config = self.env_manager.environments[env_name]
-        
+
         # Provision environment
         if not self.env_manager.provision_environment(env_name):
             return {"success": False, "error": "Environment provisioning failed"}
-        
+
         try:
             # Determine test parameters based on scenario
             test_params = self._get_scenario_params(scenario, config)
-            
+
             # Run load test
             cmd = [
                 "locust",
@@ -350,31 +350,31 @@ class PerformanceTestRunner:
                 "--headless",
                 "--html", str(self.results_dir / f"load_test_{scenario}_{env_name}_{int(time.time())}.html")
             ]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
+
             # Parse results
             results = self._parse_locust_output(result.stdout)
             results["test_type"] = "load"
             results["scenario"] = scenario
             results["environment"] = env_name
             results["success"] = result.returncode == 0
-            
+
             # Validate performance
             results["performance_validation"] = self._validate_performance(results)
-            
+
             # Save results
             self._save_results(results, f"load_test_{scenario}_{env_name}")
-            
+
             return results
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
-        
+
         finally:
             # Cleanup
             self.env_manager.cleanup_environment(env_name)
-    
+
     def _get_scenario_params(self, scenario: str, config: PerformanceEnvironmentConfig) -> Dict[str, Any]:
         """Get test parameters for scenario"""
         scenarios = {
@@ -384,14 +384,14 @@ class PerformanceTestRunner:
             "stress": {"users": min(1000, config.max_concurrent_users), "spawn_rate": 100, "run_time": "3m"},
             "endurance": {"users": min(200, config.max_concurrent_users), "spawn_rate": 20, "run_time": "30m"}
         }
-        
+
         return scenarios.get(scenario, scenarios["normal"])
-    
+
     def _parse_locust_output(self, output: str) -> Dict[str, Any]:
         """Parse Locust output to extract metrics"""
         # This is a simplified parser - in production, you'd want more robust parsing
         lines = output.split('\n')
-        
+
         results = {
             "total_requests": 0,
             "failed_requests": 0,
@@ -400,7 +400,7 @@ class PerformanceTestRunner:
             "requests_per_second": 0,
             "test_duration": 0
         }
-        
+
         for line in lines:
             if "Total requests" in line:
                 try:
@@ -427,9 +427,9 @@ class PerformanceTestRunner:
                     results["requests_per_second"] = float(line.split()[3])
                 except:
                     pass
-        
+
         return results
-    
+
     def _validate_performance(self, results: Dict[str, Any]) -> Dict[str, bool]:
         """Validate performance against thresholds"""
         thresholds = {
@@ -437,45 +437,45 @@ class PerformanceTestRunner:
             "max_error_rate_percent": 5,
             "min_throughput_rps": 10
         }
-        
+
         validation = {}
-        
+
         # Check response time
         avg_response_time_ms = results.get("avg_response_time", 0) * 1000
         validation["response_time"] = avg_response_time_ms <= thresholds["max_response_time_ms"]
-        
+
         # Check error rate
         total_requests = results.get("total_requests", 0)
         failed_requests = results.get("failed_requests", 0)
         error_rate = (failed_requests / total_requests * 100) if total_requests > 0 else 0
         validation["error_rate"] = error_rate <= thresholds["max_error_rate_percent"]
-        
+
         # Check throughput
         throughput = results.get("requests_per_second", 0)
         validation["throughput"] = throughput >= thresholds["min_throughput_rps"]
-        
+
         validation["overall"] = all(validation.values())
-        
+
         return validation
-    
+
     def _save_results(self, results: Dict[str, Any], test_name: str):
         """Save test results to file"""
         timestamp = int(time.time())
         filename = f"{test_name}_{timestamp}.json"
         filepath = self.results_dir / filename
-        
+
         with open(filepath, 'w') as f:
             json.dump(results, f, indent=2)
-        
+
         print(f"Results saved to: {filepath}")
 
 
 def main():
     """Main function for running performance tests"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="PAKE System Performance Testing")
-    parser.add_argument("--environment", "-e", default="local", 
+    parser.add_argument("--environment", "-e", default="local",
                        choices=["local", "staging", "production"],
                        help="Target environment")
     parser.add_argument("--scenario", "-s", default="smoke",
@@ -484,25 +484,25 @@ def main():
     parser.add_argument("--test-type", "-t", default="smoke",
                        choices=["smoke", "load"],
                        help="Type of test to run")
-    
+
     args = parser.parse_args()
-    
+
     # Initialize managers
     env_manager = PerformanceEnvironmentManager()
     test_runner = PerformanceTestRunner(env_manager)
-    
+
     # Run test
     if args.test_type == "smoke":
         results = test_runner.run_smoke_test(args.environment)
     else:
         results = test_runner.run_load_test(args.environment, args.scenario)
-    
+
     # Print results
     print("\n" + "="*50)
     print("PERFORMANCE TEST RESULTS")
     print("="*50)
     print(json.dumps(results, indent=2))
-    
+
     if results.get("success"):
         print("\n✅ Test completed successfully")
     else:

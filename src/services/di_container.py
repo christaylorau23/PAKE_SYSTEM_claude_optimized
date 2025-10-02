@@ -32,8 +32,8 @@ class ServiceRegistration:
     def __init__(
         self,
         interface: type[T],
-        implementation: type[T],
-        lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT,
+        implementation: Optional[type[T]] = None,
+        lifetime: str = ServiceLifetime.TRANSIENT,
         factory: Optional[Callable[[], T]] = None,
     ):
         self.interface = interface
@@ -71,7 +71,7 @@ class DIContainer:
         self,
         interface: type[T],
         factory: Callable[[], T],
-        lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT,
+        lifetime: str = ServiceLifetime.TRANSIENT,
     ) -> "DIContainer":
         """Register a service with custom factory"""
         interface_name = interface.__name__
@@ -79,7 +79,7 @@ class DIContainer:
             interface=interface, implementation=None, lifetime=lifetime, factory=factory
         )
         logger.info(
-            f"Registered factory: {interface_name} (lifetime: {lifetime.value})"
+            f"Registered factory: {interface_name} (lifetime: {lifetime})"
         )
         return self
 
@@ -91,7 +91,7 @@ class DIContainer:
         return self
 
     def _register_service(
-        self, interface: type[T], implementation: type[T], lifetime: ServiceLifetime
+        self, interface: type[T], implementation: type[T], lifetime: str
     ) -> "DIContainer":
         """Internal service registration method"""
         interface_name = interface.__name__
@@ -99,7 +99,7 @@ class DIContainer:
             interface=interface, implementation=implementation, lifetime=lifetime
         )
         logger.info(
-            f"Registered service: {interface_name} -> {implementation.__name__} (lifetime: {lifetime.value})"
+            f"Registered service: {interface_name} -> {implementation.__name__} (lifetime: {lifetime})"
         )
         return self
 
@@ -109,7 +109,7 @@ class DIContainer:
 
         # Check if we have a registered instance
         if interface_name in self._singletons:
-            return self._singletons[interface_name]
+            return self._singletons[interface_name]  # type: ignore[no-any-return]
 
         # Check if we have a service registration
         if interface_name not in self._services:
@@ -121,7 +121,7 @@ class DIContainer:
         if registration.lifetime == ServiceLifetime.SINGLETON:
             if registration.instance is None:
                 registration.instance = self._create_instance(registration)
-            return registration.instance
+            return registration.instance  # type: ignore[return-value]
 
         # Handle transient lifetime
         return self._create_instance(registration)
@@ -137,33 +137,33 @@ class DIContainer:
 
         # Create instance with additional dependencies
         if registration.factory:
-            return registration.factory()
+            return registration.factory()  # type: ignore[return-value]
 
         if registration.implementation:
             # Try to inject dependencies through constructor
             try:
-                return registration.implementation(**kwargs)
+                return registration.implementation(**kwargs)  # type: ignore[return-value]
             except TypeError:
                 # Fallback to parameterless constructor
-                return registration.implementation()
+                return registration.implementation()  # type: ignore[return-value]
 
         raise ValueError(f"Cannot create instance for {interface_name}")
 
-    def _create_instance(self, registration: ServiceRegistration) -> T:
+    def _create_instance(self, registration: ServiceRegistration) -> T:  # type: ignore[type-var]
         """Create service instance"""
         if registration.factory:
-            return registration.factory()
+            return registration.factory()  # type: ignore[return-value]
 
         if registration.implementation:
             try:
                 # Try to resolve constructor dependencies
-                return self._resolve_dependencies(registration.implementation)
+                return self._resolve_dependencies(registration.implementation)  # type: ignore[return-value]
             except Exception as e:
                 logger.warning(
                     f"Failed to resolve dependencies for {registration.implementation.__name__}: {e}"
                 )
                 # Fallback to parameterless constructor
-                return registration.implementation()
+                return registration.implementation()  # type: ignore[return-value]
 
         raise ValueError(
             f"Cannot create instance for {registration.interface.__name__}"
@@ -205,7 +205,7 @@ class DIContainer:
         for name, registration in self._services.items():
             services[
                 name
-            ] = f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime.value})"
+            ] = f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime})"
 
         # Add singleton instances
         for name in self._singletons.keys():

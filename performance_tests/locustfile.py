@@ -8,10 +8,10 @@ It simulates authentic user journeys across different personas and usage pattern
 Usage:
     # Run locally with web UI
     locust -f locustfile.py --host=http://localhost:8000
-    
+
     # Run headless with specific parameters
     locust -f locustfile.py --host=http://localhost:8000 --users=100 --spawn-rate=10 --run-time=5m --headless
-    
+
     # Run against staging environment
     locust -f locustfile.py --host=https://staging.pake-system.com --users=50 --spawn-rate=5 --run-time=10m --headless
 
@@ -34,13 +34,13 @@ from locust.exception import StopUser
 
 class BaseUserBehavior:
     """Base behavior shared across all user types"""
-    
+
     def __init__(self, parent):
         self.parent = parent
         self.client = parent.client
         self.auth_token: Optional[str] = None
         self.user_id: Optional[str] = None
-        
+
     def login(self) -> bool:
         """Authenticate user and store token"""
         try:
@@ -68,13 +68,13 @@ class BaseUserBehavior:
         except Exception as e:
             print(f"Login error: {e}")
             return False
-    
+
     def get_auth_headers(self) -> Dict[str, str]:
         """Get authentication headers"""
         if not self.auth_token:
             return {}
         return {"Authorization": f"Bearer {self.auth_token}"}
-    
+
     def make_authenticated_request(self, method: str, url: str, **kwargs) -> 'Response':
         """Make an authenticated request"""
         headers = kwargs.get('headers', {})
@@ -329,11 +329,11 @@ class WebAppUser(HttpUser):
     """Typical web application user"""
     weight = 40  # 40% of users
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
-    
+
     def on_start(self):
         """Called when user starts"""
         self.behavior = WebAppUserBehavior(self)
-    
+
     @task
     def user_tasks(self):
         """Execute user tasks"""
@@ -348,11 +348,11 @@ class ApiUser(HttpUser):
     """API-focused user"""
     weight = 30  # 30% of users
     wait_time = between(0.5, 2)  # Faster requests
-    
+
     def on_start(self):
         """Called when user starts"""
         self.behavior = ApiUserBehavior(self)
-    
+
     @task
     def api_tasks(self):
         """Execute API tasks"""
@@ -367,11 +367,11 @@ class ResearcherUser(HttpUser):
     """Heavy research user"""
     weight = 20  # 20% of users
     wait_time = between(2, 5)  # Longer waits for complex operations
-    
+
     def on_start(self):
         """Called when user starts"""
         self.behavior = ResearcherUserBehavior(self)
-    
+
     @task
     def research_tasks(self):
         """Execute research tasks"""
@@ -385,11 +385,11 @@ class AdminUser(HttpUser):
     """Administrative user"""
     weight = 10  # 10% of users
     wait_time = between(1, 4)  # Moderate waits
-    
+
     def on_start(self):
         """Called when user starts"""
         self.behavior = AdminUserBehavior(self)
-    
+
     @task
     def admin_tasks(self):
         """Execute admin tasks"""
@@ -402,7 +402,7 @@ class AdminUser(HttpUser):
 # Performance test scenarios
 class PerformanceTestScenarios:
     """Predefined test scenarios for different load patterns"""
-    
+
     @staticmethod
     def smoke_test():
         """Light load test for CI/CD pipeline"""
@@ -412,7 +412,7 @@ class PerformanceTestScenarios:
             "run_time": "60s",
             "description": "Smoke test for CI/CD pipeline"
         }
-    
+
     @staticmethod
     def normal_load():
         """Normal production load"""
@@ -422,7 +422,7 @@ class PerformanceTestScenarios:
             "run_time": "10m",
             "description": "Normal production load"
         }
-    
+
     @staticmethod
     def peak_load():
         """Peak production load"""
@@ -432,7 +432,7 @@ class PerformanceTestScenarios:
             "run_time": "5m",
             "description": "Peak production load"
         }
-    
+
     @staticmethod
     def stress_test():
         """Stress test to find breaking point"""
@@ -442,7 +442,7 @@ class PerformanceTestScenarios:
             "run_time": "3m",
             "description": "Stress test to find breaking point"
         }
-    
+
     @staticmethod
     def endurance_test():
         """Long-running test for memory leaks"""
@@ -457,7 +457,7 @@ class PerformanceTestScenarios:
 # Custom metrics collection
 class CustomMetrics:
     """Custom metrics for detailed performance analysis"""
-    
+
     def __init__(self):
         self.metrics = {
             "response_times": [],
@@ -465,22 +465,22 @@ class CustomMetrics:
             "throughput": 0,
             "concurrent_users": 0
         }
-    
+
     def record_response_time(self, response_time: float):
         """Record response time"""
         self.metrics["response_times"].append(response_time)
-    
+
     def record_error(self, status_code: int):
         """Record error"""
         if status_code not in self.metrics["error_rates"]:
             self.metrics["error_rates"][status_code] = 0
         self.metrics["error_rates"][status_code] += 1
-    
+
     def get_summary(self) -> Dict:
         """Get metrics summary"""
         if not self.metrics["response_times"]:
             return self.metrics
-        
+
         response_times = self.metrics["response_times"]
         return {
             "avg_response_time": sum(response_times) / len(response_times),
@@ -519,21 +519,21 @@ PERFORMANCE_THRESHOLDS = {
 def validate_performance(results: Dict) -> Dict[str, bool]:
     """Validate performance against thresholds"""
     validation = {}
-    
+
     # Check response time
     avg_response_time = results.get("avg_response_time", 0) * 1000  # Convert to ms
     validation["response_time"] = avg_response_time <= PERFORMANCE_THRESHOLDS["max_response_time_ms"]
-    
+
     # Check error rate
     total_requests = results.get("total_requests", 0)
     total_errors = sum(results.get("error_rates", {}).values())
     error_rate = (total_errors / total_requests * 100) if total_requests > 0 else 0
     validation["error_rate"] = error_rate <= PERFORMANCE_THRESHOLDS["max_error_rate_percent"]
-    
+
     # Check throughput (requests per second)
     throughput = total_requests / (results.get("test_duration", 1) / 60)  # Convert to RPS
     validation["throughput"] = throughput >= PERFORMANCE_THRESHOLDS["min_throughput_rps"]
-    
+
     return validation
 
 
@@ -541,7 +541,7 @@ if __name__ == "__main__":
     # This allows running the file directly for testing
     import subprocess
     import sys
-    
+
     if len(sys.argv) > 1:
         scenario = sys.argv[1]
         if scenario in ["smoke", "normal", "peak", "stress", "endurance"]:

@@ -13,7 +13,7 @@ data:
       # Primary bucket (source)
       primary_bucket: "pake-storage-primary"
       primary_region: "us-east-1"
-      
+
       # Target buckets for replication
       targets:
         secondary:
@@ -21,19 +21,19 @@ data:
           region: "eu-west-1"
           sync_interval: 300  # 5 minutes
           priority: 1
-          
+
         tertiary:
           bucket: "pake-storage-ap"
           region: "ap-southeast-1"
           sync_interval: 600  # 10 minutes
           priority: 2
-          
+
         backup:
           bucket: "pake-storage-backup"
           region: "us-west-2"
           sync_interval: 3600  # 1 hour
           priority: 3
-      
+
       # Sync patterns
       include_patterns:
         - "user-uploads/*"
@@ -41,20 +41,20 @@ data:
         - "knowledge-base/*"
         - "exports/*"
         - "reports/*"
-      
+
       exclude_patterns:
         - "*.tmp"
         - "*.part"
         - ".DS_Store"
         - "temp/*"
         - "cache/*"
-      
+
       # Monitoring and alerting
       monitoring:
         lag_threshold_seconds: 1800  # 30 minutes
         failure_threshold: 3
         metrics_interval: 60
-      
+
       # Performance settings
       performance:
         max_concurrent_transfers: 10
@@ -93,19 +93,19 @@ data:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['sync']
-            
+
             self.primary_client = boto3.client('s3', region_name=self.config['primary_region'])
-            
+
             # Create clients for each target region
             self.target_clients = {}
             for target_name, target_config in self.config['targets'].items():
                 self.target_clients[target_name] = boto3.client('s3', region_name=target_config['region'])
-            
+
             # State tracking
             self.sync_state = {}
             self.last_sync_times = {}
             self.failure_counts = {}
-            
+
             # Performance tracking
             self.transfer_stats = {
                 'objects_synced': 0,
@@ -113,9 +113,9 @@ data:
                 'sync_duration': 0,
                 'failures': 0
             }
-            
+
             self.executor = ThreadPoolExecutor(max_workers=self.config['performance']['max_concurrent_transfers'])
-            
+
         def should_include_object(self, key):
             """Check if object should be included in sync"""
             # Check include patterns
@@ -124,26 +124,26 @@ data:
                 if self._match_pattern(key, pattern):
                     include_match = True
                     break
-            
+
             if not include_match:
                 return False
-            
+
             # Check exclude patterns
             for pattern in self.config['exclude_patterns']:
                 if self._match_pattern(key, pattern):
                     return False
-            
+
             return True
-            
+
         def _match_pattern(self, text, pattern):
             """Simple pattern matching with wildcards"""
             if '*' not in pattern:
                 return text == pattern
-            
+
             # Convert shell-style wildcards to regex-like matching
             pattern_parts = pattern.split('*')
             text_pos = 0
-            
+
             for i, part in enumerate(pattern_parts):
                 if i == 0:
                     # First part must match from beginning
@@ -160,17 +160,17 @@ data:
                     if pos == -1:
                         return False
                     text_pos = pos + len(part)
-            
+
             return True
-            
+
         async def get_bucket_objects(self, bucket, client, prefix=''):
             """Get list of objects from bucket"""
             try:
                 objects = []
                 paginator = client.get_paginator('list_objects_v2')
-                
+
                 page_iterator = paginator.paginate(Bucket=bucket, Prefix=prefix)
-                
+
                 for page in page_iterator:
                     if 'Contents' in page:
                         for obj in page['Contents']:
@@ -181,43 +181,43 @@ data:
                                     'last_modified': obj['LastModified'],
                                     'etag': obj['ETag'].strip('"')
                                 })
-                
+
                 logger.info(f"Found {len(objects)} objects in {bucket}")
                 return objects
-                
+
             except Exception as e:
                 logger.error(f"Error listing objects in {bucket}: {e}")
                 return []
-                
+
         async def sync_object(self, source_bucket, target_bucket, source_client, target_client, obj, target_name):
             """Sync a single object between buckets"""
             try:
                 key = obj['key']
-                
+
                 # Check if object exists in target and if it's the same
                 try:
                     target_obj = target_client.head_object(Bucket=target_bucket, Key=key)
-                    
+
                     # Compare ETags (basic content comparison)
                     if target_obj['ETag'].strip('"') == obj['etag']:
                         # Object already exists and is the same
                         return True
-                        
+
                 except ClientError as e:
                     if e.response['Error']['Code'] != '404':
                         logger.error(f"Error checking object {key} in {target_bucket}: {e}")
                         return False
                     # Object doesn't exist in target, continue with copy
-                
+
                 # Copy object
                 start_time = time.time()
-                
+
                 copy_source = {'Bucket': source_bucket, 'Key': key}
-                
+
                 # For large objects, use multipart copy
                 if obj['size'] > 100 * 1024 * 1024:  # 100MB
                     logger.info(f"Starting multipart copy of large object {key} ({obj['size']} bytes) to {target_name}")
-                    
+
                     target_client.copy(
                         copy_source,
                         target_bucket,
@@ -241,57 +241,57 @@ data:
                         MetadataDirective='COPY',
                         StorageClass='STANDARD_IA'
                     )
-                
+
                 transfer_time = time.time() - start_time
                 transfer_rate = obj['size'] / transfer_time if transfer_time > 0 else 0
-                
+
                 logger.info(f"Synced {key} to {target_name} ({obj['size']} bytes in {transfer_time:.2f}s, {transfer_rate/1024/1024:.2f} MB/s)")
-                
+
                 # Update stats
                 self.transfer_stats['objects_synced'] += 1
                 self.transfer_stats['bytes_transferred'] += obj['size']
-                
+
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Error syncing {obj['key']} to {target_name}: {e}")
                 self.transfer_stats['failures'] += 1
                 return False
-                
+
         async def sync_to_target(self, target_name, target_config):
             """Sync primary bucket to a specific target"""
             try:
                 start_time = time.time()
-                
+
                 primary_bucket = self.config['primary_bucket']
                 target_bucket = target_config['bucket']
-                
+
                 logger.info(f"Starting sync to {target_name}: {primary_bucket} -> {target_bucket}")
-                
+
                 # Get objects from primary bucket
                 primary_objects = await self.get_bucket_objects(
-                    primary_bucket, 
+                    primary_bucket,
                     self.primary_client
                 )
-                
+
                 if not primary_objects:
                     logger.warning(f"No objects found in primary bucket {primary_bucket}")
                     return True
-                
+
                 # Get objects from target bucket
                 target_objects = await self.get_bucket_objects(
                     target_bucket,
                     self.target_clients[target_name]
                 )
-                
+
                 # Create lookup for target objects
                 target_lookup = {obj['key']: obj for obj in target_objects}
-                
+
                 # Find objects that need syncing
                 objects_to_sync = []
                 for obj in primary_objects:
                     key = obj['key']
-                    
+
                     if key not in target_lookup:
                         # Object doesn't exist in target
                         objects_to_sync.append(obj)
@@ -300,13 +300,13 @@ data:
                         # Check if objects are different
                         if obj['etag'] != target_obj['etag'] or obj['last_modified'] > target_obj['last_modified']:
                             objects_to_sync.append(obj)
-                
+
                 if not objects_to_sync:
                     logger.info(f"No objects need syncing to {target_name}")
                     return True
-                
+
                 logger.info(f"Syncing {len(objects_to_sync)} objects to {target_name}")
-                
+
                 # Sync objects concurrently
                 sync_tasks = []
                 for obj in objects_to_sync:
@@ -319,57 +319,57 @@ data:
                         target_name
                     ))
                     sync_tasks.append(task)
-                
+
                 # Wait for all syncs to complete
                 results = await asyncio.gather(*sync_tasks, return_exceptions=True)
-                
+
                 successful_syncs = sum(1 for result in results if result is True)
                 failed_syncs = len(results) - successful_syncs
-                
+
                 sync_duration = time.time() - start_time
-                
+
                 logger.info(f"Sync to {target_name} completed: {successful_syncs} successful, {failed_syncs} failed in {sync_duration:.2f}s")
-                
+
                 # Update failure tracking
                 if failed_syncs > 0:
                     self.failure_counts[target_name] = self.failure_counts.get(target_name, 0) + 1
                 else:
                     self.failure_counts[target_name] = 0
-                
+
                 # Update last sync time
                 self.last_sync_times[target_name] = datetime.utcnow()
-                
+
                 return failed_syncs == 0
-                
+
             except Exception as e:
                 logger.error(f"Error syncing to {target_name}: {e}")
                 self.failure_counts[target_name] = self.failure_counts.get(target_name, 0) + 1
                 return False
-                
+
         async def cleanup_orphaned_objects(self, target_name, target_config):
             """Remove objects from target that don't exist in primary"""
             try:
                 primary_bucket = self.config['primary_bucket']
                 target_bucket = target_config['bucket']
-                
+
                 logger.info(f"Checking for orphaned objects in {target_name}")
-                
+
                 # Get objects from both buckets
                 primary_objects = await self.get_bucket_objects(primary_bucket, self.primary_client)
                 target_objects = await self.get_bucket_objects(target_bucket, self.target_clients[target_name])
-                
+
                 # Create lookup for primary objects
                 primary_keys = {obj['key'] for obj in primary_objects}
-                
+
                 # Find orphaned objects
                 orphaned_objects = [obj for obj in target_objects if obj['key'] not in primary_keys]
-                
+
                 if not orphaned_objects:
                     logger.info(f"No orphaned objects found in {target_name}")
                     return
-                
+
                 logger.info(f"Found {len(orphaned_objects)} orphaned objects in {target_name}")
-                
+
                 # Delete orphaned objects
                 deleted_count = 0
                 for obj in orphaned_objects:
@@ -382,12 +382,12 @@ data:
                         logger.info(f"Deleted orphaned object {obj['key']} from {target_name}")
                     except Exception as e:
                         logger.error(f"Error deleting orphaned object {obj['key']} from {target_name}: {e}")
-                
+
                 logger.info(f"Deleted {deleted_count} orphaned objects from {target_name}")
-                
+
             except Exception as e:
                 logger.error(f"Error cleaning up orphaned objects in {target_name}: {e}")
-                
+
         def update_metrics(self):
             """Update Prometheus metrics"""
             try:
@@ -398,7 +398,7 @@ data:
                     f"object_sync_failures_total {self.transfer_stats['failures']}",
                     f"object_sync_last_run_timestamp {current_time}"
                 ]
-                
+
                 # Add per-target metrics
                 for target_name, target_config in self.config['targets'].items():
                     last_sync = self.last_sync_times.get(target_name)
@@ -406,12 +406,12 @@ data:
                         last_sync_timestamp = int(last_sync.timestamp())
                         lag_seconds = current_time - last_sync_timestamp
                         metrics.append(f"object_sync_lag_seconds{{target=\"{target_name}\"}} {lag_seconds}")
-                    
+
                     failure_count = self.failure_counts.get(target_name, 0)
                     metrics.append(f"object_sync_failure_count{{target=\"{target_name}\"}} {failure_count}")
-                
+
                 metrics_data = "\n".join(metrics)
-                
+
                 # Send to Prometheus pushgateway
                 import requests
                 response = requests.post(
@@ -420,47 +420,47 @@ data:
                     headers={'Content-Type': 'text/plain'},
                     timeout=30
                 )
-                
+
                 if response.status_code == 200:
                     logger.debug("Metrics updated successfully")
                 else:
                     logger.warning(f"Failed to update metrics: HTTP {response.status_code}")
-                    
+
             except Exception as e:
                 logger.error(f"Error updating metrics: {e}")
-                
+
         async def run_sync_cycle(self):
             """Run a complete sync cycle for all targets"""
             try:
                 start_time = time.time()
                 logger.info("Starting sync cycle")
-                
+
                 # Reset cycle stats
                 cycle_stats = {
                     'objects_synced': self.transfer_stats['objects_synced'],
                     'bytes_transferred': self.transfer_stats['bytes_transferred'],
                     'failures': self.transfer_stats['failures']
                 }
-                
+
                 # Sync to all targets based on their priority and schedule
                 sync_tasks = []
                 for target_name, target_config in self.config['targets'].items():
                     last_sync = self.last_sync_times.get(target_name)
                     sync_interval = target_config['sync_interval']
-                    
+
                     # Check if it's time to sync this target
                     should_sync = True
                     if last_sync:
                         time_since_sync = (datetime.utcnow() - last_sync).total_seconds()
                         should_sync = time_since_sync >= sync_interval
-                    
+
                     if should_sync:
                         logger.info(f"Scheduling sync for {target_name}")
                         task = asyncio.create_task(self.sync_to_target(target_name, target_config))
                         sync_tasks.append((target_name, task))
                     else:
                         logger.debug(f"Skipping {target_name} - too early to sync")
-                
+
                 # Wait for all sync tasks to complete
                 for target_name, task in sync_tasks:
                     try:
@@ -471,66 +471,66 @@ data:
                             logger.warning(f"Sync to {target_name} had failures")
                     except Exception as e:
                         logger.error(f"Sync to {target_name} failed: {e}")
-                
+
                 # Calculate cycle stats
                 cycle_duration = time.time() - start_time
                 objects_synced_this_cycle = self.transfer_stats['objects_synced'] - cycle_stats['objects_synced']
                 bytes_transferred_this_cycle = self.transfer_stats['bytes_transferred'] - cycle_stats['bytes_transferred']
                 failures_this_cycle = self.transfer_stats['failures'] - cycle_stats['failures']
-                
+
                 logger.info(f"Sync cycle completed in {cycle_duration:.2f}s: {objects_synced_this_cycle} objects, {bytes_transferred_this_cycle} bytes, {failures_this_cycle} failures")
-                
+
                 # Update metrics
                 self.update_metrics()
-                
+
             except Exception as e:
                 logger.error(f"Error in sync cycle: {e}")
-                
+
         async def run_cleanup_cycle(self):
             """Run cleanup cycle to remove orphaned objects"""
             try:
                 logger.info("Starting cleanup cycle")
-                
+
                 for target_name, target_config in self.config['targets'].items():
                     await self.cleanup_orphaned_objects(target_name, target_config)
-                
+
                 logger.info("Cleanup cycle completed")
-                
+
             except Exception as e:
                 logger.error(f"Error in cleanup cycle: {e}")
-                
+
         async def run_daemon(self):
             """Main daemon loop"""
             logger.info("Starting Object Sync Daemon")
-            
+
             # Run initial sync
             await self.run_sync_cycle()
-            
+
             # Schedule periodic tasks
             while True:
                 try:
                     # Wait for next sync interval (use minimum interval from all targets)
                     min_interval = min(target['sync_interval'] for target in self.config['targets'].values())
                     sleep_time = min(min_interval, 300)  # Max 5 minutes between checks
-                    
+
                     logger.debug(f"Sleeping for {sleep_time} seconds")
                     await asyncio.sleep(sleep_time)
-                    
+
                     # Run sync cycle
                     await self.run_sync_cycle()
-                    
+
                     # Run cleanup cycle every hour
                     current_time = datetime.utcnow()
                     if current_time.minute == 0:  # Top of the hour
                         await self.run_cleanup_cycle()
-                    
+
                 except KeyboardInterrupt:
                     logger.info("Daemon stopped by user")
                     break
                 except Exception as e:
                     logger.error(f"Error in daemon loop: {e}")
                     await asyncio.sleep(60)  # Wait before retrying
-            
+
             # Cleanup
             self.executor.shutdown(wait=True)
             logger.info("Object Sync Daemon stopped")
@@ -778,49 +778,49 @@ data:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['sync']
-            
+
             self.primary_client = boto3.client('s3', region_name=self.config['primary_region'])
             self.target_clients = {}
-            
+
             for target_name, target_config in self.config['targets'].items():
                 self.target_clients[target_name] = boto3.client('s3', region_name=target_config['region'])
-        
+
         def get_bucket_stats(self, bucket, client):
             """Get basic stats about a bucket"""
             try:
                 response = client.list_objects_v2(Bucket=bucket, MaxKeys=1)
-                
+
                 if 'Contents' not in response:
                     return {'count': 0, 'last_modified': None}
-                
+
                 # Count all objects (this is expensive for large buckets)
                 paginator = client.get_paginator('list_objects_v2')
                 page_iterator = paginator.paginate(Bucket=bucket)
-                
+
                 count = 0
                 latest_modified = None
-                
+
                 for page in page_iterator:
                     if 'Contents' in page:
                         count += len(page['Contents'])
                         for obj in page['Contents']:
                             if latest_modified is None or obj['LastModified'] > latest_modified:
                                 latest_modified = obj['LastModified']
-                
+
                 return {
                     'count': count,
                     'last_modified': latest_modified
                 }
-                
+
             except Exception as e:
                 logger.error(f"Error getting stats for {bucket}: {e}")
                 return {'count': 0, 'last_modified': None, 'error': str(e)}
-        
+
         def check_sync_status(self):
             """Check sync status for all targets"""
             primary_bucket = self.config['primary_bucket']
             primary_stats = self.get_bucket_stats(primary_bucket, self.primary_client)
-            
+
             status = {
                 'primary': {
                     'bucket': primary_bucket,
@@ -829,21 +829,21 @@ data:
                 'targets': {},
                 'overall_health': True
             }
-            
+
             for target_name, target_config in self.config['targets'].items():
                 target_bucket = target_config['bucket']
                 target_stats = self.get_bucket_stats(target_bucket, self.target_clients[target_name])
-                
+
                 # Calculate lag
                 lag_seconds = 0
                 if primary_stats['last_modified'] and target_stats['last_modified']:
                     lag_seconds = (primary_stats['last_modified'] - target_stats['last_modified']).total_seconds()
                     if lag_seconds < 0:
                         lag_seconds = 0
-                
+
                 # Calculate count difference
                 count_diff = primary_stats['count'] - target_stats['count']
-                
+
                 # Determine health
                 health_ok = True
                 if 'error' in target_stats:
@@ -852,10 +852,10 @@ data:
                     health_ok = False
                 elif abs(count_diff) > 10:  # Allow small differences
                     health_ok = False
-                
+
                 if not health_ok:
                     status['overall_health'] = False
-                
+
                 status['targets'][target_name] = {
                     'bucket': target_bucket,
                     'region': target_config['region'],
@@ -864,12 +864,12 @@ data:
                     'count_difference': count_diff,
                     'health_ok': health_ok
                 }
-                
+
                 # Update Prometheus metrics
                 object_sync_lag.labels(target=target_name).set(lag_seconds)
                 object_count_diff.labels(target=target_name).set(count_diff)
                 sync_health_status.labels(target=target_name).set(1 if health_ok else 0)
-            
+
             return status
 
     # Global monitor instance
@@ -894,7 +894,7 @@ data:
     if __name__ == '__main__':
         # Start Prometheus metrics server
         start_http_server(8080)
-        
+
         # Update metrics periodically in background
         import threading
         def periodic_update():
@@ -905,10 +905,10 @@ data:
                 except Exception as e:
                     logger.error(f"Error in periodic update: {e}")
                     time.sleep(60)
-        
+
         thread = threading.Thread(target=periodic_update, daemon=True)
         thread.start()
-        
+
         # Start Flask API
         app.run(host='0.0.0.0', port=8090, debug=False)
 
@@ -962,28 +962,28 @@ spec:
                   def validate_sync():
                       with open('/etc/config/sync-config.yaml', 'r') as f:
                           config = yaml.safe_load(f)['sync']
-                      
+
                       primary_client = boto3.client('s3', region_name=config['primary_region'])
                       primary_bucket = config['primary_bucket']
-                      
+
                       validation_results = {
                           'timestamp': datetime.utcnow().isoformat(),
                           'primary_bucket': primary_bucket,
                           'validations': {},
                           'overall_success': True
                       }
-                      
+
                       # Get a sample of objects from primary
                       try:
                           response = primary_client.list_objects_v2(Bucket=primary_bucket, MaxKeys=100)
                           sample_objects = response.get('Contents', [])[:10]  # Test first 10 objects
-                          
+
                           logger.info(f"Testing sync validation with {len(sample_objects)} sample objects")
-                          
+
                           for target_name, target_config in config['targets'].items():
                               target_client = boto3.client('s3', region_name=target_config['region'])
                               target_bucket = target_config['bucket']
-                              
+
                               target_validation = {
                                   'target_bucket': target_bucket,
                                   'objects_checked': 0,
@@ -991,36 +991,36 @@ spec:
                                   'objects_different': 0,
                                   'success': True
                               }
-                              
+
                               for obj in sample_objects:
                                   key = obj['Key']
                                   target_validation['objects_checked'] += 1
-                                  
+
                                   try:
                                       # Check if object exists in target
                                       target_obj = target_client.head_object(Bucket=target_bucket, Key=key)
-                                      
+
                                       # Compare ETags
                                       if obj['ETag'] != target_obj['ETag']:
                                           target_validation['objects_different'] += 1
                                           logger.warning(f"Object {key} differs between primary and {target_name}")
-                                          
+
                                   except target_client.exceptions.NoSuchKey:
                                       target_validation['objects_missing'] += 1
                                       logger.warning(f"Object {key} missing in {target_name}")
                                   except Exception as e:
                                       logger.error(f"Error checking {key} in {target_name}: {e}")
                                       target_validation['success'] = False
-                              
+
                               # Determine if validation passed
                               if target_validation['objects_missing'] > 0 or target_validation['objects_different'] > 0:
                                   target_validation['success'] = False
                                   validation_results['overall_success'] = False
-                              
+
                               validation_results['validations'][target_name] = target_validation
-                              
+
                               logger.info(f"Validation for {target_name}: {target_validation}")
-                          
+
                           # Update metrics
                           import requests
                           for target_name, result in validation_results['validations'].items():
@@ -1031,9 +1031,9 @@ spec:
                                   headers={'Content-Type': 'text/plain'},
                                   timeout=30
                               )
-                          
+
                           return validation_results['overall_success']
-                          
+
                       except Exception as e:
                           logger.error(f"Error in validation: {e}")
                           return False

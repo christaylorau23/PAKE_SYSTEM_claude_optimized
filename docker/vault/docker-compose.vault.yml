@@ -45,10 +45,10 @@ services:
       sh -c "
         # Wait for Vault to be ready
         until vault status; do sleep 2; done
-        
+
         # Enable kv secrets engine
         vault secrets enable -version=2 kv
-        
+
         # Create policies
         vault policy write pake-system - <<EOF
         path \"kv/data/pake-system/*\" {
@@ -58,26 +58,26 @@ services:
           capabilities = [\"read\", \"list\"]
         }
         EOF
-        
+
         # Create service-specific policies
         vault policy write voice-agents - <<EOF
         path \"kv/data/pake-system/voice-agents/*\" {
           capabilities = [\"read\", \"list\"]
         }
         EOF
-        
+
         vault policy write video-generation - <<EOF
         path \"kv/data/pake-system/video-generation/*\" {
           capabilities = [\"read\", \"list\"]
         }
         EOF
-        
+
         vault policy write social-media - <<EOF
         path \"kv/data/pake-system/social-media/*\" {
           capabilities = [\"read\", \"list\"]
         }
         EOF
-        
+
         # Store initial secrets
         vault kv put kv/pake-system/database \\
           host=\"postgres\" \\
@@ -85,43 +85,43 @@ services:
           database=\"pake_system\" \\
           username=\"pake_user\" \\
           REDACTED_SECRET=\"$(openssl rand -hex 32)\"
-        
+
         vault kv put kv/pake-system/redis \\
           host=\"redis\" \\
           port=\"6379\" \\
           REDACTED_SECRET=\"$(openssl rand -hex 32)\"
-        
+
         vault kv put kv/pake-system/jwt \\
           secret_key=\"$(openssl rand -hex 64)\" \\
           algorithm=\"HS256\" \\
           expiration_minutes=\"30\"
-        
+
         # Voice Agents secrets
         vault kv put kv/pake-system/voice-agents/vapi \\
           api_key=\"PLACEHOLDER_VAPI_API_KEY\" \\
           webhook_secret=\"$(openssl rand -hex 32)\"
-        
+
         # Video Generation secrets
         vault kv put kv/pake-system/video-generation/d-id \\
           api_key=\"PLACEHOLDER_DID_API_KEY\" \\
           secret=\"$(openssl rand -hex 32)\"
-          
+
         vault kv put kv/pake-system/video-generation/heygen \\
           api_key=\"PLACEHOLDER_HEYGEN_API_KEY\"
-        
+
         # Social Media secrets
         vault kv put kv/pake-system/social-media/twitter \\
           bearer_token=\"PLACEHOLDER_TWITTER_BEARER_TOKEN\" \\
           api_key=\"PLACEHOLDER_TWITTER_API_KEY\" \\
           api_secret=\"PLACEHOLDER_TWITTER_API_SECRET\"
-          
+
         vault kv put kv/pake-system/social-media/openai \\
           api_key=\"PLACEHOLDER_OPENAI_API_KEY\" \\
           organization=\"PLACEHOLDER_OPENAI_ORG\"
-          
+
         vault kv put kv/pake-system/social-media/anthropic \\
           api_key=\"PLACEHOLDER_ANTHROPIC_API_KEY\"
-        
+
         echo \"Vault initialization complete!\"
       "
     networks:

@@ -550,15 +550,15 @@ class TestRunner {
         <h1>🧪 PAKE System Test Results</h1>
         <p>Generated on {{TIMESTAMP}}</p>
     </div>
-    
+
     {{SUMMARY}}
-    
+
     <div id="results"></div>
-    
+
     <script>
         const results = {{RESULTS_JSON}};
         const container = document.getElementById('results');
-        
+
         Object.entries(results.suites).forEach(([name, suite]) => {
             const div = document.createElement('div');
             div.className = \`suite \${suite.success ? 'success' : 'failed'}\`;

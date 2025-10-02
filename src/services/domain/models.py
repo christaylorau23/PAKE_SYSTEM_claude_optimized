@@ -311,9 +311,9 @@ class TenantActivity:
 
     id: str
     tenant_id: str
-    user_id: Optional[str] = None
     activity_type: str
     activity_description: str
+    user_id: Optional[str] = None
 
     # Activity metadata
     metadata: dict[str, Any] = field(default_factory=dict)

@@ -6,12 +6,12 @@ beforeAll(() => {
   process.env.NODE_ENV = process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED';
   process.env.VAULT_ADDR = 'https://vault-test.example.com:8200';
   process.env.VAULT_TOKEN = 'test-token';
-  
+
   // Mock console methods to reduce noise in tests
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
-  
+
   // Keep error logs for debugging
   const originalError = console.error;
   vi.spyOn(console, 'error').mockImplementation((...args) => {
@@ -40,7 +40,7 @@ beforeAll(() => {
 afterAll(() => {
   // Restore original methods
   vi.restoreAllMocks();
-  
+
   // Restore crypto.randomBytes if needed
   if ((global as any).__originalRandomBytes) {
     const crypto = require('crypto');
@@ -76,7 +76,7 @@ export function generateTestSecret(path: string, overrides: any = {}) {
 
 // Helper function to measure performance
 export function measurePerformance<T>(
-  name: string, 
+  name: string,
   fn: () => Promise<T>
 ): Promise<{ result: T; duration: number }> {
   return new Promise(async (resolve, reject) => {
@@ -84,13 +84,13 @@ export function measurePerformance<T>(
       const startTime = performance.now();
       const result = await fn();
       const duration = performance.now() - startTime;
-      
+
       // Store metric for analysis
       if (!global.performanceMetrics) {
         global.performanceMetrics = new Map();
       }
       global.performanceMetrics.set(name, duration);
-      
+
       resolve({ result, duration });
     } catch (error) {
       reject(error);
@@ -142,8 +142,8 @@ export function createTestCertificate() {
 
 // Helper function to validate performance requirements
 export function validatePerformanceRequirement(
-  operationName: string, 
-  duration: number, 
+  operationName: string,
+  duration: number,
   maxAllowedMs: number = 10
 ) {
   if (duration > maxAllowedMs) {

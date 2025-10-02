@@ -185,28 +185,28 @@ data:
           latency_threshold: 500  # milliseconds
           error_rate_threshold: 0.05
           analysis_duration: 300  # seconds
-          
+
         failure_policy:
           auto_rollback: true
           notification_channels: ["slack", "email"]
           escalation_timeout: 600  # seconds
-          
+
       blue_green:
         auto_promotion:
           enabled: false  # Manual approval required
           analysis_duration: 180  # seconds
-          
+
         failure_policy:
           auto_rollback: true
           keep_previous_version: true
           notification_channels: ["slack", "email", "pagerduty"]
-          
+
       approval_gates:
         production:
           required_approvers: 2
           approver_groups: ["devops", "sre"]
           timeout: 3600  # 1 hour
-          
+
         staging:
           required_approvers: 1
           approver_groups: ["developers", "devops"]
@@ -295,7 +295,7 @@ spec:
                   kubectl argo rollouts list -n pake-system --output json | jq -r '.[] | select(.status.phase == "Degraded" or .status.phase == "Error") | .metadata.name' | while read rollout; do
                     if [ -n "$rollout" ]; then
                       echo "Unhealthy rollout detected: $rollout"
-                      
+
                       # Send notification (placeholder)
                       curl -X POST -H 'Content-type: application/json' \
                         --data "{\"text\":\"⚠️ PAKE Deployment Issue: Rollout $rollout is in unhealthy state\"}" \

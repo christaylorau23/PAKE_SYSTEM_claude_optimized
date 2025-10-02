@@ -9,7 +9,7 @@ import logging
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class SafeImporter:
         if isinstance(attr_names, str):
             attr_names = [attr_names]
 
-        result = {}
+        result: Dict[str, Any] = {}
 
         try:
             module = self.safe_import_module(module_name, package)

@@ -113,11 +113,11 @@ class SecurityAlert(BaseModel):
 class SecurityMonitoringSystem:
     """
     Enterprise Security Monitoring & Alerting System
-    
+
     Provides comprehensive security monitoring, threat detection,
     and automated incident response capabilities.
     """
-    
+
     def __init__(self):
         self.logger = self._setup_logger()
         self.security_events: List[SecurityEvent] = []
@@ -125,36 +125,36 @@ class SecurityMonitoringSystem:
         self.alerts: List[SecurityAlert] = []
         self.detection_rules: List[SecurityRule] = []
         self.threat_indicators: Dict[str, List[datetime]] = {}
-        
+
         # Initialize detection rules
         self._initialize_default_rules()
-        
+
         # Alert handlers
         self.alert_handlers: Dict[AlertChannel, Callable] = {}
         self._setup_alert_handlers()
-        
+
         # Monitoring state
         self.monitoring_active = False
         self.last_scan_time = datetime.now(UTC)
-    
+
     def _setup_logger(self) -> logging.Logger:
         """Set up security monitoring logger"""
         logger = logging.getLogger("pake_security_monitoring")
         logger.setLevel(logging.INFO)
-        
+
         # Create security log file
         log_dir = Path("logs/security")
         log_dir.mkdir(parents=True, exist_ok=True)
-        
+
         handler = logging.FileHandler(log_dir / "security_monitoring.log")
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        
+
         return logger
-    
+
     def _initialize_default_rules(self):
         """Initialize default security detection rules"""
         default_rules = [
@@ -223,10 +223,10 @@ class SecurityMonitoringSystem:
                 tags=["malware", "signature"]
             )
         ]
-        
+
         self.detection_rules.extend(default_rules)
         self.logger.info(f"Initialized {len(default_rules)} default security rules")
-    
+
     def _setup_alert_handlers(self):
         """Setup alert notification handlers"""
         self.alert_handlers[AlertChannel.EMAIL] = self._send_email_alert
@@ -234,11 +234,11 @@ class SecurityMonitoringSystem:
         self.alert_handlers[AlertChannel.WEBHOOK] = self._send_webhook_alert
         self.alert_handlers[AlertChannel.SMS] = self._send_sms_alert
         self.alert_handlers[AlertChannel.PAGERDUTY] = self._send_pagerduty_alert
-    
+
     # ========================================================================
     # Event Processing and Detection
     # ========================================================================
-    
+
     async def process_security_event(
         self,
         event_type: str,
@@ -250,7 +250,7 @@ class SecurityMonitoringSystem:
     ) -> SecurityEvent:
         """
         Process a security event and run detection rules
-        
+
         Args:
             event_type: Type of security event
             description: Event description
@@ -258,7 +258,7 @@ class SecurityMonitoringSystem:
             user_id: User identifier
             resource: Affected resource
             metadata: Additional metadata
-            
+
         Returns:
             SecurityEvent object
         """
@@ -273,49 +273,49 @@ class SecurityMonitoringSystem:
             description=description,
             metadata=metadata or {}
         )
-        
+
         # Run detection rules
         await self._run_detection_rules(event)
-        
+
         # Store event
         self.security_events.append(event)
-        
+
         # Update threat indicators
         await self._update_threat_indicators(event)
-        
+
         # Check for incident creation
         await self._check_incident_creation(event)
-        
+
         self.logger.info(f"Processed security event: {event.event_id} - {event_type}")
-        
+
         return event
-    
+
     async def _run_detection_rules(self, event: SecurityEvent):
         """Run detection rules against security event"""
         for rule in self.detection_rules:
             if not rule.enabled:
                 continue
-            
+
             # Check if event matches rule pattern
             if await self._matches_rule_pattern(event, rule):
                 # Update threat level if rule threat level is higher
                 if self._get_threat_level_value(rule.threat_level) > self._get_threat_level_value(event.threat_level):
                     event.threat_level = rule.threat_level
-                
+
                 # Add rule metadata
                 event.metadata[f"matched_rule_{rule.rule_id}"] = {
                     "rule_name": rule.name,
                     "rule_description": rule.description,
                     "matched_at": datetime.now(UTC).isoformat()
                 }
-                
+
                 self.logger.warning(f"Event {event.event_id} matched rule {rule.rule_id}: {rule.name}")
-    
+
     async def _matches_rule_pattern(self, event: SecurityEvent, rule: SecurityRule) -> bool:
         """Check if event matches rule pattern"""
         # Simple pattern matching - in production, use more sophisticated detection
         event_text = f"{event.event_type} {event.description} {event.resource or ''}"
-        
+
         if rule.pattern == "failed_login_attempts":
             return await self._detect_brute_force(event)
         elif rule.pattern == "sql_injection":
@@ -332,23 +332,23 @@ class SecurityMonitoringSystem:
             return await self._detect_anomalous_traffic(event)
         elif rule.pattern == "malware_signature":
             return await self._detect_malware_signature(event)
-        
+
         return False
-    
+
     async def _detect_brute_force(self, event: SecurityEvent) -> bool:
         """Detect brute force attack patterns"""
         if event.event_type != "failed_login":
             return False
-        
+
         # Check for multiple failed attempts from same IP
         if event.source_ip:
             recent_events = [
                 e for e in self.security_events[-100:]  # Last 100 events
-                if e.event_type == "failed_login" 
+                if e.event_type == "failed_login"
                 and e.source_ip == event.source_ip
                 and (datetime.now(UTC) - e.timestamp).total_seconds() < 300  # 5 minutes
             ]
-            
+
             if len(recent_events) >= 5:  # 5 or more failed attempts
                 event.threat_level = ThreatLevel.HIGH
                 event.metadata["brute_force_detected"] = {
@@ -356,9 +356,9 @@ class SecurityMonitoringSystem:
                     "time_window": "5 minutes"
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_sql_injection(self, event: SecurityEvent) -> bool:
         """Detect SQL injection patterns"""
         sql_patterns = [
@@ -372,9 +372,9 @@ class SecurityMonitoringSystem:
             r"(UPDATE\s+SET)",
             r"(DELETE\s+FROM)"
         ]
-        
+
         event_text = f"{event.description} {event.resource or ''}"
-        
+
         for pattern in sql_patterns:
             if re.search(pattern, event_text, re.IGNORECASE):
                 event.metadata["sql_injection_detected"] = {
@@ -382,9 +382,9 @@ class SecurityMonitoringSystem:
                     "event_text": event_text
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_xss(self, event: SecurityEvent) -> bool:
         """Detect XSS attack patterns"""
         xss_patterns = [
@@ -399,9 +399,9 @@ class SecurityMonitoringSystem:
             r"document\.write",
             r"innerHTML\s*="
         ]
-        
+
         event_text = f"{event.description} {event.resource or ''}"
-        
+
         for pattern in xss_patterns:
             if re.search(pattern, event_text, re.IGNORECASE):
                 event.metadata["xss_detected"] = {
@@ -409,9 +409,9 @@ class SecurityMonitoringSystem:
                     "event_text": event_text
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_unauthorized_access(self, event: SecurityEvent) -> bool:
         """Detect unauthorized file access"""
         if event.event_type == "file_access":
@@ -422,9 +422,9 @@ class SecurityMonitoringSystem:
                     "resource": event.resource
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_privilege_escalation(self, event: SecurityEvent) -> bool:
         """Detect privilege escalation attempts"""
         escalation_patterns = [
@@ -435,9 +435,9 @@ class SecurityMonitoringSystem:
             r"privilege\s+escalation",
             r"elevate\s+privileges"
         ]
-        
+
         event_text = f"{event.description} {event.resource or ''}"
-        
+
         for pattern in escalation_patterns:
             if re.search(pattern, event_text, re.IGNORECASE):
                 event.metadata["privilege_escalation_detected"] = {
@@ -445,9 +445,9 @@ class SecurityMonitoringSystem:
                     "event_text": event_text
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_data_exfiltration(self, event: SecurityEvent) -> bool:
         """Detect data exfiltration attempts"""
         exfiltration_indicators = [
@@ -457,9 +457,9 @@ class SecurityMonitoringSystem:
             "data_export",
             "file_copy_outbound"
         ]
-        
+
         event_text = f"{event.description} {event.resource or ''}"
-        
+
         for indicator in exfiltration_indicators:
             if indicator in event_text.lower():
                 event.metadata["data_exfiltration_detected"] = {
@@ -467,15 +467,15 @@ class SecurityMonitoringSystem:
                     "event_text": event_text
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_anomalous_traffic(self, event: SecurityEvent) -> bool:
         """Detect anomalous network traffic"""
         if event.event_type == "network_traffic":
             # Check for unusual patterns (simplified)
             metadata = event.metadata
-            
+
             # High bandwidth usage
             if metadata.get("bandwidth_mbps", 0) > 1000:  # 1 Gbps
                 event.metadata["anomalous_traffic_detected"] = {
@@ -483,7 +483,7 @@ class SecurityMonitoringSystem:
                     "bandwidth_mbps": metadata.get("bandwidth_mbps")
                 }
                 return True
-            
+
             # Unusual destination
             if metadata.get("destination_country") not in ["US", "CA", "GB"]:
                 event.metadata["anomalous_traffic_detected"] = {
@@ -491,9 +491,9 @@ class SecurityMonitoringSystem:
                     "destination_country": metadata.get("destination_country")
                 }
                 return True
-        
+
         return False
-    
+
     async def _detect_malware_signature(self, event: SecurityEvent) -> bool:
         """Detect malware signatures"""
         malware_signatures = [
@@ -506,9 +506,9 @@ class SecurityMonitoringSystem:
             "keylogger",
             "botnet"
         ]
-        
+
         event_text = f"{event.description} {event.resource or ''}"
-        
+
         for signature in malware_signatures:
             if signature in event_text.lower():
                 event.metadata["malware_signature_detected"] = {
@@ -516,35 +516,35 @@ class SecurityMonitoringSystem:
                     "event_text": event_text
                 }
                 return True
-        
+
         return False
-    
+
     # ========================================================================
     # Threat Intelligence and Correlation
     # ========================================================================
-    
+
     async def _update_threat_indicators(self, event: SecurityEvent):
         """Update threat indicators for correlation"""
         if event.source_ip:
             if event.source_ip not in self.threat_indicators:
                 self.threat_indicators[event.source_ip] = []
-            
+
             self.threat_indicators[event.source_ip].append(event.timestamp)
-            
+
             # Keep only recent indicators (last 24 hours)
             cutoff_time = datetime.now(UTC) - timedelta(hours=24)
             self.threat_indicators[event.source_ip] = [
                 ts for ts in self.threat_indicators[event.source_ip]
                 if ts > cutoff_time
             ]
-    
+
     async def _check_incident_creation(self, event: SecurityEvent):
         """Check if event should trigger incident creation"""
         # Create incident for high/critical threat events
         if event.threat_level in [ThreatLevel.HIGH, ThreatLevel.CRITICAL]:
             # Check if there's already an open incident for this threat
             existing_incident = await self._find_related_incident(event)
-            
+
             if not existing_incident:
                 # Create new incident
                 incident = await self._create_incident(event)
@@ -553,12 +553,12 @@ class SecurityMonitoringSystem:
                 # Add event to existing incident
                 existing_incident.events.append(event)
                 existing_incident.updated_at = datetime.now(UTC)
-                
+
                 # Update incident threat level if needed
                 if self._get_threat_level_value(event.threat_level) > self._get_threat_level_value(existing_incident.threat_level):
                     existing_incident.threat_level = event.threat_level
                     await self._send_incident_update_alerts(existing_incident)
-    
+
     async def _find_related_incident(self, event: SecurityEvent) -> Optional[SecurityIncident]:
         """Find related incident for event"""
         for incident in self.incidents:
@@ -569,9 +569,9 @@ class SecurityMonitoringSystem:
                        (event.user_id and incident_event.user_id == event.user_id) or \
                        (event.resource and incident_event.resource == event.resource):
                         return incident
-        
+
         return None
-    
+
     async def _create_incident(self, event: SecurityEvent) -> SecurityIncident:
         """Create new security incident"""
         incident = SecurityIncident(
@@ -582,20 +582,20 @@ class SecurityMonitoringSystem:
             events=[event],
             tags=[event.event_type]
         )
-        
+
         self.incidents.append(incident)
         self.logger.warning(f"Created security incident: {incident.incident_id}")
-        
+
         return incident
-    
+
     # ========================================================================
     # Alerting and Notifications
     # ========================================================================
-    
+
     async def _send_incident_alerts(self, incident: SecurityIncident):
         """Send alerts for new incident"""
         alert_channels = self._get_alert_channels_for_threat_level(incident.threat_level)
-        
+
         alert = SecurityAlert(
             alert_id=f"alert_{int(time.time())}_{secrets.token_hex(4)}",
             incident_id=incident.incident_id,
@@ -605,20 +605,20 @@ class SecurityMonitoringSystem:
             threat_level=incident.threat_level,
             channels=alert_channels
         )
-        
+
         self.alerts.append(alert)
-        
+
         # Send alerts to all channels
         for channel in alert_channels:
             try:
                 await self.alert_handlers[channel](alert)
             except Exception as e:
                 self.logger.error(f"Failed to send alert to {channel}: {str(e)}")
-    
+
     async def _send_incident_update_alerts(self, incident: SecurityIncident):
         """Send alerts for incident updates"""
         alert_channels = self._get_alert_channels_for_threat_level(incident.threat_level)
-        
+
         alert = SecurityAlert(
             alert_id=f"alert_{int(time.time())}_{secrets.token_hex(4)}",
             incident_id=incident.incident_id,
@@ -628,16 +628,16 @@ class SecurityMonitoringSystem:
             threat_level=incident.threat_level,
             channels=alert_channels
         )
-        
+
         self.alerts.append(alert)
-        
+
         # Send alerts to all channels
         for channel in alert_channels:
             try:
                 await self.alert_handlers[channel](alert)
             except Exception as e:
                 self.logger.error(f"Failed to send alert to {channel}: {str(e)}")
-    
+
     def _get_alert_channels_for_threat_level(self, threat_level: ThreatLevel) -> List[AlertChannel]:
         """Get alert channels based on threat level"""
         if threat_level == ThreatLevel.CRITICAL:
@@ -648,36 +648,36 @@ class SecurityMonitoringSystem:
             return [AlertChannel.EMAIL]
         else:
             return [AlertChannel.EMAIL]
-    
+
     async def _send_email_alert(self, alert: SecurityAlert):
         """Send email alert"""
         # In production, integrate with email service (SendGrid, SES, etc.)
         self.logger.info(f"Email alert sent: {alert.title}")
-    
+
     async def _send_slack_alert(self, alert: SecurityAlert):
         """Send Slack alert"""
         # In production, integrate with Slack API
         self.logger.info(f"Slack alert sent: {alert.title}")
-    
+
     async def _send_webhook_alert(self, alert: SecurityAlert):
         """Send webhook alert"""
         # In production, send to configured webhook URL
         self.logger.info(f"Webhook alert sent: {alert.title}")
-    
+
     async def _send_sms_alert(self, alert: SecurityAlert):
         """Send SMS alert"""
         # In production, integrate with SMS service (Twilio, etc.)
         self.logger.info(f"SMS alert sent: {alert.title}")
-    
+
     async def _send_pagerduty_alert(self, alert: SecurityAlert):
         """Send PagerDuty alert"""
         # In production, integrate with PagerDuty API
         self.logger.info(f"PagerDuty alert sent: {alert.title}")
-    
+
     # ========================================================================
     # Incident Management
     # ========================================================================
-    
+
     async def update_incident_status(
         self,
         incident_id: str,
@@ -689,58 +689,58 @@ class SecurityMonitoringSystem:
         incident = await self._get_incident_by_id(incident_id)
         if not incident:
             return False
-        
+
         incident.status = status
         incident.updated_at = datetime.now(UTC)
-        
+
         if assigned_to:
             incident.assigned_to = assigned_to
-        
+
         if notes:
             incident.notes.append(f"{datetime.now(UTC).isoformat()}: {notes}")
-        
+
         if status == IncidentStatus.RESOLVED:
             incident.resolved_at = datetime.now(UTC)
-        
+
         self.logger.info(f"Updated incident {incident_id} status to {status.value}")
         return True
-    
+
     async def _get_incident_by_id(self, incident_id: str) -> Optional[SecurityIncident]:
         """Get incident by ID"""
         for incident in self.incidents:
             if incident.incident_id == incident_id:
                 return incident
         return None
-    
+
     async def get_open_incidents(self) -> List[SecurityIncident]:
         """Get all open incidents"""
         return [
             incident for incident in self.incidents
             if incident.status in [IncidentStatus.OPEN, IncidentStatus.INVESTIGATING]
         ]
-    
+
     async def get_incident_metrics(self, days: int = 30) -> Dict[str, Any]:
         """Get incident metrics"""
         end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
-        
+
         # Filter incidents by date range
         recent_incidents = [
             incident for incident in self.incidents
             if start_date <= incident.created_at <= end_date
         ]
-        
+
         # Calculate metrics
         total_incidents = len(recent_incidents)
         resolved_incidents = len([i for i in recent_incidents if i.status == IncidentStatus.RESOLVED])
         open_incidents = len([i for i in recent_incidents if i.status in [IncidentStatus.OPEN, IncidentStatus.INVESTIGATING]])
-        
+
         # Threat level breakdown
         threat_level_counts = {}
         for incident in recent_incidents:
             level = incident.threat_level.value
             threat_level_counts[level] = threat_level_counts.get(level, 0) + 1
-        
+
         # Average resolution time
         resolved_with_time = [i for i in recent_incidents if i.resolved_at]
         avg_resolution_time = None
@@ -750,7 +750,7 @@ class SecurityMonitoringSystem:
                 for i in resolved_with_time
             ]
             avg_resolution_time = sum(resolution_times) / len(resolution_times)
-        
+
         return {
             "period": {
                 "start_date": start_date.isoformat(),
@@ -768,16 +768,16 @@ class SecurityMonitoringSystem:
             "top_event_types": self._get_top_event_types(recent_incidents),
             "top_source_ips": self._get_top_source_ips(recent_incidents)
         }
-    
+
     def _get_top_event_types(self, incidents: List[SecurityIncident]) -> Dict[str, int]:
         """Get top event types from incidents"""
         event_type_counts = {}
         for incident in incidents:
             for event in incident.events:
                 event_type_counts[event.event_type] = event_type_counts.get(event.event_type, 0) + 1
-        
+
         return dict(sorted(event_type_counts.items(), key=lambda x: x[1], reverse=True)[:10])
-    
+
     def _get_top_source_ips(self, incidents: List[SecurityIncident]) -> Dict[str, int]:
         """Get top source IPs from incidents"""
         ip_counts = {}
@@ -785,13 +785,13 @@ class SecurityMonitoringSystem:
             for event in incident.events:
                 if event.source_ip:
                     ip_counts[event.source_ip] = ip_counts.get(event.source_ip, 0) + 1
-        
+
         return dict(sorted(ip_counts.items(), key=lambda x: x[1], reverse=True)[:10])
-    
+
     # ========================================================================
     # Utility Methods
     # ========================================================================
-    
+
     def _get_threat_level_value(self, threat_level: ThreatLevel) -> int:
         """Get numeric value for threat level comparison"""
         threat_values = {
@@ -801,32 +801,32 @@ class SecurityMonitoringSystem:
             ThreatLevel.CRITICAL: 4
         }
         return threat_values[threat_level]
-    
+
     async def generate_security_report(self, days: int = 30) -> Dict[str, Any]:
         """Generate comprehensive security report"""
         end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
-        
+
         # Filter events by date range
         recent_events = [
             event for event in self.security_events
             if start_date <= event.timestamp <= end_date
         ]
-        
+
         # Filter incidents by date range
         recent_incidents = [
             incident for incident in self.incidents
             if start_date <= incident.created_at <= end_date
         ]
-        
+
         # Calculate statistics
         total_events = len(recent_events)
         critical_events = len([e for e in recent_events if e.threat_level == ThreatLevel.CRITICAL])
         high_events = len([e for e in recent_events if e.threat_level == ThreatLevel.HIGH])
-        
+
         # Get incident metrics
         incident_metrics = await self.get_incident_metrics(days)
-        
+
         report = {
             "report_period": {
                 "start_date": start_date.isoformat(),
@@ -844,9 +844,9 @@ class SecurityMonitoringSystem:
             "top_threats": self._get_top_event_types(recent_incidents),
             "recommendations": await self._generate_security_recommendations(recent_events, recent_incidents)
         }
-        
+
         return report
-    
+
     async def _generate_security_recommendations(
         self,
         events: List[SecurityEvent],
@@ -854,28 +854,28 @@ class SecurityMonitoringSystem:
     ) -> List[str]:
         """Generate security recommendations"""
         recommendations = []
-        
+
         # Check for high number of critical events
         critical_events = [e for e in events if e.threat_level == ThreatLevel.CRITICAL]
         if len(critical_events) > 5:
             recommendations.append("High number of critical security events detected - review security controls")
-        
+
         # Check for unresolved incidents
         open_incidents = [i for i in incidents if i.status in [IncidentStatus.OPEN, IncidentStatus.INVESTIGATING]]
         if len(open_incidents) > 3:
             recommendations.append("Multiple unresolved security incidents - prioritize incident response")
-        
+
         # Check for repeated source IPs
         source_ips = [e.source_ip for e in events if e.source_ip]
         if source_ips:
             ip_counts = {}
             for ip in source_ips:
                 ip_counts[ip] = ip_counts.get(ip, 0) + 1
-            
+
             suspicious_ips = [ip for ip, count in ip_counts.items() if count > 10]
             if suspicious_ips:
                 recommendations.append(f"Consider blocking suspicious IP addresses: {suspicious_ips}")
-        
+
         return recommendations
 
 
@@ -884,7 +884,7 @@ if __name__ == "__main__":
     async def main():
         # Initialize security monitoring system
         security_monitor = SecurityMonitoringSystem()
-        
+
         # Process some security events
         await security_monitor.process_security_event(
             event_type="failed_login",
@@ -892,9 +892,9 @@ if __name__ == "__main__":
             source_ip="192.168.1.100",
             user_id="admin"
         )
-        
+
         # Generate security report
         report = await security_monitor.generate_security_report()
         print(f"Security report: {report['summary']}")
-    
+
     asyncio.run(main())

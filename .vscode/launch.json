@@ -40,7 +40,7 @@
     },
     {
       "name": "🧪 Debug: Python Tests",
-      "type": "python", 
+      "type": "python",
       "request": "launch",
       "module": "pytest",
       "args": [

@@ -41,7 +41,7 @@ if %ERRORLEVEL% equ 0 (
     echo [%date% %time%] Service started successfully via alternative method >> "D:\Projects\PAKE_SYSTEM\logs\watchdog.log"
 ) else (
     echo [%date% %time%] WARNING: Service failed to start, will retry next cycle >> "D:\Projects\PAKE_SYSTEM\logs\watchdog.log"
-    
+
     :: Emergency fallback - start manual process
     tasklist /fi "imagename eq python.exe" /fi "windowtitle eq *automated_vault_watcher*" 2>nul | find /i "python.exe" >nul
     if %ERRORLEVEL% neq 0 (

@@ -41,7 +41,7 @@ export class VideoStorageManagerImpl implements VideoStorageManager {
   async storeVideo(videoId: string, videoData: Buffer, metadata: any): Promise<string> {
     try {
       this.logger.info('Storing video', { videoId, size: videoData.length });
-      
+
       const storagePath = await this.storage.storeVideo(videoId, videoData, {
         ...metadata,
         storedAt: new Date(),

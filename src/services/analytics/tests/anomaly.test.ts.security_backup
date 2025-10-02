@@ -1,6 +1,6 @@
 /**
  * PAKE System - Anomaly Detection Tests
- * 
+ *
  * Comprehensive test suite for anomaly detection algorithms including
  * Z-score spike detection, configuration testing, and performance validation.
  */
@@ -11,7 +11,7 @@ import { TrendRecord } from '../../trends/src/types/TrendRecord';
 
 describe('AnomalyDetector', () => {
   let detector: AnomalyDetector;
-  
+
   const mockTrendRecord: TrendRecord = {
     id: 'test-trend-001',
     platform: 'twitter',
@@ -75,7 +75,7 @@ describe('AnomalyDetector', () => {
   describe('Basic Anomaly Detection', () => {
     it('should detect no anomalies for normal trend', async () => {
       const result = await detector.detectAnomalies(mockTrendRecord);
-      
+
       expect(result).toBeDefined();
       expect(result.recordId).toBe(mockTrendRecord.id);
       expect(result.anomalies).toBeInstanceOf(Array);
@@ -94,7 +94,7 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(spikyRecord);
-      
+
       expect(result.anomalies.length).toBeGreaterThan(0);
       expect(result.anomalies).toContainElementMatching(
         anomaly => anomaly.type === AnomalyType.ENGAGEMENT_SPIKE
@@ -110,7 +110,7 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(fastRecord);
-      
+
       // Should detect high velocity if algorithm is enabled
       if (result.metadata.algorithmsUsed.includes('velocity')) {
         expect(result.anomalies).toContainElementMatching(
@@ -129,7 +129,7 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(minimalRecord);
-      
+
       expect(result).toBeDefined();
       expect(result.anomalies).toBeInstanceOf(Array);
       expect(result.overallScore).toBeGreaterThanOrEqual(0);
@@ -158,12 +158,12 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(outlierRecord);
-      
+
       // Should detect engagement spike
       const engagementAnomaly = result.anomalies.find(
         a => a.type === AnomalyType.ENGAGEMENT_SPIKE
       );
-      
+
       expect(engagementAnomaly).toBeDefined();
       expect(engagementAnomaly?.algorithm).toBe('z-score');
       expect(engagementAnomaly?.score).toBeGreaterThan(2.0);
@@ -175,11 +175,11 @@ describe('AnomalyDetector', () => {
       });
 
       const result = await strictDetector.detectAnomalies(mockTrendRecord);
-      
+
       // More likely to detect anomalies with strict threshold
       // (though depends on baseline data)
       expect(result).toBeDefined();
-      
+
       strictDetector.destroy();
     });
   });
@@ -194,12 +194,12 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(offPeakRecord);
-      
+
       // May detect off-peak activity if algorithm is enabled
       const offPeakAnomaly = result.anomalies.find(
         a => a.type === AnomalyType.OFF_PEAK_ACTIVITY
       );
-      
+
       if (offPeakAnomaly) {
         expect(offPeakAnomaly.algorithm).toBe('temporal-clustering');
         expect(offPeakAnomaly.metadata.hourOfDay).toBe(3);
@@ -213,7 +213,7 @@ describe('AnomalyDetector', () => {
       };
 
       const result = await detector.detectAnomalies(localTimeRecord);
-      
+
       expect(result).toBeDefined();
       expect(result.recordId).toBe(localTimeRecord.id);
     });
@@ -233,7 +233,7 @@ describe('AnomalyDetector', () => {
 
       expect(results).toHaveLength(50);
       expect(processingTime).toBeLessThan(10000); // Should complete in under 10s
-      
+
       results.forEach(result => {
         expect(result.recordId).toMatch(/^batch-\d+$/);
         expect(result.anomalies).toBeInstanceOf(Array);
@@ -252,7 +252,7 @@ describe('AnomalyDetector', () => {
       const results = await detector.detectAnomaliesBatch(
         records.filter(r => r !== null)
       );
-      
+
       expect(results.length).toBe(3); // Only valid records processed
     });
   });
@@ -270,9 +270,9 @@ describe('AnomalyDetector', () => {
 
       const twitterRecord = { ...mockTrendRecord, platform: 'twitter' };
       const result = await configuredDetector.detectAnomalies(twitterRecord);
-      
+
       expect(result).toBeDefined();
-      
+
       configuredDetector.destroy();
     });
 
@@ -288,9 +288,9 @@ describe('AnomalyDetector', () => {
       });
 
       const result = await limitedDetector.detectAnomalies(mockTrendRecord);
-      
+
       expect(result.metadata.algorithmsUsed).toEqual(['z-score']);
-      
+
       limitedDetector.destroy();
     });
 
@@ -309,7 +309,7 @@ describe('AnomalyDetector', () => {
       await detector.detectAnomalies({ ...mockTrendRecord, id: 'test-2' });
 
       const stats = detector.getStatistics();
-      
+
       expect(stats.totalRequests).toBe(2);
       expect(stats.averageProcessingTime).toBeGreaterThan(0);
       expect(stats.algorithmUsage.size).toBeGreaterThan(0);
@@ -330,10 +330,10 @@ describe('AnomalyDetector', () => {
       }));
 
       const startTime = Date.now();
-      const promises = records.map(record => 
+      const promises = records.map(record =>
         detector.detectAnomalies(record).catch(() => null)
       );
-      
+
       const results = await Promise.all(promises);
       const processingTime = Date.now() - startTime;
 
@@ -374,7 +374,7 @@ describe('AnomalyDetector', () => {
   describe('Data Quality and Validation', () => {
     it('should validate detection result structure', async () => {
       const result = await detector.detectAnomalies(mockTrendRecord);
-      
+
       // Validate structure
       expect(result).toHaveProperty('recordId');
       expect(result).toHaveProperty('anomalies');
@@ -382,7 +382,7 @@ describe('AnomalyDetector', () => {
       expect(result).toHaveProperty('confidence');
       expect(result).toHaveProperty('baseline');
       expect(result).toHaveProperty('metadata');
-      
+
       // Validate anomaly structure
       result.anomalies.forEach(anomaly => {
         expect(anomaly).toHaveProperty('type');
@@ -391,7 +391,7 @@ describe('AnomalyDetector', () => {
         expect(anomaly).toHaveProperty('severity');
         expect(anomaly).toHaveProperty('confidence');
         expect(anomaly).toHaveProperty('context');
-        
+
         // Validate score ranges
         expect(anomaly.score).toBeGreaterThanOrEqual(0);
         expect(anomaly.normalizedScore).toBeGreaterThanOrEqual(0);
@@ -407,7 +407,7 @@ describe('AnomalyDetector', () => {
         detector.detectAnomalies(mockTrendRecord),
         detector.detectAnomalies(mockTrendRecord)
       ]);
-      
+
       // Results should be consistent (within small variance)
       const scores = results.map(r => r.overallScore);
       const maxDiff = Math.max(...scores) - Math.min(...scores);
@@ -420,18 +420,18 @@ describe('AnomalyDetector', () => {
       const patterns = [
         // Normal post
         { ...mockTrendRecord, id: 'normal', engagementCount: 150 },
-        
+
         // Viral post
         { ...mockTrendRecord, id: 'viral', engagementCount: 50000 },
-        
+
         // Bot activity
-        { 
-          ...mockTrendRecord, 
-          id: 'bot', 
+        {
+          ...mockTrendRecord,
+          id: 'bot',
           engagementCount: 1000,
           timestamp: new Date(Date.now() - 1000) // Very recent
         },
-        
+
         // Low quality
         {
           ...mockTrendRecord,
@@ -443,10 +443,10 @@ describe('AnomalyDetector', () => {
 
       for (const pattern of patterns) {
         const result = await detector.detectAnomalies(pattern);
-        
+
         expect(result).toBeDefined();
         expect(result.recordId).toBe(pattern.id);
-        
+
         // Viral posts should likely trigger anomalies
         if (pattern.id === 'viral') {
           expect(result.overallScore).toBeGreaterThan(0.3);
@@ -468,18 +468,18 @@ describe('AnomalyDetector', () => {
       // Check that memory usage doesn't grow unbounded
       const stats = detector.getStatistics();
       expect(stats.totalRequests).toBe(200);
-      
+
       // Historical data should be limited
       // (This is implementation-dependent, but should not grow indefinitely)
     });
 
     it('should handle detector destruction cleanly', () => {
       const testDetector = new AnomalyDetector();
-      
+
       expect(() => {
         testDetector.destroy();
       }).not.toThrow();
-      
+
       // Should handle multiple destroy calls
       expect(() => {
         testDetector.destroy();

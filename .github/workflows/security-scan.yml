@@ -10,13 +10,13 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch full history for secret scanning
-    
+
     - name: Run TruffleHog secret scan
       uses: trufflesecurity/trufflehog@main
       with:
@@ -24,13 +24,13 @@ jobs:
         base: main
         head: HEAD
         extra_args: --debug --only-verified
-    
+
     - name: Run GitLeaks secret scan
       uses: gitleaks/gitleaks-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-    
+
     - name: Run Semgrep security scan
       uses: returntocorp/semgrep-action@v1
       with:
@@ -39,19 +39,19 @@ jobs:
           p/secrets
           p/owasp-top-ten
         generateSarif: "1"
-    
+
     - name: Upload Semgrep SARIF results
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: semgrep.sarif
-    
+
     - name: Run Bandit security linter
       run: |
         pip install bandit
         bandit -r src/ -f json -o bandit-report.json || true
         bandit -r security/ -f json -o security-bandit-report.json || true
-    
+
     - name: Upload Bandit results
       uses: actions/upload-artifact@v4
       if: always()
@@ -60,44 +60,44 @@ jobs:
         path: |
           bandit-report.json
           security-bandit-report.json
-    
+
     - name: Check for hardcoded secrets
       run: |
         echo "Checking for hardcoded secrets..."
-        
+
         # Check for common secret patterns
         if grep -r -i "password.*=.*['\"].*['\"]" src/ security/ --include="*.py"; then
           echo "❌ Found potential hardcoded passwords"
           exit 1
         fi
-        
+
         if grep -r -i "api.*key.*=.*['\"].*['\"]" src/ security/ --include="*.py"; then
           echo "❌ Found potential hardcoded API keys"
           exit 1
         fi
-        
+
         if grep -r -i "secret.*=.*['\"].*['\"]" src/ security/ --include="*.py"; then
           echo "❌ Found potential hardcoded secrets"
           exit 1
         fi
-        
+
         # Check for REDACTED_SECRET fallbacks (should not exist)
         if grep -r "REDACTED_SECRET" src/ security/ --include="*.py"; then
           echo "❌ Found REDACTED_SECRET fallbacks - these should be removed"
           exit 1
         fi
-        
+
         echo "✅ No hardcoded secrets found"
-    
+
     - name: Validate environment variable usage
       run: |
         echo "Validating environment variable usage..."
-        
+
         # Check that critical secrets use environment variables without fallbacks
         python3 -c "
         import os
         import sys
-        
+
         # Test that secrets manager fails without proper environment variables
         try:
             from security.secrets_manager import SecretsManager
@@ -115,7 +115,7 @@ jobs:
             print(f'❌ Unexpected error: {e}')
             sys.exit(1)
         "
-    
+
     - name: Security scan summary
       if: always()
       run: |

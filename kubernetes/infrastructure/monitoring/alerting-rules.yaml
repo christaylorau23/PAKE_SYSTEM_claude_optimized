@@ -27,7 +27,7 @@ data:
           summary: "High API error rate detected"
           description: "PAKE API error rate is {{ $value | humanizePercentage }} over the last 5 minutes, which exceeds the 5% threshold"
           runbook_url: "https://wiki.pake-system.com/runbooks/high-error-rate"
-      
+
       # High response time
       - alert: HighAPILatency
         expr: |
@@ -43,7 +43,7 @@ data:
         annotations:
           summary: "High API latency detected"
           description: "PAKE API 95th percentile latency is {{ $value }}s, which exceeds the 500ms threshold"
-          
+
       # Low throughput
       - alert: LowAPIThroughput
         expr: |
@@ -56,7 +56,7 @@ data:
         annotations:
           summary: "Low API throughput detected"
           description: "PAKE API request rate is {{ $value }} requests/second, which is unusually low"
-          
+
       # API service down
       - alert: APIServiceDown
         expr: |
@@ -69,7 +69,7 @@ data:
         annotations:
           summary: "PAKE API service is down"
           description: "PAKE API service has been down for more than 1 minute"
-          
+
       # High memory usage
       - alert: HighAPIMemoryUsage
         expr: |
@@ -102,7 +102,7 @@ data:
         annotations:
           summary: "Low GPU utilization detected"
           description: "GPU utilization on {{ $labels.instance }} is {{ $value }}%, which may indicate underutilized resources"
-          
+
       # GPU memory exhaustion
       - alert: HighGPUMemoryUsage
         expr: |
@@ -118,7 +118,7 @@ data:
         annotations:
           summary: "GPU memory exhaustion"
           description: "GPU memory usage on {{ $labels.instance }} is {{ $value | humanizePercentage }}"
-          
+
       # AI inference latency
       - alert: HighAIInferenceLatency
         expr: |
@@ -134,7 +134,7 @@ data:
         annotations:
           summary: "High AI inference latency"
           description: "AI inference 95th percentile latency is {{ $value }}s"
-          
+
       # Model loading failures
       - alert: ModelLoadingFailures
         expr: |
@@ -147,7 +147,7 @@ data:
         annotations:
           summary: "AI model loading failures"
           description: "{{ $value }} model loading failures detected in the last 5 minutes"
-          
+
       # AI service queue backup
       - alert: AIServiceQueueBackup
         expr: |
@@ -177,7 +177,7 @@ data:
         annotations:
           summary: "High worker queue length"
           description: "Queue {{ $labels.queue }} has {{ $value }} pending tasks"
-          
+
       # Worker failures
       - alert: WorkerTaskFailures
         expr: |
@@ -190,7 +190,7 @@ data:
         annotations:
           summary: "High worker task failure rate"
           description: "{{ $value }} worker task failures in the last 5 minutes"
-          
+
       # Dead letter queue growth
       - alert: DeadLetterQueueGrowth
         expr: |
@@ -203,7 +203,7 @@ data:
         annotations:
           summary: "Dead letter queue growth detected"
           description: "{{ $value }} tasks moved to dead letter queue"
-          
+
       # Worker memory exhaustion
       - alert: WorkerMemoryExhaustion
         expr: |
@@ -239,7 +239,7 @@ data:
         annotations:
           summary: "PostgreSQL connection exhaustion"
           description: "PostgreSQL is using {{ $value | humanizePercentage }} of available connections"
-          
+
       # High database CPU
       - alert: HighDatabaseCPU
         expr: |
@@ -252,7 +252,7 @@ data:
         annotations:
           summary: "High database CPU usage"
           description: "Database CPU usage is {{ $value | humanizePercentage }}"
-          
+
       # Redis memory usage
       - alert: HighRedisMemoryUsage
         expr: |
@@ -268,7 +268,7 @@ data:
         annotations:
           summary: "High Redis memory usage"
           description: "Redis memory usage is {{ $value | humanizePercentage }}"
-          
+
       # Database replication lag
       - alert: DatabaseReplicationLag
         expr: |
@@ -297,7 +297,7 @@ data:
         annotations:
           summary: "Node not ready"
           description: "Node {{ $labels.node }} has been not ready for more than 10 minutes"
-          
+
       # High node CPU usage
       - alert: HighNodeCPU
         expr: |
@@ -313,7 +313,7 @@ data:
         annotations:
           summary: "High node CPU usage"
           description: "Node {{ $labels.instance }} CPU usage is {{ $value | humanizePercentage }}"
-          
+
       # High node memory usage
       - alert: HighNodeMemory
         expr: |
@@ -330,7 +330,7 @@ data:
         annotations:
           summary: "High node memory usage"
           description: "Node {{ $labels.instance }} memory usage is {{ $value | humanizePercentage }}"
-          
+
       # Disk space usage
       - alert: HighDiskUsage
         expr: |
@@ -347,7 +347,7 @@ data:
         annotations:
           summary: "High disk usage"
           description: "Disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }} is {{ $value | humanizePercentage }}"
-          
+
       # Pod crash looping
       - alert: PodCrashLooping
         expr: |
@@ -359,7 +359,7 @@ data:
         annotations:
           summary: "Pod crash looping"
           description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
-          
+
       # PVC usage high
       - alert: PVCUsageHigh
         expr: |

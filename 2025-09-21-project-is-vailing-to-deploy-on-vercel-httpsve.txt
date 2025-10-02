@@ -15,14 +15,14 @@
   ⎿  5-hour limit reached ∙ resets 3am
      /upgrade to increase your usage limit.
 
-> /export 
+> /export
   ⎿  Conversation copied to clipboard
 
-> /context 
-  ⎿  ⛁ ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛁ 
+> /context
+  ⎿  ⛁ ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛁
      ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁   Context Usage
      ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛶ ⛶ ⛶   claude-sonnet-4-20250514 • 51k/200k tokens (26%)
-     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶
      ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 3.3k tokens (1.6%)
      ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 11.5k tokens (5.7%)
      ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ MCP tools: 927 tokens (0.5%)
@@ -38,6 +38,6 @@
      └ Project                                                           7.9k tokens
      (/home/chris/projects/PAKE_SYSTEM_claude_optimized/CLAUDE.md):
 
-> /export 
+> /export
   ⎿  Conversation exported to: 2025-09-21-project-is-vailing-to-deploy-on-vercel-httpsve.txt
 

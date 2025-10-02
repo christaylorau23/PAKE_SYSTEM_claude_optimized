@@ -59,7 +59,7 @@ done
 # Function to build production image
 build_production() {
     echo -e "${YELLOW}📦 Building production image...${NC}"
-    
+
     docker build \
         $NO_CACHE \
         $PLATFORM \
@@ -67,7 +67,7 @@ build_production() {
         -t pake-system/voice-agents:latest \
         -t pake-system/voice-agents:$(date +%Y%m%d-%H%M%S) \
         .
-    
+
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ Production image built successfully${NC}"
     else
@@ -79,14 +79,14 @@ build_production() {
 # Function to build development image
 build_development() {
     echo -e "${YELLOW}🔧 Building development image...${NC}"
-    
+
     docker build \
         $NO_CACHE \
         $PLATFORM \
         -f Dockerfile.dev \
         -t pake-system/voice-agents:dev \
         .
-    
+
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ Development image built successfully${NC}"
     else

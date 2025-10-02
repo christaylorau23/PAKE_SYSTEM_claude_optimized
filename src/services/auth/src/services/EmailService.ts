@@ -342,15 +342,15 @@ export class EmailService {
       `,
       text: `
         PAKE System - Verify Your Email Address
-        
+
         Thank you for creating an account with PAKE System. To complete your registration, please verify your email address by clicking the following link:
-        
+
         ${verificationUrl}
-        
+
         This link will expire in 24 hours.
-        
+
         If you did not create an account with us, please ignore this email.
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -410,16 +410,16 @@ export class EmailService {
       `,
       text: `
         PAKE System - Password Reset Request
-        
+
         We received a request to reset your REDACTED_SECRET. Click the following link to create a new REDACTED_SECRET:
-        
+
         ${resetUrl}
-        
+
         Security Notice:
         - This link will expire in 1 hour
         - If you did not request this reset, please ignore this email
         - Your REDACTED_SECRET will remain unchanged until you create a new one
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -480,21 +480,21 @@ export class EmailService {
       `,
       text: `
         PAKE System - Password Reset Successful
-        
+
         Your REDACTED_SECRET has been successfully reset.
-        
+
         Your PAKE System account REDACTED_SECRET has been updated. You can now log in with your new REDACTED_SECRET.
-        
+
         Security Information:
         - All active sessions have been terminated for your security
         - You will need to log in again on all devices
         - If you did not make this change, please contact support immediately
-        
+
         For your security, we recommend:
         - Using a strong, unique REDACTED_SECRET
         - Enabling two-factor authentication
         - Regularly updating your REDACTED_SECRET
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -560,22 +560,22 @@ export class EmailService {
       `,
       text: `
         PAKE System - New Login Notification
-        
+
         We detected a new login to your PAKE System account:
-        
+
         Time: ${timestamp}
         IP Address: ${ipAddress}
         Device: ${userAgent}
         ${location ? `Location: ${location}` : ''}
-        
+
         If this was you, you can safely ignore this email.
-        
+
         If this wasn't you:
         - Change your REDACTED_SECRET immediately
         - Check your account for any unauthorized changes
         - Consider enabling two-factor authentication
         - Contact support if you need assistance
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -637,18 +637,18 @@ export class EmailService {
       `,
       text: `
         PAKE System - Your MFA Backup Codes
-        
+
         Here are your two-factor authentication backup codes. Keep them safe and secure:
-        
+
         ${codesList}
-        
+
         Important Security Information:
         - Each code can only be used once
         - Store these codes in a secure location
         - Don't share these codes with anyone
         - Use these codes if you lose access to your authenticator app
         - Generate new codes if you suspect they've been compromised
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -710,18 +710,18 @@ export class EmailService {
       `,
       text: `
         PAKE System - Security Alert: ${alertType}
-        
+
         Alert Details:
         ${details}
         ${ipAddress ? `IP Address: ${ipAddress}` : ''}
         Time: ${new Date().toLocaleString()}
-        
+
         Recommended Actions:
         - Review your account activity
         - Change your REDACTED_SECRET if you suspect unauthorized access
         - Enable two-factor authentication if not already enabled
         - Contact support if you need assistance
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };
@@ -757,7 +757,7 @@ export class EmailService {
               <div class="content">
                 <h2>Hello ${firstName}! 👋</h2>
                 <p>Welcome to PAKE System - your Personal Autonomous Knowledge Engine Plus. We're excited to have you on board!</p>
-                
+
                 <h3>What can you do with PAKE System?</h3>
                 <div class="feature">
                   <strong>🧠 Knowledge Management</strong><br>
@@ -775,7 +775,7 @@ export class EmailService {
                   <strong>⚡ Workflow Automation</strong><br>
                   Automate your workflows with AI-powered task management
                 </div>
-                
+
                 <h3>Getting Started</h3>
                 <p>Here are some next steps to get the most out of PAKE System:</p>
                 <ul>
@@ -784,7 +784,7 @@ export class EmailService {
                   <li>Explore the knowledge vault features</li>
                   <li>Set up your first automated workflow</li>
                 </ul>
-                
+
                 <p>If you have any questions, our support team is here to help!</p>
               </div>
               <div class="footer">
@@ -796,33 +796,33 @@ export class EmailService {
       `,
       text: `
         Welcome to PAKE System!
-        
+
         Hello ${firstName}!
-        
+
         Welcome to PAKE System - your Personal Autonomous Knowledge Engine Plus. We're excited to have you on board!
-        
+
         What can you do with PAKE System?
-        
+
         🧠 Knowledge Management
         Organize and search your knowledge with AI-powered insights
-        
+
         📊 Advanced Analytics
         Get intelligent analytics and anomaly detection
-        
+
         🔒 Secure & Private
         Enterprise-grade security with multi-factor authentication
-        
+
         ⚡ Workflow Automation
         Automate your workflows with AI-powered task management
-        
+
         Getting Started:
         - Complete your profile setup
         - Enable two-factor authentication for enhanced security
         - Explore the knowledge vault features
         - Set up your first automated workflow
-        
+
         If you have any questions, our support team is here to help!
-        
+
         © 2025 PAKE System. All rights reserved.
       `,
     };

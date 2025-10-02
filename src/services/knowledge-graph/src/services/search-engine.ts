@@ -131,7 +131,7 @@ export class SearchEngine extends EventEmitter {
 
     const query = `
       MATCH (n)
-      RETURN n.id as id, 
+      RETURN n.id as id,
              labels(n) as labels,
              n.name as name,
              n.title as title,
@@ -340,12 +340,12 @@ export class SearchEngine extends EventEmitter {
   ): Promise<SearchResult[]> {
     const cypher = `
       MATCH (n)
-      WHERE toLower(n.name) CONTAINS $query 
+      WHERE toLower(n.name) CONTAINS $query
          OR toLower(n.title) CONTAINS $query
          OR toLower(n.description) CONTAINS $query
          ${this.buildFilterClause(filters)}
-      RETURN n, 
-             CASE 
+      RETURN n,
+             CASE
                WHEN toLower(n.name) = $query THEN 1.0
                WHEN toLower(n.title) = $query THEN 0.9
                WHEN toLower(n.name) STARTS WITH $query THEN 0.8
@@ -500,7 +500,7 @@ export class SearchEngine extends EventEmitter {
       MATCH (node)-[r1]-(connected1)-[r2]-(connected2)
       WHERE connected2.name IS NOT NULL
       ${this.buildFilterClause(filters, 'connected2')}
-      RETURN DISTINCT connected2 as n, 
+      RETURN DISTINCT connected2 as n,
              score * 0.3 as contextScore,
              count(DISTINCT r1) + count(DISTINCT r2) as connectionStrength
       ORDER BY contextScore * connectionStrength DESC
@@ -677,7 +677,7 @@ export class SearchEngine extends EventEmitter {
   ): Promise<Recommendation[]> {
     const cypher = `
       MATCH (source {id: $nodeId})-[r1]-(intermediate)-[r2]-(target)
-      WHERE source <> target 
+      WHERE source <> target
         AND NOT (source)-[r2]-(target)
         ${context?.excludeTypes ? 'AND NOT target:' + context.excludeTypes.join(' AND NOT target:') : ''}
       RETURN target,

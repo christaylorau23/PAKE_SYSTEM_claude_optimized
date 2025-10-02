@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: PAKE System API
   description: |
-    Enterprise knowledge management system with multi-source ingestion, AI intelligence, 
+    Enterprise knowledge management system with multi-source ingestion, AI intelligence,
     advanced analytics, and enhanced Obsidian integration.
 
     ## Features
@@ -163,7 +163,7 @@ paths:
         - Analytics
       summary: Generate comprehensive analytics report
       description: |
-        Generates a comprehensive analytics report with insights, predictions, 
+        Generates a comprehensive analytics report with insights, predictions,
         and actionable recommendations for system optimization.
       parameters:
         - name: time_range

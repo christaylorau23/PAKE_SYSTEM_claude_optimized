@@ -24,14 +24,14 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
-from services.analytics.performance_analyzer import PerformanceAnalyzer
-from services.caching.redis_cache_strategy import RedisCacheStrategy
-from services.database.connection_manager import DatabaseConnectionManager
-from services.ingestion.arxiv_service import ArxivService
-from services.ingestion.firecrawl_service import FirecrawlService
-from services.ingestion.orchestrator import IngestionConfig, IngestionOrchestrator
-from services.messaging.message_bus import MessageBus
-from services.security.authentication_service import AuthenticationService
+from src.services.analytics.performance_analyzer import PerformanceAnalyzer
+from src.services.caching.redis_cache_strategy import RedisCacheStrategy
+from src.services.database.connection_manager import DatabaseConnectionManager
+from src.services.ingestion.arxiv_service import ArxivService
+from src.services.ingestion.firecrawl_service import FirecrawlService
+from src.services.ingestion.orchestrator import IngestionConfig, IngestionOrchestrator
+from src.services.messaging.message_bus import MessageBus
+from src.services.security.authentication_service import AuthenticationService
 
 
 class TestServiceIntegration:
@@ -679,12 +679,12 @@ class TestErrorPropagationIntegration:
         """
         # Set up service with failing database
         with patch(
-            "services.database.connection_manager.DatabaseConnectionManager.connect"
+            "src.services.database.connection_manager.DatabaseConnectionManager.connect"
         ) as mock_connect:
             mock_connect.side_effect = Exception("Database connection failed")
 
             # Attempt to use service that depends on database
-            from services.analytics.user_analytics_service import UserAnalyticsService
+            from src.services.analytics.user_analytics_service import UserAnalyticsService
 
             analytics_service = UserAnalyticsService()
 
@@ -707,12 +707,12 @@ class TestErrorPropagationIntegration:
         """
         # Set up service with failing cache
         with patch(
-            "services.caching.redis_cache_strategy.RedisCacheStrategy.get"
+            "src.services.caching.redis_cache_strategy.RedisCacheStrategy.get"
         ) as mock_cache_get:
             mock_cache_get.side_effect = Exception("Cache service unavailable")
 
             # Service should still work without cache
-            from services.ingestion.content_processor import ContentProcessor
+            from src.services.ingestion.content_processor import ContentProcessor
 
             processor = ContentProcessor()
             processor.database_manager = test_database
@@ -737,11 +737,11 @@ class TestErrorPropagationIntegration:
         - Test service degradation
         """
         # Set up service with failing message bus
-        with patch("services.messaging.message_bus.MessageBus.publish") as mock_publish:
+        with patch("src.services.messaging.message_bus.MessageBus.publish") as mock_publish:
             mock_publish.side_effect = Exception("Message bus unavailable")
 
             # Service should handle message bus failures gracefully
-            from services.workflow.orchestration_service import OrchestrationService
+            from src.services.workflow.orchestration_service import OrchestrationService
 
             orchestration_service = OrchestrationService()
 

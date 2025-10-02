@@ -13,7 +13,7 @@ data:
     spec:
       # Kubernetes version
       kubernetesVersion: "v1.28.4"
-      
+
       # Networking configuration
       networking:
         apiServerAddress: "0.0.0.0"
@@ -21,7 +21,7 @@ data:
         podSubnet: "10.244.0.0/16"
         serviceSubnet: "10.96.0.0/12"
         dnsDomain: "cluster.local"
-      
+
       # Node pools configuration
       nodes:
         # Control plane nodes (3 for HA)
@@ -35,13 +35,13 @@ data:
               hostPort: 80
             - containerPort: 443
               hostPort: 443
-        
+
         - role: control-plane
           kubernetesVersion: "v1.28.4"
-        
+
         - role: control-plane
           kubernetesVersion: "v1.28.4"
-        
+
         # Worker nodes (20 for production load)
         - role: worker
           kubernetesVersion: "v1.28.4"
@@ -52,7 +52,7 @@ data:
             - key: workload
               value: api-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -62,7 +62,7 @@ data:
             - key: workload
               value: api-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -72,7 +72,7 @@ data:
             - key: workload
               value: ai-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -82,7 +82,7 @@ data:
             - key: workload
               value: ai-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -93,7 +93,7 @@ data:
             - key: nvidia.com/gpu
               value: "true"
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -104,7 +104,7 @@ data:
             - key: nvidia.com/gpu
               value: "true"
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -114,7 +114,7 @@ data:
             - key: workload
               value: data-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -124,7 +124,7 @@ data:
             - key: workload
               value: data-services
               effect: NoSchedule
-        
+
         - role: worker
           kubernetesVersion: "v1.28.4"
           labels:
@@ -134,7 +134,7 @@ data:
             - key: workload
               value: data-services
               effect: NoSchedule
-      
+
       # Cluster-wide settings
       kubeadmConfigPatches:
         - |
@@ -173,7 +173,7 @@ data:
           scheduler:
             extraArgs:
               bind-address: "0.0.0.0"
-        
+
         - |
           apiVersion: kubeadm.k8s.io/v1beta3
           kind: InitConfiguration
@@ -184,7 +184,7 @@ data:
               eviction-hard: "memory.available<5%,nodefs.available<10%"
               eviction-soft: "memory.available<10%,nodefs.available<15%"
               eviction-soft-grace-period: "memory.available=2m,nodefs.available=2m"
-        
+
         - |
           apiVersion: kubelet.config.k8s.io/v1beta1
           kind: KubeletConfiguration
@@ -343,7 +343,7 @@ data:
       fsGroup:
         rule: 'RunAsAny'
       readOnlyRootFilesystem: true
-      
+
     ---
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole

@@ -43,7 +43,7 @@ import sys
 
 class JsonFormatter(logging.Formatter):
     """JSON formatter for structured logging"""
-    
+
     def format(self, record):
         log_entry = {
             'timestamp': datetime.fromtimestamp(record.created).isoformat(),
@@ -54,20 +54,20 @@ class JsonFormatter(logging.Formatter):
             'function': record.funcName,
             'line': record.lineno
         }
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry['exception'] = self.formatException(record.exc_info)
-        
+
         # Add extra fields from record
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'pathname', 'filename', 
+            if key not in ['name', 'msg', 'args', 'pathname', 'filename',
                           'module', 'lineno', 'funcName', 'created', 'msecs',
                           'relativeCreated', 'thread', 'threadName', 'processName',
                           'process', 'levelname', 'levelno', 'exc_info', 'exc_text',
                           'stack_info', 'message']:
                 log_entry[key] = value
-        
+
         return json.dumps(log_entry, default=str)
 
 # Configure JSON logging using configuration
@@ -84,25 +84,25 @@ logging.getLogger().handlers.clear()
 
 class VaultManager:
     """File-based vault manager for Knowledge Vault operations"""
-    
+
     def __init__(self, vault_path: Path = None):
         # Use configuration system for vault path
         self.vault_path = vault_path or config.get_vault_path()
         self.vault_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Initialized vault manager for: {self.vault_path}")
-    
+
     def _contains_path_traversal(self, title: str) -> bool:
         """Detect path traversal attempts in title"""
         import re
         import urllib.parse
-        
+
         # Special case: allow standalone dots and double dots (check first)
         if title.strip() in ('.', '..', '...'):
             return False  # These will be handled by filename sanitization
-        
+
         # Normalize the title for analysis
         normalized = title.lower()
-        
+
         # Check for direct path traversal patterns
         dangerous_patterns = [
             # Classic path traversal
@@ -116,7 +116,7 @@ class VaultManager:
             '%5c',     # URL encoded \
             # Double encoding
             '%252e',
-            '%252f', 
+            '%252f',
             '%255c',
             # Unicode encoding
             '\u002e\u002e',
@@ -126,12 +126,12 @@ class VaultManager:
             '\x00',
             '\0'
         ]
-        
+
         # Check for any dangerous patterns
         for pattern in dangerous_patterns:
             if pattern in normalized:
                 return True
-        
+
         # Check for suspicious sequences after URL decoding
         try:
             decoded = urllib.parse.unquote(title)
@@ -143,19 +143,19 @@ class VaultManager:
         except:
             # If URL decoding fails, be safe and assume potential attack
             pass
-            
+
         # Check for absolute path indicators (but allow single characters)
         if (title.startswith('/') and len(title) > 1) or (title.startswith('\\') and len(title) > 1):
             return True
-            
+
         # Windows absolute path (C:, D:, etc.)
         if re.match(r'^[A-Za-z]:', title):
             return True
-            
+
         # UNC paths (\\server\share)
         if title.startswith('\\\\'):
             return True
-            
+
         return False
 
     async def parse_frontmatter(self, file_path: Path) -> Dict[str, Any]:
@@ -163,14 +163,14 @@ class VaultManager:
         try:
             async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
                 content = await f.read()
-            
+
             if content.startswith('---'):
                 # Extract frontmatter
                 parts = content.split('---', 2)
                 if len(parts) >= 3:
                     frontmatter_text = parts[1].strip()
                     body_content = parts[2].strip()
-                    
+
                     # Parse YAML-like frontmatter
                     metadata = {}
                     for line in frontmatter_text.split('\n'):
@@ -178,7 +178,7 @@ class VaultManager:
                             key, value = line.split(':', 1)
                             key = key.strip()
                             value = value.strip()
-                            
+
                             # Handle lists
                             if value.startswith('[') and value.endswith(']'):
                                 value = [item.strip().strip('"\'') for item in value[1:-1].split(',') if item.strip()]
@@ -193,21 +193,21 @@ class VaultManager:
                                 value = value[1:-1]
                             elif value.startswith("'") and value.endswith("'"):
                                 value = value[1:-1]
-                            
+
                             metadata[key] = value
-                    
+
                     return {
                         'metadata': metadata,
                         'content': body_content,
                         'has_frontmatter': True
                     }
-            
+
             return {
                 'metadata': {},
                 'content': content,
                 'has_frontmatter': False
             }
-            
+
         except (FileNotFoundError, PermissionError) as e:
             logger.error(f"File access error parsing frontmatter for {file_path}: {e}")
             return {'metadata': {}, 'content': '', 'has_frontmatter': False}
@@ -221,21 +221,21 @@ class VaultManager:
     async def search_notes(self, filters: Dict[str, Any], limit: int = None) -> List[Dict[str, Any]]:
         """Search notes based on filters"""
         results = []
-        
+
         # Use configuration for default limit
         if limit is None:
             limit = config.search.default_search_limit
-        
+
         # Enforce maximum limit
         limit = min(limit, config.search.max_search_limit)
-        
+
         try:
             # Find all markdown files
             for md_file in self.vault_path.rglob("*.md"):
                 try:
                     parsed = await self.parse_frontmatter(md_file)
                     metadata = parsed['metadata']
-                    
+
                     # Apply filters
                     matches = True
                     for key, value in filters.items():
@@ -259,7 +259,7 @@ class VaultManager:
                             if metadata.get('confidence_score', 0.0) < value:
                                 matches = False
                                 break
-                    
+
                     if matches:
                         results.append({
                             'pake_id': metadata.get('pake_id', str(uuid.uuid4())),
@@ -268,10 +268,10 @@ class VaultManager:
                             'summary': metadata.get('summary', parsed['content'][:config.vault.summary_truncate_length] + '...' if len(parsed['content']) > config.vault.summary_truncate_length else parsed['content']),
                             'metadata': metadata
                         })
-                        
+
                         if len(results) >= limit:
                             break
-                            
+
                 except (FileNotFoundError, PermissionError):
                     logger.warning(f"File access denied or not found: {md_file}")
                     continue
@@ -281,12 +281,12 @@ class VaultManager:
                 except (ValueError, KeyError, TypeError) as e:
                     logger.warning(f"Data parsing error for file {md_file}: {e}")
                     continue
-                    
+
         except (OSError, IOError) as e:
             logger.error(f"File system error searching notes: {e}")
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid search parameters: {e}")
-        
+
         return results
 
     async def get_note_by_id(self, pake_id: str) -> Optional[Dict[str, Any]]:
@@ -306,10 +306,10 @@ class VaultManager:
             logger.error(f"File system error getting note by ID {pake_id}: {e}")
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid pake_id parameter: {pake_id}: {e}")
-        
+
         return None
 
-    async def create_note(self, title: str, content: str, note_type: str = "SourceNote", 
+    async def create_note(self, title: str, content: str, note_type: str = "SourceNote",
                    source_uri: Optional[str] = None, tags: List[str] = None,
                    summary: Optional[str] = None) -> Dict[str, Any]:
         """Create a new note in the vault"""
@@ -317,48 +317,48 @@ class VaultManager:
             # Generate PAKE ID
             pake_id = str(uuid.uuid4())
             timestamp = datetime.now().isoformat()
-            
+
             # Determine file location based on type using configuration
             folder = config.get_folder_for_note_type(note_type)
-            
+
             # SECURITY: Comprehensive path traversal protection
             # Step 1: Detect path traversal patterns BEFORE sanitization
             if self._contains_path_traversal(title):
                 raise SecurityError(f"Path traversal attempt detected: {title}")
-            
+
             # Step 2: Character whitelist sanitization using configuration
             allowed_chars = config.security.allowed_filename_chars
             safe_title = "".join(c for c in title if c.isalnum() or c in allowed_chars).rstrip()
             safe_title = safe_title.replace(' ', config.security.filename_replacement_char)[:config.vault.max_filename_length]
-            
+
             # Step 3: Strip directory components to prevent path traversal
             safe_title = os.path.basename(safe_title)
-            
+
             # Step 4: Ensure filename is not empty after sanitization
             if not safe_title or safe_title in ('.', '..'):
                 safe_title = f"note_{pake_id[:8]}"
-            
+
             filename = f"{safe_title}{config.vault.default_file_extension}"
-            
+
             # Step 5: Construct final path inside configured vault root
             target_folder = self.vault_path / folder
             file_path = target_folder / filename
-            
+
             # Step 6: CRITICAL - Verify path stays within vault directory
             try:
                 # Resolve all symbolic links and relative path components
                 resolved_path = file_path.resolve()
                 resolved_vault = self.vault_path.resolve()
-                
+
                 # Check if the resolved path is within the vault directory
                 if not str(resolved_path).startswith(str(resolved_vault)):
                     raise SecurityError(f"Path traversal attempt detected: {title}")
-                
+
             except (OSError, ValueError) as e:
                 raise SecurityError(f"Invalid path detected: {title}") from e
-            
+
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Create frontmatter
             frontmatter = {
                 'pake_id': pake_id,
@@ -374,7 +374,7 @@ class VaultManager:
                 'summary': summary or '',
                 'human_notes': ''
             }
-            
+
             # Write file
             async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
                 await f.write('---\n')
@@ -387,9 +387,9 @@ class VaultManager:
                         await f.write(f'{key}: {value}\n')
                 await f.write('---\n\n')
                 await f.write(content)
-            
+
             logger.info(f"Created note: {file_path}")
-            
+
             return {
                 'pake_id': pake_id,
                 'title': title,
@@ -397,7 +397,7 @@ class VaultManager:
                 'status': 'created',
                 'metadata': frontmatter
             }
-            
+
         except SecurityError:
             # Re-raise security errors without wrapping
             raise
@@ -482,7 +482,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             filters = arguments.get("filters", {})
             limit = arguments.get("limit", config.search.default_search_limit)
             results = await vault_manager.search_notes(filters, limit)
-            
+
             return [types.TextContent(
                 type="text",
                 text=json.dumps({
@@ -491,12 +491,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     "filters_applied": filters
                 }, indent=2)
             )]
-            
+
         elif name == "get_note_by_id":
             pake_id = arguments.get("pake_id")
             if not pake_id:
                 raise ValueError("pake_id is required")
-                
+
             note = await vault_manager.get_note_by_id(pake_id)
             if note:
                 return [types.TextContent(
@@ -508,7 +508,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     type="text",
                     text=json.dumps({"error": "Note not found", "pake_id": pake_id})
                 )]
-                
+
         elif name == "notes_from_schema":
             title = arguments.get("title")
             content = arguments.get("content")
@@ -516,10 +516,10 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             source_uri = arguments.get("source_uri")
             tags = arguments.get("tags", [])
             summary = arguments.get("summary")
-            
+
             if not title or not content:
                 raise ValueError("Both title and content are required")
-            
+
             result = await vault_manager.create_note(
                 title=title,
                 content=content,
@@ -528,15 +528,15 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                 tags=tags,
                 summary=summary
             )
-            
+
             return [types.TextContent(
                 type="text",
                 text=json.dumps(result, indent=2)
             )]
-            
+
         else:
             raise ValueError(f"Unknown tool: {name}")
-            
+
     except SecurityError as e:
         logger.error(f"Security error executing tool {name}: {e}")
         return [types.TextContent(
@@ -568,7 +568,7 @@ async def main():
         logger.info(f"Starting PAKE MCP Server")
         logger.info(f"Vault path: {vault_manager.vault_path}")
         logger.info(f"Total notes: {len(list(vault_manager.vault_path.rglob('*.md')))}")
-        
+
         await server.run(
             read_stream,
             write_stream,

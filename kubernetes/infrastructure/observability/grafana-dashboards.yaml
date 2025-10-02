@@ -33,7 +33,7 @@ data:
                 "refId": "A"
               },
               {
-                "expr": "pake:ai_latency_p95", 
+                "expr": "pake:ai_latency_p95",
                 "legendFormat": "AI P95",
                 "refId": "B"
               }
@@ -104,7 +104,7 @@ data:
           {
             "id": 4,
             "title": "Golden Signals - Saturation",
-            "type": "stat", 
+            "type": "stat",
             "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
             "targets": [
               {
@@ -149,7 +149,7 @@ data:
           },
           {
             "id": 6,
-            "title": "Error Rate by Service", 
+            "title": "Error Rate by Service",
             "type": "graph",
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
             "targets": [
@@ -174,7 +174,7 @@ data:
         "id": null,
         "title": "AI Performance Dashboard",
         "tags": ["pake", "ai", "performance", "gpu"],
-        "timezone": "UTC", 
+        "timezone": "UTC",
         "refresh": "15s",
         "time": {
           "from": "now-1h",
@@ -354,7 +354,7 @@ data:
           {
             "id": 3,
             "title": "Rate Limited Requests",
-            "type": "stat", 
+            "type": "stat",
             "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
             "targets": [
               {
@@ -565,7 +565,7 @@ data:
     {
       "dashboard": {
         "id": null,
-        "title": "Cost Optimization Dashboard", 
+        "title": "Cost Optimization Dashboard",
         "tags": ["pake", "cost", "optimization", "efficiency"],
         "timezone": "UTC",
         "refresh": "5m",
@@ -631,7 +631,7 @@ data:
           {
             "id": 4,
             "title": "Right-sizing Recommendations",
-            "type": "table", 
+            "type": "table",
             "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
             "targets": [
               {

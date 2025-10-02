@@ -1,6 +1,6 @@
 /**
  * PAKE System - Test Fixtures for Connectors
- * 
+ *
  * Comprehensive test data for all connector types and scenarios.
  */
 
@@ -53,7 +53,7 @@ export const sampleRequests = {
         priority: 'normal' as const
       }
     } as ConnectorRequest,
-    
+
     withHeaders: {
       id: 'web-002',
       type: ConnectorRequestType.SCRAPE_URL,
@@ -77,7 +77,7 @@ export const sampleRequests = {
         priority: 'high' as const
       }
     } as ConnectorRequest,
-    
+
     sitemap: {
       id: 'web-003',
       type: ConnectorRequestType.SCRAPE_SITEMAP,
@@ -119,7 +119,7 @@ export const sampleRequests = {
         correlationId: 'test-corr-004'
       }
     } as ConnectorRequest,
-    
+
     insert: {
       id: 'db-002',
       type: ConnectorRequestType.INSERT,
@@ -143,18 +143,18 @@ export const sampleRequests = {
         correlationId: 'test-corr-005'
       }
     } as ConnectorRequest,
-    
+
     customQuery: {
       id: 'db-003',
       type: ConnectorRequestType.QUERY,
       target: 'analytics',
       parameters: {
         sql: `
-          SELECT 
+          SELECT
             DATE_TRUNC('day', created_at) as date,
             COUNT(*) as user_count,
             AVG(engagement_score) as avg_engagement
-          FROM user_analytics 
+          FROM user_analytics
           WHERE created_at >= $1 AND created_at <= $2
           GROUP BY DATE_TRUNC('day', created_at)
           ORDER BY date DESC
@@ -203,7 +203,7 @@ export const sampleRequests = {
         priority: 'high' as const
       }
     } as ConnectorRequest,
-    
+
     consume: {
       id: 'queue-002',
       type: ConnectorRequestType.CONSUME,
@@ -223,7 +223,7 @@ export const sampleRequests = {
         correlationId: 'test-corr-008'
       }
     } as ConnectorRequest,
-    
+
     subscribe: {
       id: 'queue-003',
       type: ConnectorRequestType.SUBSCRIBE,
@@ -278,7 +278,7 @@ export const sampleResponses = {
         freshness: 0
       }
     } as ResponseEnvelope<any>,
-    
+
     robotsBlocked: {
       requestId: 'web-002',
       success: false,
@@ -320,7 +320,7 @@ export const sampleResponses = {
         recordCount: 2
       }
     } as ResponseEnvelope<any>,
-    
+
     insertSuccess: {
       requestId: 'db-002',
       success: true,
@@ -358,7 +358,7 @@ export const sampleResponses = {
         connector: 'QueueConnector'
       }
     } as ResponseEnvelope<any>,
-    
+
     consumeSuccess: {
       requestId: 'queue-002',
       success: true,
@@ -411,7 +411,7 @@ export const errorScenarios = {
       retryAfter: 5000
     }
   } as ResponseEnvelope<null>,
-  
+
   rateLimit: {
     requestId: 'error-002',
     success: false,
@@ -431,7 +431,7 @@ export const errorScenarios = {
       retryAfter: 3600
     }
   } as ResponseEnvelope<null>,
-  
+
   notFound: {
     requestId: 'error-003',
     success: false,
@@ -450,7 +450,7 @@ export const errorScenarios = {
       retryable: false
     }
   } as ResponseEnvelope<null>,
-  
+
   unauthorized: {
     requestId: 'error-004',
     success: false,
@@ -520,7 +520,7 @@ export const mockTrendRecords = {
       apiResponse: { user: 'tech_news', created_at: '2024-01-15T10:30:00Z' }
     }
   },
-  
+
   withAnomalies: {
     id: 'trend-002',
     platform: 'reddit',
@@ -566,7 +566,7 @@ export const mockTrendRecords = {
       comments: 2500
     }
   },
-  
+
   lowQuality: {
     id: 'trend-003',
     platform: 'tiktok',
@@ -625,7 +625,7 @@ export const testHelpers = {
     },
     ...overrides
   }),
-  
+
   createMockResponse: <T>(data: T, overrides: Partial<ResponseEnvelope<T>> = {}): ResponseEnvelope<T> => ({
     requestId: 'test-request',
     success: true,
@@ -639,16 +639,16 @@ export const testHelpers = {
     },
     ...overrides
   }),
-  
+
   delay: (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms)),
-  
+
   generateRandomId: (): string => Math.random().toString(36).substr(2, 9),
-  
+
   createTestDatabase: async (): Promise<void> => {
     // Mock database setup for tests
     console.log('Setting up test database...');
   },
-  
+
   cleanupTestDatabase: async (): Promise<void> => {
     // Mock database cleanup for tests
     console.log('Cleaning up test database...');

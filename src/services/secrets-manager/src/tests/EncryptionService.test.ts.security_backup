@@ -84,7 +84,7 @@ describe('EncryptionService', () => {
     it('should initialize without HSM when disabled', async () => {
       config.hsm.enabled = false;
       const service = new EncryptionService(config, mockHSMService);
-      
+
       await service.initialize();
       expect(mockHSMService.initialize).not.toHaveBeenCalled();
     });
@@ -93,24 +93,24 @@ describe('EncryptionService', () => {
   describe('Data Encryption', () => {
     beforeEach(async () => {
       await encryptionService.initialize();
-      
+
       // Mock crypto functions
       (crypto.randomBytes as any).mockReturnValue(Buffer.from('1234567890123456'));
-      
+
       const mockCipher = {
         update: vi.fn().mockReturnValue(Buffer.from('encrypted')),
         final: vi.fn().mockReturnValue(Buffer.from('final')),
         getAuthTag: vi.fn().mockReturnValue(Buffer.from('authTag123456'))
       };
-      
+
       (crypto.createCipher as any).mockReturnValue(mockCipher);
     });
 
     it('should encrypt data successfully', async () => {
       const plaintext = 'sensitive data to encrypt';
-      
+
       const result = await encryptionService.encryptData(plaintext);
-      
+
       expect(result.ciphertext).toBeTruthy();
       expect(result.keyId).toBe('master-key-1');
       expect(result.algorithm).toBe('aes-256-gcm');
@@ -120,9 +120,9 @@ describe('EncryptionService', () => {
 
     it('should encrypt buffer data', async () => {
       const buffer = Buffer.from('binary data', 'utf8');
-      
+
       const result = await encryptionService.encryptData(buffer);
-      
+
       expect(result).toBeTruthy();
       expect(result.ciphertext).toBeTruthy();
     });
@@ -130,9 +130,9 @@ describe('EncryptionService', () => {
     it('should use specified key ID', async () => {
       const plaintext = 'test data';
       const customKeyId = 'custom-key-123';
-      
+
       const result = await encryptionService.encryptData(plaintext, customKeyId);
-      
+
       expect(result.keyId).toBe(customKeyId);
     });
 
@@ -148,13 +148,13 @@ describe('EncryptionService', () => {
   describe('Data Decryption', () => {
     beforeEach(async () => {
       await encryptionService.initialize();
-      
+
       const mockDecipher = {
         setAuthTag: vi.fn(),
         update: vi.fn().mockReturnValue(Buffer.from('decrypted')),
         final: vi.fn().mockReturnValue(Buffer.from('final'))
       };
-      
+
       (crypto.createDecipher as any).mockReturnValue(mockDecipher);
     });
 
@@ -168,7 +168,7 @@ describe('EncryptionService', () => {
       };
 
       const decrypted = await encryptionService.decryptData(encryptionResult);
-      
+
       expect(decrypted).toContain('decrypted');
     });
 
@@ -180,7 +180,7 @@ describe('EncryptionService', () => {
           throw new Error('Unsupported state or unable to authenticate data');
         })
       };
-      
+
       (crypto.createDecipher as any).mockReturnValue(mockDecipher);
 
       const encryptionResult: EncryptionResult = {
@@ -217,7 +217,7 @@ describe('EncryptionService', () => {
       });
 
       const result = await encryptionService.encryptField('user@example.com', fieldConfig);
-      
+
       expect(result.ciphertext).toBe('encrypted-email');
       expect(result.keyId).toBe('pii-key-1');
     });
@@ -241,7 +241,7 @@ describe('EncryptionService', () => {
       vi.spyOn(encryptionService, 'decryptData').mockResolvedValue('user@example.com');
 
       const result = await encryptionService.decryptField(encryptionResult, fieldConfig);
-      
+
       expect(result).toBe('user@example.com');
     });
 
@@ -276,7 +276,7 @@ describe('EncryptionService', () => {
         });
 
       const result = await encryptionService.encryptFields(data, fieldsToEncrypt);
-      
+
       expect(result.name).toBe('John Doe'); // Not encrypted
       expect(result.age).toBe(30); // Not encrypted
       expect(result.email).toEqual({
@@ -312,7 +312,7 @@ describe('EncryptionService', () => {
       mockHSMService.generateKey.mockResolvedValue(keyInfo);
 
       const result = await encryptionService.generateKey('test-key', 'aes-256-gcm');
-      
+
       expect(result.keyId).toBe('new-key-123');
       expect(result.algorithm).toBe('aes-256-gcm');
       expect(mockHSMService.generateKey).toHaveBeenCalledWith(
@@ -334,7 +334,7 @@ describe('EncryptionService', () => {
       mockHSMService.generateKey.mockResolvedValue(newKeyInfo);
 
       const result = await encryptionService.rotateKey(oldKeyId);
-      
+
       expect(result.success).toBe(true);
       expect(result.newKeyId).toBe('new-key-456');
       expect(result.oldKeyId).toBe(oldKeyId);
@@ -344,26 +344,26 @@ describe('EncryptionService', () => {
   describe('Performance', () => {
     beforeEach(async () => {
       await encryptionService.initialize();
-      
+
       // Mock crypto functions for performance test
       (crypto.randomBytes as any).mockReturnValue(Buffer.from('1234567890123456'));
-      
+
       const mockCipher = {
         update: vi.fn().mockReturnValue(Buffer.from('encrypted')),
         final: vi.fn().mockReturnValue(Buffer.from('final')),
         getAuthTag: vi.fn().mockReturnValue(Buffer.from('authTag123456'))
       };
-      
+
       (crypto.createCipher as any).mockReturnValue(mockCipher);
     });
 
     it('should meet encryption performance requirements', async () => {
       const plaintext = 'test data for performance measurement';
-      
+
       const startTime = performance.now();
       await encryptionService.encryptData(plaintext);
       const duration = performance.now() - startTime;
-      
+
       expect(duration).toBeLessThan(10); // Less than 10ms requirement
     });
 
@@ -381,13 +381,13 @@ describe('EncryptionService', () => {
         update: vi.fn().mockReturnValue(Buffer.from('decrypted')),
         final: vi.fn().mockReturnValue(Buffer.from('final'))
       };
-      
+
       (crypto.createDecipher as any).mockReturnValue(mockDecipher);
 
       const startTime = performance.now();
       await encryptionService.decryptData(encryptionResult);
       const duration = performance.now() - startTime;
-      
+
       expect(duration).toBeLessThan(10); // Less than 10ms requirement
     });
   });
@@ -395,7 +395,7 @@ describe('EncryptionService', () => {
   describe('Key Derivation', () => {
     beforeEach(async () => {
       await encryptionService.initialize();
-      
+
       // Mock Argon2 key derivation
       (crypto.scrypt as any).mockImplementation((REDACTED_SECRET, salt, keylen, options, callback) => {
         callback(null, Buffer.from('derived-key-32-bytes-long-test'));
@@ -405,19 +405,19 @@ describe('EncryptionService', () => {
     it('should derive key using Argon2id', async () => {
       const REDACTED_SECRET = process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED';
       const salt = Buffer.from('test-salt-16-bytes');
-      
+
       const derivedKey = await encryptionService.deriveKey(REDACTED_SECRET, salt);
-      
+
       expect(derivedKey).toBeInstanceOf(Buffer);
       expect(derivedKey.length).toBe(32); // 256 bits
     });
 
     it('should use consistent salt for same input', async () => {
       const REDACTED_SECRET = process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED';
-      
+
       const key1 = await encryptionService.deriveKey(REDACTED_SECRET, Buffer.from('same-salt'));
       const key2 = await encryptionService.deriveKey(REDACTED_SECRET, Buffer.from('same-salt'));
-      
+
       expect(key1.equals(key2)).toBe(true);
     });
   });
@@ -425,17 +425,17 @@ describe('EncryptionService', () => {
   describe('Integrity Verification', () => {
     beforeEach(async () => {
       await encryptionService.initialize();
-      
+
       const mockHash = {
         update: vi.fn().mockReturnThis(),
         digest: vi.fn().mockReturnValue(Buffer.from('computed-hash'))
       };
-      
+
       const mockHmac = {
         update: vi.fn().mockReturnThis(),
         digest: vi.fn().mockReturnValue(Buffer.from('computed-hmac'))
       };
-      
+
       (crypto.createHash as any).mockReturnValue(mockHash);
       (crypto.createHmac as any).mockReturnValue(mockHmac);
       (crypto.timingSafeEqual as any).mockReturnValue(true);
@@ -443,9 +443,9 @@ describe('EncryptionService', () => {
 
     it('should generate data hash', async () => {
       const data = 'important data to hash';
-      
+
       const hash = await encryptionService.generateHash(data);
-      
+
       expect(hash).toBeTruthy();
       expect(crypto.createHash).toHaveBeenCalledWith('sha256');
     });
@@ -454,22 +454,22 @@ describe('EncryptionService', () => {
       const data = 'data to verify';
       const key = 'verification-key';
       const expectedHmac = Buffer.from('computed-hmac');
-      
+
       const isValid = await encryptionService.verifyIntegrity(data, expectedHmac, key);
-      
+
       expect(isValid).toBe(true);
       expect(crypto.createHmac).toHaveBeenCalledWith('sha256', key);
     });
 
     it('should detect tampered data', async () => {
       (crypto.timingSafeEqual as any).mockReturnValue(false);
-      
+
       const data = 'tampered data';
       const key = 'verification-key';
       const invalidHmac = Buffer.from('invalid-hmac');
-      
+
       const isValid = await encryptionService.verifyIntegrity(data, invalidHmac, key);
-      
+
       expect(isValid).toBe(false);
     });
   });
@@ -481,7 +481,7 @@ describe('EncryptionService', () => {
 
     it('should handle HSM unavailable', async () => {
       mockHSMService.isInitialized.mockReturnValue(false);
-      
+
       await expect(encryptionService.generateKey('test', 'aes-256-gcm')).rejects.toThrow('HSM not available');
     });
 
@@ -543,7 +543,7 @@ describe('EncryptionService', () => {
 
     it('should use secure random number generation', async () => {
       await encryptionService.encryptData('test data');
-      
+
       expect(crypto.randomBytes).toHaveBeenCalledWith(16); // IV length
     });
 

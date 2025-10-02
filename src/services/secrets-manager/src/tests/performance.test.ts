@@ -153,7 +153,7 @@ describe('Secrets Management Performance Tests', () => {
 
       console.log(`Secret Retrieval Performance:
         Average: ${averageTime.toFixed(2)}ms
-        Maximum: ${maxTime.toFixed(2)}ms  
+        Maximum: ${maxTime.toFixed(2)}ms
         95th Percentile: ${p95Time.toFixed(2)}ms`);
 
       expect(averageTime).toBeLessThan(10);

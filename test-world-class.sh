@@ -54,9 +54,9 @@ record_test() {
     local test_name="$1"
     local result="$2"
     local details="$3"
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     case "$result" in
         "PASS")
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -71,28 +71,28 @@ record_test() {
             log_warning "⊘ $test_name: $details"
             ;;
     esac
-    
+
     echo "$(date): $test_name - $result - $details" >> "$TEST_RESULTS_DIR/test-details.log"
 }
 
 # Setup test environment
 setup_test_environment() {
     log_header "Setting Up Test Environment"
-    
+
     # Create test results directory
     mkdir -p "$TEST_RESULTS_DIR"
-    
+
     # Initialize log files
     touch "$LOG_FILE"
     touch "$TEST_RESULTS_DIR/test-details.log"
-    
+
     log_success "Test environment setup completed"
 }
 
 # Test Docker services
 test_docker_services() {
     log_header "Testing Docker Services"
-    
+
     # Test if Docker is running
     log_test "Docker daemon status"
     if docker info >/dev/null 2>&1; then
@@ -101,7 +101,7 @@ test_docker_services() {
         record_test "Docker daemon" "FAIL" "Docker is not running"
         return 1
     fi
-    
+
     # Test Docker Compose
     log_test "Docker Compose availability"
     if command -v docker-compose >/dev/null 2>&1; then
@@ -110,10 +110,10 @@ test_docker_services() {
         record_test "Docker Compose" "FAIL" "Docker Compose is not available"
         return 1
     fi
-    
+
     # Test service containers
     local services=("vault" "postgres" "redis" "pake-api" "pake-bridge" "prometheus" "grafana" "nginx")
-    
+
     for service in "${services[@]}"; do
         log_test "Service container: $service"
         if docker-compose ps "$service" | grep -q "Up"; then
@@ -127,7 +127,7 @@ test_docker_services() {
 # Test network connectivity
 test_network_connectivity() {
     log_header "Testing Network Connectivity"
-    
+
     local endpoints=(
         "http://localhost:8000/health:PAKE API"
         "http://localhost:3001/health:PAKE Bridge"
@@ -135,11 +135,11 @@ test_network_connectivity() {
         "http://localhost:3000/api/health:Grafana"
         "http://localhost:8200/v1/sys/health:Vault"
     )
-    
+
     for endpoint_info in "${endpoints[@]}"; do
         IFS=':' read -r endpoint service <<< "$endpoint_info"
         log_test "Network connectivity: $service"
-        
+
         if curl -f -s --max-time 10 "$endpoint" >/dev/null 2>&1; then
             record_test "Network $service" "PASS" "Endpoint is reachable"
         else
@@ -151,7 +151,7 @@ test_network_connectivity() {
 # Test API endpoints
 test_api_endpoints() {
     log_header "Testing API Endpoints"
-    
+
     local api_base="http://localhost:8000"
     local endpoints=(
         "/health:Health check"
@@ -160,14 +160,14 @@ test_api_endpoints() {
         "/docs:API documentation"
         "/openapi.json:OpenAPI specification"
     )
-    
+
     for endpoint_info in "${endpoints[@]}"; do
         IFS=':' read -r endpoint description <<< "$endpoint_info"
         log_test "API endpoint: $description"
-        
+
         local response_code
         response_code=$(curl -s -o /dev/null -w "%{http_code}" "$api_base$endpoint")
-        
+
         if [ "$response_code" = "200" ]; then
             record_test "API $description" "PASS" "HTTP 200 response"
         else
@@ -179,7 +179,7 @@ test_api_endpoints() {
 # Test database connections
 test_database_connections() {
     log_header "Testing Database Connections"
-    
+
     # Test PostgreSQL
     log_test "PostgreSQL connection"
     if docker-compose exec -T postgres pg_isready -U postgres -d wealth_db >/dev/null 2>&1; then
@@ -187,7 +187,7 @@ test_database_connections() {
     else
         record_test "PostgreSQL connection" "FAIL" "Database is not ready"
     fi
-    
+
     # Test PostgreSQL query
     log_test "PostgreSQL query execution"
     if docker-compose exec -T postgres psql -U postgres -d wealth_db -c "SELECT 1;" >/dev/null 2>&1; then
@@ -195,7 +195,7 @@ test_database_connections() {
     else
         record_test "PostgreSQL query" "FAIL" "Query execution failed"
     fi
-    
+
     # Test Redis
     log_test "Redis connection"
     if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
@@ -203,7 +203,7 @@ test_database_connections() {
     else
         record_test "Redis connection" "FAIL" "Redis is not responding"
     fi
-    
+
     # Test Redis operations
     log_test "Redis operations"
     if docker-compose exec -T redis redis-cli set test_key "test_value" && \
@@ -218,7 +218,7 @@ test_database_connections() {
 # Test Vault functionality
 test_vault_functionality() {
     log_header "Testing Vault Functionality"
-    
+
     # Test Vault status
     log_test "Vault status"
     if docker-compose exec -T vault vault status | grep -q "Sealed.*false"; then
@@ -226,7 +226,7 @@ test_vault_functionality() {
     else
         record_test "Vault status" "FAIL" "Vault is not ready"
     fi
-    
+
     # Test Vault secret access
     log_test "Vault secret access"
     if docker-compose exec -T vault vault kv get secret/wealth-platform/postgres >/dev/null 2>&1; then
@@ -234,7 +234,7 @@ test_vault_functionality() {
     else
         record_test "Vault secret access" "FAIL" "Secrets are not accessible"
     fi
-    
+
     # Test Vault policy
     log_test "Vault policy"
     if docker-compose exec -T vault vault policy read wealth-platform >/dev/null 2>&1; then
@@ -247,7 +247,7 @@ test_vault_functionality() {
 # Test monitoring systems
 test_monitoring_systems() {
     log_header "Testing Monitoring Systems"
-    
+
     # Test Prometheus
     log_test "Prometheus metrics collection"
     if curl -f -s "http://localhost:9090/api/v1/query?query=up" | grep -q "success"; then
@@ -255,7 +255,7 @@ test_monitoring_systems() {
     else
         record_test "Prometheus metrics" "FAIL" "Metrics collection is not working"
     fi
-    
+
     # Test Grafana
     log_test "Grafana dashboard access"
     if curl -f -s "http://localhost:3000/api/health" | grep -q "ok"; then
@@ -268,12 +268,12 @@ test_monitoring_systems() {
 # Test security features
 test_security_features() {
     log_header "Testing Security Features"
-    
+
     # Test HTTPS redirect (if configured)
     log_test "HTTPS redirect"
     local https_response
     https_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost/health" || echo "000")
-    
+
     if [ "$https_response" = "301" ] || [ "$https_response" = "302" ]; then
         record_test "HTTPS redirect" "PASS" "HTTPS redirect is configured"
     elif [ "$https_response" = "200" ]; then
@@ -281,7 +281,7 @@ test_security_features() {
     else
         record_test "HTTPS redirect" "FAIL" "HTTP endpoint is not responding"
     fi
-    
+
     # Test secret management
     log_test "Secret management"
     if docker-compose exec -T vault vault kv list secret/wealth-platform/ >/dev/null 2>&1; then
@@ -289,19 +289,19 @@ test_security_features() {
     else
         record_test "Secret management" "FAIL" "Secret management is not working"
     fi
-    
+
     # Test non-root containers
     log_test "Container security"
     local containers=("pake-api" "pake-bridge")
     local all_non_root=true
-    
+
     for container in "${containers[@]}"; do
         if docker-compose exec -T "$container" whoami | grep -q "root"; then
             all_non_root=false
             break
         fi
     done
-    
+
     if [ "$all_non_root" = true ]; then
         record_test "Container security" "PASS" "Containers run as non-root user"
     else
@@ -312,32 +312,32 @@ test_security_features() {
 # Test performance
 test_performance() {
     log_header "Testing Performance"
-    
+
     # Test API response time
     log_test "API response time"
     local response_time
     response_time=$(curl -o /dev/null -s -w "%{time_total}" "http://localhost:8000/health")
-    
+
     if (( $(echo "$response_time < 1.0" | bc -l) )); then
         record_test "API response time" "PASS" "Response time: ${response_time}s"
     else
         record_test "API response time" "FAIL" "Response time too slow: ${response_time}s"
     fi
-    
+
     # Test database query performance
     log_test "Database query performance"
     local query_time
     query_time=$(time (docker-compose exec -T postgres psql -U postgres -d wealth_db -c "SELECT 1;" >/dev/null 2>&1) 2>&1 | grep real | awk '{print $2}')
-    
+
     record_test "Database query performance" "PASS" "Query time: $query_time"
 }
 
 # Generate test report
 generate_test_report() {
     log_header "Generating Test Report"
-    
+
     local report_file="$TEST_RESULTS_DIR/test-report.md"
-    
+
     cat > "$report_file" << EOF
 # PAKE System Test Report
 
@@ -364,7 +364,7 @@ EOF
         cat "$TEST_RESULTS_DIR/test-details.log" >> "$report_file"
         echo '```' >> "$report_file"
     fi
-    
+
     cat >> "$report_file" << EOF
 
 ## System Status
@@ -374,7 +374,7 @@ EOF
 
     # Add service status
     docker-compose ps >> "$report_file"
-    
+
     cat >> "$report_file" << EOF
 
 ## Recommendations
@@ -395,25 +395,25 @@ EOF
 - Review security configurations
 EOF
     fi
-    
+
     log_success "Test report generated: $report_file"
 }
 
 # Show test summary
 show_test_summary() {
     log_header "Test Summary"
-    
+
     echo -e "${CYAN}📊 Test Results:${NC}"
     echo -e "   Total Tests:  $TOTAL_TESTS"
     echo -e "   Passed:       ${GREEN}$PASSED_TESTS${NC}"
     echo -e "   Failed:       ${RED}$FAILED_TESTS${NC}"
     echo -e "   Skipped:      ${YELLOW}$SKIPPED_TESTS${NC}"
     echo -e "   Success Rate: $(( (PASSED_TESTS * 100) / TOTAL_TESTS ))%"
-    
+
     echo ""
     echo -e "${CYAN}📁 Test Results Directory:${NC}"
     echo -e "   $TEST_RESULTS_DIR"
-    
+
     echo ""
     if [ $FAILED_TESTS -eq 0 ]; then
         echo -e "${GREEN}🎉 All tests passed! System is ready for production!${NC}"
@@ -425,10 +425,10 @@ show_test_summary() {
 # Main test function
 main() {
     START_TIME=$(date +%s)
-    
+
     log_header "Starting PAKE System Test Suite"
     log_info "Test results directory: $TEST_RESULTS_DIR"
-    
+
     # Execute test suites
     setup_test_environment
     test_docker_services
@@ -441,7 +441,7 @@ main() {
     test_performance
     generate_test_report
     show_test_summary
-    
+
     # Exit with appropriate code
     if [ $FAILED_TESTS -eq 0 ]; then
         log_success "All tests completed successfully!"

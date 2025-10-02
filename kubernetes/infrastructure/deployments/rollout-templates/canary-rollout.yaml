@@ -254,6 +254,6 @@ spec:
           address: http://prometheus.monitoring.svc:9090
           query: |
             histogram_quantile(0.95,
-              sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) 
+              sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m]))
               by (le)
             )

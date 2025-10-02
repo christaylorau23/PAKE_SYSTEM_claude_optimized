@@ -91,50 +91,50 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/pake_db")
 
 class RealDataManager:
     """Manages real data connections and processing"""
-    
+
     def __init__(self):
         self.content_cache = {}
         self.user_cache = {}
         self.ml_vectorizer = None
         self.content_vectors = None
-        
+
         if ML_AVAILABLE:
             self.ml_vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
             logger.info("ML components initialized")
-    
+
     async def initialize_database(self):
         """Initialize database connections"""
         if not SQLALCHEMY_AVAILABLE:
             logger.warning("Using mock database - SQLAlchemy not available")
             await self._load_mock_data()
             return
-            
+
         try:
             # Try to connect to existing PAKE database
             self.engine = create_async_engine(DATABASE_URL)
             logger.info("Database connection established")
-            
+
             # Load real data from database
             await self._load_database_content()
-            
+
         except Exception as e:
             logger.warning(f"Database connection failed: {e}, using mock data")
             await self._load_mock_data()
-    
+
     async def _load_database_content(self):
         """Load content from real database"""
         try:
             async with self.engine.begin() as conn:
                 # Query existing search history and content
                 result = await conn.execute(sa.text("""
-                    SELECT id, query, results, created_at 
-                    FROM search_history 
-                    ORDER BY created_at DESC 
+                    SELECT id, query, results, created_at
+                    FROM search_history
+                    ORDER BY created_at DESC
                     LIMIT 100
                 """))
-                
+
                 search_data = result.fetchall()
-                
+
                 # Convert search history to content items
                 for row in search_data:
                     content_id = f"real_{row[0]}"
@@ -149,13 +149,13 @@ class RealDataManager:
                         quality_score=0.8,
                         category="search_history"
                     )
-                
+
                 logger.info(f"Loaded {len(self.content_cache)} real content items from database")
-                
+
         except Exception as e:
             logger.error(f"Error loading database content: {e}")
             await self._load_mock_data()
-    
+
     async def _load_mock_data(self):
         """Load mock data for demonstration"""
         mock_content = [
@@ -220,16 +220,16 @@ class RealDataManager:
                 "category": "research"
             }
         ]
-        
+
         for item in mock_content:
             self.content_cache[item["id"]] = ContentItem(**item)
-        
+
         # Initialize ML features if available
         if ML_AVAILABLE and self.content_cache:
             await self._initialize_ml_features()
-        
+
         logger.info(f"Loaded {len(self.content_cache)} mock content items")
-    
+
     async def _initialize_ml_features(self):
         """Initialize ML features for content"""
         try:
@@ -238,7 +238,7 @@ class RealDataManager:
             logger.info("ML features initialized for content similarity")
         except Exception as e:
             logger.error(f"Error initializing ML features: {e}")
-    
+
     def _extract_tags_from_query(self, query: str) -> List[str]:
         """Extract topic tags from search query"""
         # Simple keyword extraction
@@ -246,15 +246,15 @@ class RealDataManager:
         # Filter out common words
         stop_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
         return [word for word in keywords if word not in stop_words and len(word) > 2]
-    
+
     async def get_personalized_recommendations(self, user_id: str, interests: List[str], limit: int = 10) -> List[Recommendation]:
         """Generate personalized recommendations based on user interests"""
         recommendations = []
-        
+
         # Simple interest matching
         for content_id, content in self.content_cache.items():
             relevance = self._calculate_relevance(content, interests)
-            
+
             if relevance > 0.3:  # Threshold for relevance
                 recommendation = Recommendation(
                     id=f"rec_{uuid.uuid4().hex[:8]}",
@@ -265,45 +265,45 @@ class RealDataManager:
                     created_at=datetime.now().isoformat()
                 )
                 recommendations.append(recommendation)
-        
+
         # Sort by relevance and limit results
         recommendations.sort(key=lambda x: x.relevance_score, reverse=True)
         return recommendations[:limit]
-    
+
     def _calculate_relevance(self, content: ContentItem, interests: List[str]) -> float:
         """Calculate relevance score between content and user interests"""
         if not interests:
             return 0.5  # Default relevance
-        
+
         # Tag-based matching
         tag_matches = sum(1 for tag in content.topic_tags if any(interest.lower() in tag.lower() for interest in interests))
         tag_score = min(tag_matches / len(content.topic_tags), 1.0) if content.topic_tags else 0
-        
+
         # Title/content matching
         content_text = (content.title + " " + content.content).lower()
         text_matches = sum(1 for interest in interests if interest.lower() in content_text)
         text_score = min(text_matches / len(interests), 1.0)
-        
+
         # Quality boost
         quality_boost = content.quality_score * 0.1
-        
+
         # Combine scores
         relevance = (tag_score * 0.5 + text_score * 0.4 + quality_boost)
         return min(relevance, 1.0)
-    
+
     def _generate_reasoning(self, content: ContentItem, interests: List[str], relevance: float) -> str:
         """Generate human-readable reasoning for recommendation"""
         reasons = []
-        
+
         # Check tag matches
         tag_matches = [tag for tag in content.topic_tags if any(interest.lower() in tag.lower() for interest in interests)]
         if tag_matches:
             reasons.append(f"Matches your interests in {', '.join(tag_matches)}")
-        
+
         # Check quality
         if content.quality_score > 0.8:
             reasons.append("High-quality content from reputable source")
-        
+
         # Check freshness
         try:
             pub_date = datetime.fromisoformat(content.published_date.replace('Z', '+00:00'))
@@ -312,10 +312,10 @@ class RealDataManager:
                 reasons.append("Recently published content")
         except:
             pass
-        
+
         if not reasons:
             reasons.append("Relevant to your general preferences")
-        
+
         return "; ".join(reasons)
 
 # Initialize data manager
@@ -366,9 +366,9 @@ async def get_content_item(content_id: str):
     """Get specific content item"""
     if content_id not in data_manager.content_cache:
         raise HTTPException(status_code=404, detail="Content not found")
-    
+
     content = data_manager.content_cache[content_id]
-    
+
     # Add real-time engagement metrics
     engagement_metrics = {
         "views": np.random.randint(100, 1000) if ML_AVAILABLE else 250,
@@ -376,7 +376,7 @@ async def get_content_item(content_id: str):
         "shares": np.random.randint(5, 50) if ML_AVAILABLE else 12,
         "comments": np.random.randint(0, 30) if ML_AVAILABLE else 8
     }
-    
+
     return {
         **content.dict(),
         "engagement_metrics": engagement_metrics,
@@ -387,13 +387,13 @@ async def get_content_item(content_id: str):
 async def get_recommendations(user_id: str, interests: str = "", limit: int = 10):
     """Get personalized recommendations for user"""
     user_interests = [i.strip() for i in interests.split(",")] if interests else ["machine-learning", "ai"]
-    
+
     recommendations = await data_manager.get_personalized_recommendations(
         user_id=user_id,
         interests=user_interests,
         limit=limit
     )
-    
+
     # Enhance recommendations with content details
     enhanced_recommendations = []
     for rec in recommendations:
@@ -406,7 +406,7 @@ async def get_recommendations(user_id: str, interests: str = "", limit: int = 10
                 "content_tags": content.topic_tags,
                 "content_quality": content.quality_score
             })
-    
+
     return {
         "recommendations": enhanced_recommendations,
         "user_id": user_id,
@@ -419,10 +419,10 @@ async def get_recommendations(user_id: str, interests: str = "", limit: int = 10
 async def submit_feedback(feedback: dict):
     """Submit user feedback"""
     feedback_id = f"fb_{uuid.uuid4().hex[:8]}"
-    
+
     # In a real system, this would be saved to database
     # Here we'll just acknowledge it and potentially update recommendations
-    
+
     processed_feedback = {
         "feedback_id": feedback_id,
         "user_id": feedback.get("user_id"),
@@ -432,7 +432,7 @@ async def submit_feedback(feedback: dict):
         "processed_at": datetime.now().isoformat(),
         "status": "processed"
     }
-    
+
     # Update content quality based on feedback (simple approach)
     content_id = feedback.get("content_id")
     if content_id in data_manager.content_cache:
@@ -442,7 +442,7 @@ async def submit_feedback(feedback: dict):
             current_quality = data_manager.content_cache[content_id].quality_score
             new_quality = min(current_quality + 0.01, 1.0)
             data_manager.content_cache[content_id].quality_score = new_quality
-    
+
     return {
         "message": "Feedback received and processed successfully",
         "feedback": processed_feedback
@@ -461,7 +461,7 @@ async def get_analytics_summary():
         "feedback_count": np.random.randint(200, 800) if ML_AVAILABLE else 456,
         "content_categories": {
             "research": sum(1 for item in data_manager.content_cache.values() if item.category == "research"),
-            "technology": sum(1 for item in data_manager.content_cache.values() if item.category == "technology"), 
+            "technology": sum(1 for item in data_manager.content_cache.values() if item.category == "technology"),
             "policy": sum(1 for item in data_manager.content_cache.values() if item.category == "policy"),
             "engineering": sum(1 for item in data_manager.content_cache.values() if item.category == "engineering")
         },
@@ -509,5 +509,5 @@ if __name__ == "__main__":
     print("   - Real-time Recommendations: ✅ Enabled")
     print("   - Content Analysis: ✅ Enabled")
     print("   - User Feedback Learning: ✅ Enabled")
-    
+
     uvicorn.run(app, host="127.0.0.1", port=8002)

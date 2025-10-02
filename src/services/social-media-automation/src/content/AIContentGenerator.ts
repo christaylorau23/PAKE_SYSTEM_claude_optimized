@@ -175,20 +175,20 @@ export class AIContentGenerator extends EventEmitter {
 
       const optimizationPrompt = `
         Optimize this social media content for ${platform}:
-        
+
         Original content: "${content}"
-        
+
         Platform guidelines:
         - Max length: ${guidelines.maxLength} characters
         - Best length: ${guidelines.bestLength} characters
         - Tone: ${guidelines.tone}
         - Audience: ${guidelines.audience}
-        
+
         Provide:
         1. Optimized text
         2. Relevant hashtags (3-5 for Twitter, 5-10 for Instagram, 3-5 for LinkedIn)
         3. Any platform-specific formatting
-        
+
         Return as JSON: {
           "text": "optimized content",
           "hashtags": ["hashtag1", "hashtag2"],
@@ -260,16 +260,16 @@ export class AIContentGenerator extends EventEmitter {
     try {
       const hashtagPrompt = `
         Generate ${count} relevant hashtags for this ${platform} post:
-        
+
         Content: "${content}"
-        
+
         Requirements:
         - Relevant to the content topic
         - Popular but not overly generic
         - Mix of broad and specific tags
         - Appropriate for ${platform} audience
         - No spaces, proper capitalization
-        
+
         Return only the hashtags as a JSON array (without # symbol):
         ["hashtag1", "hashtag2", "hashtag3"]
       `;
@@ -324,9 +324,9 @@ export class AIContentGenerator extends EventEmitter {
     try {
       const analysisPrompt = `
         Analyze this social media content:
-        
+
         Content: "${content}"
-        
+
         Provide analysis as JSON:
         {
           "sentiment": "positive|neutral|negative",
@@ -334,7 +334,7 @@ export class AIContentGenerator extends EventEmitter {
           "topics": ["topic1", "topic2"],
           "suggestions": ["improvement1", "improvement2"]
         }
-        
+
         Consider:
         - Overall tone and sentiment
         - Appropriateness for public social media
@@ -418,19 +418,19 @@ export class AIContentGenerator extends EventEmitter {
 
     const system = `
       You are an expert social media content creator specializing in ${request.platforms.join(', ')} content.
-      
+
       Your expertise includes:
       - Understanding platform-specific best practices
       - Creating engaging, authentic content
       - Optimizing for audience engagement
       - Following current social media trends
-      
+
       Content Guidelines:
       - Tone: ${request.tone}
       - Length: ${request.length} (max ${maxLength} characters)
       - Type: ${request.contentType}
       - Target audience: ${request.targetAudience || 'general'}
-      
+
       Always create content that is:
       - Authentic and engaging
       - Platform-appropriate
@@ -453,14 +453,14 @@ export class AIContentGenerator extends EventEmitter {
 
     const user = `
       Create ${request.length} social media content for ${request.platforms.join(' and ')}:
-      
+
       Topic/Prompt: ${request.prompt}${contextSection}${keywordSection}
-      
+
       Requirements:
       - Tone: ${request.tone}
       - Content type: ${request.contentType}
       - Make it ${this.getLengthDescription(request.length)}${hashtagInstruction}${emojiInstruction}
-      
+
       Provide the content ready to post, engaging and optimized for the specified platform(s).
     `;
 

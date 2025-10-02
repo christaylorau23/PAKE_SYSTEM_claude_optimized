@@ -28,10 +28,10 @@ export class RBACService {
     try {
       // Create Casbin enforcer
       this.enforcer = await newEnforcer(this.modelPath);
-      
+
       // Load default roles and permissions
       await this.createDefaultRolesAndPermissions();
-      
+
       this.logger.info('RBAC system initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize RBAC system', { error: error.message });
@@ -90,7 +90,7 @@ export class RBACService {
       }
 
       const role: Role = JSON.parse(roleData);
-      
+
       // Load permissions
       role.permissions = await this.getRolePermissions(roleId);
 
@@ -110,7 +110,7 @@ export class RBACService {
       if (!roleId) {
         return null;
       }
-      
+
       return await this.getRole(roleId);
     } catch (error) {
       this.logger.error('Failed to get role by name', { name, error: error.message });
@@ -217,7 +217,7 @@ export class RBACService {
   async createPermission(name: string, resource: string, action: string, description: string): Promise<Permission> {
     try {
       const permissionId = uuidv4();
-      
+
       const permission: Permission = {
         id: permissionId,
         name: name.toLowerCase(),
@@ -353,7 +353,7 @@ export class RBACService {
       }
 
       const roleName = JSON.parse(role).name;
-      
+
       if (!this.enforcer) {
         return [];
       }
@@ -363,13 +363,13 @@ export class RBACService {
 
       for (const policy of policies) {
         const [, resource, action] = policy;
-        
+
         // Find permission by resource and action
         const allPermissions = await this.listPermissions();
-        const permission = allPermissions.find(p => 
+        const permission = allPermissions.find(p =>
           p.resource === resource && p.action === action
         );
-        
+
         if (permission) {
           permissions.push(permission);
         }
@@ -515,8 +515,8 @@ export class RBACService {
     try {
       const userRoles = await this.getUserRoles(userId);
       const userRoleNames = userRoles.map(r => r.name.toLowerCase());
-      
-      return roleNames.some(roleName => 
+
+      return roleNames.some(roleName =>
         userRoleNames.includes(roleName.toLowerCase())
       );
     } catch (error) {
@@ -536,21 +536,21 @@ export class RBACService {
         { name: 'user.read', resource: 'user', action: 'read', description: 'View user information' },
         { name: 'user.write', resource: 'user', action: 'write', description: 'Create and update users' },
         { name: 'user.delete', resource: 'user', action: 'delete', description: 'Delete users' },
-        
+
         // Role management
         { name: 'role.read', resource: 'role', action: 'read', description: 'View roles' },
         { name: 'role.write', resource: 'role', action: 'write', description: 'Create and update roles' },
         { name: 'role.delete', resource: 'role', action: 'delete', description: 'Delete roles' },
-        
+
         // Knowledge vault
         { name: 'vault.read', resource: 'vault', action: 'read', description: 'Read knowledge vault' },
         { name: 'vault.write', resource: 'vault', action: 'write', description: 'Write to knowledge vault' },
         { name: 'vault.admin', resource: 'vault', action: 'admin', description: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' },
-        
+
         // Analytics
         { name: 'analytics.read', resource: 'analytics', action: 'read', description: 'View analytics' },
         { name: 'analytics.admin', resource: 'analytics', action: 'admin', description: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' },
-        
+
         // System
         { name: 'system.admin', resource: 'system', action: 'admin', description: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' },
         { name: 'audit.read', resource: 'audit', action: 'read', description: 'View audit logs' }
@@ -595,7 +595,7 @@ export class RBACService {
         const existingRole = await this.getRoleByName(roleData.name);
         if (!existingRole) {
           const role = await this.createRole(roleData.name, roleData.description, roleData.permissions);
-          
+
           // Mark as system role
           const updatedRole = { ...role, isSystem: roleData.isSystem };
           await this.redis.set(`role:${role.id}`, JSON.stringify(updatedRole));
@@ -615,7 +615,7 @@ export class RBACService {
   private async removeRoleFromAllUsers(roleId: string): Promise<void> {
     try {
       const userRoleKeys = await this.redis.keys('user_roles:*');
-      
+
       for (const key of userRoleKeys) {
         await this.redis.srem(key, roleId);
       }
@@ -636,7 +636,7 @@ export class RBACService {
     try {
       const roles = await this.listRoles();
       const permissions = await this.listPermissions();
-      
+
       return {
         totalRoles: roles.length,
         totalPermissions: permissions.length,

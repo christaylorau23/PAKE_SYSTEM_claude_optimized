@@ -54,7 +54,7 @@ data:
     p, role:admin, logs, *, *, allow
     p, role:admin, exec, *, */*, allow
 
-    # DevOps role  
+    # DevOps role
     p, role:devops, applications, *, production/*, allow
     p, role:devops, applications, *, staging/*, allow
     p, role:devops, clusters, get, *, allow

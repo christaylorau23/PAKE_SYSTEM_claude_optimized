@@ -74,7 +74,7 @@ fi
 # 2. Create GitHub release (if GitHub CLI is available)
 if command -v gh &> /dev/null; then
     print_info "Creating GitHub release..."
-    
+
     # Check if user is authenticated
     if gh auth status &> /dev/null; then
         # Create release
@@ -82,8 +82,8 @@ if command -v gh &> /dev/null; then
             --title "🚀 PAKE System v9.1.0 - Phase 9B Complete" \
             --notes "## 🎉 Major Milestone: Advanced AI/ML Pipeline Integration
 
-**Release Date**: $(date +'%Y-%m-%d')  
-**Version**: v9.1.0  
+**Release Date**: $(date +'%Y-%m-%d')
+**Version**: v9.1.0
 **Status**: Production Ready ✅
 
 ### ✨ What's New in v9.1.0
@@ -109,10 +109,10 @@ if command -v gh &> /dev/null; then
 - **Automation**: 90% automated ML workflows
 
 ### 🚀 Production Readiness
-✅ Scalable ML Infrastructure  
-✅ Advanced AI Capabilities  
-✅ Enterprise Security & Compliance  
-✅ Comprehensive Monitoring & Observability  
+✅ Scalable ML Infrastructure
+✅ Advanced AI Capabilities
+✅ Enterprise Security & Compliance
+✅ Comprehensive Monitoring & Observability
 ✅ Automated ML Operations
 
 ### 📈 Next Steps Available
@@ -147,7 +147,7 @@ docker-compose ps | grep ml
 The PAKE System is now a production-ready, enterprise-grade AI-powered knowledge management platform with comprehensive ML capabilities." \
             --latest \
             --verify-tag
-        
+
         if [ $? -eq 0 ]; then
             print_status "GitHub release created successfully"
         else
@@ -220,25 +220,25 @@ jobs:
     strategy:
       matrix:
         python-version: [3.12]
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-phase7.txt
         pip install pytest pytest-asyncio pytest-cov
-    
+
     - name: Run tests
       run: |
         python -m pytest tests/ -v --cov=src --cov-report=xml
-    
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -249,19 +249,19 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         REDACTED_SECRET: ${{ secrets.DOCKER_PASSWORD }}
-    
+
     - name: Build and push Docker images
       uses: docker/build-push-action@v5
       with:
@@ -276,10 +276,10 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     needs: [test, build]
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Deploy to staging
       run: |
         echo "Deploying to staging environment..."
@@ -289,10 +289,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test, build]
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Deploy to production
       run: |
         echo "Deploying to production environment..."

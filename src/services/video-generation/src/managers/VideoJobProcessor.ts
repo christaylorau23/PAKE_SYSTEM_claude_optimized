@@ -36,7 +36,7 @@ export class VideoJobProcessorImpl implements VideoJobProcessor {
   addJob(job: VideoProcessingJob): void {
     this.jobQueue.set(job.id, job);
     this.logger.info('Job added to queue', { jobId: job.id, priority: job.priority });
-    
+
     // Start processing if not already running
     if (!this.processing) {
       this.processJobs();
@@ -45,7 +45,7 @@ export class VideoJobProcessorImpl implements VideoJobProcessor {
 
   async processJobs(): Promise<void> {
     if (this.processing) return;
-    
+
     this.processing = true;
     this.logger.info('Starting job processing');
 
@@ -73,23 +73,23 @@ export class VideoJobProcessorImpl implements VideoJobProcessor {
     try {
       job.status = VideoStatus.IN_PROGRESS;
       job.updatedAt = new Date();
-      
+
       this.logger.info('Processing job', { jobId: job.id });
-      
+
       // Simulate job processing - would integrate with actual video generation
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       job.status = VideoStatus.COMPLETED;
       job.updatedAt = new Date();
-      
+
       this.logger.info('Job completed', { jobId: job.id });
     } catch (error) {
       job.status = VideoStatus.FAILED;
       job.updatedAt = new Date();
       job.attempts++;
-      
+
       this.logger.error('Job failed', { jobId: job.id, error: error.message });
-      
+
       // Retry logic
       if (job.attempts < job.maxAttempts) {
         job.status = VideoStatus.PENDING;

@@ -225,7 +225,7 @@ export class AuditStorageService {
 
       // Get paginated results
       const eventsQuery = `
-        SELECT 
+        SELECT
           ae.*,
           aam.metadata as actor_metadata,
           aacm.metadata as action_metadata,
@@ -370,7 +370,7 @@ export class AuditStorageService {
     try {
       // Hot storage stats
       const hotStatsQuery = `
-        SELECT 
+        SELECT
           COUNT(*) as count,
           SUM(length(raw_event::text)) as size_bytes,
           MIN(timestamp) as oldest_event
@@ -686,7 +686,7 @@ export class AuditStorageService {
         const { rows } = await client.query(
           `
           SELECT id, raw_event, created_at
-          FROM audit_events 
+          FROM audit_events
           WHERE created_at < $1 AND archived_s3 = false
           ORDER BY created_at
           LIMIT $2
@@ -717,8 +717,8 @@ export class AuditStorageService {
           const eventIds = batch.map(row => row.id);
           await client.query(
             `
-            UPDATE audit_events 
-            SET archived_s3 = true, s3_key = $1 
+            UPDATE audit_events
+            SET archived_s3 = true, s3_key = $1
             WHERE id = ANY($2)
           `,
             [s3Key, eventIds]
@@ -759,7 +759,7 @@ export class AuditStorageService {
         const { rows } = await client.query(
           `
           SELECT s3_key, COUNT(*) as event_count
-          FROM audit_events 
+          FROM audit_events
           WHERE created_at < $1 AND archived_s3 = true AND archived_glacier = false
           GROUP BY s3_key
           LIMIT $2
@@ -789,7 +789,7 @@ export class AuditStorageService {
 
           await client.query(
             `
-            UPDATE audit_events 
+            UPDATE audit_events
             SET archived_glacier = true, glacier_archive_id = $1
             WHERE s3_key = $2
           `,

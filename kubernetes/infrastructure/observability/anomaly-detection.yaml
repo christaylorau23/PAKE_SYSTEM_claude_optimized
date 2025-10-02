@@ -22,12 +22,12 @@ data:
     - name: pake.anomaly.detection
       interval: 60s
       rules:
-      
+
       # Traffic Pattern Anomalies
       - alert: AnomalousTrafficSpike
         expr: |
           (
-            rate(pake_api_requests_total[5m]) / 
+            rate(pake_api_requests_total[5m]) /
             avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])
           ) > 3
         for: 2m
@@ -41,18 +41,18 @@ data:
             Traffic rate is {{ $value }}x higher than the 1-hour average.
             Current rate: {{ with query "rate(pake_api_requests_total[5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }} req/sec
             Average rate: {{ with query "avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }} req/sec
-            
+
             Possible causes:
             - DDoS attack or bot traffic
-            - Viral content or marketing campaign  
+            - Viral content or marketing campaign
             - Partner integration sending bulk requests
             - Application retry loops
           runbook_url: "https://wiki.pake-system.com/runbooks/traffic-anomalies"
-      
+
       - alert: AnomalousTrafficDrop
         expr: |
           (
-            rate(pake_api_requests_total[5m]) / 
+            rate(pake_api_requests_total[5m]) /
             avg_over_time(rate(pake_api_requests_total[5m])[1h:5m])
           ) < 0.3
         for: 5m
@@ -65,7 +65,7 @@ data:
           description: |
             Traffic rate is {{ $value }}x lower than the 1-hour average.
             This could indicate service issues or external problems.
-      
+
       # Error Rate Anomalies
       - alert: AnomalousErrorRateSpike
         expr: |
@@ -84,7 +84,7 @@ data:
             Error rate is {{ $value }}x higher than the 6-hour average.
             Current error rate: {{ with query "rate(pake_api_requests_total{status=~\"5..\"}[5m])" }}{{ . | first | value | printf "%.3f" }}{{ end }} errors/sec
             This indicates a potential service degradation or recent deployment issue.
-      
+
       # Latency Anomalies
       - alert: AnomalousLatencyIncrease
         expr: |
@@ -103,7 +103,7 @@ data:
             P95 latency is {{ $value }}x higher than the 1-hour average.
             Current P95: {{ with query "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service=\"pake-api\"}[5m]))" }}{{ . | first | value | printf "%.3f" }}{{ end }}s
             This may indicate performance degradation or resource constraints.
-      
+
       # AI Service Anomalies
       - alert: AnomalousAIInferenceLatency
         expr: |
@@ -121,7 +121,7 @@ data:
           description: |
             AI inference latency is {{ $value }}x higher than normal.
             This could indicate GPU resource constraints or model loading issues.
-      
+
       - alert: AnomalousTokenUsage
         expr: |
           (
@@ -138,7 +138,7 @@ data:
           description: |
             Token usage is {{ $value }}x higher than the 1-hour average.
             This could indicate prompt injection attacks or misuse of AI services.
-      
+
       # Resource Anomalies
       - alert: AnomalousMemoryUsage
         expr: |
@@ -156,7 +156,7 @@ data:
           description: |
             Memory usage for {{ $labels.pod }} is {{ $value }}x higher than the 2-hour average.
             This could indicate a memory leak or increased load.
-      
+
       - alert: AnomalousCPUUsage
         expr: |
           (
@@ -173,7 +173,7 @@ data:
           description: |
             CPU usage for {{ $labels.pod }} is {{ $value }}x higher than the 2-hour average.
             This could indicate inefficient code or increased computational load.
-      
+
       # Database Anomalies
       - alert: AnomalousQueryLatency
         expr: |
@@ -191,7 +191,7 @@ data:
           description: |
             Database query latency is {{ $value }}x higher than the 1-hour average.
             This could indicate slow queries, lock contention, or resource constraints.
-      
+
       # Security Anomalies
       - alert: AnomalousAuthFailures
         expr: |
@@ -209,7 +209,7 @@ data:
           description: |
             Authentication failures are {{ $value }}x higher than the 24-hour average.
             This could indicate a brute force attack or credential stuffing.
-      
+
       # Cost Anomalies
       - alert: AnomalousCostIncrease
         expr: |
@@ -379,11 +379,11 @@ data:
             self.check_interval = int(os.getenv('CHECK_INTERVAL', '300'))
             self.anomaly_threshold = float(os.getenv('ANOMALY_THRESHOLD', '2.5'))
             self.learning_period = int(os.getenv('LEARNING_PERIOD', '168'))  # hours
-            
+
             self.models = {}
             self.scalers = {}
             self.feature_names = {}
-            
+
             # Metrics to monitor for anomalies
             self.metrics_config = {
                 'api_request_rate': {
@@ -417,7 +417,7 @@ data:
                     'contamination': 0.05
                 }
             }
-        
+
         def query_prometheus(self, query, start_time, end_time, step='5m'):
             """Query Prometheus for time series data"""
             try:
@@ -427,80 +427,80 @@ data:
                     'end': end_time.isoformat() + 'Z',
                     'step': step
                 }
-                
+
                 response = requests.get(f"{self.prometheus_url}/api/v1/query_range", params=params)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 if data['status'] == 'success':
                     return data['data']['result']
                 else:
                     logger.error(f"Prometheus query failed: {data.get('error', 'Unknown error')}")
                     return []
-                    
+
             except Exception as e:
                 logger.error(f"Error querying Prometheus: {e}")
                 return []
-        
+
         def extract_features(self, time_series_data, feature_config):
             """Extract features from time series data"""
             features = []
             timestamps = []
-            
+
             for result in time_series_data:
                 for timestamp, value in result['values']:
                     dt = datetime.fromtimestamp(float(timestamp))
-                    
+
                     feature_row = []
-                    
+
                     # Add the metric value
                     if 'value' in feature_config:
                         try:
                             feature_row.append(float(value))
                         except (ValueError, TypeError):
                             continue
-                    
+
                     # Add temporal features
                     if 'hour_of_day' in feature_config:
                         feature_row.append(dt.hour)
-                    
+
                     if 'day_of_week' in feature_config:
                         feature_row.append(dt.weekday())
-                    
+
                     if 'day_of_month' in feature_config:
                         feature_row.append(dt.day)
-                    
+
                     features.append(feature_row)
                     timestamps.append(dt)
-            
+
             return np.array(features), timestamps
-        
+
         def train_model(self, metric_name, config):
             """Train anomaly detection model for a specific metric"""
             logger.info(f"Training model for {metric_name}")
-            
+
             with model_training_duration.time():
                 # Get historical data for training
                 end_time = datetime.utcnow()
                 start_time = end_time - timedelta(hours=self.learning_period)
-                
+
                 time_series_data = self.query_prometheus(config['query'], start_time, end_time)
-                
+
                 if not time_series_data:
                     logger.warning(f"No training data available for {metric_name}")
                     return False
-                
+
                 # Extract features
                 features, timestamps = self.extract_features(time_series_data, config['features'])
-                
+
                 if len(features) < 100:  # Minimum data points required
                     logger.warning(f"Insufficient training data for {metric_name}: {len(features)} points")
                     return False
-                
+
                 # Scale features
                 scaler = StandardScaler()
                 features_scaled = scaler.fit_transform(features)
-                
+
                 # Train isolation forest model
                 model = IsolationForest(
                     contamination=config.get('contamination', 0.05),
@@ -508,50 +508,50 @@ data:
                     n_jobs=-1
                 )
                 model.fit(features_scaled)
-                
+
                 # Store model and scaler
                 self.models[metric_name] = model
                 self.scalers[metric_name] = scaler
                 self.feature_names[metric_name] = config['features']
-                
+
                 logger.info(f"Model trained for {metric_name} with {len(features)} data points")
                 last_training_time.set_to_current_time()
-                
+
                 return True
-        
+
         def detect_anomalies(self, metric_name, config):
             """Detect anomalies in current data"""
             if metric_name not in self.models:
                 logger.warning(f"No trained model for {metric_name}")
                 return []
-            
+
             # Get recent data for detection
             end_time = datetime.utcnow()
             start_time = end_time - timedelta(minutes=30)  # Last 30 minutes
-            
+
             time_series_data = self.query_prometheus(config['query'], start_time, end_time, step='1m')
-            
+
             if not time_series_data:
                 return []
-            
+
             # Extract features
             features, timestamps = self.extract_features(time_series_data, config['features'])
-            
+
             if len(features) == 0:
                 return []
-            
+
             # Scale features
             features_scaled = self.scalers[metric_name].transform(features)
-            
+
             # Predict anomalies
             anomaly_scores = self.models[metric_name].decision_function(features_scaled)
             predictions = self.models[metric_name].predict(features_scaled)
-            
+
             anomalies = []
             for i, (score, prediction, timestamp) in enumerate(zip(anomaly_scores, predictions, timestamps)):
                 # Record anomaly score
                 anomaly_score.labels(metric_name=metric_name).observe(abs(score))
-                
+
                 if prediction == -1:  # Anomaly detected
                     anomaly_data = {
                         'metric_name': metric_name,
@@ -561,20 +561,20 @@ data:
                         'severity': 'high' if abs(score) > 0.5 else 'medium'
                     }
                     anomalies.append(anomaly_data)
-                    
+
                     # Record anomaly detection
                     anomalies_detected.labels(
                         metric_name=metric_name,
                         anomaly_type='ml_detected'
                     ).inc()
-            
+
             return anomalies
-        
+
         def send_alert(self, anomalies):
             """Send alert to Alertmanager"""
             if not anomalies:
                 return
-            
+
             for anomaly in anomalies:
                 alert = {
                     "labels": {
@@ -600,7 +600,7 @@ data:
                     },
                     "startsAt": anomaly['timestamp']
                 }
-                
+
                 try:
                     response = requests.post(
                         f"{self.alertmanager_url}/api/v1/alerts",
@@ -611,22 +611,22 @@ data:
                     logger.info(f"Alert sent for anomaly in {anomaly['metric_name']}")
                 except Exception as e:
                     logger.error(f"Failed to send alert: {e}")
-        
+
         def health_check(self):
             """Health check endpoint"""
             return {"status": "healthy", "models_trained": len(self.models)}
-        
+
         def run(self):
             """Main execution loop"""
             logger.info("Starting ML Anomaly Detector")
-            
+
             # Initial model training
             for metric_name, config in self.metrics_config.items():
                 self.train_model(metric_name, config)
-            
+
             # Retrain models daily
             last_training = datetime.utcnow()
-            
+
             while True:
                 try:
                     # Retrain models if needed (daily)
@@ -635,23 +635,23 @@ data:
                         for metric_name, config in self.metrics_config.items():
                             self.train_model(metric_name, config)
                         last_training = datetime.utcnow()
-                    
+
                     # Detect anomalies
                     all_anomalies = []
                     for metric_name, config in self.metrics_config.items():
                         anomalies = self.detect_anomalies(metric_name, config)
                         all_anomalies.extend(anomalies)
-                        
+
                         if anomalies:
                             logger.info(f"Detected {len(anomalies)} anomalies in {metric_name}")
-                    
+
                     # Send alerts for detected anomalies
                     if all_anomalies:
                         self.send_alert(all_anomalies)
-                    
+
                 except Exception as e:
                     logger.error(f"Error in anomaly detection loop: {e}")
-                
+
                 time.sleep(self.check_interval)
 
     # Health check endpoints
@@ -671,10 +671,10 @@ data:
             elif self.path == '/ready':
                 ready = len(detector.models) > 0
                 self.send_response(200 if ready else 503)
-                self.send_header('Content-type', 'application/json') 
+                self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"ready": ready}).encode())
-        
+
         def log_message(self, format, *args):
             pass  # Suppress default logging
 

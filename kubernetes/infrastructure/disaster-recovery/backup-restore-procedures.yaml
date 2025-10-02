@@ -199,25 +199,25 @@ data:
     for ns_dir in cluster-config/namespaces/*/; do
       ns=$(basename $ns_dir)
       echo "Restoring namespace: $ns"
-      
+
       # Skip system namespaces that are auto-created
       if [[ "$ns" == "kube-system" || "$ns" == "kube-public" || "$ns" == "kube-node-lease" ]]; then
         continue
       fi
-      
+
       # Create namespace if it doesn't exist
       kubectl create namespace $ns --dry-run=client -o yaml | kubectl apply -f -
-      
+
       # Restore secrets and configmaps first
       kubectl apply -f $ns_dir/secrets.yaml -n $ns || true
       kubectl apply -f $ns_dir/configmaps.yaml -n $ns || true
-      
+
       # Restore PVCs
       kubectl apply -f $ns_dir/pvcs.yaml -n $ns || true
-      
+
       # Wait for PVCs to be bound
       kubectl wait --for=condition=Bound pvc --all -n $ns --timeout=300s || true
-      
+
       # Restore other resources
       kubectl apply -f $ns_dir/all-resources.yaml -n $ns || true
     done
@@ -249,11 +249,11 @@ data:
     case $DATABASE_TYPE in
       postgresql)
         echo "Restoring PostgreSQL database..."
-        
+
         # Scale down applications that use the database
         kubectl scale deployment pake-api --replicas=0 -n pake-system
         kubectl scale deployment pake-workers --replicas=0 -n pake-system
-        
+
         # Create restore job
         kubectl apply -f - <<EOF
     apiVersion: batch/v1
@@ -285,23 +285,23 @@ data:
               set -e
               echo "Downloading backup from S3..."
               aws s3 cp s3://pake-backups/postgresql/$BACKUP_FILE /tmp/backup.sql.gz
-              
+
               echo "Stopping connections to database..."
               psql -h \$PGHOST -U \$PGUSER -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'pake_production' AND pid <> pg_backend_pid();"
-              
+
               echo "Dropping existing database..."
               psql -h \$PGHOST -U \$PGUSER -c "DROP DATABASE IF EXISTS pake_production;"
-              
+
               echo "Creating new database..."
               psql -h \$PGHOST -U \$PGUSER -c "CREATE DATABASE pake_production;"
-              
+
               echo "Restoring database..."
               gunzip -c /tmp/backup.sql.gz | psql -h \$PGHOST -U \$PGUSER -d pake_production
-              
+
               echo "Database restore completed successfully!"
     EOF
         ;;
-        
+
       redis)
         echo "Restoring Redis database..."
         kubectl apply -f - <<EOF
@@ -330,18 +330,18 @@ data:
               set -e
               echo "Downloading Redis backup..."
               aws s3 cp s3://pake-backups/redis/$BACKUP_FILE /tmp/backup.rdb
-              
+
               echo "Redis restore would be implemented here"
               echo "This requires coordination with Redis pods"
     EOF
         ;;
-        
+
       chromadb)
         echo "Restoring ChromaDB..."
         # Implementation for ChromaDB restore
         echo "ChromaDB restore would be implemented here"
         ;;
-        
+
       *)
         echo "Unknown database type: $DATABASE_TYPE"
         exit 1

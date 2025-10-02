@@ -69,7 +69,7 @@ wait_for_service() {
     local port=$2
     local timeout=120
     local counter=0
-    
+
     echo -n "Waiting for $service"
     while ! curl -f -s "http://localhost:$port" > /dev/null 2>&1; do
         if [ $counter -eq $timeout ]; then

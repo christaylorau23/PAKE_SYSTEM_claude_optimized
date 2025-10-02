@@ -37,12 +37,12 @@ print_info() {
 # Step 1: Create .env file
 setup_environment() {
     print_header "Setting up Environment Variables"
-    
+
     if [ -f ".env" ]; then
         print_warning ".env file already exists. Backing up to .env.backup"
         cp .env .env.backup
     fi
-    
+
     print_info "Creating development .env file..."
     cat > .env << 'EOF'
 # PAKE System Development Environment Configuration
@@ -175,26 +175,26 @@ EOF
 # Step 2: Install PostgreSQL
 install_postgresql() {
     print_header "Installing PostgreSQL"
-    
+
     print_info "Updating package list..."
     sudo apt update
-    
+
     print_info "Installing PostgreSQL..."
     sudo apt install -y postgresql postgresql-contrib
-    
+
     print_info "Starting PostgreSQL service..."
     sudo service postgresql start
-    
+
     print_info "Enabling PostgreSQL to start on boot..."
     sudo systemctl enable postgresql
-    
+
     print_success "PostgreSQL installed and started successfully!"
 }
 
 # Step 3: Setup Database
 setup_database() {
     print_header "Setting up Database"
-    
+
     print_info "Creating database and user..."
     sudo -u postgres psql << 'EOF'
 CREATE DATABASE pake_db;
@@ -210,46 +210,46 @@ EOF
 # Step 4: Install Redis
 install_redis() {
     print_header "Installing Redis"
-    
+
     print_info "Installing Redis server..."
     sudo apt install -y redis-server
-    
+
     print_info "Starting Redis service..."
     sudo service redis-server start
-    
+
     print_info "Enabling Redis to start on boot..."
     sudo systemctl enable redis-server
-    
+
     print_success "Redis installed and started successfully!"
 }
 
 # Step 5: Setup Python Environment
 setup_python_env() {
     print_header "Setting up Python Environment"
-    
+
     if [ -d ".venv" ]; then
         print_warning "Virtual environment already exists"
     else
         print_info "Creating Python virtual environment..."
         python3 -m venv .venv
     fi
-    
+
     print_info "Activating virtual environment..."
     source .venv/bin/activate
-    
+
     print_info "Upgrading pip..."
     pip install --upgrade pip
-    
+
     print_info "Installing dependencies..."
     pip install -r requirements.txt
-    
+
     print_success "Python environment setup complete!"
 }
 
 # Step 6: Setup Node.js Environment
 setup_node_env() {
     print_header "Setting up Node.js Environment"
-    
+
     if command -v nvm &> /dev/null; then
         print_info "NVM already installed"
     else
@@ -257,39 +257,39 @@ setup_node_env() {
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
         source ~/.bashrc
     fi
-    
+
     print_info "Installing Node.js 18..."
     nvm install 18
     nvm use 18
-    
+
     print_info "Installing dependencies..."
     npm install
-    
+
     print_success "Node.js environment setup complete!"
 }
 
 # Step 7: Create necessary directories
 create_directories() {
     print_header "Creating Required Directories"
-    
+
     mkdir -p logs
     mkdir -p vault
     mkdir -p backups
     mkdir -p vault-backups
-    
+
     print_success "Directories created successfully!"
 }
 
 # Step 8: Run database migrations
 run_migrations() {
     print_header "Running Database Migrations"
-    
+
     print_info "Activating virtual environment..."
     source .venv/bin/activate
-    
+
     print_info "Running Alembic migrations..."
     alembic upgrade head
-    
+
     print_success "Database migrations completed!"
 }
 
@@ -298,13 +298,13 @@ main() {
     print_header "PAKE System WSL Development Setup"
     print_info "This script will set up your complete development environment"
     echo ""
-    
+
     # Check if running as root
     if [ "$EUID" -eq 0 ]; then
         print_error "Please do not run this script as root"
         exit 1
     fi
-    
+
     # Execute setup steps
     setup_environment
     install_postgresql
@@ -314,7 +314,7 @@ main() {
     setup_node_env
     create_directories
     run_migrations
-    
+
     print_header "Setup Complete! 🎉"
     echo ""
     print_success "Your PAKE System development environment is ready!"

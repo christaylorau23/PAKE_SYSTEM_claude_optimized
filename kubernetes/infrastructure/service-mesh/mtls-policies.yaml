@@ -173,7 +173,7 @@ spec:
         baseEjectionTime: 30s
         maxEjectionPercent: 50
         minHealthPercent: 30
-    
+
     # Circuit breaker
     outlierDetection:
       consecutiveGatewayErrors: 3
@@ -182,11 +182,11 @@ spec:
       baseEjectionTime: 30s
       maxEjectionPercent: 50
       minHealthPercent: 30
-    
+
     # Load balancing
     loadBalancer:
       simple: LEAST_CONN
-  
+
   # Subset configuration for canary deployments
   subsets:
   - name: stable
@@ -223,7 +223,7 @@ spec:
         http1MaxPendingRequests: 20
         http2MaxRequests: 50
         maxRequestsPerConnection: 5
-    
+
     outlierDetection:
       consecutiveGatewayErrors: 2
       consecutive5xxErrors: 2
@@ -231,7 +231,7 @@ spec:
       baseEjectionTime: 60s
       maxEjectionPercent: 30
       minHealthPercent: 50
-    
+
     loadBalancer:
       consistentHash:
         httpHeaderName: "x-user-id"  # Sticky sessions for AI context
@@ -253,7 +253,7 @@ spec:
         keepAlive:
           time: 7200s
           interval: 75s
-    
+
     loadBalancer:
       consistentHash:
         httpCookieTtl: 300s
@@ -291,7 +291,7 @@ spec:
         percentage:
           value: 0.1
         fixedDelay: 5s
-  
+
   # Production traffic routing
   - match:
     - uri:
@@ -305,17 +305,17 @@ spec:
         host: pake-api.pake-system.svc.cluster.local
         subset: canary
       weight: 10
-    
+
     # Retry policy
     retries:
       attempts: 3
       perTryTimeout: 10s
       retryOn: 5xx,gateway-error,connect-failure,refused-stream
       retryRemoteLocalities: true
-    
+
     # Timeout
     timeout: 30s
-    
+
     # CORS policy
     corsPolicy:
       allowOrigins:
@@ -357,14 +357,14 @@ spec:
     route:
     - destination:
         host: pake-ai.pake-system.svc.cluster.local
-    
+
     timeout: 300s  # Extended timeout for AI inference
-    
+
     retries:
       attempts: 2
       perTryTimeout: 150s
       retryOn: 5xx,reset,connect-failure,refused-stream
-    
+
     # Rate limiting for expensive AI operations
     match:
     - headers:
@@ -375,7 +375,7 @@ spec:
         percentage:
           value: 0
         fixedDelay: 0s
-  
+
   # Health checks and metrics (faster timeout)
   - match:
     - uri:
@@ -436,7 +436,7 @@ spec:
       http:
         timeout: 60s
         maxRequestsPerConnection: 10
-    
+
     outlierDetection:
       consecutiveGatewayErrors: 3
       interval: 30s
@@ -453,14 +453,14 @@ spec:
   workloadSelector:
     labels:
       app: pake-api
-  
+
   ingress:
   - port:
       number: 8080
       protocol: HTTP
       name: http
     defaultEndpoint: 127.0.0.1:8080
-  
+
   egress:
   # Allow traffic to database
   - hosts:
@@ -491,7 +491,7 @@ spec:
   policyTypes:
   - Ingress
   - Egress
-  
+
   ingress:
   # Allow Istio sidecar traffic
   - from:
@@ -501,7 +501,7 @@ spec:
     - podSelector:
         matchLabels:
           security.istio.io/tlsMode: istio
-  
+
   egress:
   # Allow Istio control plane traffic
   - to:

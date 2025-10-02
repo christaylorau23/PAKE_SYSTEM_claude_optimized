@@ -9,30 +9,30 @@ data:
     service:
       name: jaeger
       version: 1.0.0
-    
+
     sampling:
       type: const
       param: 1  # Sample 100% of traces for development
-    
+
     reporter:
       logSpans: true
       localAgentHostPort: jaeger-agent:6831
-    
+
     headers:
       traceContextHeaderName: uber-trace-id
       baggageHeaderPrefix: uberctx-
-    
+
     baggage_restrictions:
       denyBaggageOnInitializationFailure: false
       hostPort: ""
       refreshInterval: 60s
-    
+
     throttler:
       hostPort: ""
       synchronousInitialization: false
       initialBalance: 100
       creditsPerSecond: 10.0
-    
+
     # Storage configuration
     storage:
       type: elasticsearch
@@ -51,7 +51,7 @@ data:
           rolloverAge: 7d
           rolloverSize: 50GB
           rolloverDocs: 10000000
-    
+
     # Query configuration
     query:
       port: 16686
@@ -95,7 +95,7 @@ data:
                 url: "https://github.com/jaegertracing/jaeger"
               - label: "Blog"
                 url: "https://medium.com/jaegertracing"
-    
+
     # Collector configuration
     collector:
       zipkin:
@@ -115,7 +115,7 @@ data:
           endpoint: 0.0.0.0:6831
         thrift-binary:
           endpoint: 0.0.0.0:6832
-    
+
     # Agent configuration
     agent:
       httpServer:

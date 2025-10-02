@@ -12,11 +12,11 @@ services:
     image: redis:7-alpine
     container_name: pake_redis_node_1
     command: >
-      redis-server 
-      --cluster-enabled yes 
-      --cluster-config-file nodes.conf 
-      --cluster-node-timeout 5000 
-      --appendonly yes 
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
       --port 6379
       --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
       --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
@@ -33,11 +33,11 @@ services:
     image: redis:7-alpine
     container_name: pake_redis_node_2
     command: >
-      redis-server 
-      --cluster-enabled yes 
-      --cluster-config-file nodes.conf 
-      --cluster-node-timeout 5000 
-      --appendonly yes 
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
       --port 6379
       --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
       --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
@@ -54,11 +54,11 @@ services:
     image: redis:7-alpine
     container_name: pake_redis_node_3
     command: >
-      redis-server 
-      --cluster-enabled yes 
-      --cluster-config-file nodes.conf 
-      --cluster-node-timeout 5000 
-      --appendonly yes 
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
       --port 6379
       --requirepass ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
       --masterauth ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'}
@@ -83,13 +83,13 @@ services:
       sh -c "
         echo 'Waiting for Redis nodes to start...' &&
         sleep 10 &&
-        redis-cli --cluster create 
-        redis-node-1:6379 
-        redis-node-2:6379 
-        redis-node-3:6379 
-        --cluster-replicas 0 
+        redis-cli --cluster create
+        redis-node-1:6379
+        redis-node-2:6379
+        redis-node-3:6379
+        --cluster-replicas 0
         --cluster-yes
-        -a ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'} || 
+        -a ${REDIS_PASSWORD:-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'} ||
         echo 'Cluster already exists or failed to create'
       "
     networks:

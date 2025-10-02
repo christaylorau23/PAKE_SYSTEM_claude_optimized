@@ -6,12 +6,12 @@
 import request from 'supertest';
 import { createAuthApp } from '../../src/index';
 import { Application } from 'express';
-import { 
-  generateTestEmail, 
-  generateTestUsername, 
+import {
+  generateTestEmail,
+  generateTestUsername,
   generateTestPassword,
   expectValidJWT,
-  expectValidUUID 
+  expectValidUUID
 } from '../setup';
 
 describe('Authentication Integration', () => {
@@ -208,7 +208,7 @@ describe('Authentication Integration', () => {
     it('should require MFA when enabled', async () => {
       // Enable MFA for test user (simulated)
       // This would require proper MFA setup in a real scenario
-      
+
       const response = await request(app)
         .post('/api/auth/login')
         .send({

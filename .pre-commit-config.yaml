@@ -16,11 +16,11 @@ repos:
       - id: end-of-file-fixer
         exclude: \.(md|rst)$
       - id: check-yaml
-        args: [--unsafe]  # Allow custom tags
+        args: [--unsafe] # Allow custom tags
       - id: check-json
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: [--maxkb=1000]  # 1MB limit
+        args: [--maxkb=1000] # 1MB limit
       - id: check-case-conflict
       - id: mixed-line-ending
         args: [--fix=lf]
@@ -107,8 +107,8 @@ repos:
         files: \.(js|ts|jsx|tsx)$
         additional_dependencies:
           - eslint@8.56.0
-          - "@typescript-eslint/eslint-plugin@8.44.0"
-          - "@typescript-eslint/parser@8.44.0"
+          - '@typescript-eslint/eslint-plugin@8.44.0'
+          - '@typescript-eslint/parser@8.44.0'
         args: [--fix, --max-warnings=0]
 
   # Prettier for frontend formatting
@@ -174,4 +174,4 @@ repos:
         files: \.(py)$
         pass_filenames: true
         exclude: ^(migrations/|venv/|\.venv/|mcp-env/|test_env/)
-        stages: [manual]  # Only run with --all-files flag
+        stages: [manual] # Only run with --all-files flag

@@ -62,11 +62,11 @@ export default function RootLayout({
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              html { 
+              html {
                 font-family: 'Inter', system-ui, sans-serif;
                 scroll-behavior: smooth;
               }
-              body { 
+              body {
                 margin: 0;
                 background: oklch(0.985 0.002 240);
                 color: oklch(0.15 0.005 240);

@@ -131,11 +131,11 @@ if [ ${#yaml_files[@]} -eq 0 ]; then
     increment_warning
 else
     log_info "Found ${#yaml_files[@]} YAML files to validate"
-    
+
     for file in "${yaml_files[@]}"; do
         relative_file="${file#$ROOT_DIR/}"
         log_info "Validating $relative_file"
-        
+
         if kubectl apply --dry-run=client -f "$file" >/dev/null 2>&1; then
             log_success "✓ $relative_file"
             increment_success
@@ -155,7 +155,7 @@ if [ -d "$MONITORING_DIR" ]; then
         if [[ "$file" == *"dr"* ]] || [[ "$file" == *"disaster"* ]] || [[ "$file" == *"backup"* ]]; then
             relative_file="${file#$ROOT_DIR/}"
             log_info "Validating $relative_file"
-            
+
             if kubectl apply --dry-run=client -f "$file" >/dev/null 2>&1; then
                 log_success "✓ $relative_file"
                 increment_success
@@ -179,7 +179,7 @@ if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
 else
     log_warning "Namespace '$NAMESPACE' does not exist"
     increment_warning
-    
+
     read -p "Create namespace '$NAMESPACE'? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -205,7 +205,7 @@ check_component() {
     local type=$1
     local name=$2
     local required=${3:-true}
-    
+
     log_info "Checking $type/$name..."
     if kubectl get "$type" -n "$NAMESPACE" "$name" >/dev/null 2>&1; then
         # Get additional status info
@@ -281,7 +281,7 @@ log_info "Checking Prometheus Operator CRDs..."
 if kubectl get crd prometheusrules.monitoring.coreos.com >/dev/null 2>&1; then
     log_success "PrometheusRule CRD is installed"
     increment_success
-    
+
     # Check for DR-specific PrometheusRules
     log_info "Checking DR PrometheusRules..."
     dr_rules=$(kubectl get prometheusrule --all-namespaces -o name 2>/dev/null | grep -E "(dr|disaster|backup)" | wc -l)
@@ -301,7 +301,7 @@ fi
 if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
     log_success "ServiceMonitor CRD is installed"
     increment_success
-    
+
     # Check for DR-specific ServiceMonitors
     log_info "Checking DR ServiceMonitors..."
     dr_monitors=$(kubectl get servicemonitor --all-namespaces -o name 2>/dev/null | grep -E "(dr|disaster|backup)" | wc -l)
@@ -361,7 +361,7 @@ log_info "Checking Prometheus accessibility..."
 if kubectl get service -n monitoring prometheus-kube-prometheus-prometheus >/dev/null 2>&1; then
     log_success "Prometheus service found in monitoring namespace"
     increment_success
-    
+
     # Try to port-forward and check metrics (non-blocking)
     log_info "Testing Prometheus port-forward (5 second timeout)..."
     if timeout 5s kubectl port-forward -n monitoring svc/prometheus-kube-prometheus-prometheus 9090:9090 >/dev/null 2>&1 &

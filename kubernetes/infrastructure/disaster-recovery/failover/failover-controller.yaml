@@ -13,12 +13,12 @@ data:
     failover:
       name: "pake-system-failover-controller"
       description: "Automated failover orchestration for PAKE System"
-      
+
       # RTO/RPO targets
       targets:
         rto_seconds: 900    # 15 minutes
         rpo_seconds: 300    # 5 minutes
-        
+
       # Health check configuration
       health_checks:
         primary_region:
@@ -31,7 +31,7 @@ data:
           timeout_seconds: 30
           failure_threshold: 3
           check_interval_seconds: 10
-          
+
         secondary_region:
           endpoints:
             - "https://api-dr.pake-system.com/health"
@@ -40,7 +40,7 @@ data:
             - "postgresql://pake-postgresql-replica:5432/pake"
             - "redis://pake-redis-replica:6379"
           timeout_seconds: 30
-          
+
       # Failover decision criteria
       failover_triggers:
         primary_health_failures: 3
@@ -48,7 +48,7 @@ data:
         api_response_time_ms: 30000
         replication_lag_seconds: 600
         manual_trigger: true
-        
+
       # Failover steps configuration
       failover_sequence:
         pre_failover:
@@ -56,47 +56,47 @@ data:
           - "check_replication_status"
           - "notify_operators"
           - "create_incident_record"
-          
+
         database_failover:
           - "promote_postgresql_replica"
           - "redirect_redis_traffic"
           - "update_chromadb_endpoints"
           - "validate_database_connectivity"
-          
+
         application_failover:
           - "scale_up_secondary_region"
           - "update_service_discovery"
           - "redirect_ingress_traffic"
           - "validate_application_health"
-          
+
         dns_failover:
           - "update_route53_records"
           - "validate_dns_propagation"
           - "test_external_connectivity"
-          
+
         post_failover:
           - "run_smoke_tests"
           - "notify_stakeholders"
           - "update_monitoring_targets"
           - "schedule_failback_assessment"
-          
+
       # Monitoring and alerting
       monitoring:
         metrics_endpoint: "http://prometheus.monitoring.svc.cluster.local:9090"
         alert_webhook: "http://alertmanager.monitoring.svc.cluster.local:9093/api/v1/alerts"
         dashboard_url: "https://grafana.pake-system.com/d/dr-backups-dashboard"
-        
+
       # External integrations
       integrations:
         pagerduty:
           enabled: true
           routing_key: "failover-controller"
-          
+
         slack:
           enabled: true
           webhook_url: "https://hooks.slack.com/services/YOUR/DR/WEBHOOK"
           channel: "#dr-critical"
-          
+
         route53:
           enabled: true
           hosted_zone_id: "Z1234567890"
@@ -156,7 +156,7 @@ data:
         response_time_ms: float
         error_message: Optional[str] = None
         timestamp: datetime = None
-        
+
         def __post_init__(self):
             if self.timestamp is None:
                 self.timestamp = datetime.now(timezone.utc)
@@ -177,77 +177,77 @@ data:
         def __init__(self, config_path: str):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['failover']
-            
+
             # Initialize clients
             try:
                 config.load_incluster_config()
             except:
                 config.load_kube_config()
-            
+
             self.k8s_client = client.CoreV1Api()
             self.apps_client = client.AppsV1Api()
             self.route53_client = boto3.client('route53')
-            
+
             # Controller state
             self.controller_id = f"failover-controller-{uuid.uuid4().hex[:8]}"
             self.current_state = FailoverState.HEALTHY
             self.current_event: Optional[FailoverEvent] = None
             self.health_history: Dict[str, List[HealthCheckResult]] = {}
             self.session: Optional[aiohttp.ClientSession] = None
-            
+
             # RTO/RPO tracking
             self.rto_target = self.config['targets']['rto_seconds']
             self.rpo_target = self.config['targets']['rpo_seconds']
-            
+
         async def start(self):
             """Initialize the failover controller"""
             self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
             logger.info(f"Starting failover controller: {self.controller_id}")
-            
+
             # Emit startup metrics
             self.emit_metric('failover_controller_start_timestamp', int(time.time()))
             self.emit_metric('failover_controller_status', 1, {'status': 'running'})
-            
+
         async def stop(self):
             """Cleanup resources"""
             if self.session:
                 await self.session.close()
-                
+
         def emit_metric(self, metric_name: str, value: float, labels: Dict[str, str] = None):
             """Emit metric to Prometheus pushgateway"""
             try:
                 if labels is None:
                     labels = {}
-                    
+
                 labels.update({
                     'controller_id': self.controller_id,
                     'component': 'failover-controller'
                 })
-                
+
                 label_str = ','.join([f'{k}="{v}"' for k, v in labels.items()])
                 metric_data = f"{metric_name}{{{label_str}}} {value}"
-                
+
                 response = requests.post(
                     "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091/metrics/job/failover-controller/instance/controller",
                     data=metric_data,
                     headers={'Content-Type': 'text/plain'},
                     timeout=10
                 )
-                
+
                 if response.status_code != 200:
                     logger.warning(f"Failed to emit metric {metric_name}: HTTP {response.status_code}")
-                    
+
             except Exception as e:
                 logger.error(f"Error emitting metric {metric_name}: {e}")
-                
+
         async def check_endpoint_health(self, endpoint: str) -> HealthCheckResult:
             """Check health of a single endpoint"""
             start_time = time.time()
-            
+
             try:
                 async with self.session.get(endpoint, timeout=aiohttp.ClientTimeout(total=30)) as response:
                     response_time_ms = (time.time() - start_time) * 1000
-                    
+
                     if response.status == 200:
                         return HealthCheckResult(
                             endpoint=endpoint,
@@ -261,7 +261,7 @@ data:
                             response_time_ms=response_time_ms,
                             error_message=f"HTTP {response.status}"
                         )
-                        
+
             except Exception as e:
                 response_time_ms = (time.time() - start_time) * 1000
                 return HealthCheckResult(
@@ -270,29 +270,29 @@ data:
                     response_time_ms=response_time_ms,
                     error_message=str(e)
                 )
-                
+
         async def check_database_health(self, database_url: str) -> HealthCheckResult:
             """Check health of database connection"""
             start_time = time.time()
-            
+
             try:
                 if database_url.startswith('postgresql://'):
                     conn = await asyncpg.connect(database_url)
                     await conn.execute('SELECT 1')
                     await conn.close()
-                    
+
                 elif database_url.startswith('redis://'):
                     redis_client = redis.from_url(database_url)
                     await redis_client.ping()
                     await redis_client.close()
-                    
+
                 response_time_ms = (time.time() - start_time) * 1000
                 return HealthCheckResult(
                     endpoint=database_url,
                     healthy=True,
                     response_time_ms=response_time_ms
                 )
-                
+
             except Exception as e:
                 response_time_ms = (time.time() - start_time) * 1000
                 return HealthCheckResult(
@@ -301,48 +301,48 @@ data:
                     response_time_ms=response_time_ms,
                     error_message=str(e)
                 )
-                
+
         async def check_region_health(self, region_name: str) -> RegionHealth:
             """Check overall health of a region"""
             try:
                 region_config = self.config['health_checks'][region_name]
                 health_results = []
-                
+
                 # Check endpoint health
                 for endpoint in region_config['endpoints']:
                     result = await self.check_endpoint_health(endpoint)
                     health_results.append(result)
-                    
+
                 # Check database health
                 for database in region_config['databases']:
                     result = await self.check_database_health(database)
                     health_results.append(result)
-                
+
                 # Store health history
                 if region_name not in self.health_history:
                     self.health_history[region_name] = []
-                    
+
                 self.health_history[region_name].extend(health_results)
-                
+
                 # Keep only last 100 results per region
                 self.health_history[region_name] = self.health_history[region_name][-100:]
-                
+
                 # Calculate health status
                 healthy_count = sum(1 for result in health_results if result.healthy)
                 total_count = len(health_results)
-                
+
                 if healthy_count == total_count:
                     health_status = RegionHealth.HEALTHY
                 elif healthy_count >= total_count * 0.7:  # 70% healthy
                     health_status = RegionHealth.DEGRADED
                 else:
                     health_status = RegionHealth.UNHEALTHY
-                
+
                 # Emit health metrics
                 self.emit_metric('region_health_check_total', total_count, {'region': region_name})
                 self.emit_metric('region_health_check_success', healthy_count, {'region': region_name})
                 self.emit_metric('region_health_status', health_status.value == 'healthy', {'region': region_name})
-                
+
                 # Emit individual endpoint metrics
                 for result in health_results:
                     self.emit_metric('endpoint_response_time_ms', result.response_time_ms, {
@@ -350,29 +350,29 @@ data:
                         'endpoint': result.endpoint,
                         'healthy': str(result.healthy).lower()
                     })
-                
+
                 logger.info(f"Region {region_name} health: {health_status.value} ({healthy_count}/{total_count} healthy)")
                 return health_status
-                
+
             except Exception as e:
                 logger.error(f"Error checking {region_name} health: {e}")
                 return RegionHealth.UNKNOWN
-                
+
         async def evaluate_failover_decision(self) -> bool:
             """Determine if failover should be triggered"""
             try:
                 # Check current primary region health
                 primary_health = await self.check_region_health('primary_region')
                 secondary_health = await self.check_region_health('secondary_region')
-                
+
                 # Don't failover if secondary is not healthy
                 if secondary_health in [RegionHealth.UNHEALTHY, RegionHealth.UNKNOWN]:
                     logger.warning("Secondary region not healthy - failover not recommended")
                     return False
-                
+
                 # Check failover triggers
                 triggers = self.config['failover_triggers']
-                
+
                 # Count recent primary region failures
                 if 'primary_region' in self.health_history:
                     recent_results = self.health_history['primary_region'][-triggers['primary_health_failures']:]
@@ -380,13 +380,13 @@ data:
                         if all(not result.healthy for result in recent_results):
                             logger.critical("Primary region failed health checks - triggering failover")
                             return True
-                
+
                 # Check replication lag
                 replication_lag = await self.get_replication_lag()
                 if replication_lag and replication_lag > triggers['replication_lag_seconds']:
                     logger.critical(f"Replication lag {replication_lag}s exceeds threshold - triggering failover")
                     return True
-                
+
                 # Check API response times
                 if 'primary_region' in self.health_history:
                     recent_results = [r for r in self.health_history['primary_region'][-10:] if r.healthy]
@@ -395,13 +395,13 @@ data:
                         if avg_response_time > triggers['api_response_time_ms']:
                             logger.warning(f"High API response time {avg_response_time}ms - considering failover")
                             return True
-                
+
                 return False
-                
+
             except Exception as e:
                 logger.error(f"Error evaluating failover decision: {e}")
                 return False
-                
+
         async def get_replication_lag(self) -> Optional[float]:
             """Get current replication lag in seconds"""
             try:
@@ -411,70 +411,70 @@ data:
                     SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))
                 """)
                 await conn.close()
-                
+
                 if result is not None:
                     self.emit_metric('replication_lag_seconds', result, {'database': 'postgresql'})
                     return float(result)
-                    
+
                 return None
-                
+
             except Exception as e:
                 logger.error(f"Error getting replication lag: {e}")
                 return None
-                
+
         async def execute_failover_step(self, step_name: str) -> bool:
             """Execute a single failover step"""
             try:
                 logger.info(f"Executing failover step: {step_name}")
                 step_start_time = time.time()
-                
+
                 if step_name == "validate_secondary_region_health":
                     health = await self.check_region_health('secondary_region')
                     success = health in [RegionHealth.HEALTHY, RegionHealth.DEGRADED]
-                    
+
                 elif step_name == "check_replication_status":
                     lag = await self.get_replication_lag()
                     success = lag is not None and lag < 600  # 10 minutes max lag
-                    
+
                 elif step_name == "promote_postgresql_replica":
                     success = await self.promote_postgresql_replica()
-                    
+
                 elif step_name == "redirect_redis_traffic":
                     success = await self.redirect_redis_traffic()
-                    
+
                 elif step_name == "scale_up_secondary_region":
                     success = await self.scale_up_secondary_region()
-                    
+
                 elif step_name == "update_route53_records":
                     success = await self.update_dns_records()
-                    
+
                 elif step_name == "run_smoke_tests":
                     success = await self.run_smoke_tests()
-                    
+
                 else:
                     # Default step execution (placeholder)
                     await asyncio.sleep(1)  # Simulate step execution
                     success = True
-                
+
                 step_duration = time.time() - step_start_time
-                
+
                 # Emit step metrics
                 self.emit_metric('failover_step_duration_seconds', step_duration, {
                     'step': step_name,
                     'success': str(success).lower()
                 })
-                
+
                 if success:
                     logger.info(f"Failover step {step_name} completed successfully ({step_duration:.2f}s)")
                 else:
                     logger.error(f"Failover step {step_name} failed ({step_duration:.2f}s)")
-                
+
                 return success
-                
+
             except Exception as e:
                 logger.error(f"Error executing failover step {step_name}: {e}")
                 return False
-                
+
         async def promote_postgresql_replica(self) -> bool:
             """Promote PostgreSQL replica to primary"""
             try:
@@ -484,15 +484,15 @@ data:
                     'pake-postgresql-replica-0', '--',
                     'pg_promote'
                 ]
-                
+
                 process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
-                
+
                 stdout, stderr = await process.communicate()
-                
+
                 if process.returncode == 0:
                     logger.info("PostgreSQL replica promoted successfully")
                     self.emit_metric('postgresql_promotion_success', 1)
@@ -501,11 +501,11 @@ data:
                     logger.error(f"PostgreSQL promotion failed: {stderr.decode()}")
                     self.emit_metric('postgresql_promotion_success', 0)
                     return False
-                    
+
             except Exception as e:
                 logger.error(f"Error promoting PostgreSQL replica: {e}")
                 return False
-                
+
         async def redirect_redis_traffic(self) -> bool:
             """Redirect Redis traffic to replica"""
             try:
@@ -518,22 +518,22 @@ data:
                         }
                     }
                 }
-                
+
                 self.k8s_client.patch_namespaced_service(
                     name="pake-redis-master",
                     namespace="database",
                     body=service_patch
                 )
-                
+
                 logger.info("Redis traffic redirected to replica")
                 self.emit_metric('redis_traffic_redirect_success', 1)
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Error redirecting Redis traffic: {e}")
                 self.emit_metric('redis_traffic_redirect_success', 0)
                 return False
-                
+
         async def scale_up_secondary_region(self) -> bool:
             """Scale up applications in secondary region"""
             try:
@@ -542,7 +542,7 @@ data:
                     'pake-ai-service-dr',
                     'pake-worker-dr'
                 ]
-                
+
                 for deployment in deployments:
                     try:
                         # Scale deployment to production replicas
@@ -551,33 +551,33 @@ data:
                                 "replicas": 3  # Production replica count
                             }
                         }
-                        
+
                         self.apps_client.patch_namespaced_deployment_scale(
                             name=deployment,
                             namespace="default",
                             body=scale_patch
                         )
-                        
+
                         logger.info(f"Scaled up {deployment} in secondary region")
-                        
+
                     except Exception as e:
                         logger.error(f"Error scaling {deployment}: {e}")
                         return False
-                
+
                 self.emit_metric('secondary_region_scale_up_success', 1)
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Error scaling up secondary region: {e}")
                 self.emit_metric('secondary_region_scale_up_success', 0)
                 return False
-                
+
         async def update_dns_records(self) -> bool:
             """Update Route53 DNS records for failover"""
             try:
                 hosted_zone_id = self.config['integrations']['route53']['hosted_zone_id']
                 ttl = self.config['integrations']['route53']['ttl']
-                
+
                 # Update A records to point to secondary region
                 changes = {
                     'Changes': [
@@ -601,22 +601,22 @@ data:
                         }
                     ]
                 }
-                
+
                 response = self.route53_client.change_resource_record_sets(
                     HostedZoneId=hosted_zone_id,
                     ChangeBatch=changes
                 )
-                
+
                 change_id = response['ChangeInfo']['Id']
                 logger.info(f"DNS records updated successfully: {change_id}")
                 self.emit_metric('dns_update_success', 1)
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Error updating DNS records: {e}")
                 self.emit_metric('dns_update_success', 0)
                 return False
-                
+
         async def run_smoke_tests(self) -> bool:
             """Run post-failover smoke tests"""
             try:
@@ -625,23 +625,23 @@ data:
                     'https://api.pake-system.com/health',
                     'https://app.pake-system.com/health'
                 ]
-                
+
                 for endpoint in test_endpoints:
                     result = await self.check_endpoint_health(endpoint)
                     if not result.healthy:
                         logger.error(f"Smoke test failed for {endpoint}: {result.error_message}")
                         self.emit_metric('smoke_test_success', 0, {'endpoint': endpoint})
                         return False
-                    
+
                     self.emit_metric('smoke_test_success', 1, {'endpoint': endpoint})
-                
+
                 logger.info("All smoke tests passed")
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Error running smoke tests: {e}")
                 return False
-                
+
         async def execute_failover(self, trigger_reason: str) -> bool:
             """Execute complete failover process"""
             try:
@@ -654,49 +654,49 @@ data:
                     steps_completed=[],
                     steps_failed=[]
                 )
-                
+
                 self.current_state = FailoverState.FAILING_OVER
-                
+
                 logger.critical(f"Starting failover: {self.current_event.event_id} - Reason: {trigger_reason}")
-                
+
                 # Emit failover start metrics
                 self.emit_metric('failover_start_timestamp', int(time.time()), {
                     'event_id': self.current_event.event_id,
                     'trigger_reason': trigger_reason
                 })
-                
+
                 # Execute failover sequence
                 sequence = self.config['failover_sequence']
                 all_steps = []
-                
+
                 for phase, steps in sequence.items():
                     all_steps.extend(steps)
-                
+
                 success_count = 0
-                
+
                 for step in all_steps:
                     try:
                         success = await self.execute_failover_step(step)
-                        
+
                         if success:
                             self.current_event.steps_completed.append(step)
                             success_count += 1
                         else:
                             self.current_event.steps_failed.append(step)
-                            
+
                     except Exception as e:
                         logger.error(f"Step {step} failed with exception: {e}")
                         self.current_event.steps_failed.append(step)
-                
+
                 # Calculate RTO
                 self.current_event.end_time = datetime.now(timezone.utc)
                 rto_achieved = (self.current_event.end_time - self.current_event.start_time).total_seconds()
                 self.current_event.rto_achieved = rto_achieved
-                
+
                 # Determine overall success
                 success_rate = success_count / len(all_steps)
                 overall_success = success_rate >= 0.8  # 80% success threshold
-                
+
                 if overall_success:
                     self.current_state = FailoverState.FAILED_OVER
                     self.current_event.state = FailoverState.FAILED_OVER
@@ -705,38 +705,38 @@ data:
                     self.current_state = FailoverState.ERROR
                     self.current_event.state = FailoverState.ERROR
                     logger.critical(f"Failover failed: {len(self.current_event.steps_failed)} steps failed")
-                
+
                 # Emit completion metrics
                 self.emit_metric('failover_duration_seconds', rto_achieved, {
                     'event_id': self.current_event.event_id,
                     'success': str(overall_success).lower()
                 })
-                
+
                 self.emit_metric('failover_rto_achieved', rto_achieved, {
                     'event_id': self.current_event.event_id
                 })
-                
+
                 self.emit_metric('failover_steps_success_rate', success_rate * 100, {
                     'event_id': self.current_event.event_id
                 })
-                
+
                 # Send notifications
                 await self.send_failover_notification(overall_success)
-                
+
                 return overall_success
-                
+
             except Exception as e:
                 logger.error(f"Failover execution failed: {e}")
                 self.current_state = FailoverState.ERROR
                 return False
-                
+
         async def send_failover_notification(self, success: bool):
             """Send failover completion notification"""
             try:
                 if self.config['integrations']['slack']['enabled']:
                     webhook_url = self.config['integrations']['slack']['webhook_url']
                     channel = self.config['integrations']['slack']['channel']
-                    
+
                     if success:
                         message = f"✅ Failover completed successfully\n" \
                                 f"Event ID: {self.current_event.event_id}\n" \
@@ -751,7 +751,7 @@ data:
                                 f"Steps Failed: {len(self.current_event.steps_failed)}\n" \
                                 f"Failed Steps: {', '.join(self.current_event.steps_failed)}"
                         color = "danger"
-                    
+
                     payload = {
                         "channel": channel,
                         "username": "Failover Controller",
@@ -763,48 +763,48 @@ data:
                             "ts": int(time.time())
                         }]
                     }
-                    
+
                     requests.post(webhook_url, json=payload, timeout=10)
-                    
+
             except Exception as e:
                 logger.error(f"Error sending notification: {e}")
-                
+
         async def run_controller_loop(self):
             """Main controller loop"""
             try:
                 await self.start()
-                
+
                 logger.info("Failover controller started")
-                
+
                 while True:
                     try:
                         # Skip checks if currently failing over
                         if self.current_state == FailoverState.FAILING_OVER:
                             await asyncio.sleep(30)
                             continue
-                        
+
                         # Check if failover should be triggered
                         should_failover = await self.evaluate_failover_decision()
-                        
+
                         if should_failover and self.current_state == FailoverState.HEALTHY:
                             await self.execute_failover("Automated health check failure")
-                        
+
                         # Regular health monitoring
                         await self.check_region_health('primary_region')
                         await self.check_region_health('secondary_region')
-                        
+
                         # Update controller status
                         self.emit_metric('failover_controller_healthy', 1)
                         self.emit_metric('failover_controller_state', 1, {'state': self.current_state.value})
-                        
+
                         # Wait before next check
                         await asyncio.sleep(self.config['health_checks']['primary_region']['check_interval_seconds'])
-                        
+
                     except Exception as e:
                         logger.error(f"Error in controller loop: {e}")
                         self.emit_metric('failover_controller_errors_total', 1)
                         await asyncio.sleep(60)  # Wait longer on error
-                        
+
             except Exception as e:
                 logger.error(f"Controller loop failed: {e}")
                 self.emit_metric('failover_controller_healthy', 0)
@@ -814,7 +814,7 @@ data:
     async def main():
         config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
         controller = FailoverController(config_path)
-        
+
         await controller.run_controller_loop()
 
     if __name__ == "__main__":

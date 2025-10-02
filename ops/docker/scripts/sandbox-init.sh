@@ -54,7 +54,7 @@ log "Enforcing resource limits..."
 
 # Set process limits
 ulimit -u ${PROCESS_LIMIT:-32}              # Max processes
-ulimit -n ${FILE_DESCRIPTOR_LIMIT:-1024}    # Max file descriptors  
+ulimit -n ${FILE_DESCRIPTOR_LIMIT:-1024}    # Max file descriptors
 ulimit -f 1048576                           # Max file size (1GB in 512-byte blocks)
 ulimit -t ${EXECUTION_TIMEOUT:-60}          # Max CPU time per process
 
@@ -85,7 +85,7 @@ umask 077
 
 # Clear environment of potentially dangerous variables
 unset LD_PRELOAD
-unset LD_LIBRARY_PATH  
+unset LD_LIBRARY_PATH
 unset PATH_SEPARATOR
 unset SHELL
 unset HOME
@@ -159,10 +159,10 @@ cleanup() {
         MONITOR_PID=$(cat /app/temp/.monitor.pid)
         kill $MONITOR_PID 2>/dev/null || true
     fi
-    
+
     # Clean temporary files
     rm -rf /app/temp/sandbox-$$ 2>/dev/null || true
-    
+
     log "Cleanup completed"
 }
 
@@ -180,7 +180,7 @@ cat > /app/logs/security-audit.json << EOF
   "sandbox_version": "1.0.0",
   "security_checks": {
     "user_identity": "passed",
-    "filesystem_readonly": "passed", 
+    "filesystem_readonly": "passed",
     "resource_limits": "passed",
     "network_isolation": "$(if [[ "${ALLOW_NETWORK:-false}" == "false" ]]; then echo "passed"; else echo "bypassed"; fi)",
     "process_limits": "passed"

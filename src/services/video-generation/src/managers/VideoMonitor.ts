@@ -36,7 +36,7 @@ export class VideoMonitorImpl implements VideoMonitor {
 
   startMonitoring(videoId: string, request: VideoGenerationRequest): void {
     this.logger.info('Starting video monitoring', { videoId });
-    
+
     this.metrics.set(videoId, {
       videoId,
       status: VideoStatus.PENDING,
@@ -55,7 +55,7 @@ export class VideoMonitorImpl implements VideoMonitor {
     }
 
     metrics.status = status;
-    
+
     if (status === VideoStatus.COMPLETED || status === VideoStatus.FAILED) {
       metrics.endTime = new Date();
       metrics.duration = metrics.endTime.getTime() - metrics.startTime.getTime();

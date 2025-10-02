@@ -15,7 +15,7 @@ data:
       smtp_smarthost: 'localhost:587'
       smtp_from: 'alerts@pake-system.com'
       slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-      
+
     # Inhibition rules suppress alerts when other alerts are firing
     inhibit_rules:
     - source_match:
@@ -31,7 +31,7 @@ data:
       group_interval: 5m
       repeat_interval: 12h
       receiver: 'default-receiver'
-      
+
       routes:
       # Critical DR alerts - immediate escalation
       - match:
@@ -41,7 +41,7 @@ data:
         group_wait: 10s
         group_interval: 2m
         repeat_interval: 4h
-        
+
       # Backup system alerts
       - match_re:
           alertname: '(BackupRestoreValidationFailed|BackupStaleCritical|PostgreSQLBackupRestoreFailed|BackupTooOld)'
@@ -49,7 +49,7 @@ data:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 6h
-        
+
       # Compliance and audit alerts
       - match_re:
           alertname: '(ComplianceAttestationMissing|AuditLogGapDetected|SOC2ComplianceViolation|GDPRDataProcessingIncident)'
@@ -57,7 +57,7 @@ data:
         group_wait: 60s
         group_interval: 10m
         repeat_interval: 8h
-        
+
       # Chaos engineering alerts
       - match_re:
           alertname: '(ChaosExperimentFailed|ChaosPodKillFailed|ChaosNetworkPartitionFailed)'
@@ -65,7 +65,7 @@ data:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 24h
-        
+
       # Replication and data alerts
       - match_re:
           alertname: '(ReplicationLagHigh|DataExportStale|ObjectSyncLagHigh)'
@@ -73,7 +73,7 @@ data:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 6h
-        
+
       # Infrastructure alerts affecting DR
       - match:
           category: infrastructure
@@ -82,7 +82,7 @@ data:
         group_wait: 60s
         group_interval: 10m
         repeat_interval: 12h
-        
+
       # RTO/RPO performance alerts
       - match_re:
           alertname: '(RTOThresholdExceeded|RPOThresholdExceeded|FailoverDurationHigh)'
@@ -90,7 +90,7 @@ data:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 6h
-        
+
       # General DR warnings
       - match:
           severity: warning
@@ -133,7 +133,7 @@ data:
           *Runbook:* {{ .Annotations.runbook_url }}
           {{ end }}
         send_resolved: true
-        
+
       pagerduty_configs:
       - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
         description: 'Critical DR Alert: {{ .GroupLabels.alertname }}'
@@ -143,16 +143,16 @@ data:
           component: '{{ .GroupLabels.component }}'
           service: '{{ .GroupLabels.service }}'
           description: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
-          
+
       email_configs:
       - to: 'dr-team@pake-system.com,oncall@pake-system.com'
         subject: 'CRITICAL: DR Alert - {{ .GroupLabels.alertname }}'
         body: |
           Critical Disaster Recovery Alert
-          
+
           Alert: {{ .GroupLabels.alertname }}
           Time: {{ range .Alerts }}{{ .StartsAt }}{{ end }}
-          
+
           {{ range .Alerts }}
           Summary: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
@@ -175,13 +175,13 @@ data:
           *Actions:* {{ .Annotations.runbook_url }}
           {{ end }}
         send_resolved: true
-        
+
       email_configs:
       - to: 'backup-team@pake-system.com'
         subject: 'Backup Alert - {{ .GroupLabels.alertname }}'
         body: |
           Backup System Alert
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Service: {{ .Labels.service }}
@@ -204,13 +204,13 @@ data:
           *Impact:* {{ .Annotations.impact }}
           {{ end }}
         send_resolved: true
-        
+
       email_configs:
       - to: 'compliance@pake-system.com,legal@pake-system.com'
         subject: 'Compliance Alert - {{ .GroupLabels.alertname }}'
         body: |
           Compliance/Audit Alert
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Framework: {{ .Labels.framework }}
@@ -232,7 +232,7 @@ data:
           *Description:* {{ .Annotations.description }}
           {{ end }}
         send_resolved: true
-        
+
     # Replication and data alerts
     - name: 'dr-replication-alerts'
       slack_configs:
@@ -247,13 +247,13 @@ data:
           *Description:* {{ .Annotations.description }}
           {{ end }}
         send_resolved: true
-        
+
       email_configs:
       - to: 'database-team@pake-system.com'
         subject: 'Replication Alert - {{ .GroupLabels.alertname }}'
         body: |
           Database Replication Alert
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Service: {{ .Labels.service }}
@@ -290,13 +290,13 @@ data:
           *Description:* {{ .Annotations.description }}
           {{ end }}
         send_resolved: true
-        
+
       email_configs:
       - to: 'sre-team@pake-system.com'
         subject: 'DR Performance Alert - {{ .GroupLabels.alertname }}'
         body: |
           DR Performance Alert
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Current Value: {{ .Labels.value }}
@@ -430,7 +430,7 @@ data:
       external_labels:
         cluster: 'pake-production'
         region: 'us-east-1'
-        
+
     # AlertManager configuration
     alerting:
       alertmanagers:
@@ -441,7 +441,7 @@ data:
         scheme: http
         timeout: 10s
         api_version: v2
-        
+
     # Rule files for DR alerts
     rule_files:
     - "/etc/prometheus/rules/*.yml"
@@ -452,11 +452,11 @@ data:
     - job_name: 'prometheus'
       static_configs:
       - targets: ['localhost:9090']
-      
+
     - job_name: 'alertmanager-dr'
       static_configs:
       - targets: ['alertmanager-dr.monitoring.svc.cluster.local:9093']
-      
+
     # Additional scrape configs for DR components
     - job_name: 'dr-services'
       kubernetes_sd_configs:

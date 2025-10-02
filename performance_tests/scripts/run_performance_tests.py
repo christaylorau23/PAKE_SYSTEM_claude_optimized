@@ -8,10 +8,10 @@ against the PAKE System in different environments.
 Usage:
     # Run smoke test locally
     python performance_tests/scripts/run_smoke_test.py
-    
+
     # Run load test on staging
     python performance_tests/scripts/run_load_test.py --environment staging --scenario normal
-    
+
     # Run stress test
     python performance_tests/scripts/run_load_test.py --scenario stress
 """
@@ -30,14 +30,14 @@ def run_smoke_test():
     """Run smoke test for CI/CD pipeline"""
     print("🚀 Starting PAKE System Smoke Test")
     print("=" * 50)
-    
+
     # Initialize managers
     env_manager = PerformanceEnvironmentManager()
     test_runner = PerformanceTestRunner(env_manager)
-    
+
     # Run smoke test
     results = test_runner.run_smoke_test("local")
-    
+
     # Print results
     print("\n📊 Smoke Test Results:")
     print("-" * 30)
@@ -46,11 +46,11 @@ def run_smoke_test():
     print(f"Failed Requests: {results.get('failed_requests', 0)}")
     print(f"Avg Response Time: {results.get('avg_response_time', 0):.2f}s")
     print(f"Requests/Second: {results.get('requests_per_second', 0):.2f}")
-    
+
     if not results.get('success'):
         print(f"Error: {results.get('error', 'Unknown error')}")
         return False
-    
+
     return True
 
 
@@ -59,14 +59,14 @@ def run_load_test(environment: str = "local", scenario: str = "normal"):
     print(f"🚀 Starting PAKE System Load Test - {scenario.upper()}")
     print(f"Environment: {environment}")
     print("=" * 50)
-    
+
     # Initialize managers
     env_manager = PerformanceEnvironmentManager()
     test_runner = PerformanceTestRunner(env_manager)
-    
+
     # Run load test
     results = test_runner.run_load_test(environment, scenario)
-    
+
     # Print results
     print("\n📊 Load Test Results:")
     print("-" * 30)
@@ -79,7 +79,7 @@ def run_load_test(environment: str = "local", scenario: str = "normal"):
     print(f"Avg Response Time: {results.get('avg_response_time', 0):.2f}s")
     print(f"Max Response Time: {results.get('max_response_time', 0):.2f}s")
     print(f"Requests/Second: {results.get('requests_per_second', 0):.2f}")
-    
+
     # Performance validation
     validation = results.get('performance_validation', {})
     if validation:
@@ -89,11 +89,11 @@ def run_load_test(environment: str = "local", scenario: str = "normal"):
         print(f"Error Rate: {'✅' if validation.get('error_rate') else '❌'}")
         print(f"Throughput: {'✅' if validation.get('throughput') else '❌'}")
         print(f"Overall: {'✅' if validation.get('overall') else '❌'}")
-    
+
     if not results.get('success'):
         print(f"Error: {results.get('error', 'Unknown error')}")
         return False
-    
+
     return True
 
 
@@ -109,22 +109,22 @@ def main():
     parser.add_argument("--test-type", "-t", default="smoke",
                        choices=["smoke", "load"],
                        help="Type of test to run")
-    
+
     args = parser.parse_args()
-    
+
     try:
         if args.test_type == "smoke":
             success = run_smoke_test()
         else:
             success = run_load_test(args.environment, args.scenario)
-        
+
         if success:
             print("\n🎉 Performance test completed successfully!")
             return 0
         else:
             print("\n💥 Performance test failed!")
             return 1
-            
+
     except KeyboardInterrupt:
         print("\n⏹️ Test interrupted by user")
         return 1

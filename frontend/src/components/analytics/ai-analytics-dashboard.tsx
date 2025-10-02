@@ -377,7 +377,7 @@ export function AIAnalyticsDashboard({
     try {
       const response = await aiService.complete({
         prompt: `Analyze this user analytics data and provide actionable insights:
-        
+
 Analytics Data:
 ${JSON.stringify(analytics, null, 2)}
 

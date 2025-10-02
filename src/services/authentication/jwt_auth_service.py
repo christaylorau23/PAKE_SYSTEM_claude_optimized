@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class AuthConfig:
     """Authentication configuration"""
 
-    secret_key: str = None  # Will be auto-generated if not provided
+    secret_key: str | None = None  # Will be auto-generated if not provided
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

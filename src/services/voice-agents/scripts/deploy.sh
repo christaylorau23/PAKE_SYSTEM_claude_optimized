@@ -63,20 +63,20 @@ check_health() {
     local service_name=$1
     local max_attempts=$(($HEALTH_CHECK_TIMEOUT / 5))
     local attempt=0
-    
+
     echo -e "${YELLOW}🔍 Checking health of $service_name...${NC}"
-    
+
     while [ $attempt -lt $max_attempts ]; do
         if curl -f -s http://localhost:9000/health > /dev/null 2>&1; then
             echo -e "${GREEN}✅ $service_name is healthy${NC}"
             return 0
         fi
-        
+
         attempt=$((attempt + 1))
         echo -e "${YELLOW}⏳ Attempt $attempt/$max_attempts - waiting for $service_name...${NC}"
         sleep 5
     done
-    
+
     echo -e "${RED}❌ $service_name health check failed after $HEALTH_CHECK_TIMEOUT seconds${NC}"
     return 1
 }
@@ -89,25 +89,25 @@ get_container_id() {
 # Function to rollback deployment
 rollback() {
     echo -e "${YELLOW}🔄 Rolling back deployment...${NC}"
-    
+
     # Stop current containers
     docker-compose -f $COMPOSE_FILE down
-    
+
     # Get previous image
     local previous_image=$(docker images pake-system/voice-agents --format "table {{.Tag}}" | grep -E '^[0-9]' | head -2 | tail -1)
-    
+
     if [ -n "$previous_image" ]; then
         echo -e "${YELLOW}📦 Rolling back to image: $previous_image${NC}"
-        
+
         # Update docker-compose to use previous image
         sed -i.bak "s|pake-system/voice-agents:latest|pake-system/voice-agents:$previous_image|g" $COMPOSE_FILE
-        
+
         # Start with previous image
         docker-compose -f $COMPOSE_FILE up -d
-        
+
         # Restore original compose file
         mv ${COMPOSE_FILE}.bak $COMPOSE_FILE
-        
+
         echo -e "${GREEN}✅ Rollback completed${NC}"
     else
         echo -e "${RED}❌ No previous image found for rollback${NC}"
@@ -163,7 +163,7 @@ sleep 10
 # Health check
 if check_health "voice-agents"; then
     echo -e "${GREEN}🎉 Deployment successful!${NC}"
-    
+
     # Show deployment info
     echo ""
     echo -e "${BLUE}📊 Deployment Info:${NC}"
@@ -171,25 +171,25 @@ if check_health "voice-agents"; then
     echo "  Health Check: http://localhost:9000/health"
     echo "  Metrics: http://localhost:9000/metrics"
     echo "  API Docs: http://localhost:9000/docs"
-    
+
     # Show running containers
     echo ""
     echo -e "${BLUE}🐳 Running Containers:${NC}"
     docker-compose -f $COMPOSE_FILE ps
-    
+
     # Show resource usage
     echo ""
     echo -e "${BLUE}💻 Resource Usage:${NC}"
     docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" $(docker-compose -f $COMPOSE_FILE ps -q)
-    
+
 else
     echo -e "${RED}❌ Deployment failed - service is not healthy${NC}"
-    
+
     # Show logs for debugging
     echo ""
     echo -e "${BLUE}📋 Recent logs:${NC}"
     docker-compose -f $COMPOSE_FILE logs --tail=50
-    
+
     # Rollback if enabled
     if [ "$ROLLBACK_ON_FAILURE" = true ]; then
         rollback

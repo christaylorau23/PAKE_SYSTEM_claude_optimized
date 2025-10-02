@@ -27,7 +27,7 @@ class TimeSeriesPoint:
 
     timestamp: datetime
     value: float
-    metadata: dict[str, Any] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 @dataclass
@@ -63,7 +63,7 @@ class RealTimeActivity:
     activity_type: str
     description: str
     value: float
-    metadata: dict[str, Any] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 class VisualizationAnalyticsService:

@@ -1,6 +1,6 @@
 /**
  * PAKE System - DBConnector Tests
- * 
+ *
  * Comprehensive tests for database operations including CRUD operations,
  * transactions, connection pooling, and error handling.
  */
@@ -246,18 +246,18 @@ describe('DBConnector', () => {
         }
       });
 
-      mockClient.query.mockResolvedValue({ 
-        rows: [], 
-        rowCount: 0, 
-        command: 'SELECT', 
-        fields: [], 
-        oid: 0 
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0
       });
 
       await connector.fetch(complexSelectRequest);
 
       const [query, params] = mockClient.query.mock.calls[0];
-      
+
       expect(query).toContain('WHERE');
       expect(query).toContain('age >');
       expect(query).toContain('age <=');
@@ -266,7 +266,7 @@ describe('DBConnector', () => {
       expect(query).toContain('created_at >=');
       expect(query).toContain('ORDER BY created_at DESC, name ASC');
       expect(query).toContain('LIMIT 100 OFFSET 50');
-      
+
       expect(params).toEqual(
         expect.arrayContaining([18, 65, 'active', '%premium%', '2024-01-01'])
       );
@@ -289,18 +289,18 @@ describe('DBConnector', () => {
         }
       });
 
-      mockClient.query.mockResolvedValue({ 
-        rows: [], 
-        rowCount: 0, 
-        command: 'SELECT', 
-        fields: [], 
-        oid: 0 
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0
       });
 
       await connector.fetch(joinRequest);
 
       const [query] = mockClient.query.mock.calls[0];
-      
+
       expect(query).toContain('LEFT JOIN profiles ON users.id = profiles.user_id');
       expect(query).toContain('SELECT users.id, users.name, profiles.bio');
     });
@@ -314,12 +314,12 @@ describe('DBConnector', () => {
         }
       });
 
-      mockClient.query.mockResolvedValue({ 
-        rows: [], 
-        rowCount: 0, 
-        command: 'SELECT', 
-        fields: [], 
-        oid: 0 
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0
       });
 
       const response = await connector.fetch(request);
@@ -351,19 +351,19 @@ describe('DBConnector', () => {
 
       mockClient.query
         .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: 0, fields: [], oid: 0 })
-        .mockResolvedValueOnce({ 
-          command: 'INSERT', 
-          rows: [{ id: 123 }], 
-          rowCount: 1, 
-          fields: [], 
-          oid: 0 
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [{ id: 123 }],
+          rowCount: 1,
+          fields: [],
+          oid: 0
         })
-        .mockResolvedValueOnce({ 
-          command: 'INSERT', 
-          rows: [], 
-          rowCount: 1, 
-          fields: [], 
-          oid: 0 
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [],
+          rowCount: 1,
+          fields: [],
+          oid: 0
         })
         .mockResolvedValueOnce({ command: 'COMMIT', rows: [], rowCount: 0, fields: [], oid: 0 });
 
@@ -389,12 +389,12 @@ describe('DBConnector', () => {
 
       mockClient.query
         .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: 0, fields: [], oid: 0 })
-        .mockResolvedValueOnce({ 
-          command: 'INSERT', 
-          rows: [{ id: 123 }], 
-          rowCount: 1, 
-          fields: [], 
-          oid: 0 
+        .mockResolvedValueOnce({
+          command: 'INSERT',
+          rows: [{ id: 123 }],
+          rowCount: 1,
+          fields: [],
+          oid: 0
         })
         .mockRejectedValueOnce(new Error('relation "invalid_table" does not exist'))
         .mockResolvedValueOnce({ command: 'ROLLBACK', rows: [], rowCount: 0, fields: [], oid: 0 });
@@ -417,12 +417,12 @@ describe('DBConnector', () => {
         })
       );
 
-      mockClient.query.mockResolvedValue({ 
-        rows: [{ id: 1, name: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' }], 
-        rowCount: 1, 
-        command: 'SELECT', 
-        fields: [], 
-        oid: 0 
+      mockClient.query.mockResolvedValue({
+        rows: [{ id: 1, name: process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED' }],
+        rowCount: 1,
+        command: 'SELECT',
+        fields: [],
+        oid: 0
       });
 
       // Execute all requests concurrently
@@ -432,7 +432,7 @@ describe('DBConnector', () => {
 
       expect(responses).toHaveLength(5);
       expect(responses.every(r => r.success)).toBe(true);
-      
+
       // Pool should have been used for all connections
       expect(mockPool.connect).toHaveBeenCalledTimes(5);
       expect(mockClient.release).toHaveBeenCalledTimes(5);
@@ -460,12 +460,12 @@ describe('DBConnector', () => {
         .mockRejectedValueOnce(new Error('Connection failed'))
         .mockResolvedValueOnce(mockClient);
 
-      mockClient.query.mockResolvedValue({ 
-        rows: [], 
-        rowCount: 0, 
-        command: 'SELECT', 
-        fields: [], 
-        oid: 0 
+      mockClient.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        fields: [],
+        oid: 0
       });
 
       const request = testHelpers.createMockConnectorRequest({
@@ -528,7 +528,7 @@ describe('DBConnector', () => {
 
     it('should handle connection timeouts', async () => {
       mockClient.query.mockImplementation(
-        () => new Promise((_, reject) => 
+        () => new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Query timeout')), 100)
         )
       );
@@ -572,7 +572,7 @@ describe('DBConnector', () => {
       const response = await connector.fetch(request);
 
       expect(response.success).toBe(true);
-      
+
       const [query, params] = mockClient.query.mock.calls[0];
       expect(params).toContain('{"tags":["test","document"],"version":1}');
       expect(params).toContain('{"sections":[{"title":"Intro","text":"Hello"}]}');
@@ -605,7 +605,7 @@ describe('DBConnector', () => {
 
     it('should handle date and timestamp types', async () => {
       const testDate = new Date('2024-01-15T10:30:00Z');
-      
+
       const request = testHelpers.createMockConnectorRequest({
         type: ConnectorRequestType.INSERT,
         target: 'events',
@@ -629,7 +629,7 @@ describe('DBConnector', () => {
       const response = await connector.fetch(request);
 
       expect(response.success).toBe(true);
-      
+
       const [query, params] = mockClient.query.mock.calls[0];
       expect(params).toContain(testDate.toISOString());
       expect(params).toContain('2024-01-16 15:00:00');
@@ -639,13 +639,13 @@ describe('DBConnector', () => {
   describe('Performance and Monitoring', () => {
     it('should track query performance metrics', async () => {
       mockClient.query.mockImplementation(
-        () => new Promise(resolve => 
-          setTimeout(() => resolve({ 
-            rows: [], 
-            rowCount: 0, 
-            command: 'SELECT', 
-            fields: [], 
-            oid: 0 
+        () => new Promise(resolve =>
+          setTimeout(() => resolve({
+            rows: [],
+            rowCount: 0,
+            command: 'SELECT',
+            fields: [],
+            oid: 0
           }), 50)
         )
       );

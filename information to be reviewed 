@@ -511,7 +511,7 @@ from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__)
 # Secret key for session management
-app.secret_key = 'a-very-secret-key' 
+app.secret_key = 'a-very-secret-key'
 oauth = OAuth(app)
 
 # Configuration for the Keycloak client

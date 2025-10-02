@@ -10,11 +10,18 @@ Organized by scope and dependency:
 
 import asyncio
 import os
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+
+# Add src directory to Python path for imports
+project_root = Path(__file__).parent.parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
 # Set test environment before any imports
 os.environ["PAKE_ENVIRONMENT"] = "test"
@@ -48,14 +55,8 @@ from tests.factories import (
 # Session-Scoped Fixtures (shared across entire test session)
 # ============================================================================
 
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
+# Note: event_loop fixture is no longer needed with pytest-asyncio>=0.21.0
+# The asyncio_mode = auto configuration in pytest.ini handles this automatically
 
 @pytest.fixture(scope="session")
 def test_data_dir():

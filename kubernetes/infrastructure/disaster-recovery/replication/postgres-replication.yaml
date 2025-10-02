@@ -124,12 +124,12 @@ data:
     $$;
 
     -- Create replication slots for each replica
-    SELECT pg_create_physical_replication_slot('pake_replica_eu_slot') 
+    SELECT pg_create_physical_replication_slot('pake_replica_eu_slot')
     WHERE NOT EXISTS (
         SELECT 1 FROM pg_replication_slots WHERE slot_name = 'pake_replica_eu_slot'
     );
 
-    SELECT pg_create_physical_replication_slot('pake_replica_ap_slot') 
+    SELECT pg_create_physical_replication_slot('pake_replica_ap_slot')
     WHERE NOT EXISTS (
         SELECT 1 FROM pg_replication_slots WHERE slot_name = 'pake_replica_ap_slot'
     );
@@ -183,11 +183,11 @@ spec:
               if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
                 echo "Initializing primary database..."
                 initdb -D /var/lib/postgresql/data --auth-host=md5 --auth-local=peer
-                
+
                 # Copy configuration files
                 cp /etc/postgresql/postgresql-primary.conf /var/lib/postgresql/data/postgresql.conf
                 cp /etc/postgresql/pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
-                
+
                 # Set ownership
                 chown -R postgres:postgres /var/lib/postgresql/data
                 chmod 700 /var/lib/postgresql/data
@@ -434,13 +434,13 @@ spec:
               set -e
               if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
                 echo "Initializing replica from primary..."
-                
+
                 # Wait for primary to be ready
                 until pg_isready -h pake-postgresql-primary.database.svc.cluster.local -p 5432 -U postgres; do
                   echo "Waiting for primary database..."
                   sleep 5
                 done
-                
+
                 # Create base backup from primary
                 PGPASSWORD="process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED'" pg_basebackup \
                   -h pake-postgresql-primary.database.svc.cluster.local \
@@ -448,13 +448,13 @@ spec:
                   -U replicator \
                   -v -P -W -R \
                   -S pake_replica_eu_slot
-                
+
                 # Override with replica configuration
                 cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
-                
+
                 # Set up standby.signal for PostgreSQL 12+
                 touch /var/lib/postgresql/data/standby.signal
-                
+
                 # Create recovery configuration
                 cat > /var/lib/postgresql/data/postgresql.auto.conf << EOF
                 primary_conninfo = 'host=pake-postgresql-primary.database.svc.cluster.local port=5432 user=replicator REDACTED_SECRET=CHANGE_ME_REPLICATION_PASSWORD application_name=pake_replica_eu'
@@ -462,7 +462,7 @@ spec:
                 restore_command = 'wal-g wal-fetch %f %p'
                 recovery_target_timeline = 'latest'
                 EOF
-                
+
                 chown -R postgres:postgres /var/lib/postgresql/data
                 chmod 700 /var/lib/postgresql/data
               fi
@@ -633,13 +633,13 @@ spec:
               set -e
               if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
                 echo "Initializing AP replica from primary..."
-                
+
                 # Wait for primary to be ready
                 until pg_isready -h pake-postgresql-primary.database.svc.cluster.local -p 5432 -U postgres; do
                   echo "Waiting for primary database..."
                   sleep 5
                 done
-                
+
                 # Create base backup from primary
                 PGPASSWORD="process.env.DB_PASSWORD || 'SECURE_DB_PASSWORD_REQUIRED'" pg_basebackup \
                   -h pake-postgresql-primary.database.svc.cluster.local \
@@ -647,13 +647,13 @@ spec:
                   -U replicator \
                   -v -P -W -R \
                   -S pake_replica_ap_slot
-                
+
                 # Override with replica configuration
                 cp /etc/postgresql/postgresql-replica.conf /var/lib/postgresql/data/postgresql.conf
-                
+
                 # Set up standby.signal
                 touch /var/lib/postgresql/data/standby.signal
-                
+
                 # Create recovery configuration
                 cat > /var/lib/postgresql/data/postgresql.auto.conf << EOF
                 primary_conninfo = 'host=pake-postgresql-primary.database.svc.cluster.local port=5432 user=replicator REDACTED_SECRET=CHANGE_ME_REPLICATION_PASSWORD application_name=pake_replica_ap'
@@ -661,7 +661,7 @@ spec:
                 restore_command = 'wal-g wal-fetch %f %p'
                 recovery_target_timeline = 'latest'
                 EOF
-                
+
                 chown -R postgres:postgres /var/lib/postgresql/data
                 chmod 700 /var/lib/postgresql/data
               fi

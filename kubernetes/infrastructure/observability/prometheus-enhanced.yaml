@@ -336,7 +336,7 @@ data:
         labels:
           sli_type: availability
           service: pake-api
-      
+
       # API Latency P95 (SLI)
       - record: pake:api_latency_p95
         expr: |
@@ -347,7 +347,7 @@ data:
         labels:
           sli_type: latency
           service: pake-api
-      
+
       # API Throughput (SLI)
       - record: pake:api_throughput
         expr: |
@@ -355,7 +355,7 @@ data:
         labels:
           sli_type: throughput
           service: pake-api
-      
+
       # AI Inference Success Rate
       - record: pake:ai_success_rate
         expr: |
@@ -364,7 +364,7 @@ data:
         labels:
           sli_type: availability
           service: pake-ai
-      
+
       # AI Inference Latency P95
       - record: pake:ai_latency_p95
         expr: |
@@ -375,7 +375,7 @@ data:
         labels:
           sli_type: latency
           service: pake-ai
-      
+
       # Daily Active Users
       - record: pake:daily_active_users
         expr: |
@@ -387,7 +387,7 @@ data:
         labels:
           metric_type: business_kpi
           frequency: daily
-      
+
       # Revenue per Hour
       - record: pake:revenue_per_hour
         expr: |
@@ -395,7 +395,7 @@ data:
         labels:
           metric_type: business_kpi
           frequency: hourly
-      
+
       # AI Token Cost per Hour
       - record: pake:ai_cost_per_hour
         expr: |
@@ -403,7 +403,7 @@ data:
         labels:
           metric_type: cost_kpi
           frequency: hourly
-      
+
       # Database Connection Utilization
       - record: pake:db_connection_utilization
         expr: |
@@ -414,7 +414,7 @@ data:
         labels:
           metric_type: infrastructure_kpi
           service: postgresql
-      
+
       # Worker Queue Health
       - record: pake:worker_queue_health
         expr: |
@@ -425,7 +425,7 @@ data:
         labels:
           metric_type: infrastructure_kpi
           service: pake-workers
-      
+
       # Security Alert Rate
       - record: pake:security_alert_rate
         expr: |
@@ -433,7 +433,7 @@ data:
         labels:
           metric_type: security_kpi
           service: security
-      
+
       # GPU Utilization Average
       - record: pake:gpu_utilization_avg
         expr: |
@@ -455,7 +455,7 @@ data:
           slo_type: availability
           slo_target: "99.9"
           service: pake-api
-      
+
       # API Latency SLO (P95 < 500ms)
       - record: pake:slo_api_latency
         expr: |
@@ -464,7 +464,7 @@ data:
           slo_type: latency
           slo_target: "500ms"
           service: pake-api
-      
+
       # AI Latency SLO (P95 < 2s)
       - record: pake:slo_ai_latency
         expr: |
@@ -473,7 +473,7 @@ data:
           slo_type: latency
           slo_target: "2s"
           service: pake-ai
-      
+
       # Error Budget Burn Rate (API)
       - record: pake:error_budget_burn_rate_api
         expr: |
@@ -481,7 +481,7 @@ data:
         labels:
           slo_type: availability
           service: pake-api
-      
+
       # Error Budget Remaining (API)
       - record: pake:error_budget_remaining_api
         expr: |
@@ -521,21 +521,21 @@ data:
           )
         labels:
           cost_type: infrastructure
-      
+
       # AI API Cost per Hour
       - record: pake:ai_api_cost_per_hour
         expr: |
           sum(increase(pake_ai_cost_total[1h]))
         labels:
           cost_type: ai_apis
-      
+
       # Total Cost per Hour
       - record: pake:total_cost_per_hour
         expr: |
           pake:infrastructure_cost_per_hour + pake:ai_api_cost_per_hour
         labels:
           cost_type: total
-      
+
       # Cost per Request
       - record: pake:cost_per_request
         expr: |
@@ -543,7 +543,7 @@ data:
           sum(rate(pake_api_requests_total[1h]) * 3600)
         labels:
           cost_type: unit_cost
-      
+
       # Revenue vs Cost Ratio
       - record: pake:revenue_cost_ratio
         expr: |

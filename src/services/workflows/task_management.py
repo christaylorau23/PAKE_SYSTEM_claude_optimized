@@ -355,9 +355,9 @@ class TaskManager:
         """Get task management statistics"""
         total_tasks = len(self.tasks)
 
-        status_counts = {}
-        priority_counts = {}
-        type_counts = {}
+        status_counts: Dict[str, int] = {}
+        priority_counts: Dict[str, int] = {}
+        type_counts: Dict[str, int] = {}
 
         for task in self.tasks.values():
             status_counts[task.status.value] = (

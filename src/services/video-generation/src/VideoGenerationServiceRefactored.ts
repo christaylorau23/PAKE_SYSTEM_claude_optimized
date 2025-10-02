@@ -1,10 +1,10 @@
 /**
  * PAKE System - Refactored Video Generation Service (SRP Compliant)
  * Single Responsibility: Orchestrating video generation workflow
- * 
+ *
  * This service now follows SRP by delegating specific responsibilities to focused managers:
  * - Configuration: VideoConfigManager
- * - Provider Management: VideoProviderRegistry  
+ * - Provider Management: VideoProviderRegistry
  * - Storage: VideoStorageManager
  * - Monitoring: VideoMonitor
  * - Rate Limiting: VideoRateLimiter
@@ -38,7 +38,7 @@ import { VideoJobProcessor, VideoJobProcessorImpl } from './managers/VideoJobPro
 
 export class VideoGenerationService extends EventEmitter {
   private logger: Logger;
-  
+
   // Decomposed managers - each with single responsibility
   private configManager: VideoConfigManager;
   private providerRegistry: VideoProviderRegistry;
@@ -46,17 +46,17 @@ export class VideoGenerationService extends EventEmitter {
   private monitor: VideoMonitor;
   private rateLimiter: VideoRateLimiter;
   private jobProcessor: VideoJobProcessor;
-  
+
   private router: Router;
   private uploadHandler: multer.Multer;
 
   constructor() {
     super();
     this.logger = new Logger('VideoGenerationService');
-    
+
     // Initialize decomposed managers
     this.initializeManagers();
-    
+
     // Setup remaining components
     this.setupFileUpload();
     this.setupRoutes();
@@ -68,22 +68,22 @@ export class VideoGenerationService extends EventEmitter {
   private initializeManagers(): void {
     // Configuration manager
     this.configManager = new VideoConfigManagerImpl();
-    
+
     // Provider registry
     this.providerRegistry = new VideoProviderRegistryImpl();
-    
+
     // Storage manager
     this.storageManager = new VideoStorageManagerImpl(
       this.createStorageImplementation(),
       this.logger
     );
-    
+
     // Monitor
     this.monitor = new VideoMonitorImpl(this.logger);
-    
+
     // Rate limiter
     this.rateLimiter = new VideoRateLimiterImpl(this.logger);
-    
+
     // Job processor
     this.jobProcessor = new VideoJobProcessorImpl(
       this.logger,
@@ -153,7 +153,7 @@ export class VideoGenerationService extends EventEmitter {
         videoId,
         error: error.message,
       });
-      
+
       this.monitor.recordError(videoId, error.message);
       throw error;
     }
@@ -169,7 +169,7 @@ export class VideoGenerationService extends EventEmitter {
     }
 
     const metrics = this.monitor.getMetrics(videoId);
-    
+
     return {
       id: videoId,
       status: job.status,

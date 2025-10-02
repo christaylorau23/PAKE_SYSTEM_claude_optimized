@@ -10,7 +10,7 @@ This module defines the core abstractions that enable:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Generic, Optional, TypeVar
@@ -41,10 +41,8 @@ class ServiceResult(Generic[T]):
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
     def __post_init__(self):
-        if self.metadata is None:
-            object.__setattr__(self, "metadata", {})
-        if self.timestamp is None:
-            object.__setattr__(self, "timestamp", datetime.utcnow())
+        # No need for post_init since we have default values
+        pass
 
 
 # ============================================================================
@@ -187,7 +185,7 @@ class AbstractDatabaseService(ABC):
 
     @abstractmethod
     async def execute_query(
-        self, query: str, params: dict[str, Any] = None
+        self, query: str, params: Optional[dict[str, Any]] = None
     ) -> ServiceResult[list[dict[str, Any]]]:
         """Execute raw SQL query"""
 
@@ -226,7 +224,7 @@ class AbstractExternalAPIService(ABC):
 
     @abstractmethod
     async def make_request(
-        self, endpoint: str, method: str, data: dict[str, Any] = None
+        self, endpoint: str, method: str, data: Optional[dict[str, Any]] = None
     ) -> ServiceResult[dict[str, Any]]:
         """Make HTTP request to external API"""
 
@@ -240,7 +238,7 @@ class AbstractFirecrawlService(AbstractExternalAPIService):
 
     @abstractmethod
     async def scrape_url(
-        self, url: str, options: dict[str, Any] = None
+        self, url: str, options: Optional[dict[str, Any]] = None
     ) -> ServiceResult[dict[str, Any]]:
         """Scrape URL content"""
 

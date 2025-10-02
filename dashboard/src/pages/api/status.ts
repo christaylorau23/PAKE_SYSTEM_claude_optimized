@@ -80,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const workflowData: GitHubWorkflowResponse = await workflowResponse.json();
-    
+
     // Process workflow data
     const workflows = workflowData.workflow_runs.map((run) => ({
       id: run.id,
@@ -97,11 +97,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalRuns = workflows.length;
     const successfulRuns = workflows.filter(w => w.conclusion === 'success').length;
     const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
-    
+
     // Determine system health
     const recentRuns = workflows.slice(0, 5);
     const recentFailures = recentRuns.filter(w => w.conclusion === 'failure').length;
-    const systemHealth = recentFailures === 0 ? 'healthy' : 
+    const systemHealth = recentFailures === 0 ? 'healthy' :
                         recentFailures <= 2 ? 'degraded' : 'critical';
 
     // Mock active services count (in a real implementation, this would come from your service registry)
@@ -119,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json(status);
   } catch (error) {
     console.error('Error fetching status:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch system status',
       details: error instanceof Error ? error.message : 'Unknown error'
     });

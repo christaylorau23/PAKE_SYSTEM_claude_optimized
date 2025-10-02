@@ -2,7 +2,7 @@
 
 /**
  * PAKE System - Test Runner
- * 
+ *
  * Comprehensive test runner script for all services with reporting and analysis.
  */
 
@@ -111,7 +111,7 @@ class TestRunner {
     console.log('🚀 Running all test suites...\n');
 
     const suiteNames = Object.keys(config.testSuites);
-    
+
     for (const suiteName of suiteNames) {
       await this.runSuite(suiteName, options);
       console.log(); // Add spacing between suites
@@ -131,21 +131,21 @@ class TestRunner {
     try {
       // Build Jest command
       const jestCmd = this.buildJestCommand(suiteName, suite, options);
-      
+
       console.log(`📝 Command: ${jestCmd}`);
-      
+
       // Execute tests
       const result = await this.executeCommand(jestCmd);
-      
+
       const duration = Date.now() - startTime;
-      
+
       // Parse results
       const suiteResult = await this.parseTestResults(suiteName, result, duration);
       this.results.suites[suiteName] = suiteResult;
-      
+
       // Update summary
       this.updateSummary(suiteResult);
-      
+
       if (suiteResult.success) {
         console.log(`✅ ${suite.name} completed successfully`);
         console.log(`   Tests: ${suiteResult.tests.passed}/${suiteResult.tests.total} passed`);
@@ -183,7 +183,7 @@ class TestRunner {
 
     // Output format
     args.push('--verbose');
-    
+
     if (options.json) {
       args.push('--json');
       args.push(`--outputFile=${config.reporting.outputDir}/${suiteName}-results.json`);
@@ -217,7 +217,7 @@ class TestRunner {
 
   async executeCommand(command) {
     return new Promise((resolve, reject) => {
-      exec(command, { 
+      exec(command, {
         cwd: __dirname,
         maxBuffer: 10 * 1024 * 1024 // 10MB buffer
       }, (error, stdout, stderr) => {
@@ -281,7 +281,7 @@ class TestRunner {
 
     // Extract test summary from Jest output
     const lines = output.split('\n');
-    
+
     for (const line of lines) {
       // Look for test summary line
       if (line.includes('Tests:')) {
@@ -292,7 +292,7 @@ class TestRunner {
           tests.total = parseInt(matches[3]) || 0;
         }
       }
-      
+
       // Look for skipped tests
       if (line.includes('skipped')) {
         const matches = line.match(/(\d+)\s+skipped/);
@@ -348,15 +348,15 @@ class TestRunner {
     try {
       // Generate JSON report
       await this.generateJsonReport();
-      
+
       // Generate HTML report
       await this.generateHtmlReport();
-      
+
       // Generate coverage badge
       await this.generateCoverageBadge();
-      
+
       console.log('✅ Reports generated successfully');
-      
+
     } catch (error) {
       console.warn('⚠️  Report generation failed:', error.message);
     }
@@ -382,7 +382,7 @@ class TestRunner {
   async generateHtmlReport() {
     const htmlTemplate = this.getHtmlReportTemplate();
     const reportPath = path.join(config.reporting.outputDir, 'test-results.html');
-    
+
     const html = htmlTemplate
       .replace('{{RESULTS_JSON}}', JSON.stringify(this.results, null, 2))
       .replace('{{TIMESTAMP}}', new Date().toLocaleString())
@@ -395,10 +395,10 @@ class TestRunner {
   async generateCoverageBadge() {
     const overallCoverage = this.calculateOverallCoverage();
     const color = overallCoverage >= 90 ? 'brightgreen' : overallCoverage >= 80 ? 'yellow' : 'red';
-    
+
     const badgeUrl = `https://img.shields.io/badge/coverage-${overallCoverage}%25-${color}`;
     const badgePath = path.join(config.reporting.outputDir, 'coverage-badge.md');
-    
+
     await fs.writeFile(badgePath, `![Coverage](${badgeUrl})\n`);
     console.log(`🏆 Coverage badge: ${badgePath}`);
   }
@@ -406,7 +406,7 @@ class TestRunner {
   calculateOverallCoverage() {
     const suites = Object.values(this.results.suites);
     if (suites.length === 0) return 0;
-    
+
     const totalCoverage = suites.reduce((sum, suite) => sum + (suite.coverage?.overall || 0), 0);
     return Math.round(totalCoverage / suites.length);
   }
@@ -414,18 +414,18 @@ class TestRunner {
   printSummary() {
     console.log('\n📊 Test Summary');
     console.log('=' .repeat(50));
-    
+
     const { summary } = this.results;
     const successRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests * 100).toFixed(1) : 0;
     const overallCoverage = this.calculateOverallCoverage();
-    
+
     console.log(`Total Tests:     ${summary.totalTests}`);
     console.log(`Passed:          ${summary.passed} (${successRate}%)`);
     console.log(`Failed:          ${summary.failed}`);
     console.log(`Skipped:         ${summary.skipped}`);
     console.log(`Duration:        ${(summary.duration / 1000).toFixed(2)}s`);
     console.log(`Coverage:        ${overallCoverage}%`);
-    
+
     // Suite breakdown
     console.log('\n📝 Suite Breakdown:');
     for (const [suiteName, result] of Object.entries(this.results.suites)) {
@@ -448,7 +448,7 @@ class TestRunner {
   getSummaryHtml() {
     const { summary } = this.results;
     const successRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests * 100).toFixed(1) : 0;
-    
+
     return `
       <div class="summary">
         <div class="metric">
@@ -493,15 +493,15 @@ class TestRunner {
         <h1>🧪 PAKE System Test Results</h1>
         <p>Generated on {{TIMESTAMP}}</p>
     </div>
-    
+
     {{SUMMARY}}
-    
+
     <div id="results"></div>
-    
+
     <script>
         const results = {{RESULTS_JSON}};
         const container = document.getElementById('results');
-        
+
         Object.entries(results.suites).forEach(([name, suite]) => {
             const div = document.createElement('div');
             div.className = \`suite \${suite.success ? 'success' : 'failed'}\`;

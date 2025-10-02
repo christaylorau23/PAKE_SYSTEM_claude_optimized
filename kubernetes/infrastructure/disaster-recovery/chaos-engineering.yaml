@@ -32,7 +32,7 @@ data:
         requests:
           cpu: 250m
           memory: 512Mi
-      
+
     chaosDaemon:
       image:
         registry: docker.io
@@ -45,7 +45,7 @@ data:
         requests:
           cpu: 250m
           memory: 512Mi
-      
+
     dashboard:
       create: true
       image:
@@ -60,7 +60,7 @@ data:
           - path: /
             pathType: Prefix
       securityMode: true
-      
+
     webhook:
       failurePolicy: Fail
       certs:
@@ -70,7 +70,7 @@ data:
 
     prometheus:
       enabled: true
-      
+
     timezone: "UTC"
 
 ---
@@ -91,44 +91,44 @@ data:
           frequency: "daily"
           duration: "10m"
           description: "Kill random pods to test restart resilience"
-          
+
         - name: "cpu-stress"
           frequency: "weekly"
           duration: "15m"
           description: "Apply CPU stress to test resource limits"
-          
+
         - name: "memory-stress"
           frequency: "weekly"
           duration: "15m"
           description: "Apply memory stress to test OOM handling"
-          
+
         - name: "network-partition"
           frequency: "weekly"
           duration: "5m"
           description: "Simulate network partitions between services"
-          
+
       advanced_scenarios:
         - name: "database-failure"
           frequency: "monthly"
           duration: "30m"
           description: "Simulate database failures to test failover"
-          
+
         - name: "az-failure"
           frequency: "quarterly"
           duration: "1h"
           description: "Simulate entire AZ failure"
-          
+
         - name: "dependency-failure"
           frequency: "monthly"
           duration: "20m"
           description: "Simulate external dependency failures"
-          
+
       disaster_scenarios:
         - name: "region-failover"
           frequency: "quarterly"
           duration: "2h"
           description: "Test complete region failover procedures"
-          
+
         - name: "data-corruption"
           frequency: "annually"
           duration: "4h"
@@ -628,12 +628,12 @@ data:
             kubernetes.config.load_incluster_config()
             self.k8s_client = kubernetes.client.ApiClient()
             self.custom_api = kubernetes.client.CustomObjectsApi()
-            
+
         def get_chaos_experiments(self):
             """Get all chaos experiments"""
             try:
                 experiments = []
-                
+
                 # Get PodChaos experiments
                 pod_chaos = self.custom_api.list_namespaced_custom_object(
                     group="chaos-mesh.org",
@@ -642,7 +642,7 @@ data:
                     plural="podchaos"
                 )
                 experiments.extend(pod_chaos.get('items', []))
-                
+
                 # Get StressChaos experiments
                 stress_chaos = self.custom_api.list_namespaced_custom_object(
                     group="chaos-mesh.org",
@@ -651,7 +651,7 @@ data:
                     plural="stresschaos"
                 )
                 experiments.extend(stress_chaos.get('items', []))
-                
+
                 # Get NetworkChaos experiments
                 network_chaos = self.custom_api.list_namespaced_custom_object(
                     group="chaos-mesh.org",
@@ -660,17 +660,17 @@ data:
                     plural="networkchaos"
                 )
                 experiments.extend(network_chaos.get('items', []))
-                
+
                 return experiments
-                
+
             except Exception as e:
                 logger.error(f"Error getting chaos experiments: {e}")
                 return []
-        
+
         def get_experiment_status(self):
             """Get status of chaos experiments"""
             experiments = self.get_chaos_experiments()
-            
+
             status_summary = {
                 'total': len(experiments),
                 'running': 0,
@@ -678,11 +678,11 @@ data:
                 'failed': 0,
                 'scheduled': 0
             }
-            
+
             for exp in experiments:
                 status = exp.get('status', {})
                 experiment_status = status.get('experiment', {}).get('phase', 'Unknown')
-                
+
                 if experiment_status == 'Running':
                     status_summary['running'] += 1
                 elif experiment_status == 'Finished':
@@ -691,21 +691,21 @@ data:
                     status_summary['failed'] += 1
                 else:
                     status_summary['scheduled'] += 1
-            
+
             return status_summary
-        
+
         def calculate_resilience_score(self):
             """Calculate system resilience score based on chaos test results"""
             experiments = self.get_chaos_experiments()
-            
+
             if not experiments:
                 return 0
-            
+
             total_score = 0
             for exp in experiments:
                 status = exp.get('status', {})
                 experiment_status = status.get('experiment', {}).get('phase', 'Unknown')
-                
+
                 # Score based on experiment outcome
                 if experiment_status == 'Finished':
                     total_score += 10  # Successful chaos test
@@ -713,11 +713,11 @@ data:
                     total_score += 5   # Failed test still provides learning
                 elif experiment_status == 'Running':
                     total_score += 7   # Running test
-            
+
             # Normalize to 0-100 scale
             max_possible_score = len(experiments) * 10
             resilience_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
-            
+
             return min(resilience_score, 100)
 
     dashboard = ChaosDashboard()
@@ -818,11 +818,11 @@ data:
             function refreshDashboard() {
                 location.reload();
             }
-            
+
             function autoRefresh() {
                 setInterval(refreshDashboard, 30000); // Refresh every 30 seconds
             }
-            
+
             window.onload = autoRefresh;
         </script>
     </head>
@@ -832,7 +832,7 @@ data:
             <p>Monitoring system resilience through controlled chaos experiments</p>
             <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh</button>
         </div>
-        
+
         <div class="dashboard-grid">
             <div class="card">
                 <h2>📊 Experiment Status</h2>
@@ -857,7 +857,7 @@ data:
                     <span class="metric-value">{{ status.scheduled }}</span>
                 </div>
             </div>
-            
+
             <div class="card">
                 <h2>🎯 System Resilience Score</h2>
                 <div class="resilience-score {% if resilience_score >= 80 %}score-excellent{% elif resilience_score >= 60 %}score-good{% else %}score-poor{% endif %}">
@@ -873,7 +873,7 @@ data:
                     {% endif %}
                 </div>
             </div>
-            
+
             <div class="card">
                 <h2>🧪 Recent Experiments</h2>
                 <div class="experiment-list">
@@ -890,7 +890,7 @@ data:
                     {% endfor %}
                 </div>
             </div>
-            
+
             <div class="card">
                 <h2>📅 Test Schedule</h2>
                 <div class="metric">
@@ -911,7 +911,7 @@ data:
                 </div>
             </div>
         </div>
-        
+
         <div style="text-align: center; margin-top: 20px; color: #666;">
             Last updated: {{ timestamp }}
         </div>
@@ -924,10 +924,10 @@ data:
         status = dashboard.get_experiment_status()
         experiments = dashboard.get_chaos_experiments()
         resilience_score = dashboard.calculate_resilience_score()
-        
+
         # Update Prometheus metrics
         system_resilience_score.set(resilience_score)
-        
+
         return render_template_string(
             DASHBOARD_TEMPLATE,
             status=status,
@@ -951,7 +951,7 @@ data:
     if __name__ == '__main__':
         # Start Prometheus metrics server
         start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
-        
+
         # Start Flask dashboard
         app.run(
             host='0.0.0.0',

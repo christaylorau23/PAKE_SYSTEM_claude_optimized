@@ -108,7 +108,7 @@ export default function Dashboard() {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     const diffInHours = Math.floor(diffInMinutes / 60);
@@ -135,8 +135,8 @@ export default function Dashboard() {
           <XCircle className="w-16 h-16 text-danger-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
           >
             Retry

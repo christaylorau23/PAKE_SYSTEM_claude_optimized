@@ -19,22 +19,22 @@ function Write-TestResult {
         [string]$Message,
         [string]$Type = "Info"
     )
-    
+
     switch ($Type) {
-        "Success" { 
+        "Success" {
             Write-Host "✅ $Message" -ForegroundColor Green
             $script:successCount++
         }
-        "Warning" { 
-            Write-Host "⚠️ $Message" -ForegroundColor Yellow 
+        "Warning" {
+            Write-Host "⚠️ $Message" -ForegroundColor Yellow
             $script:warningCount++
         }
-        "Error" { 
+        "Error" {
             Write-Host "❌ $Message" -ForegroundColor Red
             $script:errorCount++
         }
-        default { 
-            Write-Host "🔎 $Message" -ForegroundColor Cyan 
+        default {
+            Write-Host "🔎 $Message" -ForegroundColor Cyan
         }
     }
 }
@@ -86,11 +86,11 @@ if ($yamlFiles.Count -eq 0) {
     Write-TestResult "No YAML files found in DR directory" "Warning"
 } else {
     Write-TestResult "Found $($yamlFiles.Count) YAML files to validate"
-    
+
     foreach ($file in $yamlFiles) {
         $relativePath = $file.FullName.Replace("$ROOT_DIR\", "")
         Write-TestResult "Validating: $relativePath"
-        
+
         try {
             $output = & kubectl apply --dry-run=client -f $file.FullName 2>&1
             if ($LASTEXITCODE -eq 0) {
@@ -112,7 +112,7 @@ Write-TestHeader "Key Component Files Check"
 
 $keyFiles = @(
     "failover\failover-controller.yaml",
-    "replication\postgres-replication.yaml", 
+    "replication\postgres-replication.yaml",
     "replication\postgres-snapshot-cron.yaml",
     "replication\vector-export-cron.yaml",
     "replication\object-sync-deployment.yaml",
@@ -126,7 +126,7 @@ $keyFiles = @(
 foreach ($file in $keyFiles) {
     $fullPath = Join-Path $DR_DIR $file
     Write-TestResult "Checking: $file"
-    
+
     if (Test-Path $fullPath) {
         $fileInfo = Get-Item $fullPath
         $sizeKB = [math]::Round($fileInfo.Length / 1KB, 1)
@@ -144,7 +144,7 @@ try {
     $clusterInfo = & kubectl cluster-info 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-TestResult "Cluster is accessible" "Success"
-        
+
         # Check namespace
         Write-TestResult "Checking namespace: $NAMESPACE"
         $nsCheck = & kubectl get namespace $NAMESPACE 2>&1
@@ -167,7 +167,7 @@ $total = $successCount + $warningCount + $errorCount
 
 Write-Host "📊 Results:" -ForegroundColor White
 Write-Host "   ✅ Successes: $successCount" -ForegroundColor Green
-Write-Host "   ⚠️  Warnings:  $warningCount" -ForegroundColor Yellow  
+Write-Host "   ⚠️  Warnings:  $warningCount" -ForegroundColor Yellow
 Write-Host "   ❌ Errors:    $errorCount" -ForegroundColor Red
 Write-Host "   📈 Total:     $total" -ForegroundColor White
 

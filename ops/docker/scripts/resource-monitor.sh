@@ -68,7 +68,7 @@ emit_metrics() {
     local cpu_percent=$2
     local disk_mb=$3
     local process_count=$4
-    
+
     cat >> "$METRICS_FILE" << EOF
 {"timestamp":"$(date -Iseconds)","memory_mb":$memory_mb,"cpu_percent":$cpu_percent,"disk_mb":$disk_mb,"process_count":$process_count,"memory_threshold":$MEMORY_THRESHOLD_MB,"cpu_threshold":$CPU_THRESHOLD_PERCENT,"disk_threshold":$DISK_THRESHOLD_MB,"process_threshold":$PROCESS_THRESHOLD}
 EOF
@@ -80,15 +80,15 @@ check_violations() {
     local cpu_percent=$2
     local disk_mb=$3
     local process_count=$4
-    
+
     local violations=0
-    
+
     # Memory violation check
     if [[ $memory_mb -gt $MEMORY_THRESHOLD_MB ]]; then
         ((MEMORY_VIOLATIONS++))
         alert "Memory usage exceeded: ${memory_mb}MB > ${MEMORY_THRESHOLD_MB}MB (violation #$MEMORY_VIOLATIONS)"
         ((violations++))
-        
+
         # Kill memory-intensive processes after 3 violations
         if [[ $MEMORY_VIOLATIONS -ge 3 ]]; then
             alert "Memory violation limit reached. Terminating high-memory processes"
@@ -98,13 +98,13 @@ check_violations() {
     else
         MEMORY_VIOLATIONS=0
     fi
-    
+
     # CPU violation check
     if [[ $cpu_percent -gt $CPU_THRESHOLD_PERCENT ]]; then
         ((CPU_VIOLATIONS++))
         alert "CPU usage exceeded: ${cpu_percent}% > ${CPU_THRESHOLD_PERCENT}% (violation #$CPU_VIOLATIONS)"
         ((violations++))
-        
+
         # Throttle CPU after violations
         if [[ $CPU_VIOLATIONS -ge 5 ]]; then
             alert "CPU violation limit reached. Applying CPU throttling"
@@ -116,13 +116,13 @@ check_violations() {
     else
         CPU_VIOLATIONS=0
     fi
-    
+
     # Disk violation check
     if [[ $disk_mb -gt $DISK_THRESHOLD_MB ]]; then
         ((DISK_VIOLATIONS++))
         alert "Disk usage exceeded: ${disk_mb}MB > ${DISK_THRESHOLD_MB}MB (violation #$DISK_VIOLATIONS)"
         ((violations++))
-        
+
         # Clean temporary files after violations
         if [[ $DISK_VIOLATIONS -ge 2 ]]; then
             alert "Disk violation limit reached. Cleaning temporary files"
@@ -132,13 +132,13 @@ check_violations() {
     else
         DISK_VIOLATIONS=0
     fi
-    
+
     # Process count violation check
     if [[ $process_count -gt $PROCESS_THRESHOLD ]]; then
         ((PROCESS_VIOLATIONS++))
         alert "Process count exceeded: $process_count > $PROCESS_THRESHOLD (violation #$PROCESS_VIOLATIONS)"
         ((violations++))
-        
+
         # Kill excess processes after violations
         if [[ $PROCESS_VIOLATIONS -ge 2 ]]; then
             alert "Process violation limit reached. Terminating excess processes"
@@ -150,7 +150,7 @@ check_violations() {
     else
         PROCESS_VIOLATIONS=0
     fi
-    
+
     # Fatal violation check - shutdown if all systems are over limits
     if [[ $violations -ge 3 ]]; then
         fatal "Multiple critical resource violations detected. Initiating sandbox shutdown"
@@ -161,29 +161,29 @@ check_violations() {
 main() {
     log "Resource monitor starting (interval: ${MONITOR_INTERVAL}s)"
     log "Thresholds: Memory=${MEMORY_THRESHOLD_MB}MB, CPU=${CPU_THRESHOLD_PERCENT}%, Disk=${DISK_THRESHOLD_MB}MB, Processes=${PROCESS_THRESHOLD}"
-    
+
     # Initialize metrics file
     echo '{"type":"resource_monitor_start","timestamp":"'"$(date -Iseconds)"'"}' > "$METRICS_FILE"
-    
+
     # Monitoring loop
     while true; do
         # Collect current metrics
         local memory_mb=$(get_memory_usage)
         local cpu_percent=$(get_cpu_usage)
-        local disk_mb=$(get_disk_usage)  
+        local disk_mb=$(get_disk_usage)
         local process_count=$(get_process_count)
-        
+
         # Emit metrics for observability
         emit_metrics "$memory_mb" "$cpu_percent" "$disk_mb" "$process_count"
-        
+
         # Check for violations and enforce limits
         check_violations "$memory_mb" "$cpu_percent" "$disk_mb" "$process_count"
-        
+
         # Log periodic status (every 12 cycles = 1 minute)
         if (( $(date +%s) % 60 < MONITOR_INTERVAL )); then
             log "Status: Memory=${memory_mb}MB, CPU=${cpu_percent}%, Disk=${disk_mb}MB, Processes=${process_count}"
         fi
-        
+
         sleep "$MONITOR_INTERVAL"
     done
 }

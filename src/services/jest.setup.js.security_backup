@@ -1,6 +1,6 @@
 /**
  * PAKE System - Jest Setup
- * 
+ *
  * Global test setup and configuration for all test suites.
  */
 
@@ -27,16 +27,16 @@ global.console = {
 global.testUtils = {
   // Async test helper
   sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
-  
+
   // Generate test IDs
   generateId: () => Math.random().toString(36).substr(2, 9),
-  
+
   // Create test dates
   createTestDate: (offset = 0) => new Date(Date.now() + offset),
-  
+
   // Deep clone objects
   deepClone: (obj) => JSON.parse(JSON.stringify(obj)),
-  
+
   // Wait for async operations
   waitFor: async (condition, timeout = 5000) => {
     const start = Date.now();
@@ -59,7 +59,7 @@ global.mockImplementations = {
     connect: jest.fn(),
     end: jest.fn()
   }),
-  
+
   // Mock Redis client
   createMockRedisClient: () => ({
     connect: jest.fn(),
@@ -76,7 +76,7 @@ global.mockImplementations = {
     brPop: jest.fn(),
     lLen: jest.fn()
   }),
-  
+
   // Mock HTTP client
   createMockHttpClient: () => ({
     get: jest.fn(),
@@ -120,9 +120,9 @@ expect.extend({
   toBeRecentDate(received, withinSeconds = 10) {
     const now = new Date();
     const diff = Math.abs(now.getTime() - received.getTime()) / 1000;
-    
+
     const pass = diff <= withinSeconds;
-    
+
     if (pass) {
       return {
         message: () => `expected ${received} not to be within ${withinSeconds} seconds of now`,
@@ -135,11 +135,11 @@ expect.extend({
       };
     }
   },
-  
+
   // Check if object contains subset
   toContainObject(received, expected) {
     const pass = this.equals(received, expect.objectContaining(expected));
-    
+
     if (pass) {
       return {
         message: () => `expected ${this.utils.printReceived(received)} not to contain object ${this.utils.printExpected(expected)}`,
@@ -152,15 +152,15 @@ expect.extend({
       };
     }
   },
-  
+
   // Check if array contains any element matching predicate
   toContainElementMatching(received, predicate) {
     if (!Array.isArray(received)) {
       throw new Error('Expected value must be an array');
     }
-    
+
     const pass = received.some(predicate);
-    
+
     if (pass) {
       return {
         message: () => `expected array not to contain element matching predicate`,
@@ -205,7 +205,7 @@ global.test = (name, fn, timeout) => {
     const start = performance.now();
     await fn();
     const duration = performance.now() - start;
-    
+
     if (duration > 1000) { // Warn if test takes more than 1 second
       console.warn(`Slow test detected: "${name}" took ${duration.toFixed(2)}ms`);
     }

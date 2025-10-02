@@ -20,150 +20,150 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for security scanning
-    
+
     - name: Run security scans
       run: |
         echo "Security scans would run here"
         # Note: This was incorrectly trying to use a workflow file as an action
-    
+
   # Code quality checks
   code-quality:
     runs-on: ubuntu-latest
     needs: security
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for better analysis
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-    
+
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
         version: '1.8.3'
         virtualenvs-create: true
         virtualenvs-in-project: true
-    
+
     - name: Install Python dependencies
       run: |
         poetry install --no-interaction --only=main
-    
+
     - name: Install Node.js dependencies
       run: |
         npm ci
-    
+
     - name: Run Python linting
       run: |
         poetry run ruff check src/ security/ tests/
         poetry run black --check src/ security/ tests/
         poetry run mypy src/ security/
-    
+
     - name: Run TypeScript linting
       run: |
         npm run lint
-    
+
     - name: Run tests
       run: |
         poetry run pytest tests/ -v --cov=src --cov-report=xml
-    
+
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
-  
+
   # Build and test
   build:
     runs-on: ubuntu-latest
     needs: [security, code-quality]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for build process
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-    
+
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
         version: '1.8.3'
         virtualenvs-create: true
         virtualenvs-in-project: true
-    
+
     - name: Install dependencies
       run: |
         poetry install --no-interaction
         npm ci
-    
+
     - name: Build Python package
       run: |
         poetry build
-    
+
     - name: Build TypeScript
       run: |
         npm run build
-    
+
     - name: Run integration tests
       run: |
         poetry run pytest tests/integration/ -v
-    
+
     - name: Build Docker image
       run: |
         docker build -t pake-system:latest .
-    
+
     - name: Test Docker image
       run: |
         docker run --rm pake-system:latest python -c "import src; print('✅ Build successful')"
-  
+
   # Deploy to staging (only on develop branch)
   deploy-staging:
     runs-on: ubuntu-latest
     needs: [security, code-quality, build]
     if: github.ref == 'refs/heads/develop'
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for deployment
-    
+
     - name: Deploy to staging
       run: |
         echo "🚀 Deploying to staging environment..."
         # Add your staging deployment commands here
-  
+
   # Deploy to production (only on main branch)
   deploy-production:
     runs-on: ubuntu-latest
     needs: [security, code-quality, build]
     if: github.ref == 'refs/heads/main'
     environment: production
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for production deployment
-    
+
     - name: Deploy to production
       run: |
         echo "🚀 Deploying to production environment..."

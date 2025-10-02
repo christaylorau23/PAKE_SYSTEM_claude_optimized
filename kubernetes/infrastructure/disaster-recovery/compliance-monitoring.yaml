@@ -35,7 +35,7 @@ data:
             - "CC7.3"  # Security Monitoring
             - "CC7.4"  # Response to Security Incidents
             - "CC8.1"  # Change Management
-          
+
         gdpr:
           enabled: true
           controls:
@@ -47,7 +47,7 @@ data:
             - "Art. 32"  # Security of processing
             - "Art. 33"  # Notification of breach to authority
             - "Art. 34"  # Communication of breach to data subject
-            
+
         iso27001:
           enabled: true
           controls:
@@ -59,13 +59,13 @@ data:
             - "A.12.6"  # Management of technical vulnerabilities
             - "A.16.1"  # Management of information security incidents
             - "A.17.1"  # Information security continuity
-            
+
       # Audit settings
       audit:
         retention_days: 2557  # 7 years for financial compliance
         backup_retention_days: 3653  # 10 years
         log_shipping_interval: 300  # 5 minutes
-        
+
         # Event categories to audit
         events:
           authentication:
@@ -74,61 +74,61 @@ data:
             - logout
             - REDACTED_SECRET_change
             - mfa_events
-            
+
           authorization:
             - permission_granted
             - permission_denied
             - role_changes
             - policy_changes
-            
+
           data_access:
             - data_read
             - data_write
             - data_delete
             - data_export
             - pii_access
-            
+
           system_events:
             - system_start
             - system_stop
             - configuration_change
             - backup_created
             - backup_restored
-            
+
           security_events:
             - intrusion_detected
             - vulnerability_found
             - security_policy_violation
             - encryption_key_rotation
-            
+
       # Data classification
       data_classification:
         public:
           retention_days: 365
           encryption_required: false
           audit_level: "basic"
-          
+
         internal:
           retention_days: 2557
           encryption_required: true
           audit_level: "standard"
-          
+
         confidential:
           retention_days: 2557
           encryption_required: true
           audit_level: "detailed"
-          
+
         restricted:
           retention_days: 3653
           encryption_required: true
           audit_level: "comprehensive"
-          
+
         pii:
           retention_days: 2557
           encryption_required: true
           audit_level: "comprehensive"
           anonymization_required: true
-          
+
       # Monitoring rules
       monitoring:
         failed_login_threshold: 5
@@ -136,7 +136,7 @@ data:
         privilege_escalation_detection: true
         unusual_data_volume_threshold: "1GB"
         after_hours_access_monitoring: true
-        
+
       # Reporting
       reporting:
         daily_summary: true
@@ -144,22 +144,22 @@ data:
         monthly_compliance: true
         quarterly_assessment: true
         incident_immediate: true
-        
+
       # Integration settings
       integrations:
         siem:
           enabled: true
           endpoint: "https://siem.pake-system.com/api/events"
-          
+
         splunk:
           enabled: false
           hec_endpoint: ""
-          
+
         elasticsearch:
           enabled: true
           endpoint: "http://elasticsearch.monitoring.svc.cluster.local:9200"
           index_pattern: "compliance-logs-"
-          
+
         prometheus:
           enabled: true
           push_gateway: "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091"
@@ -176,7 +176,7 @@ data:
       - group: ""
         resources: ["*"]
       namespaces: ["kube-system", "pake-system", "database"]
-      
+
     # Log all admin actions
     - level: RequestResponse
       users: ["admin", "root"]
@@ -186,28 +186,28 @@ data:
         resources: ["*"]
       - group: "apps"
         resources: ["*"]
-      
+
     # Log secret access
     - level: Metadata
       verbs: ["get", "list", "create", "update", "patch", "delete"]
       resources:
       - group: ""
         resources: ["secrets"]
-      
+
     # Log RBAC changes
     - level: RequestResponse
       verbs: ["create", "update", "patch", "delete"]
       resources:
       - group: "rbac.authorization.k8s.io"
         resources: ["*"]
-      
+
     # Log PII data access (custom resources)
     - level: Metadata
       verbs: ["get", "list", "create", "update", "patch", "delete"]
       resources:
       - group: "pake.system"
         resources: ["users", "profiles", "personaldata"]
-      
+
     # Log backup and restore operations
     - level: RequestResponse
       verbs: ["create", "delete"]
@@ -369,16 +369,16 @@ data:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)['compliance']
-            
+
             self.es_client = None
             self.session = None
             self.encryption_key = self._get_or_create_encryption_key()
             self.fernet = Fernet(self.encryption_key)
-            
+
             # Initialize Kubernetes client
             kubernetes.config.load_incluster_config()
             self.k8s_client = kubernetes.client.ApiClient()
-            
+
         def _get_or_create_encryption_key(self):
             """Get or create encryption key for sensitive data"""
             try:
@@ -387,30 +387,30 @@ data:
             except Exception as e:
                 logger.error(f"Error with encryption key: {e}")
                 return Fernet.generate_key()
-                
+
         async def start(self):
             """Initialize the collector"""
             self.session = aiohttp.ClientSession()
-            
+
             # Initialize Elasticsearch client
             es_url = os.getenv('ELASTICSEARCH_URL', 'http://elasticsearch.monitoring.svc.cluster.local:9200')
             self.es_client = AsyncElasticsearch([es_url])
-            
+
             # Create indices if they don't exist
             await self._create_indices()
-            
+
             # Start collection tasks
             asyncio.create_task(self.collect_k8s_audit_logs())
             asyncio.create_task(self.collect_application_logs())
             asyncio.create_task(self.monitor_compliance())
             asyncio.create_task(self.generate_reports())
-            
+
             # Start metrics server
             start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
-            
+
             # Start API server
             await self.start_api_server()
-            
+
         async def _create_indices(self):
             """Create Elasticsearch indices for audit logs"""
             indices = [
@@ -419,7 +419,7 @@ data:
                 'pii-access-logs',
                 'compliance-reports'
             ]
-            
+
             for index in indices:
                 try:
                     if not await self.es_client.indices.exists(index=index):
@@ -447,14 +447,14 @@ data:
                         logger.info(f"Created index: {index}")
                 except Exception as e:
                     logger.error(f"Error creating index {index}: {e}")
-        
+
         async def collect_k8s_audit_logs(self):
             """Collect Kubernetes audit logs"""
             while True:
                 try:
                     # Read audit logs from file
                     audit_log_path = "/var/log/audit/audit.log"
-                    
+
                     if os.path.exists(audit_log_path):
                         with open(audit_log_path, 'r') as f:
                             for line in f:
@@ -463,13 +463,13 @@ data:
                                     await self.process_audit_event(audit_event)
                                 except json.JSONDecodeError:
                                     continue
-                    
+
                     await asyncio.sleep(10)  # Check every 10 seconds
-                    
+
                 except Exception as e:
                     logger.error(f"Error collecting K8s audit logs: {e}")
                     await asyncio.sleep(60)
-        
+
         async def process_audit_event(self, audit_event):
             """Process individual audit event"""
             try:
@@ -477,16 +477,16 @@ data:
                 user = audit_event.get('user', {}).get('username', 'unknown')
                 resource = audit_event.get('objectRef', {}).get('resource', 'unknown')
                 namespace = audit_event.get('objectRef', {}).get('namespace', '')
-                
+
                 # Determine compliance frameworks this event relates to
                 frameworks = self._determine_frameworks(audit_event)
-                
+
                 # Check if PII is involved
                 pii_involved = self._check_pii_involvement(audit_event)
-                
+
                 # Determine data classification
                 classification = self._determine_data_classification(audit_event)
-                
+
                 # Create audit record
                 audit_record = {
                     'timestamp': audit_event.get('stageTimestamp', datetime.utcnow().isoformat()),
@@ -503,73 +503,73 @@ data:
                     'pii_involved': pii_involved,
                     'raw_event': audit_event
                 }
-                
+
                 # Encrypt sensitive data
                 if pii_involved or classification in ['confidential', 'restricted']:
                     audit_record['encrypted_payload'] = self.fernet.encrypt(
                         json.dumps(audit_event).encode()
                     ).decode()
                     del audit_record['raw_event']
-                
+
                 # Store in Elasticsearch
                 await self.es_client.index(
                     index='audit-events',
                     body=audit_record
                 )
-                
+
                 # Update metrics
                 for framework in frameworks:
                     audit_events_total.labels(event_type=event_type, framework=framework).inc()
-                
+
                 if pii_involved:
                     pii_access_events.labels(operation=event_type, user=user).inc()
-                
+
                 data_access_events.labels(classification=classification, operation=event_type).inc()
-                
+
                 # Check for compliance violations
                 await self._check_compliance_violations(audit_record)
-                
+
             except Exception as e:
                 logger.error(f"Error processing audit event: {e}")
-        
+
         def _determine_frameworks(self, audit_event):
             """Determine which compliance frameworks apply to this event"""
             frameworks = []
-            
+
             resource = audit_event.get('objectRef', {}).get('resource', '')
             verb = audit_event.get('verb', '')
             user = audit_event.get('user', {}).get('username', '')
-            
+
             # SOC2 applies to access controls and system changes
             if any(keyword in resource.lower() for keyword in ['role', 'binding', 'secret', 'configmap']) or \
                verb in ['create', 'update', 'patch', 'delete']:
                 frameworks.append('soc2')
-            
+
             # GDPR applies to PII data operations
             if self._check_pii_involvement(audit_event):
                 frameworks.append('gdpr')
-            
+
             # ISO27001 applies to security-related operations
             if any(keyword in resource.lower() for keyword in ['security', 'policy', 'network']) or \
                'admin' in user.lower():
                 frameworks.append('iso27001')
-            
+
             return frameworks
-        
+
         def _check_pii_involvement(self, audit_event):
             """Check if event involves PII data"""
             resource = audit_event.get('objectRef', {}).get('resource', '').lower()
             name = audit_event.get('objectRef', {}).get('name', '').lower()
-            
+
             pii_indicators = ['user', 'profile', 'personal', 'contact', 'email', 'phone', 'address']
-            
+
             return any(indicator in resource or indicator in name for indicator in pii_indicators)
-        
+
         def _determine_data_classification(self, audit_event):
             """Determine data classification level"""
             resource = audit_event.get('objectRef', {}).get('resource', '').lower()
             namespace = audit_event.get('objectRef', {}).get('namespace', '').lower()
-            
+
             if self._check_pii_involvement(audit_event):
                 return 'pii'
             elif any(keyword in resource for keyword in ['secret', 'key', 'credential']):
@@ -580,53 +580,53 @@ data:
                 return 'internal'
             else:
                 return 'public'
-        
+
         async def _check_compliance_violations(self, audit_record):
             """Check for compliance violations"""
             try:
                 # Failed authentication attempts
                 if audit_record['event_type'] == 'get' and audit_record['result'] == 401:
                     compliance_violations.labels(framework='soc2', control='CC6.1').inc()
-                
+
                 # Unauthorized access attempts
                 if audit_record['result'] == 403:
                     compliance_violations.labels(framework='soc2', control='CC6.6').inc()
-                
+
                 # PII access without proper authorization
                 if audit_record['pii_involved'] and audit_record['user'] not in ['pake-api', 'pake-workers']:
                     compliance_violations.labels(framework='gdpr', control='Art. 5').inc()
-                
+
                 # Administrative actions without proper controls
                 if audit_record['user'] == 'process.env.PAKE_WEAK_PASSWORD || 'SECURE_WEAK_PASSWORD_REQUIRED'' and audit_record['event_type'] in ['create', 'delete']:
                     # Check if proper approval workflow was followed
                     # This would integrate with your approval system
                     pass
-                
+
             except Exception as e:
                 logger.error(f"Error checking compliance violations: {e}")
-        
+
         async def collect_application_logs(self):
             """Collect application-specific audit logs"""
             while True:
                 try:
                     # This would collect logs from your application components
                     # For now, we'll simulate by checking for specific log patterns
-                    
+
                     # Monitor failed login attempts
                     await self._monitor_failed_logins()
-                    
+
                     # Monitor data export activities
                     await self._monitor_data_exports()
-                    
+
                     # Monitor privilege escalations
                     await self._monitor_privilege_escalations()
-                    
+
                     await asyncio.sleep(60)  # Check every minute
-                    
+
                 except Exception as e:
                     logger.error(f"Error collecting application logs: {e}")
                     await asyncio.sleep(60)
-        
+
         async def _monitor_failed_logins(self):
             """Monitor for excessive failed login attempts"""
             try:
@@ -647,22 +647,22 @@ data:
                         }
                     }
                 }
-                
+
                 result = await self.es_client.search(
                     index='audit-events',
                     body=query
                 )
-                
+
                 # Check for users with excessive failed attempts
                 threshold = self.config['monitoring']['failed_login_threshold']
                 for bucket in result['aggregations']['users']['buckets']:
                     if bucket['doc_count'] >= threshold:
                         logger.warning(f"User {bucket['key']} has {bucket['doc_count']} failed login attempts")
                         compliance_violations.labels(framework='soc2', control='CC6.1').inc()
-                
+
             except Exception as e:
                 logger.error(f"Error monitoring failed logins: {e}")
-        
+
         async def _monitor_data_exports(self):
             """Monitor for unusual data export activities"""
             try:
@@ -682,23 +682,23 @@ data:
                         }
                     }
                 }
-                
+
                 result = await self.es_client.search(
                     index='audit-events',
                     body=query
                 )
-                
+
                 # Check for unusual export volumes
                 total_volume = result['aggregations']['volume']['value']
                 threshold_bytes = 1024 * 1024 * 1024  # 1GB
-                
+
                 if total_volume > threshold_bytes:
                     logger.warning(f"Unusual data export volume: {total_volume} bytes")
                     compliance_violations.labels(framework='gdpr', control='Art. 32').inc()
-                
+
             except Exception as e:
                 logger.error(f"Error monitoring data exports: {e}")
-        
+
         async def _monitor_privilege_escalations(self):
             """Monitor for privilege escalation attempts"""
             try:
@@ -714,21 +714,21 @@ data:
                         }
                     }
                 }
-                
+
                 result = await self.es_client.search(
                     index='audit-events',
                     body=query
                 )
-                
+
                 if result['hits']['total']['value'] > 0:
                     logger.info(f"Detected {result['hits']['total']['value']} privilege changes")
                     for hit in result['hits']['hits']:
                         source = hit['_source']
                         logger.info(f"Privilege change by {source['user']} on {source['resource']}")
-                
+
             except Exception as e:
                 logger.error(f"Error monitoring privilege escalations: {e}")
-        
+
         async def monitor_compliance(self):
             """Monitor overall compliance status"""
             while True:
@@ -738,13 +738,13 @@ data:
                         score = await self._calculate_compliance_score(framework)
                         compliance_score.labels(framework=framework).set(score)
                         logger.info(f"{framework.upper()} compliance score: {score}%")
-                    
+
                     await asyncio.sleep(3600)  # Update hourly
-                    
+
                 except Exception as e:
                     logger.error(f"Error monitoring compliance: {e}")
                     await asyncio.sleep(3600)
-        
+
         async def _calculate_compliance_score(self, framework):
             """Calculate compliance score for a framework"""
             try:
@@ -759,14 +759,14 @@ data:
                         }
                     }
                 }
-                
+
                 result = await self.es_client.search(
                     index='audit-events',
                     body=query
                 )
-                
+
                 total_events = result['hits']['total']['value']
-                
+
                 # Query violations
                 violation_query = {
                     "query": {
@@ -779,27 +779,27 @@ data:
                         }
                     }
                 }
-                
+
                 violation_result = await self.es_client.search(
                     index='audit-events',
                     body=violation_query
                 )
-                
+
                 violations = violation_result['hits']['total']['value']
-                
+
                 # Calculate score (100% - violation percentage)
                 if total_events > 0:
                     violation_rate = violations / total_events
                     score = max(0, 100 - (violation_rate * 100))
                 else:
                     score = 100
-                
+
                 return round(score, 2)
-                
+
             except Exception as e:
                 logger.error(f"Error calculating compliance score for {framework}: {e}")
                 return 0
-        
+
         async def generate_reports(self):
             """Generate compliance reports"""
             while True:
@@ -807,21 +807,21 @@ data:
                     # Generate daily report
                     if datetime.now().hour == 6:  # 6 AM UTC
                         await self._generate_daily_report()
-                    
+
                     # Generate weekly report (Sunday)
                     if datetime.now().weekday() == 6 and datetime.now().hour == 7:  # Sunday 7 AM UTC
                         await self._generate_weekly_report()
-                    
+
                     # Generate monthly report (1st of month)
                     if datetime.now().day == 1 and datetime.now().hour == 8:  # 1st day 8 AM UTC
                         await self._generate_monthly_report()
-                    
+
                     await asyncio.sleep(3600)  # Check hourly
-                    
+
                 except Exception as e:
                     logger.error(f"Error generating reports: {e}")
                     await asyncio.sleep(3600)
-        
+
         async def _generate_daily_report(self):
             """Generate daily compliance summary"""
             try:
@@ -831,40 +831,40 @@ data:
                     'period': 'last_24_hours',
                     'frameworks': {}
                 }
-                
+
                 for framework in ['soc2', 'gdpr', 'iso27001']:
                     score = await self._calculate_compliance_score(framework)
-                    
+
                     # Get violation summary
                     violations = await self._get_violation_summary(framework, '24h')
-                    
+
                     report_data['frameworks'][framework] = {
                         'compliance_score': score,
                         'violations': violations,
                         'status': 'compliant' if score >= 95 else 'non_compliant'
                     }
-                
+
                 # Store report
                 await self.es_client.index(
                     index='compliance-reports',
                     body=report_data
                 )
-                
+
                 logger.info("Daily compliance report generated")
-                
+
             except Exception as e:
                 logger.error(f"Error generating daily report: {e}")
-        
+
         async def _generate_weekly_report(self):
             """Generate weekly detailed compliance report"""
             # Implementation would be similar to daily but with more detail
             logger.info("Weekly compliance report would be generated here")
-        
+
         async def _generate_monthly_report(self):
             """Generate monthly compliance assessment"""
             # Implementation would include trend analysis and recommendations
             logger.info("Monthly compliance assessment would be generated here")
-        
+
         async def _get_violation_summary(self, framework, period):
             """Get violation summary for a framework and period"""
             try:
@@ -884,44 +884,44 @@ data:
                         }
                     }
                 }
-                
+
                 result = await self.es_client.search(
                     index='audit-events',
                     body=query
                 )
-                
+
                 return {
                     'total': result['hits']['total']['value'],
-                    'by_control': {bucket['key']: bucket['doc_count'] 
+                    'by_control': {bucket['key']: bucket['doc_count']
                                  for bucket in result['aggregations']['controls']['buckets']}
                 }
-                
+
             except Exception as e:
                 logger.error(f"Error getting violation summary: {e}")
                 return {'total': 0, 'by_control': {}}
-        
+
         async def start_api_server(self):
             """Start HTTP API server"""
             app = web.Application()
-            
+
             app.router.add_get('/health', self.handle_health)
             app.router.add_get('/ready', self.handle_ready)
             app.router.add_get('/compliance/status', self.handle_compliance_status)
             app.router.add_get('/compliance/report/{framework}', self.handle_compliance_report)
             app.router.add_get('/audit/search', self.handle_audit_search)
-            
+
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, '0.0.0.0', int(os.getenv('API_PORT', 8090)))
             await site.start()
             logger.info("Compliance API server started")
-        
+
         async def handle_health(self, request):
             return web.json_response({'status': 'healthy'})
-        
+
         async def handle_ready(self, request):
             return web.json_response({'status': 'ready'})
-        
+
         async def handle_compliance_status(self, request):
             """Get current compliance status"""
             status = {}
@@ -931,13 +931,13 @@ data:
                     'score': score,
                     'status': 'compliant' if score >= 95 else 'non_compliant'
                 }
-            
+
             return web.json_response(status)
-        
+
         async def handle_compliance_report(self, request):
             """Get compliance report for a framework"""
             framework = request.match_info['framework']
-            
+
             query = {
                 "query": {
                     "bool": {
@@ -950,35 +950,35 @@ data:
                 "sort": [{"timestamp": {"order": "desc"}}],
                 "size": 30  # Last 30 reports
             }
-            
+
             result = await self.es_client.search(
                 index='compliance-reports',
                 body=query
             )
-            
+
             reports = [hit['_source'] for hit in result['hits']['hits']]
             return web.json_response(reports)
-        
+
         async def handle_audit_search(self, request):
             """Search audit events"""
             query_params = request.query
-            
+
             # Build Elasticsearch query from parameters
             must_clauses = []
-            
+
             if 'user' in query_params:
                 must_clauses.append({"term": {"user": query_params['user']}})
-            
+
             if 'event_type' in query_params:
                 must_clauses.append({"term": {"event_type": query_params['event_type']}})
-            
+
             if 'pii' in query_params:
                 must_clauses.append({"term": {"pii_involved": query_params['pii'].lower() == 'true'}})
-            
+
             # Time range
             time_range = query_params.get('time_range', '1h')
             must_clauses.append({"range": {"timestamp": {"gte": f"now-{time_range}"}}})
-            
+
             query = {
                 "query": {
                     "bool": {
@@ -988,12 +988,12 @@ data:
                 "sort": [{"timestamp": {"order": "desc"}}],
                 "size": int(query_params.get('size', 100))
             }
-            
+
             result = await self.es_client.search(
                 index='audit-events',
                 body=query
             )
-            
+
             events = [hit['_source'] for hit in result['hits']['hits']]
             return web.json_response({
                 'total': result['hits']['total']['value'],
@@ -1003,7 +1003,7 @@ data:
     async def main():
         config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
         collector = ComplianceAuditCollector(config_path)
-        
+
         try:
             await collector.start()
             # Keep running
@@ -1106,16 +1106,16 @@ data:
         config = load_config()
         es_url = os.getenv('ELASTICSEARCH_URL', 'http://elasticsearch.monitoring.svc.cluster.local:9200')
         es = Elasticsearch([es_url])
-        
+
         logger.info("Starting data retention enforcement")
-        
+
         # Enforce retention for different data classifications
         for classification, policy in config['data_classification'].items():
             retention_days = policy['retention_days']
             cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
-            
+
             logger.info(f"Enforcing {retention_days} day retention for {classification} data")
-            
+
             # Delete old audit events
             query = {
                 "query": {
@@ -1127,30 +1127,30 @@ data:
                     }
                 }
             }
-            
+
             try:
                 result = es.delete_by_query(
                     index='audit-events',
                     body=query
                 )
-                
+
                 deleted_count = result.get('deleted', 0)
                 logger.info(f"Deleted {deleted_count} old {classification} audit events")
-                
+
             except Exception as e:
                 logger.error(f"Error deleting old {classification} data: {e}")
-        
+
         # Handle PII anonymization
         pii_policy = config['data_classification']['pii']
         if pii_policy.get('anonymization_required', False):
             anonymize_old_pii_data(es, pii_policy['retention_days'])
-        
+
         logger.info("Data retention enforcement completed")
 
     def anonymize_old_pii_data(es, retention_days):
         """Anonymize PII data older than retention period"""
         cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
-        
+
         # Query for old PII data
         query = {
             "query": {
@@ -1162,7 +1162,7 @@ data:
                 }
             }
         }
-        
+
         try:
             # Update with anonymized data
             anonymization_script = {
@@ -1177,15 +1177,15 @@ data:
                     """
                 }
             }
-            
+
             result = es.update_by_query(
                 index='audit-events',
                 body={**query, **anonymization_script}
             )
-            
+
             updated_count = result.get('updated', 0)
             logger.info(f"Anonymized {updated_count} old PII records")
-            
+
         except Exception as e:
             logger.error(f"Error anonymizing PII data: {e}")
 

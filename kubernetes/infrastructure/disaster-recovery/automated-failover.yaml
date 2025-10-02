@@ -21,11 +21,11 @@ data:
     failover:
       rto_target: 900  # 15 minutes in seconds
       rpo_target: 300  # 5 minutes in seconds
-      
+
       # Health check intervals
       health_check_interval: 30  # seconds
       critical_failure_threshold: 3  # consecutive failures
-      
+
       # Cluster configurations
       clusters:
         primary:
@@ -38,7 +38,7 @@ data:
           database_endpoints:
             - "pake-postgresql.database.svc.cluster.local:5432"
             - "pake-redis.database.svc.cluster.local:6379"
-            
+
         secondary:
           name: "pake-secondary"
           region: "eu-west-1"
@@ -49,7 +49,7 @@ data:
           database_endpoints:
             - "pake-postgresql.database.svc.cluster.local:5432"
             - "pake-redis.database.svc.cluster.local:6379"
-            
+
         tertiary:
           name: "pake-tertiary"
           region: "ap-southeast-1"
@@ -60,7 +60,7 @@ data:
           database_endpoints:
             - "pake-postgresql.database.svc.cluster.local:5432"
             - "pake-redis.database.svc.cluster.local:6379"
-      
+
       # DNS failover configuration
       dns:
         provider: "route53"
@@ -75,7 +75,7 @@ data:
           - name: "app.pake-system.com"
             type: "A"
             ttl: 60
-      
+
       # Database failover
       database:
         postgresql:
@@ -84,20 +84,20 @@ data:
             - "pake-postgresql-replica-eu.database.svc.cluster.local"
             - "pake-postgresql-replica-ap.database.svc.cluster.local"
           failover_script: "/scripts/postgresql-failover.sh"
-          
+
         redis:
           sentinel_endpoints:
             - "redis-sentinel-0.database.svc.cluster.local:26379"
             - "redis-sentinel-1.database.svc.cluster.local:26379"
             - "redis-sentinel-2.database.svc.cluster.local:26379"
           master_name: "pake-redis-master"
-          
+
       # Monitoring and alerting
       monitoring:
         prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
         alertmanager_url: "http://alertmanager.monitoring.svc.cluster.local:9093"
         grafana_url: "http://grafana.monitoring.svc.cluster.local:3000"
-        
+
       # Notification channels
       notifications:
         slack:
@@ -123,9 +123,9 @@ data:
         local to_region=$2
         local record_name=$3
         local new_ip=$4
-        
+
         echo "Starting DNS failover for $record_name from $from_region to $to_region"
-        
+
         # Update Route53 record
         aws route53 change-resource-record-sets \
             --hosted-zone-id $HOSTED_ZONE_ID \
@@ -140,7 +140,7 @@ data:
                     }
                 }]
             }'
-        
+
         echo "DNS failover completed for $record_name"
     }
 
@@ -149,15 +149,15 @@ data:
         local db_type=$1
         local from_endpoint=$2
         local to_endpoint=$3
-        
+
         echo "Starting database failover for $db_type"
-        
+
         case $db_type in
             "postgresql")
                 # Promote replica to primary
                 kubectl exec -n database deployment/pake-postgresql-replica -- \
                     pg_ctl promote -D /var/lib/postgresql/data
-                
+
                 # Update service endpoints
                 kubectl patch service pake-postgresql -n database -p '{
                     "spec": {
@@ -167,7 +167,7 @@ data:
                     }
                 }'
                 ;;
-                
+
             "redis")
                 # Redis Sentinel will handle automatic failover
                 # Just verify the switch happened
@@ -175,7 +175,7 @@ data:
                     redis-cli -p 26379 sentinel get-master-addr-by-name pake-redis-master
                 ;;
         esac
-        
+
         echo "Database failover completed for $db_type"
     }
 
@@ -183,9 +183,9 @@ data:
     scale_applications() {
         local cluster_context=$1
         local action=$2  # "up" or "down"
-        
+
         echo "Scaling applications $action in cluster $cluster_context"
-        
+
         if [ "$action" = "up" ]; then
             # Scale up applications in target cluster
             kubectl --context=$cluster_context scale deployment pake-api -n pake-system --replicas=10
@@ -193,11 +193,11 @@ data:
             kubectl --context=$cluster_context scale deployment pake-workers-high -n pake-system --replicas=15
             kubectl --context=$cluster_context scale deployment pake-workers-medium -n pake-system --replicas=20
             kubectl --context=$cluster_context scale deployment pake-workers-low -n pake-system --replicas=10
-            
+
             # Wait for pods to be ready
             kubectl --context=$cluster_context wait --for=condition=ready pod -l app=pake-api -n pake-system --timeout=300s
             kubectl --context=$cluster_context wait --for=condition=ready pod -l app=pake-ai -n pake-system --timeout=300s
-            
+
         elif [ "$action" = "down" ]; then
             # Scale down applications in source cluster (graceful)
             kubectl --context=$cluster_context scale deployment pake-api -n pake-system --replicas=0
@@ -206,7 +206,7 @@ data:
             kubectl --context=$cluster_context scale deployment pake-workers-medium -n pake-system --replicas=0
             kubectl --context=$cluster_context scale deployment pake-workers-low -n pake-system --replicas=0
         fi
-        
+
         echo "Application scaling completed"
     }
 
@@ -214,7 +214,7 @@ data:
     health_check() {
         local endpoint=$1
         local timeout=${2:-10}
-        
+
         if curl -f -m $timeout -s "$endpoint" > /dev/null 2>&1; then
             return 0  # Success
         else
@@ -227,23 +227,23 @@ data:
         local source_cluster=$1
         local target_cluster=$2
         local failover_type=$3  # "auto" or "manual"
-        
+
         echo "=========================================="
         echo "FAILOVER INITIATED: $source_cluster -> $target_cluster"
         echo "Type: $failover_type"
         echo "Timestamp: $(date -Iseconds)"
         echo "=========================================="
-        
+
         # Record failover start time for RTO measurement
         FAILOVER_START_TIME=$(date +%s)
-        
+
         # Step 1: Health check on target cluster
         echo "Step 1: Checking target cluster health..."
         if ! health_check "https://api.$target_cluster.com/health"; then
             echo "ERROR: Target cluster is not healthy. Aborting failover."
             exit 1
         fi
-        
+
         # Step 2: Final data sync (if source is accessible)
         echo "Step 2: Attempting final data sync..."
         if kubectl --context=$source_cluster get nodes > /dev/null 2>&1; then
@@ -251,30 +251,30 @@ data:
             kubectl --context=$source_cluster create job postgresql-emergency-backup \
                 --from=cronjob/postgresql-backup -n database || true
         fi
-        
+
         # Step 3: Scale up target cluster
         echo "Step 3: Scaling up target cluster..."
         scale_applications $target_cluster "up"
-        
+
         # Step 4: Database failover
         echo "Step 4: Executing database failover..."
         db_failover "postgresql" "$source_cluster" "$target_cluster"
         db_failover "redis" "$source_cluster" "$target_cluster"
-        
+
         # Step 5: DNS failover
         echo "Step 5: Updating DNS records..."
         TARGET_API_IP=$(kubectl --context=$target_cluster get svc pake-api-lb -n pake-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         TARGET_AI_IP=$(kubectl --context=$target_cluster get svc pake-ai-lb -n pake-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        
+
         dns_failover "$source_cluster" "$target_cluster" "api.pake-system.com" "$TARGET_API_IP"
         dns_failover "$source_cluster" "$target_cluster" "ai.pake-system.com" "$TARGET_AI_IP"
-        
+
         # Step 6: Scale down source cluster (if accessible)
         echo "Step 6: Scaling down source cluster..."
         if kubectl --context=$source_cluster get nodes > /dev/null 2>&1; then
             scale_applications $source_cluster "down"
         fi
-        
+
         # Step 7: Update failover status
         echo "Step 7: Recording failover status..."
         kubectl --context=$target_cluster apply -f - <<EOF
@@ -290,33 +290,33 @@ data:
       failover_type: "$failover_type"
       rto_achieved: "$(($(date +%s) - $FAILOVER_START_TIME)) seconds"
     EOF
-        
+
         # Step 8: Verify services
         echo "Step 8: Verifying services..."
         sleep 30  # Wait for DNS propagation
-        
+
         if health_check "https://api.pake-system.com/health" 30; then
             echo "✅ API service is healthy"
         else
             echo "❌ API service verification failed"
         fi
-        
+
         if health_check "https://ai.pake-system.com/health" 30; then
             echo "✅ AI service is healthy"
         else
             echo "❌ AI service verification failed"
         fi
-        
+
         FAILOVER_END_TIME=$(date +%s)
         RTO_ACHIEVED=$((FAILOVER_END_TIME - FAILOVER_START_TIME))
-        
+
         echo "=========================================="
         echo "FAILOVER COMPLETED"
         echo "RTO Achieved: ${RTO_ACHIEVED} seconds"
         echo "Target RTO: 900 seconds (15 minutes)"
         echo "Status: $([ $RTO_ACHIEVED -le 900 ] && echo "✅ PASSED" || echo "❌ FAILED")"
         echo "=========================================="
-        
+
         # Send notification
         send_notification "Failover completed from $source_cluster to $target_cluster. RTO: ${RTO_ACHIEVED}s"
     }
@@ -325,14 +325,14 @@ data:
     send_notification() {
         local message=$1
         local severity=${2:-"warning"}
-        
+
         # Slack notification
         if [ -n "$SLACK_WEBHOOK_URL" ]; then
             curl -X POST -H 'Content-type: application/json' \
                 --data "{\"text\":\"🚨 PAKE System Alert: $message\"}" \
                 "$SLACK_WEBHOOK_URL"
         fi
-        
+
         # PagerDuty notification for critical events
         if [ "$severity" = "critical" ] && [ -n "$PAGERDUTY_INTEGRATION_KEY" ]; then
             curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
@@ -525,31 +525,31 @@ data:
         def __init__(self, config_path):
             with open(config_path, 'r') as f:
                 self.config = yaml.safe_load(f)
-            
+
             self.session = None
             self.active_cluster = "primary"
             self.last_successful_backup = None
             self.health_status = {}
-            
+
             # Initialize Kubernetes client
             kubernetes.config.load_incluster_config()
             self.k8s_client = kubernetes.client.ApiClient()
-            
+
         async def start(self):
             self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
-            
+
             # Start health monitoring
             asyncio.create_task(self.health_monitor())
-            
+
             # Start backup monitoring
             asyncio.create_task(self.backup_monitor())
-            
+
             # Start metrics server
             start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
-            
+
             # Start API server
             await self.start_api_server()
-            
+
         async def health_monitor(self):
             """Continuously monitor cluster health"""
             while True:
@@ -557,31 +557,31 @@ data:
                     for cluster_name, cluster_config in self.config['failover']['clusters'].items():
                         health_status = await self.check_cluster_health(cluster_name, cluster_config)
                         self.health_status[cluster_name] = health_status
-                        
+
                         # Update Prometheus metrics
                         cluster_health_gauge.labels(
-                            cluster=cluster_name, 
+                            cluster=cluster_name,
                             region=cluster_config['region']
                         ).set(1 if health_status['healthy'] else 0)
-                        
+
                         # Check if failover is needed
                         if cluster_name == self.active_cluster and not health_status['healthy']:
                             if health_status['consecutive_failures'] >= self.config['failover']['critical_failure_threshold']:
                                 logger.critical(f"Critical failure detected in {cluster_name}. Initiating failover.")
                                 await self.initiate_failover(cluster_name, "auto")
-                    
+
                     await asyncio.sleep(self.config['failover']['health_check_interval'])
-                    
+
                 except Exception as e:
                     logger.error(f"Error in health monitor: {e}")
                     await asyncio.sleep(30)
-                    
+
         async def check_cluster_health(self, cluster_name, cluster_config):
             """Check health of a specific cluster"""
             start_time = time.time()
             healthy = True
             failed_endpoints = []
-            
+
             try:
                 # Check API endpoints
                 for endpoint in cluster_config['health_endpoints']:
@@ -593,32 +593,32 @@ data:
                     except Exception as e:
                         healthy = False
                         failed_endpoints.append(f"{endpoint}: {str(e)}")
-                
+
                 # Check database endpoints
                 for db_endpoint in cluster_config['database_endpoints']:
                     if not await self.check_database_health(db_endpoint):
                         healthy = False
                         failed_endpoints.append(db_endpoint)
-                
+
                 # Update health check duration metric
                 health_check_duration.labels(endpoint=cluster_name).observe(time.time() - start_time)
-                
+
                 # Track consecutive failures
                 if cluster_name not in self.health_status:
                     self.health_status[cluster_name] = {'consecutive_failures': 0}
-                
+
                 if healthy:
                     self.health_status[cluster_name]['consecutive_failures'] = 0
                 else:
                     self.health_status[cluster_name]['consecutive_failures'] += 1
-                
+
                 return {
                     'healthy': healthy,
                     'failed_endpoints': failed_endpoints,
                     'consecutive_failures': self.health_status[cluster_name]['consecutive_failures'],
                     'check_time': datetime.utcnow().isoformat()
                 }
-                
+
             except Exception as e:
                 logger.error(f"Error checking health for {cluster_name}: {e}")
                 return {
@@ -627,7 +627,7 @@ data:
                     'consecutive_failures': self.health_status.get(cluster_name, {}).get('consecutive_failures', 0) + 1,
                     'check_time': datetime.utcnow().isoformat()
                 }
-        
+
         async def check_database_health(self, endpoint):
             """Check database connectivity"""
             try:
@@ -641,7 +641,7 @@ data:
                 return True
             except Exception:
                 return False
-        
+
         async def backup_monitor(self):
             """Monitor backup status and calculate RPO"""
             while True:
@@ -650,24 +650,24 @@ data:
                     backup_status = await self.get_backup_status()
                     if backup_status:
                         self.last_successful_backup = backup_status['timestamp']
-                        
+
                         # Calculate current RPO
                         current_time = datetime.utcnow()
                         backup_time = datetime.fromisoformat(self.last_successful_backup.replace('Z', '+00:00'))
                         current_rpo = (current_time - backup_time).total_seconds()
-                        
+
                         rpo_gauge.set(current_rpo)
-                        
+
                         # Alert if RPO target is exceeded
                         if current_rpo > self.config['failover']['rpo_target']:
                             logger.warning(f"RPO target exceeded: {current_rpo}s > {self.config['failover']['rpo_target']}s")
-                    
+
                     await asyncio.sleep(60)  # Check every minute
-                    
+
                 except Exception as e:
                     logger.error(f"Error in backup monitor: {e}")
                     await asyncio.sleep(60)
-        
+
         async def get_backup_status(self):
             """Get status of last successful backup"""
             try:
@@ -680,19 +680,19 @@ data:
                 }
             except Exception:
                 return None
-        
+
         async def initiate_failover(self, source_cluster, failover_type="manual"):
             """Initiate failover process"""
             start_time = time.time()
-            
+
             # Determine target cluster
             target_cluster = self.get_target_cluster(source_cluster)
             if not target_cluster:
                 logger.error("No healthy target cluster found for failover")
                 return False
-            
+
             logger.info(f"Initiating {failover_type} failover: {source_cluster} -> {target_cluster}")
-            
+
             try:
                 # Execute failover script
                 result = subprocess.run([
@@ -702,12 +702,12 @@ data:
                     target_cluster,
                     failover_type
                 ], capture_output=True, text=True, timeout=1800)  # 30 minute timeout
-                
+
                 if result.returncode == 0:
                     # Successful failover
                     self.active_cluster = target_cluster
                     rto_achieved = time.time() - start_time
-                    
+
                     # Update metrics
                     failover_counter.labels(
                         from_cluster=source_cluster,
@@ -715,21 +715,21 @@ data:
                         type=failover_type
                     ).inc()
                     rto_histogram.observe(rto_achieved)
-                    
+
                     logger.info(f"Failover completed successfully. RTO: {rto_achieved:.2f}s")
                     return True
                 else:
                     logger.error(f"Failover failed: {result.stderr}")
                     return False
-                    
+
             except Exception as e:
                 logger.error(f"Error during failover: {e}")
                 return False
-        
+
         def get_target_cluster(self, source_cluster):
             """Determine the best target cluster for failover"""
             clusters = self.config['failover']['clusters']
-            
+
             # Find healthy clusters excluding the source
             healthy_clusters = []
             for cluster_name, cluster_config in clusters.items():
@@ -737,70 +737,70 @@ data:
                     health = self.health_status.get(cluster_name, {})
                     if health.get('healthy', False):
                         healthy_clusters.append(cluster_name)
-            
+
             # Prefer secondary, then tertiary
             preference_order = ['secondary', 'tertiary', 'primary']
             for preferred in preference_order:
                 if preferred in healthy_clusters and preferred != source_cluster:
                     return preferred
-            
+
             return healthy_clusters[0] if healthy_clusters else None
-        
+
         async def start_api_server(self):
             """Start HTTP API server for manual operations"""
             app = web.Application()
-            
+
             app.router.add_get('/health', self.handle_health)
             app.router.add_get('/ready', self.handle_ready)
             app.router.add_get('/status', self.handle_status)
             app.router.add_post('/failover', self.handle_manual_failover)
             app.router.add_get('/metrics/rto', self.handle_rto_metrics)
             app.router.add_get('/metrics/rpo', self.handle_rpo_metrics)
-            
+
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, '0.0.0.0', 8090)
             await site.start()
             logger.info("API server started on port 8090")
-        
+
         async def handle_health(self, request):
             return web.json_response({'status': 'healthy'})
-        
+
         async def handle_ready(self, request):
             return web.json_response({'status': 'ready'})
-        
+
         async def handle_status(self, request):
             return web.json_response({
                 'active_cluster': self.active_cluster,
                 'health_status': self.health_status,
                 'last_backup': self.last_successful_backup
             })
-        
+
         async def handle_manual_failover(self, request):
             data = await request.json()
             source_cluster = data.get('source_cluster', self.active_cluster)
             target_cluster = data.get('target_cluster')
-            
+
             if not target_cluster:
                 target_cluster = self.get_target_cluster(source_cluster)
-            
+
             if not target_cluster:
                 return web.json_response({'error': 'No healthy target cluster found'}, status=400)
-            
+
             # Initiate failover in background
             asyncio.create_task(self.initiate_failover(source_cluster, "manual"))
-            
+
             return web.json_response({
                 'message': f'Manual failover initiated: {source_cluster} -> {target_cluster}'
             })
-        
+
         async def handle_rto_metrics(self, request):
             # Return current RTO metrics
             return web.json_response({
                 'target_rto_seconds': self.config['failover']['rto_target'],
                 'recent_failovers': []  # Would be populated from metrics
             })
-        
+
         async def handle_rpo_metrics(self, request):
             # Return current RPO metrics
             current_time = datetime.utcnow()
@@ -809,7 +809,7 @@ data:
                 current_rpo = (current_time - backup_time).total_seconds()
             else:
                 current_rpo = None
-            
+
             return web.json_response({
                 'target_rpo_seconds': self.config['failover']['rpo_target'],
                 'current_rpo_seconds': current_rpo,
@@ -820,7 +820,7 @@ data:
         config_path = os.getenv('CONFIG_PATH', '/etc/config/config.yaml')
         orchestrator = FailoverOrchestrator(config_path)
         await orchestrator.start()
-        
+
         # Keep running
         try:
             await asyncio.Future()  # Run forever

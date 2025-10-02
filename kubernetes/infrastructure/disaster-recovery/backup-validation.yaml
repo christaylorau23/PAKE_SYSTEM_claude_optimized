@@ -25,7 +25,7 @@ data:
         cpu: "2000m"
         memory: "4Gi"
         storage: "50Gi"
-      
+
       # Backup sources
       backup_sources:
         postgresql:
@@ -40,7 +40,7 @@ data:
             - "SELECT COUNT(*) FROM pg_stat_user_tables"
             - "VACUUM ANALYZE"
             - "SELECT * FROM pg_stat_database WHERE datname = 'pake_test_restore'"
-            
+
         redis:
           primary_bucket: "s3://pake-backups/redis"
           test_keys:
@@ -52,7 +52,7 @@ data:
             - "INFO replication"
             - "DBSIZE"
             - "MEMORY USAGE test:backup:validation"
-            
+
         chromadb:
           primary_bucket: "s3://pake-backups/chromadb"
           test_collections:
@@ -63,7 +63,7 @@ data:
             - "list_collections"
             - "get_collection_count"
             - "query_test_vectors"
-            
+
         vault:
           primary_bucket: "s3://pake-backups/vault"
           test_secrets:
@@ -72,19 +72,19 @@ data:
           validation_operations:
             - "vault_status"
             - "read_test_secret"
-            
+
       # Test schedules
       schedules:
         daily_quick_test: "0 3 * * *"     # 3 AM UTC daily
         weekly_full_test: "0 2 * * 0"     # 2 AM UTC Sunday
         monthly_deep_test: "0 1 1 * *"    # 1st of month 1 AM UTC
-        
+
       # Performance thresholds
       thresholds:
         restoration_time_seconds: 1800     # 30 minutes max
         data_integrity_percentage: 99.9    # 99.9% integrity required
         backup_size_variance_percentage: 10 # 10% size variance allowed
-        
+
       # Notification settings
       notifications:
         slack_webhook: "backup-validation-webhook"
@@ -118,12 +118,12 @@ data:
     validate_postgresql_backup() {
         local backup_file=$1
         local test_namespace=${2:-"backup-test"}
-        
+
         log_info "Starting PostgreSQL backup validation for $backup_file"
-        
+
         # Create test namespace if it doesn't exist
         kubectl create namespace $test_namespace --dry-run=client -o yaml | kubectl apply -f -
-        
+
         # Deploy test PostgreSQL instance
         kubectl apply -f - <<EOF
     apiVersion: apps/v1
@@ -181,51 +181,51 @@ data:
       selector:
         app: postgres-test-restore
     EOF
-        
+
         # Wait for PostgreSQL to be ready
         log_info "Waiting for test PostgreSQL instance to be ready..."
         kubectl wait --for=condition=ready pod -l app=postgres-test-restore -n $test_namespace --timeout=300s
-        
+
         # Download and restore backup
         log_info "Downloading backup from S3..."
         aws s3 cp s3://pake-backups/postgresql/$backup_file /tmp/backup.sql.gz
-        
+
         log_info "Restoring backup to test database..."
         kubectl exec -i deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-        
+
         gunzip -c /tmp/backup.sql.gz | \
         kubectl exec -i deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore
-        
+
         # Run validation queries
         log_info "Running validation queries..."
-        
+
         # Check table counts
         USERS_COUNT=$(kubectl exec deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore -t -c "SELECT COUNT(*) FROM users;" | tr -d ' ')
-        
+
         KB_COUNT=$(kubectl exec deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore -t -c "SELECT COUNT(*) FROM knowledge_base;" | tr -d ' ')
-        
+
         # Validate data integrity
         INTEGRITY_CHECK=$(kubectl exec deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore -t -c "SELECT COUNT(*) FROM pg_stat_user_tables;" | tr -d ' ')
-        
+
         # Check database size
         DB_SIZE=$(kubectl exec deployment/postgres-test-restore -n $test_namespace -- \
           psql -U postgres -d pake_test_restore -t -c "SELECT pg_size_pretty(pg_database_size('pake_test_restore'));" | tr -d ' ')
-        
+
         log_info "Validation Results:"
         log_info "  Users count: $USERS_COUNT"
         log_info "  Knowledge base count: $KB_COUNT"
         log_info "  Tables count: $INTEGRITY_CHECK"
         log_info "  Database size: $DB_SIZE"
-        
+
         # Cleanup test resources
         kubectl delete namespace $test_namespace --ignore-not-found=true
         rm -f /tmp/backup.sql.gz
-        
+
         # Validate results
         if [ "$USERS_COUNT" -gt 0 ] && [ "$KB_COUNT" -gt 0 ] && [ "$INTEGRITY_CHECK" -gt 0 ]; then
             log_success "PostgreSQL backup validation passed"
@@ -240,12 +240,12 @@ data:
     validate_redis_backup() {
         local backup_file=$1
         local test_namespace=${2:-"backup-test"}
-        
+
         log_info "Starting Redis backup validation for $backup_file"
-        
+
         # Create test namespace
         kubectl create namespace $test_namespace --dry-run=client -o yaml | kubectl apply -f -
-        
+
         # Deploy test Redis instance
         kubectl apply -f - <<EOF
     apiVersion: apps/v1
@@ -295,36 +295,36 @@ data:
       selector:
         app: redis-test-restore
     EOF
-        
+
         # Wait for Redis to be ready
         kubectl wait --for=condition=ready pod -l app=redis-test-restore -n $test_namespace --timeout=300s
-        
+
         # Download and restore backup
         log_info "Downloading Redis backup from S3..."
         aws s3 cp s3://pake-backups/redis/$backup_file /tmp/backup.rdb
-        
+
         # Stop Redis, replace RDB file, restart
         kubectl exec deployment/redis-test-restore -n $test_namespace -- redis-cli -a test_REDACTED_SECRET_123 SHUTDOWN NOSAVE || true
         kubectl cp /tmp/backup.rdb $test_namespace/$(kubectl get pods -n $test_namespace -l app=redis-test-restore -o jsonpath='{.items[0].metadata.name}'):/data/dump.rdb
         kubectl rollout restart deployment/redis-test-restore -n $test_namespace
         kubectl wait --for=condition=ready pod -l app=redis-test-restore -n $test_namespace --timeout=300s
-        
+
         # Run validation commands
         log_info "Running Redis validation commands..."
-        
+
         PING_RESULT=$(kubectl exec deployment/redis-test-restore -n $test_namespace -- redis-cli -a test_REDACTED_SECRET_123 PING)
         DB_SIZE=$(kubectl exec deployment/redis-test-restore -n $test_namespace -- redis-cli -a test_REDACTED_SECRET_123 DBSIZE)
         REPLICATION_INFO=$(kubectl exec deployment/redis-test-restore -n $test_namespace -- redis-cli -a test_REDACTED_SECRET_123 INFO replication | grep role)
-        
+
         log_info "Redis Validation Results:"
         log_info "  Ping: $PING_RESULT"
         log_info "  DB Size: $DB_SIZE"
         log_info "  Replication: $REPLICATION_INFO"
-        
+
         # Cleanup
         kubectl delete namespace $test_namespace --ignore-not-found=true
         rm -f /tmp/backup.rdb
-        
+
         if [ "$PING_RESULT" = "PONG" ] && [ "$DB_SIZE" -gt 0 ]; then
             log_success "Redis backup validation passed"
             return 0
@@ -338,12 +338,12 @@ data:
     validate_chromadb_backup() {
         local backup_file=$1
         local test_namespace=${2:-"backup-test"}
-        
+
         log_info "Starting ChromaDB backup validation for $backup_file"
-        
+
         # Create test namespace
         kubectl create namespace $test_namespace --dry-run=client -o yaml | kubectl apply -f -
-        
+
         # Deploy test ChromaDB instance
         kubectl apply -f - <<EOF
     apiVersion: apps/v1
@@ -392,43 +392,43 @@ data:
       selector:
         app: chromadb-test-restore
     EOF
-        
+
         # Wait for ChromaDB to be ready
         kubectl wait --for=condition=ready pod -l app=chromadb-test-restore -n $test_namespace --timeout=300s
-        
+
         # Download and restore backup
         log_info "Downloading ChromaDB backup from S3..."
         aws s3 cp s3://pake-backups/chromadb/$backup_file /tmp/chromadb_backup.tar.gz
-        
+
         # Extract and restore data
         tar -xzf /tmp/chromadb_backup.tar.gz -C /tmp/
         kubectl cp /tmp/chromadb_data/. $test_namespace/$(kubectl get pods -n $test_namespace -l app=chromadb-test-restore -o jsonpath='{.items[0].metadata.name}'):/chroma/chroma/
-        
+
         # Restart ChromaDB to load data
         kubectl rollout restart deployment/chromadb-test-restore -n $test_namespace
         kubectl wait --for=condition=ready pod -l app=chromadb-test-restore -n $test_namespace --timeout=300s
-        
+
         # Validate collections
         sleep 30  # Wait for ChromaDB to initialize
-        
+
         CHROMADB_URL="http://chromadb-test-restore.$test_namespace.svc.cluster.local:8000"
-        
+
         # Test heartbeat
         HEARTBEAT=$(kubectl exec deployment/chromadb-test-restore -n $test_namespace -- \
           curl -s $CHROMADB_URL/api/v1/heartbeat | jq -r '.nanosecond_heartbeat')
-        
+
         # Get collections
         COLLECTIONS=$(kubectl exec deployment/chromadb-test-restore -n $test_namespace -- \
           curl -s $CHROMADB_URL/api/v1/collections | jq length)
-        
+
         log_info "ChromaDB Validation Results:"
         log_info "  Heartbeat: $HEARTBEAT"
         log_info "  Collections count: $COLLECTIONS"
-        
+
         # Cleanup
         kubectl delete namespace $test_namespace --ignore-not-found=true
         rm -rf /tmp/chromadb_backup.tar.gz /tmp/chromadb_data
-        
+
         if [ "$COLLECTIONS" -gt 0 ] && [ "$HEARTBEAT" -gt 0 ]; then
             log_success "ChromaDB backup validation passed"
             return 0
@@ -442,9 +442,9 @@ data:
     run_full_validation() {
         local test_type=${1:-"daily"}
         local results_file="/tmp/validation_results_$(date +%Y%m%d_%H%M%S).json"
-        
+
         log_info "Starting full backup validation suite - $test_type"
-        
+
         # Initialize results
         cat > $results_file << EOF
     {
@@ -460,14 +460,14 @@ data:
       "total_duration": 0
     }
     EOF
-        
+
         START_TIME=$(date +%s)
-        
+
         # Get latest backups
         LATEST_PG_BACKUP=$(aws s3 ls s3://pake-backups/postgresql/ | sort | tail -1 | awk '{print $4}')
         LATEST_REDIS_BACKUP=$(aws s3 ls s3://pake-backups/redis/ | sort | tail -1 | awk '{print $4}')
         LATEST_CHROMA_BACKUP=$(aws s3 ls s3://pake-backups/chromadb/ | sort | tail -1 | awk '{print $4}')
-        
+
         # PostgreSQL validation
         log_info "Validating PostgreSQL backup: $LATEST_PG_BACKUP"
         PG_START=$(date +%s)
@@ -479,7 +479,7 @@ data:
             PG_DETAILS="Backup validation failed"
         fi
         PG_DURATION=$(($(date +%s) - PG_START))
-        
+
         # Redis validation
         log_info "Validating Redis backup: $LATEST_REDIS_BACKUP"
         REDIS_START=$(date +%s)
@@ -491,7 +491,7 @@ data:
             REDIS_DETAILS="Backup validation failed"
         fi
         REDIS_DURATION=$(($(date +%s) - REDIS_START))
-        
+
         # ChromaDB validation
         log_info "Validating ChromaDB backup: $LATEST_CHROMA_BACKUP"
         CHROMA_START=$(date +%s)
@@ -503,16 +503,16 @@ data:
             CHROMA_DETAILS="Backup validation failed"
         fi
         CHROMA_DURATION=$(($(date +%s) - CHROMA_START))
-        
+
         TOTAL_DURATION=$(($(date +%s) - START_TIME))
-        
+
         # Determine overall status
         if [ "$PG_STATUS" = "success" ] && [ "$REDIS_STATUS" = "success" ] && [ "$CHROMA_STATUS" = "success" ]; then
             OVERALL_STATUS="success"
         else
             OVERALL_STATUS="failed"
         fi
-        
+
         # Update results file
         cat > $results_file << EOF
     {
@@ -528,17 +528,17 @@ data:
       "total_duration": $TOTAL_DURATION
     }
     EOF
-        
+
         # Upload results to S3
         aws s3 cp $results_file s3://pake-backups/validation-results/
-        
+
         # Send notification
         send_validation_notification "$results_file"
-        
+
         log_info "Full backup validation completed with status: $OVERALL_STATUS"
         log_info "Total duration: ${TOTAL_DURATION}s"
         log_info "Results saved to: $results_file"
-        
+
         return $([ "$OVERALL_STATUS" = "success" ] && echo 0 || echo 1)
     }
 
@@ -547,7 +547,7 @@ data:
         local results_file=$1
         local overall_status=$(jq -r '.overall_status' $results_file)
         local total_duration=$(jq -r '.total_duration' $results_file)
-        
+
         if [ -n "$SLACK_WEBHOOK_URL" ]; then
             if [ "$overall_status" = "success" ]; then
                 EMOJI="✅"
@@ -556,7 +556,7 @@ data:
                 EMOJI="❌"
                 COLOR="danger"
             fi
-            
+
             curl -X POST -H 'Content-type: application/json' \
                 --data "{
                   \"attachments\": [{
@@ -834,7 +834,7 @@ data:
             self.s3_client = boto3.client('s3')
             kubernetes.config.load_incluster_config()
             self.k8s_client = kubernetes.client.ApiClient()
-            
+
         def get_latest_validation_results(self):
             """Get latest validation results from S3"""
             try:
@@ -843,13 +843,13 @@ data:
                     Prefix='validation-results/',
                     MaxKeys=10
                 )
-                
+
                 if 'Contents' not in response:
                     return []
-                
+
                 # Sort by last modified
                 objects = sorted(response['Contents'], key=lambda x: x['LastModified'], reverse=True)
-                
+
                 results = []
                 for obj in objects[:5]:  # Get last 5 results
                     try:
@@ -861,19 +861,19 @@ data:
                         results.append(result)
                     except Exception as e:
                         logger.error(f"Error reading validation result {obj['Key']}: {e}")
-                
+
                 return results
-                
+
             except Exception as e:
                 logger.error(f"Error getting validation results: {e}")
                 return []
-        
+
         def get_backup_status(self):
             """Get status of latest backups"""
             status = {}
-            
+
             services = ['postgresql', 'redis', 'chromadb', 'vault']
-            
+
             for service in services:
                 try:
                     response = self.s3_client.list_objects_v2(
@@ -881,15 +881,15 @@ data:
                         Prefix=f'{service}/',
                         MaxKeys=1
                     )
-                    
+
                     if 'Contents' in response and response['Contents']:
                         latest_backup = response['Contents'][0]
                         last_modified = latest_backup['LastModified']
                         size = latest_backup['Size']
-                        
+
                         # Calculate age in hours
                         age_hours = (datetime.now(last_modified.tzinfo) - last_modified).total_seconds() / 3600
-                        
+
                         status[service] = {
                             'last_backup': last_modified.isoformat(),
                             'age_hours': round(age_hours, 2),
@@ -897,11 +897,11 @@ data:
                             'size_mb': round(size / (1024 * 1024), 2),
                             'status': 'healthy' if age_hours < 48 else 'stale'
                         }
-                        
+
                         # Update Prometheus metrics
                         backup_age_hours.labels(service=service).set(age_hours)
                         backup_size_bytes.labels(service=service).set(size)
-                        
+
                     else:
                         status[service] = {
                             'last_backup': None,
@@ -910,32 +910,32 @@ data:
                             'size_mb': 0,
                             'status': 'missing'
                         }
-                        
+
                 except Exception as e:
                     logger.error(f"Error getting backup status for {service}: {e}")
                     status[service] = {
                         'error': str(e),
                         'status': 'error'
                     }
-            
+
             return status
-        
+
         def update_prometheus_metrics(self):
             """Update Prometheus metrics from validation results"""
             results = self.get_latest_validation_results()
-            
+
             for result in results:
                 test_type = result.get('test_type', 'unknown')
-                
+
                 for service, service_result in result.get('results', {}).items():
                     status = service_result.get('status', 'unknown')
                     duration = service_result.get('duration', 0)
-                    
+
                     if status == 'success':
                         backup_validation_success.labels(service=service, test_type=test_type).inc()
                     elif status == 'failed':
                         backup_validation_failure.labels(service=service, test_type=test_type).inc()
-                    
+
                     if duration > 0:
                         backup_validation_duration.labels(service=service, test_type=test_type).observe(duration)
 
@@ -1033,11 +1033,11 @@ data:
             function refreshDashboard() {
                 location.reload();
             }
-            
+
             function autoRefresh() {
                 setInterval(refreshDashboard, 60000); // Refresh every minute
             }
-            
+
             window.onload = autoRefresh;
         </script>
     </head>
@@ -1047,7 +1047,7 @@ data:
             <p>Monitoring backup integrity and restoration testing</p>
             <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh</button>
         </div>
-        
+
         <div class="dashboard-grid">
             <div class="card">
                 <h2>📦 Backup Status</h2>
@@ -1067,7 +1067,7 @@ data:
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="card">
                 <h2>🧪 Recent Validation Results</h2>
                 {% for result in validation_results[:3] %}
@@ -1085,7 +1085,7 @@ data:
                     <div style="margin-top: 8px;">
                         {% for service, svc_result in result.results.items() %}
                         <span style="margin-right: 15px;">
-                            <strong>{{ service.title() }}:</strong> 
+                            <strong>{{ service.title() }}:</strong>
                             <span class="status-{{ svc_result.status }}">{{ svc_result.status }}</span>
                         </span>
                         {% endfor %}
@@ -1093,14 +1093,14 @@ data:
                 </div>
                 {% endfor %}
             </div>
-            
+
             <div class="card">
                 <h2>📊 Validation Statistics</h2>
                 {% set stats = validation_results[:10] %}
                 {% set total_tests = stats|length %}
                 {% set successful_tests = stats|selectattr('overall_status', 'equalto', 'success')|list|length %}
                 {% set success_rate = (successful_tests / total_tests * 100) if total_tests > 0 else 0 %}
-                
+
                 <div class="backup-item">
                     <span>Total Tests (Last 10)</span>
                     <span style="font-size: 24px; font-weight: bold;">{{ total_tests }}</span>
@@ -1117,7 +1117,7 @@ data:
                 </div>
             </div>
         </div>
-        
+
         <div style="text-align: center; margin-top: 20px; color: #666;">
             Last updated: {{ timestamp }}
         </div>
@@ -1129,7 +1129,7 @@ data:
     def dashboard():
         validation_results = monitor.get_latest_validation_results()
         backup_status = monitor.get_backup_status()
-        
+
         return render_template_string(
             DASHBOARD_TEMPLATE,
             validation_results=validation_results,
@@ -1151,10 +1151,10 @@ data:
     if __name__ == '__main__':
         # Update Prometheus metrics
         monitor.update_prometheus_metrics()
-        
+
         # Start Prometheus metrics server
         start_http_server(int(os.getenv('PROMETHEUS_PORT', 8080)))
-        
+
         # Start Flask dashboard
         app.run(
             host='0.0.0.0',

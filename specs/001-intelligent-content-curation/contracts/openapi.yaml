@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: PAKE Intelligent Content Curation API
   description: |
-    Advanced content curation and recommendation system that automatically discovers, 
-    analyzes, and recommends relevant content to users based on their interests, 
+    Advanced content curation and recommendation system that automatically discovers,
+    analyzes, and recommends relevant content to users based on their interests,
     behavior patterns, and preferences.
   version: 1.0.0
   contact:
@@ -24,7 +24,7 @@ paths:
     post:
       summary: Get personalized content recommendations
       description: |
-        Analyzes user preferences and behavior to generate personalized content 
+        Analyzes user preferences and behavior to generate personalized content
         recommendations with explanations and confidence scores.
       operationId: curateContent
       requestBody:
@@ -102,7 +102,7 @@ paths:
       summary: Submit user feedback for learning
       description: |
         Processes user feedback on recommendations to improve future suggestions.
-        Supports both explicit feedback (ratings, comments) and implicit feedback 
+        Supports both explicit feedback (ratings, comments) and implicit feedback
         (interaction patterns, session duration).
       operationId: submitFeedback
       requestBody:

@@ -98,6 +98,9 @@ sentence-transformers = "^3.2.1"
 # ===== TEMPLATE RENDERING =====
 jinja2 = "^3.1.2"
 
+# ===== GRAPHQL =====
+strawberry-graphql = "^0.230.0"
+
 # ===== FILE PROCESSING =====
 openpyxl = "^3.1.2"
 xlsxwriter = "^3.1.9"
@@ -297,6 +300,12 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+# Enable strawberry-graphql mypy plugin for dynamic type generation
+# Temporarily disabled due to Pydantic compatibility issues
+# plugins = [
+#     "strawberry.ext.mypy_plugin"
+# ]
 
 [[tool.mypy.overrides]]
 module = [

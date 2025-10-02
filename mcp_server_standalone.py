@@ -821,22 +821,22 @@ async def create_entity(entity_data: dict):
     """Create a new entity in the knowledge graph"""
     try:
         from src.services.graph.entity_service import get_entity_service, EntityType
-        
+
         entity_service = get_entity_service()
-        
+
         # Extract entity type and properties
         entity_type_str = entity_data.get('entity_type', 'CONCEPT')
         properties = entity_data.get('properties', {})
-        
+
         # Convert string to EntityType enum
         try:
             entity_type = EntityType(entity_type_str)
         except ValueError:
             entity_type = EntityType.CONCEPT
-        
+
         # Create entity
         entity_id = await entity_service.create_entity(entity_type, properties)
-        
+
         if entity_id:
             return {
                 "success": True,
@@ -846,7 +846,7 @@ async def create_entity(entity_data: dict):
             }
         else:
             raise HTTPException(status_code=400, detail="Failed to create entity")
-            
+
     except Exception as e:
         logger.error(f"Failed to create entity: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create entity: {str(e)}")
@@ -856,28 +856,28 @@ async def create_relationship(relationship_data: dict):
     """Create a relationship between entities"""
     try:
         from src.services.graph.entity_service import get_entity_service, RelationshipType
-        
+
         entity_service = get_entity_service()
-        
+
         from_entity_id = relationship_data.get('from_entity_id')
         to_entity_id = relationship_data.get('to_entity_id')
         relationship_type_str = relationship_data.get('relationship_type', 'RELATED_TO')
         properties = relationship_data.get('properties', {})
-        
+
         if not from_entity_id or not to_entity_id:
             raise HTTPException(status_code=400, detail="Missing entity IDs")
-        
+
         # Convert string to RelationshipType enum
         try:
             relationship_type = RelationshipType(relationship_type_str)
         except ValueError:
             relationship_type = RelationshipType.RELATED_TO
-        
+
         # Create relationship
         rel_id = await entity_service.create_relationship(
             from_entity_id, to_entity_id, relationship_type, properties
         )
-        
+
         if rel_id:
             return {
                 "success": True,
@@ -888,7 +888,7 @@ async def create_relationship(relationship_data: dict):
             }
         else:
             raise HTTPException(status_code=400, detail="Failed to create relationship")
-            
+
     except Exception as e:
         logger.error(f"Failed to create relationship: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create relationship: {str(e)}")
@@ -898,10 +898,10 @@ async def get_entity(entity_id: str):
     """Get entity by ID"""
     try:
         from src.services.graph.entity_service import get_entity_service
-        
+
         entity_service = get_entity_service()
         entity = await entity_service.get_entity_by_id(entity_id)
-        
+
         if entity:
             return {
                 "success": True,
@@ -909,7 +909,7 @@ async def get_entity(entity_id: str):
             }
         else:
             raise HTTPException(status_code=404, detail="Entity not found")
-            
+
     except Exception as e:
         logger.error(f"Failed to get entity {entity_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get entity: {str(e)}")
@@ -919,17 +919,17 @@ async def get_entity_relationships(entity_id: str):
     """Get all relationships for an entity"""
     try:
         from src.services.graph.entity_service import get_entity_service
-        
+
         entity_service = get_entity_service()
         relationships = await entity_service.get_entity_relationships(entity_id)
-        
+
         return {
             "success": True,
             "entity_id": entity_id,
             "relationships": relationships,
             "count": len(relationships)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get relationships for entity {entity_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get relationships: {str(e)}")
@@ -939,9 +939,9 @@ async def search_entities(q: str, entity_types: str = None, limit: int = 50):
     """Search entities by text"""
     try:
         from src.services.graph.entity_service import get_entity_service, EntityType
-        
+
         entity_service = get_entity_service()
-        
+
         # Parse entity types filter
         type_filter = None
         if entity_types:
@@ -950,16 +950,16 @@ async def search_entities(q: str, entity_types: str = None, limit: int = 50):
                 type_filter = [EntityType(t) for t in type_strings if t]
             except ValueError:
                 pass  # Invalid types will be ignored
-        
+
         entities = await entity_service.search_entities(q, type_filter, limit)
-        
+
         return {
             "success": True,
             "query": q,
             "entities": entities,
             "count": len(entities)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to search entities: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to search entities: {str(e)}")
@@ -969,15 +969,15 @@ async def get_graph_visualization(center_entity_id: str = None, max_nodes: int =
     """Get knowledge graph visualization data"""
     try:
         from src.services.graph.knowledge_graph_service import get_knowledge_graph_service
-        
+
         kg_service = get_knowledge_graph_service()
         graph_data = await kg_service.get_knowledge_graph_visualization(
             center_entity_id=center_entity_id,
             max_nodes=max_nodes
         )
-        
+
         return graph_data
-        
+
     except Exception as e:
         logger.error(f"Failed to get graph visualization: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get graph visualization: {str(e)}")
@@ -987,12 +987,12 @@ async def process_document_entities(document_data: dict):
     """Process a document and extract entities to knowledge graph"""
     try:
         from src.services.graph.knowledge_graph_service import get_knowledge_graph_service
-        
+
         kg_service = get_knowledge_graph_service()
         result = await kg_service.process_document_entities(document_data)
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"Failed to process document entities: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
@@ -1002,12 +1002,12 @@ async def get_graph_statistics():
     """Get knowledge graph statistics"""
     try:
         from src.services.graph.knowledge_graph_service import get_knowledge_graph_service
-        
+
         kg_service = get_knowledge_graph_service()
         stats = await kg_service.get_graph_statistics()
-        
+
         return stats
-        
+
     except Exception as e:
         logger.error(f"Failed to get graph statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get graph statistics: {str(e)}")
@@ -1017,18 +1017,18 @@ async def get_entity_insights(entity_id: str):
     """Get insights about a specific entity"""
     try:
         from src.services.graph.knowledge_graph_service import get_knowledge_graph_service
-        
+
         kg_service = get_knowledge_graph_service()
         insights = await kg_service.get_entity_insights(entity_id)
-        
+
         return insights
-        
+
     except Exception as e:
         logger.error(f"Failed to get entity insights: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get entity insights: {str(e)}")
 
 # ================================
-# Semantic Search API Endpoints  
+# Semantic Search API Endpoints
 # ================================
 
 @app.post("/semantic/add-documents")
@@ -1036,12 +1036,12 @@ async def add_documents_to_semantic_index(documents: dict):
     """Add documents to the semantic search index"""
     try:
         from src.services.semantic.lightweight_semantic_service import get_semantic_service
-        
+
         semantic_service = get_semantic_service()
         docs = documents.get('documents', [])
-        
+
         success = await semantic_service.add_documents(docs)
-        
+
         if success:
             analytics = await semantic_service.get_analytics()
             return {
@@ -1052,7 +1052,7 @@ async def add_documents_to_semantic_index(documents: dict):
             }
         else:
             raise HTTPException(status_code=400, detail="Failed to add documents to semantic index")
-            
+
     except Exception as e:
         logger.error(f"Failed to add documents to semantic index: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to add documents: {str(e)}")
@@ -1062,10 +1062,10 @@ async def semantic_search(q: str, top_k: int = 10, min_score: float = 0.1):
     """Perform semantic search"""
     try:
         from src.services.semantic.lightweight_semantic_service import get_semantic_service
-        
+
         semantic_service = get_semantic_service()
         results = await semantic_service.semantic_search(q, top_k=top_k, min_score=min_score)
-        
+
         return {
             "success": True,
             "query": q,
@@ -1080,7 +1080,7 @@ async def semantic_search(q: str, top_k: int = 10, min_score: float = 0.1):
             ],
             "count": len(results)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to perform semantic search: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to perform semantic search: {str(e)}")
@@ -1090,13 +1090,13 @@ async def find_similar_documents(document_id: str, top_k: int = 5):
     """Find documents similar to a specific document"""
     try:
         from src.services.semantic.lightweight_semantic_service import get_semantic_service
-        
+
         semantic_service = get_semantic_service()
-        
-        # For now, we'll use the document ID as text (in a real implementation, 
+
+        # For now, we'll use the document ID as text (in a real implementation,
         # you'd fetch the document content first)
         results = await semantic_service.find_similar_documents(document_id, top_k=top_k)
-        
+
         return {
             "success": True,
             "document_id": document_id,
@@ -1111,7 +1111,7 @@ async def find_similar_documents(document_id: str, top_k: int = 5):
             ],
             "count": len(results)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to find similar documents: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to find similar documents: {str(e)}")
@@ -1121,10 +1121,10 @@ async def get_semantic_analytics():
     """Get semantic search analytics"""
     try:
         from src.services.semantic.lightweight_semantic_service import get_semantic_service
-        
+
         semantic_service = get_semantic_service()
         analytics = await semantic_service.get_analytics()
-        
+
         return {
             "success": True,
             "analytics": {
@@ -1135,7 +1135,7 @@ async def get_semantic_analytics():
                 "average_similarity": analytics.average_similarity
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get semantic analytics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get semantic analytics: {str(e)}")
@@ -1145,15 +1145,15 @@ async def cluster_documents(num_clusters: int = 5):
     """Cluster documents using semantic similarity"""
     try:
         from src.services.semantic.lightweight_semantic_service import get_semantic_service
-        
+
         semantic_service = get_semantic_service()
         clustering_result = await semantic_service.cluster_documents(num_clusters)
-        
+
         return {
             "success": True,
             "clustering": clustering_result
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to cluster documents: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to cluster documents: {str(e)}")
@@ -1167,15 +1167,15 @@ async def extract_entities_from_text(text_data: dict):
     """Extract entities from text using advanced NLP"""
     try:
         from src.services.nlp.advanced_nlp_service import get_nlp_service
-        
+
         nlp_service = get_nlp_service()
         text = text_data.get('text', '')
-        
+
         if not text.strip():
             raise HTTPException(status_code=400, detail="Text content is required")
-        
+
         entities = await nlp_service.extract_entities(text)
-        
+
         return {
             "success": True,
             "text": text,
@@ -1200,7 +1200,7 @@ async def extract_entities_from_text(text_data: dict):
             ],
             "count": len(entities)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to extract entities: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to extract entities: {str(e)}")
@@ -1210,15 +1210,15 @@ async def analyze_text_content(text_data: dict):
     """Perform comprehensive text analysis"""
     try:
         from src.services.nlp.advanced_nlp_service import get_nlp_service
-        
+
         nlp_service = get_nlp_service()
         text = text_data.get('text', '')
-        
+
         if not text.strip():
             raise HTTPException(status_code=400, detail="Text content is required")
-        
+
         analytics = await nlp_service.analyze_text(text)
-        
+
         return {
             "success": True,
             "text_length": len(text),
@@ -1234,7 +1234,7 @@ async def analyze_text_content(text_data: dict):
                 "sentiment_indicators": analytics.sentiment_indicators
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to analyze text: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze text: {str(e)}")
@@ -1251,7 +1251,7 @@ async def health_check():
         neo4j_status = health_data.get('status', 'unhealthy')
     except Exception:
         neo4j_status = "unavailable"
-    
+
     health_status = {
         "status": "healthy",
         "version": "10.1.0",
@@ -1265,7 +1265,7 @@ async def health_check():
         },
         "capabilities": [
             "Multi-source research",
-            "Real-time web scraping", 
+            "Real-time web scraping",
             "Academic paper search",
             "Biomedical literature search",
             "Intelligent deduplication",
@@ -1515,9 +1515,9 @@ async def obsidian_sync(request: Dict[str, Any]):
         event_type = request.get("event", {}).get("type")
         filepath = request.get("event", {}).get("filepath")
         vault_path = request.get("vault_path")
-        
+
         logger.info(f"Obsidian sync event: {event_type} - {filepath}")
-        
+
         # Process sync event
         sync_result = {
             "processed": True,
@@ -1526,14 +1526,14 @@ async def obsidian_sync(request: Dict[str, Any]):
             "timestamp": datetime.now().isoformat(),
             "vault_path": vault_path
         }
-        
+
         # If it's a create or update event, process the file content
         if event_type in ["create", "update"] and filepath:
             try:
                 # Read file content and extract metadata
                 with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
-                
+
                 # Extract basic metadata
                 sync_result["metadata"] = {
                     "file_size": len(content),
@@ -1541,13 +1541,13 @@ async def obsidian_sync(request: Dict[str, Any]):
                     "word_count": len(content.split()),
                     "processed_at": datetime.now().isoformat()
                 }
-                
+
             except Exception as e:
                 logger.warning(f"Failed to process file content: {e}")
                 sync_result["warning"] = str(e)
-        
+
         return sync_result
-        
+
     except Exception as e:
         logger.error(f"Error processing Obsidian sync: {e}")
         raise HTTPException(status_code=500, detail=f"Sync processing failed: {str(e)}")
@@ -1558,38 +1558,38 @@ async def auto_tag_content(request: Dict[str, Any]):
     try:
         content = request.get("content", "")
         max_tags = request.get("max_tags", 5)
-        
+
         if not content:
             raise HTTPException(status_code=400, detail="Content is required")
-        
+
         # Use semantic search service for tag generation
         semantic_service = get_semantic_search_service()
-        
+
         # Extract key terms and concepts
         tags = []
-        
+
         # Simple keyword extraction (can be enhanced with ML)
         words = content.lower().split()
         word_freq = {}
-        
+
         # Filter out common words
         stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can", "this", "that", "these", "those"}
-        
+
         for word in words:
             if len(word) > 3 and word not in stop_words:
                 word_freq[word] = word_freq.get(word, 0) + 1
-        
+
         # Get top words as tags
         sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
         tags = [word for word, freq in sorted_words[:max_tags]]
-        
+
         return {
             "tags": tags,
             "confidence": 0.7,  # Placeholder confidence score
             "method": "keyword_extraction",
             "processed_at": datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"Error in auto-tagging: {e}")
         raise HTTPException(status_code=500, detail=f"Auto-tagging failed: {str(e)}")
@@ -1602,10 +1602,10 @@ async def extract_metadata(request: Dict[str, Any]):
         include_entities = request.get("include_entities", True)
         include_topics = request.get("include_topics", True)
         include_sentiment = request.get("include_sentiment", True)
-        
+
         if not content:
             raise HTTPException(status_code=400, detail="Content is required")
-        
+
         metadata = {
             "basic_stats": {
                 "word_count": len(content.split()),
@@ -1615,7 +1615,7 @@ async def extract_metadata(request: Dict[str, Any]):
             },
             "extracted_at": datetime.now().isoformat()
         }
-        
+
         # Extract entities (simple implementation)
         if include_entities:
             # Look for potential entities (capitalized words, URLs, emails)
@@ -1626,37 +1626,37 @@ async def extract_metadata(request: Dict[str, Any]):
                 "potential_names": re.findall(r'\b[A-Z][a-z]+ [A-Z][a-z]+\b', content)
             }
             metadata["entities"] = entities
-        
+
         # Extract topics (simple keyword analysis)
         if include_topics:
             words = content.lower().split()
             word_freq = {}
             stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"}
-            
+
             for word in words:
                 if len(word) > 3 and word not in stop_words:
                     word_freq[word] = word_freq.get(word, 0) + 1
-            
+
             topics = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
             metadata["topics"] = [{"term": term, "frequency": freq} for term, freq in topics]
-        
+
         # Basic sentiment analysis (placeholder)
         if include_sentiment:
             positive_words = ["good", "great", "excellent", "amazing", "wonderful", "fantastic", "positive", "success", "achievement"]
             negative_words = ["bad", "terrible", "awful", "horrible", "negative", "failure", "problem", "issue", "error"]
-            
+
             content_lower = content.lower()
             positive_count = sum(1 for word in positive_words if word in content_lower)
             negative_count = sum(1 for word in negative_words if word in content_lower)
-            
+
             sentiment_score = (positive_count - negative_count) / max(len(content.split()), 1)
             metadata["sentiment"] = {
                 "score": sentiment_score,
                 "label": "positive" if sentiment_score > 0.1 else "negative" if sentiment_score < -0.1 else "neutral"
             }
-        
+
         return metadata
-        
+
     except Exception as e:
         logger.error(f"Error extracting metadata: {e}")
         raise HTTPException(status_code=500, detail=f"Metadata extraction failed: {str(e)}")
@@ -1672,7 +1672,7 @@ async def get_knowledge_graph():
             return graph_data
         except Exception as e:
             logger.warning(f"Knowledge graph service not available: {e}")
-            
+
             # Return basic graph structure
             return {
                 "nodes": [],
@@ -1684,7 +1684,7 @@ async def get_knowledge_graph():
                     "status": "basic_mode"
                 }
             }
-        
+
     except Exception as e:
         logger.error(f"Error getting knowledge graph: {e}")
         raise HTTPException(status_code=500, detail=f"Knowledge graph retrieval failed: {str(e)}")
@@ -1694,13 +1694,13 @@ async def update_knowledge_graph(request: Dict[str, Any]):
     """Update knowledge graph with new node data"""
     try:
         node_data = request
-        
+
         # Validate required fields
         required_fields = ["id", "title", "type"]
         for field in required_fields:
             if field not in node_data:
                 raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
-        
+
         # Use knowledge graph service if available
         try:
             kg_service = get_knowledge_graph_service()
@@ -1708,7 +1708,7 @@ async def update_knowledge_graph(request: Dict[str, Any]):
             return result
         except Exception as e:
             logger.warning(f"Knowledge graph service not available: {e}")
-            
+
             # Return success response even if service is unavailable
             return {
                 "success": True,
@@ -1716,7 +1716,7 @@ async def update_knowledge_graph(request: Dict[str, Any]):
                 "message": "Node queued for processing",
                 "timestamp": datetime.now().isoformat()
             }
-        
+
     except Exception as e:
         logger.error(f"Error updating knowledge graph: {e}")
         raise HTTPException(status_code=500, detail=f"Knowledge graph update failed: {str(e)}")

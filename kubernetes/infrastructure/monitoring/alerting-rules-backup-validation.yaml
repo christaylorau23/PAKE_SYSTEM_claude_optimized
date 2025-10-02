@@ -406,7 +406,7 @@ spec:
         - alert: BackupValidationHighResourceUsage
           expr: |
             (
-              max(container_memory_usage_bytes{namespace="backup-validation"}) / 
+              max(container_memory_usage_bytes{namespace="backup-validation"}) /
               max(container_spec_memory_limit_bytes{namespace="backup-validation"}) * 100
             ) > 90
           for: 5m

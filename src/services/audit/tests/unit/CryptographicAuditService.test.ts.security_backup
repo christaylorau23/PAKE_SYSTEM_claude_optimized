@@ -64,7 +64,7 @@ describe('CryptographicAuditService', () => {
 
     it('should produce consistent signatures for identical events', async () => {
       const signedEvent1 = await cryptoService.signAuditEvent(mockEvent);
-      
+
       // Reset chain state for consistent test
       cryptoService = new CryptographicAuditService(testSigningKey, testEncryptionKey);
       const signedEvent2 = await cryptoService.signAuditEvent(mockEvent);
@@ -74,7 +74,7 @@ describe('CryptographicAuditService', () => {
 
     it('should produce different signatures for different events', async () => {
       const signedEvent1 = await cryptoService.signAuditEvent(mockEvent);
-      
+
       const modifiedEvent = { ...mockEvent, id: 'test-event-002' };
       const signedEvent2 = await cryptoService.signAuditEvent(modifiedEvent);
 
@@ -157,7 +157,7 @@ describe('CryptographicAuditService', () => {
       };
 
       const signedEvent = await cryptoService.signAuditEvent(mockEvent);
-      
+
       // Tamper with signature
       const tamperedEvent = { ...signedEvent, signature: 'invalid-signature' };
       const isValid = await cryptoService.verifyAuditEvent(tamperedEvent);
@@ -289,7 +289,7 @@ describe('CryptographicAuditService', () => {
       ];
 
       const batch = await cryptoService.createSignedBatch(events);
-      
+
       // Tamper with checksum
       batch.checksum = 'tampered:checksum';
       const isValid = await cryptoService.verifyBatch(batch);
@@ -324,7 +324,7 @@ describe('CryptographicAuditService', () => {
 
       // Create service with different key
       const wrongKeyCrypto = new CryptographicAuditService(
-        testSigningKey, 
+        testSigningKey,
         'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
       );
 

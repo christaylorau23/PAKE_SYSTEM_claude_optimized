@@ -19,22 +19,22 @@ function Write-TestResult {
         [string]$Message,
         [string]$Type = "Info"
     )
-    
+
     switch ($Type) {
-        "Success" { 
+        "Success" {
             Write-Host "✅ $Message" -ForegroundColor Green
             $script:successCount++
         }
-        "Warning" { 
-            Write-Host "⚠️ $Message" -ForegroundColor Yellow 
+        "Warning" {
+            Write-Host "⚠️ $Message" -ForegroundColor Yellow
             $script:warningCount++
         }
-        "Error" { 
+        "Error" {
             Write-Host "❌ $Message" -ForegroundColor Red
             $script:errorCount++
         }
-        default { 
-            Write-Host "🔎 $Message" -ForegroundColor Cyan 
+        default {
+            Write-Host "🔎 $Message" -ForegroundColor Cyan
         }
     }
 }
@@ -87,11 +87,11 @@ if ($yamlFiles.Count -eq 0) {
     Write-TestResult "No YAML files found in DR directory" "Warning"
 } else {
     Write-TestResult "Found $($yamlFiles.Count) YAML files to validate"
-    
+
     foreach ($file in $yamlFiles) {
         $relativePath = $file.FullName.Replace($ROOT_DIR.Path + "\", "")
         Write-TestResult "Validating: $relativePath"
-        
+
         try {
             $null = & kubectl apply --dry-run=client -f $file.FullName 2>&1
             if ($LASTEXITCODE -eq 0) {
@@ -129,9 +129,9 @@ foreach ($fileInfo in $keyFiles) {
     $file = $fileInfo.Path
     $required = $fileInfo.Required
     $fullPath = Join-Path $DR_DIR $file
-    
+
     Write-TestResult "Checking: $file"
-    
+
     if (Test-Path $fullPath) {
         $fileItem = Get-Item $fullPath
         $sizeKB = [math]::Round($fileItem.Length / 1024, 1)
@@ -160,7 +160,7 @@ $monitoringFiles = @(
 foreach ($file in $monitoringFiles) {
     $fullPath = Join-Path $monitoringDir $file
     Write-TestResult "Checking monitoring file: $file"
-    
+
     if (Test-Path $fullPath) {
         Write-TestResult "Found monitoring file: $file" "Success"
     } else {
@@ -176,7 +176,7 @@ try {
     $null = & kubectl cluster-info 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-TestResult "Cluster is accessible" "Success"
-        
+
         # Check namespace
         Write-TestResult "Checking namespace: $NAMESPACE"
         $null = & kubectl get namespace $NAMESPACE 2>&1
@@ -186,7 +186,7 @@ try {
             Write-TestResult "Namespace '$NAMESPACE' not found" "Warning"
             Write-Host "   💡 Create with: kubectl create namespace $NAMESPACE" -ForegroundColor Yellow
         }
-        
+
         # Test dry-run deployment
         Write-TestResult "Testing dry-run deployment of DR components"
         $tempFile = [System.IO.Path]::GetTempFileName()
@@ -195,7 +195,7 @@ try {
                 Get-Content $_.FullName | Out-File -Append -FilePath $tempFile
                 "---" | Out-File -Append -FilePath $tempFile
             }
-            
+
             $null = & kubectl apply --dry-run=server -f $tempFile 2>&1
             if ($LASTEXITCODE -eq 0) {
                 Write-TestResult "Dry-run deployment successful" "Success"
@@ -205,7 +205,7 @@ try {
         } finally {
             Remove-Item $tempFile -ErrorAction SilentlyContinue
         }
-        
+
     } else {
         Write-TestResult "Cluster not accessible (continuing with offline validation)" "Warning"
     }
@@ -222,13 +222,13 @@ if (Test-Path $runbooksPath) {
     $runbooksContent = Get-Content $runbooksPath -Raw
     $requiredSections = @(
         "Automated Failover",
-        "Data Replication", 
+        "Data Replication",
         "Chaos Engineering",
         "Backup Validation",
         "Compliance",
         "Post-Mortem"
     )
-    
+
     foreach ($section in $requiredSections) {
         if ($runbooksContent -match $section) {
             Write-TestResult "Runbooks contain '$section' section" "Success"
@@ -246,7 +246,7 @@ $total = $successCount + $warningCount + $errorCount
 Write-Host ""
 Write-Host "📊 Test Results:" -ForegroundColor White
 Write-Host "   ✅ Successes: $successCount" -ForegroundColor Green
-Write-Host "   ⚠️  Warnings:  $warningCount" -ForegroundColor Yellow  
+Write-Host "   ⚠️  Warnings:  $warningCount" -ForegroundColor Yellow
 Write-Host "   ❌ Errors:    $errorCount" -ForegroundColor Red
 Write-Host "   📈 Total:     $total" -ForegroundColor White
 

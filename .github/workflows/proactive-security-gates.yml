@@ -23,7 +23,7 @@ jobs:
     name: 'Pre-Commit Security Scan'
     runs-on: ubuntu-latest
     if: github.event_name == 'pre-push' || github.event_name == 'push'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
         run: |
           echo "Running detect-secrets scan..."
           detect-secrets scan --all-files --exclude-files '.*\.lock$|.*\.log$|.*\.tmp$' --exclude-lines '.*test.*|.*example.*|.*placeholder.*' . > .secrets.baseline || true
-          
+
           # Check if any new secrets were detected
           if detect-secrets audit .secrets.baseline --fail-on-unaudited; then
             echo "❌ New secrets detected! Please review and audit."
@@ -63,7 +63,7 @@ jobs:
       - name: Fail on hardcoded secrets
         run: |
           echo "Scanning for hardcoded secrets patterns..."
-          
+
           # Patterns that should NEVER be in code
           FORBIDDEN_PATTERNS=(
             "api-key"
@@ -74,7 +74,7 @@ jobs:
             "key.*=.*[\"'][^\"']+[\"']"
             "token.*=.*[\"'][^\"']+[\"']"
           )
-          
+
           FAILED=false
           for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
             if grep -r -n -E "$pattern" src/ scripts/ --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=.git; then
@@ -84,7 +84,7 @@ jobs:
               FAILED=true
             fi
           done
-          
+
           if [ "$FAILED" = true ]; then
             echo ""
             echo "🚨 SECURITY VIOLATION DETECTED!"
@@ -99,7 +99,7 @@ jobs:
     name: 'Blocking Secret Detection'
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -119,7 +119,7 @@ jobs:
       - name: Run comprehensive secret scan
         run: |
           echo "🔍 Running comprehensive secret detection..."
-          
+
           # Create comprehensive ignore patterns
           cat > .comprehensive-ignore << EOF
           # Ignore test files
@@ -128,32 +128,32 @@ jobs:
           *test*.py
           *test*.js
           *test*.ts
-          
+
           # Ignore example files
           examples/
           example/
           *example*.py
           *example*.js
           *example*.ts
-          
+
           # Ignore documentation
           docs/
           *.md
           README*
-          
+
           # Ignore lockfiles
           *.lock
           package-lock.json
           yarn.lock
           pnpm-lock.yaml
-          
+
           # Ignore build artifacts
           dist/
           build/
           node_modules/
           venv/
           .git/
-          
+
           # Ignore environment examples
           .env.example
           env.example
@@ -173,7 +173,7 @@ jobs:
         run: |
           echo "Running comprehensive detect-secrets scan..."
           detect-secrets scan --all-files --exclude-files '.*\.lock$|.*\.log$|.*\.tmp$|.*test.*|.*example.*' . > .secrets.baseline
-          
+
           # Audit the baseline
           if detect-secrets audit .secrets.baseline --fail-on-unaudited; then
             echo "❌ Unaudited secrets detected in PR!"
@@ -186,17 +186,17 @@ jobs:
       - name: Check for hardcoded secrets in PR
         run: |
           echo "🔍 Checking PR for hardcoded secrets..."
-          
+
           # Get changed files in PR
           CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
-          
+
           echo "Changed files: $CHANGED_FILES"
-          
+
           # Check each changed file for hardcoded secrets
           for file in $CHANGED_FILES; do
             if [ -f "$file" ]; then
               echo "Checking file: $file"
-              
+
               # Check for hardcoded secrets patterns
               if grep -n -E "(api-key|default-api-key|your-secret-key|password\s*=\s*[\"'][^\"']+[\"']|secret\s*=\s*[\"'][^\"']+[\"']|key\s*=\s*[\"'][^\"']+[\"']|token\s*=\s*[\"'][^\"']+[\"'])" "$file"; then
                 echo "❌ HARDCODED SECRET DETECTED in $file"
@@ -206,13 +206,13 @@ jobs:
               fi
             fi
           done
-          
+
           echo "✅ No hardcoded secrets detected in PR"
 
       - name: Validate secrets manager usage
         run: |
           echo "🔍 Validating secrets manager usage..."
-          
+
           # Check if any Python files use os.getenv with hardcoded fallbacks
           if grep -r -n "os\.getenv.*,.*[\"'][^\"']+[\"']" src/ --include="*.py" | grep -v "test" | grep -v "example"; then
             echo "❌ HARDCODED FALLBACKS DETECTED!"
@@ -231,7 +231,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [pre-commit-security-scan, blocking-secret-scan]
     if: always()
-    
+
     steps:
       - name: Check security scan results
         run: |
@@ -239,12 +239,12 @@ jobs:
             echo "❌ Pre-commit security scan failed"
             exit 1
           fi
-          
+
           if [ "${{ needs.blocking-secret-scan.result }}" != "success" ]; then
             echo "❌ Blocking secret scan failed"
             exit 1
           fi
-          
+
           echo "✅ All security scans passed"
 
       - name: Generate security report

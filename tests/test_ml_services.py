@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import ML services that are available
 try:
-    from services.ml import (
+    from src.services.ml import (
         ContentSummarizationService,
         MLAnalyticsAggregationService,
         SemanticSearchService,
@@ -56,7 +56,7 @@ class TestMLServices:
         assert callable(get_ml_analytics_service)
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    @patch("services.ml.semantic_search_service.SemanticSearchService")
+    @patch("src.services.ml.semantic_search_service.SemanticSearchService")
     def test_semantic_search_service_creation(self, mock_service):
         """Test semantic search service creation"""
         # Mock the service creation
@@ -68,7 +68,7 @@ class TestMLServices:
         assert service is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    @patch("services.ml.content_summarization_service.ContentSummarizationService")
+    @patch("src.services.ml.content_summarization_service.ContentSummarizationService")
     def test_content_summarization_service_creation(self, mock_service):
         """Test content summarization service creation"""
         # Mock the service creation
@@ -80,7 +80,7 @@ class TestMLServices:
         assert service is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    @patch("services.ml.analytics_aggregation_service.MLAnalyticsAggregationService")
+    @patch("src.services.ml.analytics_aggregation_service.MLAnalyticsAggregationService")
     def test_ml_analytics_service_creation(self, mock_service):
         """Test ML analytics service creation"""
         # Mock the service creation
@@ -98,7 +98,7 @@ class TestMLServiceIntegration:
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
     def test_ml_services_module_structure(self):
         """Test that ML services module has expected structure"""
-        import services.ml as ml_module
+        import src.services.ml as ml_module
 
         # Check that module has expected attributes
         expected_exports = [
@@ -114,7 +114,7 @@ class TestMLServiceIntegration:
         """Test that system handles ML service unavailability gracefully"""
         # This test should always pass even if ML services are not available
         try:
-            from services.ml import SemanticSearchService
+            from src.services.ml import SemanticSearchService
 
             # If import succeeds, service should be functional
             assert SemanticSearchService is not None
@@ -144,7 +144,7 @@ class TestMLServiceConfiguration:
         """Test that services can be initialized without actual ML models"""
         # This test verifies that services can be created even if models aren't loaded
         with patch(
-            "services.ml.semantic_search_service.SemanticSearchService",
+            "src.services.ml.semantic_search_service.SemanticSearchService",
         ) as mock_service:
             mock_instance = Mock()
             mock_instance.initialized = False

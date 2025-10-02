@@ -66,44 +66,44 @@ CREATE TABLE IF NOT EXISTS confidence_history (
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_knowledge_embeddings 
+CREATE INDEX IF NOT EXISTS idx_knowledge_embeddings
 ON knowledge_nodes USING ivfflat (embeddings vector_cosine_ops)
 WITH (lists = 100);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_confidence 
+CREATE INDEX IF NOT EXISTS idx_knowledge_confidence
 ON knowledge_nodes(confidence_score DESC);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_verification 
+CREATE INDEX IF NOT EXISTS idx_knowledge_verification
 ON knowledge_nodes(verification_status);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_type 
+CREATE INDEX IF NOT EXISTS idx_knowledge_type
 ON knowledge_nodes(type);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_status 
+CREATE INDEX IF NOT EXISTS idx_knowledge_status
 ON knowledge_nodes(status);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_created 
+CREATE INDEX IF NOT EXISTS idx_knowledge_created
 ON knowledge_nodes(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_modified 
+CREATE INDEX IF NOT EXISTS idx_knowledge_modified
 ON knowledge_nodes(modified_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_content_fts 
+CREATE INDEX IF NOT EXISTS idx_knowledge_content_fts
 ON knowledge_nodes USING GIN (to_tsvector('english', content));
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_tags 
+CREATE INDEX IF NOT EXISTS idx_knowledge_tags
 ON knowledge_nodes USING GIN (tags);
 
-CREATE INDEX IF NOT EXISTS idx_connections_source 
+CREATE INDEX IF NOT EXISTS idx_connections_source
 ON node_connections(source_id);
 
-CREATE INDEX IF NOT EXISTS idx_connections_target 
+CREATE INDEX IF NOT EXISTS idx_connections_target
 ON node_connections(target_id);
 
-CREATE INDEX IF NOT EXISTS idx_processing_logs_pake_id 
+CREATE INDEX IF NOT EXISTS idx_processing_logs_pake_id
 ON processing_logs(pake_id);
 
-CREATE INDEX IF NOT EXISTS idx_processing_logs_created 
+CREATE INDEX IF NOT EXISTS idx_processing_logs_created
 ON processing_logs(created_at DESC);
 
 -- Create views for common queries
@@ -119,7 +119,7 @@ WHERE verification_status = 'pending'
 ORDER BY confidence_score ASC, created_at DESC;
 
 CREATE OR REPLACE VIEW node_connection_graph AS
-SELECT 
+SELECT
     nc.source_id,
     nc.target_id,
     nc.connection_type,
@@ -141,10 +141,10 @@ BEGIN
         INSERT INTO confidence_history (pake_id, old_score, new_score, reason, changed_by)
         VALUES (NEW.pake_id, OLD.confidence_score, NEW.confidence_score, 'automatic_update', 'system');
     END IF;
-    
+
     -- Update modified timestamp
     NEW.modified_at = NOW();
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -161,29 +161,29 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         -- Add to source node connections
-        UPDATE knowledge_nodes 
+        UPDATE knowledge_nodes
         SET connections = array_append(connections, NEW.target_id::text)
-        WHERE pake_id = NEW.source_id 
+        WHERE pake_id = NEW.source_id
         AND NOT (NEW.target_id::text = ANY(connections));
-        
+
         -- Add to target node connections (bidirectional)
-        UPDATE knowledge_nodes 
+        UPDATE knowledge_nodes
         SET connections = array_append(connections, NEW.source_id::text)
-        WHERE pake_id = NEW.target_id 
+        WHERE pake_id = NEW.target_id
         AND NOT (NEW.source_id::text = ANY(connections));
-        
+
     ELSIF TG_OP = 'DELETE' THEN
         -- Remove from source node connections
-        UPDATE knowledge_nodes 
+        UPDATE knowledge_nodes
         SET connections = array_remove(connections, OLD.target_id::text)
         WHERE pake_id = OLD.source_id;
-        
+
         -- Remove from target node connections
-        UPDATE knowledge_nodes 
+        UPDATE knowledge_nodes
         SET connections = array_remove(connections, OLD.source_id::text)
         WHERE pake_id = OLD.target_id;
     END IF;
-    
+
     RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
@@ -195,7 +195,7 @@ CREATE TRIGGER trigger_sync_connections
     EXECUTE FUNCTION sync_connections_array();
 
 -- Insert sample data for testing
-INSERT INTO knowledge_nodes (content, confidence_score, type, verification_status, tags, source_uri) VALUES 
+INSERT INTO knowledge_nodes (content, confidence_score, type, verification_status, tags, source_uri) VALUES
 (
     'PAKE+ system initialization complete. Core components include MCP servers, PostgreSQL with pgvector, Redis for queuing, and Obsidian vault integration.',
     0.9,

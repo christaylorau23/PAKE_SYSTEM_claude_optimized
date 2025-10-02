@@ -1,21 +1,21 @@
 /**
  * Contract Tests for NullProvider
- * 
+ *
  * These tests ensure the NullProvider adheres to the AgentProvider interface contract
  * and produces outputs that conform to the expected JSON schemas.
  */
 
 import { NullProvider } from '../../src/providers/NullProvider';
-import { 
-  AgentProvider, 
+import {
+  AgentProvider,
   AgentCapability,
-  AgentExecutionError 
+  AgentExecutionError
 } from '../../src/providers/AgentProvider';
-import { 
-  AgentTask, 
-  AgentResult, 
-  AgentTaskType, 
-  AgentResultStatus 
+import {
+  AgentTask,
+  AgentResult,
+  AgentTaskType,
+  AgentResultStatus
 } from '../../src/types';
 
 // Import JSON schemas for validation
@@ -36,17 +36,17 @@ describe('NullProvider Contract Tests', () => {
   describe('AgentProvider Interface Compliance', () => {
     it('should implement all required interface methods', () => {
       expect(typeof provider.run).toBe('function');
-      expect(typeof provider.healthCheck).toBe('function');  
+      expect(typeof provider.healthCheck).toBe('function');
       expect(typeof provider.dispose).toBe('function');
     });
 
     it('should have required metadata properties', () => {
       expect(typeof provider.name).toBe('string');
       expect(provider.name.length).toBeGreaterThan(0);
-      
+
       expect(typeof provider.version).toBe('string');
       expect(provider.version).toMatch(/^\d+\.\d+\.\d+$/);
-      
+
       expect(Array.isArray(provider.capabilities)).toBe(true);
       expect(provider.capabilities.length).toBeGreaterThan(0);
     });
@@ -229,17 +229,17 @@ describe('NullProvider Contract Tests', () => {
 
       if (result.metadata.usage) {
         const usage = result.metadata.usage;
-        
+
         if (usage.tokens !== undefined) {
           expect(typeof usage.tokens).toBe('number');
           expect(usage.tokens).toBeGreaterThanOrEqual(0);
         }
-        
+
         if (usage.apiCalls !== undefined) {
-          expect(typeof usage.apiCalls).toBe('number'); 
+          expect(typeof usage.apiCalls).toBe('number');
           expect(usage.apiCalls).toBeGreaterThanOrEqual(0);
         }
-        
+
         if (usage.memoryMb !== undefined) {
           expect(typeof usage.memoryMb).toBe('number');
           expect(usage.memoryMb).toBeGreaterThanOrEqual(0);
@@ -262,17 +262,17 @@ describe('NullProvider Contract Tests', () => {
 
       if (result.output.entities) {
         expect(Array.isArray(result.output.entities)).toBe(true);
-        
+
         result.output.entities.forEach(entity => {
           expect(entity).toHaveProperty('type');
           expect(entity).toHaveProperty('value');
           expect(entity).toHaveProperty('confidence');
-          
+
           expect(typeof entity.type).toBe('string');
           expect(typeof entity.value).toBe('string');
           expect(typeof entity.confidence).toBe('number');
           expect(entity.confidence).toBeWithinRange(0, 1);
-          
+
           if (entity.span) {
             expect(typeof entity.span.start).toBe('number');
             expect(typeof entity.span.end).toBe('number');
@@ -297,20 +297,20 @@ describe('NullProvider Contract Tests', () => {
 
       if (result.output.sentiment) {
         const sentiment = result.output.sentiment;
-        
+
         expect(sentiment).toHaveProperty('score');
         expect(sentiment).toHaveProperty('label');
         expect(sentiment).toHaveProperty('confidence');
-        
+
         expect(typeof sentiment.score).toBe('number');
         expect(sentiment.score).toBeWithinRange(-1, 1);
-        
+
         expect(typeof sentiment.label).toBe('string');
         expect(['positive', 'negative', 'neutral']).toContain(sentiment.label);
-        
+
         expect(typeof sentiment.confidence).toBe('number');
         expect(sentiment.confidence).toBeWithinRange(0, 1);
-        
+
         if (sentiment.emotions) {
           expect(typeof sentiment.emotions).toBe('object');
           Object.values(sentiment.emotions).forEach(emotionScore => {
@@ -336,27 +336,27 @@ describe('NullProvider Contract Tests', () => {
 
       if (result.output.trends) {
         expect(Array.isArray(result.output.trends)).toBe(true);
-        
+
         result.output.trends.forEach(trend => {
           expect(trend).toHaveProperty('topic');
           expect(trend).toHaveProperty('direction');
           expect(trend).toHaveProperty('strength');
           expect(trend).toHaveProperty('period');
-          
+
           expect(typeof trend.topic).toBe('string');
           expect(['up', 'down', 'stable']).toContain(trend.direction);
           expect(typeof trend.strength).toBe('number');
           expect(trend.strength).toBeWithinRange(0, 1);
-          
+
           expect(trend.period).toHaveProperty('start');
           expect(trend.period).toHaveProperty('end');
           expect(typeof trend.period.start).toBe('string');
           expect(typeof trend.period.end).toBe('string');
-          
+
           // Validate timestamps
           expect(() => new Date(trend.period.start)).not.toThrow();
           expect(() => new Date(trend.period.end)).not.toThrow();
-          
+
           if (trend.dataPoints) {
             expect(Array.isArray(trend.dataPoints)).toBe(true);
             trend.dataPoints.forEach(point => {
@@ -384,7 +384,7 @@ describe('NullProvider Contract Tests', () => {
       };
 
       await expect(provider.run(task)).rejects.toThrow(AgentExecutionError);
-      
+
       try {
         await provider.run(task);
       } catch (error) {
@@ -416,7 +416,7 @@ describe('NullProvider Contract Tests', () => {
 
       // Should complete within configured timeout
       expect(actualDuration).toBeLessThan(5000);
-      
+
       // Reported duration should be close to actual duration
       expect(Math.abs(reportedDuration - actualDuration)).toBeLessThan(100);
     });

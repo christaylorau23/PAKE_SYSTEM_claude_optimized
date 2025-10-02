@@ -1,6 +1,6 @@
 /**
  * OllamaProvider - Local Ollama instance integration
- * 
+ *
  * Optimized for local Ollama deployments with:
  * - Connection health monitoring and reconnection
  * - Model availability checking and loading
@@ -10,17 +10,17 @@
  * - Fallback model selection
  */
 
-import { 
-  AgentProvider, 
-  AgentCapability, 
+import {
+  AgentProvider,
+  AgentCapability,
   AgentProviderConfig,
   AgentExecutionError,
-  AgentErrorCode 
+  AgentErrorCode
 } from './AgentProvider';
-import { 
-  AgentTask, 
-  AgentResult, 
-  AgentTaskType, 
+import {
+  AgentTask,
+  AgentResult,
+  AgentTaskType,
   AgentResultStatus,
   EntityResult,
   SentimentResult,
@@ -135,7 +135,7 @@ class OllamaConnectionMonitor {
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(5000)
       });
-      
+
       this.isHealthy = response.ok;
       this.lastHealthCheck = Date.now();
     } catch (error) {
@@ -147,14 +147,14 @@ class OllamaConnectionMonitor {
 
   async waitForHealth(maxWaitMs: number = 30000): Promise<boolean> {
     const startTime = Date.now();
-    
+
     while (!this.isHealthy && (Date.now() - startTime) < maxWaitMs) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       if (Date.now() - this.lastHealthCheck > 5000) {
         await this.performHealthCheck();
       }
     }
-    
+
     return this.isHealthy;
   }
 
@@ -225,7 +225,7 @@ export class OllamaProvider implements AgentProvider {
 
     this.baseUrl = `http://${this.config.host}:${this.config.port}`;
     this.currentModel = this.config.model;
-    
+
     this.connectionMonitor = new OllamaConnectionMonitor(
       this.baseUrl,
       this.config.healthCheckInterval
@@ -250,7 +250,7 @@ export class OllamaProvider implements AgentProvider {
 
     const startTime = new Date().toISOString();
     const startTimestamp = Date.now();
-    
+
     try {
       // Ensure Ollama is healthy
       if (!await this.connectionMonitor.waitForHealth(10000)) {
@@ -267,19 +267,19 @@ export class OllamaProvider implements AgentProvider {
 
       // Select appropriate model and ensure it's loaded
       const modelToUse = await this.selectAndLoadModel(task);
-      
+
       // Generate prompt for the task
       const prompt = this.generatePrompt(task);
 
       // Execute with retry logic
       const response = await this.executeWithRetry(prompt, modelToUse, task);
-      
+
       // Parse response into structured output
       const output = await this.parseResponse(response, task);
-      
+
       const endTime = new Date().toISOString();
       const duration = Date.now() - startTimestamp;
-      
+
       // Update metrics
       this.executionCount++;
       this.totalTokensGenerated += response.eval_count || 0;
@@ -311,7 +311,7 @@ export class OllamaProvider implements AgentProvider {
       }
 
       const executionError = this.convertToExecutionError(error, task);
-      
+
       return {
         taskId: task.id,
         status: AgentResultStatus.ERROR,
@@ -359,7 +359,7 @@ export class OllamaProvider implements AgentProvider {
   async dispose(): Promise<void> {
     this.disposed = true;
     this.connectionMonitor.dispose();
-    
+
     // Optionally unload model to free GPU memory
     try {
       await this.unloadModel(this.currentModel);
@@ -397,7 +397,7 @@ export class OllamaProvider implements AgentProvider {
     try {
       const models = await this.getAvailableModels();
       this.availableModels = new Set(models.map(m => m.name));
-      
+
       // Verify primary model is available
       if (!this.availableModels.has(this.currentModel)) {
         // Try to find a fallback
@@ -408,7 +408,7 @@ export class OllamaProvider implements AgentProvider {
             break;
           }
         }
-        
+
         if (!this.availableModels.has(this.currentModel)) {
           console.warn(`No configured models available. Available models: ${Array.from(this.availableModels).join(', ')}`);
         }
@@ -442,15 +442,15 @@ export class OllamaProvider implements AgentProvider {
   private async selectAndLoadModel(task: AgentTask): Promise<string> {
     // Check if current model is appropriate for task
     let selectedModel = this.currentModel;
-    
+
     // Task-specific model selection logic
     if (task.type === AgentTaskType.CONTENT_GENERATION && this.availableModels.has('codellama')) {
       selectedModel = 'codellama';
     }
-    
+
     // Ensure model is loaded and ready
     await this.ensureModelLoaded(selectedModel);
-    
+
     return selectedModel;
   }
 
@@ -493,7 +493,7 @@ export class OllamaProvider implements AgentProvider {
           }
         }
       }
-      
+
       throw new AgentExecutionError(
         `No suitable model available. Primary model ${modelName} failed to load.`,
         AgentErrorCode.PROVIDER_UNAVAILABLE,
@@ -537,7 +537,7 @@ export class OllamaProvider implements AgentProvider {
     // Check content length for local model constraints
     const content = task.input.content || JSON.stringify(task.input.data);
     const estimatedTokens = this.estimateTokens(content);
-    
+
     if (estimatedTokens > this.config.numCtx * 0.8) { // Leave 20% for response
       throw new AgentExecutionError(
         `Content too long for model context (${estimatedTokens} tokens, max ${Math.floor(this.config.numCtx * 0.8)})`,
@@ -553,7 +553,7 @@ export class OllamaProvider implements AgentProvider {
    */
   private generatePrompt(task: AgentTask): string {
     const content = task.input.content || JSON.stringify(task.input.data);
-    
+
     // Use more concise prompts for local models
     switch (task.type) {
       case AgentTaskType.SENTIMENT_ANALYSIS:
@@ -603,13 +603,13 @@ JSON Response:`;
    */
   private async executeWithRetry(prompt: string, model: string, task: AgentTask): Promise<OllamaGenerateResponse> {
     let lastError: Error | null = null;
-    
+
     for (let attempt = 0; attempt < this.config.retries; attempt++) {
       try {
         return await this.makeOllamaCall(prompt, model, task);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         // Check if we should try a different model
         if (this.shouldTryFallbackModel(error) && attempt === 0) {
           const fallbackModel = this.findFallbackModel(model);
@@ -623,7 +623,7 @@ JSON Response:`;
             }
           }
         }
-        
+
         // Wait before retry (shorter delays for local)
         if (attempt < this.config.retries - 1) {
           const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
@@ -632,7 +632,7 @@ JSON Response:`;
         }
       }
     }
-    
+
     throw lastError || new Error('Max retry attempts exceeded');
   }
 
@@ -642,7 +642,7 @@ JSON Response:`;
   private async makeOllamaCall(prompt: string, model: string, task: AgentTask): Promise<OllamaGenerateResponse> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
-    
+
     try {
       const response = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
@@ -677,7 +677,7 @@ JSON Response:`;
 
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new AgentExecutionError(
           'Ollama call timed out',
@@ -685,7 +685,7 @@ JSON Response:`;
           this.name
         );
       }
-      
+
       throw error;
     }
   }
@@ -695,7 +695,7 @@ JSON Response:`;
    */
   private async parseResponse(response: OllamaGenerateResponse, task: AgentTask): Promise<AgentResult['output']> {
     const content = response.response || '';
-    
+
     try {
       // Try to extract JSON from response
       const jsonMatch = content.match(/\{[\s\S]*?\}(?=\s*$|$)/);
@@ -727,13 +727,13 @@ JSON Response:`;
    */
   private calculateConfidence(response: OllamaGenerateResponse, task: AgentTask): number {
     let confidence = 0.75; // Base confidence for local models
-    
+
     // Adjust based on response quality
     const responseLength = response.response?.length || 0;
     if (responseLength < 20) {
       confidence -= 0.2; // Penalize very short responses
     }
-    
+
     // Adjust based on processing time (very fast might indicate cached/simple response)
     const totalTime = response.total_duration || 0;
     if (totalTime > 0) {
@@ -744,13 +744,13 @@ JSON Response:`;
         confidence -= 0.15; // Penalize very slow responses
       }
     }
-    
+
     // Check for JSON structure if expected
     const hasValidJson = /\{[\s\S]*?\}/.test(response.response || '');
     if (!hasValidJson) {
       confidence -= 0.1;
     }
-    
+
     return Math.max(0.1, Math.min(1.0, confidence));
   }
 
@@ -778,8 +778,8 @@ JSON Response:`;
    */
   private shouldTryFallbackModel(error: any): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    return message.includes('model') || 
-           message.includes('not found') || 
+    return message.includes('model') ||
+           message.includes('not found') ||
            message.includes('failed to load');
   }
 
@@ -800,19 +800,19 @@ JSON Response:`;
    */
   private convertToExecutionError(error: any, task?: AgentTask): AgentExecutionError {
     const message = error instanceof Error ? error.message : String(error);
-    
+
     if (message.includes('timeout') || message.includes('AbortError')) {
       return new AgentExecutionError('Request timeout', AgentErrorCode.TIMEOUT, this.name, task);
     }
-    
+
     if (message.includes('not found') || message.includes('model')) {
       return new AgentExecutionError('Model not available', AgentErrorCode.CONFIGURATION_ERROR, this.name, task);
     }
-    
+
     if (message.includes('connection') || message.includes('fetch')) {
       return new AgentExecutionError('Connection to Ollama failed', AgentErrorCode.PROVIDER_UNAVAILABLE, this.name, task);
     }
-    
+
     return new AgentExecutionError(`Ollama error: ${message}`, AgentErrorCode.INTERNAL_ERROR, this.name, task);
   }
 }

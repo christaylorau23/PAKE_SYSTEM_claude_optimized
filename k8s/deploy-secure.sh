@@ -32,27 +32,27 @@ log_error() {
 # Check if kubectl is available
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     if ! command -v kubectl &> /dev/null; then
         log_error "kubectl is not installed or not in PATH"
         exit 1
     fi
-    
+
     if ! kubectl cluster-info &> /dev/null; then
         log_error "Cannot connect to Kubernetes cluster"
         exit 1
     fi
-    
+
     log_success "Prerequisites check passed"
 }
 
 # Generate secure secrets for Vault
 generate_vault_secrets() {
     log_info "Generating secure Vault secrets..."
-    
+
     # Generate a secure root token
     VAULT_ROOT_TOKEN=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-    
+
     # Create temporary secret file
     cat > /tmp/vault-secret.yaml << EOF
 apiVersion: v1
@@ -64,7 +64,7 @@ type: Opaque
 data:
   root-token: $(echo -n "$VAULT_ROOT_TOKEN" | base64)
 EOF
-    
+
     log_success "Vault secrets generated"
     echo "Vault Root Token: $VAULT_ROOT_TOKEN"
     echo "Please save this token securely!"
@@ -73,41 +73,41 @@ EOF
 # Deploy Vault
 deploy_vault() {
     log_info "Deploying HashiCorp Vault..."
-    
+
     # Apply Vault deployment
     kubectl apply -f vault-deployment.yaml
-    
+
     # Wait for Vault to be ready
     log_info "Waiting for Vault to be ready..."
     kubectl wait --for=condition=available --timeout=300s deployment/vault -n vault-system
-    
+
     # Apply the generated secret
     kubectl apply -f /tmp/vault-secret.yaml
-    
+
     # Wait for Vault init job to complete
     log_info "Waiting for Vault initialization..."
     kubectl wait --for=condition=complete --timeout=300s job/vault-init -n vault-system
-    
+
     log_success "Vault deployed and initialized"
 }
 
 # Deploy External Secrets Operator
 deploy_external_secrets() {
     log_info "Deploying External Secrets Operator..."
-    
+
     kubectl apply -f external-secrets-operator.yaml
-    
+
     # Wait for ESO to be ready
     log_info "Waiting for External Secrets Operator to be ready..."
     kubectl wait --for=condition=available --timeout=300s deployment/external-secrets -n external-secrets-system
-    
+
     log_success "External Secrets Operator deployed"
 }
 
 # Deploy the main platform
 deploy_platform() {
     log_info "Deploying Wealth Platform..."
-    
+
     # Deploy in order
     kubectl apply -f namespace.yaml
     kubectl apply -f postgresql-deployment.yaml
@@ -116,35 +116,35 @@ deploy_platform() {
     kubectl apply -f monitoring.yaml
     kubectl apply -f ingress.yaml
     kubectl apply -f autoscaling.yaml
-    
+
     log_success "Wealth Platform deployed"
 }
 
 # Verify deployment
 verify_deployment() {
     log_info "Verifying deployment..."
-    
+
     # Check if secrets are created by External Secrets Operator
     log_info "Checking if secrets are properly created..."
-    
+
     if kubectl get secret postgres-secret -n wealth-platform &> /dev/null; then
         log_success "PostgreSQL secret created"
     else
         log_warning "PostgreSQL secret not found - External Secrets may still be syncing"
     fi
-    
+
     if kubectl get secret wealth-secrets -n wealth-platform &> /dev/null; then
         log_success "Wealth Platform secrets created"
     else
         log_warning "Wealth Platform secrets not found - External Secrets may still be syncing"
     fi
-    
+
     if kubectl get secret grafana-secret -n wealth-platform &> /dev/null; then
         log_success "Grafana secret created"
     else
         log_warning "Grafana secret not found - External Secrets may still be syncing"
     fi
-    
+
     # Check pod status
     log_info "Checking pod status..."
     kubectl get pods -n wealth-platform
@@ -161,7 +161,7 @@ cleanup() {
 # Main deployment function
 main() {
     log_info "Starting Wealth Platform secure deployment..."
-    
+
     check_prerequisites
     generate_vault_secrets
     deploy_vault
@@ -169,9 +169,9 @@ main() {
     deploy_platform
     verify_deployment
     cleanup
-    
+
     log_success "Deployment completed successfully!"
-    
+
     echo ""
     echo "=== Access Information ==="
     echo "Vault UI: kubectl port-forward svc/vault-service 8200:8200 -n vault-system"
