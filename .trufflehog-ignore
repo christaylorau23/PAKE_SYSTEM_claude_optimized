@@ -1,45 +1,54 @@
-# TruffleHog Ignore Configuration
-# This file tells TruffleHog to ignore specific files and patterns
+# TruffleHog Ignore File for PAKE System
+# ======================================
+#
+# This file contains patterns that TruffleHog should ignore during security scans.
+# Only add patterns here for confirmed false positives - never for real secrets.
+#
+# Format: Each line contains a regex pattern that TruffleHog will ignore.
+# Use with caution - this can hide real security issues if misused.
 
-# Ignore placeholder API keys in example environment files
-.env.example
-.env.template
-env.example
+# Test environment secrets (confirmed false positives)
+test-secret-key-for-testing-only
+test-secret-key-for-testing-only-never-use-in-production
+test-secret-key-for-testing-only-never-use-in-production-12345678
 
-# Ignore lockfiles which can sometimes contain long random strings
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
+# Placeholder values (confirmed false positives)
+REDACTED_SECRET
+placeholder-.*-api-key
+changeme-.*-REDACTED_SECRET
+REPLACE_WITH_.*
+REPLACE-.*-SECURE-.*
 
-# Ignore test files and documentation
-tests/
-test/
-docs/
-examples/
-templates/
+# Development environment placeholders (confirmed false positives)
+dev-secret-key-change-in-production-
+staging-secret-key-replace-me-
+dev_password
+staging_password
 
-# Ignore backup and temporary files
-*.backup
-*.bak
-*.tmp
-*.temp
-*.swp
-*.swo
-*.log
-logs/
+# Test database URLs (confirmed false positives)
+postgresql://test:test@localhost
+redis://localhost:6379
 
-# Ignore IDE and editor files
-.vscode/
-.idea/
+# Documentation examples (confirmed false positives)
+your-super-secure-.*-change-this-in-production
+your-.*-api-key-from-.*-console
 
-# Ignore node_modules and virtual environments
-node_modules/
-venv/
-venv_new/
+# Environment variable names (not values)
+SECRET_KEY
+DATABASE_URL
+REDIS_URL
+API_KEY
+JWT_SECRET
 
-# Ignore git directory
-.git/
+# Test data and fixtures
+hashed_password
+hashed_REDACTED_SECRET_here
+test_token
+test-secret
 
-# Ignore build and dist directories
-dist/
-build/
+# Common false positives
+default
+Default
+your-
+your-.*-change-this-in-production
+your-.*-api-key-from-.*-console

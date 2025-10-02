@@ -30,19 +30,19 @@ class MockTestClient:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_client():
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_headers():
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def valid_preferences_update():
     """Valid preferences update payload"""
     return {
@@ -458,13 +458,13 @@ class TestUserPreferencesPutContract:
 # Test fixtures for various update scenarios
 
 
-@pytest.fixture
+@pytest.fixture()
 def minimal_preferences_update():
     """Minimal valid preferences update"""
     return {"interests": ["artificial intelligence"]}
 
 
-@pytest.fixture
+@pytest.fixture()
 def comprehensive_preferences_update():
     """Comprehensive preferences update with all fields"""
     return {
@@ -479,7 +479,7 @@ def comprehensive_preferences_update():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def invalid_preferences_update():
     """Invalid preferences update for testing validation"""
     return {

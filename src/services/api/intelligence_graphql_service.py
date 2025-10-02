@@ -1030,7 +1030,7 @@ if __name__ == "__main__":
                 "Please configure it before running the application. "
                 "This is a security requirement."
             )
-        
+
         service = await create_intelligence_graphql_service(
             obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH", "/path/to/vault"),
             neo4j_uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),

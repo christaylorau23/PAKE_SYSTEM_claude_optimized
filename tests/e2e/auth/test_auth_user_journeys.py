@@ -15,17 +15,14 @@ Critical User Journeys Tested:
 """
 
 import pytest
-from fastapi.testclient import TestClient
-
-from tests.factories import LoginRequestFactory, UserInDBFactory
-
 
 # ============================================================================
 # E2E Test: User Registration and First Login
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestUserRegistrationJourney:
     """Test complete user registration and first login journey"""
 
@@ -55,11 +52,7 @@ class TestUserRegistrationJourney:
 
         # Step 4: Login with credentials
         login_response = test_client.post(
-            "/token",
-            data={
-                "username": "admin",
-                "password": "secret"
-            }
+            "/token", data={"username": "admin", "password": "secret"}
         )
 
         assert login_response.status_code == 200
@@ -70,8 +63,7 @@ class TestUserRegistrationJourney:
         # Step 5: Access protected endpoint with token
         token = token_data["access_token"]
         protected_response = test_client.get(
-            "/protected",
-            headers={"Authorization": f"Bearer {token}"}
+            "/protected", headers={"Authorization": f"Bearer {token}"}
         )
 
         assert protected_response.status_code == 200
@@ -79,8 +71,7 @@ class TestUserRegistrationJourney:
 
         # Step 6: Verify user info
         user_info_response = test_client.get(
-            "/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
+            "/auth/me", headers={"Authorization": f"Bearer {token}"}
         )
 
         assert user_info_response.status_code == 200
@@ -93,8 +84,9 @@ class TestUserRegistrationJourney:
 # E2E Test: Login, Access Resources, Logout
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestLoginAccessLogoutJourney:
     """Test complete login, access, and logout journey"""
 
@@ -112,8 +104,7 @@ class TestLoginAccessLogoutJourney:
         """
         # Step 1: Login
         login_response = test_client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
 
         assert login_response.status_code == 200
@@ -147,8 +138,9 @@ class TestLoginAccessLogoutJourney:
 # E2E Test: Token Refresh Flow
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestTokenRefreshJourney:
     """Test token refresh workflow"""
 
@@ -165,8 +157,7 @@ class TestTokenRefreshJourney:
         """
         # Step 1: Initial login
         login_response = test_client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
 
         assert login_response.status_code == 200
@@ -174,8 +165,7 @@ class TestTokenRefreshJourney:
 
         # Step 2: Use initial access token
         response = test_client.get(
-            "/auth/me",
-            headers={"Authorization": f"Bearer {initial_token}"}
+            "/auth/me", headers={"Authorization": f"Bearer {initial_token}"}
         )
         assert response.status_code == 200
 
@@ -187,8 +177,9 @@ class TestTokenRefreshJourney:
 # E2E Test: Password Change Workflow
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestPasswordChangeJourney:
     """Test password change workflow"""
 
@@ -205,8 +196,7 @@ class TestPasswordChangeJourney:
         """
         # Step 1: Login with current password
         login_response = test_client.post(
-            "/token",
-            data={"username": "testuser", "password": "secret"}
+            "/token", data={"username": "testuser", "password": "secret"}
         )
 
         # testuser doesn't exist in fake_users_db, so this would fail
@@ -217,8 +207,9 @@ class TestPasswordChangeJourney:
 # E2E Test: Failed Authentication Scenarios
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestFailedAuthenticationJourneys:
     """Test various failure scenarios in authentication"""
 
@@ -234,8 +225,7 @@ class TestFailedAuthenticationJourneys:
         """
         # Step 1: Attempt login with wrong password
         response = test_client.post(
-            "/token",
-            data={"username": "admin", "password": "wrongpassword"}
+            "/token", data={"username": "admin", "password": "wrongpassword"}
         )
 
         # Step 2: Verify error response
@@ -279,8 +269,7 @@ class TestFailedAuthenticationJourneys:
 
         # Step 2: Attempt access with invalid token
         response = test_client.get(
-            "/protected",
-            headers={"Authorization": f"Bearer {invalid_token}"}
+            "/protected", headers={"Authorization": f"Bearer {invalid_token}"}
         )
 
         # Step 3: Verify 401 response
@@ -298,16 +287,16 @@ class TestFailedAuthenticationJourneys:
         """
         # This test would require creating a token with past expiration
         # or mocking time to simulate expiration
-        pass
 
 
 # ============================================================================
 # E2E Test: Complete Application Flow
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
-@pytest.mark.slow
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
+@pytest.mark.slow()
 class TestCompleteApplicationFlow:
     """Test complete application workflows end-to-end"""
 
@@ -335,8 +324,7 @@ class TestCompleteApplicationFlow:
 
         # Step 3: Login
         login_response = test_client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
         token = login_response.json()["access_token"]
@@ -360,16 +348,14 @@ class TestCompleteApplicationFlow:
 
         # Step 8: Log back in
         second_login_response = test_client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         assert second_login_response.status_code == 200
         new_token = second_login_response.json()["access_token"]
 
         # Step 9: Verify session persists
         new_profile_response = test_client.get(
-            "/auth/me",
-            headers={"Authorization": f"Bearer {new_token}"}
+            "/auth/me", headers={"Authorization": f"Bearer {new_token}"}
         )
         assert new_profile_response.status_code == 200
         assert new_profile_response.json()["username"] == user_data["username"]
@@ -379,9 +365,10 @@ class TestCompleteApplicationFlow:
 # E2E Test: Performance and Reliability
 # ============================================================================
 
-@pytest.mark.e2e
-@pytest.mark.e2e_performance
-@pytest.mark.slow
+
+@pytest.mark.e2e()
+@pytest.mark.e2e_performance()
+@pytest.mark.slow()
 class TestAuthPerformanceAndReliability:
     """Test authentication performance and reliability"""
 
@@ -398,8 +385,7 @@ class TestAuthPerformanceAndReliability:
         responses = []
         for _ in range(10):
             response = test_client.post(
-                "/token",
-                data={"username": "admin", "password": "secret"}
+                "/token", data={"username": "admin", "password": "secret"}
             )
             responses.append(response)
 
@@ -415,10 +401,10 @@ class TestAuthPerformanceAndReliability:
         1. Benchmark login endpoint response time
         2. Verify response time < 500ms
         """
+
         def login():
             return test_client.post(
-                "/token",
-                data={"username": "admin", "password": "secret"}
+                "/token", data={"username": "admin", "password": "secret"}
             )
 
         result = benchmark(login)

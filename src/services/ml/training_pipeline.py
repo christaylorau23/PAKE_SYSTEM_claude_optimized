@@ -22,18 +22,27 @@ try:
     import mlflow.pytorch
     import mlflow.sklearn
     import mlflow.tensorflow
+
     MLFLOW_AVAILABLE = True
 except ImportError:
     MLFLOW_AVAILABLE = False
+
     # Create dummy classes for when mlflow is not available
     class mlflow:
-        class pytorch: pass
-        class sklearn: pass
-        class tensorflow: pass
+        class pytorch:
+            pass
+
+        class sklearn:
+            pass
+
+        class tensorflow:
+            pass
+
+
 import numpy as np
 
-# # import pickle  # SECURITY: Replaced with secure serialization  # SECURITY: Replaced with secure serialization
 from kubernetes import client, config
+from src.utils.secure_serialization import deserialize_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -653,7 +662,7 @@ class TrainingOrchestrator:
             logger.warning("MLflow not available, skipping MLflow initialization")
             self.mlflow_client = None
             return
-            
+
         try:
             mlflow.set_tracking_uri(self.config.mlflow_tracking_uri)
 
@@ -730,7 +739,11 @@ class TrainingOrchestrator:
 
             # Start MLflow run
             mlflow_run_id = None
-            if self.config.enable_mlflow_logging and self.mlflow_client and MLFLOW_AVAILABLE:
+            if (
+                self.config.enable_mlflow_logging
+                and self.mlflow_client
+                and MLFLOW_AVAILABLE
+            ):
                 with mlflow.start_run(experiment_id=self.experiment_id):
                     mlflow_run_id = mlflow.active_run().info.run_id
 
@@ -768,7 +781,11 @@ class TrainingOrchestrator:
                 self.training_results[job.job_id] = result
 
                 # Log to MLflow
-                if self.config.enable_mlflow_logging and self.mlflow_client and MLFLOW_AVAILABLE:
+                if (
+                    self.config.enable_mlflow_logging
+                    and self.mlflow_client
+                    and MLFLOW_AVAILABLE
+                ):
                     with mlflow.start_run(run_id=mlflow_run_id):
                         mlflow.log_metrics(metrics)
                         mlflow.log_artifact(model_path)
@@ -798,7 +815,11 @@ class TrainingOrchestrator:
             self.stats["failed_jobs"] += 1
 
             # Log to MLflow
-            if self.config.enable_mlflow_logging and self.mlflow_client and MLFLOW_AVAILABLE:
+            if (
+                self.config.enable_mlflow_logging
+                and self.mlflow_client
+                and MLFLOW_AVAILABLE
+            ):
                 with mlflow.start_run(run_id=mlflow_run_id):
                     mlflow.set_tag("status", "failed")
                     mlflow.log_param("error_message", str(e))
@@ -846,16 +867,15 @@ class TrainingOrchestrator:
                 with open(data_path) as f:
                     return json.load(f)
             elif data_path.suffix == ".pkl":
-                with open(data_path, "rb") as f:
-                    return pickle.load(f)
+                # Use secure deserialization for pickle files
+                return deserialize_from_file(str(data_path))
             elif data_path.suffix == ".csv":
                 import pandas as pd
 
                 return pd.read_csv(data_path)
             else:
-                # Default: assume it's a pickle file
-                with open(data_path, "rb") as f:
-                    return pickle.load(f)
+                # Default: assume it's a secure serialized file
+                return deserialize_from_file(str(data_path))
 
         except Exception as e:
             logger.error(f"Failed to load training data: {e}")

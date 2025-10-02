@@ -58,7 +58,17 @@
     "spec:setup-plan": "./.specify/scripts/bash/setup-plan.sh",
     "spec:create-feature": "./.specify/scripts/bash/create-new-feature.sh",
     "spec:feature-paths": "./.specify/scripts/bash/get-feature-paths.sh",
-    "spec:validate": "npm run doctor && echo '✅ Spec-Kit integration validated'"
+    "spec:validate": "npm run doctor && echo '✅ Spec-Kit integration validated'",
+    "validate": "python scripts/local_validation.py",
+    "validate:quick": "python scripts/local_validation.py --quick",
+    "validate:lint": "python scripts/validate_lint.py",
+    "validate:type-check": "python scripts/validate_type_check.py",
+    "validate:security": "python scripts/validate_security.py",
+    "validate:tests": "python scripts/validate_tests.py",
+    "validate:fix": "python scripts/validate_lint.py --fix",
+    "validate:all": "python scripts/simulate_cicd.py",
+    "validate:pre-commit": "pre-commit run --all-files",
+    "validate:install-hooks": "pre-commit install"
   },
   "keywords": [
     "pake",

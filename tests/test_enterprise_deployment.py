@@ -40,7 +40,7 @@ class TestEnterpriseDeploymentOrchestrator:
     Tests service deployment, health monitoring, configuration validation, and production readiness.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_services(self):
         """Sample service configurations for testing"""
         return [
@@ -70,7 +70,7 @@ class TestEnterpriseDeploymentOrchestrator:
             ),
         ]
 
-    @pytest.fixture
+    @pytest.fixture()
     def deployment_config(self, sample_services):
         """Standard deployment configuration for testing"""
         return DeploymentConfig(
@@ -85,7 +85,7 @@ class TestEnterpriseDeploymentOrchestrator:
             resource_quotas={"cpu": "4", "memory": "8Gi"},
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_service_manager(self):
         """Mock service manager for testing"""
         manager = AsyncMock(spec=LocalServiceManager)
@@ -123,7 +123,7 @@ class TestEnterpriseDeploymentOrchestrator:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_orchestrator_with_configuration(
         self,
         deployment_config,
@@ -147,7 +147,7 @@ class TestEnterpriseDeploymentOrchestrator:
         # Check service startup order is empty initially
         assert orchestrator.service_startup_order == []
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_validate_deployment_configuration_correctly(
         self,
         orchestrator,
@@ -182,7 +182,7 @@ class TestEnterpriseDeploymentOrchestrator:
         assert len(issues) > 0
         assert any("duplicate" in issue.lower() for issue in issues)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_calculate_service_deployment_order_based_on_dependencies(
         self,
         orchestrator,
@@ -207,7 +207,7 @@ class TestEnterpriseDeploymentOrchestrator:
         # test-database has no dependencies, can be anywhere
         assert "test-database" in order
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_deploy_services_in_correct_dependency_order(
         self,
         orchestrator,
@@ -247,7 +247,7 @@ class TestEnterpriseDeploymentOrchestrator:
                 == ServiceStatus.RUNNING
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_service_deployment_failures_gracefully(
         self,
         orchestrator,
@@ -287,7 +287,7 @@ class TestEnterpriseDeploymentOrchestrator:
         # The specific failed service should be test-service-2 (as per our mock)
         assert "test-service-2" in failed_services
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_perform_health_checks_on_deployed_services(
         self,
         orchestrator,
@@ -314,7 +314,7 @@ class TestEnterpriseDeploymentOrchestrator:
             assert health.response_time_ms > 0
             assert health.last_check is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_stop_services_in_reverse_dependency_order(
         self,
         orchestrator,
@@ -455,7 +455,7 @@ class TestEnterpriseDeploymentOrchestrator:
     # Service Management Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_local_service_manager_should_handle_service_lifecycle(self):
         """
         Test: LocalServiceManager should properly handle service deployment,
@@ -492,7 +492,7 @@ class TestEnterpriseDeploymentOrchestrator:
         status = await manager.get_service_status("test-local-service")
         assert status == ServiceStatus.STOPPED
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_export_deployment_configuration_to_file(self, orchestrator):
         """
         Test: Should export deployment configuration to JSON/YAML files
@@ -526,7 +526,7 @@ class TestEnterpriseDeploymentOrchestrator:
     # Performance and Scalability Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_large_number_of_services_efficiently(
         self,
         mock_service_manager,
@@ -568,7 +568,7 @@ class TestEnterpriseDeploymentOrchestrator:
         for status in orchestrator.deployment_status.services.values():
             assert status == ServiceStatus.RUNNING
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_health_checks_safely(
         self,
         orchestrator,
@@ -602,7 +602,7 @@ class TestEnterpriseDeploymentOrchestrator:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_service_manager_failures_gracefully(
         self,
         deployment_config,
@@ -628,7 +628,7 @@ class TestEnterpriseDeploymentOrchestrator:
         assert not success
         assert orchestrator.deployment_status.overall_status == ServiceStatus.FAILED
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_health_check_failures_appropriately(
         self,
         orchestrator,
@@ -668,7 +668,7 @@ class TestEnterpriseDeploymentOrchestrator:
         assert unhealthy_service.status == HealthCheckStatus.UNHEALTHY
         assert unhealthy_service.error_message == "Service unavailable"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_empty_service_configuration(self):
         """
         Test: Should handle deployment configurations with no services
@@ -692,7 +692,7 @@ class TestDeploymentConfigurationFactory:
     Test suite for deployment configuration factory functions.
     """
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_ready_configuration(self):
         """
         Test: Should create production-ready configuration with all
@@ -719,7 +719,7 @@ class TestDeploymentConfigurationFactory:
                 assert service.replicas >= 2  # HA requirement
             assert service.resource_limits  # Resource limits required
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_development_configuration(self):
         """
         Test: Should create development configuration optimized
@@ -738,7 +738,7 @@ class TestDeploymentConfigurationFactory:
         for service in config.services:
             assert service.replicas == 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_production_configuration_should_pass_validation(self):
         """
         Test: Production configuration created by factory should

@@ -14,7 +14,6 @@ from typing import Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
 from utils.api_patterns import (
     APIConfig,
     APIResponse,

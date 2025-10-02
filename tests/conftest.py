@@ -11,7 +11,6 @@ Organized by scope and dependency:
 import asyncio
 import os
 from pathlib import Path
-from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -26,23 +25,29 @@ os.environ["PAKE_DEBUG"] = "true"
 os.environ["USE_VAULT"] = "false"
 
 # Set test secrets via environment variables
-os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-os.environ["DATABASE_URL"] = "postgresql://test:test@localhost/pake_test"
-os.environ["REDIS_URL"] = "redis://localhost:6379/1"
+# SECURITY: No hardcoded secrets - use environment variables or Vault
+os.environ["SECRET_KEY"] = os.getenv(
+    "TEST_SECRET_KEY", "test-secret-key-for-testing-only-never-use-in-production"
+)
+os.environ["DATABASE_URL"] = os.getenv(
+    "TEST_DATABASE_URL", "postgresql://test:test@localhost/pake_test"
+)
+os.environ["REDIS_URL"] = os.getenv("TEST_REDIS_URL", "redis://localhost:6379/1")
 
 # Import after environment is set
+from datetime import UTC
+
 from tests.factories import (
-    UserFactory,
-    UserInDBFactory,
+    LoginRequestFactory,
     SearchQueryFactory,
     SearchResultFactory,
-    LoginRequestFactory,
+    UserInDBFactory,
 )
-
 
 # ============================================================================
 # Session-Scoped Fixtures (shared across entire test session)
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -78,6 +83,7 @@ def mock_env_vars():
 # Module-Scoped Fixtures (shared within a test module)
 # ============================================================================
 
+
 @pytest.fixture(scope="module")
 async def test_database():
     """
@@ -95,7 +101,7 @@ async def test_database():
         "user": "test_user",
         "password": "test_password",
     }
-    yield db_config
+    return db_config
     # Cleanup happens here
 
 
@@ -112,7 +118,7 @@ async def test_redis():
         "port": 6379,
         "db": 1,
     }
-    yield redis_config
+    return redis_config
     # Cleanup happens here
 
 
@@ -120,7 +126,8 @@ async def test_redis():
 # Function-Scoped Fixtures (fresh for each test)
 # ============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def test_client():
     """
     FastAPI test client for E2E tests.
@@ -133,7 +140,7 @@ def test_client():
         yield client
 
 
-@pytest.fixture
+@pytest.fixture()
 def authenticated_client(test_client, test_user):
     """
     Authenticated FastAPI test client.
@@ -142,61 +149,58 @@ def authenticated_client(test_client, test_user):
     """
     # Login to get token
     response = test_client.post(
-        "/token",
-        data={"username": test_user["username"], "password": "password123"}
+        "/token", data={"username": test_user["username"], "password": "password123"}
     )
     token = response.json()["access_token"]
 
     # Add token to headers
-    test_client.headers = {
-        **test_client.headers,
-        "Authorization": f"Bearer {token}"
-    }
+    test_client.headers = {**test_client.headers, "Authorization": f"Bearer {token}"}
 
-    yield test_client
+    return test_client
 
 
 # ============================================================================
 # Test Data Fixtures
 # ============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def test_user():
     """Create a test user using factory."""
     return UserInDBFactory()
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_admin_user():
     """Create an admin test user using factory."""
     return UserInDBFactory(username="admin", role="admin")
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_disabled_user():
     """Create a disabled test user using factory."""
     return UserInDBFactory(disabled=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_users(count=5):
     """Create multiple test users using factory."""
     return [UserInDBFactory() for _ in range(count)]
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_search_query():
     """Create a test search query using factory."""
     return SearchQueryFactory()
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_search_results(count=10):
     """Create test search results using factory."""
     return [SearchResultFactory() for _ in range(count)]
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_login_request():
     """Create a test login request using factory."""
     return LoginRequestFactory()
@@ -206,7 +210,8 @@ def test_login_request():
 # Mock Fixtures (for unit tests)
 # ============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def mock_database():
     """Mock database service for unit tests."""
     mock_db = AsyncMock()
@@ -220,7 +225,7 @@ def mock_database():
     return mock_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_redis():
     """Mock Redis service for unit tests."""
     mock_redis = MagicMock()
@@ -234,7 +239,7 @@ def mock_redis():
     return mock_redis
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_user_repository():
     """Mock user repository for unit tests."""
     mock_repo = AsyncMock()
@@ -249,30 +254,30 @@ def mock_user_repository():
     return mock_repo
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_auth_service():
     """Mock authentication service for unit tests."""
     mock_auth = AsyncMock()
 
     # Configure authentication operations
-    mock_auth.authenticate_user = AsyncMock(return_value={
-        "success": True,
-        "access_token": "test_token",
-        "token_type": "bearer"
-    })
-    mock_auth.validate_token = AsyncMock(return_value={
-        "valid": True,
-        "user_id": "test-user-id"
-    })
-    mock_auth.refresh_token = AsyncMock(return_value={
-        "success": True,
-        "access_token": "new_test_token"
-    })
+    mock_auth.authenticate_user = AsyncMock(
+        return_value={
+            "success": True,
+            "access_token": "test_token",
+            "token_type": "bearer",
+        }
+    )
+    mock_auth.validate_token = AsyncMock(
+        return_value={"valid": True, "user_id": "test-user-id"}
+    )
+    mock_auth.refresh_token = AsyncMock(
+        return_value={"success": True, "access_token": "new_test_token"}
+    )
 
     return mock_auth
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_external_api():
     """Mock external API client for unit tests."""
     mock_api = AsyncMock()
@@ -288,13 +293,14 @@ def mock_external_api():
 # Utility Fixtures
 # ============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def mock_datetime(mocker):
     """Mock datetime for testing time-sensitive functionality."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    fixed_time = datetime(2025, 1, 30, 12, 0, 0, tzinfo=timezone.utc)
-    mock_now = mocker.patch('datetime.datetime')
+    fixed_time = datetime(2025, 1, 30, 12, 0, 0, tzinfo=UTC)
+    mock_now = mocker.patch("datetime.datetime")
     mock_now.now.return_value = fixed_time
     mock_now.utcnow.return_value = fixed_time
 
@@ -308,11 +314,11 @@ def reset_singletons():
 
     Prevents test pollution when testing singleton patterns.
     """
-    yield
+    return
     # Reset singleton instances here if needed
 
 
-@pytest.fixture
+@pytest.fixture()
 def capture_logs(caplog):
     """
     Enhanced log capturing with helper methods.
@@ -322,18 +328,31 @@ def capture_logs(caplog):
             # Test code
             assert capture_logs.has_error("Error message")
     """
+
     class LogCapture:
         def __init__(self, caplog):
             self.caplog = caplog
 
         def has_error(self, message):
-            return any(message in record.message for record in self.caplog.records if record.levelname == "ERROR")
+            return any(
+                message in record.message
+                for record in self.caplog.records
+                if record.levelname == "ERROR"
+            )
 
         def has_warning(self, message):
-            return any(message in record.message for record in self.caplog.records if record.levelname == "WARNING")
+            return any(
+                message in record.message
+                for record in self.caplog.records
+                if record.levelname == "WARNING"
+            )
 
         def has_info(self, message):
-            return any(message in record.message for record in self.caplog.records if record.levelname == "INFO")
+            return any(
+                message in record.message
+                for record in self.caplog.records
+                if record.levelname == "INFO"
+            )
 
     return LogCapture(caplog)
 
@@ -342,10 +361,10 @@ def capture_logs(caplog):
 # Pytest Hooks
 # ============================================================================
 
+
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""
     # Markers are already defined in pyproject.toml
-    pass
 
 
 def pytest_collection_modifyitems(config, items):

@@ -5,7 +5,6 @@ This file contains all test configuration, markers, and settings
 for the comprehensive testing suite.
 """
 
-import pytest
 from pathlib import Path
 
 # Test configuration
@@ -32,7 +31,6 @@ markers = [
     "unit_error_handling: Unit tests for error scenarios and exception handling",
     "unit_performance: Unit tests for algorithm efficiency and performance",
     "unit_security: Unit tests for security-related functionality",
-
     # Integration Tests (20% of tests) - Service interactions, real dependencies
     "integration: Integration tests - test service-to-service interactions",
     "integration_database: Integration tests with database dependencies",
@@ -40,7 +38,6 @@ markers = [
     "integration_message_bus: Integration tests with message queue",
     "integration_api: Integration tests with external APIs",
     "integration_auth: Integration tests with authentication system",
-
     # End-to-End Tests (10% of tests) - Complete workflows, user journeys
     "e2e: End-to-end tests - complete user workflows",
     "e2e_user_journey: E2E tests for complete user journeys",
@@ -48,14 +45,12 @@ markers = [
     "e2e_reliability: E2E tests for system reliability",
     "e2e_user_experience: E2E tests for user experience validation",
     "e2e_security: E2E tests for security validation",
-
     # Test Categories
     "slow: Slow running tests (> 5 seconds)",
     "requires_db: Tests requiring database connection",
     "requires_redis: Tests requiring Redis connection",
     "requires_network: Tests requiring network access",
     "requires_external_api: Tests requiring external API access",
-
     # Test Types
     "smoke: Smoke tests - basic functionality verification",
     "regression: Regression tests - prevent regression of fixed bugs",
@@ -86,9 +81,19 @@ filterwarnings = [
 
 # Test discovery configuration
 norecursedirs = [
-    "venv", ".venv", "mcp-env", "test_env", "black_env",
-    "node_modules", "dist", "build", ".git", "__pycache__",
-    "security_backups", "backups", ".pytest_cache"
+    "venv",
+    ".venv",
+    "mcp-env",
+    "test_env",
+    "black_env",
+    "node_modules",
+    "dist",
+    "build",
+    ".git",
+    "__pycache__",
+    "security_backups",
+    "backups",
+    ".pytest_cache",
 ]
 
 # Coverage configuration

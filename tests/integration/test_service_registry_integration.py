@@ -12,30 +12,30 @@ CRITICAL: This test MUST FAIL before implementation exists.
 This follows TDD methodology - Red, Green, Refactor.
 """
 
-import pytest
-import httpx
 import asyncio
 import uuid
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from typing import Any
+
+import httpx
+import pytest
 
 
 class TestServiceRegistryIntegration:
     """Integration tests for complete service registry workflow"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def service_registry_url(self) -> str:
         """Service registry API base URL"""
         return "http://localhost:8000/api/v1"
 
-    @pytest.fixture
+    @pytest.fixture()
     async def http_client(self) -> httpx.AsyncClient:
         """HTTP client for service registry API calls"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.fixture
-    def test_service_config(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def test_service_config(self) -> dict[str, Any]:
         """Test service configuration for registration"""
         return {
             "service_name": f"test-service-{uuid.uuid4().hex[:8]}",
@@ -49,7 +49,7 @@ class TestServiceRegistryIntegration:
                 "cpu_request_millicores": 200,
                 "memory_request_mb": 256,
                 "cpu_limit_millicores": 500,
-                "memory_limit_mb": 512
+                "memory_limit_mb": 512,
             },
             "endpoints": [
                 {
@@ -57,25 +57,19 @@ class TestServiceRegistryIntegration:
                     "method": "GET",
                     "description": "Test endpoint",
                     "authentication_required": True,
-                    "rate_limit": {
-                        "requests_per_minute": 100,
-                        "burst_size": 10
-                    }
+                    "rate_limit": {"requests_per_minute": 100, "burst_size": 10},
                 }
             ],
             "dependencies": [],
-            "labels": {
-                "team": "platform",
-                "component": "test"
-            }
+            "labels": {"team": "platform", "component": "test"},
         }
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_complete_service_registration_flow(
         self,
         service_registry_url: str,
         http_client: httpx.AsyncClient,
-        test_service_config: Dict[str, Any]
+        test_service_config: dict[str, Any],
     ):
         """
         Test complete service registration workflow
@@ -92,18 +86,17 @@ class TestServiceRegistryIntegration:
 
         # Step 1: Register new service
         registration_response = await http_client.post(
-            f"{service_registry_url}/services/register",
-            json=test_service_config
+            f"{service_registry_url}/services/register", json=test_service_config
         )
 
-        assert registration_response.status_code == 201, (
-            f"Service registration failed: {registration_response.status_code}"
-        )
+        assert (
+            registration_response.status_code == 201
+        ), f"Service registration failed: {registration_response.status_code}"
 
         registration_data = registration_response.json()
-        assert "service_id" in registration_data, (
-            "Registration response should include service_id"
-        )
+        assert (
+            "service_id" in registration_data
+        ), "Registration response should include service_id"
 
         service_id = registration_data["service_id"]
 
@@ -123,13 +116,15 @@ class TestServiceRegistryIntegration:
                     our_service = service
                     break
 
-            assert our_service is not None, (
-                f"Registered service {service_id} not found in discovery"
-            )
+            assert (
+                our_service is not None
+            ), f"Registered service {service_id} not found in discovery"
 
             # Validate service data matches registration
             assert our_service["service_name"] == test_service_config["service_name"]
-            assert our_service["service_version"] == test_service_config["service_version"]
+            assert (
+                our_service["service_version"] == test_service_config["service_version"]
+            )
             assert our_service["environment"] == test_service_config["environment"]
 
             # Step 3: Check health monitoring activation
@@ -140,14 +135,13 @@ class TestServiceRegistryIntegration:
                 f"{service_registry_url}/services/{service_id}/health"
             )
 
-            assert health_response.status_code in [200, 503], (
-                f"Health check not activated for service {service_id}"
-            )
+            assert health_response.status_code in [
+                200,
+                503,
+            ], f"Health check not activated for service {service_id}"
 
             health_data = health_response.json()
-            assert "status" in health_data, (
-                "Health response should include status"
-            )
+            assert "status" in health_data, "Health response should include status"
 
             # Step 4: Test service configuration retrieval
             config_response = await http_client.get(
@@ -166,21 +160,16 @@ class TestServiceRegistryIntegration:
             # Step 5: Test service updates
             update_config = {
                 "service_version": "1.0.1",
-                "labels": {
-                    "team": "platform",
-                    "component": "test",
-                    "updated": "true"
-                }
+                "labels": {"team": "platform", "component": "test", "updated": "true"},
             }
 
             update_response = await http_client.put(
-                f"{service_registry_url}/services/{service_id}",
-                json=update_config
+                f"{service_registry_url}/services/{service_id}", json=update_config
             )
 
-            assert update_response.status_code == 200, (
-                f"Service update failed: {update_response.status_code}"
-            )
+            assert (
+                update_response.status_code == 200
+            ), f"Service update failed: {update_response.status_code}"
 
             # Verify update took effect
             updated_response = await http_client.get(
@@ -201,11 +190,9 @@ class TestServiceRegistryIntegration:
             # Should succeed or service already gone
             assert cleanup_response.status_code in [200, 204, 404]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_service_dependency_management(
-        self,
-        service_registry_url: str,
-        http_client: httpx.AsyncClient
+        self, service_registry_url: str, http_client: httpx.AsyncClient
     ):
         """
         Test service dependency registration and validation
@@ -231,9 +218,9 @@ class TestServiceRegistryIntegration:
                 {
                     "path": "/api/v1/data",
                     "method": "GET",
-                    "description": "Data provider endpoint"
+                    "description": "Data provider endpoint",
                 }
-            ]
+            ],
         }
 
         # Create dependent service config
@@ -249,9 +236,9 @@ class TestServiceRegistryIntegration:
                     "provider_service_name": provider_config["service_name"],
                     "dependency_type": "HARD",
                     "max_response_time_ms": 500,
-                    "expected_availability": 0.99
+                    "expected_availability": 0.99,
                 }
-            ]
+            ],
         }
 
         provider_id = None
@@ -260,8 +247,7 @@ class TestServiceRegistryIntegration:
         try:
             # Register provider service
             provider_response = await http_client.post(
-                f"{service_registry_url}/services/register",
-                json=provider_config
+                f"{service_registry_url}/services/register", json=provider_config
             )
 
             assert provider_response.status_code == 201
@@ -270,8 +256,7 @@ class TestServiceRegistryIntegration:
 
             # Register dependent service
             dependent_response = await http_client.post(
-                f"{service_registry_url}/services/register",
-                json=dependent_config
+                f"{service_registry_url}/services/register", json=dependent_config
             )
 
             assert dependent_response.status_code == 201
@@ -288,7 +273,9 @@ class TestServiceRegistryIntegration:
 
             assert len(dependencies) == 1
             dependency = dependencies[0]
-            assert dependency["provider_service_name"] == provider_config["service_name"]
+            assert (
+                dependency["provider_service_name"] == provider_config["service_name"]
+            )
             assert dependency["dependency_type"] == "HARD"
 
             # Test dependency health validation
@@ -306,15 +293,17 @@ class TestServiceRegistryIntegration:
         finally:
             # Cleanup
             if dependent_id:
-                await http_client.delete(f"{service_registry_url}/services/{dependent_id}")
+                await http_client.delete(
+                    f"{service_registry_url}/services/{dependent_id}"
+                )
             if provider_id:
-                await http_client.delete(f"{service_registry_url}/services/{provider_id}")
+                await http_client.delete(
+                    f"{service_registry_url}/services/{provider_id}"
+                )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_service_discovery_filtering(
-        self,
-        service_registry_url: str,
-        http_client: httpx.AsyncClient
+        self, service_registry_url: str, http_client: httpx.AsyncClient
     ):
         """
         Test service discovery with filtering capabilities
@@ -336,7 +325,7 @@ class TestServiceRegistryIntegration:
                 "environment": "DEVELOPMENT",
                 "base_url": "http://localhost:8090",
                 "health_check_url": "http://localhost:8090/health",
-                "labels": {"tier": "api", "team": "platform"}
+                "labels": {"tier": "api", "team": "platform"},
             },
             {
                 "service_name": f"worker-service-{uuid.uuid4().hex[:8]}",
@@ -344,7 +333,7 @@ class TestServiceRegistryIntegration:
                 "environment": "DEVELOPMENT",
                 "base_url": "http://localhost:8091",
                 "health_check_url": "http://localhost:8091/health",
-                "labels": {"tier": "worker", "team": "data"}
+                "labels": {"tier": "worker", "team": "data"},
             },
             {
                 "service_name": f"api-service-prod-{uuid.uuid4().hex[:8]}",
@@ -352,8 +341,8 @@ class TestServiceRegistryIntegration:
                 "environment": "PRODUCTION",
                 "base_url": "http://localhost:8092",
                 "health_check_url": "http://localhost:8092/health",
-                "labels": {"tier": "api", "team": "platform"}
-            }
+                "labels": {"tier": "api", "team": "platform"},
+            },
         ]
 
         registered_ids = []
@@ -362,8 +351,7 @@ class TestServiceRegistryIntegration:
             # Register all test services
             for service_config in services_to_register:
                 response = await http_client.post(
-                    f"{service_registry_url}/services/register",
-                    json=service_config
+                    f"{service_registry_url}/services/register", json=service_config
                 )
 
                 assert response.status_code == 201
@@ -413,14 +401,16 @@ class TestServiceRegistryIntegration:
         finally:
             # Cleanup all registered services
             for service_id in registered_ids:
-                await http_client.delete(f"{service_registry_url}/services/{service_id}")
+                await http_client.delete(
+                    f"{service_registry_url}/services/{service_id}"
+                )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_service_health_monitoring_lifecycle(
         self,
         service_registry_url: str,
         http_client: httpx.AsyncClient,
-        test_service_config: Dict[str, Any]
+        test_service_config: dict[str, Any],
     ):
         """
         Test complete health monitoring lifecycle
@@ -436,14 +426,15 @@ class TestServiceRegistryIntegration:
 
         # Register service with specific health check configuration
         health_config = test_service_config.copy()
-        health_config.update({
-            "health_check_interval_seconds": 5,  # Frequent checks for testing
-            "health_timeout_seconds": 2
-        })
+        health_config.update(
+            {
+                "health_check_interval_seconds": 5,  # Frequent checks for testing
+                "health_timeout_seconds": 2,
+            }
+        )
 
         registration_response = await http_client.post(
-            f"{service_registry_url}/services/register",
-            json=health_config
+            f"{service_registry_url}/services/register", json=health_config
         )
 
         assert registration_response.status_code == 201
@@ -464,7 +455,9 @@ class TestServiceRegistryIntegration:
 
             # Should have health check metadata
             assert "timestamp" in initial_health
-            assert "response_time_ms" in initial_health or "last_check" in initial_health
+            assert (
+                "response_time_ms" in initial_health or "last_check" in initial_health
+            )
 
             # Monitor health over time
             health_checks = []
@@ -480,24 +473,24 @@ class TestServiceRegistryIntegration:
                     health_checks.append(health_data)
 
             # Should have multiple health check records
-            assert len(health_checks) >= 2, (
-                "Health monitoring should record multiple checks"
-            )
+            assert (
+                len(health_checks) >= 2
+            ), "Health monitoring should record multiple checks"
 
             # Test health check configuration update
             update_config = {
                 "health_check_interval_seconds": 10,
-                "health_timeout_seconds": 5
+                "health_timeout_seconds": 5,
             }
 
             update_response = await http_client.put(
                 f"{service_registry_url}/services/{service_id}/health-config",
-                json=update_config
+                json=update_config,
             )
 
-            assert update_response.status_code == 200, (
-                "Health check configuration update should succeed"
-            )
+            assert (
+                update_response.status_code == 200
+            ), "Health check configuration update should succeed"
 
         finally:
             # Cleanup
@@ -507,7 +500,7 @@ class TestServiceRegistryIntegration:
 class TestServiceRegistryPerformance:
     """Performance integration tests for service registry"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_concurrent_service_registrations(self):
         """
         Test service registry performance under concurrent load
@@ -525,13 +518,13 @@ class TestServiceRegistryPerformance:
                     "service_type": "API",
                     "environment": "DEVELOPMENT",
                     "base_url": f"http://localhost:{8100 + service_number}",
-                    "health_check_url": f"http://localhost:{8100 + service_number}/health"
+                    "health_check_url": f"http://localhost:{8100 + service_number}/health",
                 }
 
                 try:
                     response = await client.post(
                         "http://localhost:8000/api/v1/services/register",
-                        json=service_config
+                        json=service_config,
                     )
 
                     return response.status_code == 201
@@ -540,6 +533,7 @@ class TestServiceRegistryPerformance:
                     return False
 
         import time
+
         start_time = time.time()
 
         # Create 20 concurrent registration tasks
@@ -549,17 +543,15 @@ class TestServiceRegistryPerformance:
         total_time = time.time() - start_time
 
         # Count successful registrations
-        successful_registrations = sum(
-            1 for result in results if result is True
-        )
+        successful_registrations = sum(1 for result in results if result is True)
 
-        assert successful_registrations >= 15, (
-            f"Only {successful_registrations}/20 concurrent registrations succeeded"
-        )
+        assert (
+            successful_registrations >= 15
+        ), f"Only {successful_registrations}/20 concurrent registrations succeeded"
 
-        assert total_time < 15.0, (
-            f"20 concurrent registrations took {total_time:.2f}s, should be <15s"
-        )
+        assert (
+            total_time < 15.0
+        ), f"20 concurrent registrations took {total_time:.2f}s, should be <15s"
 
 
 if __name__ == "__main__":

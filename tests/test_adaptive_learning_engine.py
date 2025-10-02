@@ -7,7 +7,6 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from services.ai.adaptive_learning_engine import (
     AdaptiveLearningConfig,
     AdaptiveLearningEngine,
@@ -25,7 +24,7 @@ from services.ai.adaptive_learning_engine import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def learning_config():
     """Test configuration for adaptive learning"""
     return AdaptiveLearningConfig(
@@ -43,13 +42,13 @@ def learning_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def learning_engine(learning_config):
     """Adaptive learning engine instance for testing"""
     return AdaptiveLearningEngine(learning_config)
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_interactions():
     """Sample user interactions for testing"""
     base_time = datetime.now(UTC)
@@ -101,7 +100,7 @@ def sample_interactions():
     return interactions
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_recommendation_requests():
     """Sample recommendation requests for testing"""
     return [
@@ -124,7 +123,7 @@ def sample_recommendation_requests():
 class TestAdaptiveLearningEngine:
     """Test the main adaptive learning engine functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_learning_engine_with_configuration(
         self,
         learning_config,
@@ -152,7 +151,7 @@ class TestAdaptiveLearningEngine:
         assert metrics["cache_hits"] == 0
         assert metrics["cache_misses"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_record_user_interactions_and_update_profiles(
         self,
         learning_engine,
@@ -189,7 +188,7 @@ class TestAdaptiveLearningEngine:
         assert metrics["interactions_processed"] == 3
         assert metrics["learning_updates"] >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_generate_personalized_recommendations_for_existing_user(
         self,
         learning_engine,
@@ -237,7 +236,7 @@ class TestAdaptiveLearningEngine:
         scores = [rec.relevance_score for rec in result.recommendations]
         assert scores == sorted(scores, reverse=True)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_fallback_recommendations_for_new_users(
         self,
         learning_engine,
@@ -262,7 +261,7 @@ class TestAdaptiveLearningEngine:
             assert rec.relevance_score > 0
             assert "Popular content" in rec.reasoning[0]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_interaction_processing_safely(
         self,
         learning_engine,
@@ -310,7 +309,7 @@ class TestAdaptiveLearningEngine:
             assert profile is not None
             assert profile.total_interactions == 4  # Each user has 4 interactions
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_recommendation_caching_effectively(
         self,
         learning_engine,
@@ -346,7 +345,7 @@ class TestAdaptiveLearningEngine:
         assert len(result1.recommendations) == len(result2.recommendations)
         assert result1.strategy_used == result2.strategy_used
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_learning_confidence_levels_appropriately(
         self,
         learning_engine,
@@ -399,7 +398,7 @@ class TestAdaptiveLearningEngine:
             LearningConfidence.VERY_HIGH,
         ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_learning_strategy_selection_intelligently(
         self,
         learning_engine,
@@ -434,7 +433,7 @@ class TestAdaptiveLearningEngine:
             LearningConfidence.VERY_HIGH,
         ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_track_comprehensive_learning_metrics(
         self,
         learning_engine,
@@ -473,7 +472,7 @@ class TestAdaptiveLearningEngine:
 class TestCollaborativeFilter:
     """Test collaborative filtering functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_calculate_user_similarity_accurately(
         self,
         learning_config,
@@ -499,7 +498,7 @@ class TestCollaborativeFilter:
         cached_similarity = collab_filter.calculate_user_similarity("user_1", "user_2")
         assert cached_similarity == similarity
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_find_similar_users_effectively(
         self,
         learning_config,
@@ -530,7 +529,7 @@ class TestCollaborativeFilter:
 class TestContentBasedFilter:
     """Test content-based filtering functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_update_content_features_correctly(self, learning_config):
         """
         Test: Should extract and normalize content features for
@@ -557,7 +556,7 @@ class TestContentBasedFilter:
         assert "quality" in features
         assert features["quality"] == 0.85
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_calculate_content_similarity_with_user_profile(
         self,
         learning_config,
@@ -599,7 +598,7 @@ class TestContentBasedFilter:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_adaptive_learning_engine(self):
         """
         Test: Should create production-optimized adaptive learning engine

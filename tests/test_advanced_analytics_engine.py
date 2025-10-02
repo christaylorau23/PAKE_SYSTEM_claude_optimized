@@ -26,17 +26,17 @@ from src.services.analytics.advanced_analytics_engine import (
 class TestAdvancedAnalyticsEngine:
     """Test suite for AdvancedAnalyticsEngine following TDD principles."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def analytics_engine(self):
         """Create a fresh analytics engine instance for each test."""
         return AdvancedAnalyticsEngine()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_time_range(self):
         """Standard time range for testing."""
         return "24h"
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_health_data(self):
         """Sample health data for testing."""
         return {
@@ -59,7 +59,7 @@ class TestAdvancedAnalyticsEngine:
             "recommendations": ["Monitor ml_services performance"],
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_anomaly_data(self):
         """Sample anomaly data for testing."""
         return {
@@ -103,7 +103,7 @@ class TestAdvancedAnalyticsEngine:
         assert engine1 is engine2
 
     # Test 3: Comprehensive Report Generation
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_comprehensive_report_success(
         self,
         analytics_engine,
@@ -177,7 +177,7 @@ class TestAdvancedAnalyticsEngine:
             assert "metadata" in report
 
     # Test 4: System Health Analysis
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_system_health_success(
         self,
         analytics_engine,
@@ -204,7 +204,7 @@ class TestAdvancedAnalyticsEngine:
             assert trend in valid_trends
 
     # Test 5: Performance Trends Analysis
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_performance_trends_success(
         self,
         analytics_engine,
@@ -234,7 +234,7 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= trends["performance_score"] <= 100
 
     # Test 6: Usage Patterns Analysis
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_usage_patterns_success(
         self,
         analytics_engine,
@@ -259,7 +259,7 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= hour <= 23
 
     # Test 7: Anomaly Detection
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_detect_anomalies_success(self, analytics_engine, mock_time_range):
         """Test successful anomaly detection."""
         anomalies = await analytics_engine._detect_anomalies(mock_time_range)
@@ -292,7 +292,7 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= anomaly["confidence"] <= 1
 
     # Test 8: Correlation Analysis
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_correlations_success(
         self,
         analytics_engine,
@@ -321,7 +321,7 @@ class TestAdvancedAnalyticsEngine:
             assert "analysis_timestamp" in correlations
 
     # Test 9: Predictive Analytics
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_predictions_success(
         self,
         analytics_engine,
@@ -354,7 +354,7 @@ class TestAdvancedAnalyticsEngine:
             assert isinstance(predictions.scenario_analysis, dict)
 
     # Test 10: Insight Synthesis
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_synthesize_insights_success(
         self,
         analytics_engine,
@@ -414,7 +414,7 @@ class TestAdvancedAnalyticsEngine:
             assert isinstance(insight.recommended_actions, list)
 
     # Test 11: Recommendation Generation
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_recommendations_success(self, analytics_engine):
         """Test successful recommendation generation."""
         # Create sample insights
@@ -586,7 +586,7 @@ class TestAdvancedAnalyticsEngine:
         assert summary["recommendations_count"] == 0
 
     # Test 15: Error Handling
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_comprehensive_report_error_handling(
         self,
         analytics_engine,
@@ -620,7 +620,7 @@ class TestAdvancedAnalyticsEngine:
         assert analytics_engine._insight_cache[cache_key] == {"test": "data"}
 
     # Test 17: Data Validation
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_data_validation_in_insights(self, analytics_engine):
         """Test data validation in insight generation."""
         # Test with invalid confidence score
@@ -641,7 +641,7 @@ class TestAdvancedAnalyticsEngine:
             )
 
     # Test 18: Performance Metrics
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_performance_metrics(self, analytics_engine, mock_time_range):
         """Test performance metrics in analytics generation."""
         import time
@@ -661,7 +661,7 @@ class TestAdvancedAnalyticsEngine:
         assert "confidence_score" in report["metadata"]
 
     # Test 19: Concurrent Execution
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_concurrent_report_generation(
         self,
         analytics_engine,
@@ -684,7 +684,7 @@ class TestAdvancedAnalyticsEngine:
             assert "generated_at" in report
 
     # Test 20: Integration Test
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_full_integration(self, analytics_engine):
         """Test full integration of all analytics components."""
         # Test with different time ranges

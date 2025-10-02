@@ -462,11 +462,11 @@ def handle_exception(
     reraise: bool = True,
 ) -> PAKEException | None:
     """Handle any exception by converting it to a PAKEException if needed.
-    
+
     This function provides centralized exception handling for the PAKE system. It
     converts standard Python exceptions to PAKEException subclasses, logs the error
     with appropriate context, and optionally re-raises the converted exception.
-    
+
     Args:
         exception: The exception to handle. Can be any Python exception or
             already a PAKEException.
@@ -474,14 +474,14 @@ def handle_exception(
         context: Optional additional context information for error tracking.
         reraise: Whether to re-raise the exception after handling. If False,
             returns the PAKEException instead of raising it.
-            
+
     Returns:
         PAKEException | None: If reraise is False, returns the converted PAKEException.
             If reraise is True, returns None (exception is raised instead).
-            
+
     Raises:
         PAKEException: If reraise is True, raises the converted PAKEException.
-        
+
     Example:
         >>> try:
         ...     risky_operation()
@@ -509,20 +509,20 @@ def convert_standard_exception(
     context: dict[str, Any] | None = None,
 ) -> PAKEException:
     """Convert standard Python exceptions to appropriate PAKEException subclasses.
-    
+
     This function maps standard Python exceptions to their corresponding PAKEException
     subclasses, providing consistent error handling across the PAKE system. It preserves
     the original exception context while wrapping it in the PAKE exception hierarchy.
-    
+
     Args:
         exception: The standard Python exception to convert.
         context: Optional additional context information for error tracking.
-        
+
     Returns:
         PAKEException: The appropriate PAKEException subclass that corresponds to the
             input exception type. If no specific mapping exists, returns a generic
             PAKEException with UNKNOWN category and MEDIUM severity.
-            
+
     Example:
         >>> try:
         ...     open("nonexistent.txt")

@@ -208,7 +208,10 @@ class TenantManagementService:
             )
 
             # Generate secure admin REDACTED_SECRET if not provided
-            if not hasattr(request, "admin_REDACTED_SECRET") or not request.admin_REDACTED_SECRET:
+            if (
+                not hasattr(request, "admin_REDACTED_SECRET")
+                or not request.admin_REDACTED_SECRET
+            ):
                 admin_REDACTED_SECRET = self._generate_REDACTED_SECRET()
             else:
                 admin_REDACTED_SECRET = request.admin_REDACTED_SECRET

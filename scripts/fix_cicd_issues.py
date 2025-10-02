@@ -117,11 +117,11 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Install TruffleHog
       run: |
         curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-    
+
     - name: Run TruffleHog
       run: |
         trufflehog filesystem . --fail --no-verification --exclude-paths .secretsignore
@@ -150,7 +150,7 @@ testpaths = tests
 python_files = test_*.py *_test.py
 python_classes = Test*
 python_functions = test_*
-addopts = 
+addopts =
     -v
     --tb=short
     --strict-markers
@@ -262,24 +262,24 @@ class TestSecurity:
         \"\"\"Test secure serialization functionality.\"\"\"
         serializer = SecureSerializer()
         test_data = {"test": "data", "number": 42}
-        
+
         # Test serialization
         serialized = serializer.serialize(test_data)
         assert isinstance(serialized, bytes)
-        
+
         # Test deserialization
         deserialized = serializer.deserialize(serialized)
         assert deserialized == test_data
-    
+
     def test_serialization_formats(self):
         \"\"\"Test different serialization formats.\"\"\"
         serializer = SecureSerializer()
         test_data = {"test": "data"}
-        
+
         # Test JSON format
         json_data = serializer.serialize(test_data, SerializationFormat.JSON)
         assert isinstance(json_data, bytes)
-        
+
         # Test MessagePack format if available
         try:
             msgpack_data = serializer.serialize(test_data, SerializationFormat.MSGPACK)
@@ -297,24 +297,24 @@ class TestNetworkConfig:
     def test_development_config(self):
         \"\"\"Test development network configuration.\"\"\"
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
-        
+
         assert config.config.bind_address == "127.0.0.1"
         assert config.config.port == 8000
         assert not config.config.enable_ssl
-    
+
     def test_production_config(self):
         \"\"\"Test production network configuration.\"\"\"
         config = SecureNetworkConfig(Environment.PRODUCTION)
-        
+
         assert config.config.bind_address != "0.0.0.0"
         assert config.config.enable_ssl
         assert config.config.enable_rate_limiting
-    
+
     def test_config_validation(self):
         \"\"\"Test configuration validation.\"\"\"
         config = SecureNetworkConfig(Environment.PRODUCTION)
         warnings = config.validate_configuration()
-        
+
         # Should not have critical warnings for production
         critical_warnings = [w for w in warnings if "CRITICAL" in w]
         assert len(critical_warnings) == 0
@@ -354,29 +354,29 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-test.txt
-    
+
     - name: Run security tests
       run: |
         python scripts/security_testing.py
-    
+
     - name: Run Bandit security linter
       run: |
         bandit -r src/ -f json -o bandit-report.json || true
-    
+
     - name: Run Safety check
       run: |
         safety check --json --output safety-report.json || true
-    
+
     - name: Upload security reports
       uses: actions/upload-artifact@v3
       if: always()
@@ -659,7 +659,7 @@ def run_command(cmd, description):
 def main():
     \"\"\"Run all linting checks.\"\"\"
     project_root = Path(__file__).parent.parent
-    
+
     checks = [
         ("black --check src/ scripts/", "Black formatting check"),
         ("isort --check-only src/ scripts/", "Import sorting check"),
@@ -667,16 +667,16 @@ def main():
         ("mypy src/", "Type checking"),
         ("bandit -r src/", "Security linting"),
     ]
-    
+
     passed = 0
     total = len(checks)
-    
+
     for cmd, description in checks:
         if run_command(cmd, description):
             passed += 1
-    
+
     logger.info(f"\\nLinting Summary: {passed}/{total} checks passed")
-    
+
     if passed < total:
         sys.exit(1)
     else:

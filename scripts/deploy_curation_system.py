@@ -14,7 +14,6 @@ from datetime import datetime
 from pathlib import Path
 
 import uvicorn
-
 from services.curation.api.curation_api import app
 from services.curation.integration.curation_orchestrator import CurationOrchestrator
 

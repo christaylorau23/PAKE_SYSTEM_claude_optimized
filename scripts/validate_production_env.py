@@ -14,7 +14,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def validate_REDACTED_SECRET_strength(REDACTED_SECRET: str, min_length: int = 12) -> dict[str, Any]:
+def validate_REDACTED_SECRET_strength(
+    REDACTED_SECRET: str, min_length: int = 12
+) -> dict[str, Any]:
     """Validate REDACTED_SECRET meets security requirements"""
     issues = []
 

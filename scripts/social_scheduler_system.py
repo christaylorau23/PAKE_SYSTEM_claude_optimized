@@ -416,7 +416,9 @@ class SocialSchedulerSystem:
             AND status NOT IN ('cancelled', 'failed')
         """
 
-        cursor.execute(query, (f"%{platform}%", start_time, end_time))
+        # Use parameterized query to prevent SQL injection
+        platform_pattern = f"%{platform}%"
+        cursor.execute(query, (platform_pattern, start_time, end_time))
         count = cursor.fetchone()[0]
 
         conn.close()

@@ -9,60 +9,55 @@ CRITICAL: This test MUST FAIL before implementation exists.
 This follows TDD methodology - Red, Green, Refactor.
 """
 
-import pytest
-import httpx
-from typing import Dict, Any, List
-import asyncio
 import ssl
-import socket
+from typing import Any
+
+import httpx
+import pytest
 
 
 class TestServiceMeshCommunicationContract:
     """Contract tests for Service Mesh inter-service communication"""
 
-    @pytest.fixture
-    def service_mesh_config(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def service_mesh_config(self) -> dict[str, Any]:
         """Service mesh configuration for testing"""
         return {
             "services": {
                 "research-orchestrator": {
                     "host": "research-orchestrator.pake-system.svc.cluster.local",
                     "port": 8000,
-                    "protocol": "http"
+                    "protocol": "http",
                 },
                 "cache-service": {
                     "host": "cache-service.pake-system.svc.cluster.local",
                     "port": 8001,
-                    "protocol": "http"
+                    "protocol": "http",
                 },
                 "performance-monitor": {
                     "host": "performance-monitor.pake-system.svc.cluster.local",
                     "port": 8002,
-                    "protocol": "http"
-                }
+                    "protocol": "http",
+                },
             },
-            "security": {
-                "mtls_enabled": True,
-                "certificate_validation": True
-            },
+            "security": {"mtls_enabled": True, "certificate_validation": True},
             "routing": {
                 "load_balancing": "round_robin",
                 "circuit_breaker_enabled": True,
-                "retry_policy": {
-                    "max_attempts": 3,
-                    "backoff_strategy": "exponential"
-                }
-            }
+                "retry_policy": {"max_attempts": 3, "backoff_strategy": "exponential"},
+            },
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     async def http_client(self) -> httpx.AsyncClient:
         """HTTP client for service mesh testing"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio
-    async def test_service_discovery_registration(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_service_discovery_registration(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that services can register with service mesh
 
@@ -82,21 +77,21 @@ class TestServiceMeshCommunicationContract:
                 # Attempt connection to verify service is registered
                 # This will fail until services are actually deployed
                 response = await http_client.get(
-                    f"http://{host}:{port}/health",
-                    timeout=5.0
+                    f"http://{host}:{port}/health", timeout=5.0
                 )
 
                 # Service should be reachable via service mesh
-                assert response.status_code in [200, 503], (
-                    f"Service {service_name} not reachable via service mesh: {response.status_code}"
-                )
+                assert response.status_code in [
+                    200,
+                    503,
+                ], f"Service {service_name} not reachable via service mesh: {response.status_code}"
 
             except (httpx.ConnectError, httpx.TimeoutException):
                 # Expected to fail until service mesh is implemented
                 pytest.fail(f"Service {service_name} not registered in service mesh")
 
-    @pytest.mark.asyncio
-    async def test_mtls_communication(self, service_mesh_config: Dict[str, Any]):
+    @pytest.mark.asyncio()
+    async def test_mtls_communication(self, service_mesh_config: dict[str, Any]):
         """
         Test that inter-service communication uses mTLS
 
@@ -124,16 +119,16 @@ class TestServiceMeshCommunicationContract:
                     f"https://{research_service['host']}:{research_service['port']}/health"
                 )
 
-                assert response.status_code in [200, 503], (
-                    "mTLS communication failed"
-                )
+                assert response.status_code in [200, 503], "mTLS communication failed"
 
         except (ssl.SSLError, httpx.ConnectError):
             # Expected to fail until mTLS is properly configured
             pytest.fail("mTLS not properly configured in service mesh")
 
-    @pytest.mark.asyncio
-    async def test_circuit_breaker_pattern(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_circuit_breaker_pattern(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that circuit breaker pattern is implemented
 
@@ -174,12 +169,14 @@ class TestServiceMeshCommunicationContract:
                     break
 
         # This assertion will fail until circuit breaker is implemented
-        assert circuit_breaker_activated, (
-            "Circuit breaker pattern not implemented in service mesh"
-        )
+        assert (
+            circuit_breaker_activated
+        ), "Circuit breaker pattern not implemented in service mesh"
 
-    @pytest.mark.asyncio
-    async def test_retry_policy_implementation(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_retry_policy_implementation(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that retry policy is implemented for failed requests
 
@@ -194,13 +191,14 @@ class TestServiceMeshCommunicationContract:
         performance_service = services["performance-monitor"]
 
         import time
+
         start_time = time.time()
 
         try:
             # Make request that might trigger retries
             response = await http_client.get(
                 f"http://{performance_service['host']}:{performance_service['port']}/flaky-endpoint",
-                timeout=15.0  # Allow time for retries
+                timeout=15.0,  # Allow time for retries
             )
 
             request_duration = time.time() - start_time
@@ -212,19 +210,21 @@ class TestServiceMeshCommunicationContract:
                 pass
             elif response.status_code >= 500:
                 # Service unavailable, but retries should have been attempted
-                assert request_duration > 2.0, (
-                    "Request failed too quickly - retries may not be implemented"
-                )
+                assert (
+                    request_duration > 2.0
+                ), "Request failed too quickly - retries may not be implemented"
 
         except httpx.TimeoutException:
             # Timeout is acceptable if retries are being attempted
             request_duration = time.time() - start_time
-            assert request_duration >= 10.0, (
-                "Request timed out too quickly - retries not implemented"
-            )
+            assert (
+                request_duration >= 10.0
+            ), "Request timed out too quickly - retries not implemented"
 
-    @pytest.mark.asyncio
-    async def test_load_balancing_across_instances(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_load_balancing_across_instances(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that load balancing distributes requests across service instances
 
@@ -247,9 +247,9 @@ class TestServiceMeshCommunicationContract:
                 if response.status_code == 200:
                     # Look for instance identifier in response headers
                     instance_id = (
-                        response.headers.get("X-Instance-ID") or
-                        response.headers.get("X-Pod-Name") or
-                        response.headers.get("Server")
+                        response.headers.get("X-Instance-ID")
+                        or response.headers.get("X-Pod-Name")
+                        or response.headers.get("Server")
                     )
 
                     if instance_id:
@@ -262,15 +262,19 @@ class TestServiceMeshCommunicationContract:
         # If multiple instances exist, we should see different response sources
         # This will likely fail until multiple instances are deployed and load balanced
         if len(response_sources) > 1:
-            assert len(response_sources) >= 2, (
-                "Load balancing not distributing requests across multiple instances"
-            )
+            assert (
+                len(response_sources) >= 2
+            ), "Load balancing not distributing requests across multiple instances"
         else:
             # Skip test if only one instance is available
-            pytest.skip("Multiple service instances not available for load balancing test")
+            pytest.skip(
+                "Multiple service instances not available for load balancing test"
+            )
 
-    @pytest.mark.asyncio
-    async def test_service_mesh_observability(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_service_mesh_observability(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that service mesh provides observability features
 
@@ -286,40 +290,42 @@ class TestServiceMeshCommunicationContract:
             trace_headers = {
                 "X-Trace-ID": "test-trace-123",
                 "X-Span-ID": "test-span-456",
-                "X-Request-ID": "test-request-789"
+                "X-Request-ID": "test-request-789",
             }
 
             response = await http_client.get(
                 f"http://{cache_service['host']}:{cache_service['port']}/health",
-                headers=trace_headers
+                headers=trace_headers,
             )
 
             # Service mesh should preserve and propagate tracing headers
-            assert response.headers.get("X-Trace-ID") == "test-trace-123", (
-                "Tracing headers not preserved by service mesh"
-            )
+            assert (
+                response.headers.get("X-Trace-ID") == "test-trace-123"
+            ), "Tracing headers not preserved by service mesh"
 
             # Service mesh should add observability metadata
             observability_headers = [
                 "X-Service-Mesh-Version",
                 "X-Proxy-Version",
-                "X-Envoy-Version"  # If using Istio with Envoy
+                "X-Envoy-Version",  # If using Istio with Envoy
             ]
 
             has_observability = any(
                 header in response.headers for header in observability_headers
             )
 
-            assert has_observability, (
-                "Service mesh not adding observability metadata to responses"
-            )
+            assert (
+                has_observability
+            ), "Service mesh not adding observability metadata to responses"
 
         except httpx.ConnectError:
             # Expected until service mesh is implemented
             pytest.fail("Service mesh observability not implemented")
 
-    @pytest.mark.asyncio
-    async def test_traffic_policies_enforcement(self, service_mesh_config: Dict[str, Any], http_client: httpx.AsyncClient):
+    @pytest.mark.asyncio()
+    async def test_traffic_policies_enforcement(
+        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
+    ):
         """
         Test that traffic policies are enforced by service mesh
 
@@ -332,29 +338,30 @@ class TestServiceMeshCommunicationContract:
 
         # Test timeout policy enforcement
         import time
+
         start_time = time.time()
 
         try:
             # Make request that should timeout according to policy
             response = await http_client.get(
                 f"http://{research_service['host']}:{research_service['port']}/slow-endpoint",
-                timeout=30.0
+                timeout=30.0,
             )
 
             request_duration = time.time() - start_time
 
             # Service mesh should enforce timeout before client timeout
             if response.status_code == 504:  # Gateway timeout
-                assert request_duration < 25.0, (
-                    "Service mesh timeout policy not enforced"
-                )
+                assert (
+                    request_duration < 25.0
+                ), "Service mesh timeout policy not enforced"
 
         except httpx.TimeoutException:
             request_duration = time.time() - start_time
             # Should timeout due to service mesh policy, not client
-            assert request_duration < 25.0, (
-                "Timeout likely from client, not service mesh policy"
-            )
+            assert (
+                request_duration < 25.0
+            ), "Timeout likely from client, not service mesh policy"
 
         # Test rate limiting policy
         rapid_requests = []
@@ -385,7 +392,7 @@ class TestServiceMeshCommunicationContract:
 class TestServiceMeshPerformance:
     """Performance contract tests for service mesh communication"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_service_mesh_latency_overhead(self):
         """
         Test that service mesh adds minimal latency overhead
@@ -397,6 +404,7 @@ class TestServiceMeshPerformance:
         # Implementation depends on actual service deployment
 
         import time
+
         latencies = []
 
         # Simulate service mesh call
@@ -420,7 +428,9 @@ class TestServiceMeshPerformance:
             p95_index = int(0.95 * len(latencies))
             p95_latency = latencies[p95_index]
 
-            assert p95_latency < 50, (  # Relaxed for initial testing
+            assert (
+                p95_latency < 50
+            ), (  # Relaxed for initial testing
                 f"Service mesh P95 latency {p95_latency:.2f}ms exceeds 50ms target"
             )
         else:

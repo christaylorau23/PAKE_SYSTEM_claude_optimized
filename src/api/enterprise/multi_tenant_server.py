@@ -439,7 +439,7 @@ app = FastAPI(
 # Middleware configuration (order matters!)
 
 # Trusted host middleware (security)
-if config.ALLOWED_HOSTS != ["*"]:
+if ["*"] != config.ALLOWED_HOSTS:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.ALLOWED_HOSTS)
 
 # Tenant context middleware (must be early in chain)

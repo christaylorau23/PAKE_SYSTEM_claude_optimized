@@ -1,31 +1,28 @@
-"""
-Minimal API Gateway Implementation
+"""Minimal API Gateway Implementation
 Task T042 - Phase 18 Production System Integration
 
 This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
 import time
-from datetime import datetime
-from typing import Dict, Any
 import uuid
+from datetime import datetime
 
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 # Minimal API Gateway to satisfy contract tests
 app = FastAPI(
     title="PAKE System API Gateway",
     version="18.0.0",
-    description="Minimal implementation for TDD Green Phase"
+    description="Minimal implementation for TDD Green Phase",
 )
 
 
 @app.get("/v1/health")
 async def get_gateway_health(level: str = "shallow"):
-    """
-    Minimal health endpoint to satisfy test_api_gateway_health.py
+    """Minimal health endpoint to satisfy test_api_gateway_health.py
 
     This implements just enough to pass the contract tests:
     - Returns required status field
@@ -37,20 +34,20 @@ async def get_gateway_health(level: str = "shallow"):
     services = {
         "service-registry": {
             "status": "healthy",
-            "last_check": datetime.utcnow().isoformat()
+            "last_check": datetime.utcnow().isoformat(),
         },
         "research-orchestrator": {
             "status": "unknown",
-            "last_check": datetime.utcnow().isoformat()
+            "last_check": datetime.utcnow().isoformat(),
         },
         "cache-service": {
             "status": "unknown",
-            "last_check": datetime.utcnow().isoformat()
+            "last_check": datetime.utcnow().isoformat(),
         },
         "performance-monitor": {
             "status": "unknown",
-            "last_check": datetime.utcnow().isoformat()
-        }
+            "last_check": datetime.utcnow().isoformat(),
+        },
     }
 
     # Determine overall status
@@ -68,15 +65,9 @@ async def get_gateway_health(level: str = "shallow"):
         "version": "18.0.0",
         "services": services,
         "dependencies": {
-            "database": {
-                "status": "unknown",
-                "type": "database"
-            },
-            "redis": {
-                "status": "unknown",
-                "type": "cache"
-            }
-        }
+            "database": {"status": "unknown", "type": "database"},
+            "redis": {"status": "unknown", "type": "cache"},
+        },
     }
 
 
@@ -85,22 +76,21 @@ async def get_gateway_health(level: str = "shallow"):
 
 @app.get("/v1/status")
 async def get_system_status():
-    """
-    System status endpoint
-    """
+    """System status endpoint"""
     return {
         "status": "operational",
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime_seconds": 3600,  # Mock uptime
-        "version": "18.0.0"
+        "version": "18.0.0",
     }
 
 
 # Minimal service routing to satisfy test_api_gateway_routing.py
-@app.api_route("/v1/services/{service_path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+@app.api_route(
+    "/v1/services/{service_path:path}", methods=["GET", "POST", "PUT", "DELETE"]
+)
 async def route_service_request(service_path: str, request: Request):
-    """
-    Minimal service routing to pass routing tests
+    """Minimal service routing to pass routing tests
 
     This is just enough to satisfy the contract tests:
     - Extracts service name from path
@@ -109,7 +99,7 @@ async def route_service_request(service_path: str, request: Request):
     - Preserves correlation ID
     """
     # Extract service name from path
-    path_parts = service_path.split('/')
+    path_parts = service_path.split("/")
     service_name = path_parts[0] if path_parts else ""
 
     # Add correlation ID if not present
@@ -121,7 +111,7 @@ async def route_service_request(service_path: str, request: Request):
     headers = {
         "X-Correlation-ID": correlation_id,
         "X-Response-Time": response_time,
-        "X-Gateway-Version": "18.0.0"
+        "X-Gateway-Version": "18.0.0",
     }
 
     # Handle known service routes
@@ -136,15 +126,15 @@ async def route_service_request(service_path: str, request: Request):
                 content={
                     "query": "artificial intelligence",
                     "request_id": str(uuid.uuid4()),
-                    "status": "accepted"
+                    "status": "accepted",
                 },
-                headers=headers
+                headers=headers,
             )
         else:
             return JSONResponse(
                 content={"error": "Unknown research endpoint"},
                 status_code=404,
-                headers=headers
+                headers=headers,
             )
 
     elif service_name == "cache":
@@ -155,39 +145,32 @@ async def route_service_request(service_path: str, request: Request):
                     "cache_stats": {
                         "total_requests": 1000,
                         "cache_hits": 950,
-                        "cache_misses": 50
-                    }
+                        "cache_misses": 50,
+                    },
                 },
-                headers=headers
+                headers=headers,
             )
         else:
             return JSONResponse(
                 content={"error": "Unknown cache endpoint"},
                 status_code=404,
-                headers=headers
+                headers=headers,
             )
 
     elif service_name == "performance":
         if "metrics" in service_path:
             return JSONResponse(
                 content={
-                    "response_time": {
-                        "p50": 50,
-                        "p95": 120,
-                        "p99": 200
-                    },
-                    "metrics": {
-                        "requests_per_second": 100,
-                        "error_rate": 0.01
-                    }
+                    "response_time": {"p50": 50, "p95": 120, "p99": 200},
+                    "metrics": {"requests_per_second": 100, "error_rate": 0.01},
                 },
-                headers=headers
+                headers=headers,
             )
         else:
             return JSONResponse(
                 content={"error": "Unknown performance endpoint"},
                 status_code=404,
-                headers=headers
+                headers=headers,
             )
 
     else:
@@ -195,43 +178,35 @@ async def route_service_request(service_path: str, request: Request):
         return JSONResponse(
             content={
                 "error": f"Service '{service_name}' not found",
-                "message": "Service not registered in gateway"
+                "message": "Service not registered in gateway",
             },
             status_code=404,
-            headers=headers
+            headers=headers,
         )
 
 
 @app.get("/v1/services")
 async def list_services():
-    """
-    Service discovery endpoint to pass routing tests
-    """
+    """Service discovery endpoint to pass routing tests"""
     return [
         {
             "name": "research",
             "status": "healthy",
-            "endpoints": ["/services/research/multi-source"]
+            "endpoints": ["/services/research/multi-source"],
         },
-        {
-            "name": "cache",
-            "status": "healthy",
-            "endpoints": ["/services/cache/stats"]
-        },
+        {"name": "cache", "status": "healthy", "endpoints": ["/services/cache/stats"]},
         {
             "name": "performance",
             "status": "healthy",
-            "endpoints": ["/services/performance/metrics"]
-        }
+            "endpoints": ["/services/performance/metrics"],
+        },
     ]
 
 
 # Middleware to add response headers for all requests
 @app.middleware("http")
 async def add_gateway_headers(request: Request, call_next):
-    """
-    Add gateway metadata to all responses
-    """
+    """Add gateway metadata to all responses"""
     start_time = time.time()
 
     response = await call_next(request)
@@ -245,4 +220,7 @@ async def add_gateway_headers(request: Request, call_next):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+
+    uvicorn.run(
+        app, host="127.0.0.1", port=8080
+    )  # Secure local binding instead of 0.0.0.0

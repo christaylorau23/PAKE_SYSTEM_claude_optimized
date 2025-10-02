@@ -39,7 +39,7 @@ class TestRSSFeedService:
     Tests comprehensive RSS feed parsing and content extraction capabilities.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cognitive_engine(self):
         """Mock cognitive engine for testing"""
         engine = Mock()
@@ -54,7 +54,7 @@ class TestRSSFeedService:
         )
         return engine
 
-    @pytest.fixture
+    @pytest.fixture()
     def rss_feed_service(self):
         """Create RSS feed service instance"""
         if RSSFeedService is None:
@@ -62,7 +62,7 @@ class TestRSSFeedService:
 
         return RSSFeedService()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_rss_xml(self):
         """Sample RSS 2.0 XML for testing"""
         return """<?xml version="1.0" encoding="UTF-8"?>
@@ -93,7 +93,7 @@ class TestRSSFeedService:
             </channel>
         </rss>"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_atom_xml(self):
         """Sample Atom XML for testing"""
         return """<?xml version="1.0" encoding="UTF-8"?>
@@ -119,7 +119,7 @@ class TestRSSFeedService:
     # CORE RSS FEED SERVICE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_fetch_and_parse_rss_feed_successfully(
         self,
         rss_feed_service,
@@ -159,7 +159,7 @@ class TestRSSFeedService:
             assert first_item.author == "Dr. Jane Smith"
             assert "Machine Learning" in first_item.categories
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_fetch_and_parse_atom_feed_successfully(
         self,
         rss_feed_service,
@@ -199,7 +199,7 @@ class TestRSSFeedService:
             assert atom_item.author == "Dr. Alice Johnson"
             assert "Quantum Computing" in atom_item.categories
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_multiple_feed_urls_concurrently(
         self,
         rss_feed_service,
@@ -252,7 +252,7 @@ class TestRSSFeedService:
             assert result.feeds_processed == 3
             assert result.feeds_failed == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_filter_items_by_date_range(
         self,
         rss_feed_service,
@@ -285,7 +285,7 @@ class TestRSSFeedService:
             assert len(result.items) == 1
             assert result.items[0].title == "Breakthrough in Neural Networks"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_filter_items_by_keywords(
         self,
         rss_feed_service,
@@ -324,7 +324,7 @@ class TestRSSFeedService:
     # CONTENT EXTRACTION AND PROCESSING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_fetch_full_article_content_when_requested(
         self,
         rss_feed_service,
@@ -380,7 +380,7 @@ class TestRSSFeedService:
             assert "Full article content" in result.items[0].full_content
             assert mock_fetch_article.called
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_convert_rss_items_to_content_items(self, rss_feed_service):
         """
         Test: Should convert RSS feed items to standardized ContentItem format
@@ -424,7 +424,7 @@ class TestRSSFeedService:
         assert "Research" in item.tags
         assert "Detailed content about AI advancement" in item.content
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_cognitive_assessment(
         self,
         rss_feed_service,
@@ -481,7 +481,7 @@ class TestRSSFeedService:
     # ERROR HANDLING AND RESILIENCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_invalid_feed_urls_gracefully(self, rss_feed_service):
         """
         Test: Should handle invalid or unreachable RSS feed URLs gracefully
@@ -504,7 +504,7 @@ class TestRSSFeedService:
                 "NOT_FOUND",
             ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_malformed_xml_gracefully(self, rss_feed_service):
         """
         Test: Should handle malformed RSS/Atom XML gracefully
@@ -535,7 +535,7 @@ class TestRSSFeedService:
             assert isinstance(result.error, RSSError)
             assert result.error.error_code == "PARSE_ERROR"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_retry_logic_for_temporary_failures(
         self,
         rss_feed_service,
@@ -576,7 +576,7 @@ class TestRSSFeedService:
             assert call_count == 3  # 2 failures + 1 success
             assert result.success
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_respect_feed_rate_limiting(self, rss_feed_service):
         """
         Test: Should respect rate limiting and backoff requirements
@@ -612,7 +612,7 @@ class TestRSSFeedService:
     # PERFORMANCE AND CACHING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_intelligent_caching(self, rss_feed_service):
         """
         Test: Should cache RSS feed results to improve performance
@@ -638,7 +638,7 @@ class TestRSSFeedService:
             assert result2.from_cache
             assert mock_get.call_count == 1  # No additional HTTP calls
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_requests_efficiently(
         self,
         rss_feed_service,
@@ -672,7 +672,7 @@ class TestRSSFeedService:
     # INTEGRATION AND WORKFLOW TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_orchestrator_workflow(self, rss_feed_service):
         """
         Test: Should integrate seamlessly with the ingestion orchestrator

@@ -21,9 +21,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 def test_vault_integration():
     """Test configuration loading from Vault."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test 1: Loading Configuration from Vault")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Set environment for Vault integration
     os.environ["ENVIRONMENT"] = "test"
@@ -61,12 +61,13 @@ def test_vault_integration():
 
 def test_environment_fallback():
     """Test configuration loading from environment variables."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test 2: Loading Configuration from Environment Variables")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Clear cache to force reload
     from pake_system.core.config import get_settings
+
     get_settings.cache_clear()
 
     # Disable Vault and set environment variables
@@ -79,9 +80,15 @@ def test_environment_fallback():
         settings = get_settings()
 
         # Verify secrets were loaded from environment
-        assert settings.SECRET_KEY == "test-env-secret-key", "SECRET_KEY should match environment"
-        assert settings.DATABASE_URL == "postgresql://test:test@localhost/test_db", "DATABASE_URL should match environment"
-        assert settings.REDIS_URL == "redis://localhost:6379/1", "REDIS_URL should match environment"
+        assert (
+            settings.SECRET_KEY == "test-env-secret-key"
+        ), "SECRET_KEY should match environment"
+        assert (
+            settings.DATABASE_URL == "postgresql://test:test@localhost/test_db"
+        ), "DATABASE_URL should match environment"
+        assert (
+            settings.REDIS_URL == "redis://localhost:6379/1"
+        ), "REDIS_URL should match environment"
 
         print("✅ Successfully loaded secrets from environment variables:")
         print(f"   - SECRET_KEY: {settings.SECRET_KEY}")
@@ -97,12 +104,13 @@ def test_environment_fallback():
 
 def test_vault_priority():
     """Test that environment variables override Vault values."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test 3: Environment Variable Override (Priority Test)")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Clear cache
     from pake_system.core.config import get_settings
+
     get_settings.cache_clear()
 
     # Enable Vault but also set environment variables
@@ -116,8 +124,12 @@ def test_vault_priority():
         settings = get_settings()
 
         # Environment variables should take precedence
-        assert settings.SECRET_KEY == "env-override-secret", "Env var should override Vault"
-        assert settings.DATABASE_URL and "override" in settings.DATABASE_URL, "Env var should override Vault"
+        assert (
+            settings.SECRET_KEY == "env-override-secret"
+        ), "Env var should override Vault"
+        assert (
+            settings.DATABASE_URL and "override" in settings.DATABASE_URL
+        ), "Env var should override Vault"
 
         print("✅ Environment variables correctly override Vault values:")
         print(f"   - SECRET_KEY: {settings.SECRET_KEY}")
@@ -132,9 +144,9 @@ def test_vault_priority():
 
 def test_vault_client_health():
     """Test Vault client health check."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test 4: Vault Client Health Check")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     try:
         from pake_system.core.vault_client import get_vault_client
@@ -142,7 +154,7 @@ def test_vault_client_health():
         vault_client = get_vault_client()
         health = vault_client.health_check()
 
-        print(f"✅ Vault Health Status:")
+        print("✅ Vault Health Status:")
         for key, value in health.items():
             print(f"   - {key}: {value}")
 
@@ -155,9 +167,9 @@ def test_vault_client_health():
 
 def main():
     """Run all integration tests."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PAKE System - Vault Integration Test Suite")
-    print("="*70)
+    print("=" * 70)
 
     results = []
 
@@ -174,9 +186,9 @@ def main():
     results.append(("Vault Health Check", test_vault_client_health()))
 
     # Summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Test Results Summary")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     passed = sum(1 for _, result in results if result)
     total = len(results)
@@ -186,7 +198,7 @@ def main():
         print(f"{status}: {test_name}")
 
     print(f"\n{passed}/{total} tests passed")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     if passed == total:
         print("🎉 All tests passed! Vault integration is working correctly.")

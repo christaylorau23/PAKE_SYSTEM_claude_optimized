@@ -9,7 +9,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-
 from services.monitoring.analytics_platform import (
     Alert,
     AlertManager,
@@ -29,7 +28,7 @@ from services.monitoring.analytics_platform import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def analytics_config():
     """Test configuration for analytics platform"""
     return AnalyticsPlatformConfig(
@@ -53,7 +52,7 @@ def analytics_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def analytics_platform(analytics_config):
     """Analytics platform instance for testing"""
     return ComprehensiveAnalyticsPlatform(analytics_config)
@@ -67,7 +66,7 @@ async def running_platform(analytics_platform):
     await analytics_platform.stop()
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_metrics():
     """Sample metrics for testing"""
     base_time = datetime.now(UTC)
@@ -117,7 +116,7 @@ def sample_metrics():
     return metrics
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_alert_rules():
     """Sample alert rules for testing"""
     return [
@@ -160,7 +159,7 @@ def sample_alert_rules():
 class TestComprehensiveAnalyticsPlatform:
     """Test the main analytics platform functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_analytics_platform_with_configuration(
         self,
         analytics_config,
@@ -185,7 +184,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(platform.dashboard_data) == 0
         assert len(platform.scheduled_reports) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_start_and_stop_platform_correctly(self, analytics_platform):
         """
         Test: Should start and stop analytics platform with proper
@@ -209,7 +208,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert not analytics_platform.is_running
         assert len(analytics_platform.background_tasks) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_collect_and_store_metrics_efficiently(
         self,
         running_platform,
@@ -245,7 +244,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(api_metrics) > 0
         assert api_metrics[0].metric_name == "response_time_ms"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_trigger_alerts_based_on_metric_thresholds(
         self,
         running_platform,
@@ -288,7 +287,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(active_alerts) > 0
         assert active_alerts[0].alert_id == triggered_alert.alert_id
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_generate_comprehensive_performance_reports(
         self,
         running_platform,
@@ -325,7 +324,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert isinstance(report.trends, dict)
         assert isinstance(report.generated_timestamp, datetime)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_comprehensive_system_health_status(
         self,
         running_platform,
@@ -373,7 +372,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert "active_alerts" in summary
         assert "system_components" in summary
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_metric_collection_safely(
         self,
         running_platform,
@@ -412,7 +411,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert stats["total_metrics_collected"] >= 100
         assert stats["buffer_size"] >= 100
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_resolve_alerts_and_track_resolution_times(
         self,
         running_platform,
@@ -459,7 +458,7 @@ class TestComprehensiveAnalyticsPlatform:
         assert alert_stats["alerts_resolved"] > 0
         assert alert_stats["avg_resolution_time_minutes"] >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_respect_alert_cooldown_periods(self, running_platform):
         """
         Test: Should respect alert cooldown periods to prevent
@@ -508,7 +507,7 @@ class TestComprehensiveAnalyticsPlatform:
         )
         assert len(alerts3) == 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_dashboard_data_and_metrics(
         self,
         running_platform,
@@ -556,7 +555,7 @@ class TestComprehensiveAnalyticsPlatform:
 class TestMetricsCollector:
     """Test metrics collection functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_collect_metrics_with_high_performance_buffer(
         self,
         analytics_config,
@@ -598,7 +597,7 @@ class TestMetricsCollector:
         assert batch_count == 10
         assert collector.collection_stats["total_metrics_collected"] == 11
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_aggregate_metrics_by_time_windows(self, analytics_config):
         """
         Test: Should aggregate metrics by configurable time windows
@@ -632,7 +631,7 @@ class TestMetricsCollector:
                 assert agg_data["min"] >= 0
                 assert agg_data["max"] >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_retrieve_metrics_by_timeframe(self, analytics_config):
         """
         Test: Should retrieve metrics by component and timeframe
@@ -689,7 +688,7 @@ class TestMetricsCollector:
 class TestAlertManager:
     """Test alerting and notification functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_evaluate_alert_conditions_accurately(
         self,
         analytics_config,
@@ -743,7 +742,7 @@ class TestAlertManager:
                     rule_id
                 } should not trigger for value {metric_value}"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_manage_alert_lifecycle_correctly(self, analytics_config):
         """
         Test: Should manage alert lifecycle from trigger through resolution
@@ -798,7 +797,7 @@ class TestAlertManager:
         assert stats["total_alerts_triggered"] >= 1
         assert stats["alerts_resolved"] >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_filter_alerts_by_severity(self, analytics_config):
         """
         Test: Should filter and retrieve alerts by severity level
@@ -882,7 +881,7 @@ class TestAlertManager:
 class TestPerformanceAnalyzer:
     """Test performance analysis functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_generate_performance_insights_from_metrics(
         self,
         analytics_config,
@@ -934,7 +933,7 @@ class TestPerformanceAnalyzer:
             assert "p99" in rt_summary
             assert rt_summary["min"] <= rt_summary["avg"] <= rt_summary["max"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_detect_performance_anomalies(self, analytics_config):
         """
         Test: Should detect performance anomalies using statistical
@@ -974,7 +973,7 @@ class TestPerformanceAnalyzer:
         )
         # Note: Anomaly detection might be triggered by other patterns too
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_calculate_percentiles_correctly(self, analytics_config):
         """
         Test: Should calculate percentiles correctly for performance
@@ -1012,7 +1011,7 @@ class TestPerformanceAnalyzer:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_analytics_platform(self):
         """
         Test: Should create production-ready analytics platform with

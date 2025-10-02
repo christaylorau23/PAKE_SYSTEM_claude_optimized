@@ -9,7 +9,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-
 from services.security.enterprise_security import (
     AuditEvent,
     AuditEventType,
@@ -76,7 +75,7 @@ async def compliance_monitor(security_config):
 class TestEnterpriseSecurityFramework:
     """Test suite for Enterprise Security Framework main orchestration."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_security_framework_initialization(self, security_framework):
         """Test security framework properly initializes all components."""
         assert security_framework.config is not None
@@ -84,7 +83,7 @@ class TestEnterpriseSecurityFramework:
         assert security_framework.audit_logger is not None
         assert security_framework.compliance_monitor is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_encrypt_decrypt_data(self, security_framework):
         """Test data encryption and decryption functionality."""
         test_data = "Sensitive financial information for user 12345"
@@ -98,7 +97,7 @@ class TestEnterpriseSecurityFramework:
         decrypted_data = await security_framework.decrypt_data(encrypted_data)
         assert decrypted_data == test_data
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_log_audit_event(self, security_framework):
         """Test audit event logging functionality."""
         event = AuditEvent(
@@ -117,7 +116,7 @@ class TestEnterpriseSecurityFramework:
         assert log_id is not None
         assert isinstance(log_id, str)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_check_compliance_status(self, security_framework):
         """Test compliance status checking across frameworks."""
         # Test GDPR compliance
@@ -129,7 +128,7 @@ class TestEnterpriseSecurityFramework:
         assert gdpr_report.compliance_score >= 0.0
         assert gdpr_report.compliance_score <= 1.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_validate_security_policy(self, security_framework):
         """Test security policy validation."""
         policy = SecurityPolicy(
@@ -150,7 +149,7 @@ class TestEnterpriseSecurityFramework:
         is_valid = await security_framework.validate_policy(policy)
         assert is_valid is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_detect_security_violations(self, security_framework):
         """Test security violation detection capabilities."""
         # Create test audit events
@@ -174,7 +173,7 @@ class TestEnterpriseSecurityFramework:
         assert isinstance(violations, list)
         assert len(violations) >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_security_report(self, security_framework):
         """Test comprehensive security report generation."""
         # Generate activity first
@@ -206,7 +205,7 @@ class TestEnterpriseSecurityFramework:
 class TestEncryptionManager:
     """Test suite for Encryption Manager functionality."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_encrypt_decrypt_string(self, encryption_manager):
         """Test string encryption and decryption."""
         original_text = "Confidential user data: credit_card_4532****1234"
@@ -220,7 +219,7 @@ class TestEncryptionManager:
         decrypted = await encryption_manager.decrypt_string(encrypted)
         assert decrypted == original_text
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_encrypt_decrypt_dictionary(self, encryption_manager):
         """Test dictionary encryption and decryption."""
         original_data = {
@@ -238,7 +237,7 @@ class TestEncryptionManager:
         decrypted = await encryption_manager.decrypt_dict(encrypted)
         assert decrypted == original_data
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_key_rotation(self, encryption_manager):
         """Test encryption key rotation functionality."""
         # Test current key info
@@ -255,7 +254,7 @@ class TestEncryptionManager:
         # Key rotation should succeed (we can't easily test key content changed
         # without exposing internals)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_encryption_performance(self, encryption_manager):
         """Test encryption performance with large data."""
         large_data = "x" * 10000  # 10KB of data
@@ -277,7 +276,7 @@ class TestEncryptionManager:
 class TestAuditLogger:
     """Test suite for Audit Logger functionality."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_log_audit_entry(self, audit_logger):
         """Test audit entry logging."""
         entry = AuditEvent(
@@ -296,7 +295,7 @@ class TestAuditLogger:
         assert log_id is not None
         assert isinstance(log_id, str)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_query_audit_logs(self, audit_logger):
         """Test audit log querying capabilities."""
         # Create test entries
@@ -336,7 +335,7 @@ class TestAuditLogger:
         assert len(results) >= 1
         assert results[0].user_id == "user1"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_detect_security_violations(self, audit_logger):
         """Test security violation detection in audit logs."""
         # Create suspicious entries
@@ -368,7 +367,7 @@ class TestAuditLogger:
         if detected:
             assert detected[0].severity in ["medium", "high", "critical"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_audit_log_retention(self, audit_logger):
         """Test audit log retention and cleanup."""
         # Test retention policy
@@ -386,7 +385,7 @@ class TestAuditLogger:
 class TestComplianceMonitor:
     """Test suite for Compliance Monitor functionality."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_gdpr_compliance_check(self, compliance_monitor):
         """Test GDPR compliance monitoring."""
         status = await compliance_monitor.check_gdpr_compliance()
@@ -398,7 +397,7 @@ class TestComplianceMonitor:
         assert status.compliance_score >= 0.5  # Should have reasonable compliance
         assert status.compliance_score >= 0.8  # Should have high compliance
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_soc2_compliance_check(self, compliance_monitor):
         """Test SOC2 compliance monitoring."""
         status = await compliance_monitor.check_soc2_compliance()
@@ -410,7 +409,7 @@ class TestComplianceMonitor:
         assert status.compliance_score >= 0.5  # Should have reasonable compliance
         assert status.compliance_score >= 0.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_iso27001_compliance_check(self, compliance_monitor):
         """Test ISO27001 compliance monitoring."""
         status = await compliance_monitor.check_iso27001_compliance()
@@ -422,7 +421,7 @@ class TestComplianceMonitor:
         assert status.compliance_score >= 0.5  # Should have reasonable compliance
         assert status.compliance_score >= 0.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_hipaa_compliance_check(self, compliance_monitor):
         """Test HIPAA compliance monitoring."""
         status = await compliance_monitor.check_hipaa_compliance()
@@ -436,7 +435,7 @@ class TestComplianceMonitor:
         )  # May have low compliance due to new framework
         assert status.compliance_score >= 0.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_compliance_reporting(self, compliance_monitor):
         """Test comprehensive compliance reporting."""
         report = await compliance_monitor.generate_compliance_report()
@@ -454,7 +453,7 @@ class TestComplianceMonitor:
             assert details["score"] >= 0.0
             assert details["score"] <= 1.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_compliance_violations_detection(self, compliance_monitor):
         """Test detection of compliance violations."""
         violations = await compliance_monitor.detect_violations()

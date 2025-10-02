@@ -4,11 +4,10 @@ Simple Security Tests for PAKE System
 Tests that don't require external dependencies
 """
 
-import os
 import sys
-import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -22,11 +21,12 @@ class TestSecureSerialization:
         try:
             from utils.secure_serialization import (
                 SecureSerializer,
-                SerializationFormat,
                 SerializationConfig,
-                serialize,
+                SerializationFormat,
                 deserialize,
+                serialize,
             )
+
             assert True  # Import successful
         except ImportError as e:
             pytest.fail(f"Failed to import secure serialization: {e}")
@@ -34,13 +34,17 @@ class TestSecureSerialization:
     def test_json_serialization(self):
         """Test JSON serialization works correctly"""
         try:
-            from utils.secure_serialization import serialize, deserialize, SerializationFormat
-            
+            from utils.secure_serialization import (
+                SerializationFormat,
+                deserialize,
+                serialize,
+            )
+
             test_data = {"key": "value", "number": 42, "list": [1, 2, 3]}
-            
+
             serialized = serialize(test_data, SerializationFormat.JSON)
             deserialized = deserialize(serialized)
-            
+
             assert deserialized == test_data
             assert isinstance(serialized, bytes)
             assert serialized.startswith(b"FORMAT:json:")
@@ -51,7 +55,7 @@ class TestSecureSerialization:
         """Test serialization format enum"""
         try:
             from utils.secure_serialization import SerializationFormat
-            
+
             assert SerializationFormat.JSON.value == "json"
             assert SerializationFormat.MSGPACK.value == "msgpack"
             assert SerializationFormat.CBOR.value == "cbor"
@@ -66,12 +70,13 @@ class TestSecureNetworkConfig:
         """Test network config can be imported"""
         try:
             from utils.secure_network_config import (
-                SecureNetworkConfig,
                 Environment,
                 NetworkSecurityConfig,
+                SecureNetworkConfig,
                 get_network_config,
                 validate_network_security,
             )
+
             assert True  # Import successful
         except ImportError as e:
             pytest.fail(f"Failed to import network config: {e}")
@@ -80,7 +85,7 @@ class TestSecureNetworkConfig:
         """Test environment enum values"""
         try:
             from utils.secure_network_config import Environment
-            
+
             assert Environment.DEVELOPMENT.value == "development"
             assert Environment.STAGING.value == "staging"
             assert Environment.PRODUCTION.value == "production"
@@ -90,10 +95,10 @@ class TestSecureNetworkConfig:
     def test_development_config_secure(self):
         """Test development config uses secure bindings"""
         try:
-            from utils.secure_network_config import SecureNetworkConfig, Environment
-            
+            from utils.secure_network_config import Environment, SecureNetworkConfig
+
             config = SecureNetworkConfig(Environment.DEVELOPMENT)
-            
+
             assert config.config.bind_address == "127.0.0.1"
             assert config.config.bind_address != "0.0.0.0"
             assert "localhost" in config.config.allowed_hosts
@@ -109,10 +114,13 @@ class TestServiceConfigSecurity:
         """Test service config can be imported"""
         try:
             from configs.service_config import (
-                ServiceConfig,
-                SecurityConfig,
                 Environment as ConfigEnvironment,
             )
+            from configs.service_config import (
+                SecurityConfig,
+                ServiceConfig,
+            )
+
             assert True  # Import successful
         except ImportError as e:
             pytest.fail(f"Failed to import service config: {e}")
@@ -121,16 +129,18 @@ class TestServiceConfigSecurity:
         """Test security config validation"""
         try:
             from configs.service_config import SecurityConfig
-            
+
             config = SecurityConfig()
-            
+
             # Test valid configuration
             config.jwt_expire_minutes = 30
             config.__post_init__()  # Should not raise
-            
+
             # Test invalid configuration
             config.jwt_expire_minutes = 0
-            with pytest.raises(ValueError, match="JWT expire minutes must be at least 1"):
+            with pytest.raises(
+                ValueError, match="JWT expire minutes must be at least 1"
+            ):
                 config.__post_init__()
         except ImportError:
             pytest.skip("Service config not available")
@@ -143,21 +153,21 @@ class TestDependencyFixes:
         """Test pyproject.toml exists and has correct pycountry version"""
         pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
         assert pyproject_path.exists()
-        
-        with open(pyproject_path, 'r') as f:
+
+        with open(pyproject_path) as f:
             content = f.read()
-        
+
         # Check that pycountry version is updated
-        assert "pycountry = \"^24.6.1\"" in content
-        assert "pycountry = \"^22.3.13\"" not in content
+        assert 'pycountry = "^24.6.1"' in content
+        assert 'pycountry = "^22.3.13"' not in content
 
     def test_node_lock_files_exist(self):
         """Test Node.js lock files exist"""
         project_root = Path(__file__).parent.parent
-        
+
         # Check that package-lock.json exists
         assert (project_root / "package-lock.json").exists()
-        
+
         # Check that yarn.lock exists
         assert (project_root / "yarn.lock").exists()
 
@@ -165,22 +175,24 @@ class TestDependencyFixes:
         """Test CI cache configuration is correct"""
         ci_path = Path(__file__).parent.parent / ".github" / "workflows" / "ci.yml"
         assert ci_path.exists()
-        
-        with open(ci_path, 'r') as f:
+
+        with open(ci_path) as f:
             ci_content = f.read()
-        
+
         # Should have cache-dependency-path configured
         assert "cache-dependency-path" in ci_content
         assert "package-lock.json" in ci_content
 
     def test_gitops_permissions(self):
         """Test GitOps workflow has correct permissions"""
-        gitops_path = Path(__file__).parent.parent / ".github" / "workflows" / "gitops.yml"
+        gitops_path = (
+            Path(__file__).parent.parent / ".github" / "workflows" / "gitops.yml"
+        )
         assert gitops_path.exists()
-        
-        with open(gitops_path, 'r') as f:
+
+        with open(gitops_path) as f:
             gitops_content = f.read()
-        
+
         # Should have write permissions
         assert "contents: write" in gitops_content
 
@@ -190,7 +202,9 @@ class TestSecurityFiles:
 
     def test_security_test_script_exists(self):
         """Test comprehensive security test script exists"""
-        script_path = Path(__file__).parent.parent / "scripts" / "security_test_comprehensive.py"
+        script_path = (
+            Path(__file__).parent.parent / "scripts" / "security_test_comprehensive.py"
+        )
         assert script_path.exists()
 
     def test_security_tests_exist(self):
@@ -200,12 +214,16 @@ class TestSecurityFiles:
 
     def test_secure_serialization_file_exists(self):
         """Test secure serialization file exists"""
-        serialization_path = Path(__file__).parent.parent / "src" / "utils" / "secure_serialization.py"
+        serialization_path = (
+            Path(__file__).parent.parent / "src" / "utils" / "secure_serialization.py"
+        )
         assert serialization_path.exists()
 
     def test_secure_network_config_exists(self):
         """Test secure network config file exists"""
-        network_path = Path(__file__).parent.parent / "src" / "utils" / "secure_network_config.py"
+        network_path = (
+            Path(__file__).parent.parent / "src" / "utils" / "secure_network_config.py"
+        )
         assert network_path.exists()
 
 
@@ -215,24 +233,24 @@ class TestSecurityIntegration:
     def test_end_to_end_secure_serialization(self):
         """Test end-to-end secure serialization workflow"""
         try:
-            from utils.secure_serialization import serialize, deserialize
-            
+            from utils.secure_serialization import deserialize, serialize
+
             # Create test data
             test_data = {
                 "user_id": 12345,
                 "data": {"sensitive": "information"},
-                "metadata": ["list", "of", "items"]
+                "metadata": ["list", "of", "items"],
             }
-            
+
             # Serialize securely
             serialized = serialize(test_data)
-            
+
             # Verify format
             assert serialized.startswith(b"FORMAT:")
-            
+
             # Deserialize
             deserialized = deserialize(serialized)
-            
+
             # Verify data integrity
             assert deserialized == test_data
         except ImportError:
@@ -241,20 +259,21 @@ class TestSecurityIntegration:
     def test_network_config_integration(self):
         """Test network configuration integrates properly"""
         try:
-            from utils.secure_network_config import SecureNetworkConfig, Environment
-            
+            from utils.secure_network_config import Environment, SecureNetworkConfig
+
             config = SecureNetworkConfig(Environment.DEVELOPMENT)
-            
+
             # Get complete server config
             from utils.secure_network_config import get_secure_server_config
+
             server_config = get_secure_server_config()
-            
+
             # Verify all components are present
             assert "uvicorn" in server_config
             assert "fastapi" in server_config
             assert "cors" in server_config
             assert "security" in server_config
-            
+
             # Verify security settings
             assert server_config["security"]["enable_ssl"] is False  # OK for dev
             assert server_config["uvicorn"]["host"] == "127.0.0.1"

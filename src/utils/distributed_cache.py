@@ -254,6 +254,7 @@ class DistributedCache:
                     # Try secure deserialization
                     try:
                         from .secure_serialization import deserialize
+
                         return deserialize(raw_data)
                     except Exception:
                         # Return as string as last resort

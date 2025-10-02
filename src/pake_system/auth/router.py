@@ -1,5 +1,4 @@
-"""
-Authentication API router
+"""Authentication API router
 Implements OAuth2 password flow endpoints
 """
 
@@ -14,7 +13,12 @@ from src.pake_system.core.config import get_settings
 from .database import authenticate_user
 from .dependencies import get_current_active_user
 from .models import Token, User, UserCreate
-from .security import create_access_token, create_refresh_token, validate_password_strength, generate_secure_password
+from .security import (
+    create_access_token,
+    create_refresh_token,
+    generate_secure_password,
+    validate_password_strength,
+)
 
 settings = get_settings()
 
@@ -27,11 +31,8 @@ router = APIRouter(
 
 
 @router.post("/token", response_model=Token)
-async def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> Token:
-    """
-    OAuth2 compatible token login endpoint.
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+    """OAuth2 compatible token login endpoint.
 
     This endpoint implements the OAuth2 "Password" flow, which is the
     standard way to authenticate users in FastAPI applications.
@@ -83,31 +84,30 @@ async def login(
     # Check if user account is disabled
     if user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user account"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user account"
         )
 
     # Create JWT access token
     # The "sub" (subject) claim contains the user identifier
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username},
-        expires_delta=access_token_expires
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
 
     # Create refresh token for token renewal
     refresh_token = create_refresh_token(data={"sub": user.username})
 
     # Return tokens in OAuth2 format
-    return Token(access_token=access_token, token_type="bearer", refresh_token=refresh_token)
+    return Token(
+        access_token=access_token, token_type="bearer", refresh_token=refresh_token
+    )
 
 
 @router.get("/me", response_model=User)
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> User:
-    """
-    Get current authenticated user information.
+    """Get current authenticated user information.
 
     This is a protected endpoint that demonstrates how to use the
     authentication dependency to secure routes.
@@ -142,8 +142,7 @@ async def read_users_me(
 async def logout(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> dict[str, str]:
-    """
-    Logout endpoint (for completeness).
+    """Logout endpoint (for completeness).
 
     Since JWT tokens are stateless, logout is typically handled client-side
     by removing the token from storage. However, this endpoint can be used
@@ -164,11 +163,8 @@ async def logout(
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(
-    refresh_token: str
-) -> Token:
-    """
-    Refresh access token using refresh token.
+async def refresh_token(refresh_token: str) -> Token:
+    """Refresh access token using refresh token.
 
     This endpoint allows clients to obtain new access tokens without
     requiring user re-authentication.
@@ -183,46 +179,41 @@ async def refresh_token(
         HTTPException: 401 Unauthorized if refresh token is invalid
     """
     from .security import decode_token, verify_token_type
-    
+
     try:
         # Decode and validate refresh token
         payload = decode_token(refresh_token)
-        
+
         # Verify it's a refresh token
         if not verify_token_type(refresh_token, "refresh"):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type"
             )
-        
+
         # Extract username from token
         username = payload.get("sub")
         if not username:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
             )
-        
+
         # Create new access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": username},
-            expires_delta=access_token_expires
+            data={"sub": username}, expires_delta=access_token_expires
         )
-        
+
         return Token(access_token=access_token, token_type="bearer")
-        
+
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
 
 @router.post("/register", response_model=User)
 async def register_user(user_data: UserCreate) -> User:
-    """
-    Register a new user account.
+    """Register a new user account.
 
     This endpoint validates password strength and creates a new user
     with secure password hashing.
@@ -238,33 +229,32 @@ async def register_user(user_data: UserCreate) -> User:
     """
     from .database import create_user
     from .security import create_password_hash
-    
+
     # Validate password strength
     is_valid, errors = validate_password_strength(user_data.password)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Password validation failed: {', '.join(errors)}"
+            detail=f"Password validation failed: {', '.join(errors)}",
         )
-    
+
     # Hash the password
     hashed_password = create_password_hash(user_data.password)
-    
+
     # Create user
     user = await create_user(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
-        full_name=user_data.full_name
+        full_name=user_data.full_name,
     )
-    
+
     return user
 
 
 @router.get("/generate-password")
 async def generate_password(length: int = 16) -> dict[str, str]:
-    """
-    Generate a secure random password.
+    """Generate a secure random password.
 
     This endpoint generates cryptographically secure passwords
     that meet enterprise security standards.
@@ -284,16 +274,15 @@ async def generate_password(length: int = 16) -> dict[str, str]:
         length = 12
     elif length > 64:
         length = 64
-    
+
     password = generate_secure_password(length)
-    
+
     return {"password": password}
 
 
 @router.post("/validate-password")
 async def validate_password(password: str) -> dict[str, Any]:
-    """
-    Validate password strength.
+    """Validate password strength.
 
     This endpoint checks if a password meets enterprise security
     requirements without storing or processing it further.
@@ -312,9 +301,9 @@ async def validate_password(password: str) -> dict[str, Any]:
         ['Password must be at least 12 characters long', ...]
     """
     is_valid, errors = validate_password_strength(password)
-    
+
     return {
         "is_valid": is_valid,
         "errors": errors,
-        "strength_score": max(0, 100 - len(errors) * 20)  # Simple strength scoring
+        "strength_score": max(0, 100 - len(errors) * 20),  # Simple strength scoring
     }

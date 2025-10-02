@@ -1,5 +1,4 @@
-"""
-User database operations
+"""User database operations
 Handles user storage and retrieval
 """
 
@@ -24,13 +23,12 @@ fake_users_db = {
         "email": "test@example.com",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",  # secret
         "disabled": False,
-    }
+    },
 }
 
 
 async def get_user(username: str) -> Optional[User]:
-    """
-    Retrieve a user from the database by username.
+    """Retrieve a user from the database by username.
 
     Args:
         username: The username to look up
@@ -49,9 +47,10 @@ async def get_user(username: str) -> Optional[User]:
     return None
 
 
-async def create_user(username: str, email: str, hashed_password: str, full_name: Optional[str] = None) -> User:
-    """
-    Create a new user in the database.
+async def create_user(
+    username: str, email: str, hashed_password: str, full_name: Optional[str] = None
+) -> User:
+    """Create a new user in the database.
 
     Args:
         username: Unique username
@@ -79,8 +78,7 @@ async def create_user(username: str, email: str, hashed_password: str, full_name
 
 
 async def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
-    """
-    Authenticate a user with username and password.
+    """Authenticate a user with username and password.
 
     This is a convenience function that combines user lookup and password verification.
 

@@ -7,23 +7,23 @@ Uses real database connections (test database) and actual service integration.
 Following Testing Pyramid: Integration tests (20%) - Service interactions, real dependencies
 """
 
-import pytest
-from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-from src.pake_system.auth.security import create_password_hash
-from src.pake_system.auth.database import get_user, authenticate_user, create_user
-from tests.factories import UserInDBFactory, LoginRequestFactory
+import pytest
 
+from src.pake_system.auth.database import authenticate_user, create_user, get_user
+from src.pake_system.auth.security import create_password_hash
+from tests.factories import UserInDBFactory
 
 # ============================================================================
 # Integration Tests - Database Operations
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_database
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+
+@pytest.mark.integration()
+@pytest.mark.integration_database()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthDatabaseIntegration:
     """Test authentication with real database operations"""
 
@@ -41,7 +41,7 @@ class TestAuthDatabaseIntegration:
         # Assert
         assert user.username == username
         assert user.email == email
-        assert "hashed_password" in user.__dict__ or hasattr(user, 'hashed_password')
+        assert "hashed_password" in user.__dict__ or hasattr(user, "hashed_password")
 
     async def test_get_user_retrieves_from_database(self):
         """Test retrieving user from database"""
@@ -54,7 +54,7 @@ class TestAuthDatabaseIntegration:
         # Assert
         assert user is not None
         assert user.username == expected_user
-        assert hasattr(user, 'hashed_password')
+        assert hasattr(user, "hashed_password")
 
     async def test_get_user_returns_none_for_nonexistent(self):
         """Test that get_user returns None for non-existent user"""
@@ -103,9 +103,10 @@ class TestAuthDatabaseIntegration:
 # Integration Tests - Service Layer
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthServiceIntegration:
     """Test authentication service with mocked dependencies"""
 
@@ -149,10 +150,11 @@ class TestAuthServiceIntegration:
 # Integration Tests - Cache Integration
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_cache
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+
+@pytest.mark.integration()
+@pytest.mark.integration_cache()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthCacheIntegration:
     """Test authentication with caching layer"""
 
@@ -193,9 +195,10 @@ class TestAuthCacheIntegration:
 # Integration Tests - Rate Limiting
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthRateLimitingIntegration:
     """Test rate limiting integration"""
 
@@ -237,10 +240,11 @@ class TestAuthRateLimitingIntegration:
 # Integration Tests - Multi-Step Workflows
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
-@pytest.mark.slow
+
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
+@pytest.mark.slow()
 class TestAuthWorkflowIntegration:
     """Test complete multi-step authentication workflows"""
 
@@ -308,21 +312,23 @@ class TestAuthWorkflowIntegration:
 # Integration Tests - Error Handling
 # ============================================================================
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthErrorHandling:
     """Test error handling in authentication integration"""
 
     async def test_handles_database_connection_failure(self, mock_database):
         """Test graceful handling of database failures"""
         # Arrange
-        mock_database.fetch_one = AsyncMock(side_effect=Exception("Database connection failed"))
+        mock_database.fetch_one = AsyncMock(
+            side_effect=Exception("Database connection failed")
+        )
 
         # Act & Assert
         # In real integration test, would handle connection failure
         # and return appropriate error
-        pass
 
     async def test_handles_cache_unavailable(self, mock_redis):
         """Test graceful handling when cache is unavailable"""
@@ -331,7 +337,6 @@ class TestAuthErrorHandling:
 
         # Act & Assert
         # Should fall back to database-only auth
-        pass
 
     async def test_handles_invalid_token_format(self):
         """Test handling of malformed tokens"""
@@ -341,6 +346,7 @@ class TestAuthErrorHandling:
         # Act & Assert
         # Should reject with appropriate error
         from jose import JWTError
+
         from src.pake_system.auth.security import decode_token
 
         with pytest.raises(JWTError):

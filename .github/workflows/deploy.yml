@@ -26,6 +26,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  id-token: write  # Required for OIDC authentication with AWS
+  contents: read   # Required for checkout
+
 env:
   PYTHON_VERSION: '3.12'
   POETRY_VERSION: '1.8.3'
@@ -117,6 +121,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
+          role-session-name: pake-system-staging-deployment
+      
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -196,6 +207,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
+          role-session-name: pake-system-production-deployment
       
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
@@ -367,6 +385,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
+          role-session-name: pake-system-rollback
       
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3

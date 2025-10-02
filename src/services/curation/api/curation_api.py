@@ -242,7 +242,8 @@ async def submit_feedback(
 async def get_user_recommendations(
     user_id: str,
     limit: int = Query(20, ge=1, le=100),
-    content_types: str | None = Query(
+    content_types: str
+    | None = Query(
         None,
         description="Comma-separated content types",
     ),

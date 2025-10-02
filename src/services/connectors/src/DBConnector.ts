@@ -408,15 +408,19 @@ export class DBConnector extends Connector {
    * Build SQL query from request parameters
    */
   private buildQuery(request: ConnectorRequest): QueryRequest {
-    const tableName = request.target;
+    // Sanitize table name to prevent SQL injection
+    const tableName = this.sanitizeIdentifier(request.target);
     const params = request.parameters;
 
     switch (request.type) {
       case ConnectorRequestType.SELECT: {
-        const columns = params.columns ? params.columns.join(', ') : '*';
+        const columns = params.columns ? 
+          params.columns.map(col => this.sanitizeIdentifier(col)).join(', ') : '*';
         const whereClause = this.buildWhereClause(params.where);
-        const orderClause = params.orderBy ? `ORDER BY ${params.orderBy}` : '';
-        const limitClause = params.limit ? `LIMIT ${params.limit}` : '';
+        const orderClause = params.orderBy ? 
+          `ORDER BY ${this.sanitizeIdentifier(params.orderBy)}` : '';
+        const limitClause = params.limit ? 
+          `LIMIT ${this.sanitizeNumericValue(params.limit)}` : '';
 
         return {
           sql: `SELECT ${columns} FROM ${tableName} ${whereClause} ${orderClause} ${limitClause}`.trim(),
@@ -425,7 +429,7 @@ export class DBConnector extends Connector {
       }
 
       case ConnectorRequestType.INSERT: {
-        const insertColumns = Object.keys(params.data);
+        const insertColumns = Object.keys(params.data).map(col => this.sanitizeIdentifier(col));
         const placeholders = insertColumns
           .map((_, i) => `$${i + 1}`)
           .join(', ');
@@ -437,7 +441,7 @@ export class DBConnector extends Connector {
       }
 
       case ConnectorRequestType.UPDATE: {
-        const updateColumns = Object.keys(params.data);
+        const updateColumns = Object.keys(params.data).map(col => this.sanitizeIdentifier(col));
         const setClause = updateColumns
           .map((col, i) => `${col} = $${i + 1}`)
           .join(', ');
@@ -470,7 +474,7 @@ export class DBConnector extends Connector {
   }
 
   /**
-   * Build WHERE clause from parameters
+   * Build WHERE clause from parameters with SQL injection protection
    */
   private buildWhereClause(whereParams: any, paramOffset: number = 0): string {
     if (!whereParams || Object.keys(whereParams).length === 0) {
@@ -479,10 +483,32 @@ export class DBConnector extends Connector {
 
     const conditions = Object.keys(whereParams).map((col, i) => {
       const paramIndex = paramOffset + i + 1;
-      return `${col} = $${paramIndex}`;
+      // Sanitize column names to prevent SQL injection
+      const sanitizedCol = this.sanitizeIdentifier(col);
+      return `${sanitizedCol} = $${paramIndex}`;
     });
 
     return `WHERE ${conditions.join(' AND ')}`;
+  }
+
+  /**
+   * Sanitize SQL identifiers to prevent injection
+   */
+  private sanitizeIdentifier(identifier: string): string {
+    // Only allow alphanumeric characters, underscores, and dots
+    // This prevents SQL injection through identifier manipulation
+    return identifier.replace(/[^a-zA-Z0-9_.]/g, '');
+  }
+
+  /**
+   * Sanitize numeric values to prevent injection
+   */
+  private sanitizeNumericValue(value: any): string {
+    const num = Number(value);
+    if (isNaN(num) || num < 0) {
+      throw new Error('Invalid numeric value for SQL query');
+    }
+    return num.toString();
   }
 
   /**

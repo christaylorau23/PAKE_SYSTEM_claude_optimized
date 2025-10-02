@@ -12,19 +12,20 @@ Tests cover:
 Run with: pytest tests/test_auth_system.py -v --cov=src/pake_system/auth
 """
 
-import pytest
 from datetime import timedelta
+
+import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 
+from src.pake_system.auth.database import authenticate_user, get_user
+from src.pake_system.auth.example_app import app
 from src.pake_system.auth.security import (
     create_access_token,
     create_password_hash,
     decode_token,
     verify_password,
 )
-from src.pake_system.auth.database import authenticate_user, get_user
-from src.pake_system.auth.example_app import app
 from src.pake_system.core.config import get_settings
 
 settings = get_settings()
@@ -33,19 +34,19 @@ settings = get_settings()
 # Fixtures
 
 
-@pytest.fixture
+@pytest.fixture()
 def client():
     """Create a test client for the FastAPI app"""
     return TestClient(app)
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_password():
     """Test password"""
     return "TestPassword123!"
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_hashed_password(test_password):
     """Hashed test password"""
     return create_password_hash(test_password)
@@ -54,7 +55,7 @@ def test_hashed_password(test_password):
 # Unit Tests - Password Hashing
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPasswordHashing:
     """Test password hashing functionality"""
 
@@ -88,7 +89,7 @@ class TestPasswordHashing:
 # Unit Tests - JWT Tokens
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestJWTTokens:
     """Test JWT token generation and validation"""
 
@@ -142,9 +143,7 @@ class TestJWTTokens:
 
         # Create token with different secret
         token = jwt.encode(
-            {"sub": "testuser"},
-            "wrong-secret",
-            algorithm=settings.ALGORITHM
+            {"sub": "testuser"}, "wrong-secret", algorithm=settings.ALGORITHM
         )
 
         with pytest.raises(JWTError):
@@ -154,11 +153,11 @@ class TestJWTTokens:
 # Integration Tests - User Authentication
 
 
-@pytest.mark.integration_auth
+@pytest.mark.integration_auth()
 class TestUserAuthentication:
     """Test user authentication flow"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_exists(self):
         """Test retrieving an existing user"""
         user = await get_user("admin")
@@ -168,13 +167,13 @@ class TestUserAuthentication:
         assert user.email == "admin@example.com"
         assert hasattr(user, "hashed_password")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_not_exists(self):
         """Test retrieving a non-existent user"""
         user = await get_user("nonexistent")
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_success(self):
         """Test successful user authentication"""
         user = await authenticate_user("admin", "secret")
@@ -183,13 +182,13 @@ class TestUserAuthentication:
         assert user.username == "admin"
         assert user.disabled is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_wrong_password(self):
         """Test authentication with wrong password"""
         user = await authenticate_user("admin", "wrongpassword")
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_not_exists(self):
         """Test authentication with non-existent user"""
         user = await authenticate_user("nonexistent", "password")
@@ -199,7 +198,7 @@ class TestUserAuthentication:
 # Integration Tests - API Endpoints
 
 
-@pytest.mark.integration_api
+@pytest.mark.integration_api()
 class TestAuthenticationEndpoints:
     """Test authentication API endpoints"""
 
@@ -215,11 +214,7 @@ class TestAuthenticationEndpoints:
     def test_login_success(self, client):
         """Test successful login via /token endpoint"""
         response = client.post(
-            "/token",
-            data={
-                "username": "admin",
-                "password": "secret"
-            }
+            "/token", data={"username": "admin", "password": "secret"}
         )
 
         assert response.status_code == 200
@@ -238,11 +233,7 @@ class TestAuthenticationEndpoints:
     def test_login_wrong_password(self, client):
         """Test login with wrong password"""
         response = client.post(
-            "/token",
-            data={
-                "username": "admin",
-                "password": "wrongpassword"
-            }
+            "/token", data={"username": "admin", "password": "wrongpassword"}
         )
 
         assert response.status_code == 401
@@ -252,11 +243,7 @@ class TestAuthenticationEndpoints:
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent user"""
         response = client.post(
-            "/token",
-            data={
-                "username": "nonexistent",
-                "password": "password"
-            }
+            "/token", data={"username": "nonexistent", "password": "password"}
         )
 
         assert response.status_code == 401
@@ -265,16 +252,12 @@ class TestAuthenticationEndpoints:
         """Test /auth/me endpoint with valid token"""
         # First, login to get token
         login_response = client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         token = login_response.json()["access_token"]
 
         # Access protected endpoint
-        response = client.get(
-            "/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
 
         assert response.status_code == 200
         data = response.json()
@@ -293,8 +276,7 @@ class TestAuthenticationEndpoints:
     def test_get_current_user_invalid_token(self, client):
         """Test /auth/me endpoint with invalid token"""
         response = client.get(
-            "/auth/me",
-            headers={"Authorization": "Bearer invalid.token.here"}
+            "/auth/me", headers={"Authorization": "Bearer invalid.token.here"}
         )
 
         assert response.status_code == 401
@@ -303,15 +285,13 @@ class TestAuthenticationEndpoints:
         """Test protected endpoint with valid token"""
         # Login
         login_response = client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         token = login_response.json()["access_token"]
 
         # Access protected endpoint
         response = client.get(
-            "/protected",
-            headers={"Authorization": f"Bearer {token}"}
+            "/protected", headers={"Authorization": f"Bearer {token}"}
         )
 
         assert response.status_code == 200
@@ -329,15 +309,13 @@ class TestAuthenticationEndpoints:
         """Test logout endpoint"""
         # Login
         login_response = client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         token = login_response.json()["access_token"]
 
         # Logout
         response = client.post(
-            "/auth/logout",
-            headers={"Authorization": f"Bearer {token}"}
+            "/auth/logout", headers={"Authorization": f"Bearer {token}"}
         )
 
         assert response.status_code == 200
@@ -348,7 +326,7 @@ class TestAuthenticationEndpoints:
 # End-to-End Tests
 
 
-@pytest.mark.e2e
+@pytest.mark.e2e()
 class TestAuthenticationE2E:
     """End-to-end authentication flow tests"""
 
@@ -364,31 +342,25 @@ class TestAuthenticationE2E:
 
         # Step 3: Login to get token
         response = client.post(
-            "/token",
-            data={"username": "admin", "password": "secret"}
+            "/token", data={"username": "admin", "password": "secret"}
         )
         assert response.status_code == 200
         token = response.json()["access_token"]
 
         # Step 4: Access protected endpoint with token (should succeed)
         response = client.get(
-            "/protected",
-            headers={"Authorization": f"Bearer {token}"}
+            "/protected", headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
 
         # Step 5: Get user info
-        response = client.get(
-            "/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         assert response.json()["username"] == "admin"
 
         # Step 6: Logout
         response = client.post(
-            "/auth/logout",
-            headers={"Authorization": f"Bearer {token}"}
+            "/auth/logout", headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
 
@@ -396,7 +368,7 @@ class TestAuthenticationE2E:
 # Performance Tests
 
 
-@pytest.mark.performance
+@pytest.mark.performance()
 class TestAuthenticationPerformance:
     """Test authentication performance"""
 
@@ -405,7 +377,9 @@ class TestAuthenticationPerformance:
         result = benchmark(create_password_hash, "password123")
         assert result.startswith("$2b$")
 
-    def test_password_verification_performance(self, benchmark, test_password, test_hashed_password):
+    def test_password_verification_performance(
+        self, benchmark, test_password, test_hashed_password
+    ):
         """Benchmark password verification"""
         result = benchmark(verify_password, test_password, test_hashed_password)
         assert result is True

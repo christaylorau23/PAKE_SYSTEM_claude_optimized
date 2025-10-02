@@ -7,7 +7,6 @@ Configures and validates Black, Prettier, Ruff, and isort across the PAKE System
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Tuple, Optional
 
 
 class FormatterSetup:
@@ -18,7 +17,9 @@ class FormatterSetup:
         self.python_dirs = ["src", "tests", "scripts"]
         self.js_ts_patterns = ["**/*.js", "**/*.ts", "**/*.tsx", "**/*.json"]
 
-    def run_command(self, command: List[str], description: str, check: bool = True) -> Tuple[bool, str]:
+    def run_command(
+        self, command: list[str], description: str, check: bool = True
+    ) -> tuple[bool, str]:
         """Run a command and return success status and output"""
         print(f"\n🔄 {description}")
         print(f"Command: {' '.join(command)}")
@@ -29,7 +30,7 @@ class FormatterSetup:
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                check=check
+                check=check,
             )
             print(f"✅ {description} completed successfully")
             return True, result.stdout
@@ -77,7 +78,7 @@ class FormatterSetup:
         success, output = self.run_command(
             black_command,
             f"{'Applying' if fix else 'Checking'} Black formatting",
-            check=False
+            check=False,
         )
 
         if not success and not fix:
@@ -94,7 +95,7 @@ class FormatterSetup:
         ruff_success, ruff_output = self.run_command(
             ruff_check_command,
             f"{'Fixing' if fix else 'Checking'} Ruff linting",
-            check=False
+            check=False,
         )
 
         # Ruff formatting
@@ -106,7 +107,7 @@ class FormatterSetup:
         ruff_format_success, _ = self.run_command(
             ruff_format_command,
             f"{'Applying' if fix else 'Checking'} Ruff formatting",
-            check=False
+            check=False,
         )
 
         # isort import sorting
@@ -118,7 +119,7 @@ class FormatterSetup:
         isort_success, _ = self.run_command(
             isort_command,
             f"{'Applying' if fix else 'Checking'} isort import sorting",
-            check=False
+            check=False,
         )
 
         return success and ruff_success and ruff_format_success and isort_success
@@ -136,7 +137,7 @@ class FormatterSetup:
         success, output = self.run_command(
             prettier_command,
             f"{'Applying' if fix else 'Checking'} Prettier formatting",
-            check=False
+            check=False,
         )
 
         if not success and not fix:
@@ -192,7 +193,7 @@ class FormatterSetup:
 
     def generate_pre_commit_hook(self) -> None:
         """Generate a pre-commit hook for automatic formatting"""
-        hook_content = '''#!/bin/sh
+        hook_content = """#!/bin/sh
 # Pre-commit hook for PAKE System
 # Runs formatters and linters before commit
 
@@ -210,7 +211,7 @@ echo "🔧 Formatting JavaScript/TypeScript code..."
 npx prettier --write . || exit 1
 
 echo "✅ Pre-commit formatting completed successfully!"
-'''
+"""
 
         hooks_dir = self.project_root / ".git" / "hooks"
         hook_file = hooks_dir / "pre-commit"
@@ -220,7 +221,9 @@ echo "✅ Pre-commit formatting completed successfully!"
             hook_file.chmod(0o755)
             print(f"✅ Pre-commit hook created: {hook_file}")
         else:
-            print("⚠️  Git hooks directory not found, skipping pre-commit hook creation")
+            print(
+                "⚠️  Git hooks directory not found, skipping pre-commit hook creation"
+            )
 
     def run_comprehensive_check(self, fix: bool = False) -> bool:
         """Run comprehensive formatting validation"""
@@ -262,7 +265,9 @@ echo "✅ Pre-commit formatting completed successfully!"
             return True
         else:
             if not fix:
-                print("⚠️  Some files need formatting. Run with --fix to apply changes.")
+                print(
+                    "⚠️  Some files need formatting. Run with --fix to apply changes."
+                )
                 print("🔧 Quick fix: npm run format")
             else:
                 print("❌ Some formatting issues could not be automatically fixed")
@@ -275,7 +280,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="Setup and validate code formatters")
     parser.add_argument("--fix", action="store_true", help="Apply formatting fixes")
-    parser.add_argument("--check-only", action="store_true", help="Only check formatting, don't fix")
+    parser.add_argument(
+        "--check-only", action="store_true", help="Only check formatting, don't fix"
+    )
 
     args = parser.parse_args()
 

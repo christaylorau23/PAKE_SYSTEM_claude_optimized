@@ -6,16 +6,17 @@ This module defines abstract interfaces that high-level modules depend on,
 rather than depending on concrete implementations.
 """
 
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
-import uuid
 
 
 class SourceType(Enum):
     """Supported ingestion source types"""
+
     WEB = "web"
     ARXIV = "arxiv"
     PUBMED = "pubmed"
@@ -26,6 +27,7 @@ class SourceType(Enum):
 
 class IngestionStatus(Enum):
     """Ingestion execution status"""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -36,6 +38,7 @@ class IngestionStatus(Enum):
 @dataclass(frozen=True)
 class IngestionSource:
     """Configuration for a single ingestion source"""
+
     source_type: str
     priority: int
     query_parameters: dict[str, Any]
@@ -50,6 +53,7 @@ class IngestionSource:
 @dataclass(frozen=True)
 class IngestionPlan:
     """Comprehensive ingestion plan for multi-source content retrieval"""
+
     topic: str
     sources: list[IngestionSource]
     total_sources: int
@@ -65,6 +69,7 @@ class IngestionPlan:
 @dataclass(frozen=True)
 class ContentItem:
     """Standard content item structure"""
+
     title: str
     content: str
     url: str
@@ -79,6 +84,7 @@ class ContentItem:
 @dataclass
 class IngestionResult:
     """Comprehensive results from ingestion plan execution"""
+
     success: bool
     plan_id: str
     content_items: list[ContentItem] = field(default_factory=list)
@@ -93,7 +99,7 @@ class IngestionResult:
     error: str | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    
+
     # Additional fields for compatibility
     total_sources: int = 0
     successful_sources: int = 0
@@ -103,7 +109,7 @@ class IngestionResult:
 
 class IngestionPlanBuilderInterface(ABC):
     """Abstract interface for ingestion plan builders"""
-    
+
     @abstractmethod
     def build_plan(
         self,
@@ -112,17 +118,15 @@ class IngestionPlanBuilderInterface(ABC):
         user_preferences: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Build a comprehensive ingestion plan from source configurations"""
-        pass
-    
+
     @abstractmethod
     def optimize_plan(self, plan: IngestionPlan) -> IngestionPlan:
         """Optimize the ingestion plan for better performance"""
-        pass
 
 
 class SourceExecutorInterface(ABC):
     """Abstract interface for source executors"""
-    
+
     @abstractmethod
     async def execute_source(
         self,
@@ -130,17 +134,15 @@ class SourceExecutorInterface(ABC):
         plan: IngestionPlan,
     ) -> tuple[list[ContentItem], dict[str, Any]]:
         """Execute ingestion for a single source"""
-        pass
-    
+
     @abstractmethod
     def get_source_cache_key(self, source: IngestionSource) -> str:
         """Generate cache key for source execution"""
-        pass
 
 
 class IngestionOrchestratorInterface(ABC):
     """Abstract interface for ingestion orchestrators"""
-    
+
     @abstractmethod
     async def create_ingestion_plan(
         self,
@@ -148,8 +150,7 @@ class IngestionOrchestratorInterface(ABC):
         context: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Create comprehensive ingestion plan based on research topic and context"""
-        pass
-    
+
     @abstractmethod
     async def execute_ingestion_plan(
         self,
@@ -157,17 +158,15 @@ class IngestionOrchestratorInterface(ABC):
         user_id: str | None = None,
     ) -> IngestionResult:
         """Execute comprehensive ingestion plan with full orchestration"""
-        pass
-    
+
     @abstractmethod
     async def health_check(self) -> dict[str, Any]:
         """Perform comprehensive orchestrator health check"""
-        pass
 
 
 class NotificationServiceInterface(ABC):
     """Abstract interface for notification services"""
-    
+
     @abstractmethod
     async def send_notification(
         self,
@@ -176,17 +175,15 @@ class NotificationServiceInterface(ABC):
         notification_type: str = "info",
     ) -> bool:
         """Send a notification to a recipient"""
-        pass
 
 
 class CacheServiceInterface(ABC):
     """Abstract interface for cache services"""
-    
+
     @abstractmethod
     async def get(self, namespace: str, key: str) -> Any:
         """Get value from cache"""
-        pass
-    
+
     @abstractmethod
     async def set(
         self,
@@ -196,17 +193,15 @@ class CacheServiceInterface(ABC):
         ttl_seconds: int | None = None,
     ) -> bool:
         """Set value in cache"""
-        pass
-    
+
     @abstractmethod
     async def delete(self, namespace: str, key: str) -> bool:
         """Delete value from cache"""
-        pass
 
 
 class MetricsCollectorInterface(ABC):
     """Abstract interface for metrics collection"""
-    
+
     @abstractmethod
     def record_metric(
         self,
@@ -215,8 +210,7 @@ class MetricsCollectorInterface(ABC):
         tags: dict[str, str] | None = None,
     ) -> None:
         """Record a metric value"""
-        pass
-    
+
     @abstractmethod
     def increment_counter(
         self,
@@ -224,9 +218,7 @@ class MetricsCollectorInterface(ABC):
         tags: dict[str, str] | None = None,
     ) -> None:
         """Increment a counter metric"""
-        pass
-    
+
     @abstractmethod
     def get_metrics(self) -> dict[str, Any]:
         """Get current metrics"""
-        pass

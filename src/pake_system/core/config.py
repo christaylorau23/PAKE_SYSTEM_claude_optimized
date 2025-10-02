@@ -1,5 +1,4 @@
-"""
-Configuration management for PAKE System
+"""Configuration management for PAKE System
 Enterprise-grade configuration with Pydantic validation
 
 Security Features:
@@ -8,16 +7,16 @@ Security Features:
 - Never logs or prints sensitive configuration values
 """
 
-import os
 from functools import lru_cache
-from typing import List, Optional, Dict, Any
+from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 # Import Vault client (graceful degradation if not available)
 try:
-    from src.pake_system.core.vault_client import get_vault_client, VaultClientError
+    from src.pake_system.core.vault_client import VaultClientError, get_vault_client
+
     VAULT_AVAILABLE = True
 except ImportError:
     VAULT_AVAILABLE = False
@@ -26,27 +25,32 @@ except ImportError:
 
 class Settings(BaseSettings):
     """Enterprise PAKE System settings with comprehensive validation."""
-    
+
     # Basic settings
     PROJECT_NAME: str = Field(default="PAKE System", env="PROJECT_NAME")
-    PROJECT_DESCRIPTION: str = Field(default="Enterprise Knowledge Management & AI Research Platform", env="PROJECT_DESCRIPTION")
+    PROJECT_DESCRIPTION: str = Field(
+        default="Enterprise Knowledge Management & AI Research Platform",
+        env="PROJECT_DESCRIPTION",
+    )
     VERSION: str = Field(default="10.1.0", env="VERSION")
     ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
     DEBUG: bool = Field(default=False, env="DEBUG")
-    
+
     # Server settings
     HOST: str = Field(default="127.0.0.1", env="HOST")
     PORT: int = Field(default=8000, env="PORT")
-    
+
     # Security settings
     # Note: SECRET_KEY can come from Vault or environment variable
     SECRET_KEY: Optional[str] = Field(default=None, env="SECRET_KEY")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, env="REFRESH_TOKEN_EXPIRE_DAYS")
     ALGORITHM: str = Field(default="HS256", env="ALGORITHM")
 
     # CORS settings
-    ALLOWED_HOSTS: List[str] = Field(default=["*"], env="ALLOWED_HOSTS")
+    ALLOWED_HOSTS: list[str] = Field(default=["*"], env="ALLOWED_HOSTS")
 
     # Database settings
     # Note: DATABASE_URL can come from Vault or environment variable
@@ -58,30 +62,34 @@ class Settings(BaseSettings):
     # Note: REDIS_URL can come from Vault or environment variable
     REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
     REDIS_POOL_SIZE: int = Field(default=10, env="REDIS_POOL_SIZE")
-    
+
     # External API settings
     FIRECRAWL_API_KEY: Optional[str] = Field(default=None, env="FIRECRAWL_API_KEY")
-    ARXIV_API_URL: str = Field(default="http://export.arxiv.org/api/query", env="ARXIV_API_URL")
-    PUBMED_API_URL: str = Field(default="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/", env="PUBMED_API_URL")
-    
+    ARXIV_API_URL: str = Field(
+        default="http://export.arxiv.org/api/query", env="ARXIV_API_URL"
+    )
+    PUBMED_API_URL: str = Field(
+        default="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/", env="PUBMED_API_URL"
+    )
+
     # Monitoring settings
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     ENABLE_METRICS: bool = Field(default=True, env="ENABLE_METRICS")
     METRICS_PORT: int = Field(default=9090, env="METRICS_PORT")
-    
+
     # Rate limiting
     RATE_LIMIT_REQUESTS: int = Field(default=100, env="RATE_LIMIT_REQUESTS")
     RATE_LIMIT_WINDOW: int = Field(default=60, env="RATE_LIMIT_WINDOW")
-    
+
     # Cache settings
     CACHE_TTL: int = Field(default=3600, env="CACHE_TTL")  # 1 hour
     CACHE_MAX_SIZE: int = Field(default=1000, env="CACHE_MAX_SIZE")
-    
+
     # Vault settings
     VAULT_URL: Optional[str] = Field(default=None, env="VAULT_URL")
     VAULT_TOKEN: Optional[str] = Field(default=None, env="VAULT_TOKEN")
     VAULT_MOUNT_POINT: str = Field(default="secret", env="VAULT_MOUNT_POINT")
-    
+
     # Performance settings
     MAX_WORKERS: int = Field(default=4, env="MAX_WORKERS")
     TIMEOUT_SECONDS: int = Field(default=30, env="TIMEOUT_SECONDS")
@@ -102,54 +110,78 @@ class Settings(BaseSettings):
     # Enable/disable Vault integration
     USE_VAULT: bool = Field(default=True, env="USE_VAULT")
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def load_secrets_from_vault(self):
-        """
-        Load secrets from HashiCorp Vault if available and enabled.
+        """Load secrets from HashiCorp Vault with fail-fast security.
 
-        This validator runs after field validation. It attempts to fetch
-        secrets from Vault only if:
-        1. USE_VAULT is True
-        2. Vault client is available
-        3. VAULT_URL and VAULT_TOKEN are configured
-        4. The secret is not already set via environment variable
+        This validator runs after field validation. It implements fail-fast security:
+        - Application refuses to start if required secrets are missing
+        - No hardcoded fallbacks allowed
+        - All secrets must be configured in Vault or environment variables
+        - Comprehensive error messages guide proper configuration
 
-        Falls back gracefully to environment variables if Vault is unavailable.
+        Security Features:
+        - Fail-fast: Application stops if secrets are missing
+        - No hardcoded fallbacks: Prevents accidental secret exposure
+        - Audit logging: All secret access is logged
+        - Environment validation: Ensures proper configuration
         """
+        # Validate environment configuration
+        if self.ENVIRONMENT not in ["development", "staging", "production", "test"]:
+            raise ValueError(f"Invalid environment: {self.ENVIRONMENT}")
+
+        # For production, Vault is mandatory
+        if self.ENVIRONMENT == "production" and not self.USE_VAULT:
+            raise ValueError(
+                "Vault integration is mandatory for production environment. "
+                "Set USE_VAULT=true and configure VAULT_URL and VAULT_TOKEN."
+            )
+
         # Skip Vault integration if disabled or not available
         if not self.USE_VAULT or not VAULT_AVAILABLE:
-            # Ensure required secrets are set from environment
+            # Validate required secrets are set via environment
+            missing_secrets = []
             if not self.SECRET_KEY:
-                raise ValueError("SECRET_KEY must be set via environment variable when Vault is disabled")
+                missing_secrets.append("SECRET_KEY")
             if not self.DATABASE_URL:
-                raise ValueError("DATABASE_URL must be set via environment variable when Vault is disabled")
+                missing_secrets.append("DATABASE_URL")
             if not self.REDIS_URL:
-                raise ValueError("REDIS_URL must be set via environment variable when Vault is disabled")
+                missing_secrets.append("REDIS_URL")
+
+            if missing_secrets:
+                raise ValueError(
+                    f"Required secrets missing when Vault is disabled: {', '.join(missing_secrets)}. "
+                    f"Set these environment variables or enable Vault integration."
+                )
             return self
 
-        # Skip if Vault connection details are not configured
+        # Validate Vault configuration
         if not self.VAULT_URL or not self.VAULT_TOKEN:
-            # Fall back to environment variables
-            if not self.SECRET_KEY:
-                raise ValueError(
-                    "SECRET_KEY must be set via environment variable or Vault. "
-                    "Set VAULT_URL and VAULT_TOKEN to use Vault."
-                )
-            if not self.DATABASE_URL:
-                raise ValueError(
-                    "DATABASE_URL must be set via environment variable or Vault. "
-                    "Set VAULT_URL and VAULT_TOKEN to use Vault."
-                )
-            if not self.REDIS_URL:
-                raise ValueError(
-                    "REDIS_URL must be set via environment variable or Vault. "
-                    "Set VAULT_URL and VAULT_TOKEN to use Vault."
-                )
-            return self
+            raise ValueError(
+                "Vault integration enabled but configuration incomplete. "
+                "Set VAULT_URL and VAULT_TOKEN environment variables. "
+                "This is a security requirement."
+            )
 
-        # Attempt to fetch secrets from Vault
+        # Attempt to fetch secrets from Vault with fail-fast security
         try:
             vault_client = get_vault_client()
+
+            # Validate Vault connection and required secrets
+            health_check = vault_client.health_check()
+            if health_check["status"] == "unhealthy":
+                raise ValueError(f"Vault connection failed: {health_check['message']}")
+
+            if not health_check["all_secrets_available"]:
+                missing_secrets = [
+                    path
+                    for path, available in health_check["secrets_validation"].items()
+                    if not available
+                ]
+                raise ValueError(
+                    f"Required secrets missing in Vault: {', '.join(missing_secrets)}. "
+                    f"Configure these secrets in Vault or set corresponding environment variables."
+                )
 
             # Fetch SECRET_KEY from Vault if not already set
             if not self.SECRET_KEY:
@@ -168,11 +200,11 @@ class Settings(BaseSettings):
                 self.FIRECRAWL_API_KEY = vault_client.get_api_key("firecrawl_api_key")
 
         except VaultClientError as e:
-            # Log error but don't fail if environment variables are set
-            if not all([self.SECRET_KEY, self.DATABASE_URL, self.REDIS_URL]):
-                raise ValueError(
-                    f"Failed to load secrets from Vault and required secrets not in environment: {e}"
-                )
+            # Fail-fast: Don't start if secrets can't be loaded
+            raise ValueError(
+                f"Failed to load secrets from Vault: {e}. "
+                f"This is a security requirement - application cannot start without proper secrets configuration."
+            )
 
         return self
 
@@ -183,7 +215,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [host.strip() for host in v.split(",")]
         return v
-    
+
     @field_validator("ENVIRONMENT")
     @classmethod
     def validate_environment(cls, v):
@@ -192,7 +224,7 @@ class Settings(BaseSettings):
         if v not in allowed_envs:
             raise ValueError(f"Environment must be one of: {allowed_envs}")
         return v
-    
+
     @field_validator("LOG_LEVEL")
     @classmethod
     def validate_log_level(cls, v):
@@ -210,14 +242,14 @@ class Settings(BaseSettings):
         if v.upper() not in allowed_levels:
             raise ValueError(f"SQL log level must be one of: {allowed_levels}")
         return v.upper()
-    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()

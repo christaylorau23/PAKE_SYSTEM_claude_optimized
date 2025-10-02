@@ -11,14 +11,14 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
-from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.email_service import (
     EmailConnectionConfig,
     EmailIngestionService,
     EmailMessage,
     EmailSearchQuery,
 )
+
+from scripts.ingestion_pipeline import ContentItem
 
 
 class TestEmailIngestionService:
@@ -27,7 +27,7 @@ class TestEmailIngestionService:
     Tests intelligent filtering, cognitive integration, and multi-protocol support.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def email_config(self):
         """Standard email connection configuration"""
         return EmailConnectionConfig(
@@ -41,7 +41,7 @@ class TestEmailIngestionService:
             folder_mapping={"INBOX": "INBOX", "Sent": "SENT"},
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def exchange_config(self):
         """Exchange server configuration"""
         return EmailConnectionConfig(
@@ -54,14 +54,14 @@ class TestEmailIngestionService:
             timeout=30,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cognitive_engine(self):
         """Mock cognitive engine for quality assessment"""
         engine = Mock()
         engine.assess_content_quality = AsyncMock(return_value=0.85)
         return engine
 
-    @pytest.fixture
+    @pytest.fixture()
     def email_service(self, email_config, mock_cognitive_engine):
         """Create email service instance"""
         return EmailIngestionService(
@@ -69,7 +69,7 @@ class TestEmailIngestionService:
             cognitive_engine=mock_cognitive_engine,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def exchange_service(self, exchange_config, mock_cognitive_engine):
         """Create Exchange email service instance"""
         return EmailIngestionService(
@@ -81,7 +81,7 @@ class TestEmailIngestionService:
     # BASIC EMAIL SEARCH TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_search_emails_in_inbox_successfully(self, email_service):
         """
         Test: Should search emails in INBOX folder and return structured results
@@ -107,7 +107,7 @@ class TestEmailIngestionService:
         assert message.content
         assert isinstance(message.timestamp, datetime)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_search_multiple_folders_concurrently(self, email_service):
         """
         Test: Should search across multiple email folders efficiently
@@ -129,7 +129,7 @@ class TestEmailIngestionService:
             folders_in_messages = {msg.folder for msg in result.messages}
             assert len(folders_in_messages) >= 1  # At least one folder represented
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_sender_filtering_accurately(self, email_service):
         """
         Test: Should filter emails by sender addresses and patterns
@@ -153,7 +153,7 @@ class TestEmailIngestionService:
                 for filter_pattern in query.sender_filters
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_subject_keyword_filtering(self, email_service):
         """
         Test: Should filter emails by subject keywords with case-insensitive
@@ -176,7 +176,7 @@ class TestEmailIngestionService:
                 keyword.lower() in subject_lower for keyword in query.subject_keywords
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_date_range_filtering(self, email_service):
         """
         Test: Should filter emails by date range with proper timezone handling
@@ -203,7 +203,7 @@ class TestEmailIngestionService:
     # INTELLIGENT FILTERING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_filter_spam_messages_intelligently(self, email_service):
         """
         Test: Should detect and filter spam messages using pattern matching
@@ -228,7 +228,7 @@ class TestEmailIngestionService:
                 for spam_word in ["lottery", "winner", "urgent", "act now"]
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_filter_promotional_content_effectively(self, email_service):
         """
         Test: Should identify and filter promotional emails including
@@ -263,7 +263,7 @@ class TestEmailIngestionService:
                     <= 1
                 )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_content_length_filtering(self, email_service):
         """
         Test: Should filter out emails with insufficient content length
@@ -283,7 +283,7 @@ class TestEmailIngestionService:
         for message in result.messages:
             assert len(message.content) >= query.min_content_length
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_prioritize_professional_content(self, email_service):
         """
         Test: Should identify and prioritize professional emails
@@ -323,7 +323,7 @@ class TestEmailIngestionService:
     # COGNITIVE INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_cognitive_quality_assessment(self, email_service):
         """
         Test: Should apply cognitive quality assessment to email content
@@ -345,7 +345,7 @@ class TestEmailIngestionService:
         # Verify cognitive engine was called
         assert email_service.cognitive_engine.assess_content_quality.call_count > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_cognitive_assessment_failures_gracefully(
         self,
         email_service,
@@ -375,7 +375,7 @@ class TestEmailIngestionService:
     # CONTENT ITEM CONVERSION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_convert_emails_to_content_items_correctly(
         self,
         email_service,
@@ -418,7 +418,7 @@ class TestEmailIngestionService:
     # MULTI-PROTOCOL SUPPORT TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_imap_connection_configuration(self, email_service):
         """
         Test: Should properly configure and connect to IMAP servers
@@ -436,7 +436,7 @@ class TestEmailIngestionService:
 
         assert result.success
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_exchange_connection_configuration(
         self,
         exchange_service,
@@ -460,7 +460,7 @@ class TestEmailIngestionService:
     # ERROR HANDLING AND RESILIENCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_connection_failures_gracefully(self, email_service):
         """
         Test: Should handle email server connection failures with proper
@@ -480,7 +480,7 @@ class TestEmailIngestionService:
             assert "Connection failed" in result.error_details
             assert result.execution_time > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_empty_search_results_properly(self, email_service):
         """
         Test: Should handle cases where email search returns no results
@@ -504,7 +504,7 @@ class TestEmailIngestionService:
     # PERFORMANCE AND SCALABILITY TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_complete_search_within_reasonable_time(self, email_service):
         """
         Test: Should complete email searches within acceptable time limits
@@ -523,7 +523,7 @@ class TestEmailIngestionService:
         assert result.success
         assert result.execution_time < 5.0  # Should complete within 5 seconds
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_respect_max_results_limit(self, email_service):
         """
         Test: Should properly limit results according to max_results parameter
@@ -542,7 +542,7 @@ class TestEmailIngestionService:
     # HEALTH CHECK AND MAINTENANCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_comprehensive_health_status(self, email_service):
         """
         Test: Should provide detailed health check information including
@@ -564,7 +564,7 @@ class TestEmailIngestionService:
         assert health_status["server_type"] == "imap"
         assert health_status["hostname"] == "imap.company.com"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_cleanup_resources_properly(self, email_service):
         """
         Test: Should properly close connections and clean up resources

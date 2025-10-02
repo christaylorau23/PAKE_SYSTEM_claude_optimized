@@ -13,7 +13,6 @@ from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
-
 from services.ai.cognitive_analysis_engine import (
     CognitiveAnalysisEngine,
     CognitiveAnalysisResult,
@@ -39,7 +38,7 @@ class TestCognitiveAnalysisEngine:
     Tests ML-powered content understanding, quality assessment, and intelligence features.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def cognitive_config(self):
         """Standard cognitive analysis configuration for testing"""
         return CognitiveConfig(
@@ -67,7 +66,7 @@ class TestCognitiveAnalysisEngine:
         yield engine
         await engine.clear_cache()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_research_content(self):
         """High-quality research content for testing"""
         return {
@@ -89,7 +88,7 @@ class TestCognitiveAnalysisEngine:
             },
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_social_content(self):
         """Social media content for testing"""
         return {
@@ -102,7 +101,7 @@ class TestCognitiveAnalysisEngine:
             },
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_news_content(self):
         """News article content for testing"""
         return {
@@ -124,7 +123,7 @@ class TestCognitiveAnalysisEngine:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_cognitive_engine_with_configuration(
         self,
         cognitive_config,
@@ -149,7 +148,7 @@ class TestCognitiveAnalysisEngine:
         assert engine.stats["total_analyzed"] == 0
         assert engine.stats["cache_hits"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_perform_comprehensive_content_analysis(
         self,
         cognitive_engine,
@@ -203,7 +202,7 @@ class TestCognitiveAnalysisEngine:
         # Check confidence score
         assert 0.0 <= result.confidence_score <= 1.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_detect_high_quality_academic_content(
         self,
         cognitive_engine,
@@ -246,7 +245,7 @@ class TestCognitiveAnalysisEngine:
             for topic in topic_names
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_analyze_social_media_sentiment_correctly(
         self,
         cognitive_engine,
@@ -278,7 +277,7 @@ class TestCognitiveAnalysisEngine:
         # Should have emotion scores
         assert len(result.sentiment_analysis.emotion_scores) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_detect_negative_sentiment_in_news_content(
         self,
         cognitive_engine,
@@ -303,7 +302,7 @@ class TestCognitiveAnalysisEngine:
             SentimentPolarity.MIXED,
         ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_extract_relevant_topics_from_content(
         self,
         cognitive_engine,
@@ -330,7 +329,7 @@ class TestCognitiveAnalysisEngine:
         topic_names = [topic.topic for topic in result.topic_extractions]
         assert "machine_learning" in topic_names or "technology" in topic_names
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_generate_content_summary_and_entities(
         self,
         cognitive_engine,
@@ -371,7 +370,7 @@ class TestCognitiveAnalysisEngine:
     # Batch Processing and Performance Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_process_batch_content_efficiently(self, cognitive_engine):
         """
         Test: Should efficiently process multiple content items in batch
@@ -427,7 +426,7 @@ class TestCognitiveAnalysisEngine:
         stats = cognitive_engine.get_analysis_statistics()
         assert stats["total_analyzed"] >= 5
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_utilize_caching_for_repeated_content(self, cognitive_engine):
         """
         Test: Should cache analysis results and utilize cache for
@@ -456,7 +455,7 @@ class TestCognitiveAnalysisEngine:
             assert stats["cache_hits"] > 0
             assert stats["cache_hit_rate"] > 0.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_large_volume_content_analysis(self, cognitive_engine):
         """
         Test: Should handle large volume of content analysis
@@ -489,7 +488,7 @@ class TestCognitiveAnalysisEngine:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_empty_and_invalid_content(self, cognitive_engine):
         """
         Test: Should gracefully handle empty content, None values,
@@ -515,7 +514,7 @@ class TestCognitiveAnalysisEngine:
             # It's acceptable to throw an exception for None content
             pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_malformed_metadata_gracefully(self, cognitive_engine):
         """
         Test: Should handle malformed or invalid metadata
@@ -540,7 +539,7 @@ class TestCognitiveAnalysisEngine:
         assert isinstance(result, CognitiveAnalysisResult)
         assert result.content_id == "malformed_test"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_very_long_content_appropriately(
         self,
         cognitive_engine,
@@ -558,7 +557,7 @@ class TestCognitiveAnalysisEngine:
         assert isinstance(result, CognitiveAnalysisResult)
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_analysis_safely(self, cognitive_engine):
         """
         Test: Should handle concurrent analysis requests
@@ -592,7 +591,7 @@ class TestIndividualAnalyzers:
     Test suite for individual analyzer components.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def test_config(self):
         """Test configuration for analyzers"""
         return CognitiveConfig()
@@ -717,7 +716,7 @@ class TestCognitiveConfigurationFactory:
     Test suite for cognitive analysis configuration factory.
     """
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_cognitive_engine(self):
         """
         Test: Should create production-ready cognitive analysis engine

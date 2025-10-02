@@ -19,7 +19,6 @@ import pytest
 
 # These imports will fail initially (RED phase) - that's expected
 try:
-    from scripts.ingestion_pipeline import ContentItem
     from services.ingestion.arxiv_enhanced_service import (
         ArxivEnhancedService,
         ArxivError,
@@ -27,6 +26,8 @@ try:
         ArxivResult,
         ArxivSearchQuery,
     )
+
+    from scripts.ingestion_pipeline import ContentItem
 except ImportError:
     # Expected during RED phase - services don't exist yet
     pass
@@ -47,7 +48,7 @@ class TestArxivEnhancedService:
     Tests focus on WHAT the service does, not HOW it does it.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def arxiv_service(self):
         """Fixture providing an ArxivEnhancedService instance for testing"""
         return ArxivEnhancedService(
@@ -55,7 +56,7 @@ class TestArxivEnhancedService:
             max_results=100,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_search_query(self):
         """Fixture providing a sample search query"""
         return ArxivSearchQuery(
@@ -67,7 +68,7 @@ class TestArxivEnhancedService:
             max_results=50,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_arxiv_xml(self):
         """Fixture providing sample ArXiv XML response"""
         return """<?xml version="1.0" encoding="UTF-8"?>
@@ -95,7 +96,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Core ArXiv API Functionality
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_search_arxiv_with_advanced_query_parameters(
         self,
         arxiv_service,
@@ -117,7 +118,7 @@ class TestArxivEnhancedService:
         assert result.query_used.terms == ["machine learning", "neural networks"]
         assert "cs.AI" in result.query_used.categories
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_parse_arxiv_xml_response_correctly(
         self,
         arxiv_service,
@@ -140,7 +141,7 @@ class TestArxivEnhancedService:
         assert "cs.AI" in paper.categories
         assert len(paper.abstract) > 50
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_complex_search_queries_with_boolean_logic(
         self,
         arxiv_service,
@@ -165,7 +166,7 @@ class TestArxivEnhancedService:
         assert "(" in result.query_used.terms[0]
         assert "OR" in result.query_used.terms[0]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_author_specific_searches(self, arxiv_service):
         """
         RED TEST: Service should support targeted author searches.
@@ -192,7 +193,7 @@ class TestArxivEnhancedService:
             "Goodfellow" in author for author in found_authors
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_date_range_filtering(self, arxiv_service):
         """
         RED TEST: Service should filter papers by publication date ranges.
@@ -218,7 +219,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Integration with Existing Pipeline
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_existing_rss_feed_system(self, arxiv_service):
         """
         RED TEST: Enhanced service should work alongside existing RSS feeds.
@@ -244,7 +245,7 @@ class TestArxivEnhancedService:
             assert item.source_type == "arxiv_enhanced"
             assert hasattr(item, "metadata")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_enhanced_metadata_for_cognitive_analysis(
         self,
         arxiv_service,
@@ -271,7 +272,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Error Handling and Resilience
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_arxiv_api_rate_limiting_gracefully(
         self,
         arxiv_service,
@@ -297,7 +298,7 @@ class TestArxivEnhancedService:
             assert "rate limit" in result.error.message.lower()
             assert result.error.retry_after is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_malformed_xml_responses_gracefully(
         self,
         arxiv_service,
@@ -316,7 +317,7 @@ class TestArxivEnhancedService:
         assert "xml" in result.error.message.lower()
         assert result.papers == []
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_empty_search_results_gracefully(self, arxiv_service):
         """
         RED TEST: Service should handle empty search results without errors.
@@ -337,7 +338,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Performance and Optimization
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_paginated_large_result_sets(self, arxiv_service):
         """
         RED TEST: Service should handle large result sets with pagination.
@@ -357,7 +358,7 @@ class TestArxivEnhancedService:
         assert result.total_pages > 1
         assert result.current_page >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_cache_recent_searches_for_performance(self, arxiv_service):
         """
         RED TEST: Service should cache recent searches to improve performance.
@@ -381,7 +382,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Integration with Cognitive System
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_autonomous_cognitive_assessment(
         self,
         arxiv_service,
@@ -409,7 +410,7 @@ class TestArxivEnhancedService:
 
         mock_cognitive_engine.assess_research_quality.assert_called()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_trigger_metacognitive_optimization_for_poor_searches(
         self,
         arxiv_service,
@@ -481,7 +482,7 @@ class TestArxivEnhancedService:
     # BEHAVIOR TESTS - Integration with n8n Workflows
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_n8n_research_workflows(self, arxiv_service):
         """
         RED TEST: Service should integrate with n8n research automation workflows.
@@ -562,12 +563,12 @@ class TestArxivServicePerformance:
     Performance-focused behavior tests for ArXiv service.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def arxiv_service(self):
         """Fixture providing ArxivEnhancedService for performance testing"""
         return ArxivEnhancedService(max_results=50)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_complete_searches_within_reasonable_time(self, arxiv_service):
         """
         RED TEST: ArXiv searches should complete within reasonable time limits.
@@ -585,7 +586,7 @@ class TestArxivServicePerformance:
         assert duration < 30  # Must complete within 30 seconds
         assert result.success is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_maintain_quality_scores_above_threshold(self, arxiv_service):
         """
         RED TEST: Research papers should maintain quality scores >90% as per Phase 2A metrics.

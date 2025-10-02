@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-PAKE System - Optimized Database Queries with Eager Loading
+"""PAKE System - Optimized Database Queries with Eager Loading
 Phase 5: Performance Under Pressure - N+1 Query Elimination
 
 This module provides optimized query methods that use SQLAlchemy's eager loading
@@ -19,7 +18,7 @@ Use eager loading to fetch all data in 1-2 queries instead of N+1.
 """
 
 import logging
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -27,19 +26,16 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 # Import models
 from src.services.base.models import (
-    ServiceRegistry,
     ServiceHealthCheck,
     ServiceMetrics,
-    APIGatewayRoute,
-    SystemAlert,
+    ServiceRegistry,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class OptimizedServiceQueries:
-    """
-    Optimized query methods for ServiceRegistry with eager loading.
+    """Optimized query methods for ServiceRegistry with eager loading.
 
     These methods demonstrate proper use of eager loading to eliminate N+1 queries.
     """
@@ -48,8 +44,7 @@ class OptimizedServiceQueries:
     def get_service_with_health_checks(
         session: Session, service_id: UUID
     ) -> Optional[ServiceRegistry]:
-        """
-        Get a service with all its health checks in a single query.
+        """Get a service with all its health checks in a single query.
 
         Without eager loading (N+1 problem):
         - 1 query to fetch service
@@ -86,8 +81,7 @@ class OptimizedServiceQueries:
     def get_service_with_metrics(
         session: Session, service_id: UUID
     ) -> Optional[ServiceRegistry]:
-        """
-        Get a service with all its metrics in a single query.
+        """Get a service with all its metrics in a single query.
 
         Uses joinedload() for optimal performance with many-to-one relationship.
 
@@ -119,8 +113,7 @@ class OptimizedServiceQueries:
     def get_service_with_all_relationships(
         session: Session, service_id: UUID
     ) -> Optional[ServiceRegistry]:
-        """
-        Get a service with all its relationships in optimized queries.
+        """Get a service with all its relationships in optimized queries.
 
         Without eager loading (N+1 problem):
         - 1 query to fetch service
@@ -165,9 +158,8 @@ class OptimizedServiceQueries:
     @staticmethod
     def list_services_with_health_checks(
         session: Session, limit: int = 100, offset: int = 0
-    ) -> List[ServiceRegistry]:
-        """
-        List services with their health checks using optimized loading.
+    ) -> list[ServiceRegistry]:
+        """List services with their health checks using optimized loading.
 
         Without eager loading (N+1 problem):
         - 1 query to fetch N services
@@ -207,9 +199,8 @@ class OptimizedServiceQueries:
     @staticmethod
     def list_services_with_all_relationships(
         session: Session, limit: int = 100, offset: int = 0
-    ) -> List[ServiceRegistry]:
-        """
-        List services with all relationships using optimized loading.
+    ) -> list[ServiceRegistry]:
+        """List services with all relationships using optimized loading.
 
         Without eager loading (N+1 problem):
         - 1 query to fetch N services
@@ -259,8 +250,7 @@ class OptimizedServiceQueries:
     def get_health_check_with_service(
         session: Session, health_check_id: UUID
     ) -> Optional[ServiceHealthCheck]:
-        """
-        Get a health check with its parent service using joinedload.
+        """Get a health check with its parent service using joinedload.
 
         For many-to-one relationships, use joinedload() which generates
         a LEFT OUTER JOIN to fetch both objects in a single query.
@@ -302,8 +292,7 @@ class OptimizedServiceQueries:
     def get_metric_with_service(
         session: Session, metric_id: UUID
     ) -> Optional[ServiceMetrics]:
-        """
-        Get a metric with its parent service using joinedload.
+        """Get a metric with its parent service using joinedload.
 
         Args:
             session: Database session
@@ -335,9 +324,8 @@ class OptimizedServiceQueries:
         limit: int = 100,
         offset: int = 0,
         service_filter: Optional[str] = None,
-    ) -> List[ServiceHealthCheck]:
-        """
-        List health checks with their parent services using optimized loading.
+    ) -> list[ServiceHealthCheck]:
+        """List health checks with their parent services using optimized loading.
 
         For many-to-one relationships with multiple child objects,
         joinedload() is more efficient than selectinload() because it uses
@@ -385,8 +373,7 @@ class OptimizedServiceQueries:
 
 # Performance comparison example
 def demonstrate_n1_vs_eager_loading():
-    """
-    Demonstration function showing the difference between N+1 and eager loading.
+    """Demonstration function showing the difference between N+1 and eager loading.
 
     This is for educational purposes and testing.
     """
@@ -400,7 +387,9 @@ def demonstrate_n1_vs_eager_loading():
         start = time.time()
 
         # 1 query to fetch services
-        services_lazy = session.execute(select(ServiceRegistry).limit(10)).scalars().all()
+        services_lazy = (
+            session.execute(select(ServiceRegistry).limit(10)).scalars().all()
+        )
 
         # N queries to fetch health checks (one per service when accessed)
         for service in services_lazy:

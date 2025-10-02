@@ -1,5 +1,4 @@
-"""
-PAKE System - Enterprise Knowledge Management & AI Research Platform
+"""PAKE System - Enterprise Knowledge Management & AI Research Platform
 """
 
 __version__ = "10.1.0"

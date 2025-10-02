@@ -30,7 +30,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 class TestSearchHistoryService:
     """Test suite for SearchHistoryService"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def mock_database_service(self):
         """Mock database service"""
         mock_db = Mock(spec=PostgreSQLService)
@@ -70,7 +70,7 @@ class TestSearchHistoryService:
         mock_db.search_history_fulltext = AsyncMock(return_value=[])
         return mock_db
 
-    @pytest.fixture
+    @pytest.fixture()
     async def mock_cache_service(self):
         """Mock cache service"""
         mock_cache = Mock(spec=RedisCacheService)
@@ -80,12 +80,12 @@ class TestSearchHistoryService:
         mock_cache.delete_pattern = AsyncMock(return_value=True)
         return mock_cache
 
-    @pytest.fixture
+    @pytest.fixture()
     async def search_history_service(self, mock_database_service, mock_cache_service):
         """Create SearchHistoryService instance"""
         return SearchHistoryService(mock_database_service, mock_cache_service)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_record_search_success(
         self,
         search_history_service,
@@ -119,7 +119,7 @@ class TestSearchHistoryService:
         assert call_args.kwargs["results_count"] == results_count
         assert call_args.kwargs["execution_time_ms"] == execution_time_ms
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_search_history_with_cache(
         self,
         search_history_service,
@@ -156,7 +156,7 @@ class TestSearchHistoryService:
         assert history[0].query == "test query"
         mock_cache_service.get.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_search_history_no_cache(
         self,
         search_history_service,
@@ -193,7 +193,7 @@ class TestSearchHistoryService:
         mock_database_service.get_search_history.assert_called_once()
         mock_cache_service.set.assert_called_once()  # Should cache the result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_search_history_fulltext(
         self,
         search_history_service,
@@ -225,7 +225,7 @@ class TestSearchHistoryService:
         assert results[0].query == "machine learning basics"
         mock_database_service.search_history_fulltext.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_toggle_favorite_search_add(
         self,
         search_history_service,
@@ -248,7 +248,7 @@ class TestSearchHistoryService:
             search_id,
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_toggle_favorite_search_remove(
         self,
         search_history_service,
@@ -271,7 +271,7 @@ class TestSearchHistoryService:
             search_id,
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_add_search_tags_success(
         self,
         search_history_service,
@@ -287,7 +287,7 @@ class TestSearchHistoryService:
         assert success is True
         mock_database_service.add_search_tags.assert_called_once_with(search_id, tags)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_add_search_tags_unauthorized(
         self,
         search_history_service,
@@ -310,7 +310,7 @@ class TestSearchHistoryService:
         assert success is False
         mock_database_service.add_search_tags.assert_not_called()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_delete_search_success(
         self,
         search_history_service,
@@ -325,7 +325,7 @@ class TestSearchHistoryService:
         assert success is True
         mock_database_service.delete_search_history.assert_called_once_with(search_id)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_clear_user_history(
         self,
         search_history_service,
@@ -346,7 +346,7 @@ class TestSearchHistoryService:
             before_date,
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_analytics_with_cache(
         self,
         search_history_service,
@@ -373,7 +373,7 @@ class TestSearchHistoryService:
         assert analytics.total_searches == 20
         mock_cache_service.get.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_popular_queries(
         self,
         search_history_service,
@@ -392,7 +392,7 @@ class TestSearchHistoryService:
         assert popular_queries[0] == ("machine learning", 10)
         mock_database_service.get_popular_queries.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_preferences_default(
         self,
         search_history_service,
@@ -412,7 +412,7 @@ class TestSearchHistoryService:
         assert preferences.auto_save_searches is True
         mock_database_service.save_user_preferences.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_update_user_preferences(
         self,
         search_history_service,
@@ -442,7 +442,7 @@ class TestSearchHistoryService:
         mock_database_service.save_user_preferences.assert_called()
         mock_cache_service.delete.assert_called_once()  # Should invalidate cache
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_export_user_data(
         self,
         search_history_service,
@@ -487,7 +487,7 @@ class TestSearchHistoryService:
         assert "analytics" in export_data
         assert "metadata" in export_data
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_filter_by_quality(
         self,
         search_history_service,
@@ -524,7 +524,7 @@ class TestSearchHistoryService:
         assert "quality_score__gte" in call_args.kwargs["filters"]
         assert call_args.kwargs["order_by"] == ("quality_score DESC, created_at DESC")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_error_handling_database_failure(
         self,
         search_history_service,
@@ -549,7 +549,7 @@ class TestSearchHistoryService:
 
         assert "Database error" in str(exc_info.value)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cache_invalidation(self, search_history_service, mock_cache_service):
         """Test cache invalidation patterns"""
         user_id = "user-123"
@@ -567,7 +567,7 @@ class TestSearchHistoryService:
         assert f"search_history:prefs:{user_id}" in call_args_list
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_search_history_service():
     """Test factory function"""
     mock_db = Mock(spec=PostgreSQLService)

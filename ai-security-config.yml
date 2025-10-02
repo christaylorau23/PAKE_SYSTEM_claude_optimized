@@ -14,7 +14,7 @@ app:
 # API CONFIGURATION
 # ============================================================================
 api:
-  host: "0.0.0.0"
+  host: "127.0.0.1"  # Secure local binding instead of 0.0.0.0
   port: 8080
   cors_origins:
     - "http://localhost:3000"

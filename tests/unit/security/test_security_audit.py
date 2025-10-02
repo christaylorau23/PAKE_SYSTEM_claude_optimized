@@ -14,12 +14,12 @@ import pytest
 # Implementation should follow to make these tests pass
 
 
-@pytest.mark.security
-@pytest.mark.unit
+@pytest.mark.security()
+@pytest.mark.unit()
 class TestSecurityAuditor:
     """Test suite for Security Audit System"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def security_config(self):
         """Configuration for security auditor testing."""
         return {
@@ -29,7 +29,7 @@ class TestSecurityAuditor:
             "confidence_threshold": 0.8,
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_project_structure(self, tmp_path):
         """Create mock project structure for testing."""
         project_root = tmp_path / "test_project"
@@ -234,7 +234,7 @@ flask==0.12.0
         perm_issue = permission_issues[0]
         assert "permissions" in perm_issue.recommendation.lower()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_api_security_check(self, security_config):
         """Test API security headers and configuration."""
 
@@ -302,7 +302,7 @@ flask==0.12.0
         assert "secret management" in rec_text
         assert "authentication" in rec_text or "security" in rec_text
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_comprehensive_audit_execution(
         self,
         security_config,
@@ -435,7 +435,7 @@ def create_token(user_data):
         jwt_issues = [issue for issue in auth_issues if "jwt" in issue.title.lower()]
         assert len(jwt_issues) > 0
 
-    @pytest.mark.performance
+    @pytest.mark.performance()
     def test_audit_performance(self, security_config, mock_project_structure):
         """Test security audit performance requirements."""
         import time
@@ -491,8 +491,8 @@ API_KEY = os.getenv("API_KEY")
             new_issues <= 2
         )  # Some false positives are acceptable but should be minimal
 
-    @pytest.mark.integration
-    @pytest.mark.asyncio
+    @pytest.mark.integration()
+    @pytest.mark.asyncio()
     async def test_full_security_audit_workflow(
         self,
         security_config,

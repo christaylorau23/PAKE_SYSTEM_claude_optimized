@@ -897,29 +897,64 @@ export class SearchEngine extends EventEmitter {
     const clauses: string[] = [];
 
     if (filters.nodeTypes && filters.nodeTypes.length > 0) {
-      clauses.push(`${nodeAlias}:${filters.nodeTypes.join(`|${nodeAlias}:`)}`);
+      // Sanitize node types to prevent injection
+      const sanitizedTypes = filters.nodeTypes
+        .map(type => this.sanitizeCypherIdentifier(type))
+        .join(`|${nodeAlias}:`);
+      clauses.push(`${nodeAlias}:${sanitizedTypes}`);
     }
 
     if (filters.dateRange) {
       if (filters.dateRange.from) {
-        clauses.push(
-          `${nodeAlias}.createdAt >= datetime('${filters.dateRange.from}')`
-        );
+        // Use parameterized query for date values
+        const fromParam = this.sanitizeCypherValue(filters.dateRange.from);
+        clauses.push(`${nodeAlias}.createdAt >= datetime($fromParam)`);
       }
       if (filters.dateRange.to) {
-        clauses.push(
-          `${nodeAlias}.createdAt <= datetime('${filters.dateRange.to}')`
-        );
+        // Use parameterized query for date values
+        const toParam = this.sanitizeCypherValue(filters.dateRange.to);
+        clauses.push(`${nodeAlias}.createdAt <= datetime($toParam)`);
       }
     }
 
     if (filters.properties) {
       Object.entries(filters.properties).forEach(([key, value]) => {
-        clauses.push(`${nodeAlias}.${key} = '${value}'`);
+        // Sanitize both key and value to prevent injection
+        const sanitizedKey = this.sanitizeCypherIdentifier(key);
+        const sanitizedValue = this.sanitizeCypherValue(value);
+        clauses.push(`${nodeAlias}.${sanitizedKey} = ${sanitizedValue}`);
       });
     }
 
     return clauses.length > 0 ? 'AND ' + clauses.join(' AND ') : '';
+  }
+
+  /**
+   * Sanitize Cypher identifiers to prevent injection
+   */
+  private sanitizeCypherIdentifier(identifier: string): string {
+    // Only allow alphanumeric characters, underscores, and dots
+    return identifier.replace(/[^a-zA-Z0-9_.]/g, '');
+  }
+
+  /**
+   * Sanitize Cypher values to prevent injection
+   */
+  private sanitizeCypherValue(value: any): string {
+    if (typeof value === 'string') {
+      // Escape single quotes and wrap in quotes
+      const escaped = value.replace(/'/g, "\\'");
+      return `'${escaped}'`;
+    }
+    if (typeof value === 'number') {
+      return value.toString();
+    }
+    if (typeof value === 'boolean') {
+      return value.toString();
+    }
+    // For other types, convert to string and escape
+    const stringValue = String(value).replace(/'/g, "\\'");
+    return `'${stringValue}'`;
   }
 
   private async getNodeById(nodeId: string): Promise<GraphNode | null> {

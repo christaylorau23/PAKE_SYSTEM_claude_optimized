@@ -10,16 +10,15 @@ Usage:
     users = UserFactory.create_batch(5)
 """
 
+from datetime import UTC
+
 import factory
-from factory import Faker, LazyAttribute, Sequence, SubFactory
-from datetime import datetime, timezone
-
-from src.pake_system.auth.models import User, UserInDB
-
+from factory import Faker, LazyAttribute, Sequence
 
 # ============================================================================
 # Authentication Factories
 # ============================================================================
+
 
 class UserFactory(factory.Factory):
     """Factory for creating User instances"""
@@ -65,6 +64,7 @@ class DisabledUserFactory(UserInDBFactory):
 # Search/Content Factories
 # ============================================================================
 
+
 class SearchQueryFactory(factory.Factory):
     """Factory for search query test data"""
 
@@ -90,12 +90,13 @@ class SearchResultFactory(factory.Factory):
     source = factory.Iterator(["arxiv", "pubmed", "web"])
     url = Faker("url")
     score = Faker("pyfloat", min_value=0.5, max_value=1.0)
-    published_at = Faker("date_time_this_year", tzinfo=timezone.utc)
+    published_at = Faker("date_time_this_year", tzinfo=UTC)
 
 
 # ============================================================================
 # Database/Repository Factories
 # ============================================================================
+
 
 class TenantFactory(factory.Factory):
     """Factory for tenant test data"""
@@ -109,7 +110,7 @@ class TenantFactory(factory.Factory):
     domain = Faker("domain_name")
     plan = "basic"
     is_active = True
-    created_at = Faker("date_time_this_year", tzinfo=timezone.utc)
+    created_at = Faker("date_time_this_year", tzinfo=UTC)
 
 
 class SessionFactory(factory.Factory):
@@ -124,14 +125,15 @@ class SessionFactory(factory.Factory):
     username = Sequence(lambda n: f"user{n}")
     role = "user"
     permissions = ["search:read", "search:write"]
-    created_at = Faker("date_time_this_year", tzinfo=timezone.utc)
-    last_activity = Faker("date_time_this_hour", tzinfo=timezone.utc)
-    expires_at = Faker("date_time_this_month", tzinfo=timezone.utc)
+    created_at = Faker("date_time_this_year", tzinfo=UTC)
+    last_activity = Faker("date_time_this_hour", tzinfo=UTC)
+    expires_at = Faker("date_time_this_month", tzinfo=UTC)
 
 
 # ============================================================================
 # API Request/Response Factories
 # ============================================================================
+
 
 class LoginRequestFactory(factory.Factory):
     """Factory for login request test data"""
@@ -159,6 +161,7 @@ class TokenResponseFactory(factory.Factory):
 # Batch Creation Helpers
 # ============================================================================
 
+
 def create_test_users(count: int = 5, **kwargs):
     """Create a batch of test users"""
     return [UserFactory(**kwargs) for _ in range(count)]
@@ -178,10 +181,13 @@ def create_test_tenants(count: int = 3, **kwargs):
 # Specialized Factories for Testing Scenarios
 # ============================================================================
 
+
 class ExpiredSessionFactory(SessionFactory):
     """Factory for expired session test data"""
 
-    expires_at = Faker("date_time_between", start_date="-1d", end_date="-1h", tzinfo=timezone.utc)
+    expires_at = Faker(
+        "date_time_between", start_date="-1d", end_date="-1h", tzinfo=UTC
+    )
 
 
 class PremiumTenantFactory(TenantFactory):
@@ -201,4 +207,4 @@ class InactiveTenantFactory(TenantFactory):
 # ============================================================================
 
 # Configure Faker locale if needed
-factory.Faker._DEFAULT_LOCALE = 'en_US'
+factory.Faker._DEFAULT_LOCALE = "en_US"

@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-
 from services.api.production_api_gateway import (
     APIEndpoint,
     APIEndpointType,
@@ -29,7 +28,7 @@ from services.api.production_api_gateway import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def api_config():
     """Test configuration for production API gateway"""
     return ProductionAPIConfig(
@@ -55,7 +54,7 @@ def api_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def api_gateway(api_config):
     """Production API gateway instance for testing"""
     return ProductionAPIGateway(api_config)
@@ -69,7 +68,7 @@ async def initialized_gateway(api_gateway):
     await api_gateway.shutdown()
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_api_requests():
     """Sample API requests for testing"""
     base_time = datetime.now(UTC)
@@ -138,7 +137,7 @@ def sample_api_requests():
     return requests
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_external_apis():
     """Sample external API configurations"""
     return [
@@ -171,7 +170,7 @@ def sample_external_apis():
 class TestProductionAPIGateway:
     """Test the main production API gateway functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_api_gateway_with_configuration(self, api_config):
         """
         Test: Should initialize production API gateway with proper configuration
@@ -206,7 +205,7 @@ class TestProductionAPIGateway:
         assert metrics["failed_requests"] == 0
         assert metrics["rate_limited_requests"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_successful_api_requests_with_authentication(
         self,
         initialized_gateway,
@@ -241,7 +240,7 @@ class TestProductionAPIGateway:
         assert metrics["successful_requests"] == 1
         assert metrics["average_response_time_ms"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_enforce_rate_limiting_per_client_and_endpoint(
         self,
         initialized_gateway,
@@ -290,7 +289,7 @@ class TestProductionAPIGateway:
         metrics = initialized_gateway.get_metrics()
         assert metrics["rate_limited_requests"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_response_caching_effectively(
         self,
         initialized_gateway,
@@ -321,7 +320,7 @@ class TestProductionAPIGateway:
         assert metrics["cached_responses"] > 0
         assert metrics["cache_hit_rate"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_authentication_failures_properly(
         self,
         initialized_gateway,
@@ -365,7 +364,7 @@ class TestProductionAPIGateway:
         assert response.status == APIStatus.UNAUTHORIZED
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_invalid_endpoints_gracefully(
         self,
         initialized_gateway,
@@ -391,7 +390,7 @@ class TestProductionAPIGateway:
         assert "not found" in response.error_message.lower()
         assert response.processing_time_ms > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_requests_safely(
         self,
         initialized_gateway,
@@ -442,7 +441,7 @@ class TestProductionAPIGateway:
             > initial_metrics["successful_requests"]
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_comprehensive_health_status(
         self,
         initialized_gateway,
@@ -472,7 +471,7 @@ class TestProductionAPIGateway:
         assert "version" in health_status["system_info"]
         assert "features_enabled" in health_status["system_info"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_track_comprehensive_metrics(
         self,
         initialized_gateway,
@@ -502,7 +501,7 @@ class TestProductionAPIGateway:
         assert "external_api_health" in final_metrics
         assert final_metrics["average_response_time_ms"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_request_processing_errors_gracefully(
         self,
         initialized_gateway,
@@ -544,7 +543,7 @@ class TestProductionAPIGateway:
 class TestRateLimiter:
     """Test rate limiting functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_sliding_window_rate_limiting(self, api_config):
         """
         Test: Should implement sliding window rate limiting accurately
@@ -582,7 +581,7 @@ class TestRateLimiter:
         assert remaining == 0
         assert reset_time is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_token_bucket_rate_limiting(self, api_config):
         """
         Test: Should implement token bucket rate limiting with proper
@@ -616,7 +615,7 @@ class TestRateLimiter:
         assert allowed is True
         assert new_remaining < remaining
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_adaptive_rate_limiting_based_on_load(
         self,
         api_config,
@@ -652,7 +651,7 @@ class TestRateLimiter:
 class TestCircuitBreaker:
     """Test circuit breaker functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_open_circuit_after_failure_threshold(self, api_config):
         """
         Test: Should open circuit breaker after reaching failure threshold
@@ -676,7 +675,7 @@ class TestCircuitBreaker:
         assert circuit["state"] == "open"
         assert circuit["failure_count"] == api_config.circuit_breaker_failure_threshold
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_transition_to_half_open_after_timeout(self, api_config):
         """
         Test: Should transition circuit breaker to half-open state
@@ -705,7 +704,7 @@ class TestCircuitBreaker:
         circuit = circuit_breaker.circuit_state[service_name]
         assert circuit["state"] == "half_open"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_close_circuit_on_successful_recovery(self, api_config):
         """
         Test: Should close circuit breaker and reset failure count
@@ -731,7 +730,7 @@ class TestCircuitBreaker:
 class TestResponseCache:
     """Test response caching functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_cache_and_retrieve_responses_correctly(self, api_config):
         """
         Test: Should cache responses and retrieve them within TTL
@@ -751,7 +750,7 @@ class TestResponseCache:
         cached_data = response_cache.get(cache_key)
         assert cached_data == test_data
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_expire_cached_responses_after_ttl(self, api_config):
         """
         Test: Should expire cached responses after TTL and return None
@@ -774,7 +773,7 @@ class TestResponseCache:
         # Should return None after expiration
         assert response_cache.get(cache_key) is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_cache_eviction_when_full(self, api_config):
         """
         Test: Should handle cache eviction when cache is full
@@ -797,7 +796,7 @@ class TestResponseCache:
 class TestExternalAPIManager:
     """Test external API management functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_manage_external_api_configurations(
         self,
         api_config,
@@ -822,7 +821,7 @@ class TestExternalAPIManager:
         assert "test_arxiv" in manager.health_status
         assert manager.health_status["test_arxiv"]["is_healthy"] is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_external_api_calls_with_retries(
         self,
         api_config,
@@ -859,7 +858,7 @@ class TestExternalAPIManager:
         finally:
             await manager.shutdown()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_track_external_api_health_status(
         self,
         api_config,
@@ -897,7 +896,7 @@ class TestExternalAPIManager:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_api_gateway(self):
         """
         Test: Should create production-ready API gateway with appropriate

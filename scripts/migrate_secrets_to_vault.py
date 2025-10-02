@@ -16,7 +16,7 @@ Requirements:
 
 import os
 import sys
-from typing import Dict, Any
+from typing import Any
 
 try:
     import hvac
@@ -28,7 +28,9 @@ except ImportError:
 class VaultSecretsManager:
     """Manages migration of secrets to HashiCorp Vault."""
 
-    def __init__(self, vault_url: str = "http://127.0.0.1:8200", vault_token: str = None):
+    def __init__(
+        self, vault_url: str = "http://127.0.0.1:8200", vault_token: str = None
+    ):
         """
         Initialize Vault client.
 
@@ -61,7 +63,7 @@ class VaultSecretsManager:
             print(f"❌ Error connecting to Vault: {e}")
             return False
 
-    def create_secret(self, path: str, secret_data: Dict[str, Any]) -> bool:
+    def create_secret(self, path: str, secret_data: dict[str, Any]) -> bool:
         """
         Create or update a secret in Vault.
 
@@ -74,8 +76,7 @@ class VaultSecretsManager:
         """
         try:
             self.client.secrets.kv.v2.create_or_update_secret(
-                path=path,
-                secret=secret_data
+                path=path, secret=secret_data
             )
             print(f"✅ Created secret at: {path}")
             return True
@@ -86,9 +87,9 @@ class VaultSecretsManager:
 
     def migrate_all_secrets(self):
         """Migrate all secrets from codebase to Vault."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("PAKE System - Secrets Migration to Vault")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
         # Define all secrets organized by environment
         secrets_structure = {
@@ -107,10 +108,10 @@ class VaultSecretsManager:
                 "url": "redis://localhost:6379",
                 "pool_size": "10",
             },
-
             # Development environment secrets
             "pake_system/development/security": {
-                "secret_key": "dev-secret-key-change-in-production-" + os.urandom(16).hex(),
+                "secret_key": "dev-secret-key-change-in-production-"
+                + os.urandom(16).hex(),
                 "algorithm": "HS256",
                 "access_token_expire_minutes": "30",
                 "refresh_token_expire_days": "7",
@@ -127,7 +128,6 @@ class VaultSecretsManager:
             "pake_system/development/api_keys": {
                 "firecrawl_api_key": "",  # Placeholder - set manually if needed
             },
-
             # Staging environment secrets (templates - should be replaced)
             "pake_system/staging/security": {
                 "secret_key": "staging-secret-key-replace-me-" + os.urandom(16).hex(),
@@ -144,10 +144,10 @@ class VaultSecretsManager:
                 "url": "redis://redis-staging:6379/0",
                 "pool_size": "20",
             },
-
             # Production environment secrets (templates - MUST be replaced)
             "pake_system/production/security": {
-                "secret_key": "REPLACE-WITH-SECURE-PRODUCTION-KEY-" + os.urandom(32).hex(),
+                "secret_key": "REPLACE-WITH-SECURE-PRODUCTION-KEY-"
+                + os.urandom(32).hex(),
                 "algorithm": "HS256",
                 "access_token_expire_minutes": "15",
                 "refresh_token_expire_days": "7",
@@ -175,9 +175,9 @@ class VaultSecretsManager:
                 success_count += 1
 
         # Summary
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print(f"Migration Complete: {success_count}/{total_count} secrets migrated")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
         if success_count == total_count:
             print("✅ All secrets successfully migrated to Vault!")
@@ -188,14 +188,16 @@ class VaultSecretsManager:
             print("4. Set VAULT_URL and VAULT_TOKEN environment variables")
             return True
         else:
-            print(f"⚠️  Warning: Only {success_count} out of {total_count} secrets migrated")
+            print(
+                f"⚠️  Warning: Only {success_count} out of {total_count} secrets migrated"
+            )
             return False
 
     def verify_secrets(self):
         """Verify that secrets can be read from Vault."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Verifying Secrets in Vault")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
         test_paths = [
             "pake_system/test/security",
@@ -206,13 +208,13 @@ class VaultSecretsManager:
         for path in test_paths:
             try:
                 response = self.client.secrets.kv.v2.read_secret_version(path=path)
-                secret_data = response['data']['data']
+                secret_data = response["data"]["data"]
                 print(f"✅ Successfully read secret from: {path}")
                 print(f"   Keys: {', '.join(secret_data.keys())}")
             except Exception as e:
                 print(f"❌ Error reading secret from {path}: {e}")
 
-        print("\n" + "="*60 + "\n")
+        print("\n" + "=" * 60 + "\n")
 
 
 def main():
@@ -224,7 +226,9 @@ def main():
     if not vault_manager.connect():
         print("\n❌ Migration aborted: Could not connect to Vault")
         print("   Make sure Vault server is running:")
-        print("   docker run --cap-add=IPC_LOCK -d -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' --name vault-dev hashicorp/vault")
+        print(
+            "   docker run --cap-add=IPC_LOCK -d -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' --name vault-dev hashicorp/vault"
+        )
         sys.exit(1)
 
     # Migrate all secrets

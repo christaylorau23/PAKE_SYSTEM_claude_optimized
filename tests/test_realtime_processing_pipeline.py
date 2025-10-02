@@ -9,7 +9,6 @@ import time
 
 import pytest
 import pytest_asyncio
-
 from services.ai.cognitive_analysis_engine import CognitiveAnalysisEngine
 from services.ai.realtime_processing_pipeline import (
     CognitiveAnalysisStage,
@@ -30,7 +29,7 @@ from services.ai.realtime_processing_pipeline import (
 from services.ai.semantic_search_engine import SemanticSearchEngine
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestRealTimeProcessingPipeline:
     """
     Test suite for the main Real-time Processing Pipeline functionality.
@@ -63,7 +62,7 @@ class TestRealTimeProcessingPipeline:
         yield pipeline
         await pipeline.stop_pipeline()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_content_items(self):
         """Sample content items for testing"""
         return [
@@ -593,7 +592,7 @@ class TestRealTimeProcessingPipeline:
         assert stats["average_processing_time"] > 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestProcessingStages:
     """
     Test suite for individual processing stage components.
@@ -702,7 +701,7 @@ class TestProcessingStages:
                 assert result["passes_quality_filter"] == test_case["expected_pass"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.

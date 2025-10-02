@@ -1,37 +1,46 @@
-"""
-HashiCorp Vault Client for PAKE System
+"""HashiCorp Vault Client for PAKE System
 =======================================
 
 This module provides a secure interface for retrieving secrets from HashiCorp Vault.
 It implements connection pooling, error handling, and caching for optimal performance.
+
+Security Features:
+- Fail-fast security: Application refuses to start if required secrets are missing
+- No hardcoded fallbacks: All secrets must be configured in Vault or environment
+- Comprehensive audit logging for all secret access
+- Automatic secret rotation support
 """
 
+import logging
 import os
-from typing import Optional, Dict, Any
+from datetime import UTC, datetime
 from functools import lru_cache
+from typing import Any, Optional
 
 try:
     import hvac
+
     HVAC_AVAILABLE = True
 except ImportError:
     hvac = None
     HVAC_AVAILABLE = False
 
+logger = logging.getLogger(__name__)
+
 
 class VaultClientError(Exception):
     """Raised when Vault client operations fail."""
-    pass
 
 
 class VaultClient:
-    """
-    HashiCorp Vault client for secure secrets management.
+    """HashiCorp Vault client for secure secrets management.
 
     Features:
     - Automatic connection management
     - LRU caching for frequently accessed secrets
-    - Graceful fallback to environment variables
-    - Comprehensive error handling
+    - Fail-fast security with no hardcoded fallbacks
+    - Comprehensive error handling and audit logging
+    - Secret rotation and lifecycle management
     """
 
     def __init__(
@@ -39,10 +48,9 @@ class VaultClient:
         vault_url: Optional[str] = None,
         vault_token: Optional[str] = None,
         mount_point: str = "secret",
-        environment: str = "development"
+        environment: str = "development",
     ):
-        """
-        Initialize Vault client.
+        """Initialize Vault client.
 
         Args:
             vault_url: Vault server URL (defaults to VAULT_URL env var)
@@ -56,11 +64,18 @@ class VaultClient:
         self.environment = environment or os.getenv("ENVIRONMENT", "development")
         self._client: Optional[Any] = None
         self._authenticated = False
+        self._access_log: list[dict[str, Any]] = []
+
+        # Validate required configuration
+        if not self.vault_token:
+            raise VaultClientError(
+                "VAULT_TOKEN environment variable is required. "
+                "This is a security requirement - no hardcoded fallbacks allowed."
+            )
 
     @property
     def client(self) -> Any:
-        """
-        Get or create authenticated Vault client.
+        """Get or create authenticated Vault client.
 
         Returns:
             Authenticated hvac.Client instance
@@ -81,10 +96,7 @@ class VaultClient:
                 )
 
             try:
-                self._client = hvac.Client(
-                    url=self.vault_url,
-                    token=self.vault_token
-                )
+                self._client = hvac.Client(url=self.vault_url, token=self.vault_token)
 
                 if not self._client.is_authenticated():
                     raise VaultClientError(
@@ -98,55 +110,91 @@ class VaultClient:
 
         return self._client
 
+    def _log_secret_access(
+        self,
+        path: str,
+        key: Optional[str],
+        success: bool,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Log secret access for audit purposes."""
+        log_entry = {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "path": path,
+            "key": key,
+            "environment": self.environment,
+            "success": success,
+            "error_message": error_message,
+        }
+        self._access_log.append(log_entry)
+
+        if success:
+            logger.debug(f"Secret accessed: {path}/{key}")
+        else:
+            logger.warning(f"Secret access failed: {path}/{key} - {error_message}")
+
     def get_secret(
         self,
         path: str,
         key: Optional[str] = None,
         fallback_env_var: Optional[str] = None,
-        raise_on_error: bool = False
+        raise_on_error: bool = True,
     ) -> Optional[str]:
-        """
-        Retrieve a secret from Vault.
+        """Retrieve a secret from Vault with fail-fast security.
 
         Args:
             path: Secret path relative to environment (e.g., 'security', 'database')
             key: Specific key within the secret (returns all if None)
             fallback_env_var: Environment variable to check if Vault fails
-            raise_on_error: Whether to raise exception on error
+            raise_on_error: Whether to raise exception on error (default: True for security)
 
         Returns:
             Secret value or None if not found
 
         Raises:
-            VaultClientError: If raise_on_error=True and retrieval fails
+            VaultClientError: If secret cannot be retrieved and raise_on_error=True
         """
         # Construct full path with environment prefix
         full_path = f"pake_system/{self.environment}/{path}"
 
         try:
             response = self.client.secrets.kv.v2.read_secret_version(path=full_path)
-            secret_data = response['data']['data']
+            secret_data = response["data"]["data"]
 
             if key:
-                return secret_data.get(key)
+                secret_value = secret_data.get(key)
+                if secret_value is None:
+                    error_msg = f"Key '{key}' not found in secret at {full_path}"
+                    self._log_secret_access(path, key, False, error_msg)
+                    if raise_on_error:
+                        raise VaultClientError(error_msg)
+                    return None
+
+                self._log_secret_access(path, key, True)
+                return secret_value
+
+            self._log_secret_access(path, key, True)
             return secret_data
 
         except Exception as e:
             error_msg = f"Error retrieving secret from {full_path}: {e}"
+            self._log_secret_access(path, key, False, error_msg)
 
-            # Try fallback to environment variable
+            # Try fallback to environment variable only if explicitly allowed
             if fallback_env_var and (fallback_value := os.getenv(fallback_env_var)):
+                logger.info(f"Using environment variable fallback for {path}/{key}")
+                self._log_secret_access(
+                    path, key, True, "Used environment variable fallback"
+                )
                 return fallback_value
 
             if raise_on_error:
                 raise VaultClientError(error_msg)
 
-            # Silent fallback for non-critical secrets
             return None
 
     def get_database_url(self) -> str:
-        """
-        Get database URL from Vault.
+        """Get database URL from Vault.
 
         Returns:
             Database connection URL
@@ -158,7 +206,7 @@ class VaultClient:
             path="database",
             key="url",
             fallback_env_var="DATABASE_URL",
-            raise_on_error=True
+            raise_on_error=True,
         )
 
         if not db_url:
@@ -167,8 +215,7 @@ class VaultClient:
         return db_url
 
     def get_redis_url(self) -> str:
-        """
-        Get Redis URL from Vault.
+        """Get Redis URL from Vault.
 
         Returns:
             Redis connection URL
@@ -177,10 +224,7 @@ class VaultClient:
             VaultClientError: If Redis URL cannot be retrieved
         """
         redis_url = self.get_secret(
-            path="redis",
-            key="url",
-            fallback_env_var="REDIS_URL",
-            raise_on_error=True
+            path="redis", key="url", fallback_env_var="REDIS_URL", raise_on_error=True
         )
 
         if not redis_url:
@@ -189,8 +233,7 @@ class VaultClient:
         return redis_url
 
     def get_secret_key(self) -> str:
-        """
-        Get application secret key from Vault.
+        """Get application secret key from Vault.
 
         Returns:
             Application secret key for JWT signing
@@ -202,7 +245,7 @@ class VaultClient:
             path="security",
             key="secret_key",
             fallback_env_var="SECRET_KEY",
-            raise_on_error=True
+            raise_on_error=True,
         )
 
         if not secret_key:
@@ -211,8 +254,7 @@ class VaultClient:
         return secret_key
 
     def get_api_key(self, service_name: str) -> Optional[str]:
-        """
-        Get API key for external service from Vault.
+        """Get API key for external service from Vault.
 
         Args:
             service_name: Name of the service (e.g., 'firecrawl_api_key')
@@ -224,12 +266,45 @@ class VaultClient:
             path="api_keys",
             key=service_name,
             fallback_env_var=service_name.upper(),
-            raise_on_error=False
+            raise_on_error=False,
         )
 
-    def health_check(self) -> Dict[str, Any]:
+    def get_access_logs(self) -> list[dict[str, Any]]:
+        """Get audit log of secret access.
+
+        Returns:
+            List of access log entries
         """
-        Check Vault connection health.
+        return self._access_log.copy()
+
+    def validate_required_secrets(self) -> dict[str, bool]:
+        """Validate that all required secrets are available in Vault.
+
+        Returns:
+            Dictionary mapping secret paths to validation results
+        """
+        required_secrets = {
+            "security/secret_key": "SECRET_KEY",
+            "database/url": "DATABASE_URL",
+            "redis/url": "REDIS_URL",
+        }
+
+        results = {}
+        for path, env_var in required_secrets.items():
+            try:
+                self.get_secret(path, raise_on_error=True)
+                results[path] = True
+            except VaultClientError:
+                # Check if available via environment variable
+                if os.getenv(env_var):
+                    results[path] = True
+                else:
+                    results[path] = False
+
+        return results
+
+    def health_check(self) -> dict[str, Any]:
+        """Check Vault connection health.
 
         Returns:
             Dictionary with health status information
@@ -239,32 +314,39 @@ class VaultClient:
                 return {
                     "status": "unavailable",
                     "message": "hvac library not installed",
-                    "authenticated": False
+                    "authenticated": False,
                 }
 
             client = self.client
-            health = client.sys.read_health_status(method='GET')
+            health = client.sys.read_health_status(method="GET")
+
+            # Validate required secrets
+            secret_validation = self.validate_required_secrets()
+            all_secrets_available = all(secret_validation.values())
 
             return {
-                "status": "healthy",
+                "status": "healthy" if all_secrets_available else "degraded",
                 "vault_url": self.vault_url,
                 "authenticated": self._authenticated,
-                "initialized": health.get('initialized', False),
-                "sealed": health.get('sealed', False)
+                "initialized": health.get("initialized", False),
+                "sealed": health.get("sealed", False),
+                "secrets_validation": secret_validation,
+                "all_secrets_available": all_secrets_available,
             }
 
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": str(e),
-                "authenticated": False
+                "authenticated": False,
+                "secrets_validation": {},
+                "all_secrets_available": False,
             }
 
 
-@lru_cache()
+@lru_cache
 def get_vault_client() -> VaultClient:
-    """
-    Get cached Vault client instance.
+    """Get cached Vault client instance.
 
     Returns:
         Singleton VaultClient instance

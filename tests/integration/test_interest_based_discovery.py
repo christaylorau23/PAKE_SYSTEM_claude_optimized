@@ -46,25 +46,25 @@ class MockCurationSystem:
         raise NotImplementedError("RecommendationService not implemented")
 
 
-@pytest.fixture
+@pytest.fixture()
 def curation_system():
     """Provide mock curation system"""
     return MockCurationSystem()
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_user_id():
     """Provide test user ID"""
     return f"test_user_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.fixture
+@pytest.fixture()
 def user_interests():
     """User interests for testing"""
     return ["machine learning", "healthcare"]
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_ml_healthcare_content():
     """Sample content that matches user interests"""
     return [
@@ -105,7 +105,7 @@ def sample_ml_healthcare_content():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def unrelated_content():
     """Sample content that doesn't match user interests"""
     return [
@@ -424,7 +424,7 @@ class TestInterestBasedDiscovery:
 # Performance test fixtures
 
 
-@pytest.fixture
+@pytest.fixture()
 def large_content_dataset():
     """Large dataset for performance testing"""
     content_items = []
@@ -447,7 +447,7 @@ def large_content_dataset():
     return content_items
 
 
-@pytest.mark.performance
+@pytest.mark.performance()
 class TestInterestBasedDiscoveryPerformance:
     """Performance tests for interest-based discovery"""
 

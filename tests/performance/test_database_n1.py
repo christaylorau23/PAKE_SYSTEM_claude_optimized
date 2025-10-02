@@ -13,15 +13,16 @@ Test Strategy:
 4. Assert that list operations use ≤3 queries regardless of result size
 """
 
+from uuid import uuid4
+
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-from uuid import uuid4
 
 from src.services.base.models import (
-    ServiceRegistry,
     ServiceHealthCheck,
     ServiceMetrics,
+    ServiceRegistry,
 )
 from src.services.repositories.optimized_queries import OptimizedServiceQueries
 
@@ -44,16 +45,12 @@ class QueryCounter:
 
     def __enter__(self):
         """Register query counter when entering context"""
-        event.listen(
-            self.session.bind, "after_cursor_execute", self._count_query
-        )
+        event.listen(self.session.bind, "after_cursor_execute", self._count_query)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Unregister query counter when exiting context"""
-        event.remove(
-            self.session.bind, "after_cursor_execute", self._count_query
-        )
+        event.remove(self.session.bind, "after_cursor_execute", self._count_query)
 
     def _count_query(self, conn, cursor, statement, parameters, context, executemany):
         """Callback to count each query"""
@@ -61,7 +58,7 @@ class QueryCounter:
         self.queries.append(statement)
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_db_session():
     """Create a test database session with in-memory SQLite"""
     from src.services.base.database import Base
@@ -77,7 +74,7 @@ def test_db_session():
     session.close()
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_services(test_db_session):
     """Create sample services with health checks and metrics"""
     services = []
@@ -120,8 +117,8 @@ def sample_services(test_db_session):
     return services
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_n1_problem_lazy_loading(test_db_session, sample_services):
     """
     Test demonstrating N+1 query problem with lazy loading.
@@ -137,9 +134,9 @@ def test_n1_problem_lazy_loading(test_db_session, sample_services):
 
     with QueryCounter(test_db_session) as counter:
         # 1 query to fetch services
-        services = test_db_session.execute(
-            select(ServiceRegistry).limit(5)
-        ).scalars().all()
+        services = (
+            test_db_session.execute(select(ServiceRegistry).limit(5)).scalars().all()
+        )
 
         # N queries (one per service when accessing health_checks)
         for service in services:
@@ -147,13 +144,12 @@ def test_n1_problem_lazy_loading(test_db_session, sample_services):
 
     # Should be N + 1 queries (5 + 1 = 6)
     assert counter.count == 6, (
-        f"Expected 6 queries with lazy loading (N+1 problem), "
-        f"got {counter.count}"
+        f"Expected 6 queries with lazy loading (N+1 problem), " f"got {counter.count}"
     )
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_eager_loading_eliminates_n1(test_db_session, sample_services):
     """
     Test that eager loading eliminates N+1 queries.
@@ -179,8 +175,8 @@ def test_eager_loading_eliminates_n1(test_db_session, sample_services):
     )
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_eager_loading_all_relationships(test_db_session, sample_services):
     """
     Test eager loading multiple relationships simultaneously.
@@ -202,13 +198,13 @@ def test_eager_loading_all_relationships(test_db_session, sample_services):
             _ = service.metrics  # Already loaded
 
     # Should be exactly 3 queries
-    assert counter.count == 3, (
-        f"Expected 3 queries with eager loading, got {counter.count}"
-    )
+    assert (
+        counter.count == 3
+    ), f"Expected 3 queries with eager loading, got {counter.count}"
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_joinedload_many_to_one(test_db_session, sample_services):
     """
     Test joinedload for many-to-one relationships.
@@ -230,13 +226,11 @@ def test_joinedload_many_to_one(test_db_session, sample_services):
         _ = health_check.service  # No additional query
 
     # Should be exactly 1 query with JOIN
-    assert counter.count == 1, (
-        f"Expected 1 query with joinedload, got {counter.count}"
-    )
+    assert counter.count == 1, f"Expected 1 query with joinedload, got {counter.count}"
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_query_count_independent_of_result_size(test_db_session):
     """
     Test that query count is independent of result size with eager loading.
@@ -293,8 +287,8 @@ def test_query_count_independent_of_result_size(test_db_session):
     )
 
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 def test_performance_improvement_metrics(test_db_session, sample_services):
     """
     Test and document the performance improvement from eager loading.
@@ -306,9 +300,9 @@ def test_performance_improvement_metrics(test_db_session, sample_services):
 
     # Measure lazy loading (N+1 problem)
     with QueryCounter(test_db_session) as lazy_counter:
-        services = test_db_session.execute(
-            select(ServiceRegistry).limit(5)
-        ).scalars().all()
+        services = (
+            test_db_session.execute(select(ServiceRegistry).limit(5)).scalars().all()
+        )
         for service in services:
             _ = service.health_checks
             _ = service.metrics
@@ -327,20 +321,20 @@ def test_performance_improvement_metrics(test_db_session, sample_services):
     improvement_percent = (queries_saved / lazy_counter.count) * 100
 
     # Should save at least 50% of queries
-    assert improvement_percent >= 50, (
-        f"Expected at least 50% query reduction, got {improvement_percent:.1f}%"
-    )
+    assert (
+        improvement_percent >= 50
+    ), f"Expected at least 50% query reduction, got {improvement_percent:.1f}%"
 
     # Document the improvement
-    print(f"\n=== Performance Improvement ===")
+    print("\n=== Performance Improvement ===")
     print(f"Lazy loading: {lazy_counter.count} queries")
     print(f"Eager loading: {eager_counter.count} queries")
     print(f"Queries saved: {queries_saved}")
     print(f"Improvement: {improvement_percent:.1f}%")
 
 
-@pytest.mark.integration
-@pytest.mark.integration_database
+@pytest.mark.integration()
+@pytest.mark.integration_database()
 def test_eager_loading_with_filters(test_db_session, sample_services):
     """
     Test that eager loading works correctly with query filters.
@@ -350,9 +344,7 @@ def test_eager_loading_with_filters(test_db_session, sample_services):
     with QueryCounter(test_db_session) as counter:
         # Query with filter
         health_checks = OptimizedServiceQueries.list_health_checks_with_services(
-            test_db_session,
-            limit=10,
-            service_filter=sample_services[0].service_name
+            test_db_session, limit=10, service_filter=sample_services[0].service_name
         )
 
         # Access parent services - should be loaded
@@ -360,9 +352,9 @@ def test_eager_loading_with_filters(test_db_session, sample_services):
             _ = hc.service
 
     # Should still be just 1 query with JOIN
-    assert counter.count == 1, (
-        f"Expected 1 query with joinedload and filter, got {counter.count}"
-    )
+    assert (
+        counter.count == 1
+    ), f"Expected 1 query with joinedload and filter, got {counter.count}"
 
 
 if __name__ == "__main__":

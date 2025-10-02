@@ -8,7 +8,6 @@ import time
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from services.ai.content_routing_engine import (
     ContentCategory,
     ContentDestination,
@@ -28,7 +27,7 @@ from services.ai.content_routing_engine import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def routing_config():
     """Test configuration for content routing"""
     return ContentRoutingConfig(
@@ -50,13 +49,13 @@ def routing_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def routing_engine(routing_config):
     """Content routing engine instance for testing"""
     return ContentRoutingEngine(routing_config)
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_content():
     """Sample content items for testing"""
     base_time = datetime.now(UTC)
@@ -115,7 +114,7 @@ def sample_content():
     return content_items
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_user_contexts():
     """Sample user contexts for testing"""
     return [
@@ -148,7 +147,7 @@ def sample_user_contexts():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_routing_rules():
     """Sample routing rules for testing"""
     return [
@@ -180,7 +179,7 @@ def sample_routing_rules():
 class TestContentRoutingEngine:
     """Test the main content routing engine functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_routing_engine_with_configuration(
         self,
         routing_config,
@@ -209,7 +208,7 @@ class TestContentRoutingEngine:
         assert metrics["cache_hits"] == 0
         assert metrics["cache_misses"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_route_urgent_content_to_real_time_stream(
         self,
         routing_engine,
@@ -242,7 +241,7 @@ class TestContentRoutingEngine:
         assert primary_decision.processing_delay_ms == 0  # No delay for urgent content
         assert primary_decision.confidence_score > 0.8
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_route_research_content_to_email_digest_with_delay(
         self,
         routing_engine,
@@ -277,7 +276,7 @@ class TestContentRoutingEngine:
             RoutingPriority.HIGH,
         ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_load_balancing_for_high_volume_users(
         self,
         routing_engine,
@@ -315,7 +314,7 @@ class TestContentRoutingEngine:
             or primary_decision.routing_priority == RoutingPriority.URGENT
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_routing_operations_safely(
         self,
         routing_engine,
@@ -357,7 +356,7 @@ class TestContentRoutingEngine:
         metrics = routing_engine.get_metrics()
         assert metrics["content_routed"] == 25
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_implement_routing_decision_caching_effectively(
         self,
         routing_engine,
@@ -388,7 +387,7 @@ class TestContentRoutingEngine:
         assert result1.primary_destination == result2.primary_destination
         assert len(result1.routing_decisions) == len(result2.routing_decisions)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_process_batch_content_efficiently(
         self,
         routing_engine,
@@ -429,7 +428,7 @@ class TestContentRoutingEngine:
         expected_ids = {f"batch_content_{i}" for i in range(15)}
         assert routed_ids == expected_ids
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_intelligent_delays_based_on_content_type(
         self,
         routing_engine,
@@ -458,7 +457,7 @@ class TestContentRoutingEngine:
                 delay_applied or primary_decision.processing_delay_ms > 60000
             )  # More than 1 minute
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_routing_errors_gracefully(self, routing_engine):
         """
         Test: Should handle routing errors gracefully and return appropriate
@@ -486,7 +485,7 @@ class TestContentRoutingEngine:
             assert result.error_message is not None
             assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_track_comprehensive_routing_metrics(
         self,
         routing_engine,
@@ -522,7 +521,7 @@ class TestContentRoutingEngine:
 class TestPriorityCalculator:
     """Test priority calculation functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_calculate_priority_based_on_multiple_factors(
         self,
         routing_config,
@@ -565,7 +564,7 @@ class TestPriorityCalculator:
         assert priority in [RoutingPriority.LOW, RoutingPriority.DEFERRED]
         assert confidence < 0.5
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_factor_content_freshness_into_priority(self, routing_config):
         """
         Test: Should consider content age/freshness when calculating
@@ -604,7 +603,7 @@ class TestPriorityCalculator:
 class TestLoadBalancer:
     """Test load balancing functionality"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_track_user_content_capacity_accurately(self, routing_config):
         """
         Test: Should accurately track user content capacity and prevent
@@ -629,7 +628,7 @@ class TestLoadBalancer:
             == routing_config.max_user_content_per_hour
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_select_optimal_destination_based_on_load(
         self,
         routing_config,
@@ -662,7 +661,7 @@ class TestLoadBalancer:
 class TestIntelligentRouter:
     """Test intelligent routing logic"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_routing_rules_by_priority_order(
         self,
         routing_config,
@@ -694,7 +693,7 @@ class TestIntelligentRouter:
         )
         assert rule_matched
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_evaluate_complex_rule_conditions_accurately(
         self,
         routing_config,
@@ -742,7 +741,7 @@ class TestIntelligentRouter:
         assert matched_decision is not None
         assert matched_decision.routing_priority == RoutingPriority.HIGH
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_default_routing_when_no_rules_match(
         self,
         routing_config,
@@ -776,7 +775,7 @@ class TestIntelligentRouter:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_production_content_routing_engine(self):
         """
         Test: Should create production-optimized content routing engine

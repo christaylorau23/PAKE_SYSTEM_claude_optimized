@@ -13,12 +13,12 @@ import pytest
 # Implementation should follow to make these tests pass
 
 
-@pytest.mark.obsidian
-@pytest.mark.unit
+@pytest.mark.obsidian()
+@pytest.mark.unit()
 class TestEnhancedObsidianBridge:
     """Test suite for Enhanced Obsidian Bridge v3.0"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def bridge_config(self):
         """Configuration for bridge testing."""
         return {
@@ -29,7 +29,7 @@ class TestEnhancedObsidianBridge:
             "knowledge_graph_enabled": True,
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_file_watcher(self):
         """Mock file watcher for testing."""
         watcher = MagicMock()
@@ -50,7 +50,7 @@ class TestEnhancedObsidianBridge:
         assert bridge.config.knowledge_graph_enabled
         assert bridge.file_watcher is None  # Not started yet
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_start_file_watching(self, bridge_config, mock_file_watcher):
         """Test that file watching starts correctly."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -62,7 +62,7 @@ class TestEnhancedObsidianBridge:
             assert bridge.file_watcher is not None
             mock_file_watcher.watch.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_file_change_detection(self, bridge_config, temp_vault_dir):
         """Test that file changes are detected and processed."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -83,7 +83,7 @@ class TestEnhancedObsidianBridge:
         assert sync_event.metadata is not None
         assert sync_event.metadata.word_count > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_auto_tag_generation(self, bridge_config, mock_mcp_server):
         """Test that auto-tagging works correctly."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -101,7 +101,7 @@ class TestEnhancedObsidianBridge:
         assert all(isinstance(tag, str) for tag in tags)
         mock_mcp_server.auto_tag.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_metadata_extraction(self, bridge_config, mock_mcp_server):
         """Test enhanced metadata extraction."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -116,7 +116,7 @@ class TestEnhancedObsidianBridge:
         assert metadata["basic_stats"]["word_count"] > 0
         mock_mcp_server.extract_metadata.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_knowledge_graph_update(self, bridge_config, mock_mcp_server):
         """Test knowledge graph node creation and updates."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -137,7 +137,7 @@ class TestEnhancedObsidianBridge:
         assert result.success
         assert result.node_id == "test-note-123"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_bidirectional_sync(
         self,
         bridge_config,
@@ -194,7 +194,7 @@ This is a synchronization test."""
         assert frontmatter.confidence_score >= 0.0
         assert frontmatter.confidence_score <= 1.0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhanced_note_creation_api(self, bridge_config, temp_vault_dir):
         """Test enhanced note creation via API."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -220,7 +220,7 @@ This is a synchronization test."""
         created_file = Path(temp_vault_dir) / result.filepath
         assert created_file.exists()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhanced_search_integration(self, bridge_config, mock_mcp_server):
         """Test enhanced search with vault integration."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -243,7 +243,7 @@ This is a synchronization test."""
         assert results["metrics"]["semanticEnabled"]
         mock_mcp_server.search.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_real_time_sync_monitoring(self, bridge_config):
         """Test real-time sync monitoring functionality."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -263,8 +263,8 @@ This is a synchronization test."""
         monitoring_stopped = await bridge.stop_sync_monitoring()
         assert monitoring_stopped
 
-    @pytest.mark.performance
-    @pytest.mark.asyncio
+    @pytest.mark.performance()
+    @pytest.mark.asyncio()
     async def test_performance_under_load(self, bridge_config, temp_vault_dir):
         """Test bridge performance under concurrent load."""
         import time
@@ -294,7 +294,7 @@ This is a synchronization test."""
         assert all(result.success for result in results)
         assert execution_time < 5.0  # Should complete in under 5 seconds
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_error_handling_and_recovery(self, bridge_config):
         """Test error handling and recovery mechanisms."""
         from src.bridge.enhanced_obsidian_bridge import EnhancedObsidianBridge
@@ -324,8 +324,8 @@ This is a synchronization test."""
         with pytest.raises(ValueError):
             EnhancedObsidianBridge(invalid_config)
 
-    @pytest.mark.integration
-    @pytest.mark.asyncio
+    @pytest.mark.integration()
+    @pytest.mark.asyncio()
     async def test_full_integration_workflow(
         self,
         bridge_config,

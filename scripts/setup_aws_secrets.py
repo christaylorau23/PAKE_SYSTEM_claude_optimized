@@ -58,7 +58,10 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
             {
                 "name": "pake-system/services/n8n",
                 "description": "n8n workflow automation credentials",
-                "secret": {"username": "n8n_admin", "REDACTED_SECRET": n8n_REDACTED_SECRET},
+                "secret": {
+                    "username": "n8n_admin",
+                    "REDACTED_SECRET": n8n_REDACTED_SECRET,
+                },
             },
             {
                 "name": "pake-system/api-keys/openai",

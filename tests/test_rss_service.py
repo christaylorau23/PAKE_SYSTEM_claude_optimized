@@ -11,13 +11,13 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
-from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.rss_service import (
     FeedConfiguration,
     FeedItem,
     RSSFeedService,
 )
+
+from scripts.ingestion_pipeline import ContentItem
 
 
 class TestRSSFeedService:
@@ -26,7 +26,7 @@ class TestRSSFeedService:
     Tests feed parsing, content filtering, and cognitive integration.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def rss_config(self):
         """Standard RSS feed configuration"""
         return FeedConfiguration(
@@ -38,7 +38,7 @@ class TestRSSFeedService:
             min_content_length=150,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def atom_config(self):
         """Atom feed configuration"""
         return FeedConfiguration(
@@ -51,19 +51,19 @@ class TestRSSFeedService:
             exclude_keywords=["spam", "advertisement"],
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cognitive_engine(self):
         """Mock cognitive engine for quality assessment"""
         engine = Mock()
         engine.assess_content_quality = AsyncMock(return_value=0.82)
         return engine
 
-    @pytest.fixture
+    @pytest.fixture()
     def rss_service(self, mock_cognitive_engine):
         """Create RSS service instance"""
         return RSSFeedService(cognitive_engine=mock_cognitive_engine)
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_rss_content(self):
         """Sample RSS 2.0 XML content"""
         return """<?xml version="1.0" encoding="UTF-8"?>
@@ -96,7 +96,7 @@ class TestRSSFeedService:
     </channel>
 </rss>"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_atom_content(self):
         """Sample Atom 1.0 XML content"""
         return """<?xml version="1.0" encoding="utf-8"?>
@@ -127,7 +127,7 @@ class TestRSSFeedService:
     # RSS FEED PARSING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_fetch_and_parse_rss_feed_successfully(
         self,
         rss_service,
@@ -168,7 +168,7 @@ class TestRSSFeedService:
         assert "Artificial Intelligence" in item.categories
         assert item.feed_name == rss_config.name
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_parse_atom_feeds_correctly(
         self,
         rss_service,
@@ -205,7 +205,7 @@ class TestRSSFeedService:
             item.content
         )  # Should have content from both summary and content elements
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_malformed_xml_gracefully(
         self,
         rss_service,
@@ -244,7 +244,7 @@ class TestRSSFeedService:
     # CONTENT FILTERING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_keyword_filtering_accurately(
         self,
         rss_service,
@@ -279,7 +279,7 @@ class TestRSSFeedService:
             keywords_lower = [kw.lower() for kw in config.keyword_filters]
             assert any(keyword in content_text for keyword in keywords_lower)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_exclude_content_by_exclude_keywords(
         self,
         rss_service,
@@ -316,7 +316,7 @@ class TestRSSFeedService:
                 keyword in content_text for keyword in exclude_keywords_lower
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_minimum_content_length_filter(self, rss_service):
         """
         Test: Should filter out RSS items with insufficient content length
@@ -365,7 +365,7 @@ class TestRSSFeedService:
     # DEDUPLICATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_deduplicate_items_by_url_and_title(
         self,
         rss_service,
@@ -424,7 +424,7 @@ class TestRSSFeedService:
     # COGNITIVE INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_cognitive_quality_assessment(
         self,
         rss_service,
@@ -460,7 +460,7 @@ class TestRSSFeedService:
     # HTTP CACHING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_http_304_not_modified_efficiently(
         self,
         rss_service,
@@ -501,7 +501,7 @@ class TestRSSFeedService:
     # CONTENT ITEM CONVERSION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_convert_feed_items_to_content_items_correctly(
         self,
         rss_service,
@@ -553,7 +553,7 @@ class TestRSSFeedService:
     # ERROR HANDLING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_http_errors_gracefully(self, rss_service, rss_config):
         """
         Test: Should handle HTTP errors (404, 500, etc.) with proper
@@ -574,7 +574,7 @@ class TestRSSFeedService:
         assert result.http_status == 404
         assert result.execution_time > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_network_timeouts_appropriately(
         self,
         rss_service,
@@ -599,7 +599,7 @@ class TestRSSFeedService:
     # HEALTH CHECK AND MAINTENANCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_provide_comprehensive_health_status(self, rss_service):
         """
         Test: Should provide detailed health check information including
@@ -619,7 +619,7 @@ class TestRSSFeedService:
         assert health_status["feed_cache_size"] >= 0
         assert health_status["item_cache_size"] >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_cleanup_resources_properly(
         self,
         rss_service,

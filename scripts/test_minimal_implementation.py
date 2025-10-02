@@ -6,13 +6,12 @@ This script tests the minimal services we created to make sure they satisfy
 the basic contract requirements before moving to the Refactor phase.
 """
 
-import asyncio
 import json
-import sys
 import subprocess
+import sys
 import time
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 class SimpleTestRunner:
@@ -66,9 +65,11 @@ class SimpleTestRunner:
         """Start a service in background"""
         try:
             self.log(f"Starting {service_name} on port {port}...")
-            process = subprocess.Popen([
-                sys.executable, script_path
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            process = subprocess.Popen(
+                [sys.executable, script_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
             # Wait a moment for service to start
             time.sleep(2)
@@ -96,7 +97,7 @@ class SimpleTestRunner:
         response = self.assert_status_code(
             "http://localhost:8080/v1/health",
             200,
-            "API Gateway health endpoint responds with 200"
+            "API Gateway health endpoint responds with 200",
         )
 
         if response:
@@ -105,18 +106,33 @@ class SimpleTestRunner:
 
                 # Test required fields
                 self.assert_in("status", data, "Health response contains status field")
-                self.assert_in("timestamp", data, "Health response contains timestamp field")
-                self.assert_in("services", data, "Health response contains services field")
+                self.assert_in(
+                    "timestamp", data, "Health response contains timestamp field"
+                )
+                self.assert_in(
+                    "services", data, "Health response contains services field"
+                )
 
                 # Test status values
                 valid_statuses = ["healthy", "degraded", "unhealthy"]
-                self.assert_in(data["status"], valid_statuses, "Health status is valid enum value")
+                self.assert_in(
+                    data["status"], valid_statuses, "Health status is valid enum value"
+                )
 
                 # Test services structure
                 if "services" in data:
-                    expected_services = ["service-registry", "research-orchestrator", "cache-service", "performance-monitor"]
+                    expected_services = [
+                        "service-registry",
+                        "research-orchestrator",
+                        "cache-service",
+                        "performance-monitor",
+                    ]
                     for service in expected_services:
-                        self.assert_in(service, data["services"], f"Health includes {service} status")
+                        self.assert_in(
+                            service,
+                            data["services"],
+                            f"Health includes {service} status",
+                        )
 
             except json.JSONDecodeError:
                 self.tests_failed += 1
@@ -130,7 +146,7 @@ class SimpleTestRunner:
         response = self.assert_status_code(
             "http://localhost:8080/v1/services",
             200,
-            "Service discovery endpoint responds"
+            "Service discovery endpoint responds",
         )
 
         if response:
@@ -143,10 +159,16 @@ class SimpleTestRunner:
                     # Check for expected services
                     service_names = [s.get("name", "") for s in services]
                     for expected in ["research", "cache", "performance"]:
-                        self.assert_in(expected, service_names, f"Service discovery includes {expected}")
+                        self.assert_in(
+                            expected,
+                            service_names,
+                            f"Service discovery includes {expected}",
+                        )
                 else:
                     self.tests_failed += 1
-                    self.log("✗ Service discovery returns empty or invalid data", "ERROR")
+                    self.log(
+                        "✗ Service discovery returns empty or invalid data", "ERROR"
+                    )
 
             except json.JSONDecodeError:
                 self.tests_failed += 1
@@ -156,13 +178,15 @@ class SimpleTestRunner:
         response = self.assert_status_code(
             "http://localhost:8080/v1/services/cache/stats",
             200,
-            "Cache service routing works"
+            "Cache service routing works",
         )
 
         if response:
             try:
                 data = json.loads(response.read().decode())
-                self.assert_in("hit_rate", data, "Cache stats response contains hit_rate")
+                self.assert_in(
+                    "hit_rate", data, "Cache stats response contains hit_rate"
+                )
             except json.JSONDecodeError:
                 self.tests_failed += 1
                 self.log("✗ Cache stats response is not valid JSON", "ERROR")
@@ -178,7 +202,7 @@ class SimpleTestRunner:
             "service_type": "API",
             "environment": "DEVELOPMENT",
             "base_url": "http://localhost:8090",
-            "health_check_url": "http://localhost:8090/health"
+            "health_check_url": "http://localhost:8090/health",
         }
 
         try:
@@ -186,7 +210,7 @@ class SimpleTestRunner:
             req = Request(
                 "http://localhost:8000/api/v1/services/register",
                 data=json.dumps(test_service).encode(),
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
 
             response = urlopen(req, timeout=5)
@@ -202,24 +226,30 @@ class SimpleTestRunner:
                     service_id = reg_data["service_id"]
 
                     # Test service discovery
-                    discovery_response = urlopen("http://localhost:8000/api/v1/services", timeout=5)
+                    discovery_response = urlopen(
+                        "http://localhost:8000/api/v1/services", timeout=5
+                    )
                     if discovery_response.getcode() == 200:
                         services = json.loads(discovery_response.read().decode())
-                        found_service = any(s.get("service_id") == service_id for s in services)
+                        found_service = any(
+                            s.get("service_id") == service_id for s in services
+                        )
 
                         if found_service:
                             self.tests_passed += 1
                             self.log("✓ Registered service appears in discovery")
                         else:
                             self.tests_failed += 1
-                            self.log("✗ Registered service not found in discovery", "ERROR")
+                            self.log(
+                                "✗ Registered service not found in discovery", "ERROR"
+                            )
 
                     # Cleanup
                     cleanup_req = Request(
                         f"http://localhost:8000/api/v1/services/{service_id}",
-                        method="DELETE"
+                        method="DELETE",
                     )
-                    cleanup_req.get_method = lambda: 'DELETE'
+                    cleanup_req.get_method = lambda: "DELETE"
                     urlopen(cleanup_req, timeout=5)
 
                 else:
@@ -227,7 +257,10 @@ class SimpleTestRunner:
                     self.log("✗ Registration response missing service_id", "ERROR")
             else:
                 self.tests_failed += 1
-                self.log(f"✗ Service registration failed with status {response.getcode()}", "ERROR")
+                self.log(
+                    f"✗ Service registration failed with status {response.getcode()}",
+                    "ERROR",
+                )
 
         except Exception as e:
             self.tests_failed += 1
@@ -241,7 +274,7 @@ class SimpleTestRunner:
         response = self.assert_status_code(
             "http://localhost:9090/api/v1/metrics",
             200,
-            "Prometheus metrics endpoint responds"
+            "Prometheus metrics endpoint responds",
         )
 
         if response:
@@ -253,7 +286,7 @@ class SimpleTestRunner:
                 "pake_request_duration_seconds",
                 "pake_cache_hit_rate",
                 "pake_database_connections_active",
-                "pake_service_health_status"
+                "pake_service_health_status",
             ]
 
             for metric in required_metrics:
@@ -267,14 +300,16 @@ class SimpleTestRunner:
         response = self.assert_status_code(
             "http://localhost:9090/api/v1/metrics/custom",
             200,
-            "Custom metrics endpoint responds"
+            "Custom metrics endpoint responds",
         )
 
         if response:
             try:
                 data = json.loads(response.read().decode())
                 self.assert_in("timestamp", data, "Custom metrics include timestamp")
-                self.assert_in("service_metrics", data, "Custom metrics include service_metrics")
+                self.assert_in(
+                    "service_metrics", data, "Custom metrics include service_metrics"
+                )
             except json.JSONDecodeError:
                 self.tests_failed += 1
                 self.log("✗ Custom metrics response is not valid JSON", "ERROR")
@@ -301,21 +336,17 @@ class SimpleTestRunner:
 
         # Start services
         api_gateway = self.start_service(
-            "src/services/orchestration/api_gateway.py",
-            8080,
-            "API Gateway"
+            "src/services/orchestration/api_gateway.py", 8080, "API Gateway"
         )
 
         service_registry = self.start_service(
-            "src/services/orchestration/service_registry.py",
-            8000,
-            "Service Registry"
+            "src/services/orchestration/service_registry.py", 8000, "Service Registry"
         )
 
         monitoring = self.start_service(
             "src/services/observability/monitoring_service.py",
             9090,
-            "Monitoring Service"
+            "Monitoring Service",
         )
 
         # Wait for services to fully start

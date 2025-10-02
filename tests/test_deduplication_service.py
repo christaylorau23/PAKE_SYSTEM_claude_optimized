@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
-
 from services.content.deduplication_service import (
     AdvancedContentDeduplicationService,
     ContentFingerprint,
@@ -36,7 +35,7 @@ class TestAdvancedContentDeduplicationService:
     Tests exact matching, fuzzy similarity, ML-powered detection, and performance.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def dedup_config(self):
         """Standard deduplication configuration for testing"""
         return DeduplicationConfig(
@@ -65,7 +64,7 @@ class TestAdvancedContentDeduplicationService:
         yield service
         await service.clear_fingerprints()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_content_items(self):
         """Sample content items for testing"""
         return [
@@ -111,7 +110,7 @@ class TestAdvancedContentDeduplicationService:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_initialize_deduplication_service_with_config(
         self,
         dedup_config,
@@ -137,7 +136,7 @@ class TestAdvancedContentDeduplicationService:
         assert service.stats["total_processed"] == 0
         assert service.stats["duplicates_found"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_detect_exact_duplicate_content_correctly(
         self,
         dedup_service,
@@ -172,7 +171,7 @@ class TestAdvancedContentDeduplicationService:
         assert result2.duplicate_of == item1["id"]
         assert result2.action_taken == DuplicateAction.SKIP
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_detect_fuzzy_similar_content_with_threshold(
         self,
         dedup_service,
@@ -211,7 +210,7 @@ class TestAdvancedContentDeduplicationService:
             # If not detected as duplicate, similarity should be below threshold
             assert result3.similarity_score < 0.80
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_title_based_similarity_detection(self, dedup_service):
         """
         Test: Should detect duplicates based on title similarity
@@ -236,7 +235,7 @@ class TestAdvancedContentDeduplicationService:
             assert result2.method_used == DeduplicationMethod.TITLE_SIMILARITY
             assert result2.similarity_score >= 0.90
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_create_comprehensive_content_fingerprints(
         self,
         dedup_service,
@@ -272,7 +271,7 @@ class TestAdvancedContentDeduplicationService:
         assert fingerprint.content_length == len(content)
         assert fingerprint.created_at is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_process_batch_content_efficiently(
         self,
         dedup_service,
@@ -383,7 +382,7 @@ class TestAdvancedContentDeduplicationService:
     # Performance and Scalability Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_maintain_performance_under_high_volume(self, dedup_service):
         """
         Test: Should maintain acceptable performance when processing
@@ -426,7 +425,7 @@ class TestAdvancedContentDeduplicationService:
         assert stats["total_processed"] == len(content_items)
         assert stats["duplicates_found"] >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_manage_memory_usage_with_fingerprint_limits(
         self,
         dedup_config,
@@ -458,7 +457,7 @@ class TestAdvancedContentDeduplicationService:
         )
         assert not result.is_duplicate
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_deduplication_safely(self, dedup_service):
         """
         Test: Should handle concurrent deduplication requests
@@ -492,7 +491,7 @@ class TestAdvancedContentDeduplicationService:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_empty_and_malformed_content(self, dedup_service):
         """
         Test: Should gracefully handle empty content, None values,
@@ -520,7 +519,7 @@ class TestAdvancedContentDeduplicationService:
             <= dedup_service.config.max_content_length
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_malformed_metadata_gracefully(self, dedup_service):
         """
         Test: Should handle malformed, missing, or invalid metadata
@@ -546,7 +545,7 @@ class TestAdvancedContentDeduplicationService:
         )
         assert isinstance(result2, DeduplicationResult)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_export_and_import_fingerprints_correctly(
         self,
         dedup_service,
@@ -601,13 +600,13 @@ class TestDeduplicationDetectors:
     Test suite for individual deduplication detection algorithms.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def normalizer(self):
         """Content normalizer for detector testing"""
         config = DeduplicationConfig()
         return ContentNormalizer(config)
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_fingerprints(self, normalizer):
         """Sample fingerprints for detector testing"""
         import hashlib
@@ -634,7 +633,7 @@ class TestDeduplicationDetectors:
 
         return fingerprints
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_exact_hash_detector_should_identify_identical_content(
         self,
         normalizer,
@@ -671,7 +670,7 @@ class TestDeduplicationDetectors:
         assert similarity == 0.0
         assert matching_fingerprint is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_fuzzy_hash_detector_should_find_similar_content(
         self,
         normalizer,
@@ -700,7 +699,7 @@ class TestDeduplicationDetectors:
             assert similarity >= config.fuzzy_similarity_threshold
             assert matching_fingerprint is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_title_similarity_detector_should_compare_titles(self, normalizer):
         """
         Test: TitleSimilarityDetector should identify content with

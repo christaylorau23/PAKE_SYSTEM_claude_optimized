@@ -459,9 +459,9 @@ class MLMonitor:
 
         # Data storage
         self.model_metrics: dict[str, deque] = defaultdict(lambda: deque(maxlen=10000))
-        self.active_alerts: dict[str, list[DriftAlert | PerformanceAlert]] = (
-            defaultdict(list)
-        )
+        self.active_alerts: dict[
+            str, list[DriftAlert | PerformanceAlert]
+        ] = defaultdict(list)
         self.ab_tests: dict[str, dict[str, Any]] = {}
         self.ab_test_results: dict[str, ABTestResult] = {}
 

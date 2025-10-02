@@ -17,8 +17,8 @@ env:
   TF_WORKING_DIR: 'infra/terraform'
 
 permissions:
-  contents: read
-  id-token: write
+  id-token: write  # Required for OIDC authentication with AWS
+  contents: read   # Required for checkout
   pull-requests: write
 
 jobs:

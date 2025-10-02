@@ -91,7 +91,7 @@ class TestDataModelContracts:
 class TestPerformanceContracts:
     """Contract tests for performance requirements"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_sub_second_analysis_contract_fails(self):
         """Contract: Trend analysis must complete in <1 second"""
         # This test will fail until performance requirements are met
@@ -161,7 +161,7 @@ class TestAPIIntegrationContracts:
 class TestRedisStreamContracts:
     """Contract tests for Redis Streams integration"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_redis_stream_processing_contract_fails(self):
         """Contract: Redis Streams must handle real-time event processing"""
         with pytest.raises(ImportError):

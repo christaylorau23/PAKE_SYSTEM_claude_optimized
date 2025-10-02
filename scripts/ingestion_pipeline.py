@@ -328,7 +328,9 @@ class UniversalIngestionPipeline:
                 source.credentials["server"],
                 source.credentials.get("port", 993),
             )
-            mail.login(source.credentials["username"], source.credentials["REDACTED_SECRET"])
+            mail.login(
+                source.credentials["username"], source.credentials["REDACTED_SECRET"]
+            )
 
             # Select folders to check
             folders = (

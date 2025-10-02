@@ -12,17 +12,16 @@ Usage:
     poetry run python scripts/test_poetry_setup.py
 """
 
-import sys
 import importlib
-from typing import Dict, List, Tuple, Optional
-import traceback
+import sys
+from typing import Optional
 
 
-def test_import(package: str, optional: bool = False) -> Tuple[bool, Optional[str]]:
+def test_import(package: str, optional: bool = False) -> tuple[bool, Optional[str]]:
     """Test if a package can be imported."""
     try:
         module = importlib.import_module(package)
-        version = getattr(module, '__version__', 'unknown')
+        version = getattr(module, "__version__", "unknown")
         return True, version
     except ImportError as e:
         if not optional:
@@ -32,7 +31,7 @@ def test_import(package: str, optional: bool = False) -> Tuple[bool, Optional[st
         return False, f"Unexpected error: {e}"
 
 
-def test_core_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
+def test_core_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     """Test core production dependencies."""
     core_packages = [
         "fastapi",
@@ -48,7 +47,7 @@ def test_core_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
         "websockets",
         "aiofiles",
         "structlog",
-        "loguru"
+        "loguru",
     ]
 
     results = {}
@@ -59,17 +58,9 @@ def test_core_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
     return results
 
 
-def test_dev_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
+def test_dev_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     """Test development dependencies."""
-    dev_packages = [
-        "pytest",
-        "black",
-        "isort",
-        "mypy",
-        "ruff",
-        "bandit",
-        "coverage"
-    ]
+    dev_packages = ["pytest", "black", "isort", "mypy", "ruff", "bandit", "coverage"]
 
     results = {}
     for package in dev_packages:
@@ -79,7 +70,7 @@ def test_dev_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
     return results
 
 
-def test_optional_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
+def test_optional_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     """Test optional dependency groups."""
     optional_packages = {
         # Trends group
@@ -106,26 +97,25 @@ def test_optional_dependencies() -> Dict[str, Tuple[bool, Optional[str]]]:
 def test_poetry_environment():
     """Test Poetry-specific environment setup."""
     import os
-    import subprocess
 
     print("🔍 Testing Poetry Environment Setup...")
 
     # Check if we're in a Poetry environment
-    virtual_env = os.environ.get('VIRTUAL_ENV')
-    if virtual_env and '.venv' in virtual_env:
+    virtual_env = os.environ.get("VIRTUAL_ENV")
+    if virtual_env and ".venv" in virtual_env:
         print(f"✅ Running in Poetry virtual environment: {virtual_env}")
     else:
         print(f"⚠️  May not be in Poetry venv. Current VIRTUAL_ENV: {virtual_env}")
 
     # Check Python path
     python_path = sys.executable
-    if '.venv' in python_path:
+    if ".venv" in python_path:
         print(f"✅ Using Poetry Python: {python_path}")
     else:
         print(f"⚠️  Python path may not be from Poetry: {python_path}")
 
 
-def print_results(category: str, results: Dict[str, Tuple[bool, Optional[str]]]):
+def print_results(category: str, results: dict[str, tuple[bool, Optional[str]]]):
     """Print test results for a category."""
     print(f"\n📦 {category} Dependencies:")
     print("-" * 40)
@@ -141,14 +131,26 @@ def print_results(category: str, results: Dict[str, Tuple[bool, Optional[str]]])
         else:
             status = "❌"
 
-        version_info = f" (v{info})" if success and "unknown" not in str(info) and "Optional" not in str(info) else ""
+        version_info = (
+            f" (v{info})"
+            if success and "unknown" not in str(info) and "Optional" not in str(info)
+            else ""
+        )
         print(f"  {status} {package}{version_info}")
 
         if not success:
             print(f"      Error: {info}")
 
-    print(f"\n📊 {category} Summary: {success_count}/{len(results)} packages successfully imported")
-    return success_count == len([r for r in results.values() if not ("Optional package not installed" in str(r[1]))])
+    print(
+        f"\n📊 {category} Summary: {success_count}/{len(results)} packages successfully imported"
+    )
+    return success_count == len(
+        [
+            r
+            for r in results.values()
+            if "Optional package not installed" not in str(r[1])
+        ]
+    )
 
 
 def test_basic_functionality():
@@ -159,6 +161,7 @@ def test_basic_functionality():
     # Test FastAPI import and basic setup
     try:
         from fastapi import FastAPI
+
         app = FastAPI()
         print("  ✅ FastAPI: Can create app instance")
     except Exception as e:
@@ -168,6 +171,7 @@ def test_basic_functionality():
     try:
         from sqlalchemy import create_engine, text
         from sqlalchemy.orm import sessionmaker
+
         # Test with SQLite in-memory database
         engine = create_engine("sqlite:///:memory:")
         Session = sessionmaker(bind=engine)
@@ -181,15 +185,15 @@ def test_basic_functionality():
     # Test Redis connection (mock)
     try:
         import redis
+
         # Don't actually connect, just test import and basic setup
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis(host="localhost", port=6379, decode_responses=True)
         print("  ✅ Redis: Client can be created")
     except Exception as e:
         print(f"  ❌ Redis: {e}")
 
     # Test pytest functionality
     try:
-        import pytest
         print("  ✅ Pytest: Available for testing")
     except Exception as e:
         print(f"  ❌ Pytest: {e}")

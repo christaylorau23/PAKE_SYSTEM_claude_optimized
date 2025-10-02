@@ -325,8 +325,12 @@ class AdminDashboardService:
 
             elif action == UserAction.RESET_PASSWORD:
                 # Generate temporary REDACTED_SECRET
-                temp_REDACTED_SECRET = kwargs.get("temp_REDACTED_SECRET", "TempPass123!")
-                REDACTED_SECRET_hash = self.auth_service.hash_REDACTED_SECRET(temp_REDACTED_SECRET)
+                temp_REDACTED_SECRET = kwargs.get(
+                    "temp_REDACTED_SECRET", "TempPass123!"
+                )
+                REDACTED_SECRET_hash = self.auth_service.hash_REDACTED_SECRET(
+                    temp_REDACTED_SECRET
+                )
                 success = await self.database_service.update_user_REDACTED_SECRET(
                     target_user_id,
                     REDACTED_SECRET_hash,

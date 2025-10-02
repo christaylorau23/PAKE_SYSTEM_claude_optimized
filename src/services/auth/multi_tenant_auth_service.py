@@ -255,7 +255,9 @@ class MultiTenantAuthService:
 
             # Verify REDACTED_SECRET
             try:
-                self.REDACTED_SECRET_hasher.verify(user["REDACTED_SECRET_hash"], request.REDACTED_SECRET)
+                self.REDACTED_SECRET_hasher.verify(
+                    user["REDACTED_SECRET_hash"], request.REDACTED_SECRET
+                )
             except VerifyMismatchError:
                 await self._record_failed_attempt(
                     tenant_id,
@@ -265,9 +267,13 @@ class MultiTenantAuthService:
                 return LoginResponse(success=False, error="Invalid credentials")
 
             # Check if REDACTED_SECRET needs rehashing (Argon2 upgrade)
-            if self.REDACTED_SECRET_hasher.check_needs_rehash(user["REDACTED_SECRET_hash"]):
+            if self.REDACTED_SECRET_hasher.check_needs_rehash(
+                user["REDACTED_SECRET_hash"]
+            ):
                 new_hash = self.REDACTED_SECRET_hasher.hash(request.REDACTED_SECRET)
-                await self._update_user_REDACTED_SECRET_hash(tenant_id, user["id"], new_hash)
+                await self._update_user_REDACTED_SECRET_hash(
+                    tenant_id, user["id"], new_hash
+                )
 
             # Check account status
             if not user["is_active"]:
@@ -549,20 +555,31 @@ class MultiTenantAuthService:
 
             # Verify current REDACTED_SECRET
             try:
-                self.REDACTED_SECRET_hasher.verify(user["REDACTED_SECRET_hash"], current_REDACTED_SECRET)
+                self.REDACTED_SECRET_hasher.verify(
+                    user["REDACTED_SECRET_hash"], current_REDACTED_SECRET
+                )
             except VerifyMismatchError:
-                return {"success": False, "error": "Current REDACTED_SECRET is incorrect"}
+                return {
+                    "success": False,
+                    "error": "Current REDACTED_SECRET is incorrect",
+                }
 
             # Validate new REDACTED_SECRET
-            REDACTED_SECRET_validation = self._validate_REDACTED_SECRET(new_REDACTED_SECRET)
+            REDACTED_SECRET_validation = self._validate_REDACTED_SECRET(
+                new_REDACTED_SECRET
+            )
             if not REDACTED_SECRET_validation["valid"]:
                 return {"success": False, "error": REDACTED_SECRET_validation["error"]}
 
             # Hash new REDACTED_SECRET
-            new_REDACTED_SECRET_hash = self.REDACTED_SECRET_hasher.hash(new_REDACTED_SECRET)
+            new_REDACTED_SECRET_hash = self.REDACTED_SECRET_hasher.hash(
+                new_REDACTED_SECRET
+            )
 
             # Update REDACTED_SECRET
-            await self._update_user_REDACTED_SECRET_hash(tenant_id, user_id, new_REDACTED_SECRET_hash)
+            await self._update_user_REDACTED_SECRET_hash(
+                tenant_id, user_id, new_REDACTED_SECRET_hash
+            )
 
             # Log REDACTED_SECRET change
             await self.db_service.log_tenant_activity(

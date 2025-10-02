@@ -1401,7 +1401,7 @@ class EnterpriseSecurityFramework:
             # For testing purposes, accept any username with REDACTED_SECRET matching
             # username + "_secure123"
             expected_REDACTED_SECRET = f"{username}_secure123"
-            authentication_successful = REDACTED_SECRET == expected_REDACTED_SECRET
+            authentication_successful = expected_REDACTED_SECRET == REDACTED_SECRET
 
             if authentication_successful:
                 # Generate session

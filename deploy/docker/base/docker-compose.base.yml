@@ -81,7 +81,7 @@ services:
       # Application Configuration
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MAX_WORKERS: ${MAX_WORKERS:-4}
-      API_HOST: 0.0.0.0
+      API_HOST: 127.0.0.1  # Secure local binding instead of 0.0.0.0
       API_PORT: 8000
 
       # Security Configuration

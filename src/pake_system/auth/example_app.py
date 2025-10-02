@@ -1,5 +1,4 @@
-"""
-Example FastAPI application demonstrating OAuth2 authentication
+"""Example FastAPI application demonstrating OAuth2 authentication
 
 This example shows how to:
 1. Set up the authentication system
@@ -43,8 +42,7 @@ app.include_router(auth_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    """
-    Public endpoint - no authentication required.
+    """Public endpoint - no authentication required.
 
     Returns:
         Welcome message and authentication instructions
@@ -56,10 +54,7 @@ async def root() -> dict[str, str]:
             "login": "POST /token with username and password",
             "me": "GET /auth/me with Bearer token",
         },
-        "test_credentials": {
-            "username": "admin",
-            "password": "secret"
-        }
+        "test_credentials": {"username": "admin", "password": "secret"},
     }
 
 
@@ -67,8 +62,7 @@ async def root() -> dict[str, str]:
 async def protected_route(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> dict[str, str]:
-    """
-    Protected endpoint - requires authentication.
+    """Protected endpoint - requires authentication.
 
     This demonstrates how to use the authentication dependency
     to protect any endpoint. FastAPI will automatically:
@@ -96,8 +90,7 @@ async def protected_route(
 async def admin_route(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> dict[str, str]:
-    """
-    Admin-only endpoint.
+    """Admin-only endpoint.
 
     This is a simple example. In production, you would add
     role-based access control by checking current_user.role
@@ -120,7 +113,7 @@ async def admin_route(
             "User management",
             "System configuration",
             "Analytics dashboard",
-        ]
+        ],
     }
 
 
@@ -136,9 +129,9 @@ async def unauthorized_handler(request, exc):
             "detail": "Authentication required. Please login at /token",
             "instructions": {
                 "step1": "POST /token with username and password",
-                "step2": "Include 'Authorization: Bearer <token>' header in requests"
-            }
-        }
+                "step2": "Include 'Authorization: Bearer <token>' header in requests",
+            },
+        },
     )
 
 
@@ -149,8 +142,8 @@ if __name__ == "__main__":
     # Access the interactive docs at http://localhost:8000/docs
     uvicorn.run(
         "example_app:app",
-        host="0.0.0.0",
+        host="127.0.0.1",  # Secure local binding instead of 0.0.0.0
         port=8000,
         reload=True,
-        log_level="info"
+        log_level="info",
     )

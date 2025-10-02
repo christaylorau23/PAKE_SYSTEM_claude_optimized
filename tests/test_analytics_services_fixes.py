@@ -24,12 +24,12 @@ from src.services.analytics.trend_analysis_service import TrendAnalysisService
 class TestTrendAnalysisService:
     """Test suite for TrendAnalysisService with missing methods."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def trend_service(self):
         """Create a fresh trend analysis service instance."""
         return TrendAnalysisService()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_trend_with_time_range(self, trend_service):
         """Test analyze_trend method with time_range parameter."""
         # This test will fail initially, demonstrating the missing method
@@ -71,7 +71,7 @@ class TestTrendAnalysisService:
             # Verify confidence is within valid range
             assert 0 <= result["confidence"] <= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_trend_different_metrics(self, trend_service):
         """Test analyze_trend with different metrics."""
         metrics = ["response_time", "throughput", "error_rate", "cache_hit_rate"]
@@ -92,7 +92,7 @@ class TestTrendAnalysisService:
                 assert isinstance(result, dict)
                 assert "trend_direction" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_trend_error_handling(self, trend_service):
         """Test error handling in analyze_trend method."""
         with patch.object(trend_service, "analyze_trend") as mock_analyze:
@@ -107,12 +107,12 @@ class TestTrendAnalysisService:
 class TestCorrelationEngine:
     """Test suite for CorrelationEngine with missing methods."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def correlation_engine(self):
         """Create a fresh correlation engine instance."""
         return CorrelationEngine()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_correlations_method(self, correlation_engine):
         """Test analyze_correlations method."""
         metrics = ["response_time", "throughput", "error_rate", "cache_hit_rate"]
@@ -171,7 +171,7 @@ class TestCorrelationEngine:
                 valid_types = ["positive", "negative", "none"]
                 assert correlation["relationship_type"] in valid_types
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_correlations_different_time_ranges(self, correlation_engine):
         """Test analyze_correlations with different time ranges."""
         metrics = ["response_time", "throughput"]
@@ -197,7 +197,7 @@ class TestCorrelationEngine:
                 assert "correlations" in result
                 assert "summary" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_analyze_correlations_error_handling(self, correlation_engine):
         """Test error handling in analyze_correlations method."""
         with patch.object(correlation_engine, "analyze_correlations") as mock_analyze:
@@ -212,12 +212,12 @@ class TestCorrelationEngine:
 class TestPredictiveAnalyticsService:
     """Test suite for PredictiveAnalyticsService with missing methods."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def predictive_service(self):
         """Create a fresh predictive analytics service instance."""
         return PredictiveAnalyticsService()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_forecast_method(self, predictive_service):
         """Test generate_forecast method."""
         metrics = ["response_time", "throughput", "error_rate"]
@@ -315,7 +315,7 @@ class TestPredictiveAnalyticsService:
                 assert metric in model_accuracy
                 assert 0 <= model_accuracy[metric] <= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_forecast_different_horizons(self, predictive_service):
         """Test generate_forecast with different forecast horizons."""
         metrics = ["response_time"]
@@ -353,7 +353,7 @@ class TestPredictiveAnalyticsService:
                 assert "forecasts" in result
                 assert result["forecast_metadata"]["forecast_horizon"] == horizon
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_forecast_error_handling(self, predictive_service):
         """Test error handling in generate_forecast method."""
         with patch.object(predictive_service, "generate_forecast") as mock_forecast:
@@ -364,7 +364,7 @@ class TestPredictiveAnalyticsService:
                     forecast_horizon="7d",
                 )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_generate_forecast_insufficient_data(self, predictive_service):
         """Test generate_forecast with insufficient historical data."""
         with patch.object(predictive_service, "generate_forecast") as mock_forecast:
@@ -390,7 +390,7 @@ class TestPredictiveAnalyticsService:
 class TestAnalyticsServicesIntegration:
     """Integration tests for all analytics services working together."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_all_services_integration(self):
         """Test all analytics services working together."""
         trend_service = TrendAnalysisService()
@@ -458,7 +458,7 @@ class TestAnalyticsServicesIntegration:
             )
             assert isinstance(forecast_result, dict)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_concurrent_analytics_operations(self):
         """Test concurrent operations across all analytics services."""
         trend_service = TrendAnalysisService()

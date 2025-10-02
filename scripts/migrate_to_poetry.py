@@ -14,15 +14,14 @@ Usage:
 """
 
 import os
+import platform
+import shutil
 import subprocess
 import sys
-import shutil
 from pathlib import Path
-from typing import List, Optional
-import platform
 
 
-def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
     """Run a shell command and return the result."""
     print(f"Running: {' '.join(cmd)}")
     return subprocess.run(cmd, check=check, capture_output=True, text=True)
@@ -51,18 +50,23 @@ def install_poetry() -> bool:
         installer_cmd = [
             "powershell",
             "-Command",
-            "(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -"
+            "(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -",
         ]
     else:
         installer_cmd = [
-            "curl", "-sSL", "https://install.python-poetry.org", "|", "python3", "-"
+            "curl",
+            "-sSL",
+            "https://install.python-poetry.org",
+            "|",
+            "python3",
+            "-",
         ]
         # For Unix systems, we need to use shell=True
         try:
             subprocess.run(
                 "curl -sSL https://install.python-poetry.org | python3 -",
                 shell=True,
-                check=True
+                check=True,
             )
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to install Poetry: {e}")
@@ -78,7 +82,7 @@ def install_poetry() -> bool:
     return check_poetry_installed()
 
 
-def backup_requirements_files() -> List[Path]:
+def backup_requirements_files() -> list[Path]:
     """Backup existing requirements files."""
     print("📦 Backing up existing requirements files...")
 
@@ -88,7 +92,7 @@ def backup_requirements_files() -> List[Path]:
     requirements_patterns = [
         "requirements*.txt",
         "*/requirements*.txt",
-        "**/requirements*.txt"
+        "**/requirements*.txt",
     ]
 
     backed_up_files = []
@@ -145,13 +149,12 @@ def validate_installation() -> bool:
             "import fastapi",
             "import sqlalchemy",
             "import redis",
-            "import pytest"
+            "import pytest",
         ]
 
         for test_import in test_imports:
             result = run_command(
-                ["poetry", "run", "python", "-c", test_import],
-                check=False
+                ["poetry", "run", "python", "-c", test_import], check=False
             )
             if result.returncode == 0:
                 package = test_import.split()[1]
@@ -168,9 +171,9 @@ def validate_installation() -> bool:
 
 def print_next_steps():
     """Print guidance for next steps."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🎉 MIGRATION TO POETRY COMPLETE!")
-    print("="*60)
+    print("=" * 60)
 
     print("\n📋 NEXT STEPS:")
     print("1. Activate Poetry environment:")
@@ -212,18 +215,22 @@ def print_next_steps():
     print("   messaging: Message queue systems")
     print("   search: Search engine integration")
 
-    print("\n💡 TIP: Old requirements.txt files are backed up in backups/requirements_backup/")
+    print(
+        "\n💡 TIP: Old requirements.txt files are backed up in backups/requirements_backup/"
+    )
     print("    You can safely remove them after confirming Poetry works correctly.")
 
 
 def main():
     """Main migration function."""
     print("🚀 PAKE System - Poetry Migration Script")
-    print("="*50)
+    print("=" * 50)
 
     # Check if we're in the right directory
     if not Path("pyproject.toml").exists():
-        print("❌ Error: pyproject.toml not found. Please run this script from the project root.")
+        print(
+            "❌ Error: pyproject.toml not found. Please run this script from the project root."
+        )
         sys.exit(1)
 
     # Backup existing requirements files
@@ -232,7 +239,9 @@ def main():
     # Check if Poetry is installed
     if not check_poetry_installed():
         if not install_poetry():
-            print("❌ Failed to install Poetry. Please install manually: https://python-poetry.org/docs/#installation")
+            print(
+                "❌ Failed to install Poetry. Please install manually: https://python-poetry.org/docs/#installation"
+            )
             sys.exit(1)
 
     # Setup Poetry environment

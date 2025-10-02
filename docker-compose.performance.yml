@@ -107,7 +107,7 @@ services:
 
       # Performance optimizations
       UVICORN_WORKERS: 4
-      UVICORN_HOST: 0.0.0.0
+      UVICORN_HOST: 127.0.0.1  # Secure local binding instead of 0.0.0.0
       UVICORN_PORT: 8000
       UVICORN_BACKLOG: 2048
 

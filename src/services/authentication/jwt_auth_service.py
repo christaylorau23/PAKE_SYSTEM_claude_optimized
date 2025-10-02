@@ -104,11 +104,15 @@ class JWTAuthenticationService:
         """Hash REDACTED_SECRET using Argon2"""
         return self.pwd_context.hash(REDACTED_SECRET)
 
-    def verify_REDACTED_SECRET(self, plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str) -> bool:
+    def verify_REDACTED_SECRET(
+        self, plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str
+    ) -> bool:
         """Verify REDACTED_SECRET against hash"""
         return self.pwd_context.verify(plain_REDACTED_SECRET, hashed_REDACTED_SECRET)
 
-    def validate_REDACTED_SECRET_complexity(self, REDACTED_SECRET: str) -> tuple[bool, list[str]]:
+    def validate_REDACTED_SECRET_complexity(
+        self, REDACTED_SECRET: str
+    ) -> tuple[bool, list[str]]:
         """Validate REDACTED_SECRET complexity"""
         errors = []
 
@@ -274,7 +278,9 @@ class JWTAuthenticationService:
                 return False, {"errors": ["Email already registered"]}
 
             # Hash REDACTED_SECRET
-            REDACTED_SECRET_hash = self.hash_REDACTED_SECRET(registration.REDACTED_SECRET)
+            REDACTED_SECRET_hash = self.hash_REDACTED_SECRET(
+                registration.REDACTED_SECRET
+            )
 
             # Create user
             user_id = await self.database_service.create_user(
@@ -331,7 +337,9 @@ class JWTAuthenticationService:
                 return False, {"errors": ["Account is deactivated"]}
 
             # Verify REDACTED_SECRET
-            if not self.verify_REDACTED_SECRET(login.REDACTED_SECRET, user["REDACTED_SECRET_hash"]):
+            if not self.verify_REDACTED_SECRET(
+                login.REDACTED_SECRET, user["REDACTED_SECRET_hash"]
+            ):
                 self.record_failed_attempt(identifier)
                 return False, {"errors": ["Invalid credentials"]}
 
@@ -461,11 +469,15 @@ class JWTAuthenticationService:
                 return False, {"errors": ["User not found"]}
 
             # Verify old REDACTED_SECRET
-            if not self.verify_REDACTED_SECRET(old_REDACTED_SECRET, user["REDACTED_SECRET_hash"]):
+            if not self.verify_REDACTED_SECRET(
+                old_REDACTED_SECRET, user["REDACTED_SECRET_hash"]
+            ):
                 return False, {"errors": ["Current REDACTED_SECRET is incorrect"]}
 
             # Validate new REDACTED_SECRET
-            is_valid, REDACTED_SECRET_errors = self.validate_REDACTED_SECRET_complexity(new_REDACTED_SECRET)
+            is_valid, REDACTED_SECRET_errors = self.validate_REDACTED_SECRET_complexity(
+                new_REDACTED_SECRET
+            )
             if not is_valid:
                 return False, {"errors": REDACTED_SECRET_errors}
 
@@ -563,7 +575,9 @@ if __name__ == "__main__":
         )
 
         # Test REDACTED_SECRET validation
-        is_valid, errors = auth_service.validate_REDACTED_SECRET_complexity("TestPass123!")
+        is_valid, errors = auth_service.validate_REDACTED_SECRET_complexity(
+            "TestPass123!"
+        )
         print(f"✅ Password validation test: {'PASSED' if is_valid else 'FAILED'}")
 
         # Test token creation

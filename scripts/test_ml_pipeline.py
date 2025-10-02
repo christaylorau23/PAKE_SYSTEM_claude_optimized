@@ -13,7 +13,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from services.ml.ml_monitoring import MetricType
 from services.ml.ml_pipeline_demo import MLPipelineDemo
 from services.ml.model_serving import ModelFramework

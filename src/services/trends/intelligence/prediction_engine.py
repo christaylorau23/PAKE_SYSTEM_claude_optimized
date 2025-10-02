@@ -236,13 +236,15 @@ class PredictionEngine:
         volume_trend = self._calculate_volume_trend(sorted_history)
 
         # Predict next stage based on current stage and trends
-        next_stage, confidence, hours_to_transition = (
-            self._predict_next_lifecycle_stage(
-                current_trend.lifecycle_stage,
-                momentum_trend,
-                volume_trend,
-                stage_changes,
-            )
+        (
+            next_stage,
+            confidence,
+            hours_to_transition,
+        ) = self._predict_next_lifecycle_stage(
+            current_trend.lifecycle_stage,
+            momentum_trend,
+            volume_trend,
+            stage_changes,
         )
 
         supporting_factors = [

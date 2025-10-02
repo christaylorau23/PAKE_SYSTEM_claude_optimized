@@ -32,7 +32,7 @@ class TestTenantIsolation:
     - Security boundary enforcement
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     async def db_service(self):
         """Create test database service"""
         config = MultiTenantDatabaseConfig(database="pake_system_multitenant_test")
@@ -41,7 +41,7 @@ class TestTenantIsolation:
         yield service
         await service.close()
 
-    @pytest.fixture
+    @pytest.fixture()
     async def test_tenants(self, db_service):
         """Create test tenants"""
         tenant1 = await db_service.create_tenant(
@@ -60,7 +60,7 @@ class TestTenantIsolation:
 
         return [tenant1, tenant2]
 
-    @pytest.fixture
+    @pytest.fixture()
     async def test_users(self, db_service, test_tenants):
         """Create test users for each tenant"""
         tenant1_id = test_tenants[0]["id"]
@@ -84,7 +84,7 @@ class TestTenantIsolation:
 
         return [user1, user2]
 
-    @pytest.fixture
+    @pytest.fixture()
     async def test_search_history(self, db_service, test_tenants, test_users):
         """Create test search history for each tenant"""
         tenant1_id = test_tenants[0]["id"]
@@ -116,7 +116,7 @@ class TestTenantIsolation:
 
     # Database-Level Isolation Tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_data_isolation(self, db_service, test_tenants, test_users):
         """Test that tenant data is properly isolated at database level"""
         tenant1_id = test_tenants[0]["id"]
@@ -136,7 +136,7 @@ class TestTenantIsolation:
         assert tenant1_users[0]["id"] != tenant2_users[0]["id"]
         assert tenant1_users[0]["username"] != tenant2_users[0]["username"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_search_history_isolation(
         self,
         db_service,
@@ -162,7 +162,7 @@ class TestTenantIsolation:
         # Verify no cross-tenant data leakage
         assert tenant1_searches[0]["id"] != tenant2_searches[0]["id"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cross_tenant_access_prevention(
         self,
         db_service,
@@ -184,7 +184,7 @@ class TestTenantIsolation:
         assert user_from_correct_tenant is not None
         assert user_from_correct_tenant["id"] == user1_id
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_analytics_isolation(
         self,
         db_service,
@@ -217,7 +217,7 @@ class TestTenantIsolation:
 
     # Application-Level Isolation Tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_aware_dal_isolation(
         self,
         db_service,
@@ -250,7 +250,7 @@ class TestTenantIsolation:
         assert len(tenant2_users) == 1
         assert tenant2_users[0].tenant_id == tenant2_id
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_context_validation(self, db_service, test_tenants):
         """Test tenant context validation"""
         tenant1_id = test_tenants[0]["id"]
@@ -265,7 +265,7 @@ class TestTenantIsolation:
         invalid_tenant_data = await db_service.get_tenant_by_id(invalid_tenant_id)
         assert invalid_tenant_data is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_isolation_error_handling(self, db_service, test_tenants):
         """Test that tenant isolation errors are properly handled"""
         dal = TenantAwareDataAccessLayer(db_service)
@@ -280,7 +280,7 @@ class TestTenantIsolation:
 
     # Security Boundary Tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_resource_isolation(self, db_service, test_tenants):
         """Test that tenant resources are properly isolated"""
         tenant1_id = test_tenants[0]["id"]
@@ -315,7 +315,7 @@ class TestTenantIsolation:
         # Verify no cross-tenant activity leakage
         assert tenant1_activity[0]["id"] != tenant2_activity[0]["id"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_status_validation(self, db_service, test_tenants):
         """Test tenant status validation"""
         tenant1_id = test_tenants[0]["id"]
@@ -331,7 +331,7 @@ class TestTenantIsolation:
         updated_tenant = await db_service.get_tenant_by_id(tenant1_id)
         assert updated_tenant["status"] == "suspended"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_plan_limits(self, db_service, test_tenants):
         """Test tenant plan limits enforcement"""
         tenant1_id = test_tenants[0]["id"]
@@ -351,7 +351,7 @@ class TestTenantIsolation:
 
     # Performance and Scalability Tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_query_performance(self, db_service, test_tenants):
         """Test that tenant-scoped queries perform well"""
         tenant1_id = test_tenants[0]["id"]
@@ -378,7 +378,7 @@ class TestTenantIsolation:
         assert query_time < 1.0  # Less than 1 second
         assert len(users) == 11  # 1 original + 10 new users
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_concurrent_tenant_operations(self, db_service, test_tenants):
         """Test concurrent operations across multiple tenants"""
         tenant1_id = test_tenants[0]["id"]
@@ -416,7 +416,7 @@ class TestTenantIsolation:
 
     # Edge Case Tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_empty_tenant_data(self, db_service):
         """Test handling of empty tenant data"""
         # Create tenant with no data
@@ -439,7 +439,7 @@ class TestTenantIsolation:
         searches = await db_service.get_tenant_search_history(empty_tenant["id"])
         assert len(searches) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tenant_deletion_cascade(self, db_service, test_tenants, test_users):
         """Test that tenant deletion cascades properly"""
         tenant1_id = test_tenants[0]["id"]

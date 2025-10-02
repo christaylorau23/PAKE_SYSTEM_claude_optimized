@@ -1,18 +1,17 @@
-"""
-Minimal Service Registry Implementation
+"""Minimal Service Registry Implementation
 Task T039 - Phase 18 Production System Integration
 
 This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
+import asyncio
 import uuid
 from datetime import datetime
-import asyncio
+from typing import Any, Optional
+
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 
 
 # Minimal data models for TDD
@@ -25,34 +24,33 @@ class ServiceConfig(BaseModel):
     health_check_url: str
     health_check_interval_seconds: int = 30
     health_timeout_seconds: int = 5
-    resource_requirements: Optional[Dict[str, Any]] = None
-    endpoints: Optional[List[Dict[str, Any]]] = None
-    dependencies: Optional[List[Dict[str, Any]]] = None
-    labels: Optional[Dict[str, str]] = None
+    resource_requirements: Optional[dict[str, Any]] = None
+    endpoints: Optional[list[dict[str, Any]]] = None
+    dependencies: Optional[list[dict[str, Any]]] = None
+    labels: Optional[dict[str, str]] = None
 
 
 class ServiceUpdate(BaseModel):
     service_version: Optional[str] = None
-    labels: Optional[Dict[str, str]] = None
-    resource_requirements: Optional[Dict[str, Any]] = None
+    labels: Optional[dict[str, str]] = None
+    resource_requirements: Optional[dict[str, Any]] = None
 
 
 # In-memory storage for TDD (will be replaced with database)
-registered_services: Dict[str, Dict[str, Any]] = {}
-service_health_status: Dict[str, Dict[str, Any]] = {}
+registered_services: dict[str, dict[str, Any]] = {}
+service_health_status: dict[str, dict[str, Any]] = {}
 
 
 app = FastAPI(
     title="PAKE System Service Registry",
     version="18.0.0",
-    description="Minimal implementation for TDD Green Phase"
+    description="Minimal implementation for TDD Green Phase",
 )
 
 
 @app.post("/api/v1/services/register", status_code=201)
 async def register_service(service_config: ServiceConfig):
-    """
-    Minimal service registration to satisfy test_service_registry_integration.py
+    """Minimal service registration to satisfy test_service_registry_integration.py
 
     This implements just enough to pass the integration tests:
     - Accepts service configuration
@@ -64,13 +62,15 @@ async def register_service(service_config: ServiceConfig):
 
     # Convert to dict and add metadata
     service_data = service_config.dict()
-    service_data.update({
-        "service_id": service_id,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
-        "deployed_at": datetime.utcnow().isoformat(),
-        "status": "HEALTHY"
-    })
+    service_data.update(
+        {
+            "service_id": service_id,
+            "created_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.utcnow().isoformat(),
+            "deployed_at": datetime.utcnow().isoformat(),
+            "status": "HEALTHY",
+        }
+    )
 
     # Store service
     registered_services[service_id] = service_data
@@ -82,7 +82,7 @@ async def register_service(service_config: ServiceConfig):
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "response_time_ms": 5.0,
-        "last_check": datetime.utcnow().isoformat()
+        "last_check": datetime.utcnow().isoformat(),
     }
 
     # Mock health monitoring activation
@@ -91,7 +91,7 @@ async def register_service(service_config: ServiceConfig):
     return {
         "status": "registered",
         "service_id": service_id,
-        "health_check_url": service_config.health_check_url
+        "health_check_url": service_config.health_check_url,
     }
 
 
@@ -99,11 +99,9 @@ async def register_service(service_config: ServiceConfig):
 async def list_services(
     environment: Optional[str] = Query(None),
     service_type: Optional[str] = Query(None),
-    status: Optional[str] = Query(None)
+    status: Optional[str] = Query(None),
 ):
-    """
-    Service discovery with filtering
-    """
+    """Service discovery with filtering"""
     services = list(registered_services.values())
 
     # Apply filters
@@ -114,16 +112,16 @@ async def list_services(
         services = [s for s in services if s.get("service_type") == service_type]
 
     if status:
-        services = [s for s in services if s.get("status", "").lower() == status.lower()]
+        services = [
+            s for s in services if s.get("status", "").lower() == status.lower()
+        ]
 
     return services
 
 
 @app.get("/api/v1/services/{service_id}")
 async def get_service(service_id: str):
-    """
-    Get individual service configuration
-    """
+    """Get individual service configuration"""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -132,9 +130,7 @@ async def get_service(service_id: str):
 
 @app.put("/api/v1/services/{service_id}")
 async def update_service(service_id: str, update: ServiceUpdate):
-    """
-    Update service configuration
-    """
+    """Update service configuration"""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -159,9 +155,7 @@ async def update_service(service_id: str, update: ServiceUpdate):
 
 @app.delete("/api/v1/services/{service_id}")
 async def deregister_service(service_id: str):
-    """
-    Remove service from registry
-    """
+    """Remove service from registry"""
     if service_id in registered_services:
         del registered_services[service_id]
 
@@ -175,11 +169,9 @@ async def deregister_service(service_id: str):
 async def get_service_health(
     service_id: str,
     include_dependencies: bool = Query(False),
-    include_metrics: bool = Query(False)
+    include_metrics: bool = Query(False),
 ):
-    """
-    Get service health status
-    """
+    """Get service health status"""
     if service_id not in service_health_status:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -196,7 +188,7 @@ async def get_service_health(
             health["dependencies"][dep_name] = {
                 "status": "healthy",
                 "response_time_ms": 10.0,
-                "last_check": datetime.utcnow().isoformat()
+                "last_check": datetime.utcnow().isoformat(),
             }
 
     if include_metrics:
@@ -204,7 +196,7 @@ async def get_service_health(
             "requests_per_minute": 120,
             "error_rate": 0.01,
             "cpu_usage_percentage": 25.5,
-            "memory_usage_mb": 128
+            "memory_usage_mb": 128,
         }
 
     return health
@@ -212,9 +204,7 @@ async def get_service_health(
 
 @app.get("/api/v1/services/{service_id}/dependencies")
 async def get_service_dependencies(service_id: str):
-    """
-    Get service dependencies
-    """
+    """Get service dependencies"""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -231,10 +221,8 @@ async def get_service_dependencies(service_id: str):
 
 
 @app.put("/api/v1/services/{service_id}/health-config")
-async def update_health_config(service_id: str, config: Dict[str, Any]):
-    """
-    Update health check configuration
-    """
+async def update_health_config(service_id: str, config: dict[str, Any]):
+    """Update health check configuration"""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -242,7 +230,9 @@ async def update_health_config(service_id: str, config: Dict[str, Any]):
 
     # Update health check configuration
     if "health_check_interval_seconds" in config:
-        service["health_check_interval_seconds"] = config["health_check_interval_seconds"]
+        service["health_check_interval_seconds"] = config[
+            "health_check_interval_seconds"
+        ]
 
     if "health_timeout_seconds" in config:
         service["health_timeout_seconds"] = config["health_timeout_seconds"]
@@ -253,16 +243,17 @@ async def update_health_config(service_id: str, config: Dict[str, Any]):
 
 
 async def mock_health_monitoring(service_id: str):
-    """
-    Mock health monitoring background task
-    """
+    """Mock health monitoring background task"""
     while service_id in service_health_status:
         # Update health status
-        service_health_status[service_id].update({
-            "timestamp": datetime.utcnow().isoformat(),
-            "last_check": datetime.utcnow().isoformat(),
-            "response_time_ms": 5.0 + (hash(service_id) % 10)  # Mock variable response time
-        })
+        service_health_status[service_id].update(
+            {
+                "timestamp": datetime.utcnow().isoformat(),
+                "last_check": datetime.utcnow().isoformat(),
+                "response_time_ms": 5.0
+                + (hash(service_id) % 10),  # Mock variable response time
+            }
+        )
 
         # Wait for next check (shortened for testing)
         await asyncio.sleep(5)
@@ -270,4 +261,7 @@ async def mock_health_monitoring(service_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    uvicorn.run(
+        app, host="127.0.0.1", port=8000
+    )  # Secure local binding instead of 0.0.0.0

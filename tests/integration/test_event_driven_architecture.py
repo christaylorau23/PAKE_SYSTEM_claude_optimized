@@ -16,7 +16,6 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from services.agents.arxiv_worker import create_arxiv_worker
 from services.agents.cognitive_worker import create_cognitive_worker
 from services.agents.performance_worker import (
@@ -62,7 +61,7 @@ class TestEventDrivenArchitecture:
     while adding event-driven capabilities.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     async def message_bus(self):
         """Create test message bus"""
         # Use in-memory Redis for testing
@@ -71,7 +70,7 @@ class TestEventDrivenArchitecture:
         yield bus
         await bus.stop()
 
-    @pytest.fixture
+    @pytest.fixture()
     async def telemetry_system(self):
         """Create test telemetry system"""
         config = create_testing_config()
@@ -79,14 +78,14 @@ class TestEventDrivenArchitecture:
         yield telemetry
         await telemetry.shutdown()
 
-    @pytest.fixture
+    @pytest.fixture()
     async def cache_strategy(self):
         """Create test cache strategy"""
         cache = await create_standard_cache_strategy("redis://localhost:6379/14")
         yield cache
         await cache.cleanup()
 
-    @pytest.fixture
+    @pytest.fixture()
     async def supervisor_agent(self, message_bus, telemetry_system):
         """Create test supervisor agent"""
         config = IngestionConfig(
@@ -100,7 +99,7 @@ class TestEventDrivenArchitecture:
         yield supervisor
         await supervisor.stop()
 
-    @pytest.fixture
+    @pytest.fixture()
     async def worker_agents(self, message_bus):
         """Create all worker agents"""
         workers = {
@@ -121,7 +120,7 @@ class TestEventDrivenArchitecture:
     # Core Architecture Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_message_bus_basic_operations(self, message_bus):
         """Test basic message bus operations"""
         # Test message publishing and subscribing
@@ -157,7 +156,7 @@ class TestEventDrivenArchitecture:
         # Cleanup
         await message_bus.unsubscribe(subscription_id)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_supervisor_worker_coordination(
         self,
         supervisor_agent,
@@ -217,7 +216,7 @@ class TestEventDrivenArchitecture:
         # Verify worker was called
         mock_process.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_multi_worker_parallel_execution(
         self,
         supervisor_agent,
@@ -294,7 +293,7 @@ class TestEventDrivenArchitecture:
     # Individual Worker Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_web_scraper_worker_functionality(self, worker_agents):
         """Test Web Scraper Worker maintains Phase 2A functionality"""
         web_scraper = worker_agents["web_scraper"]
@@ -342,7 +341,7 @@ class TestEventDrivenArchitecture:
         assert len(result["result"]) > 0
         assert result["result"][0]["content"] == "Test scraped content"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_arxiv_worker_functionality(self, worker_agents):
         """Test ArXiv Worker maintains Phase 2A functionality"""
         arxiv_worker = worker_agents["arxiv"]
@@ -385,7 +384,7 @@ class TestEventDrivenArchitecture:
         assert len(result["result"]) > 0
         assert result["metrics"]["papers_retrieved"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cognitive_worker_functionality(self, worker_agents):
         """Test Cognitive Worker quality assessment"""
         cognitive_worker = worker_agents["cognitive"]
@@ -417,7 +416,7 @@ class TestEventDrivenArchitecture:
     # Cache System Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_multi_layered_cache_functionality(self, cache_strategy):
         """Test multi-layered cache system"""
         # Test cache hierarchy
@@ -447,7 +446,7 @@ class TestEventDrivenArchitecture:
     # Protocol Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_task_coordination_protocol(self, message_bus):
         """Test task coordination protocol"""
         config = create_standard_config()
@@ -469,7 +468,7 @@ class TestEventDrivenArchitecture:
         assert task_status["status"] == "assigned"
         assert task_status["worker_id"] == "test_worker"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_health_monitoring_protocol(self, message_bus):
         """Test health monitoring protocol"""
         config = create_standard_config()
@@ -495,7 +494,7 @@ class TestEventDrivenArchitecture:
     # Phase 2A Compatibility Tests
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_phase2a_orchestrator_compatibility(
         self,
         supervisor_agent,
@@ -670,7 +669,7 @@ class TestEventDrivenArchitecture:
         assert hasattr(result, "deduplication_applied")
         assert hasattr(result, "cache_hits")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_maintains_84_tests_success_rate(
         self,
         supervisor_agent,

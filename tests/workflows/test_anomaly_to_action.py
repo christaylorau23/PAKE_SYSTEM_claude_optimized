@@ -64,13 +64,13 @@ class MockSecurityAlert:
         self.context = {"attempts": 5, "timeframe": "1 minute"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_task_manager():
     """Mock task management system"""
     return MagicMock(spec=TaskManager)
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_security_alerts():
     """Sample security alerts for testing"""
     return [
@@ -104,7 +104,7 @@ def sample_security_alerts():
 class TestAnomalyToActionEngine:
     """Test the main anomaly-to-action workflow engine"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def engine(self, mock_task_manager):
         """Create AnomalyToActionEngine instance for testing"""
         # This will fail initially because AnomalyToActionEngine doesn't exist yet
@@ -231,7 +231,7 @@ class TestAnomalyToActionEngine:
 class TestWorkflowRules:
     """Test the workflow rule engine that determines how alerts are processed"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def workflow_rules(self):
         """Create WorkflowRule instances for testing"""
         # This will fail initially because WorkflowRule doesn't exist yet
@@ -340,7 +340,7 @@ class TestIncidentTaskCreation:
 class TestIncidentResponseWorkflow:
     """Test the incident response workflow orchestration"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def workflow(self):
         """Create IncidentResponseWorkflow for testing"""
         # This will fail initially because IncidentResponseWorkflow doesn't exist yet
@@ -393,7 +393,7 @@ class TestIncidentResponseWorkflow:
 class TestTaskManagementIntegration:
     """Test integration with task management systems"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def task_manager(self):
         """Mock task management system"""
         return MagicMock(spec=TaskManagementSystem)

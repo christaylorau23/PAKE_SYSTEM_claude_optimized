@@ -23,14 +23,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 class TestVectorMemoryDatabase:
     """Test suite for VectorMemoryDatabase"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def temp_dir(self):
         """Create temporary directory for testing"""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
 
-    @pytest.fixture
+    @pytest.fixture()
     async def mock_dal(self):
         """Create mock Data Access Layer"""
         dal = Mock(spec=DataAccessLayer)
@@ -38,7 +38,7 @@ class TestVectorMemoryDatabase:
         dal.vault_path = "/test/vault"
         return dal
 
-    @pytest.fixture
+    @pytest.fixture()
     async def vector_db(self, mock_dal, temp_dir):
         """Create VectorMemoryDatabase instance for testing"""
         try:
@@ -51,7 +51,7 @@ class TestVectorMemoryDatabase:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_vector_database_initialization(self, mock_dal, temp_dir):
         """Test vector database initialization"""
         try:
@@ -69,7 +69,7 @@ class TestVectorMemoryDatabase:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_store_conversation_memory(self, vector_db):
         """Test storing conversation memories"""
         conversation_id = "test_conversation_001"
@@ -91,7 +91,7 @@ class TestVectorMemoryDatabase:
         assert stored_memory["content"] == content
         assert stored_memory["metadata"]["conversation_id"] == conversation_id
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_store_knowledge_memory(self, vector_db):
         """Test storing knowledge memories"""
         knowledge_id = "test_knowledge_001"
@@ -115,7 +115,7 @@ class TestVectorMemoryDatabase:
         assert stored_memory["content"] == content
         assert stored_memory["metadata"]["knowledge_type"] == knowledge_type
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_semantic_search(self, vector_db):
         """Test semantic search functionality"""
         # Store test memories
@@ -150,7 +150,7 @@ class TestVectorMemoryDatabase:
         assert "machine learning" in top_result["content"].lower()
         assert top_result["similarity"] > 0.3
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_conversation_context(self, vector_db):
         """Test getting conversation context"""
         conversation_id = "context_test_conversation"
@@ -181,7 +181,7 @@ class TestVectorMemoryDatabase:
         assert len(context["recent_memories"]) == len(conversation_contents)
         assert len(context["context_summary"]) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_extract_and_index_knowledge(self, vector_db):
         """Test knowledge extraction and indexing"""
         content = """
@@ -205,7 +205,7 @@ class TestVectorMemoryDatabase:
             assert memory is not None
             assert memory["metadata"]["source_id"] == source_id
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_find_similar_memories(self, vector_db):
         """Test finding similar memories with recent context"""
         # Store test content
@@ -234,7 +234,7 @@ class TestVectorMemoryDatabase:
         for memory in similar_memories:
             assert memory["similarity"] > 0.1 or "timestamp" in memory
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_batch_store_memories(self, vector_db):
         """Test batch memory storage"""
         batch_memories = [
@@ -265,7 +265,7 @@ class TestVectorMemoryDatabase:
         assert len(results["memory_ids"]) == 3
         assert len(results["errors"]) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_memory_statistics(self, vector_db):
         """Test getting memory statistics"""
         # Store some test memories
@@ -280,7 +280,7 @@ class TestVectorMemoryDatabase:
         assert "storage_path" in stats
         assert stats["initialized"] is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_health_check(self, vector_db):
         """Test vector database health check"""
         health = await vector_db.health_check()
@@ -290,7 +290,7 @@ class TestVectorMemoryDatabase:
         assert health["vector_db"]["initialized"] is True
         assert health["vector_db"]["collections_ready"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cleanup_old_memories(self, vector_db):
         """Test cleaning up old memories"""
         # Store a memory with old timestamp
@@ -317,14 +317,14 @@ class TestVectorMemoryDatabase:
 class TestAIMemoryQueryInterface:
     """Test suite for AI Memory Query Interface"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def temp_dir(self):
         """Create temporary directory for testing"""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
 
-    @pytest.fixture
+    @pytest.fixture()
     async def memory_interface(self, temp_dir):
         """Create AI Memory Query Interface for testing"""
         try:
@@ -349,7 +349,7 @@ class TestAIMemoryQueryInterface:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_ask_memory_basic(self, memory_interface):
         """Test basic memory querying"""
         # Store some test knowledge
@@ -371,7 +371,7 @@ class TestAIMemoryQueryInterface:
         assert "metadata" in results
         assert results["metadata"]["success"] is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_remember_conversation(self, memory_interface):
         """Test storing conversation with knowledge extraction"""
         conversation_id = "interface_test_conv"
@@ -394,7 +394,7 @@ class TestAIMemoryQueryInterface:
         # Should extract knowledge from substantial content
         assert result["knowledge_extracted"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_learn_from_interaction(self, memory_interface):
         """Test learning from user interaction with feedback"""
         interaction_id = "feedback_test_001"
@@ -414,7 +414,7 @@ class TestAIMemoryQueryInterface:
         # High feedback should trigger knowledge extraction
         assert result["knowledge_extracted"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_conversation_history(self, memory_interface):
         """Test getting conversation history with context"""
         conversation_id = "history_test_conv"
@@ -445,7 +445,7 @@ class TestAIMemoryQueryInterface:
         assert history["total_memories"] > 0
         assert len(history["recent_memories"]) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_extract_knowledge(self, memory_interface):
         """Test knowledge extraction interface"""
         content = """
@@ -467,7 +467,7 @@ class TestAIMemoryQueryInterface:
         assert result["extracted_count"] > 0
         assert len(result["knowledge_ids"]) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_memory_stats(self, memory_interface):
         """Test getting memory statistics through interface"""
         stats = await memory_interface.get_memory_stats()
@@ -477,7 +477,7 @@ class TestAIMemoryQueryInterface:
         assert "interface" in stats
         assert stats["interface"]["query_interface_active"] is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_health_check(self, memory_interface):
         """Test memory interface health check"""
         health = await memory_interface.health_check()
@@ -490,14 +490,14 @@ class TestAIMemoryQueryInterface:
 class TestDataAccessLayerIntegration:
     """Test suite for Data Access Layer vector memory integration"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def temp_dir(self):
         """Create temporary directory for testing"""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_dal_vector_memory_integration(self, temp_dir):
         """Test Data Access Layer integration with vector memory"""
         try:
@@ -519,7 +519,7 @@ class TestDataAccessLayerIntegration:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_dal_remember_and_recall(self, temp_dir):
         """Test DAL remember and recall methods"""
         try:
@@ -553,7 +553,7 @@ class TestDataAccessLayerIntegration:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_dal_learn_from_feedback(self, temp_dir):
         """Test DAL learning from feedback"""
         try:
@@ -582,14 +582,14 @@ class TestDataAccessLayerIntegration:
 class TestEndToEndWorkflow:
     """End-to-end workflow tests for vector memory system"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def temp_dir(self):
         """Create temporary directory for testing"""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_complete_memory_workflow(self, temp_dir):
         """Test complete memory workflow from storage to retrieval"""
         try:
@@ -672,7 +672,7 @@ class TestEndToEndWorkflow:
         except ImportError:
             pytest.skip("ChromaDB not available for testing")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_performance_with_large_dataset(self, temp_dir):
         """Test performance with larger dataset"""
         try:

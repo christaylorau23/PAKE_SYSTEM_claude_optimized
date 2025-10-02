@@ -778,7 +778,7 @@ class MultiTenantSecurityTester:
 # Test execution
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_multi_tenant_security():
     """Main test function for multi-tenant security"""
     tester = MultiTenantSecurityTester()

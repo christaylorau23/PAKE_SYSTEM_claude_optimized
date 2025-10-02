@@ -5,33 +5,30 @@ Comprehensive tests to ensure all security vulnerabilities are properly addresse
 """
 
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-import json
-import hashlib
-from unittest.mock import patch, MagicMock
-from typing import Any, Dict
+
+from configs.service_config import SecurityConfig, ServiceConfig
+from src.utils.distributed_cache import CacheConfig, DistributedCache
+from src.utils.secure_network_config import (
+    Environment,
+    SecureNetworkConfig,
+    migrate_bind_address,
+    validate_network_security,
+)
 
 # Import the modules we're testing
 from src.utils.secure_serialization import (
     SecureSerializer,
-    SerializationFormat,
     SerializationConfig,
-    serialize,
+    SerializationFormat,
     deserialize,
     migrate_from_pickle,
-    safe_pickle_replacement,
     safe_pickle_loads_replacement,
+    safe_pickle_replacement,
+    serialize,
 )
-from src.utils.distributed_cache import DistributedCache, CacheConfig
-from src.utils.secure_network_config import (
-    SecureNetworkConfig,
-    Environment,
-    NetworkSecurityConfig,
-    get_network_config,
-    validate_network_security,
-    migrate_bind_address,
-)
-from configs.service_config import ServiceConfig, SecurityConfig, Environment as ConfigEnvironment
 
 
 class TestSecureSerialization:
@@ -41,17 +38,17 @@ class TestSecureSerialization:
         """Test secure serializer initializes correctly"""
         config = SerializationConfig()
         serializer = SecureSerializer(config)
-        
+
         assert serializer.config == config
         assert serializer.config.default_format == SerializationFormat.JSON
 
     def test_json_serialization(self):
         """Test JSON serialization works correctly"""
         test_data = {"key": "value", "number": 42, "list": [1, 2, 3]}
-        
+
         serialized = serialize(test_data, SerializationFormat.JSON)
         deserialized = deserialize(serialized)
-        
+
         assert deserialized == test_data
         assert isinstance(serialized, bytes)
         assert serialized.startswith(b"FORMAT:json:")
@@ -60,10 +57,10 @@ class TestSecureSerialization:
         """Test serialization includes checksum verification"""
         config = SerializationConfig(enable_checksums=True)
         serializer = SecureSerializer(config)
-        
+
         test_data = {"secure": "data"}
         serialized = serializer.serialize(test_data)
-        
+
         # Should include checksum header
         assert b"CHECKSUM:" in serialized
         assert b"FORMAT:json:" in serialized
@@ -72,13 +69,13 @@ class TestSecureSerialization:
         """Test checksum verification catches tampering"""
         config = SerializationConfig(enable_checksums=True)
         serializer = SecureSerializer(config)
-        
+
         test_data = {"secure": "data"}
         serialized = serializer.serialize(test_data)
-        
+
         # Tamper with the data
         tampered = serialized[:-10] + b"tampered"
-        
+
         with pytest.raises(ValueError, match="Checksum verification failed"):
             serializer.deserialize(tampered)
 
@@ -86,9 +83,9 @@ class TestSecureSerialization:
         """Test serialization enforces size limits"""
         config = SerializationConfig(max_size_bytes=100)
         serializer = SecureSerializer(config)
-        
+
         large_data = "x" * 200
-        
+
         with pytest.raises(ValueError, match="Serialized data too large"):
             serializer.serialize(large_data)
 
@@ -96,23 +93,24 @@ class TestSecureSerialization:
         """Test pickle migration utility works"""
         # Mock pickle data
         import pickle
+
         original_data = {"test": "data"}
         pickle_data = pickle.dumps(original_data)
-        
+
         # Migrate to secure format
         secure_data = migrate_from_pickle(pickle_data)
         deserialized = deserialize(secure_data)
-        
+
         assert deserialized == original_data
 
     def test_safe_pickle_replacements(self):
         """Test safe pickle replacement functions"""
         test_data = {"safe": "replacement"}
-        
+
         # Test safe replacement for pickle.dumps()
         secure_dumps = safe_pickle_replacement(test_data)
         assert isinstance(secure_dumps, bytes)
-        
+
         # Test safe replacement for pickle.loads()
         secure_loads = safe_pickle_loads_replacement(secure_dumps)
         assert secure_loads == test_data
@@ -120,12 +118,12 @@ class TestSecureSerialization:
     def test_serialization_formats(self):
         """Test all supported serialization formats"""
         test_data = {"format": "test", "number": 123}
-        
+
         # Test JSON format
         json_data = serialize(test_data, SerializationFormat.JSON)
         json_result = deserialize(json_data)
         assert json_result == test_data
-        
+
         # Test MessagePack if available
         try:
             msgpack_data = serialize(test_data, SerializationFormat.MSGPACK)
@@ -134,7 +132,7 @@ class TestSecureSerialization:
         except ValueError:
             # MessagePack not available, which is OK
             pass
-        
+
         # Test CBOR if available
         try:
             cbor_data = serialize(test_data, SerializationFormat.CBOR)
@@ -148,7 +146,7 @@ class TestSecureSerialization:
         """Test proper error handling for invalid data"""
         with pytest.raises(RuntimeError, match="Failed to deserialize data"):
             deserialize(b"invalid data")
-        
+
         with pytest.raises(ValueError, match="Invalid serialized data format"):
             deserialize(b"not a format header")
 
@@ -165,11 +163,11 @@ class TestDistributedCacheSecurity:
     def test_cache_no_pickle_fallback(self):
         """Test cache doesn't fall back to pickle"""
         cache = DistributedCache(CacheConfig())
-        
+
         # Mock Redis client
         cache._client = MagicMock()
         cache._client.get.return_value = b"RAW:invalid_json_data"
-        
+
         # Should not use pickle, should return string
         result = cache._deserialize_value(b"RAW:invalid_json_data")
         assert isinstance(result, str)
@@ -177,11 +175,11 @@ class TestDistributedCacheSecurity:
     def test_cache_secure_serialization_integration(self):
         """Test cache integrates with secure serialization"""
         cache = DistributedCache(CacheConfig())
-        
+
         # Test serialization uses secure format
         test_data = {"cache": "test"}
         serialized = cache._serialize_value(test_data)
-        
+
         assert serialized.startswith(b"RAW:")
         # Should not contain pickle format indicators
         assert b"pickle" not in serialized.lower()
@@ -193,7 +191,7 @@ class TestSecureNetworkConfig:
     def test_development_config_secure(self):
         """Test development config uses secure bindings"""
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
-        
+
         assert config.config.bind_address == "127.0.0.1"
         assert config.config.bind_address != "0.0.0.0"
         assert "localhost" in config.config.allowed_hosts
@@ -203,7 +201,7 @@ class TestSecureNetworkConfig:
         """Test production config enforces security"""
         with patch.dict(os.environ, {"PAKE_BIND_ADDRESS": "192.168.1.100"}):
             config = SecureNetworkConfig(Environment.PRODUCTION)
-            
+
             assert config.config.bind_address == "192.168.1.100"
             assert config.config.bind_address != "0.0.0.0"
             assert config.config.enable_ssl is True
@@ -214,7 +212,7 @@ class TestSecureNetworkConfig:
         with patch.dict(os.environ, {"PAKE_BIND_ADDRESS": "0.0.0.0"}):
             config = SecureNetworkConfig(Environment.PRODUCTION)
             warnings = config.validate_configuration()
-            
+
             assert any("CRITICAL" in warning for warning in warnings)
             assert any("0.0.0.0" in warning for warning in warnings)
 
@@ -224,7 +222,7 @@ class TestSecureNetworkConfig:
         secure_address = migrate_bind_address("0.0.0.0")
         assert secure_address != "0.0.0.0"
         assert secure_address in ["127.0.0.1", "localhost"]
-        
+
         # Test non-insecure addresses pass through
         secure_address = migrate_bind_address("192.168.1.100")
         assert secure_address == "192.168.1.100"
@@ -234,7 +232,7 @@ class TestSecureNetworkConfig:
         # Test secure configuration passes
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
         assert validate_network_security() is True
-        
+
         # Test insecure configuration fails
         with patch.dict(os.environ, {"PAKE_BIND_ADDRESS": "0.0.0.0"}):
             config = SecureNetworkConfig(Environment.PRODUCTION)
@@ -244,7 +242,7 @@ class TestSecureNetworkConfig:
         """Test uvicorn configuration is secure"""
         config = SecureNetworkConfig(Environment.PRODUCTION)
         uvicorn_config = config.get_uvicorn_config()
-        
+
         assert uvicorn_config["host"] != "0.0.0.0"
         assert uvicorn_config["server_header"] is False
         assert uvicorn_config["date_header"] is False
@@ -254,7 +252,7 @@ class TestSecureNetworkConfig:
         """Test CORS configuration is secure"""
         config = SecureNetworkConfig(Environment.PRODUCTION)
         cors_config = config.get_cors_config()
-        
+
         assert "allow_origins" in cors_config
         assert cors_config["allow_credentials"] is True
         assert "max_age" in cors_config
@@ -271,13 +269,16 @@ class TestServiceConfigSecurity:
 
     def test_security_config_uses_env_vars(self):
         """Test security config uses environment variables"""
-        with patch.dict(os.environ, {
-            "JWT_SECRET_KEY": "secure-key-from-env",
-            "JWT_ALGORITHM": "HS256",
-            "JWT_EXPIRE_MINUTES": "60"
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "JWT_SECRET_KEY": "secure-key-from-env",
+                "JWT_ALGORITHM": "HS256",
+                "JWT_EXPIRE_MINUTES": "60",
+            },
+        ):
             config = SecurityConfig()
-            
+
             assert config.jwt_secret_key == "secure-key-from-env"
             assert config.jwt_algorithm == "HS256"
             assert config.jwt_expire_minutes == 60
@@ -285,11 +286,11 @@ class TestServiceConfigSecurity:
     def test_security_config_validation(self):
         """Test security config validation"""
         config = SecurityConfig()
-        
+
         # Test valid configuration
         config.jwt_expire_minutes = 30
         config.__post_init__()  # Should not raise
-        
+
         # Test invalid configuration
         config.jwt_expire_minutes = 0
         with pytest.raises(ValueError, match="JWT expire minutes must be at least 1"):
@@ -297,12 +298,12 @@ class TestServiceConfigSecurity:
 
     def test_service_config_production_validation(self):
         """Test service config validates production requirements"""
-        with patch.dict(os.environ, {
-            "PAKE_ENVIRONMENT": "production",
-            "JWT_SECRET_KEY": "production-secret"
-        }):
+        with patch.dict(
+            os.environ,
+            {"PAKE_ENVIRONMENT": "production", "JWT_SECRET_KEY": "production-secret"},
+        ):
             config = ServiceConfig()
-            
+
             assert config.is_production() is True
             assert config.security.jwt_secret_key == "production-secret"
 
@@ -310,7 +311,7 @@ class TestServiceConfigSecurity:
         """Test configuration excludes secrets when converting to dict"""
         config = ServiceConfig()
         config_dict = config.to_dict()
-        
+
         # JWT secret should be excluded
         assert "jwt_secret_key" not in config_dict["security"]
         # Other security config should be present
@@ -324,27 +325,28 @@ class TestDependencyFixes:
         """Test pycountry version is fixed"""
         # This test ensures the version in pyproject.toml is valid
         import pycountry
-        assert hasattr(pycountry, '__version__')
-        
+
+        assert hasattr(pycountry, "__version__")
+
         # Version should be recent (24.x.x)
         version = pycountry.__version__
-        major_version = int(version.split('.')[0])
+        major_version = int(version.split(".")[0])
         assert major_version >= 24
 
     def test_node_lock_files_exist(self):
         """Test Node.js lock files exist"""
         # Check that package-lock.json exists
         assert os.path.exists("package-lock.json")
-        
+
         # Check that yarn.lock exists
         assert os.path.exists("yarn.lock")
 
     def test_ci_cache_configuration(self):
         """Test CI cache configuration is correct"""
         # Read the CI workflow file
-        with open(".github/workflows/ci.yml", "r") as f:
+        with open(".github/workflows/ci.yml") as f:
             ci_content = f.read()
-        
+
         # Should have cache-dependency-path configured
         assert "cache-dependency-path" in ci_content
         assert "package-lock.json" in ci_content
@@ -359,18 +361,18 @@ class TestSecurityIntegration:
         test_data = {
             "user_id": 12345,
             "data": {"sensitive": "information"},
-            "metadata": ["list", "of", "items"]
+            "metadata": ["list", "of", "items"],
         }
-        
+
         # Serialize securely
         serialized = serialize(test_data)
-        
+
         # Verify format
         assert serialized.startswith(b"FORMAT:")
-        
+
         # Deserialize
         deserialized = deserialize(serialized)
-        
+
         # Verify data integrity
         assert deserialized == test_data
 
@@ -378,16 +380,16 @@ class TestSecurityIntegration:
         """Test cache works with secure serialization"""
         config = CacheConfig()
         cache = DistributedCache(config)
-        
+
         # Mock Redis client
         cache._client = MagicMock()
         cache._client.setex.return_value = True
         cache._client.get.return_value = cache._serialize_value({"test": "data"})
-        
+
         # Test set operation
         result = cache.set("test_key", {"test": "data"})
         assert result is True
-        
+
         # Test get operation
         retrieved = cache.get("test_key")
         assert retrieved == {"test": "data"}
@@ -395,35 +397,35 @@ class TestSecurityIntegration:
     def test_network_config_integration(self):
         """Test network configuration integrates properly"""
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
-        
+
         # Get complete server config
         server_config = config.get_secure_server_config()
-        
+
         # Verify all components are present
         assert "uvicorn" in server_config
         assert "fastapi" in server_config
         assert "cors" in server_config
         assert "security" in server_config
-        
+
         # Verify security settings
         assert server_config["security"]["enable_ssl"] is False  # OK for dev
         assert server_config["uvicorn"]["host"] == "127.0.0.1"
 
     def test_service_config_integration(self):
         """Test service configuration integrates properly"""
-        with patch.dict(os.environ, {
-            "PAKE_ENVIRONMENT": "development",
-            "JWT_SECRET_KEY": "test-secret"
-        }):
+        with patch.dict(
+            os.environ,
+            {"PAKE_ENVIRONMENT": "development", "JWT_SECRET_KEY": "test-secret"},
+        ):
             config = ServiceConfig()
-            
+
             # Verify all sections are present
-            assert hasattr(config, 'vault')
-            assert hasattr(config, 'search')
-            assert hasattr(config, 'cache')
-            assert hasattr(config, 'security')
-            assert hasattr(config, 'server')
-            
+            assert hasattr(config, "vault")
+            assert hasattr(config, "search")
+            assert hasattr(config, "cache")
+            assert hasattr(config, "security")
+            assert hasattr(config, "server")
+
             # Verify validation passes
             issues = config.validate()
             assert len(issues) == 0
@@ -435,14 +437,14 @@ class TestSecurityRegression:
     def test_serialization_performance(self):
         """Test serialization performance is acceptable"""
         import time
-        
+
         test_data = {"performance": "test", "data": list(range(1000))}
-        
+
         start_time = time.time()
         serialized = serialize(test_data)
         deserialized = deserialize(serialized)
         end_time = time.time()
-        
+
         # Should complete in reasonable time (< 1 second)
         assert (end_time - start_time) < 1.0
         assert deserialized == test_data
@@ -451,12 +453,12 @@ class TestSecurityRegression:
         """Test cache performance with secure serialization"""
         config = CacheConfig()
         cache = DistributedCache(config)
-        
+
         # Mock Redis client
         cache._client = MagicMock()
         cache._client.setex.return_value = True
         cache._client.get.return_value = cache._serialize_value({"perf": "test"})
-        
+
         # Test multiple operations
         for i in range(100):
             cache.set(f"key_{i}", {"data": f"value_{i}"})
@@ -467,7 +469,7 @@ class TestSecurityRegression:
         """Test backward compatibility with existing data"""
         # Test that we can still deserialize old JSON data
         old_json_data = b'{"legacy": "data"}'
-        
+
         # Should handle legacy format gracefully
         try:
             result = deserialize(old_json_data)

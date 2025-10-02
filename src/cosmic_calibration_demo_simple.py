@@ -250,9 +250,9 @@ class CosmicCalibrationDemo:
         self.performance_score += 0.08  # Simulate 8% improvement
         self.performance_score = min(1.0, self.performance_score)
         self.optimization_cycles += 1
-        self.component_status["metacognitive_optimizer"]["cycles"] = (
-            self.optimization_cycles
-        )
+        self.component_status["metacognitive_optimizer"][
+            "cycles"
+        ] = self.optimization_cycles
 
         self.logger.info(
             f"📈 Performance Improved: {pre_score:.3f} → {self.performance_score:.3f}",
@@ -272,13 +272,13 @@ class CosmicCalibrationDemo:
         await asyncio.sleep(1)
 
         # Update component statuses
-        self.component_status["cognitive_engine"]["performance"] = (
-            self.performance_score
-        )
+        self.component_status["cognitive_engine"][
+            "performance"
+        ] = self.performance_score
         self.component_status["prompt_evolution"]["generations"] = self.evolution_cycles
-        self.component_status["self_critique"]["critiques_performed"] = (
-            self.critique_cycles
-        )
+        self.component_status["self_critique"][
+            "critiques_performed"
+        ] = self.critique_cycles
 
         self.logger.info("🧠 Cognitive Engine Status:")
         self.logger.info(

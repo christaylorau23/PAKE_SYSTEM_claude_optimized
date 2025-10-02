@@ -845,12 +845,12 @@ class CorrelationEngine:
                         )
 
                         # Fill correlation matrix
-                        correlation_matrix[i, j] = (
-                            correlation_result.correlation_coefficient
-                        )
-                        correlation_matrix[j, i] = (
-                            correlation_result.correlation_coefficient
-                        )
+                        correlation_matrix[
+                            i, j
+                        ] = correlation_result.correlation_coefficient
+                        correlation_matrix[
+                            j, i
+                        ] = correlation_result.correlation_coefficient
 
                 # Diagonal is 1.0
                 correlation_matrix[i, i] = 1.0

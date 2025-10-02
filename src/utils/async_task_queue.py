@@ -17,7 +17,6 @@ import redis.asyncio as redis
 from celery import Celery
 from celery.result import AsyncResult
 from kombu import Exchange, Queue
-
 from utils.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,

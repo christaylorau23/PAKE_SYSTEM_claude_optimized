@@ -9,7 +9,6 @@ import time
 
 import pytest
 import pytest_asyncio
-
 from services.ai.query_expansion_engine import (
     ContextualExpander,
     ExpandedQuery,
@@ -27,7 +26,7 @@ from services.ai.query_expansion_engine import (
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestQueryExpansionEngine:
     """
     Test suite for the main Query Expansion Engine functionality.
@@ -46,7 +45,7 @@ class TestQueryExpansionEngine:
         )
         return QueryExpansionEngine(config)
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_queries(self):
         """Sample queries for testing"""
         return {
@@ -435,7 +434,7 @@ class TestQueryExpansionEngine:
         assert stats_after["cached_expansions"] == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestExpansionComponents:
     """
     Test suite for individual expansion components.
@@ -618,7 +617,7 @@ class TestExpansionComponents:
                     assert len(expansion_terms) > 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.

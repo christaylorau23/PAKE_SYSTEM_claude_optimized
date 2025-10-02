@@ -10,7 +10,6 @@ import time
 import numpy as np
 import pytest
 import pytest_asyncio
-
 from services.ai.semantic_search_engine import (
     RankingStrategy,
     SearchMode,
@@ -28,7 +27,7 @@ from services.ai.semantic_search_engine import (
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestSemanticSearchEngine:
     """
     Test suite for the main Semantic Search Engine functionality.
@@ -46,7 +45,7 @@ class TestSemanticSearchEngine:
         )
         return SemanticSearchEngine(config)
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_content_items(self):
         """Sample content for testing"""
         return [
@@ -77,7 +76,7 @@ class TestSemanticSearchEngine:
             ),
         ]
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_search_queries(self):
         """Sample search queries for testing"""
         return [
@@ -605,7 +604,7 @@ class TestSemanticSearchEngine:
         assert semantic_engine.stats["cache_hits"] == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestEmbeddingComponents:
     """
     Test suite for individual embedding and similarity components.
@@ -769,7 +768,7 @@ class TestEmbeddingComponents:
             assert np.sum(np.abs(vector_np)) > 0  # Not all zeros
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.

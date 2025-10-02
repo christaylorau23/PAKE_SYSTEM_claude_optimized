@@ -209,7 +209,7 @@ class TestMockMLServices:
         assert service is not None
         assert hasattr(service, "analyze")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_mock_service_functionality(self):
         """Test that mock services provide expected functionality"""
         search_service = MockSemanticSearchService()

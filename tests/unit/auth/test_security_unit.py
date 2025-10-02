@@ -7,25 +7,26 @@ All external dependencies are mocked using pytest-mock.
 Following Testing Pyramid: Unit tests (70%) - Fast, isolated, comprehensive
 """
 
+from datetime import timedelta
+from unittest.mock import patch
+
 import pytest
-from datetime import timedelta, timezone
-from jose import jwt, JWTError
-from unittest.mock import patch, MagicMock
+from jose import JWTError, jwt
 
 from src.pake_system.auth.security import (
-    create_password_hash,
-    verify_password,
     create_access_token,
+    create_password_hash,
     decode_token,
+    verify_password,
 )
-
 
 # ============================================================================
 # Unit Tests - Password Hashing
 # ============================================================================
 
-@pytest.mark.unit
-@pytest.mark.unit_functional
+
+@pytest.mark.unit()
+@pytest.mark.unit_functional()
 class TestPasswordHashing:
     """Test password hashing functionality in isolation"""
 
@@ -79,7 +80,7 @@ class TestPasswordHashing:
         # Assert
         assert result is False
 
-    @pytest.mark.unit_edge_case
+    @pytest.mark.unit_edge_case()
     def test_verify_password_rejects_empty_password(self):
         """Test password verification with empty string"""
         # Arrange
@@ -91,7 +92,7 @@ class TestPasswordHashing:
         # Assert
         assert result is False
 
-    @pytest.mark.unit_edge_case
+    @pytest.mark.unit_edge_case()
     def test_verify_password_handles_special_characters(self):
         """Test password hashing with special characters"""
         # Arrange
@@ -104,7 +105,7 @@ class TestPasswordHashing:
         # Assert
         assert result is True
 
-    @pytest.mark.unit_error_handling
+    @pytest.mark.unit_error_handling()
     def test_create_password_hash_handles_unicode(self):
         """Test password hashing with unicode characters"""
         # Arrange
@@ -121,12 +122,13 @@ class TestPasswordHashing:
 # Unit Tests - JWT Token Generation (with mocked settings)
 # ============================================================================
 
-@pytest.mark.unit
-@pytest.mark.unit_functional
+
+@pytest.mark.unit()
+@pytest.mark.unit_functional()
 class TestJWTTokenGeneration:
     """Test JWT token creation and validation with mocked dependencies"""
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_create_access_token_generates_valid_token(self, mock_settings):
         """Test that token generation creates valid JWT"""
         # Arrange
@@ -143,7 +145,7 @@ class TestJWTTokenGeneration:
         assert isinstance(token, str)
         assert len(token.split(".")) == 3  # JWT has 3 parts
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_create_access_token_includes_subject(self, mock_settings):
         """Test that token includes the subject claim"""
         # Arrange
@@ -155,13 +157,15 @@ class TestJWTTokenGeneration:
 
         # Act
         token = create_access_token(data)
-        payload = jwt.decode(token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM])
+        payload = jwt.decode(
+            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+        )
 
         # Assert
         assert payload["sub"] == "testuser"
         assert payload["role"] == "admin"
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_create_access_token_includes_expiration(self, mock_settings):
         """Test that token includes expiration claim"""
         # Arrange
@@ -173,14 +177,16 @@ class TestJWTTokenGeneration:
 
         # Act
         token = create_access_token(data)
-        payload = jwt.decode(token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM])
+        payload = jwt.decode(
+            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+        )
 
         # Assert
         assert "exp" in payload
         assert "iat" in payload
         assert payload["exp"] > payload["iat"]
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_create_access_token_with_custom_expiration(self, mock_settings):
         """Test token generation with custom expiration"""
         # Arrange
@@ -192,13 +198,15 @@ class TestJWTTokenGeneration:
 
         # Act
         token = create_access_token(data, expires_delta=custom_expires)
-        payload = jwt.decode(token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM])
+        payload = jwt.decode(
+            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+        )
 
         # Assert
         assert "exp" in payload
         # Custom expiration should be roughly 15 minutes from now
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_decode_token_validates_signature(self, mock_settings):
         """Test that token decoding validates signature"""
         # Arrange
@@ -215,8 +223,8 @@ class TestJWTTokenGeneration:
         # Assert
         assert payload["sub"] == "testuser"
 
-    @pytest.mark.unit_error_handling
-    @patch('src.pake_system.auth.security.settings')
+    @pytest.mark.unit_error_handling()
+    @patch("src.pake_system.auth.security.settings")
     def test_decode_token_rejects_invalid_signature(self, mock_settings):
         """Test that invalid signature is rejected"""
         # Arrange
@@ -230,8 +238,8 @@ class TestJWTTokenGeneration:
         with pytest.raises(JWTError):
             decode_token(token)
 
-    @pytest.mark.unit_error_handling
-    @patch('src.pake_system.auth.security.settings')
+    @pytest.mark.unit_error_handling()
+    @patch("src.pake_system.auth.security.settings")
     def test_decode_token_rejects_malformed_token(self, mock_settings):
         """Test that malformed tokens are rejected"""
         # Arrange
@@ -244,8 +252,8 @@ class TestJWTTokenGeneration:
         with pytest.raises(JWTError):
             decode_token(malformed_token)
 
-    @pytest.mark.unit_edge_case
-    @patch('src.pake_system.auth.security.settings')
+    @pytest.mark.unit_edge_case()
+    @patch("src.pake_system.auth.security.settings")
     def test_create_access_token_with_empty_data(self, mock_settings):
         """Test token creation with minimal data"""
         # Arrange
@@ -268,8 +276,9 @@ class TestJWTTokenGeneration:
 # Unit Tests - Security Edge Cases
 # ============================================================================
 
-@pytest.mark.unit
-@pytest.mark.unit_edge_case
+
+@pytest.mark.unit()
+@pytest.mark.unit_edge_case()
 class TestSecurityEdgeCases:
     """Test edge cases and boundary conditions"""
 
@@ -295,7 +304,7 @@ class TestSecurityEdgeCases:
         # Assert
         assert verify_password(password, hashed) is True
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_token_with_large_payload(self, mock_settings):
         """Test token creation with large payload"""
         # Arrange
@@ -307,7 +316,7 @@ class TestSecurityEdgeCases:
         data = {
             "sub": "testuser",
             "permissions": [f"perm_{i}" for i in range(100)],
-            "metadata": {"key": "value" * 100}
+            "metadata": {"key": "value" * 100},
         }
 
         # Act
@@ -323,8 +332,9 @@ class TestSecurityEdgeCases:
 # Unit Tests - Performance (using pytest-benchmark if available)
 # ============================================================================
 
-@pytest.mark.unit
-@pytest.mark.unit_performance
+
+@pytest.mark.unit()
+@pytest.mark.unit_performance()
 class TestSecurityPerformance:
     """Test performance characteristics of security functions"""
 
@@ -347,7 +357,7 @@ class TestSecurityPerformance:
         # Assert
         assert result is True
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_token_generation_performance(self, benchmark, mock_settings):
         """Benchmark token generation speed"""
         # Arrange
@@ -361,7 +371,7 @@ class TestSecurityPerformance:
         # Assert
         assert isinstance(result, str)
 
-    @patch('src.pake_system.auth.security.settings')
+    @patch("src.pake_system.auth.security.settings")
     def test_token_decoding_performance(self, benchmark, mock_settings):
         """Benchmark token decoding speed"""
         # Arrange

@@ -18,13 +18,14 @@ import pytest
 
 # These imports will fail initially (RED phase) - that's expected
 try:
-    from scripts.ingestion_pipeline import ContentItem
     from services.ingestion.firecrawl_service import (
         FirecrawlError,
         FirecrawlResult,
         FirecrawlService,
         ScrapingOptions,
     )
+
+    from scripts.ingestion_pipeline import ContentItem
 except ImportError:
     # Expected during RED phase - services don't exist yet
     pass
@@ -45,7 +46,7 @@ class TestFirecrawlService:
     Tests focus on WHAT the service does, not HOW it does it.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def firecrawl_service(self):
         """Fixture providing a FirecrawlService instance for testing"""
         return FirecrawlService(
@@ -53,12 +54,12 @@ class TestFirecrawlService:
             base_url="https://api.firecrawl.dev",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_url(self):
         """Fixture providing a sample URL for testing"""
         return "https://example.com/javascript-heavy-page"
 
-    @pytest.fixture
+    @pytest.fixture()
     def expected_content_item(self):
         """Fixture providing expected ContentItem structure"""
         return {
@@ -76,7 +77,7 @@ class TestFirecrawlService:
     # BEHAVIOR TESTS - Core Functionality
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_scrape_javascript_rendered_content_successfully(
         self,
         firecrawl_service,
@@ -99,7 +100,7 @@ class TestFirecrawlService:
         assert result.metadata["javascript_rendered"] is True
         assert result.url == sample_url
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_rate_limiting_gracefully(self, firecrawl_service):
         """
         RED TEST: Service should handle API rate limiting without crashing.
@@ -121,7 +122,7 @@ class TestFirecrawlService:
             assert "rate limit" in result.error.message.lower()
             assert result.retry_after is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_extract_structured_content_with_metadata(
         self,
         firecrawl_service,
@@ -150,7 +151,7 @@ class TestFirecrawlService:
         assert result.metadata["content_type"] is not None
         assert result.metadata["word_count"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_existing_content_item_structure(
         self,
         firecrawl_service,
@@ -181,7 +182,7 @@ class TestFirecrawlService:
     # BEHAVIOR TESTS - Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_invalid_urls_gracefully(self, firecrawl_service):
         """
         RED TEST: Service should handle invalid URLs without crashing.
@@ -194,7 +195,7 @@ class TestFirecrawlService:
             assert result.error is not None
             assert "invalid url" in result.error.message.lower()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_network_timeout_gracefully(self, firecrawl_service):
         """
         RED TEST: Service should handle network timeouts with proper error reporting.
@@ -208,7 +209,7 @@ class TestFirecrawlService:
             assert result.error is not None
             assert "timeout" in result.error.message.lower()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_api_key_authentication_errors(self, firecrawl_service):
         """
         RED TEST: Service should handle API authentication errors appropriately.
@@ -229,7 +230,7 @@ class TestFirecrawlService:
     # BEHAVIOR TESTS - Performance and Optimization
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_respect_scraping_options_configuration(
         self,
         firecrawl_service,
@@ -251,7 +252,7 @@ class TestFirecrawlService:
         assert result.metadata["wait_time"] == 5000
         assert result.metadata["followed_redirects"] is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_support_bulk_scraping_with_rate_limiting(
         self,
         firecrawl_service,
@@ -276,7 +277,7 @@ class TestFirecrawlService:
     # BEHAVIOR TESTS - Integration with Cognitive System
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_autonomous_cognitive_engine(
         self,
         firecrawl_service,
@@ -303,7 +304,7 @@ class TestFirecrawlService:
         assert result.cognitive_assessment is not None
         mock_cognitive_engine.assess_content_quality.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_trigger_metacognitive_optimization_for_poor_results(
         self,
         firecrawl_service,
@@ -369,7 +370,7 @@ class TestFirecrawlService:
     # BEHAVIOR TESTS - Integration with n8n Workflows
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_n8n_workflow_triggers(self, firecrawl_service):
         """
         RED TEST: Service should integrate with existing n8n workflow system.
@@ -449,7 +450,7 @@ class TestFirecrawlServicePerformance:
     Performance-focused behavior tests ensuring service meets requirements.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def firecrawl_service(self):
         """Fixture providing a FirecrawlService instance for performance testing"""
         return FirecrawlService(
@@ -457,7 +458,7 @@ class TestFirecrawlServicePerformance:
             base_url="https://api.firecrawl.dev",
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_complete_single_scraping_within_timeout_limits(
         self,
         firecrawl_service,
@@ -480,7 +481,7 @@ class TestFirecrawlServicePerformance:
         assert duration < 30  # Must complete within 30 seconds
         assert result.success is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_maintain_quality_scores_above_threshold(
         self,
         firecrawl_service,

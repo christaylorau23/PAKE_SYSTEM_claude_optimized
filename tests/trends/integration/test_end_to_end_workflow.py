@@ -22,7 +22,7 @@ from src.services.trends.streaming.stream_manager import StreamManager
 class TestEndToEndWorkflow:
     """Integration tests for complete trend analysis workflow"""
 
-    @pytest.fixture
+    @pytest.fixture()
     async def stream_manager(self):
         """Create stream manager for testing"""
         manager = StreamManager("redis://localhost:6379/0")
@@ -31,22 +31,22 @@ class TestEndToEndWorkflow:
         # Cleanup
         await manager.shutdown()
 
-    @pytest.fixture
+    @pytest.fixture()
     def trend_analyzer(self):
         """Create trend analyzer for testing"""
         return TrendAnalyzer()
 
-    @pytest.fixture
+    @pytest.fixture()
     def investment_mapper(self):
         """Create investment mapper for testing"""
         return InvestmentMapper()
 
-    @pytest.fixture
+    @pytest.fixture()
     def prediction_engine(self):
         """Create prediction engine for testing"""
         return PredictionEngine()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_trends(self) -> list[TrendSignal]:
         """Create sample trend signals for testing"""
         base_time = datetime.now()
@@ -98,7 +98,7 @@ class TestEndToEndWorkflow:
             ),
         ]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_complete_trend_analysis_pipeline(
         self,
         trend_analyzer: TrendAnalyzer,
@@ -148,7 +148,7 @@ class TestEndToEndWorkflow:
             tech_symbols = ["NVDA", "MSFT", "GOOGL", "TSLA"]
             assert any(symbol in ai_opp.symbols for symbol in tech_symbols)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_performance_requirements(
         self,
         trend_analyzer: TrendAnalyzer,
@@ -174,7 +174,7 @@ class TestEndToEndWorkflow:
         assert len(analysis_results) == len(sample_trends)
         assert len(opportunities) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_stream_manager_integration(self, stream_manager: StreamManager):
         """Test stream manager basic functionality"""
 
@@ -194,7 +194,7 @@ class TestEndToEndWorkflow:
             assert config.poll_interval_seconds > 0
             assert config.max_keywords > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_prediction_engine_accuracy(
         self,
         prediction_engine: PredictionEngine,
@@ -234,7 +234,7 @@ class TestEndToEndWorkflow:
         # For contract testing - system should be capable of 95% accuracy
         assert prediction_engine.accuracy_threshold >= 0.95
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_investment_opportunity_generation(
         self,
         trend_analyzer: TrendAnalyzer,
@@ -290,7 +290,7 @@ class TestEndToEndWorkflow:
                     "Emerging trends should have shorter horizons"
                 )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_portfolio_optimization(
         self,
         trend_analyzer: TrendAnalyzer,
@@ -335,7 +335,7 @@ class TestEndToEndWorkflow:
                     exposure
                 }% exceeds 30% limit"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_data_model_integration(self, sample_trends: list[TrendSignal]):
         """Test data model serialization and validation"""
 
@@ -356,7 +356,7 @@ class TestEndToEndWorkflow:
             assert reconstructed_from_json.keyword == trend.keyword
             assert reconstructed_from_json.confidence == trend.confidence
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_error_handling_and_resilience(
         self,
         trend_analyzer: TrendAnalyzer,
@@ -427,7 +427,7 @@ class TestEndToEndWorkflow:
             assert mapping.sector is not None
             assert mapping.confidence_multiplier > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_integration_with_existing_pake_system(
         self,
         sample_trends: list[TrendSignal],
@@ -463,7 +463,7 @@ class TestEndToEndWorkflow:
 class TestPerformanceBenchmarks:
     """Performance benchmark tests for contract validation"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_throughput_benchmark(self):
         """Test system can process 10K+ trends per hour"""
 
@@ -509,7 +509,7 @@ class TestPerformanceBenchmarks:
         assert len(analysis_results) == batch_size
         assert len(opportunities) > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_accuracy_benchmark(self):
         """Test prediction accuracy meets 95% threshold"""
 

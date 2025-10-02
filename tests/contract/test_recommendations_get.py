@@ -32,19 +32,19 @@ class MockTestClient:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_client():
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_headers():
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_user_id():
     """Provide sample user ID for testing"""
     return str(uuid.uuid4())
@@ -289,7 +289,7 @@ def validate_url(value: str) -> bool:
 # Test fixtures for data validation
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_recommendation_response():
     """Sample recommendation response for validation testing"""
     return {

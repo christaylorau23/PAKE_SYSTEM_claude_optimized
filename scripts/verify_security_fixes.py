@@ -122,7 +122,9 @@ def test_secrets_validator():
         from utils.secrets_validator import SecretsValidator
 
         # Test weak secret detection
-        result = SecretsValidator.validate_secret_strength("test", "weak_REDACTED_SECRET")
+        result = SecretsValidator.validate_secret_strength(
+            "test", "weak_REDACTED_SECRET"
+        )
         if result.is_valid:
             print("❌ Weak secret validation failed")
             return False

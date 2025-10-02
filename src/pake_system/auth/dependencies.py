@@ -1,5 +1,4 @@
-"""
-FastAPI authentication dependencies
+"""FastAPI authentication dependencies
 Provides reusable dependency functions for protecting endpoints
 """
 
@@ -9,9 +8,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 
+from .database import get_user
 from .models import TokenData, User
 from .security import decode_token
-from .database import get_user
 
 # OAuth2 scheme for token extraction
 # This tells FastAPI to extract the token from the Authorization header
@@ -20,8 +19,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
-    """
-    FastAPI dependency to get the current authenticated user.
+    """FastAPI dependency to get the current authenticated user.
 
     This function:
     1. Extracts the JWT token from the Authorization header
@@ -78,8 +76,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Use
 async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)]
 ) -> User:
-    """
-    FastAPI dependency to get the current active (non-disabled) user.
+    """FastAPI dependency to get the current active (non-disabled) user.
 
     This is a stricter version of get_current_user that also checks
     if the user account is disabled.
@@ -100,8 +97,7 @@ async def get_current_active_user(
     """
     if current_user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
 
     return current_user

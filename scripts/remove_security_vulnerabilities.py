@@ -181,7 +181,9 @@ class SecurityVulnerabilityRemover:
 
         if self.vulnerabilities_found > 0:
             print("✅ CRITICAL security vulnerabilities have been removed!")
-            print("⚠️  IMPORTANT: Update your environment variables with proper secrets")
+            print(
+                "⚠️  IMPORTANT: Update your environment variables with proper secrets"
+            )
             print("⚠️  The application will now fail-fast if secrets are missing")
         else:
             print("ℹ️  No vulnerabilities were found to remove")

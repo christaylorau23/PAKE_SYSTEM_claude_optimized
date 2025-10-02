@@ -31,37 +31,37 @@ class MockTestClient:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_client():
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_headers():
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_content_id():
     """Provide sample content ID for testing"""
     return str(uuid.uuid4())
 
 
-@pytest.fixture
+@pytest.fixture()
 def valid_content_id():
     """Provide a valid content ID that exists in the system"""
     return str(uuid.uuid4())
 
 
-@pytest.fixture
+@pytest.fixture()
 def invalid_content_id():
     """Provide an invalid content ID format"""
     return "invalid-uuid-format"
 
 
-@pytest.fixture
+@pytest.fixture()
 def nonexistent_content_id():
     """Provide a valid UUID that doesn't exist in the system"""
     return str(uuid.uuid4())
@@ -397,7 +397,7 @@ class TestContentAnalyzeContract:
 # Test fixtures for data validation
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_analysis_response():
     """Sample content analysis response for validation testing"""
     return {
@@ -420,7 +420,7 @@ def sample_analysis_response():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_in_progress_response():
     """Sample in-progress analysis response"""
     return {
@@ -434,7 +434,7 @@ def sample_in_progress_response():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_failed_response():
     """Sample failed analysis response"""
     return {

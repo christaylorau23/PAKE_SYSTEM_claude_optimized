@@ -20,7 +20,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
-
 from utils.async_task_queue import AsyncTaskQueue, TaskPriority
 from utils.distributed_cache import CacheConfig, DistributedCache
 from utils.error_handling import (
@@ -586,7 +585,7 @@ class EnhancedAPIFactory:
         """Create standardized CRUD endpoints with caching and security"""
 
         @app.post(f"{prefix}/", response_model=APIResponse, tags=tags or [])
-        @secure_endpoint() if self.security_guard else lambda x: x
+        @ secure_endpoint() if self.security_guard else lambda x: x
         @with_error_handling("create_resource")
         async def create_resource(
             item: model_class,

@@ -1,5 +1,4 @@
-"""
-Enterprise Authentication and Security
+"""Enterprise Authentication and Security
 Task T039-T045 - Phase 18 Production System Integration
 
 Production-grade JWT authentication, security middleware, and
@@ -7,30 +6,31 @@ enterprise security patterns.
 """
 
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any, Optional
 from uuid import UUID, uuid4
-from passlib.context import CryptContext
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from .database import get_db
-from .models import Base
-from sqlalchemy import String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from passlib.context import CryptContext
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from utils.logger import get_logger
 
 # Security configuration with enterprise secrets management
-from ..secrets_manager.enterprise_secrets_manager import get_jwt_secret, get_api_key
-from utils.logger import get_logger
+from ..secrets_manager.enterprise_secrets_manager import get_api_key, get_jwt_secret
+from .database import get_db
+from .models import Base
 
 # Initialize logger
 logger = get_logger(service_name="auth-service")
 
 # Initialize secrets manager
 import asyncio
+
 try:
     SECRET_KEY = asyncio.run(get_jwt_secret())
 except (ImportError, ModuleNotFoundError) as e:
@@ -61,65 +61,61 @@ security = HTTPBearer()
 
 class User(Base):
     """User model for authentication"""
+
     __tablename__ = "users"
 
     # Primary key
     user_id: Mapped[UUID] = mapped_column(
-        PostgresUUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid4
+        PostgresUUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    
+
     # User information
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     hashed_REDACTED_SECRET: Mapped[str] = mapped_column(String(255), nullable=False)
-    
+
     # User status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
-        default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     # Relationships
-    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
     """User session tracking"""
+
     __tablename__ = "user_sessions"
 
     # Primary key
     session_id: Mapped[UUID] = mapped_column(
-        PostgresUUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid4
+        PostgresUUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    
+
     # Foreign key to user
     user_id: Mapped[UUID] = mapped_column(
-        PostgresUUID(as_uuid=True), 
-        ForeignKey("users.user_id"),
-        nullable=False
+        PostgresUUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False
     )
-    
+
     # Session information
     refresh_token: Mapped[str] = mapped_column(String(500), nullable=False)
     user_agent: Mapped[Optional[str]] = mapped_column(String(500))
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))
-    
+
     # Session status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
-        default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -129,41 +125,45 @@ class UserSession(Base):
 
 class AuthService:
     """Enterprise authentication service"""
-    
+
     @staticmethod
-    def verify_REDACTED_SECRET(plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str) -> bool:
+    def verify_REDACTED_SECRET(
+        plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str
+    ) -> bool:
         """Verify a REDACTED_SECRET against its hash"""
         return pwd_context.verify(plain_REDACTED_SECRET, hashed_REDACTED_SECRET)
-    
+
     @staticmethod
     def get_REDACTED_SECRET_hash(REDACTED_SECRET: str) -> str:
         """Hash a REDACTED_SECRET"""
         return pwd_context.hash(REDACTED_SECRET)
-    
+
     @staticmethod
-    def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+    def create_access_token(
+        data: dict[str, Any], expires_delta: Optional[timedelta] = None
+    ) -> str:
         """Create JWT access token"""
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.now(timezone.utc) + expires_delta
+            expire = datetime.now(UTC) + expires_delta
         else:
-            expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        
+            expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
         to_encode.update({"exp": expire, "type": "access"})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
-    
+
     @staticmethod
-    def create_refresh_token(data: Dict[str, Any]) -> str:
+    def create_refresh_token(data: dict[str, Any]) -> str:
         """Create JWT refresh token"""
         to_encode = data.copy()
-        expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh"})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
-    
+
     @staticmethod
-    def verify_token(token: str) -> Dict[str, Any]:
+    def verify_token(token: str) -> dict[str, Any]:
         """Verify and decode JWT token"""
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -178,12 +178,12 @@ class AuthService:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """Get current authenticated user"""
     token = credentials.credentials
     payload = AuthService.verify_token(token)
-    
+
     user_id: str = payload.get("sub")
     if user_id is None:
         raise HTTPException(
@@ -191,29 +191,31 @@ async def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Get user from database
     result = await db.execute(select(User).where(User.user_id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive user",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return user
 
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
     """Get current active user"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
@@ -222,7 +224,7 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 
 class SecurityMiddleware:
     """Enterprise security middleware"""
-    
+
     @staticmethod
     async def validate_api_key(api_key: str) -> bool:
         """Validate API key with enterprise secrets management"""
@@ -234,16 +236,18 @@ class SecurityMiddleware:
         except Exception as e:
             logger.error(f"Failed to validate API key: {e}")
             return False
-    
+
     @staticmethod
     async def check_rate_limit(user_id: str, endpoint: str) -> bool:
         """Check rate limiting (placeholder for enterprise implementation)"""
         # In production, this would check against Redis or similar
         # For now, we'll allow all requests
         return True
-    
+
     @staticmethod
-    async def log_security_event(event_type: str, user_id: Optional[str], details: Dict[str, Any]):
+    async def log_security_event(
+        event_type: str, user_id: Optional[str], details: dict[str, Any]
+    ):
         """Log security events"""
         # In production, this would log to a security monitoring system
         print(f"Security Event: {event_type} - User: {user_id} - Details: {details}")

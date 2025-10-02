@@ -14,12 +14,12 @@ import pytest
 # Implementation should follow to make these tests pass
 
 
-@pytest.mark.analytics
-@pytest.mark.unit
+@pytest.mark.analytics()
+@pytest.mark.unit()
 class TestAdvancedAnalyticsEngine:
     """Test suite for Advanced Analytics Engine"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def analytics_config(self):
         """Configuration for analytics engine testing."""
         return {
@@ -30,7 +30,7 @@ class TestAdvancedAnalyticsEngine:
             "max_insights_per_category": 10,
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_metrics_data(self):
         """Sample metrics data for testing."""
         return {
@@ -58,7 +58,7 @@ class TestAdvancedAnalyticsEngine:
         assert engine.insights_cache is not None
         assert engine.is_initialized
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_system_health_analysis(self, analytics_config, sample_metrics_data):
         """Test comprehensive system health analysis."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -82,7 +82,7 @@ class TestAdvancedAnalyticsEngine:
             assert "critical_issues" in health_analysis
             assert "recommendations" in health_analysis
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_anomaly_detection(self, analytics_config, sample_metrics_data):
         """Test anomaly detection algorithms."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -110,7 +110,7 @@ class TestAdvancedAnalyticsEngine:
             assert 0.0 <= anomaly.confidence <= 1.0
             assert anomaly.severity in ["low", "medium", "high", "critical"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_insight_generation(self, analytics_config, sample_analytics_data):
         """Test AI-powered insight generation."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -148,7 +148,7 @@ class TestAdvancedAnalyticsEngine:
         assert 0.0 <= insight.confidence <= 1.0
         assert isinstance(insight.recommended_actions, list)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_predictive_analytics(self, analytics_config, sample_metrics_data):
         """Test predictive analytics capabilities."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -185,7 +185,7 @@ class TestAdvancedAnalyticsEngine:
                 <= prediction.confidence_interval.upper
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_correlation_analysis(self, analytics_config, sample_metrics_data):
         """Test correlation analysis between metrics."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -215,7 +215,7 @@ class TestAdvancedAnalyticsEngine:
                 assert metric in matrix
                 assert len(matrix[metric]) == len(metrics_list)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_comprehensive_report_generation(self, analytics_config):
         """Test comprehensive analytics report generation."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -249,7 +249,7 @@ class TestAdvancedAnalyticsEngine:
         assert "total_insights" in summary
         assert summary["overall_status"] in ["healthy", "warning", "critical"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_real_time_analytics_processing(self, analytics_config):
         """Test real-time analytics data processing."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -275,7 +275,7 @@ class TestAdvancedAnalyticsEngine:
         assert "anomalies_detected" in result.details
         assert "alerts_triggered" in result.details
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_usage_pattern_analysis(self, analytics_config):
         """Test user behavior and usage pattern analysis."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -314,8 +314,8 @@ class TestAdvancedAnalyticsEngine:
             assert "session_analytics" in patterns
             assert "recommendations" in patterns
 
-    @pytest.mark.performance
-    @pytest.mark.asyncio
+    @pytest.mark.performance()
+    @pytest.mark.asyncio()
     async def test_analytics_performance(self, analytics_config):
         """Test analytics engine performance under load."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -343,7 +343,7 @@ class TestAdvancedAnalyticsEngine:
         assert len(results) == 5
         assert all(not isinstance(result, Exception) for result in results)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_caching_mechanism(self, analytics_config):
         """Test analytics caching for performance optimization."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -366,7 +366,7 @@ class TestAdvancedAnalyticsEngine:
         assert second_call_time < first_call_time / 2
         assert len(result1) == len(result2)  # Same results
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_alert_generation(self, analytics_config):
         """Test automated alert generation for critical issues."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -400,7 +400,7 @@ class TestAdvancedAnalyticsEngine:
             assert hasattr(alert, "recommended_actions")
             assert hasattr(alert, "triggered_at")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_ml_service_integration(self, analytics_config):
         """Test integration with ML services for enhanced analytics."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -445,7 +445,7 @@ class TestAdvancedAnalyticsEngine:
         ):
             AdvancedAnalyticsEngine(invalid_config)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_error_handling_and_recovery(self, analytics_config):
         """Test error handling and graceful degradation."""
         from src.services.analytics.advanced_analytics_engine import (
@@ -467,8 +467,8 @@ class TestAdvancedAnalyticsEngine:
             assert result["fallback_data"] is not None
             assert result["status"] == "degraded"
 
-    @pytest.mark.integration
-    @pytest.mark.asyncio
+    @pytest.mark.integration()
+    @pytest.mark.asyncio()
     async def test_full_analytics_pipeline(
         self,
         analytics_config,

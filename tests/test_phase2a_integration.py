@@ -14,8 +14,6 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
-from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.arxiv_enhanced_service import (
     ArxivEnhancedService,
     ArxivSearchQuery,
@@ -28,6 +26,8 @@ from services.ingestion.firecrawl_service import (
 )
 from services.ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 
+from scripts.ingestion_pipeline import ContentItem
+
 
 class TestPhase2AIntegration:
     """
@@ -35,7 +35,7 @@ class TestPhase2AIntegration:
     Tests focus on end-to-end workflows and service interactions.
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cognitive_engine(self):
         """Mock cognitive engine for testing"""
         engine = Mock()
@@ -51,7 +51,7 @@ class TestPhase2AIntegration:
         )
         return engine
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_n8n_manager(self):
         """Mock n8n workflow manager for testing"""
         manager = Mock()
@@ -61,7 +61,7 @@ class TestPhase2AIntegration:
         manager.monitor_workflow = AsyncMock(return_value={"status": "completed"})
         return manager
 
-    @pytest.fixture
+    @pytest.fixture()
     def firecrawl_service(self):
         """Firecrawl service instance"""
         return FirecrawlService(
@@ -69,7 +69,7 @@ class TestPhase2AIntegration:
             base_url="https://api.firecrawl.dev",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def arxiv_service(self):
         """ArXiv enhanced service instance"""
         return ArxivEnhancedService(
@@ -77,7 +77,7 @@ class TestPhase2AIntegration:
             max_results=50,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def pubmed_service(self):
         """PubMed E-utilities service instance"""
         return PubMedService(email="test@example.com", max_results=50)
@@ -86,7 +86,7 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Multi-Source Content Ingestion
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_orchestrate_multi_source_research_ingestion(
         self,
         firecrawl_service,
@@ -167,7 +167,7 @@ class TestPhase2AIntegration:
         )
         assert total_sources >= 5  # Should have diverse content from all sources
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_all_services_with_content_pipeline(
         self,
         firecrawl_service,
@@ -230,7 +230,7 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Cognitive Processing Pipeline
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_apply_unified_cognitive_assessment_across_sources(
         self,
         arxiv_service,
@@ -284,7 +284,7 @@ class TestPhase2AIntegration:
         # Verify quality threshold compliance
         assert all(score > 0.85 for score in all_quality_scores)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_mixed_content_quality_filtering(
         self,
         arxiv_service,
@@ -344,7 +344,7 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Workflow Automation
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_integrate_with_n8n_research_automation_workflows(
         self,
         arxiv_service,
@@ -388,7 +388,7 @@ class TestPhase2AIntegration:
         )
         assert mock_n8n_manager.trigger_workflow.call_count >= 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_cross_source_content_deduplication(
         self,
         arxiv_service,
@@ -448,7 +448,7 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Performance and Scalability
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_concurrent_multi_source_ingestion(
         self,
         firecrawl_service,
@@ -508,7 +508,7 @@ class TestPhase2AIntegration:
             if hasattr(result, "success"):
                 assert result.success
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_maintain_system_stability_under_load(
         self,
         arxiv_service,
@@ -570,7 +570,7 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Error Handling and Resilience
     # ========================================================================
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_should_handle_partial_service_failures_gracefully(
         self,
         arxiv_service,

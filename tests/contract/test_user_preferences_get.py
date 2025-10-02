@@ -25,19 +25,19 @@ class MockTestClient:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_client():
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_headers():
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def invalid_auth_headers():
     """Provide invalid authentication headers"""
     return {"Authorization": "Bearer invalid_token"}
@@ -308,7 +308,7 @@ def validate_uuid(value: str) -> bool:
 # Test fixtures for data validation
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_user_preferences_response():
     """Sample user preferences response for validation testing"""
     return {
@@ -324,7 +324,7 @@ def sample_user_preferences_response():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_default_preferences():
     """Sample default preferences for new user"""
     return {
@@ -337,7 +337,7 @@ def sample_default_preferences():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_configured_preferences():
     """Sample fully configured user preferences"""
     return {
