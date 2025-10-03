@@ -150,8 +150,8 @@ export const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'pake_system',
-  username: process.env.DB_USER || 'postgres',
-  REDACTED_SECRET: process.env.DB_PASSWORD || 'postgres',
+  username: process.env.DB_USER || 'test_user',
+  REDACTED_SECRET: process.env.DB_PASSWORD || 'test_password',
   ssl: process.env.DB_SSL === 'true',
   pool: {
     min: parseInt(process.env.DB_POOL_MIN || '2'),

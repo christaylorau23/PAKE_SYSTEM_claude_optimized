@@ -49,8 +49,8 @@ class TestServiceIntegration:
             host="localhost",
             port=5432,
             database="pake_test",
-            user="postgres",
-            REDACTED_SECRET="postgres",
+            user="test_user",
+            REDACTED_SECRET="test_password",
         )
 
         await db_manager.connect()
