@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE+ Circuit Breaker Implementation
-Advanced circuit breaker patterns for MCP servers and external service calls
+Advanced circuit breaker patterns for MCP servers and external service calls.
 """
 
 import asyncio
@@ -23,7 +23,7 @@ metrics = MetricsStore(service_name="pake-circuit-breaker")
 
 
 class CircuitState(Enum):
-    """Circuit breaker states"""
+    """Circuit breaker states."""
 
     CLOSED = "closed"  # Normal operation
     OPEN = "open"  # Failing fast
@@ -31,7 +31,7 @@ class CircuitState(Enum):
 
 
 class FailureType(Enum):
-    """Types of failures that can trigger circuit breaker"""
+    """Types of failures that can trigger circuit breaker."""
 
     TIMEOUT = "timeout"
     EXCEPTION = "exception"
@@ -42,7 +42,7 @@ class FailureType(Enum):
 
 @dataclass
 class CircuitBreakerConfig:
-    """Configuration for circuit breaker behavior"""
+    """Configuration for circuit breaker behavior."""
 
     # Failure thresholds
     failure_threshold: int = 5  # Number of failures to open circuit
@@ -71,7 +71,7 @@ class CircuitBreakerConfig:
 
 @dataclass
 class CallResult:
-    """Result of a circuit-protected call"""
+    """Result of a circuit-protected call."""
 
     success: bool
     duration: float
@@ -82,17 +82,17 @@ class CallResult:
 
 
 class CircuitBreakerError(PAKEException):
-    """Circuit breaker specific errors"""
+    """Circuit breaker specific errors."""
 
-    def __init__(self, message: str, state: CircuitState, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
         self.circuit_state = state
 
 
 class RateLimiter:
-    """Token bucket rate limiter"""
+    """Token bucket rate limiter."""
 
-    def __init__(self, rate: float, capacity: int):
+    def __init__(self) -> None:
         self.rate = rate  # tokens per second
         self.capacity = capacity  # maximum tokens
         self.tokens = capacity
@@ -100,7 +100,7 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def acquire(self, tokens: int = 1) -> bool:
-        """Try to acquire tokens"""
+        """Try to acquire tokens."""
         with self._lock:
             now = time.time()
             # Add tokens based on elapsed time
@@ -114,7 +114,7 @@ class RateLimiter:
             return False
 
     def wait_time(self, tokens: int = 1) -> float:
-        """Calculate wait time for tokens"""
+        """Calculate wait time for tokens."""
         with self._lock:
             if self.tokens >= tokens:
                 return 0.0
@@ -123,9 +123,9 @@ class RateLimiter:
 
 
 class CircuitBreaker:
-    """Advanced circuit breaker with comprehensive failure detection"""
+    """Advanced circuit breaker with comprehensive failure detection."""
 
-    def __init__(self, name: str, config: CircuitBreakerConfig):
+    def __init__(self) -> None:
         self.name = name
         self.config = config
         self.logger = get_logger(service_name=f"circuit-breaker-{name}")
@@ -159,12 +159,12 @@ class CircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        """Get current circuit state"""
+        """Get current circuit state."""
         return self._state
 
     @property
     def failure_rate(self) -> float:
-        """Calculate current failure rate"""
+        """Calculate current failure rate."""
         if len(self._recent_calls) < self.config.minimum_requests:
             return 0.0
 
@@ -173,20 +173,20 @@ class CircuitBreaker:
 
     @property
     def average_response_time(self) -> float:
-        """Calculate average response time"""
+        """Calculate average response time."""
         if not self._recent_calls:
             return 0.0
         return statistics.mean(call.duration for call in self._recent_calls)
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
 
     def _should_attempt_reset(self) -> bool:
-        """Check if circuit should attempt reset"""
+        """Check if circuit should attempt reset."""
         if self._state != CircuitState.OPEN:
             return False
 
@@ -194,7 +194,7 @@ class CircuitBreaker:
         return time_since_failure >= self.config.recovery_timeout
 
     def _record_call(self, result: CallResult) -> None:
-        """Record call result for statistics"""
+        """Record call result for statistics."""
         self._recent_calls.append(result)
 
         # Keep only recent calls within rolling window
@@ -209,7 +209,7 @@ class CircuitBreaker:
             self._total_failures += 1
 
     def _transition_to_state(self, new_state: CircuitState, reason: str = "") -> None:
-        """Transition circuit to new state"""
+        """Transition circuit to new state."""
         if new_state == self._state:
             return
 
@@ -219,9 +219,10 @@ class CircuitBreaker:
 
         if self.config.log_state_changes:
             self.logger.info(
-                f"Circuit breaker '{self.name}' transitioned from {old_state.value} to {
-                    new_state.value
-                }",
+                "Circuit breaker '%s' transitioned from %s to %s",
+                self.name,
+                old_state.value,
+                new_state.value,
                 extra={"reason": reason, "failure_count": self._failure_count},
             )
 
@@ -238,7 +239,8 @@ class CircuitBreaker:
         # Alert on circuit opening
         if new_state == CircuitState.OPEN and self.config.alert_on_open:
             self.logger.error(
-                f"ALERT: Circuit breaker '{self.name}' opened due to failures",
+                "ALERT: Circuit breaker '%s' opened due to failures",
+                self.name,
                 extra={
                     "failure_count": self._failure_count,
                     "failure_rate": self.failure_rate,
@@ -247,7 +249,7 @@ class CircuitBreaker:
             )
 
     def _handle_success(self, result: CallResult) -> None:
-        """Handle successful call"""
+        """Handle successful call."""
         self._record_call(result)
 
         if self._state == CircuitState.HALF_OPEN:
@@ -265,7 +267,7 @@ class CircuitBreaker:
                 self._failure_count = max(0, self._failure_count - 1)
 
     def _handle_failure(self, result: CallResult) -> None:
-        """Handle failed call"""
+        """Handle failed call."""
         self._record_call(result)
         self._last_failure_time = time.time()
 
@@ -293,7 +295,7 @@ class CircuitBreaker:
                 )
 
     async def _execute_with_timeout(self, func: Callable, *args, **kwargs) -> Any:
-        """Execute function with timeout"""
+        """Execute function with timeout."""
         try:
             return await asyncio.wait_for(
                 (
@@ -304,22 +306,24 @@ class CircuitBreaker:
                 timeout=self.config.timeout_threshold,
             )
         except TimeoutError as e:
+            msg = f"Operation timed out after {self.config.timeout_threshold}s"
             raise CircuitBreakerError(
-                f"Operation timed out after {self.config.timeout_threshold}s",
+                msg,
                 state=self._state,
                 original_exception=e,
             )
 
     async def call(self, func: Callable, *args, **kwargs) -> Any:
-        """Execute function with circuit breaker protection"""
+        """Execute function with circuit breaker protection."""
         async with self._lock:
             # Check rate limiting
             if not self._rate_limiter.acquire():
                 wait_time = self._rate_limiter.wait_time()
                 if wait_time > 0:
                     if self.config.fail_fast:
+                        msg = f"Rate limit exceeded. Wait {wait_time:.2f}s"
                         raise CircuitBreakerError(
-                            f"Rate limit exceeded. Wait {wait_time:.2f}s",
+                            msg,
                             state=self._state,
                         )
                     await asyncio.sleep(wait_time)
@@ -335,8 +339,9 @@ class CircuitBreaker:
                     if self.config.fail_fast:
                         if self.config.fallback_response is not None:
                             return self.config.fallback_response
+                        msg = f"Circuit breaker '{self.name}' is OPEN"
                         raise CircuitBreakerError(
-                            f"Circuit breaker '{self.name}' is OPEN",
+                            msg,
                             state=self._state,
                         )
 
@@ -408,8 +413,8 @@ class CircuitBreaker:
 
             raise
 
-    def get_statistics(self) -> dict[str, Any]:
-        """Get circuit breaker statistics"""
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get circuit breaker statistics."""
         return {
             "name": self.name,
             "state": self._state.value,
@@ -431,7 +436,7 @@ class CircuitBreaker:
         }
 
     async def reset(self) -> None:
-        """Manually reset circuit breaker"""
+        """Manually reset circuit breaker."""
         async with self._lock:
             self._failure_count = 0
             self._success_count = 0
@@ -440,41 +445,43 @@ class CircuitBreaker:
 
 
 class CircuitBreakerRegistry:
-    """Registry for managing multiple circuit breakers"""
+    """Registry for managing multiple circuit breakers."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._breakers: dict[str, CircuitBreaker] = {}
         self.logger = get_logger(service_name="circuit-breaker-registry")
 
     def create_breaker(self, name: str, config: CircuitBreakerConfig) -> CircuitBreaker:
-        """Create and register a new circuit breaker"""
+        """Create and register a new circuit breaker."""
         if name in self._breakers:
-            raise ValueError(f"Circuit breaker '{name}' already exists")
+            msg = f"Circuit breaker '{name}' already exists"
+            raise ValueError(msg)
 
         breaker = CircuitBreaker(name, config)
         self._breakers[name] = breaker
 
-        self.logger.info(f"Created circuit breaker: {name}")
+        self.logger.info("Created circuit breaker: %s", name)
         return breaker
 
     def get_breaker(self, name: str) -> CircuitBreaker:
-        """Get circuit breaker by name"""
+        """Get circuit breaker by name."""
         if name not in self._breakers:
-            raise ValueError(f"Circuit breaker '{name}' not found")
+            msg = f"Circuit breaker '{name}' not found"
+            raise ValueError(msg)
         return self._breakers[name]
 
-    def list_breakers(self) -> list[str]:
-        """List all circuit breaker names"""
+    def list_breakers(self) -> List[str]:
+        """List all circuit breaker names."""
         return list(self._breakers.keys())
 
-    def get_all_statistics(self) -> dict[str, dict[str, Any]]:
-        """Get statistics for all circuit breakers"""
+    def get_all_statistics(self) -> dict[str, Dict[str, Any]]:
+        """Get statistics for all circuit breakers."""
         return {
             name: breaker.get_statistics() for name, breaker in self._breakers.items()
         }
 
     async def reset_all(self) -> None:
-        """Reset all circuit breakers"""
+        """Reset all circuit breakers."""
         for breaker in self._breakers.values():
             await breaker.reset()
         self.logger.info("Reset all circuit breakers")
@@ -485,12 +492,8 @@ circuit_registry = CircuitBreakerRegistry()
 
 
 # Decorators for easy circuit breaker integration
-def with_circuit_breaker(
-    name: str,
-    config: CircuitBreakerConfig | None = None,
-    registry: CircuitBreakerRegistry = circuit_registry,
-):
-    """Decorator to add circuit breaker protection to functions"""
+def with_circuit_breaker(self) -> None:
+    """Decorator to add circuit breaker protection to functions."""
 
     def decorator(func: Callable) -> Callable:
         # Create circuit breaker if it doesn't exist
@@ -501,11 +504,11 @@ def with_circuit_breaker(
             breaker = registry.create_breaker(name, breaker_config)
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(self) -> None:
             return await breaker.call(func, *args, **kwargs)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             return asyncio.run(breaker.call(func, *args, **kwargs))
 
         if asyncio.iscoroutinefunction(func):
@@ -517,7 +520,7 @@ def with_circuit_breaker(
 
 # Specialized circuit breakers for PAKE system components
 def create_mcp_server_breaker() -> CircuitBreakerConfig:
-    """Create circuit breaker config optimized for MCP servers"""
+    """Create circuit breaker config optimized for MCP servers."""
     return CircuitBreakerConfig(
         failure_threshold=3,
         success_threshold=2,
@@ -536,7 +539,7 @@ def create_mcp_server_breaker() -> CircuitBreakerConfig:
 
 
 def create_database_breaker() -> CircuitBreakerConfig:
-    """Create circuit breaker config optimized for database calls"""
+    """Create circuit breaker config optimized for database calls."""
     return CircuitBreakerConfig(
         failure_threshold=5,
         success_threshold=3,
@@ -555,7 +558,7 @@ def create_database_breaker() -> CircuitBreakerConfig:
 
 
 def create_external_api_breaker() -> CircuitBreakerConfig:
-    """Create circuit breaker config optimized for external API calls"""
+    """Create circuit breaker config optimized for external API calls."""
     return CircuitBreakerConfig(
         failure_threshold=3,
         success_threshold=2,
@@ -575,14 +578,14 @@ def create_external_api_breaker() -> CircuitBreakerConfig:
 
 
 # Health check integration
-async def circuit_breaker_health_check() -> dict[str, Any]:
-    """Health check for all circuit breakers"""
+async def circuit_breaker_health_check() -> Dict[str, Any]:
+    """Health check for all circuit breakers."""
     stats = circuit_registry.get_all_statistics()
 
     healthy_breakers = sum(1 for stat in stats.values() if stat["state"] == "closed")
     total_breakers = len(stats)
 
-    health_status = {
+    return {
         "overall_health": (
             "healthy" if healthy_breakers == total_breakers else "degraded"
         ),
@@ -591,32 +594,31 @@ async def circuit_breaker_health_check() -> dict[str, Any]:
         "breakers": stats,
     }
 
-    return health_status
-
 
 # Example usage and testing
 if __name__ == "__main__":
     import asyncio
     import random
 
-    async def unreliable_service():
-        """Simulate an unreliable service"""
+    async def unreliable_service(self) -> None:
+        """Simulate an unreliable service."""
         await asyncio.sleep(random.uniform(0.1, 2.0))
         if random.random() < 0.3:  # 30% failure rate
-            raise Exception("Service failure")
+            msg = "Service failure"
+            raise Exception(msg)
         return {"status": "success", "data": "response"}
 
-    async def slow_service():
-        """Simulate a slow service"""
+    async def slow_service(self) -> None:
+        """Simulate a slow service."""
         await asyncio.sleep(random.uniform(8, 12))  # Slower than threshold
         return {"status": "slow_success"}
 
     @with_circuit_breaker("test_service", create_external_api_breaker())
-    async def protected_service_call():
-        """Example protected service call"""
+    async def protected_service_call(self) -> None:
+        """Example protected service call."""
         return await unreliable_service()
 
-    async def main():
+    async def main(self) -> None:
         print("Testing Circuit Breaker Implementation")
 
         # Test multiple calls

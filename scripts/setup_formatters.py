@@ -12,13 +12,13 @@ from pathlib import Path
 class FormatterSetup:
     """Setup and validation for code formatters"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.python_dirs = ["src", "tests", "scripts"]
         self.js_ts_patterns = ["**/*.js", "**/*.ts", "**/*.tsx", "**/*.json"]
 
     def run_command(
-        self, command: list[str], description: str, check: bool = True
+        self, command: List[str], description: str, check: bool = True
     ) -> tuple[bool, str]:
         """Run a command and return success status and output"""
         print(f"\n🔄 {description}")
@@ -221,9 +221,7 @@ echo "✅ Pre-commit formatting completed successfully!"
             hook_file.chmod(0o755)
             print(f"✅ Pre-commit hook created: {hook_file}")
         else:
-            print(
-                "⚠️  Git hooks directory not found, skipping pre-commit hook creation"
-            )
+            print("⚠️  Git hooks directory not found, skipping pre-commit hook creation")
 
     def run_comprehensive_check(self, fix: bool = False) -> bool:
         """Run comprehensive formatting validation"""
@@ -263,18 +261,15 @@ echo "✅ Pre-commit formatting completed successfully!"
             print("📝 Use 'npm run format' to format all files")
             print("🔍 Use 'npm run format:check' to check formatting")
             return True
+        if not fix:
+            print("⚠️  Some files need formatting. Run with --fix to apply changes.")
+            print("🔧 Quick fix: npm run format")
         else:
-            if not fix:
-                print(
-                    "⚠️  Some files need formatting. Run with --fix to apply changes."
-                )
-                print("🔧 Quick fix: npm run format")
-            else:
-                print("❌ Some formatting issues could not be automatically fixed")
-            return False
+            print("❌ Some formatting issues could not be automatically fixed")
+        return False
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     import argparse
 

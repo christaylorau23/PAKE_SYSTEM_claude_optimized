@@ -200,7 +200,7 @@ jwt_secret = await get_jwt_secret()
    # Remove old hardcoded values
    unset API_KEY_FALLBACK
    unset SECRET_KEY_FALLBACK
-   
+
    # Set proper environment variables
    export API_KEY="your-secure-api-key"
    export SECRET_KEY="your-secure-jwt-secret"
@@ -279,7 +279,7 @@ jwt_secret = await get_jwt_secret()
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: September 27, 2025  
-**Security Classification**: Internal Use Only  
+**Document Version**: 1.0
+**Last Updated**: September 27, 2025
+**Security Classification**: Internal Use Only
 **Review Required**: Every 90 days

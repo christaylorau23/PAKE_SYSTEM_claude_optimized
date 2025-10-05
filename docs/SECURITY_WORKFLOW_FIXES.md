@@ -120,6 +120,6 @@ curl -X GET "https://context7.com/api/v1/search?query=github+actions+security+wo
 
 ---
 
-**Fix Applied:** September 2, 2025  
-**Workflow File:** `.github/workflows/security-audit.yml`  
+**Fix Applied:** September 2, 2025
+**Workflow File:** `.github/workflows/security-audit.yml`
 **Status:** ✅ Ready for testing

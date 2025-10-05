@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
-def test_vault_integration():
+def test_vault_integration(self) -> None:
     """Test configuration loading from Vault."""
     print("\n" + "=" * 60)
     print("Test 1: Loading Configuration from Vault")
@@ -59,7 +59,7 @@ def test_vault_integration():
         return False
 
 
-def test_environment_fallback():
+def test_environment_fallback(self) -> None:
     """Test configuration loading from environment variables."""
     print("\n" + "=" * 60)
     print("Test 2: Loading Configuration from Environment Variables")
@@ -102,7 +102,7 @@ def test_environment_fallback():
         return False
 
 
-def test_vault_priority():
+def test_vault_priority(self) -> None:
     """Test that environment variables override Vault values."""
     print("\n" + "=" * 60)
     print("Test 3: Environment Variable Override (Priority Test)")
@@ -142,7 +142,7 @@ def test_vault_priority():
         return False
 
 
-def test_vault_client_health():
+def test_vault_client_health(self) -> None:
     """Test Vault client health check."""
     print("\n" + "=" * 60)
     print("Test 4: Vault Client Health Check")
@@ -165,7 +165,7 @@ def test_vault_client_health():
         return False
 
 
-def main():
+def main(self) -> None:
     """Run all integration tests."""
     print("\n" + "=" * 70)
     print("PAKE System - Vault Integration Test Suite")
@@ -203,9 +203,8 @@ def main():
     if passed == total:
         print("🎉 All tests passed! Vault integration is working correctly.")
         return 0
-    else:
-        print("⚠️  Some tests failed. Please review the errors above.")
-        return 1
+    print("⚠️  Some tests failed. Please review the errors above.")
+    return 1
 
 
 if __name__ == "__main__":

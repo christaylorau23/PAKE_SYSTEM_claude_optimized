@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -51,7 +51,7 @@ except ImportError:
 
 
 class Environment(Enum):
-    """Environment types"""
+    """Environment types."""
 
     DEVELOPMENT = "development"
     STAGING = "staging"
@@ -60,7 +60,7 @@ class Environment(Enum):
 
 
 class ConfigSource(Enum):
-    """Configuration source types"""
+    """Configuration source types."""
 
     ENVIRONMENT = "environment"
     FILE = "file"
@@ -72,7 +72,7 @@ class ConfigSource(Enum):
 
 @dataclass
 class LoggingServiceConfig:
-    """Configuration for logging service"""
+    """Configuration for logging service."""
 
     # Basic settings
     service_name: str = "pake-system"
@@ -143,39 +143,41 @@ class LoggingServiceConfig:
         default_factory=lambda: os.getenv("LOG_TRACING", "true").lower() == "true"
     )
 
-    def __post_init__(self):
-        """Validate configuration"""
+    def __post_init__(self) -> None:
+        """Validate configuration."""
         # Validate log level
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if self.log_level.upper() not in valid_levels:
-            raise ValueError(
-                f"Invalid log level: {self.log_level}. Must be one of {valid_levels}"
-            )
+            msg = f"Invalid log level: {self.log_level}. Must be one of {valid_levels}"
+            raise ValueError(msg)
 
         # Validate security level
         valid_security_levels = ["public", "internal", "confidential", "restricted"]
         if self.security_level.lower() not in valid_security_levels:
-            raise ValueError(
-                f"Invalid security level: {self.security_level}. Must be one of {valid_security_levels}"
-            )
+            msg = f"Invalid security level: {self.security_level}. Must be one of {valid_security_levels}"
+            raise ValueError(msg)
 
         # Validate numeric values
         if self.max_file_size_mb <= 0:
-            raise ValueError("Max file size must be positive")
+            msg = "Max file size must be positive"
+            raise ValueError(msg)
 
         if self.backup_count < 0:
-            raise ValueError("Backup count cannot be negative")
+            msg = "Backup count cannot be negative"
+            raise ValueError(msg)
 
         if self.buffer_size <= 0:
-            raise ValueError("Buffer size must be positive")
+            msg = "Buffer size must be positive"
+            raise ValueError(msg)
 
         if self.flush_interval_seconds <= 0:
-            raise ValueError("Flush interval must be positive")
+            msg = "Flush interval must be positive"
+            raise ValueError(msg)
 
 
 @dataclass
 class MonitoringServiceConfig:
-    """Configuration for monitoring service"""
+    """Configuration for monitoring service."""
 
     # Basic settings
     service_name: str = "pake-system"
@@ -250,22 +252,27 @@ class MonitoringServiceConfig:
         default_factory=lambda: os.getenv("GRAFANA_URL", "http://localhost:3000")
     )
 
-    def __post_init__(self):
-        """Validate configuration"""
+    def __post_init__(self) -> None:
+        """Validate configuration."""
         if self.collection_interval_seconds <= 0:
-            raise ValueError("Collection interval must be positive")
+            msg = "Collection interval must be positive"
+            raise ValueError(msg)
 
         if self.health_check_interval_seconds <= 0:
-            raise ValueError("Health check interval must be positive")
+            msg = "Health check interval must be positive"
+            raise ValueError(msg)
 
         if not (0 <= self.cpu_threshold_percent <= 100):
-            raise ValueError("CPU threshold must be between 0 and 100")
+            msg = "CPU threshold must be between 0 and 100"
+            raise ValueError(msg)
 
         if not (0 <= self.memory_threshold_percent <= 100):
-            raise ValueError("Memory threshold must be between 0 and 100")
+            msg = "Memory threshold must be between 0 and 100"
+            raise ValueError(msg)
 
         if not (0 <= self.disk_threshold_percent <= 100):
-            raise ValueError("Disk threshold must be between 0 and 100")
+            msg = "Disk threshold must be between 0 and 100"
+            raise ValueError(msg)
 
 
 class LoggingConfigService:
@@ -274,24 +281,24 @@ class LoggingConfigService:
     - Dynamic configuration updates
     - Configuration validation
     - Hot-reloading of logging settings
-    - Integration with external configuration sources
+    - Integration with external configuration sources.
     """
 
-    def __init__(self, config_file: str = None):
+    def __init__(self) -> None:
         self.config_file = config_file or "logging_config.yaml"
-        self.logging_config: Optional[LoggingServiceConfig] = None
-        self.monitoring_config: Optional[MonitoringServiceConfig] = None
+        self.logging_config: LoggingServiceConfig | None = None
+        self.monitoring_config: MonitoringServiceConfig | None = None
         self.config_sources: list[ConfigSource] = [
             ConfigSource.ENVIRONMENT,
             ConfigSource.FILE,
         ]
-        self.last_modified: Optional[datetime] = None
+        self.last_modified: datetime | None = None
 
         # Load initial configuration
         self._load_configuration()
 
-    def _load_configuration(self):
-        """Load configuration from all sources"""
+    def _load_configuration(self) -> None:
+        """Load configuration from all sources."""
         try:
             # Load from environment variables first
             self.logging_config = LoggingServiceConfig()
@@ -310,8 +317,8 @@ class LoggingConfigService:
             self.logging_config = LoggingServiceConfig()
             self.monitoring_config = MonitoringServiceConfig()
 
-    def _load_from_file(self):
-        """Load configuration from YAML file"""
+    def _load_from_file(self) -> None:
+        """Load configuration from YAML file."""
         try:
             with open(self.config_file) as f:
                 config_data = yaml.safe_load(f)
@@ -339,8 +346,8 @@ class LoggingConfigService:
         except Exception as e:
             print(f"Failed to load configuration from file: {e}")
 
-    def _validate_configurations(self):
-        """Validate both configurations"""
+    def _validate_configurations(self) -> None:
+        """Validate both configurations."""
         if self.logging_config:
             # Re-run post_init validation
             self.logging_config.__post_init__()
@@ -350,19 +357,19 @@ class LoggingConfigService:
             self.monitoring_config.__post_init__()
 
     def get_logging_config(self) -> LoggingServiceConfig:
-        """Get current logging configuration"""
+        """Get current logging configuration."""
         if self.logging_config is None:
             self.logging_config = LoggingServiceConfig()
         return self.logging_config
 
     def get_monitoring_config(self) -> MonitoringServiceConfig:
-        """Get current monitoring configuration"""
+        """Get current monitoring configuration."""
         if self.monitoring_config is None:
             self.monitoring_config = MonitoringServiceConfig()
         return self.monitoring_config
 
-    def update_logging_config(self, **kwargs):
-        """Update logging configuration dynamically"""
+    def update_logging_config(self) -> None:
+        """Update logging configuration dynamically."""
         if self.logging_config is None:
             self.logging_config = LoggingServiceConfig()
 
@@ -373,8 +380,8 @@ class LoggingConfigService:
         # Validate updated configuration
         self._validate_configurations()
 
-    def update_monitoring_config(self, **kwargs):
-        """Update monitoring configuration dynamically"""
+    def update_monitoring_config(self) -> None:
+        """Update monitoring configuration dynamically."""
         if self.monitoring_config is None:
             self.monitoring_config = MonitoringServiceConfig()
 
@@ -385,12 +392,12 @@ class LoggingConfigService:
         # Validate updated configuration
         self._validate_configurations()
 
-    def reload_configuration(self):
-        """Reload configuration from all sources"""
+    def reload_configuration(self) -> None:
+        """Reload configuration from all sources."""
         self._load_configuration()
 
     def check_configuration_changes(self) -> bool:
-        """Check if configuration file has changed"""
+        """Check if configuration file has changed."""
         if not Path(self.config_file).exists():
             return False
 
@@ -404,8 +411,8 @@ class LoggingConfigService:
 
         return False
 
-    def save_configuration(self, file_path: str = None):
-        """Save current configuration to file"""
+    def save_configuration(self) -> None:
+        """Save current configuration to file."""
         save_path = file_path or self.config_file
 
         config_data = {
@@ -466,8 +473,8 @@ class LoggingConfigService:
         except Exception as e:
             print(f"Failed to save configuration: {e}")
 
-    def get_configuration_summary(self) -> dict[str, Any]:
-        """Get configuration summary"""
+    def get_configuration_summary(self) -> Dict[str, Any]:
+        """Get configuration summary."""
         return {
             "timestamp": datetime.now(UTC).isoformat(),
             "config_file": self.config_file,
@@ -504,8 +511,8 @@ class LoggingConfigService:
             },
         }
 
-    def validate_environment(self) -> dict[str, Any]:
-        """Validate current environment configuration"""
+    def validate_environment(self) -> Dict[str, Any]:
+        """Validate current environment configuration."""
         validation_results = {
             "timestamp": datetime.now(UTC).isoformat(),
             "environment": self.logging_config.environment
@@ -574,11 +581,11 @@ class LoggingConfigService:
 # ========================================================================
 
 # Create global configuration instance
-_global_config: Optional[LoggingConfigService] = None
+_global_config: LoggingConfigService | None = None
 
 
 def get_config_service(config_file: str = None) -> LoggingConfigService:
-    """Get or create global configuration service instance"""
+    """Get or create global configuration service instance."""
     global _global_config
     if _global_config is None:
         _global_config = LoggingConfigService(config_file)
@@ -587,17 +594,17 @@ def get_config_service(config_file: str = None) -> LoggingConfigService:
 
 # Convenience functions for quick access
 def get_logging_config() -> LoggingServiceConfig:
-    """Get current logging configuration"""
+    """Get current logging configuration."""
     return get_config_service().get_logging_config()
 
 
 def get_monitoring_config() -> MonitoringServiceConfig:
-    """Get current monitoring configuration"""
+    """Get current monitoring configuration."""
     return get_config_service().get_monitoring_config()
 
 
-def reload_configuration():
-    """Reload configuration from all sources"""
+def reload_configuration(self) -> None:
+    """Reload configuration from all sources."""
     get_config_service().reload_configuration()
 
 

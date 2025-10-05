@@ -1,11 +1,11 @@
-"""Knowledge Graph Service
+"""Knowledge Graph Service.
 
 Provides high-level knowledge graph operations for the PAKE System.
 Handles entity extraction from text, relationship inference, and graph visualization.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from .entity_service import (
@@ -25,14 +25,14 @@ class KnowledgeGraphService:
     relationship inference, and graph analytics for research intelligence.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.entity_service = get_entity_service()
         self.neo4j_service = get_neo4j_service()
 
     async def process_document_entities(
         self,
-        document_data: dict[str, Any],
-    ) -> dict[str, Any]:
+        document_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Process a document and extract entities to knowledge graph.
 
         Args:
@@ -64,7 +64,7 @@ class KnowledgeGraphService:
                 "processing_time_ms": 0,
             }
 
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
 
             # Extract entities from content if available
             if document_data.get("content"):
@@ -86,27 +86,28 @@ class KnowledgeGraphService:
                 )
 
             # Calculate processing time
-            end_time = datetime.utcnow()
+            end_time = datetime.now(UTC)
             processing_time = (end_time - start_time).total_seconds() * 1000
             results["processing_time_ms"] = round(processing_time, 2)
 
             logger.info(
-                f"Processed document {document_id}: "
-                f"{len(results['entities_created'])} entities, "
-                f"{len(results['relationships_created'])} relationships",
+                "Processed document %s: %d entities, %d relationships",
+                document_id,
+                len(results["entities_created"]),
+                len(results["relationships_created"]),
             )
 
             return results
 
         except Exception as e:
-            logger.error(f"Error processing document entities: {e}")
+            logger.error("Error processing document entities: %s", e)
             return {"success": False, "error": str(e)}
 
     async def _extract_entities_from_text(
         self,
         text: str,
         document_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Extract entities from text content using simple pattern matching.
 
         Note: This is a basic implementation. In production, you would use
@@ -238,14 +239,14 @@ class KnowledgeGraphService:
             }
 
         except Exception as e:
-            logger.error(f"Error extracting entities from text: {e}")
+            logger.error("Error extracting entities from text: %s", e)
             return {"entities_created": [], "relationships_created": []}
 
     async def _process_authors(
         self,
-        authors: list[str],
+        authors: List[str],
         document_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Process author information and create entities/relationships."""
         entities_created = []
         relationships_created = []
@@ -287,15 +288,15 @@ class KnowledgeGraphService:
             }
 
         except Exception as e:
-            logger.error(f"Error processing authors: {e}")
+            logger.error("Error processing authors: %s", e)
             return {"entities_created": [], "relationships_created": []}
 
     async def get_knowledge_graph_visualization(
         self,
         center_entity_id: str | None = None,
-        entity_types: list[str] | None = None,
+        entity_types: List[str] | None = None,
         max_nodes: int = 50,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get knowledge graph data for visualization.
 
         Args:
@@ -331,12 +332,12 @@ class KnowledgeGraphService:
                     "node_count": len(visualization_data["nodes"]),
                     "edge_count": len(visualization_data["edges"]),
                     "center_entity": center_entity_id,
-                    "generated_at": datetime.utcnow().isoformat(),
+                    "generated_at": datetime.now(UTC).isoformat(),
                 },
             }
 
         except Exception as e:
-            logger.error(f"Error getting knowledge graph visualization: {e}")
+            logger.error("Error getting knowledge graph visualization: %s", e)
             return {
                 "success": False,
                 "error": str(e),
@@ -345,16 +346,13 @@ class KnowledgeGraphService:
 
     async def _get_sample_graph(
         self,
-        entity_types: list[str] | None = None,
+        entity_types: List[str] | None = None,
         max_nodes: int = 50,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get a sample of the knowledge graph."""
         try:
             # Build query to get sample nodes and their relationships
-            if entity_types:
-                type_filter = ":" + "|".join(entity_types)
-            else:
-                type_filter = ""
+            type_filter = ":" + "|".join(entity_types) if entity_types else ""
 
             query = f"""
             MATCH (n{type_filter})
@@ -389,10 +387,10 @@ class KnowledgeGraphService:
             return {"nodes": [], "relationships": []}
 
         except Exception as e:
-            logger.error(f"Error getting sample graph: {e}")
+            logger.error("Error getting sample graph: %s", e)
             return {"nodes": [], "relationships": []}
 
-    def _format_for_visualization(self, graph_data: dict[str, Any]) -> dict[str, Any]:
+    def _format_for_visualization(self, graph_data: Dict[str, Any]) -> Dict[str, Any]:
         """Format graph data for frontend visualization."""
         try:
             nodes = []
@@ -477,10 +475,10 @@ class KnowledgeGraphService:
             return {"nodes": nodes, "edges": edges}
 
         except Exception as e:
-            logger.error(f"Error formatting graph data for visualization: {e}")
+            logger.error("Error formatting graph data for visualization: %s", e)
             return {"nodes": [], "edges": []}
 
-    async def get_entity_insights(self, entity_id: str) -> dict[str, Any]:
+    async def get_entity_insights(self, entity_id: str) -> Dict[str, Any]:
         """Get insights about a specific entity.
 
         Args:
@@ -515,14 +513,14 @@ class KnowledgeGraphService:
                 "relationship_count": len(relationships),
                 "relationship_analysis": relationship_analysis,
                 "network_metrics": network_metrics,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Error getting entity insights for {entity_id}: {e}")
+            logger.error("Error getting entity insights for %s: %s", entity_id, e)
             return {"success": False, "error": str(e)}
 
-    def _analyze_relationships(self, relationships: list[dict]) -> dict[str, Any]:
+    def _analyze_relationships(self, relationships: list[dict]) -> Dict[str, Any]:
         """Analyze entity relationships for insights."""
         if not relationships:
             return {"total": 0, "by_type": {}, "most_common_type": None}
@@ -541,7 +539,7 @@ class KnowledgeGraphService:
             "unique_types": len(by_type),
         }
 
-    async def _get_entity_network_metrics(self, entity_id: str) -> dict[str, Any]:
+    async def _get_entity_network_metrics(self, entity_id: str) -> Dict[str, Any]:
         """Calculate network metrics for an entity."""
         try:
             # Simple network metrics
@@ -567,10 +565,10 @@ class KnowledgeGraphService:
             return {"degree": 0, "relationship_count": 0}
 
         except Exception as e:
-            logger.error(f"Error calculating network metrics: {e}")
+            logger.error("Error calculating network metrics: %s", e)
             return {"degree": 0, "relationship_count": 0}
 
-    async def get_graph_statistics(self) -> dict[str, Any]:
+    async def get_graph_statistics(self) -> Dict[str, Any]:
         """Get comprehensive knowledge graph statistics."""
         try:
             if not self.neo4j_service.driver:
@@ -587,11 +585,11 @@ class KnowledgeGraphService:
                 "basic_stats": stats,
                 "entity_distribution": entity_distribution,
                 "relationship_distribution": relationship_distribution,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Error getting graph statistics: {e}")
+            logger.error("Error getting graph statistics: %s", e)
             return {"success": False, "error": str(e)}
 
     async def _get_entity_type_distribution(self) -> dict[str, int]:
@@ -619,7 +617,7 @@ class KnowledgeGraphService:
             return distribution
 
         except Exception as e:
-            logger.error(f"Error getting entity type distribution: {e}")
+            logger.error("Error getting entity type distribution: %s", e)
             return {}
 
     async def _get_relationship_type_distribution(self) -> dict[str, int]:
@@ -642,7 +640,7 @@ class KnowledgeGraphService:
             return distribution
 
         except Exception as e:
-            logger.error(f"Error getting relationship type distribution: {e}")
+            logger.error("Error getting relationship type distribution: %s", e)
             return {}
 
 

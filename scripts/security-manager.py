@@ -10,7 +10,7 @@ import json
 import logging
 import subprocess
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -27,10 +27,10 @@ class SecurityManager:
     Comprehensive security management for the PAKE System
     """
 
-    def __init__(self, project_root: Path):
+    def __init__(self) -> None:
         self.project_root = project_root
         self.results = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "nodejs_services": {},
             "python_services": {},
             "docker_images": {},
@@ -42,19 +42,19 @@ class SecurityManager:
             },
         }
 
-    async def audit_nodejs_service(self, service_path: Path) -> dict[str, Any]:
+    async def audit_nodejs_service(self, service_path: Path) -> Dict[str, Any]:
         """Audit a Node.js service for vulnerabilities"""
         service_name = service_path.name
-        logger.info(f"Auditing Node.js service: {service_name}")
+        logger.info("Auditing Node.js service: %s", service_name)
 
         if not (service_path / "package.json").exists():
-            logger.warning(f"No package.json found in {service_path}")
+            logger.warning("No package.json found in %s", service_path)
             return {"error": "No package.json found"}
 
         try:
             # Install dependencies if needed
             if not (service_path / "node_modules").exists():
-                logger.info(f"Installing dependencies for {service_name}")
+                logger.info("Installing dependencies for %s", service_name)
                 subprocess.run(
                     ["npm", "ci", "--audit=false"],
                     cwd=service_path,
@@ -98,7 +98,7 @@ class SecurityManager:
             }
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"npm audit failed for {service_name}: {e}")
+            logger.error("npm audit failed for %s: %s", service_name, e)
             return {
                 "service": service_name,
                 "path": str(service_path),
@@ -106,7 +106,7 @@ class SecurityManager:
                 "status": "error",
             }
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse npm audit output for {service_name}: {e}")
+            logger.error("Failed to parse npm audit output for %s: %s", service_name, e)
             return {
                 "service": service_name,
                 "path": str(service_path),
@@ -114,14 +114,14 @@ class SecurityManager:
                 "status": "error",
             }
 
-    async def audit_python_service(self, service_path: Path) -> dict[str, Any]:
+    async def audit_python_service(self, service_path: Path) -> Dict[str, Any]:
         """Audit a Python service for vulnerabilities"""
         service_name = service_path.name
-        logger.info(f"Auditing Python service: {service_name}")
+        logger.info("Auditing Python service: %s", service_name)
 
         requirements_file = service_path / "requirements.txt"
         if not requirements_file.exists():
-            logger.warning(f"No requirements.txt found in {service_path}")
+            logger.warning("No requirements.txt found in %s", service_path)
             return {"error": "No requirements.txt found"}
 
         try:
@@ -161,7 +161,7 @@ class SecurityManager:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error(f"Safety check timed out for {service_name}")
+            logger.error("Safety check timed out for %s", service_name)
             return {
                 "service": service_name,
                 "path": str(service_path),
@@ -169,7 +169,7 @@ class SecurityManager:
                 "status": "error",
             }
         except subprocess.CalledProcessError as e:
-            logger.error(f"Safety check failed for {service_name}: {e}")
+            logger.error("Safety check failed for %s: %s", service_name, e)
             return {
                 "service": service_name,
                 "path": str(service_path),
@@ -177,7 +177,7 @@ class SecurityManager:
                 "status": "error",
             }
 
-    async def scan_docker_images(self) -> dict[str, Any]:
+    async def scan_docker_images(self) -> Dict[str, Any]:
         """Scan Docker images for vulnerabilities"""
         logger.info("Scanning Docker images")
 
@@ -191,7 +191,7 @@ class SecurityManager:
         for dockerfile_path in dockerfile_paths:
             if dockerfile_path.exists():
                 service_name = dockerfile_path.parent.name
-                logger.info(f"Analyzing Dockerfile for {service_name}")
+                logger.info("Analyzing Dockerfile for %s", service_name)
 
                 try:
                     # Run hadolint for Dockerfile best practices
@@ -230,7 +230,7 @@ class SecurityManager:
     async def fix_nodejs_vulnerabilities(self, service_path: Path) -> bool:
         """Attempt to fix Node.js vulnerabilities automatically"""
         service_name = service_path.name
-        logger.info(f"Attempting to fix vulnerabilities in {service_name}")
+        logger.info("Attempting to fix vulnerabilities in %s", service_name)
 
         try:
             # Try npm audit fix
@@ -243,18 +243,19 @@ class SecurityManager:
             )
 
             if result.returncode == 0:
-                logger.info(f"Successfully fixed vulnerabilities in {service_name}")
+                logger.info("Successfully fixed vulnerabilities in %s", service_name)
                 return True
             logger.warning(
-                f"Some vulnerabilities could not be auto-fixed in {service_name}",
+                "Some vulnerabilities could not be auto-fixed in %s",
+                service_name,
             )
             return False
 
         except subprocess.TimeoutExpired:
-            logger.error(f"npm audit fix timed out for {service_name}")
+            logger.error("npm audit fix timed out for %s", service_name)
             return False
         except subprocess.CalledProcessError as e:
-            logger.error(f"npm audit fix failed for {service_name}: {e}")
+            logger.error("npm audit fix failed for %s: %s", service_name, e)
             return False
 
     async def generate_security_report(self) -> str:
@@ -325,7 +326,7 @@ class SecurityManager:
 
         return "\\n".join(report)
 
-    async def run_full_audit(self, fix_issues: bool = False) -> dict[str, Any]:
+    async def run_full_audit(self, fix_issues: bool = False) -> Dict[str, Any]:
         """Run a comprehensive security audit"""
         logger.info("Starting comprehensive security audit")
 
@@ -397,13 +398,13 @@ class SecurityManager:
         with open(report_file, "w") as f:
             f.write(report)
 
-        logger.info(f"Security audit complete. Results saved to {results_file}")
-        logger.info(f"Security report saved to {report_file}")
+        logger.info("Security audit complete. Results saved to %s", results_file)
+        logger.info("Security report saved to %s", report_file)
 
         return self.results
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Security Manager")
     parser.add_argument(
@@ -425,7 +426,7 @@ async def main():
         not (args.project_root / "package.json").exists()
         and not (args.project_root / "frontend").exists()
     ):
-        logger.error(f"Invalid project root: {args.project_root}")
+        logger.error("Invalid project root: %s", args.project_root)
         sys.exit(1)
 
     # Run security audit

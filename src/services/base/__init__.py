@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Base Service Components
-Provides common base classes and utilities for all services
+Provides common base classes and utilities for all services.
 """
 
 from .mixins import CacheMixin, LoggingMixin, MetricsMixin, RetryMixin, ValidationMixin

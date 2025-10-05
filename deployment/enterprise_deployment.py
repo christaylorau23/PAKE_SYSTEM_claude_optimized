@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
-"""
-PAKE System - Enterprise Deployment Configuration
-Phase 2B Sprint 4: Production-ready deployment orchestration and configuration
+"""PAKE System - Enterprise Deployment Configuration
+Phase 2B Sprint 4: Production-ready deployment orchestration and configuration.
 
 Provides enterprise-grade deployment configuration, service orchestration,
 health monitoring, and production readiness validation.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
-import os
-import subprocess
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import TYPE_CHECKING, Any
+
 import yaml
+
+if TYPE_CHECKING:
+    import subprocess
 
 logger = logging.getLogger(__name__)
 
 
 class DeploymentEnvironment(Enum):
-    """Deployment environment types"""
+    """Deployment environment types."""
+
     DEVELOPMENT = "development"
     STAGING = "staging"
     PRODUCTION = "production"
@@ -33,7 +35,8 @@ class DeploymentEnvironment(Enum):
 
 
 class ServiceStatus(Enum):
-    """Service deployment status"""
+    """Service deployment status."""
+
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"
@@ -43,7 +46,8 @@ class ServiceStatus(Enum):
 
 
 class HealthCheckStatus(Enum):
-    """Health check status levels"""
+    """Health check status levels."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -52,19 +56,20 @@ class HealthCheckStatus(Enum):
 
 @dataclass
 class ServiceConfig:
-    """Configuration for individual service deployment"""
+    """Configuration for individual service deployment."""
+
     name: str
     version: str
-    image: Optional[str] = None
+    image: str | None = None
     replicas: int = 1
     port: int = 8000
     health_check_path: str = "/health"
-    environment_variables: Dict[str, str] = field(default_factory=dict)
-    resource_limits: Dict[str, str] = field(default_factory=dict)
-    dependencies: List[str] = field(default_factory=list)
+    environment_variables: dict[str, str] = field(default_factory=dict)
+    resource_limits: dict[str, str] = field(default_factory=dict)
+    dependencies: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
         return {
             "name": self.name,
             "version": self.version,
@@ -74,39 +79,40 @@ class ServiceConfig:
             "health_check_path": self.health_check_path,
             "environment_variables": self.environment_variables,
             "resource_limits": self.resource_limits,
-            "dependencies": self.dependencies
+            "dependencies": self.dependencies,
         }
 
 
 @dataclass
 class DeploymentConfig:
-    """Enterprise deployment configuration"""
+    """Enterprise deployment configuration."""
+
     environment: DeploymentEnvironment = DeploymentEnvironment.DEVELOPMENT
     namespace: str = "pake-system"
     cluster_name: str = "pake-cluster"
 
     # Service configurations
-    services: List[ServiceConfig] = field(default_factory=list)
+    services: list[ServiceConfig] = field(default_factory=list)
 
     # Infrastructure settings
-    database_config: Dict[str, Any] = field(default_factory=dict)
-    cache_config: Dict[str, Any] = field(default_factory=dict)
-    monitoring_config: Dict[str, Any] = field(default_factory=dict)
+    database_config: dict[str, Any] = field(default_factory=dict)
+    cache_config: dict[str, Any] = field(default_factory=dict)
+    monitoring_config: dict[str, Any] = field(default_factory=dict)
 
     # Security settings
     enable_tls: bool = True
-    secret_management: Dict[str, str] = field(default_factory=dict)
-    network_policies: List[Dict[str, Any]] = field(default_factory=list)
+    secret_management: dict[str, str] = field(default_factory=dict)
+    network_policies: list[dict[str, Any]] = field(default_factory=list)
 
     # Performance settings
-    auto_scaling: Dict[str, Any] = field(default_factory=dict)
-    resource_quotas: Dict[str, str] = field(default_factory=dict)
+    auto_scaling: dict[str, Any] = field(default_factory=dict)
+    resource_quotas: dict[str, str] = field(default_factory=dict)
 
     # Backup and recovery
-    backup_config: Dict[str, Any] = field(default_factory=dict)
+    backup_config: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
         return {
             "environment": self.environment.value,
             "namespace": self.namespace,
@@ -120,93 +126,95 @@ class DeploymentConfig:
             "network_policies": self.network_policies,
             "auto_scaling": self.auto_scaling,
             "resource_quotas": self.resource_quotas,
-            "backup_config": self.backup_config
+            "backup_config": self.backup_config,
         }
 
 
 @dataclass
 class ServiceHealth:
-    """Service health status information"""
+    """Service health status information."""
+
     service_name: str
     status: HealthCheckStatus
     response_time_ms: float = 0.0
-    last_check: Optional[datetime] = None
-    error_message: Optional[str] = None
-    metrics: Dict[str, Any] = field(default_factory=dict)
+    last_check: datetime | None = None
+    error_message: str | None = None
+    metrics: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
         return {
             "service_name": self.service_name,
             "status": self.status.value,
             "response_time_ms": self.response_time_ms,
             "last_check": self.last_check.isoformat() if self.last_check else None,
             "error_message": self.error_message,
-            "metrics": self.metrics
+            "metrics": self.metrics,
         }
 
 
 @dataclass
 class DeploymentStatus:
-    """Overall deployment status"""
+    """Overall deployment status."""
+
     environment: DeploymentEnvironment
     deployment_id: str
     started_at: datetime
-    services: Dict[str, ServiceStatus] = field(default_factory=dict)
-    health_checks: Dict[str, ServiceHealth] = field(default_factory=dict)
+    services: dict[str, ServiceStatus] = field(default_factory=dict)
+    health_checks: dict[str, ServiceHealth] = field(default_factory=dict)
     overall_status: ServiceStatus = ServiceStatus.UNKNOWN
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
         return {
             "environment": self.environment.value,
             "deployment_id": self.deployment_id,
             "started_at": self.started_at.isoformat(),
             "services": {name: status.value for name, status in self.services.items()},
-            "health_checks": {name: health.to_dict() for name, health in self.health_checks.items()},
-            "overall_status": self.overall_status.value
+            "health_checks": {
+                name: health.to_dict() for name, health in self.health_checks.items()
+            },
+            "overall_status": self.overall_status.value,
         }
 
 
 class ServiceManager(ABC):
-    """Abstract base for service management implementations"""
+    """Abstract base for service management implementations."""
 
     @abstractmethod
     async def deploy_service(self, config: ServiceConfig) -> bool:
-        """Deploy a service with the given configuration"""
-        pass
+        """Deploy a service with the given configuration."""
 
     @abstractmethod
     async def stop_service(self, service_name: str) -> bool:
-        """Stop a running service"""
-        pass
+        """Stop a running service."""
 
     @abstractmethod
     async def get_service_status(self, service_name: str) -> ServiceStatus:
-        """Get current status of a service"""
-        pass
+        """Get current status of a service."""
 
     @abstractmethod
-    async def health_check(self, service_name: str, health_check_path: str) -> ServiceHealth:
-        """Perform health check on a service"""
-        pass
+    async def health_check(
+        self, service_name: str, health_check_path: str
+    ) -> ServiceHealth:
+        """Perform health check on a service."""
 
 
 class LocalServiceManager(ServiceManager):
-    """Local development service manager"""
+    """Local development service manager."""
 
-    def __init__(self):
-        self.running_processes: Dict[str, subprocess.Popen] = {}
-        self.service_ports: Dict[str, int] = {}
+    def __init__(self) -> None:
+        self.running_processes: dict[str, subprocess.Popen] = {}
+        self.service_ports: dict[str, int] = {}
 
     async def deploy_service(self, config: ServiceConfig) -> bool:
-        """Deploy service locally using subprocess"""
+        """Deploy service locally using subprocess."""
         try:
             if config.name in self.running_processes:
                 await self.stop_service(config.name)
 
             # Simulate service deployment
-            logger.info(f"Deploying {config.name} locally on port {config.port}")
+            logger.info("Deploying %s locally on port %s", config.name, config.port)
 
             # In a real implementation, this would start the actual service
             # For simulation, we'll just track the configuration
@@ -219,32 +227,34 @@ class LocalServiceManager(ServiceManager):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to deploy {config.name}: {e}")
+            logger.error("Failed to deploy %s: %s", config.name, e)
             return False
 
     async def stop_service(self, service_name: str) -> bool:
-        """Stop a locally running service"""
+        """Stop a locally running service."""
         try:
             if service_name in self.running_processes:
                 # In real implementation, would terminate the process
                 del self.running_processes[service_name]
                 if service_name in self.service_ports:
                     del self.service_ports[service_name]
-                logger.info(f"Stopped {service_name}")
+                logger.info("Stopped %s", service_name)
                 return True
             return False
         except Exception as e:
-            logger.error(f"Failed to stop {service_name}: {e}")
+            logger.error("Failed to stop %s: %s", service_name, e)
             return False
 
     async def get_service_status(self, service_name: str) -> ServiceStatus:
-        """Get status of local service"""
+        """Get status of local service."""
         if service_name in self.running_processes:
             return ServiceStatus.RUNNING
         return ServiceStatus.STOPPED
 
-    async def health_check(self, service_name: str, health_check_path: str) -> ServiceHealth:
-        """Perform health check on local service"""
+    async def health_check(
+        self, service_name: str, health_check_path: str
+    ) -> ServiceHealth:
+        """Perform health check on local service."""
         start_time = time.time()
 
         try:
@@ -258,16 +268,15 @@ class LocalServiceManager(ServiceManager):
                     service_name=service_name,
                     status=HealthCheckStatus.HEALTHY,
                     response_time_ms=response_time,
-                    last_check=datetime.now(timezone.utc),
-                    metrics={"uptime": "simulated"}
+                    last_check=datetime.now(UTC),
+                    metrics={"uptime": "simulated"},
                 )
-            else:
-                return ServiceHealth(
-                    service_name=service_name,
-                    status=HealthCheckStatus.UNHEALTHY,
-                    last_check=datetime.now(timezone.utc),
-                    error_message="Service not running"
-                )
+            return ServiceHealth(
+                service_name=service_name,
+                status=HealthCheckStatus.UNHEALTHY,
+                last_check=datetime.now(UTC),
+                error_message="Service not running",
+            )
 
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
@@ -275,30 +284,33 @@ class LocalServiceManager(ServiceManager):
                 service_name=service_name,
                 status=HealthCheckStatus.UNHEALTHY,
                 response_time_ms=response_time,
-                last_check=datetime.now(timezone.utc),
-                error_message=str(e)
+                last_check=datetime.now(UTC),
+                error_message=str(e),
             )
 
 
 class ConfigurationValidator:
-    """Validates deployment configurations for production readiness"""
+    """Validates deployment configurations for production readiness."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.validation_rules = {
             DeploymentEnvironment.PRODUCTION: self._production_rules,
             DeploymentEnvironment.STAGING: self._staging_rules,
-            DeploymentEnvironment.DEVELOPMENT: self._development_rules
+            DeploymentEnvironment.DEVELOPMENT: self._development_rules,
         }
 
-    async def validate_configuration(self, config: DeploymentConfig) -> Tuple[bool, List[str]]:
-        """
-        Validate deployment configuration.
-        Returns: (is_valid, list_of_issues)
+    async def validate_configuration(
+        self, config: DeploymentConfig
+    ) -> tuple[bool, list[str]]:
+        """Validate deployment configuration.
+        Returns: (is_valid, list_of_issues).
         """
         issues = []
 
         # Get environment-specific validation rules
-        validator = self.validation_rules.get(config.environment, self._development_rules)
+        validator = self.validation_rules.get(
+            config.environment, self._development_rules
+        )
         issues.extend(await validator(config))
 
         # Common validation rules
@@ -306,8 +318,10 @@ class ConfigurationValidator:
 
         return len(issues) == 0, issues
 
-    async def _validate_common_requirements(self, config: DeploymentConfig) -> List[str]:
-        """Validate common requirements across all environments"""
+    async def _validate_common_requirements(
+        self, config: DeploymentConfig
+    ) -> list[str]:
+        """Validate common requirements across all environments."""
         issues = []
 
         # Check service configurations
@@ -328,12 +342,14 @@ class ConfigurationValidator:
         for service in config.services:
             for dep in service.dependencies:
                 if dep not in service_names:
-                    issues.append(f"Service {service.name} depends on undefined service {dep}")
+                    issues.append(
+                        f"Service {service.name} depends on undefined service {dep}"
+                    )
 
         return issues
 
-    async def _production_rules(self, config: DeploymentConfig) -> List[str]:
-        """Production-specific validation rules"""
+    async def _production_rules(self, config: DeploymentConfig) -> list[str]:
+        """Production-specific validation rules."""
         issues = []
 
         # Security requirements
@@ -354,10 +370,14 @@ class ConfigurationValidator:
         # High availability requirements
         for service in config.services:
             if service.replicas < 2:
-                issues.append(f"Service {service.name} should have at least 2 replicas in production")
+                issues.append(
+                    f"Service {service.name} should have at least 2 replicas in production"
+                )
 
             if not service.resource_limits:
-                issues.append(f"Resource limits must be defined for service {service.name} in production")
+                issues.append(
+                    f"Resource limits must be defined for service {service.name} in production"
+                )
 
         # Monitoring requirements
         if not config.monitoring_config:
@@ -365,8 +385,8 @@ class ConfigurationValidator:
 
         return issues
 
-    async def _staging_rules(self, config: DeploymentConfig) -> List[str]:
-        """Staging-specific validation rules"""
+    async def _staging_rules(self, config: DeploymentConfig) -> list[str]:
+        """Staging-specific validation rules."""
         issues = []
 
         # Less strict than production but still important
@@ -375,21 +395,19 @@ class ConfigurationValidator:
 
         return issues
 
-    async def _development_rules(self, config: DeploymentConfig) -> List[str]:
-        """Development-specific validation rules"""
-        issues = []
+    async def _development_rules(self, config: DeploymentConfig) -> list[str]:
+        """Development-specific validation rules."""
+        return []
 
         # Minimal requirements for development
-        return issues
 
 
 class EnterpriseDeploymentOrchestrator:
-    """
-    Enterprise deployment orchestrator for PAKE system.
+    """Enterprise deployment orchestrator for PAKE system.
     Manages service deployment, health monitoring, and configuration validation.
     """
 
-    def __init__(self, config: DeploymentConfig, service_manager: ServiceManager = None):
+    def __init__(self) -> None:
         self.config = config
         self.service_manager = service_manager or LocalServiceManager()
         self.validator = ConfigurationValidator()
@@ -398,32 +416,34 @@ class EnterpriseDeploymentOrchestrator:
         self.deployment_status = DeploymentStatus(
             environment=config.environment,
             deployment_id=f"deployment_{int(time.time())}",
-            started_at=datetime.now(timezone.utc)
+            started_at=datetime.now(UTC),
         )
 
         # Service orchestration
-        self.service_startup_order: List[str] = []
+        self.service_startup_order: list[str] = []
         self.health_check_interval = 30  # seconds
-        self.health_monitoring_task: Optional[asyncio.Task] = None
+        self.health_monitoring_task: asyncio.Task | None = None
 
-        logger.info(f"Initialized Enterprise Deployment Orchestrator for {config.environment.value}")
+        logger.info(
+            "Initialized Enterprise Deployment Orchestrator for %s",
+            config.environment.value,
+        )
 
-    async def validate_deployment(self) -> Tuple[bool, List[str]]:
-        """Validate deployment configuration before starting"""
+    async def validate_deployment(self) -> tuple[bool, list[str]]:
+        """Validate deployment configuration before starting."""
         return await self.validator.validate_configuration(self.config)
 
     async def deploy(self) -> bool:
-        """
-        Deploy all services according to configuration.
+        """Deploy all services according to configuration.
         Returns True if deployment successful, False otherwise.
         """
-        logger.info(f"Starting deployment to {self.config.environment.value}")
+        logger.info("Starting deployment to %s", self.config.environment.value)
 
         try:
             # Validate configuration first
             is_valid, issues = await self.validate_deployment()
             if not is_valid:
-                logger.error(f"Configuration validation failed: {issues}")
+                logger.error("Configuration validation failed: %s", issues)
                 return False
 
             # Calculate service deployment order based on dependencies
@@ -433,21 +453,23 @@ class EnterpriseDeploymentOrchestrator:
             for service_name in self.service_startup_order:
                 service_config = self._get_service_config(service_name)
                 if not service_config:
-                    logger.error(f"Service configuration not found: {service_name}")
+                    logger.error("Service configuration not found: %s", service_name)
                     return False
 
-                logger.info(f"Deploying service: {service_name}")
+                logger.info("Deploying service: %s", service_name)
                 self.deployment_status.services[service_name] = ServiceStatus.STARTING
 
                 success = await self.service_manager.deploy_service(service_config)
 
                 if success:
-                    self.deployment_status.services[service_name] = ServiceStatus.RUNNING
-                    logger.info(f"Successfully deployed: {service_name}")
+                    self.deployment_status.services[service_name] = (
+                        ServiceStatus.RUNNING
+                    )
+                    logger.info("Successfully deployed: %s", service_name)
                 else:
                     self.deployment_status.services[service_name] = ServiceStatus.FAILED
                     self.deployment_status.overall_status = ServiceStatus.FAILED
-                    logger.error(f"Failed to deploy: {service_name}")
+                    logger.error("Failed to deploy: %s", service_name)
                     return False
 
                 # Brief pause between service deployments
@@ -463,34 +485,34 @@ class EnterpriseDeploymentOrchestrator:
             return True
 
         except Exception as e:
-            logger.error(f"Deployment failed: {e}")
+            logger.error("Deployment failed: %s", e)
             self.deployment_status.overall_status = ServiceStatus.FAILED
             return False
 
     async def stop_deployment(self) -> bool:
-        """Stop all deployed services"""
+        """Stop all deployed services."""
         logger.info("Stopping deployment")
 
         try:
             # Stop health monitoring
             if self.health_monitoring_task:
                 self.health_monitoring_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self.health_monitoring_task
-                except asyncio.CancelledError:
-                    pass
 
             # Stop services in reverse order
             for service_name in reversed(self.service_startup_order):
-                logger.info(f"Stopping service: {service_name}")
+                logger.info("Stopping service: %s", service_name)
                 self.deployment_status.services[service_name] = ServiceStatus.STOPPING
 
                 success = await self.service_manager.stop_service(service_name)
 
                 if success:
-                    self.deployment_status.services[service_name] = ServiceStatus.STOPPED
+                    self.deployment_status.services[service_name] = (
+                        ServiceStatus.STOPPED
+                    )
                 else:
-                    logger.warning(f"Failed to cleanly stop: {service_name}")
+                    logger.warning("Failed to cleanly stop: %s", service_name)
 
                 await asyncio.sleep(0.5)
 
@@ -499,19 +521,20 @@ class EnterpriseDeploymentOrchestrator:
             return True
 
         except Exception as e:
-            logger.error(f"Error stopping deployment: {e}")
+            logger.error("Error stopping deployment: %s", e)
             return False
 
-    def _calculate_deployment_order(self) -> List[str]:
-        """Calculate service deployment order based on dependencies"""
+    def _calculate_deployment_order(self) -> list[str]:
+        """Calculate service deployment order based on dependencies."""
         # Simple topological sort for dependency resolution
         visited = set()
         temp_visited = set()
         order = []
 
-        def visit(service_name: str):
+        def visit(self) -> None:
             if service_name in temp_visited:
-                raise ValueError(f"Circular dependency detected involving {service_name}")
+                msg = f"Circular dependency detected involving {service_name}"
+                raise ValueError(msg)
 
             if service_name not in visited:
                 temp_visited.add(service_name)
@@ -533,19 +556,21 @@ class EnterpriseDeploymentOrchestrator:
 
         return order
 
-    def _get_service_config(self, service_name: str) -> Optional[ServiceConfig]:
-        """Get service configuration by name"""
+    def _get_service_config(self, service_name: str) -> ServiceConfig | None:
+        """Get service configuration by name."""
         for service in self.config.services:
             if service.name == service_name:
                 return service
         return None
 
-    async def _start_health_monitoring(self):
-        """Start continuous health monitoring of deployed services"""
-        self.health_monitoring_task = asyncio.create_task(self._health_monitoring_loop())
+    async def _start_health_monitoring(self) -> None:
+        """Start continuous health monitoring of deployed services."""
+        self.health_monitoring_task = asyncio.create_task(
+            self._health_monitoring_loop()
+        )
 
-    async def _health_monitoring_loop(self):
-        """Continuous health monitoring loop"""
+    async def _health_monitoring_loop(self) -> None:
+        """Continuous health monitoring loop."""
         while True:
             try:
                 await self._perform_health_checks()
@@ -553,27 +578,34 @@ class EnterpriseDeploymentOrchestrator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health monitoring error: {e}")
+                logger.error("Health monitoring error: %s", e)
                 await asyncio.sleep(5)  # Brief pause before retry
 
-    async def _perform_health_checks(self):
-        """Perform health checks on all services"""
+    async def _perform_health_checks(self) -> None:
+        """Perform health checks on all services."""
         health_check_tasks = []
 
         for service_name in self.service_startup_order:
             service_config = self._get_service_config(service_name)
-            if service_config and self.deployment_status.services.get(service_name) == ServiceStatus.RUNNING:
-                task = self.service_manager.health_check(service_name, service_config.health_check_path)
+            if (
+                service_config
+                and self.deployment_status.services.get(service_name)
+                == ServiceStatus.RUNNING
+            ):
+                task = self.service_manager.health_check(
+                    service_name, service_config.health_check_path
+                )
                 health_check_tasks.append((service_name, task))
 
         # Execute health checks concurrently
         if health_check_tasks:
             results = await asyncio.gather(
-                *[task for _, task in health_check_tasks],
-                return_exceptions=True
+                *[task for _, task in health_check_tasks], return_exceptions=True
             )
 
-            for (service_name, _), result in zip(health_check_tasks, results):
+            for (service_name, _), result in zip(
+                health_check_tasks, results, strict=False
+            ):
                 if isinstance(result, ServiceHealth):
                     self.deployment_status.health_checks[service_name] = result
                 else:
@@ -581,42 +613,43 @@ class EnterpriseDeploymentOrchestrator:
                     self.deployment_status.health_checks[service_name] = ServiceHealth(
                         service_name=service_name,
                         status=HealthCheckStatus.UNHEALTHY,
-                        last_check=datetime.now(timezone.utc),
-                        error_message=str(result) if isinstance(result, Exception) else "Unknown error"
+                        last_check=datetime.now(UTC),
+                        error_message=str(result)
+                        if isinstance(result, Exception)
+                        else "Unknown error",
                     )
 
     async def get_deployment_status(self) -> DeploymentStatus:
-        """Get current deployment status"""
+        """Get current deployment status."""
         return self.deployment_status
 
-    async def get_service_health(self, service_name: str) -> Optional[ServiceHealth]:
-        """Get health status of a specific service"""
+    async def get_service_health(self, service_name: str) -> ServiceHealth | None:
+        """Get health status of a specific service."""
         return self.deployment_status.health_checks.get(service_name)
 
     async def export_configuration(self, filepath: str) -> bool:
-        """Export deployment configuration to file"""
+        """Export deployment configuration to file."""
         try:
             config_data = self.config.to_dict()
 
-            if filepath.endswith('.yaml') or filepath.endswith('.yml'):
-                with open(filepath, 'w') as f:
+            if filepath.endswith((".yaml", ".yml")):
+                with open(filepath, "w") as f:
                     yaml.dump(config_data, f, default_flow_style=False)
             else:
-                with open(filepath, 'w') as f:
+                with open(filepath, "w") as f:
                     json.dump(config_data, f, indent=2)
 
-            logger.info(f"Configuration exported to {filepath}")
+            logger.info("Configuration exported to %s", filepath)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to export configuration: {e}")
+            logger.error("Failed to export configuration: %s", e)
             return False
 
 
 # Production-ready configuration factory functions
 async def create_production_deployment_config() -> DeploymentConfig:
-    """Create production-ready deployment configuration"""
-
+    """Create production-ready deployment configuration."""
     # Core services
     services = [
         ServiceConfig(
@@ -625,14 +658,8 @@ async def create_production_deployment_config() -> DeploymentConfig:
             replicas=3,
             port=8000,
             health_check_path="/health",
-            environment_variables={
-                "ENVIRONMENT": "production",
-                "LOG_LEVEL": "INFO"
-            },
-            resource_limits={
-                "cpu": "1000m",
-                "memory": "2Gi"
-            }
+            environment_variables={"ENVIRONMENT": "production", "LOG_LEVEL": "INFO"},
+            resource_limits={"cpu": "1000m", "memory": "2Gi"},
         ),
         ServiceConfig(
             name="pake-cache-service",
@@ -641,10 +668,7 @@ async def create_production_deployment_config() -> DeploymentConfig:
             port=6379,
             health_check_path="/health",
             dependencies=["pake-database"],
-            resource_limits={
-                "cpu": "500m",
-                "memory": "1Gi"
-            }
+            resource_limits={"cpu": "500m", "memory": "1Gi"},
         ),
         ServiceConfig(
             name="pake-monitoring-dashboard",
@@ -653,10 +677,7 @@ async def create_production_deployment_config() -> DeploymentConfig:
             port=8080,
             health_check_path="/health",
             dependencies=["pake-orchestrator"],
-            resource_limits={
-                "cpu": "250m",
-                "memory": "512Mi"
-            }
+            resource_limits={"cpu": "250m", "memory": "512Mi"},
         ),
         ServiceConfig(
             name="pake-database",
@@ -664,11 +685,8 @@ async def create_production_deployment_config() -> DeploymentConfig:
             replicas=1,
             port=5432,
             health_check_path="/health",
-            resource_limits={
-                "cpu": "2000m",
-                "memory": "4Gi"
-            }
-        )
+            resource_limits={"cpu": "2000m", "memory": "4Gi"},
+        ),
     ]
 
     return DeploymentConfig(
@@ -679,45 +697,33 @@ async def create_production_deployment_config() -> DeploymentConfig:
         database_config={
             "type": "postgresql",
             "high_availability": True,
-            "backup_retention_days": 30
+            "backup_retention_days": 30,
         },
-        cache_config={
-            "type": "redis",
-            "clustering": True,
-            "persistence": True
-        },
+        cache_config={"type": "redis", "clustering": True, "persistence": True},
         monitoring_config={
             "metrics_collection": True,
             "alerting": True,
-            "log_aggregation": True
+            "log_aggregation": True,
         },
         enable_tls=True,
-        secret_management={
-            "provider": "kubernetes-secrets",
-            "encryption": "enabled"
-        },
+        secret_management={"provider": "kubernetes-secrets", "encryption": "enabled"},
         auto_scaling={
             "enabled": True,
             "min_replicas": 2,
             "max_replicas": 10,
-            "target_cpu_utilization": 70
+            "target_cpu_utilization": 70,
         },
-        resource_quotas={
-            "cpu": "10",
-            "memory": "20Gi",
-            "storage": "100Gi"
-        },
+        resource_quotas={"cpu": "10", "memory": "20Gi", "storage": "100Gi"},
         backup_config={
             "enabled": True,
             "schedule": "0 2 * * *",  # Daily at 2 AM
-            "retention_days": 30
-        }
+            "retention_days": 30,
+        },
     )
 
 
 async def create_development_deployment_config() -> DeploymentConfig:
-    """Create development deployment configuration"""
-
+    """Create development deployment configuration."""
     services = [
         ServiceConfig(
             name="pake-orchestrator",
@@ -725,18 +731,15 @@ async def create_development_deployment_config() -> DeploymentConfig:
             replicas=1,
             port=8000,
             health_check_path="/health",
-            environment_variables={
-                "ENVIRONMENT": "development",
-                "LOG_LEVEL": "DEBUG"
-            }
+            environment_variables={"ENVIRONMENT": "development", "LOG_LEVEL": "DEBUG"},
         ),
         ServiceConfig(
             name="pake-cache-service",
             version="dev",
             replicas=1,
             port=6379,
-            health_check_path="/health"
-        )
+            health_check_path="/health",
+        ),
     ]
 
     return DeploymentConfig(
@@ -744,16 +747,13 @@ async def create_development_deployment_config() -> DeploymentConfig:
         namespace="pake-dev",
         services=services,
         enable_tls=False,  # Simplified for development
-        monitoring_config={
-            "metrics_collection": False,
-            "basic_logging": True
-        }
+        monitoring_config={"metrics_collection": False, "basic_logging": True},
     )
 
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         # Create deployment configuration
         config = await create_development_deployment_config()
 

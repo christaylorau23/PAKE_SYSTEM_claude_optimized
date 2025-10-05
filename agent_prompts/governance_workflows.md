@@ -11,7 +11,7 @@ The PAKE system implements a **Human-in-the-Loop** governance model that ensures
 ### 1. Conservative Confidence
 AI agents should err on the side of caution with confidence scores, allowing human reviewers to upgrade quality assessments rather than catching overconfident content.
 
-### 2. Full Traceability  
+### 2. Full Traceability
 Every piece of knowledge must be traceable back to its original source and processing decisions, enabling accountability and verification.
 
 ### 3. Graceful Degradation
@@ -51,7 +51,7 @@ Human feedback must flow back into agent instruction refinement, creating an imp
 
 4. **Decision Making**:
    - ✅ **Verify**: `verification_status: verified`, `status: refined`
-   - ❌ **Reject**: `verification_status: rejected`, `status: quarantined`  
+   - ❌ **Reject**: `verification_status: rejected`, `status: quarantined`
    - 🔄 **Revise**: Edit content, update metadata as needed
    - ⏳ **Defer**: Mark for later review with specific notes
 
@@ -232,7 +232,7 @@ When reviewing notes, document specific problems:
 - [ ] Synthesis agents producing genuinely valuable insights
 - [ ] Minimal manual intervention needed for routine operations
 
-### Long-term (6+ months)  
+### Long-term (6+ months)
 - [ ] Self-improving system requiring minimal human oversight
 - [ ] High-quality knowledge base serving as reliable reference
 - [ ] Automated discovery and synthesis creating novel insights

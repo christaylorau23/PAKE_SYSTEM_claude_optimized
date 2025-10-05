@@ -38,7 +38,7 @@ class SecurityIssue:
     message: str
     file_path: str = ""
     line_number: int = 0
-    details: dict[str, Any] = None
+    details: Dict[str, Any] = None
     passed: bool = False
 
 
@@ -50,18 +50,18 @@ class SecurityTestResult:
     passed: bool
     severity: SecuritySeverity
     message: str
-    details: dict[str, Any] = None
+    details: Dict[str, Any] = None
 
 
 class SecurityTester:
     """Comprehensive security testing framework"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.issues: list[SecurityIssue] = []
         self.results: list[SecurityTestResult] = []
         self.project_root = Path(__file__).parent.parent
 
-    def run_all_tests(self) -> dict[str, Any]:
+    def run_all_tests(self) -> Dict[str, Any]:
         """Run all security tests and return comprehensive report"""
         logger.info("🔒 Starting comprehensive security testing...")
 
@@ -576,7 +576,7 @@ class SecurityTester:
                 )
             )
 
-    def generate_report(self) -> dict[str, Any]:
+    def generate_report(self) -> Dict[str, Any]:
         """Generate comprehensive security report"""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r.passed)
@@ -608,8 +608,8 @@ class SecurityTester:
 
         import datetime
 
-        report = {
-            "timestamp": str(datetime.datetime.now()),
+        return {
+            "timestamp": str(datetime.now(UTC)),
             "summary": {
                 "total_tests": total_tests,
                 "passed": passed_tests,
@@ -637,9 +637,7 @@ class SecurityTester:
             "recommendations": self._generate_recommendations(),
         }
 
-        return report
-
-    def _generate_recommendations(self) -> list[str]:
+    def _generate_recommendations(self) -> List[str]:
         """Generate security recommendations based on test results"""
         recommendations = []
 
@@ -676,7 +674,7 @@ class SecurityTester:
 
         return recommendations
 
-    def print_report(self, report: dict[str, Any]) -> None:
+    def print_report(self, report: Dict[str, Any]) -> None:
         """Print formatted security report"""
         print("=" * 60)
         print("🔒 PAKE SYSTEM SECURITY TEST REPORT")
@@ -726,7 +724,7 @@ class SecurityTester:
             print("\n✅ All security tests passed!")
 
 
-def main():
+def main(self) -> None:
     """Main entry point for security testing"""
 
     # Set up logging

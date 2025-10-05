@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Source Executor
-Single Responsibility: Executing ingestion from individual sources
+Single Responsibility: Executing ingestion from individual sources.
 """
 
 import logging
@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class SourceExecutor(SourceExecutorInterface):
-    """Single Responsibility: Executing ingestion from individual sources"""
+    """Single Responsibility: Executing ingestion from individual sources."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialize source services
         self.firecrawl_service = FirecrawlService()
         self.arxiv_service = ArxivEnhancedService()
@@ -34,9 +34,11 @@ class SourceExecutor(SourceExecutorInterface):
         self,
         source: IngestionSource,
         plan: IngestionPlan,
-    ) -> tuple[list[ContentItem], dict[str, Any]]:
-        """Execute ingestion for a single source"""
-        logger.info(f"Executing source {source.source_type} (ID: {source.source_id})")
+    ) -> tuple[list[ContentItem], Dict[str, Any]]:
+        """Execute ingestion for a single source."""
+        logger.info(
+            "Executing source %s (ID: %s)", source.source_type, source.source_id
+        )
 
         start_time = time.time()
         content_items = []
@@ -59,7 +61,8 @@ class SourceExecutor(SourceExecutorInterface):
             elif source.source_type == "pubmed":
                 content_items = await self._execute_pubmed_source(source)
             else:
-                raise ValueError(f"Unsupported source type: {source.source_type}")
+                msg = f"Unsupported source type: {source.source_type}"
+                raise ValueError(msg)
 
             # Update metrics
             metrics["success"] = True
@@ -92,7 +95,7 @@ class SourceExecutor(SourceExecutorInterface):
         return content_items, metrics
 
     async def _execute_web_source(self, source: IngestionSource) -> list[ContentItem]:
-        """Execute web source ingestion"""
+        """Execute web source ingestion."""
         query = source.query_parameters.get("query", "")
         max_results = source.query_parameters.get(
             "max_results", source.estimated_results
@@ -129,7 +132,7 @@ class SourceExecutor(SourceExecutorInterface):
         return content_items
 
     async def _execute_arxiv_source(self, source: IngestionSource) -> list[ContentItem]:
-        """Execute ArXiv source ingestion"""
+        """Execute ArXiv source ingestion."""
         query = source.query_parameters.get("query", "")
         max_results = source.query_parameters.get(
             "max_results", source.estimated_results
@@ -166,7 +169,7 @@ class SourceExecutor(SourceExecutorInterface):
     async def _execute_pubmed_source(
         self, source: IngestionSource
     ) -> list[ContentItem]:
-        """Execute PubMed source ingestion"""
+        """Execute PubMed source ingestion."""
         query = source.query_parameters.get("query", "")
         max_results = source.query_parameters.get(
             "max_results", source.estimated_results
@@ -201,7 +204,7 @@ class SourceExecutor(SourceExecutorInterface):
         return content_items
 
     def get_source_cache_key(self, source: IngestionSource) -> str:
-        """Generate cache key for source execution"""
+        """Generate cache key for source execution."""
         # Create deterministic cache key based on source parameters
         cache_data = {
             "source_type": source.source_type,

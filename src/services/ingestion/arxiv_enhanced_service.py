@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - ArXiv Enhanced Service Implementation
-GREEN PHASE: Minimal implementation to pass failing tests
+GREEN PHASE: Minimal implementation to pass failing tests.
 
 Following TDD methodology:
 - All tests failing (RED phase complete)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ArxivError:
-    """Immutable error class for ArXiv service errors"""
+    """Immutable error class for ArXiv service errors."""
 
     message: str
     error_code: str = "UNKNOWN_ERROR"
@@ -31,18 +31,23 @@ class ArxivError:
 
     @property
     def is_retryable(self) -> bool:
-        """Determine if error is retryable based on error code"""
-        retryable_codes = ["RATE_LIMIT_EXCEEDED", "NETWORK_ERROR", "TIMEOUT"]
+        """Determine if error is retryable based on error code."""
+        retryable_codes = [
+            "RATE_LIMIT_EXCEEDED",
+            "NETWORK_ERROR",
+            "TIMEOUT",
+            "SERVICE_UNAVAILABLE",
+        ]
         return self.error_code in retryable_codes
 
 
 @dataclass(frozen=True)
 class ArxivSearchQuery:
-    """Immutable search query configuration for ArXiv API"""
+    """Immutable search query configuration for ArXiv API."""
 
-    terms: list[str]
-    categories: list[str] | None = field(default_factory=list)
-    authors: list[str] | None = field(default_factory=list)
+    terms: List[str]
+    categories: List[str] | None = field(default_factory=list)
+    authors: List[str] | None = field(default_factory=list)
     date_from: datetime | None = None
     date_to: datetime | None = None
     max_results: int = 50
@@ -51,7 +56,7 @@ class ArxivSearchQuery:
     sort_by: str = "relevance"
     sort_order: str = "descending"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Validate max_results is within ArXiv API limits
         if self.max_results > 100:
             object.__setattr__(self, "max_results", 100)
@@ -61,21 +66,21 @@ class ArxivSearchQuery:
 
 @dataclass(frozen=True)
 class ArxivPaper:
-    """Immutable representation of an ArXiv paper"""
+    """Immutable representation of an ArXiv paper."""
 
     arxiv_id: str
     title: str
-    authors: list[str]
+    authors: List[str]
     abstract: str
-    categories: list[str]
+    categories: List[str]
     published_date: datetime
     updated_date: datetime | None = None
     primary_category: str | None = None
-    metadata: dict[str, Any] | None = field(default_factory=dict)
+    metadata: Dict[str, Any] | None = field(default_factory=dict)
     quality_score: float | None = None
-    cognitive_assessment: dict[str, Any] | None = field(default_factory=dict)
+    cognitive_assessment: Dict[str, Any] | None = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.metadata is None:
             object.__setattr__(self, "metadata", {})
         if self.cognitive_assessment is None:
@@ -84,7 +89,7 @@ class ArxivPaper:
 
 @dataclass(frozen=True)
 class ArxivResult:
-    """Immutable result from ArXiv search operation"""
+    """Immutable result from ArXiv search operation."""
 
     success: bool
     papers: list[ArxivPaper] = field(default_factory=list)
@@ -104,19 +109,15 @@ class ArxivEnhancedService:
     GREEN PHASE: Minimal implementation to pass tests.
     """
 
-    def __init__(
-        self,
-        base_url: str = "http://export.arxiv.org/api/query",
-        max_results: int = 100,
-    ):
-        """Initialize ArXiv Enhanced Service"""
+    def __init__(self) -> None:
+        """Initialize ArXiv Enhanced Service."""
         self.base_url = base_url
         self.max_results = max_results
         self.session: aiohttp.ClientSession | None = None
         self.cache: dict[str, ArxivResult] = {}  # Simple in-memory cache
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session"""
+        """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=30),
@@ -127,7 +128,7 @@ class ArxivEnhancedService:
         return self.session
 
     def _build_query_string(self, query: ArxivSearchQuery) -> str:
-        """Build ArXiv API query string from search parameters"""
+        """Build ArXiv API query string from search parameters."""
         search_terms = []
 
         # Add terms
@@ -151,21 +152,28 @@ class ArxivEnhancedService:
             search_terms.append(f"({cat_searches})")
 
         # Combine all search components
-        final_query = " AND ".join(search_terms) if search_terms else "all:*"
+        return " AND ".join(search_terms) if search_terms else "all:*"
 
-        return final_query
+    async def _make_arxiv_request(self) -> None:
+        """Make request to ArXiv API."""
+        session = await self._get_session()
+        url = f"{self.base_url}"
 
-    async def _make_arxiv_request(self, query_params: dict[str, str]):
-        """Make request to ArXiv API"""
-        # For GREEN phase - return mock successful response directly
-        # This will be replaced with real API calls in REFACTOR phase
-        return MockArxivAPIResponse(
-            status=200,
-            text=await self._generate_mock_arxiv_xml(query_params),
-        )
+        try:
+            async with session.get(url, params=query_params) as response:
+                return MockArxivAPIResponse(
+                    status=response.status,
+                    text=await response.text(),
+                )
+        except Exception as e:
+            # Handle network errors
+            return MockArxivAPIResponse(
+                status=500,
+                text=f"Network error: {str(e)}",
+            )
 
     async def _generate_mock_arxiv_xml(self, query_params: dict[str, str]) -> str:
-        """Generate mock ArXiv XML response for testing"""
+        """Generate mock ArXiv XML response for testing."""
         return """<?xml version="1.0" encoding="UTF-8"?>
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title>ArXiv Query Results</title>
@@ -239,6 +247,16 @@ class ArxivEnhancedService:
                         message="ArXiv API rate limit exceeded",
                         error_code="RATE_LIMIT_EXCEEDED",
                         retry_after=300,
+                        query=search_query,
+                    ),
+                )
+
+            if response.status == 503:
+                return ArxivResult(
+                    success=False,
+                    error=ArxivError(
+                        message=f"ArXiv API service unavailable (status {response.status})",
+                        error_code="SERVICE_UNAVAILABLE",
                         query=search_query,
                     ),
                 )
@@ -604,7 +622,7 @@ class ArxivEnhancedService:
         result: ArxivResult,
         n8n_manager,
         workflow_type: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Trigger n8n research workflow processing.
         GREEN PHASE: Minimal implementation.
         """
@@ -613,7 +631,7 @@ class ArxivEnhancedService:
                 "papers_count": len(result.papers),
                 "query": str(result.query_used),
                 "categories": list(
-                    set(cat for paper in result.papers for cat in paper.categories),
+                    {cat for paper in result.papers for cat in paper.categories},
                 ),
             }
 
@@ -624,24 +642,24 @@ class ArxivEnhancedService:
 
         return {"workflow_id": None}
 
-    async def close(self):
-        """Clean up resources"""
+    async def close(self) -> None:
+        """Clean up resources."""
         if self.session and not self.session.closed:
             await self.session.close()
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         await self.close()
 
 
 class MockArxivAPIResponse:
-    """Mock response class for testing"""
+    """Mock response class for testing."""
 
-    def __init__(self, status: int, text: str):
+    def __init__(self) -> None:
         self.status = status
         self._text = text
 

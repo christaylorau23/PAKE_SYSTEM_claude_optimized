@@ -16,14 +16,14 @@ import pytest
 class TestHashingNetworkRemediation:
     """Test weak hashing and network binding remediation."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment."""
         self.project_root = Path(__file__).parent.parent.parent
         self.src_dir = self.project_root / "src"
         self.config_dir = self.project_root / "configs"
         self.deploy_dir = self.project_root / "deploy"
 
-    def test_no_weak_hashing_in_source(self):
+    def test_no_weak_hashing_in_source(self) -> None:
         """Test that no weak hashing algorithms are used in source code."""
         weak_hash_patterns = [
             r"hashlib\.md5\(",
@@ -55,7 +55,7 @@ class TestHashingNetworkRemediation:
             len(vulnerable_files) == 0
         ), f"Found weak hashing in source files: {vulnerable_files}"
 
-    def test_secure_network_bindings(self):
+    def test_secure_network_bindings(self) -> None:
         """Test that all network bindings use secure addresses."""
         insecure_bindings = []
 
@@ -97,7 +97,7 @@ class TestHashingNetworkRemediation:
             len(insecure_bindings) == 0
         ), f"Found insecure 0.0.0.0 bindings in production code: {insecure_bindings}"
 
-    def test_secure_hashing_algorithms_used(self):
+    def test_secure_hashing_algorithms_used(self) -> None:
         """Test that secure hashing algorithms are used for passwords."""
         secure_hash_files = []
 
@@ -141,7 +141,7 @@ class TestHashingNetworkRemediation:
                     "argon2" in content.lower() or "bcrypt" in content.lower()
                 ), f"Expected secure hashing in {expected_file}"
 
-    def test_network_binding_security(self):
+    def test_network_binding_security(self) -> None:
         """Test that network bindings use secure local addresses."""
         secure_bindings = []
 
@@ -189,7 +189,7 @@ class TestHashingNetworkRemediation:
                     "127.0.0.1" in content
                 ), f"Expected secure binding in {expected_file}"
 
-    def test_no_md5_sha1_in_security_context(self):
+    def test_no_md5_sha1_in_security_context(self) -> None:
         """Test that MD5/SHA1 are not used in security contexts."""
         security_context_patterns = [
             r"password.*md5",
@@ -222,7 +222,7 @@ class TestHashingNetworkRemediation:
             len(vulnerable_files) == 0
         ), f"Found MD5/SHA1 in security context: {vulnerable_files}"
 
-    def test_secure_network_configuration(self):
+    def test_secure_network_configuration(self) -> None:
         """Test that network configuration uses secure defaults."""
         # Check that secure network config utility exists and is used
         secure_config_file = self.project_root / "src/utils/secure_network_config.py"

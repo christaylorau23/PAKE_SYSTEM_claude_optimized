@@ -1,0 +1,144 @@
+# PAKE System - macOS Runner CI Simulation
+# Docker Compose configuration for simulating macOS GitHub Actions runner
+#
+# macOS Runner Specifications:
+# - CPU Cores: 3
+# - RAM: 14GB
+# - Storage: 14GB SSD
+# - Network: 1 Gbps
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with macOS CI resource constraints
+  postgres-macos-ci:
+    image: postgres:15-alpine
+    container_name: pake-postgres-macos-ci
+    environment:
+      POSTGRES_DB: pake_system_test
+      POSTGRES_USER: pake_test
+      POSTGRES_PASSWORD: test_password_macos_ci
+    ports:
+      - '5435:5432'
+    volumes:
+      - postgres_macos_ci_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pake_test -d pake_system_test']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'            # Allocate 1 CPU core to PostgreSQL
+          memory: 2g           # Allocate 2GB RAM to PostgreSQL
+        reservations:
+          cpus: '0.5'         # Reserve 0.5 CPU cores
+          memory: 1g           # Reserve 1GB RAM
+    networks:
+      - pake-macos-ci-network
+
+  # Redis Cache with macOS CI resource constraints
+  redis-macos-ci:
+    image: redis:7-alpine
+    container_name: pake-redis-macos-ci
+    ports:
+      - '6382:6379'
+    volumes:
+      - redis_macos_ci_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'         # Allocate 0.5 CPU cores to Redis
+          memory: 512m         # Allocate 512MB RAM to Redis
+        reservations:
+          cpus: '0.25'        # Reserve 0.25 CPU cores
+          memory: 256m         # Reserve 256MB RAM
+    networks:
+      - pake-macos-ci-network
+
+  # PAKE Backend with macOS CI resource constraints
+  pake-backend-macos-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pake-backend-macos-ci
+    environment:
+      DATABASE_URL: postgresql://pake_test:test_password_macos_ci@postgres-macos-ci:5432/pake_system_test
+      REDIS_URL: redis://redis-macos-ci:6379/0
+      CI: 'true'
+      GITHUB_ACTIONS: 'true'
+      ENVIRONMENT: 'macos-ci-simulation'
+      LOG_LEVEL: 'info'
+      JWT_SECRET_KEY: 'macos-ci-simulation-secret-key'
+      PYTEST_WORKERS: '2'      # macOS can handle 2 workers
+      PYTEST_TIMEOUT: '300'
+      PYTEST_MAX_FAILURES: '3'
+    ports:
+      - '8004:8000'
+    volumes:
+      - ./vault:/app/vault:ro
+      - ./logs:/app/logs
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+    depends_on:
+      postgres-macos-ci:
+        condition: service_healthy
+      redis-macos-ci:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '3'            # Simulate macOS: 3 CPU cores
+          memory: 14g          # Simulate macOS: 14GB RAM
+        reservations:
+          cpus: '2'            # Reserve 2 CPU cores
+          memory: 4g           # Reserve 4GB RAM
+    networks:
+      - pake-macos-ci-network
+    command: >
+      sh -c "
+        echo '🍎 macOS CI Simulation Environment Starting...' &&
+        echo '   CPU Cores: 3 (macOS simulation)' &&
+        echo '   Memory: 14GB (macOS simulation)' &&
+        echo '   Workers: 2 (macOS-optimized)' &&
+        echo '   Timeout: 300s' &&
+        echo '' &&
+        echo '⏳ Waiting for services to be ready...' &&
+        sleep 15 &&
+        echo '🧪 Running tests with macOS CI resource constraints...' &&
+        python -m pytest tests/
+          -v
+          --tb=short
+          --maxfail=3
+          --durations=5
+          --disable-warnings
+          --timeout=300
+          --timeout-method=thread
+          -x
+          --junitxml=/app/logs/macos-ci-test-results.xml
+          --cov=src
+          --cov-report=xml:/app/logs/macos-coverage.xml
+          --cov-report=html:/app/logs/macos-htmlcov
+          --cov-fail-under=80
+      "
+
+volumes:
+  postgres_macos_ci_data:
+    driver: local
+  redis_macos_ci_data:
+    driver: local
+
+networks:
+  pake-macos-ci-network:
+    driver: bridge

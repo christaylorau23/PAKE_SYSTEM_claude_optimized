@@ -10,28 +10,28 @@ This test suite validates:
 5. Domain model purity
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ..business.user_service_refactored import UserService
-from ..di_container import DIContainer, configure_services
-from ..domain.interfaces import (
+from src.services.business.user_service_refactored import UserService
+from src.services.di_container import DIContainer, configure_services
+from src.services.domain.interfaces import (
     AbstractAuthenticationService,
     AbstractNotificationService,
     AbstractUserRepository,
     ServiceResult,
     ServiceStatus,
 )
-from ..domain.models import UserRole, UserStatus, create_user
-from ..repositories.sqlalchemy_repositories import UserRepository
+from src.services.domain.models import UserRole, UserStatus, create_user
+from src.services.repositories.sqlalchemy_repositories import UserRepository
 
 
 class TestDomainModels:
     """Test domain model purity and immutability"""
 
-    def test_user_creation(self):
+    def test_user_creation(self) -> None:
         """Test user domain model creation"""
         user = create_user(
             email="test@example.com",
@@ -51,7 +51,7 @@ class TestDomainModels:
         assert user.status == UserStatus.ACTIVE
         assert user.is_active is True
 
-    def test_user_validation(self):
+    def test_user_validation(self) -> None:
         """Test user domain model validation"""
         # Test invalid email
         with pytest.raises(ValueError, match="Invalid email address"):
@@ -75,7 +75,7 @@ class TestDomainModels:
                 tenant_id="",
             )
 
-    def test_user_immutability(self):
+    def test_user_immutability(self) -> None:
         """Test that user domain model is immutable"""
         user = create_user(
             email="test@example.com",
@@ -91,25 +91,23 @@ class TestDomainModels:
 class TestRepositoryPattern:
     """Test repository pattern implementation"""
 
-    @pytest.fixture()
-    def mock_session_maker(self):
+    @pytest.fixture
+    def mock_session_maker(self) -> None:
         """Mock SQLAlchemy session maker"""
         return MagicMock()
 
-    @pytest.fixture()
-    def user_repository(self, mock_session_maker):
+    @pytest.fixture
+    def user_repository(self) -> None:
         """User repository instance"""
         return UserRepository(mock_session_maker)
 
-    def test_user_repository_creation(self, user_repository):
+    def test_user_repository_creation(self) -> None:
         """Test user repository creation"""
         assert user_repository is not None
         assert isinstance(user_repository, AbstractUserRepository)
 
-    @pytest.mark.asyncio()
-    async def test_user_repository_get_by_email(
-        self, user_repository, mock_session_maker
-    ):
+    @pytest.mark.asyncio
+    async def test_user_repository_get_by_email(self) -> None:
         """Test getting user by email"""
         # Mock session and query result
         mock_session = AsyncMock()
@@ -124,8 +122,8 @@ class TestRepositoryPattern:
         mock_user_orm.last_name = "Doe"
         mock_user_orm.role = "user"
         mock_user_orm.status = "active"
-        mock_user_orm.created_at = datetime.utcnow()
-        mock_user_orm.updated_at = datetime.utcnow()
+        mock_user_orm.created_at = datetime.now(UTC)
+        mock_user_orm.updated_at = datetime.now(UTC)
         mock_user_orm.last_login_at = None
         mock_user_orm.metadata = {}
 
@@ -141,10 +139,8 @@ class TestRepositoryPattern:
         assert user.id == "user-123"
         assert user.tenant_id == "tenant-123"
 
-    @pytest.mark.asyncio()
-    async def test_user_repository_get_by_email_not_found(
-        self, user_repository, mock_session_maker
-    ):
+    @pytest.mark.asyncio
+    async def test_user_repository_get_by_email_not_found(self) -> None:
         """Test getting user by email when not found"""
         # Mock session and query result
         mock_session = AsyncMock()
@@ -163,12 +159,12 @@ class TestRepositoryPattern:
 class TestDependencyInjection:
     """Test dependency injection container"""
 
-    @pytest.fixture()
-    def container(self):
+    @pytest.fixture
+    def container(self) -> None:
         """DI container instance"""
         return DIContainer()
 
-    def test_service_registration(self, container):
+    def test_service_registration(self) -> None:
         """Test service registration"""
         container.register_singleton(AbstractUserRepository, UserRepository)
 
@@ -178,7 +174,7 @@ class TestDependencyInjection:
         assert "AbstractUserRepository" in services
         assert "UserRepository (singleton)" in services["AbstractUserRepository"]
 
-    def test_service_resolution(self, container):
+    def test_service_resolution(self) -> None:
         """Test service resolution"""
         container.register_singleton(AbstractUserRepository, UserRepository)
 
@@ -186,7 +182,7 @@ class TestDependencyInjection:
         assert service is not None
         assert isinstance(service, UserRepository)
 
-    def test_singleton_lifetime(self, container):
+    def test_singleton_lifetime(self) -> None:
         """Test singleton service lifetime"""
         container.register_singleton(AbstractUserRepository, UserRepository)
 
@@ -195,7 +191,7 @@ class TestDependencyInjection:
 
         assert service1 is service2  # Same instance
 
-    def test_transient_lifetime(self, container):
+    def test_transient_lifetime(self) -> None:
         """Test transient service lifetime"""
         container.register_transient(AbstractUserRepository, UserRepository)
 
@@ -204,10 +200,10 @@ class TestDependencyInjection:
 
         assert service1 is not service2  # Different instances
 
-    def test_factory_registration(self, container):
+    def test_factory_registration(self) -> None:
         """Test factory registration"""
 
-        def create_mock_repo():
+        def create_mock_repo(self) -> None:
             return MagicMock(spec=AbstractUserRepository)
 
         container.register_factory(AbstractUserRepository, create_mock_repo)
@@ -219,25 +215,23 @@ class TestDependencyInjection:
 class TestUserService:
     """Test refactored user service"""
 
-    @pytest.fixture()
-    def mock_user_repository(self):
+    @pytest.fixture
+    def mock_user_repository(self) -> None:
         """Mock user repository"""
         return AsyncMock(spec=AbstractUserRepository)
 
-    @pytest.fixture()
-    def mock_auth_service(self):
+    @pytest.fixture
+    def mock_auth_service(self) -> None:
         """Mock authentication service"""
         return AsyncMock(spec=AbstractAuthenticationService)
 
-    @pytest.fixture()
-    def mock_notification_service(self):
+    @pytest.fixture
+    def mock_notification_service(self) -> None:
         """Mock notification service"""
         return AsyncMock(spec=AbstractNotificationService)
 
-    @pytest.fixture()
-    def user_service(
-        self, mock_user_repository, mock_auth_service, mock_notification_service
-    ):
+    @pytest.fixture
+    def user_service(self) -> None:
         """User service instance with mocked dependencies"""
         return UserService(
             user_repository=mock_user_repository,
@@ -245,14 +239,8 @@ class TestUserService:
             notification_service=mock_notification_service,
         )
 
-    @pytest.mark.asyncio()
-    async def test_create_user_success(
-        self,
-        user_service,
-        mock_user_repository,
-        mock_auth_service,
-        mock_notification_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_create_user_success(self) -> None:
         """Test successful user creation"""
         # Setup mocks
         mock_auth_service.create_user.return_value = ServiceResult(
@@ -287,8 +275,8 @@ class TestUserService:
         mock_user_repository.create.assert_called_once()
         mock_notification_service.send_welcome_email.assert_called_once()
 
-    @pytest.mark.asyncio()
-    async def test_create_user_validation_failure(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_validation_failure(self) -> None:
         """Test user creation with validation failure"""
         result = await user_service.create_user(
             email="invalid-email", password="short", user_data={}
@@ -297,8 +285,8 @@ class TestUserService:
         assert result.status == ServiceStatus.FAILED
         assert "Validation failed" in result.error
 
-    @pytest.mark.asyncio()
-    async def test_get_user_profile_success(self, user_service, mock_user_repository):
+    @pytest.mark.asyncio
+    async def test_get_user_profile_success(self) -> None:
         """Test successful user profile retrieval"""
         mock_user = create_user(
             email="test@example.com",
@@ -316,8 +304,8 @@ class TestUserService:
         assert result.data["name"] == "John Doe"
         assert result.data["is_active"] is True
 
-    @pytest.mark.asyncio()
-    async def test_get_user_profile_not_found(self, user_service, mock_user_repository):
+    @pytest.mark.asyncio
+    async def test_get_user_profile_not_found(self) -> None:
         """Test user profile retrieval when user not found"""
         mock_user_repository.get_by_id.return_value = None
 
@@ -326,8 +314,8 @@ class TestUserService:
         assert result.status == ServiceStatus.FAILED
         assert "not found" in result.error
 
-    @pytest.mark.asyncio()
-    async def test_get_users_by_tenant(self, user_service, mock_user_repository):
+    @pytest.mark.asyncio
+    async def test_get_users_by_tenant(self) -> None:
         """Test getting users by tenant"""
         mock_users = [
             create_user(
@@ -353,8 +341,8 @@ class TestUserService:
 class TestServiceIntegration:
     """Test service integration with DI container"""
 
-    @pytest.mark.asyncio()
-    async def test_service_integration(self):
+    @pytest.mark.asyncio
+    async def test_service_integration(self) -> None:
         """Test complete service integration"""
         container = DIContainer()
         configure_services(container)

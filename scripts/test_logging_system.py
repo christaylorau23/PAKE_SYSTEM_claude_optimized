@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime
 
 
-def test_basic_logging():
+def test_basic_logging(self) -> None:
     """Test basic logging functionality"""
     print("=== Testing Basic Logging ===")
 
@@ -28,7 +28,7 @@ def test_basic_logging():
     return log_entry
 
 
-def test_security_logging():
+def test_security_logging(self) -> None:
     """Test security-aware logging"""
     print("=== Testing Security Logging ===")
 
@@ -72,7 +72,7 @@ def test_security_logging():
     return security_event
 
 
-def test_performance_logging():
+def test_performance_logging(self) -> None:
     """Test performance monitoring"""
     print("=== Testing Performance Logging ===")
 
@@ -96,7 +96,7 @@ def test_performance_logging():
     return performance_metrics
 
 
-def test_monitoring_metrics():
+def test_monitoring_metrics(self) -> None:
     """Test monitoring metrics collection"""
     print("=== Testing Monitoring Metrics ===")
 
@@ -137,7 +137,7 @@ def test_monitoring_metrics():
     return metrics
 
 
-def test_audit_logging():
+def test_audit_logging(self) -> None:
     """Test audit logging for compliance"""
     print("=== Testing Audit Logging ===")
 
@@ -187,7 +187,7 @@ def test_audit_logging():
     return audit_events
 
 
-def test_correlation_tracking():
+def test_correlation_tracking(self) -> None:
     """Test correlation ID tracking"""
     print("=== Testing Correlation Tracking ===")
 
@@ -229,7 +229,7 @@ def test_correlation_tracking():
     return request_flow
 
 
-def test_configuration_management():
+def test_configuration_management(self) -> None:
     """Test configuration management"""
     print("=== Testing Configuration Management ===")
 
@@ -274,7 +274,7 @@ def test_configuration_management():
     return config
 
 
-def test_error_handling():
+def test_error_handling(self) -> None:
     """Test error handling and recovery"""
     print("=== Testing Error Handling ===")
 
@@ -314,7 +314,7 @@ def test_error_handling():
     return errors
 
 
-def generate_summary_report():
+def generate_summary_report(self) -> None:
     """Generate a summary report of all tests"""
     print("\n" + "=" * 60)
     print("PAKE SYSTEM LOGGING & MONITORING TEST SUMMARY")
@@ -366,7 +366,7 @@ def generate_summary_report():
     return summary
 
 
-def main():
+def main(self) -> None:
     """Run all logging and monitoring tests"""
     print("PAKE System - Logging & Monitoring Test Suite")
     print("=" * 50)

@@ -5,7 +5,7 @@ Supports multiple algorithms, hyperparameter optimization, and model evaluation.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ModelMetrics:
-    """Model performance metrics"""
+    """Model performance metrics."""
 
     model_name: str
     task_type: str  # 'regression', 'classification', 'ranking'
@@ -56,10 +56,10 @@ class ModelMetrics:
 
 @dataclass(frozen=True)
 class ModelConfig:
-    """Configuration for model training"""
+    """Configuration for model training."""
 
     model_type: str
-    hyperparameters: dict[str, Any] = field(default_factory=dict)
+    hyperparameters: Dict[str, Any] = field(default_factory=dict)
     feature_selection: bool = True
     cross_validation_folds: int = 5
     test_size: float = 0.2
@@ -69,15 +69,15 @@ class ModelConfig:
 
 
 class ModelTrainer:
-    """Advanced ML model training pipeline for curation systems"""
+    """Advanced ML model training pipeline for curation systems."""
 
-    def __init__(self, models_dir: str = "models"):
+    def __init__(self) -> None:
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(exist_ok=True)
         self.feature_extractor = FeatureExtractor()
         self.scaler = StandardScaler()
         self.label_encoder = LabelEncoder()
-        self.trained_models: dict[str, Any] = {}
+        self.trained_models: Dict[str, Any] = {}
         self.model_metrics: dict[str, ModelMetrics] = {}
 
         # Model configurations
@@ -146,7 +146,7 @@ class ModelTrainer:
         contents: list[ContentItem],
         interactions: list[UserInteraction],
     ) -> ModelMetrics:
-        """Train model to predict content quality scores"""
+        """Train model to predict content quality scores."""
         logger.info("Training content quality model")
 
         try:
@@ -184,9 +184,9 @@ class ModelTrainer:
             for model_name, params in self.model_configs[
                 "content_quality"
             ].hyperparameters.items():
-                logger.info(f"Training {model_name} for content quality")
+                logger.info("Training %s for content quality", model_name)
 
-                start_time = datetime.now()
+                start_time = datetime.now(UTC)
 
                 if model_name == "RandomForest":
                     model = RandomForestRegressor(**params)
@@ -205,7 +205,7 @@ class ModelTrainer:
                 # Evaluate
                 y_pred = model.predict(X_test_scaled)
 
-                training_time = (datetime.now() - start_time).total_seconds()
+                training_time = (datetime.now(UTC) - start_time).total_seconds()
 
                 # Calculate metrics
                 mse = mean_squared_error(y_test, y_pred)
@@ -246,12 +246,13 @@ class ModelTrainer:
                 self.model_metrics["content_quality"] = best_metrics
 
                 logger.info(
-                    f"Content quality model trained successfully. R²: {best_score:.3f}",
+                    "Content quality model trained successfully. R²: %s",
+                    best_score,
                 )
                 return best_metrics
 
         except Exception as e:
-            logger.error(f"Error training content quality model: {e}")
+            logger.error("Error training content quality model: %s", e)
             raise
 
         return ModelMetrics(model_name="content_quality", task_type="regression")
@@ -261,7 +262,7 @@ class ModelTrainer:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> ModelMetrics:
-        """Train model to predict user preferences"""
+        """Train model to predict user preferences."""
         logger.info("Training user preference model")
 
         try:
@@ -300,9 +301,9 @@ class ModelTrainer:
             for model_name, params in self.model_configs[
                 "user_preference"
             ].hyperparameters.items():
-                logger.info(f"Training {model_name} for user preference")
+                logger.info("Training %s for user preference", model_name)
 
-                start_time = datetime.now()
+                start_time = datetime.now(UTC)
 
                 if model_name == "LogisticRegression":
                     model = LogisticRegression(**params)
@@ -319,7 +320,7 @@ class ModelTrainer:
                 # Evaluate
                 y_pred = model.predict(X_test_scaled)
 
-                training_time = (datetime.now() - start_time).total_seconds()
+                training_time = (datetime.now(UTC) - start_time).total_seconds()
 
                 # Calculate metrics
                 accuracy = accuracy_score(y_test, y_pred)
@@ -362,12 +363,13 @@ class ModelTrainer:
                 self.model_metrics["user_preference"] = best_metrics
 
                 logger.info(
-                    f"User preference model trained successfully. F1: {best_score:.3f}",
+                    "User preference model trained successfully. F1: %s",
+                    best_score,
                 )
                 return best_metrics
 
         except Exception as e:
-            logger.error(f"Error training user preference model: {e}")
+            logger.error("Error training user preference model: %s", e)
             raise
 
         return ModelMetrics(model_name="user_preference", task_type="classification")
@@ -378,7 +380,7 @@ class ModelTrainer:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> ModelMetrics:
-        """Train model to predict recommendation scores"""
+        """Train model to predict recommendation scores."""
         logger.info("Training recommendation model")
 
         try:
@@ -417,9 +419,9 @@ class ModelTrainer:
             for model_name, params in self.model_configs[
                 "recommendation_score"
             ].hyperparameters.items():
-                logger.info(f"Training {model_name} for recommendation scoring")
+                logger.info("Training %s for recommendation scoring", model_name)
 
-                start_time = datetime.now()
+                start_time = datetime.now(UTC)
 
                 if model_name == "RandomForest":
                     model = RandomForestRegressor(**params)
@@ -436,7 +438,7 @@ class ModelTrainer:
                 # Evaluate
                 y_pred = model.predict(X_test_scaled)
 
-                training_time = (datetime.now() - start_time).total_seconds()
+                training_time = (datetime.now(UTC) - start_time).total_seconds()
 
                 # Calculate metrics
                 mse = mean_squared_error(y_test, y_pred)
@@ -477,12 +479,13 @@ class ModelTrainer:
                 self.model_metrics["recommendation"] = best_metrics
 
                 logger.info(
-                    f"Recommendation model trained successfully. R²: {best_score:.3f}",
+                    "Recommendation model trained successfully. R²: %s",
+                    best_score,
                 )
                 return best_metrics
 
         except Exception as e:
-            logger.error(f"Error training recommendation model: {e}")
+            logger.error("Error training recommendation model: %s", e)
             raise
 
         return ModelMetrics(model_name="recommendation", task_type="regression")
@@ -492,7 +495,7 @@ class ModelTrainer:
         contents: list[ContentItem],
         interactions: list[UserInteraction],
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Prepare training data for content quality model"""
+        """Prepare training data for content quality model."""
         X_list = []
         y_list = []
 
@@ -526,7 +529,7 @@ class ModelTrainer:
                 y_list.append(quality_score)
 
             except Exception as e:
-                logger.warning(f"Error processing content {content.id}: {e}")
+                logger.warning("Error processing content %s: %s", content.id, e)
                 continue
 
         return np.array(X_list), np.array(y_list)
@@ -536,7 +539,7 @@ class ModelTrainer:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Prepare training data for user preference model"""
+        """Prepare training data for user preference model."""
         X_list = []
         y_list = []
 
@@ -571,7 +574,7 @@ class ModelTrainer:
                 y_list.append(preference_category)
 
             except Exception as e:
-                logger.warning(f"Error processing user {user_profile.user_id}: {e}")
+                logger.warning("Error processing user %s: %s", user_profile.user_id, e)
                 continue
 
         return np.array(X_list), np.array(y_list)
@@ -582,7 +585,7 @@ class ModelTrainer:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Prepare training data for recommendation model"""
+        """Prepare training data for recommendation model."""
         X_list = []
         y_list = []
 
@@ -634,9 +637,10 @@ class ModelTrainer:
 
                 except Exception as e:
                     logger.warning(
-                        f"Error processing content {content.id} for user {
-                            user_profile.user_id
-                        }: {e}",
+                        "Error processing content %s for user %s: %s",
+                        content.id,
+                        user_profile.user_id,
+                        e,
                     )
                     continue
 
@@ -646,7 +650,7 @@ class ModelTrainer:
         self,
         interactions: list[UserInteraction],
     ) -> float:
-        """Calculate quality score from interactions"""
+        """Calculate quality score from interactions."""
         if not interactions:
             return 0.0
 
@@ -674,7 +678,7 @@ class ModelTrainer:
         self,
         interactions: list[UserInteraction],
     ) -> int:
-        """Determine user preference category from interactions"""
+        """Determine user preference category from interactions."""
         if not interactions:
             return 0
 
@@ -691,7 +695,7 @@ class ModelTrainer:
         return 0  # Unknown
 
     def _calculate_interaction_score(self, interaction: UserInteraction) -> float:
-        """Calculate score from individual interaction"""
+        """Calculate score from individual interaction."""
         scores = {
             "view": 0.1,
             "like": 0.3,
@@ -714,7 +718,7 @@ class ModelTrainer:
         return base_score
 
     async def load_models(self) -> dict[str, bool]:
-        """Load pre-trained models from disk"""
+        """Load pre-trained models from disk."""
         loaded_models = {}
 
         model_files = {
@@ -730,9 +734,9 @@ class ModelTrainer:
                     model = joblib.load(model_path)
                     self.trained_models[model_name] = model
                     loaded_models[model_name] = True
-                    logger.info(f"Loaded {model_name} model")
+                    logger.info("Loaded %s model", model_name)
                 except Exception as e:
-                    logger.error(f"Error loading {model_name} model: {e}")
+                    logger.error("Error loading %s model: %s", model_name, e)
                     loaded_models[model_name] = False
             else:
                 loaded_models[model_name] = False
@@ -740,7 +744,7 @@ class ModelTrainer:
         return loaded_models
 
     async def save_models(self) -> dict[str, bool]:
-        """Save trained models to disk"""
+        """Save trained models to disk."""
         saved_models = {}
 
         for model_name, model in self.trained_models.items():
@@ -748,15 +752,15 @@ class ModelTrainer:
                 model_path = self.models_dir / f"{model_name}_model.pkl"
                 joblib.dump(model, model_path)
                 saved_models[model_name] = True
-                logger.info(f"Saved {model_name} model")
+                logger.info("Saved %s model", model_name)
             except Exception as e:
-                logger.error(f"Error saving {model_name} model: {e}")
+                logger.error("Error saving %s model: %s", model_name, e)
                 saved_models[model_name] = False
 
         return saved_models
 
     async def predict_content_quality(self, content: ContentItem) -> float:
-        """Predict quality score for content"""
+        """Predict quality score for content."""
         if "content_quality" not in self.trained_models:
             logger.warning("Content quality model not trained")
             return 0.0
@@ -781,7 +785,7 @@ class ModelTrainer:
             return max(0.0, min(1.0, prediction))  # Clamp to [0, 1]
 
         except Exception as e:
-            logger.error(f"Error predicting content quality: {e}")
+            logger.error("Error predicting content quality: %s", e)
             return 0.0
 
     async def predict_user_preference(
@@ -789,7 +793,7 @@ class ModelTrainer:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> int:
-        """Predict user preference category"""
+        """Predict user preference category."""
         if "user_preference" not in self.trained_models:
             logger.warning("User preference model not trained")
             return 0
@@ -815,7 +819,7 @@ class ModelTrainer:
             return int(prediction)
 
         except Exception as e:
-            logger.error(f"Error predicting user preference: {e}")
+            logger.error("Error predicting user preference: %s", e)
             return 0
 
     async def predict_recommendation_score(
@@ -824,7 +828,7 @@ class ModelTrainer:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> float:
-        """Predict recommendation score for content-user pair"""
+        """Predict recommendation score for content-user pair."""
         if "recommendation" not in self.trained_models:
             logger.warning("Recommendation model not trained")
             return 0.0
@@ -853,11 +857,11 @@ class ModelTrainer:
             return max(0.0, min(1.0, prediction))  # Clamp to [0, 1]
 
         except Exception as e:
-            logger.error(f"Error predicting recommendation score: {e}")
+            logger.error("Error predicting recommendation score: %s", e)
             return 0.0
 
     def get_model_metrics(self) -> dict[str, ModelMetrics]:
-        """Get metrics for all trained models"""
+        """Get metrics for all trained models."""
         return self.model_metrics.copy()
 
     async def retrain_models(
@@ -866,7 +870,7 @@ class ModelTrainer:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> dict[str, ModelMetrics]:
-        """Retrain all models with new data"""
+        """Retrain all models with new data."""
         logger.info("Retraining all models")
 
         results = {}
@@ -878,7 +882,7 @@ class ModelTrainer:
                 interactions,
             )
         except Exception as e:
-            logger.error(f"Error retraining content quality model: {e}")
+            logger.error("Error retraining content quality model: %s", e)
 
         # Train user preference model
         try:
@@ -887,7 +891,7 @@ class ModelTrainer:
                 interactions,
             )
         except Exception as e:
-            logger.error(f"Error retraining user preference model: {e}")
+            logger.error("Error retraining user preference model: %s", e)
 
         # Train recommendation model
         try:
@@ -897,7 +901,7 @@ class ModelTrainer:
                 interactions,
             )
         except Exception as e:
-            logger.error(f"Error retraining recommendation model: {e}")
+            logger.error("Error retraining recommendation model: %s", e)
 
         # Save models
         await self.save_models()

@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
+from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.arxiv_enhanced_service import (
     ArxivEnhancedService,
     ArxivSearchQuery,
@@ -26,8 +28,6 @@ from services.ingestion.firecrawl_service import (
 )
 from services.ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 
-from scripts.ingestion_pipeline import ContentItem
-
 
 class TestPhase2AIntegration:
     """
@@ -35,8 +35,8 @@ class TestPhase2AIntegration:
     Tests focus on end-to-end workflows and service interactions.
     """
 
-    @pytest.fixture()
-    def mock_cognitive_engine(self):
+    @pytest.fixture
+    def mock_cognitive_engine(self) -> None:
         """Mock cognitive engine for testing"""
         engine = Mock()
         engine.assess_research_quality = AsyncMock(return_value=0.89)
@@ -51,8 +51,8 @@ class TestPhase2AIntegration:
         )
         return engine
 
-    @pytest.fixture()
-    def mock_n8n_manager(self):
+    @pytest.fixture
+    def mock_n8n_manager(self) -> None:
         """Mock n8n workflow manager for testing"""
         manager = Mock()
         manager.trigger_workflow = AsyncMock(
@@ -61,24 +61,24 @@ class TestPhase2AIntegration:
         manager.monitor_workflow = AsyncMock(return_value={"status": "completed"})
         return manager
 
-    @pytest.fixture()
-    def firecrawl_service(self):
+    @pytest.fixture
+    def firecrawl_service(self) -> None:
         """Firecrawl service instance"""
         return FirecrawlService(
             api_key="test-key",
             base_url="https://api.firecrawl.dev",
         )
 
-    @pytest.fixture()
-    def arxiv_service(self):
+    @pytest.fixture
+    def arxiv_service(self) -> None:
         """ArXiv enhanced service instance"""
         return ArxivEnhancedService(
             base_url="http://export.arxiv.org/api/query",
             max_results=50,
         )
 
-    @pytest.fixture()
-    def pubmed_service(self):
+    @pytest.fixture
+    def pubmed_service(self) -> None:
         """PubMed E-utilities service instance"""
         return PubMedService(email="test@example.com", max_results=50)
 
@@ -86,14 +86,8 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Multi-Source Content Ingestion
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_orchestrate_multi_source_research_ingestion(
-        self,
-        firecrawl_service,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_orchestrate_multi_source_research_ingestion(self) -> None:
         """
         Integration test: Should orchestrate content ingestion from multiple sources
         for a comprehensive research topic.
@@ -167,13 +161,8 @@ class TestPhase2AIntegration:
         )
         assert total_sources >= 5  # Should have diverse content from all sources
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_all_services_with_content_pipeline(
-        self,
-        firecrawl_service,
-        arxiv_service,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_integrate_all_services_with_content_pipeline(self) -> None:
         """
         Integration test: Should convert all service results to unified ContentItem format
         for pipeline processing.
@@ -230,13 +219,10 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Cognitive Processing Pipeline
     # ========================================================================
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_apply_unified_cognitive_assessment_across_sources(
         self,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    ) -> None:
         """
         Integration test: Should apply consistent cognitive assessment
         across all content sources.
@@ -284,13 +270,8 @@ class TestPhase2AIntegration:
         # Verify quality threshold compliance
         assert all(score > 0.85 for score in all_quality_scores)
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_mixed_content_quality_filtering(
-        self,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_mixed_content_quality_filtering(self) -> None:
         """
         Integration test: Should filter content based on cognitive quality assessment
         across different source types.
@@ -344,13 +325,10 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Workflow Automation
     # ========================================================================
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_integrate_with_n8n_research_automation_workflows(
         self,
-        arxiv_service,
-        pubmed_service,
-        mock_n8n_manager,
-    ):
+    ) -> None:
         """
         Integration test: Should trigger appropriate n8n workflows
         based on content source and type.
@@ -388,12 +366,8 @@ class TestPhase2AIntegration:
         )
         assert mock_n8n_manager.trigger_workflow.call_count >= 2
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_cross_source_content_deduplication(
-        self,
-        arxiv_service,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_cross_source_content_deduplication(self) -> None:
         """
         Integration test: Should identify and handle potential content duplication
         across different sources.
@@ -448,14 +422,8 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Performance and Scalability
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_multi_source_ingestion(
-        self,
-        firecrawl_service,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_multi_source_ingestion(self) -> None:
         """
         Integration test: Should handle concurrent ingestion from multiple sources
         without performance degradation.
@@ -508,13 +476,8 @@ class TestPhase2AIntegration:
             if hasattr(result, "success"):
                 assert result.success
 
-    @pytest.mark.asyncio()
-    async def test_should_maintain_system_stability_under_load(
-        self,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_maintain_system_stability_under_load(self) -> None:
         """
         Integration test: Should maintain system stability under higher load
         with proper error handling and resource management.
@@ -570,13 +533,8 @@ class TestPhase2AIntegration:
     # INTEGRATION TESTS - Error Handling and Resilience
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_partial_service_failures_gracefully(
-        self,
-        arxiv_service,
-        pubmed_service,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_partial_service_failures_gracefully(self) -> None:
         """
         Integration test: Should handle partial service failures
         and continue processing with available services.

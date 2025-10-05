@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Metrics Collection for PAKE System
-Prometheus-compatible metrics for observability
+Prometheus-compatible metrics for observability.
 """
 
 import os
@@ -25,7 +25,7 @@ except ImportError:
 
 @dataclass
 class MetricValue:
-    """Container for metric values with metadata"""
+    """Container for metric values with metadata."""
 
     value: float
     labels: dict[str, str] = field(default_factory=dict)
@@ -33,9 +33,9 @@ class MetricValue:
 
 
 class MetricsStore:
-    """Thread-safe metrics storage with Prometheus export capability"""
+    """Thread-safe metrics storage with Prometheus export capability."""
 
-    def __init__(self, service_name: str = "pake-system"):
+    def __init__(self) -> None:
         self.service_name = service_name
         self.start_time = time.time()
         self._lock = threading.RLock()
@@ -66,18 +66,13 @@ class MetricsStore:
         logger.info("Metrics store initialized", service=service_name)
 
     def _get_label_key(self, labels: dict[str, str]) -> str:
-        """Convert labels dict to string key"""
+        """Convert labels dict to string key."""
         if not labels:
             return ""
         return "|".join(f"{k}={v}" for k, v in sorted(labels.items()))
 
-    def increment_counter(
-        self,
-        name: str,
-        labels: dict[str, str] = None,
-        value: int = 1,
-    ):
-        """Increment a counter metric"""
+    def increment_counter(self) -> None:
+        """Increment a counter metric."""
         labels = labels or {}
         labels["service"] = self.service_name
         label_key = self._get_label_key(labels)
@@ -87,8 +82,8 @@ class MetricsStore:
 
         logger.debug("Counter incremented", metric=name, value=value, labels=labels)
 
-    def set_gauge(self, name: str, value: float, labels: dict[str, str] = None):
-        """Set a gauge metric value"""
+    def set_gauge(self) -> None:
+        """Set a gauge metric value."""
         labels = labels or {}
         labels["service"] = self.service_name
         label_key = self._get_label_key(labels)
@@ -98,14 +93,8 @@ class MetricsStore:
 
         logger.debug("Gauge set", metric=name, value=value, labels=labels)
 
-    def record_histogram(
-        self,
-        name: str,
-        value: float,
-        buckets: list[float] = None,
-        labels: dict[str, str] = None,
-    ):
-        """Record a histogram value"""
+    def record_histogram(self) -> None:
+        """Record a histogram value."""
         labels = labels or {}
         labels["service"] = self.service_name
         label_key = self._get_label_key(labels)
@@ -131,14 +120,8 @@ class MetricsStore:
 
         logger.debug("Histogram recorded", metric=name, value=value, labels=labels)
 
-    def record_http_request(
-        self,
-        method: str,
-        path: str,
-        status_code: int,
-        duration: float,
-    ):
-        """Record HTTP request metrics"""
+    def record_http_request(self) -> None:
+        """Record HTTP request metrics."""
         normalized_path = self._normalize_path(path)
         key = f"{method}:{normalized_path}:{status_code}"
         duration_key = f"{method}:{normalized_path}"
@@ -170,7 +153,7 @@ class MetricsStore:
         )
 
     def _normalize_path(self, path: str) -> str:
-        """Normalize API paths for metrics (remove IDs, etc.)"""
+        """Normalize API paths for metrics (remove IDs, etc.)."""
         import re
 
         normalized = path
@@ -183,11 +166,10 @@ class MetricsStore:
         # Replace numeric IDs
         normalized = re.sub(r"/\d+", "/:id", normalized)
         # Replace query parameters
-        normalized = re.sub(r"\?.*", "", normalized)
-        return normalized
+        return re.sub(r"\?.*", "", normalized)
 
-    def update_system_metrics(self):
-        """Update system-level metrics"""
+    def update_system_metrics(self) -> None:
+        """Update system-level metrics."""
         now = time.time()
         if now - self._last_system_update < 5.0:  # Update every 5 seconds
             return
@@ -227,7 +209,7 @@ class MetricsStore:
             logger.error("Failed to update system metrics", error=e)
 
     def get_prometheus_metrics(self) -> str:
-        """Generate Prometheus format metrics"""
+        """Generate Prometheus format metrics."""
         self.update_system_metrics()
         lines = []
 
@@ -357,8 +339,8 @@ class MetricsStore:
 
         return "\n".join(lines)
 
-    def get_json_metrics(self) -> dict[str, Any]:
-        """Get metrics in JSON format"""
+    def get_json_metrics(self) -> Dict[str, Any]:
+        """Get metrics in JSON format."""
         self.update_system_metrics()
 
         with self._lock:
@@ -389,7 +371,7 @@ _metrics_store = None
 
 
 def get_metrics_store(service_name: str = "pake-system") -> MetricsStore:
-    """Get or create global metrics store"""
+    """Get or create global metrics store."""
     global _metrics_store
     if _metrics_store is None:
         _metrics_store = MetricsStore(service_name)
@@ -399,23 +381,23 @@ def get_metrics_store(service_name: str = "pake-system") -> MetricsStore:
 # Convenience functions
 
 
-def increment_counter(name: str, value: int = 1, labels: dict[str, str] = None):
-    """Increment a counter metric"""
+def increment_counter(self) -> None:
+    """Increment a counter metric."""
     get_metrics_store().increment_counter(name, value, labels)
 
 
-def set_gauge(name: str, value: float, labels: dict[str, str] = None):
-    """Set a gauge metric"""
+def set_gauge(self) -> None:
+    """Set a gauge metric."""
     get_metrics_store().set_gauge(name, value, labels)
 
 
-def record_histogram(name: str, value: float, labels: dict[str, str] = None):
-    """Record a histogram value"""
+def record_histogram(self) -> None:
+    """Record a histogram value."""
     get_metrics_store().record_histogram(name, value, labels=labels)
 
 
-def record_http_request(method: str, path: str, status_code: int, duration: float):
-    """Record HTTP request metrics"""
+def record_http_request(self) -> None:
+    """Record HTTP request metrics."""
     get_metrics_store().record_http_request(method, path, status_code, duration)
 
 
@@ -423,28 +405,28 @@ def record_http_request(method: str, path: str, status_code: int, duration: floa
 
 
 class timer:
-    """Context manager for timing operations"""
+    """Context manager for timing operations."""
 
-    def __init__(self, metric_name: str, labels: dict[str, str] = None):
+    def __init__(self) -> None:
         self.metric_name = metric_name
         self.labels = labels or {}
         self.start_time = None
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.start_time = time.time()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self) -> None:
         if self.start_time:
             duration = time.time() - self.start_time
             record_histogram(self.metric_name, duration, self.labels)
 
 
-def timed(metric_name: str, labels: dict[str, str] = None):
-    """Decorator to time function execution"""
+def timed(self) -> None:
+    """Decorator to time function execution."""
 
-    def decorator(func):
-        def wrapper(*args, **kwargs):
+    def decorator(self) -> None:
+        def wrapper(self) -> None:
             with timer(metric_name, labels):
                 return func(*args, **kwargs)
 
@@ -456,8 +438,8 @@ def timed(metric_name: str, labels: dict[str, str] = None):
 # FastAPI/Starlette middleware
 
 
-def create_metrics_middleware():
-    """Create metrics middleware for FastAPI/Starlette"""
+def create_metrics_middleware(self) -> None:
+    """Create metrics middleware for FastAPI/Starlette."""
     try:
         import time
 
@@ -466,11 +448,11 @@ def create_metrics_middleware():
         from starlette.responses import Response
 
         class MetricsMiddleware(BaseHTTPMiddleware):
-            def __init__(self, app, metrics_store: MetricsStore = None):
+            def __init__(self) -> None:
                 super().__init__(app)
                 self.metrics_store = metrics_store or get_metrics_store()
 
-            async def dispatch(self, request: Request, call_next):
+            async def dispatch(self) -> None:
                 start_time = time.time()
 
                 try:
@@ -502,7 +484,7 @@ def create_metrics_middleware():
     except ImportError:
         # Return no-op middleware if starlette is not available
         class NoOpMetricsMiddleware:
-            def __init__(self, app, metrics_store=None):
+            def __init__(self) -> None:
                 pass
 
         return NoOpMetricsMiddleware
@@ -511,8 +493,8 @@ def create_metrics_middleware():
 # Health check function
 
 
-def get_health_status() -> dict[str, Any]:
-    """Get service health status with key metrics"""
+def get_health_status() -> Dict[str, Any]:
+    """Get service health status with key metrics."""
     metrics_store = get_metrics_store()
     metrics = metrics_store.get_json_metrics()
 

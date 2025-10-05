@@ -18,7 +18,8 @@ from data.repositories.NoteRepository import NoteRepository
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-async def test_dal_and_repository():
+@pytest.mark.asyncio
+async def test_dal_and_repository(self) -> None:
     """Test the Python DAL and NoteRepository implementation"""
     print("Testing PAKE Data Access Layer Implementation...\n")
 
@@ -193,7 +194,7 @@ async def test_dal_and_repository():
     return True
 
 
-def test_note_repository_standalone():
+def test_note_repository_standalone(self) -> None:
     """Test NoteRepository without DAL"""
     print("\nTesting NoteRepository Standalone...")
 
@@ -231,7 +232,7 @@ def test_note_repository_standalone():
         shutil.rmtree(temp_vault, ignore_errors=True)
 
 
-async def main():
+async def main(self) -> None:
     """Run all tests"""
     print("Starting PAKE System DAL Test Suite\n")
 

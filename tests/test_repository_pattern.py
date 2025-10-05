@@ -6,32 +6,31 @@ Comprehensive unit tests demonstrating the benefits of the Repository Pattern:
 - Clean separation of concerns
 """
 
-
 import pytest
 
-from ..business.user_service import UserService
-from ..domain.models import SearchHistory, User
-from ..repositories.fake_repositories import (
+from src.services.business.user_service import UserService
+from src.services.domain.models import SearchHistory, User
+from src.services.repositories.fake_repositories import (
     FakeUserRepository,
 )
-from ..repositories.repository_container import FakeRepositoryContainer
+from src.services.repositories.repository_container import FakeRepositoryContainer
 
 
 class TestUserServiceWithFakeRepository:
     """Test UserService using fake repository for fast, isolated testing"""
 
-    @pytest.fixture()
-    def fake_user_repository(self):
+    @pytest.fixture
+    def fake_user_repository(self) -> None:
         """Create fake user repository for testing"""
         return FakeUserRepository()
 
-    @pytest.fixture()
-    def user_service(self, fake_user_repository):
+    @pytest.fixture
+    def user_service(self) -> None:
         """Create user service with fake repository"""
         return UserService(fake_user_repository)
 
-    @pytest.mark.asyncio()
-    async def test_create_user_success(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_success(self) -> None:
         """Test successful user creation"""
         # Arrange
         username = "testuser"
@@ -56,8 +55,8 @@ class TestUserServiceWithFakeRepository:
         assert user.is_admin is False
         assert user.id is not None
 
-    @pytest.mark.asyncio()
-    async def test_create_user_duplicate_email(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_duplicate_email(self) -> None:
         """Test user creation with duplicate email"""
         # Arrange
         username1 = "user1"
@@ -74,8 +73,8 @@ class TestUserServiceWithFakeRepository:
         ):
             await user_service.create_user(username2, email, password_hash)
 
-    @pytest.mark.asyncio()
-    async def test_create_user_duplicate_username(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_duplicate_username(self) -> None:
         """Test user creation with duplicate username"""
         # Arrange
         username = "duplicate_user"
@@ -92,15 +91,15 @@ class TestUserServiceWithFakeRepository:
         ):
             await user_service.create_user(username, email2, password_hash)
 
-    @pytest.mark.asyncio()
-    async def test_create_user_invalid_email(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_invalid_email(self) -> None:
         """Test user creation with invalid email"""
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid email address"):
             await user_service.create_user("testuser", "invalid-email", "password")
 
-    @pytest.mark.asyncio()
-    async def test_create_user_short_username(self, user_service):
+    @pytest.mark.asyncio
+    async def test_create_user_short_username(self) -> None:
         """Test user creation with short username"""
         # Act & Assert
         with pytest.raises(
@@ -108,8 +107,8 @@ class TestUserServiceWithFakeRepository:
         ):
             await user_service.create_user("ab", "test@example.com", "password")
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_success(self, user_service):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_success(self) -> None:
         """Test successful user authentication"""
         # Arrange
         username = "testuser"
@@ -126,8 +125,8 @@ class TestUserServiceWithFakeRepository:
         assert authenticated_user.id == user.id
         assert authenticated_user.email == email
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_wrong_password(self, user_service):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_wrong_password(self) -> None:
         """Test authentication with wrong password"""
         # Arrange
         username = "testuser"
@@ -143,8 +142,8 @@ class TestUserServiceWithFakeRepository:
         # Assert
         assert authenticated_user is None
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_inactive(self, user_service):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_inactive(self) -> None:
         """Test authentication of inactive user"""
         # Arrange
         username = "testuser"
@@ -160,8 +159,8 @@ class TestUserServiceWithFakeRepository:
         # Assert
         assert authenticated_user is None
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_nonexistent(self, user_service):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_nonexistent(self) -> None:
         """Test authentication of nonexistent user"""
         # Act
         authenticated_user = await user_service.authenticate_user(
@@ -171,8 +170,8 @@ class TestUserServiceWithFakeRepository:
         # Assert
         assert authenticated_user is None
 
-    @pytest.mark.asyncio()
-    async def test_update_user_profile_success(self, user_service):
+    @pytest.mark.asyncio
+    async def test_update_user_profile_success(self) -> None:
         """Test successful user profile update"""
         # Arrange
         username = "testuser"
@@ -194,8 +193,8 @@ class TestUserServiceWithFakeRepository:
         assert updated_user.full_name == new_full_name
         assert updated_user.preferences == new_preferences
 
-    @pytest.mark.asyncio()
-    async def test_update_user_profile_nonexistent(self, user_service):
+    @pytest.mark.asyncio
+    async def test_update_user_profile_nonexistent(self) -> None:
         """Test updating profile of nonexistent user"""
         # Act & Assert
         with pytest.raises(ValueError, match="User .* not found"):
@@ -203,8 +202,8 @@ class TestUserServiceWithFakeRepository:
                 "nonexistent_id", full_name="New Name"
             )
 
-    @pytest.mark.asyncio()
-    async def test_deactivate_user_success(self, user_service):
+    @pytest.mark.asyncio
+    async def test_deactivate_user_success(self) -> None:
         """Test successful user deactivation"""
         # Arrange
         username = "testuser"
@@ -223,8 +222,8 @@ class TestUserServiceWithFakeRepository:
         deactivated_user = await user_service.get_user_by_id(user.id)
         assert deactivated_user.is_active is False
 
-    @pytest.mark.asyncio()
-    async def test_deactivate_user_already_inactive(self, user_service):
+    @pytest.mark.asyncio
+    async def test_deactivate_user_already_inactive(self) -> None:
         """Test deactivating already inactive user"""
         # Arrange
         username = "testuser"
@@ -240,8 +239,8 @@ class TestUserServiceWithFakeRepository:
         # Assert
         assert success is False
 
-    @pytest.mark.asyncio()
-    async def test_deactivate_admin_user(self, user_service):
+    @pytest.mark.asyncio
+    async def test_deactivate_admin_user(self) -> None:
         """Test deactivating admin user (should fail)"""
         # Arrange
         username = "admin"
@@ -256,8 +255,8 @@ class TestUserServiceWithFakeRepository:
         with pytest.raises(ValueError, match="Cannot deactivate admin users"):
             await user_service.deactivate_user(user.id, "admin")
 
-    @pytest.mark.asyncio()
-    async def test_activate_user_success(self, user_service):
+    @pytest.mark.asyncio
+    async def test_activate_user_success(self) -> None:
         """Test successful user activation"""
         # Arrange
         username = "testuser"
@@ -277,8 +276,8 @@ class TestUserServiceWithFakeRepository:
         activated_user = await user_service.get_user_by_id(user.id)
         assert activated_user.is_active is True
 
-    @pytest.mark.asyncio()
-    async def test_get_user_statistics(self, user_service):
+    @pytest.mark.asyncio
+    async def test_get_user_statistics(self) -> None:
         """Test user statistics calculation"""
         # Arrange
         # Create active users
@@ -307,8 +306,8 @@ class TestUserServiceWithFakeRepository:
         assert stats["regular_users"] == 3
         assert stats["active_percentage"] == 75.0
 
-    @pytest.mark.asyncio()
-    async def test_search_users(self, user_service):
+    @pytest.mark.asyncio
+    async def test_search_users(self) -> None:
         """Test user search functionality"""
         # Arrange
         await user_service.create_user(
@@ -328,8 +327,8 @@ class TestUserServiceWithFakeRepository:
         assert len(results) == 1
         assert results[0].username == "john_doe"
 
-    @pytest.mark.asyncio()
-    async def test_search_users_by_email(self, user_service):
+    @pytest.mark.asyncio
+    async def test_search_users_by_email(self) -> None:
         """Test user search by email"""
         # Arrange
         await user_service.create_user("user1", "test@example.com", "password")
@@ -342,8 +341,8 @@ class TestUserServiceWithFakeRepository:
         assert len(results) == 1
         assert results[0].email == "test@example.com"
 
-    @pytest.mark.asyncio()
-    async def test_search_users_short_query(self, user_service):
+    @pytest.mark.asyncio
+    async def test_search_users_short_query(self) -> None:
         """Test user search with short query"""
         # Act & Assert
         with pytest.raises(
@@ -351,8 +350,8 @@ class TestUserServiceWithFakeRepository:
         ):
             await user_service.search_users("a")
 
-    @pytest.mark.asyncio()
-    async def test_health_check(self, user_service):
+    @pytest.mark.asyncio
+    async def test_health_check(self) -> None:
         """Test service health check"""
         # Act
         health = await user_service.health_check()
@@ -367,8 +366,8 @@ class TestUserServiceWithFakeRepository:
 class TestRepositoryPatternBenefits:
     """Test demonstrating the benefits of the Repository Pattern"""
 
-    @pytest.mark.asyncio()
-    async def test_fast_test_execution(self):
+    @pytest.mark.asyncio
+    async def test_fast_test_execution(self) -> None:
         """Test that fake repositories provide fast test execution"""
         import time
 
@@ -398,8 +397,8 @@ class TestRepositoryPatternBenefits:
         assert execution_time < 1.0
         print(f"Fake repository operations completed in {execution_time:.3f} seconds")
 
-    @pytest.mark.asyncio()
-    async def test_isolation_from_database(self):
+    @pytest.mark.asyncio
+    async def test_isolation_from_database(self) -> None:
         """Test that business logic can be tested without database"""
         # Create fake repository
         fake_repo = FakeUserRepository()
@@ -428,8 +427,8 @@ class TestRepositoryPatternBenefits:
         deactivated_user = await user_service.get_user_by_id(user.id)
         assert deactivated_user.is_active is False
 
-    @pytest.mark.asyncio()
-    async def test_repository_container_integration(self):
+    @pytest.mark.asyncio
+    async def test_repository_container_integration(self) -> None:
         """Test repository container with fake repositories"""
         # Create fake container
         fake_container = FakeRepositoryContainer()

@@ -1,4 +1,4 @@
-"""Intelligence GraphQL Service
+"""Intelligence GraphQL Service.
 
 FastAPI + GraphQL interface for unified querying across all knowledge stores
 following the Personal Intelligence Engine blueprint. Provides a single,
@@ -58,7 +58,7 @@ class EntityType:
     text: str
     entity_type: str
     confidence: float
-    mentions: list[str]
+    mentions: List[str]
     properties: strawberry.scalars.JSON
 
 
@@ -83,7 +83,7 @@ class KnowledgeItemType:
     content: str
     source_type: str
     source_path: str
-    tags: list[str]
+    tags: List[str]
     created_at: datetime
     updated_at: datetime
     entities: list[EntityType]
@@ -108,7 +108,7 @@ class TopicEvolutionType:
 
     topic_id: str
     topic_description: str
-    keywords: list[str]
+    keywords: List[str]
     coherence_score: float
     trend_direction: str
     growth_rate: float
@@ -135,10 +135,10 @@ class CommunityInsightType:
 
     community_id: str
     community_description: str
-    member_entities: list[str]
+    member_entities: List[str]
     community_size: int
     modularity_score: float
-    central_entities: list[str]
+    central_entities: List[str]
     significance: str
 
 
@@ -151,10 +151,10 @@ class SynthesisInsightType:
     description: str
     confidence_score: float
     significance: str
-    supporting_evidence: list[str]
-    actionable_recommendations: list[str]
+    supporting_evidence: List[str]
+    actionable_recommendations: List[str]
     time_horizon: str
-    categories: list[str]
+    categories: List[str]
     created_at: datetime
 
 
@@ -213,7 +213,7 @@ class AddKnowledgeItemInput:
     content: str
     source_type: str
     source_path: str
-    tags: list[str] | None = None
+    tags: List[str] | None = None
     frontmatter: strawberry.scalars.JSON | None = None
 
 
@@ -221,7 +221,7 @@ class AddKnowledgeItemInput:
 class AnalysisInput:
     """Input type for running comprehensive analysis."""
 
-    documents: list[str] | None = None
+    documents: List[str] | None = None
     include_topics: bool = True
     include_correlations: bool = True
     include_communities: bool = True
@@ -301,8 +301,9 @@ class Query:
             return items
 
         except Exception as e:
-            logger.error(f"Error in knowledge search: {e}")
-            raise Exception(f"Knowledge search failed: {str(e)}")
+            logger.error("Error in knowledge search: %s", e)
+            msg = f"Knowledge search failed: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.field
     async def semantic_search(
@@ -322,7 +323,8 @@ class Query:
             # Generate query embedding
             embeddings = await nlp_service.generate_embeddings([query_text])
             if embeddings.size == 0:
-                raise Exception("Failed to generate query embedding")
+                msg = "Failed to generate query embedding"
+                raise Exception(msg)
 
             # Perform vector search
             results = await vector_db.semantic_search(
@@ -347,8 +349,9 @@ class Query:
             return search_results
 
         except Exception as e:
-            logger.error(f"Error in semantic search: {e}")
-            raise Exception(f"Semantic search failed: {str(e)}")
+            logger.error("Error in semantic search: %s", e)
+            msg = f"Semantic search failed: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.field
     async def get_insights(
@@ -400,8 +403,9 @@ class Query:
             return insights
 
         except Exception as e:
-            logger.error(f"Error getting insights: {e}")
-            raise Exception(f"Failed to retrieve insights: {str(e)}")
+            logger.error("Error getting insights: %s", e)
+            msg = f"Failed to retrieve insights: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.field
     async def get_topic_evolution(
@@ -458,8 +462,9 @@ class Query:
             return topic_evolutions
 
         except Exception as e:
-            logger.error(f"Error getting topic evolution: {e}")
-            raise Exception(f"Failed to retrieve topic evolution: {str(e)}")
+            logger.error("Error getting topic evolution: %s", e)
+            msg = f"Failed to retrieve topic evolution: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.field
     async def get_service_statistics(self, info: strawberry.Info) -> ServiceStatsType:
@@ -484,14 +489,15 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error getting service statistics: {e}")
-            raise Exception(f"Failed to retrieve service statistics: {str(e)}")
+            logger.error("Error getting service statistics: %s", e)
+            msg = f"Failed to retrieve service statistics: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.field
     async def health_check(self, info: strawberry.Info) -> HealthCheckType:
         """Perform comprehensive health check."""
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
 
             intelligence_core = info.context["intelligence_core"]
             nlp_service = info.context["nlp_service"]
@@ -539,7 +545,7 @@ class Query:
 
             overall_status = "healthy" if all_healthy else "degraded"
 
-            response_time = (datetime.now() - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             return HealthCheckType(
                 status=overall_status,
@@ -549,8 +555,9 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error in health check: {e}")
-            raise Exception(f"Health check failed: {str(e)}")
+            logger.error("Error in health check: %s", e)
+            msg = f"Health check failed: {str(e)}"
+            raise Exception(msg)
 
 
 # GraphQL Mutation Class
@@ -619,8 +626,9 @@ class Mutation:
             )
 
         except Exception as e:
-            logger.error(f"Error adding knowledge item: {e}")
-            raise Exception(f"Failed to add knowledge item: {str(e)}")
+            logger.error("Error adding knowledge item: %s", e)
+            msg = f"Failed to add knowledge item: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.mutation
     async def run_comprehensive_analysis(
@@ -726,8 +734,9 @@ class Mutation:
             )
 
         except Exception as e:
-            logger.error(f"Error in comprehensive analysis: {e}")
-            raise Exception(f"Comprehensive analysis failed: {str(e)}")
+            logger.error("Error in comprehensive analysis: %s", e)
+            msg = f"Comprehensive analysis failed: {str(e)}"
+            raise Exception(msg)
 
 
 # GraphQL Schema
@@ -742,17 +751,7 @@ class IntelligenceGraphQLService:
     and production-ready performance.
     """
 
-    def __init__(
-        self,
-        obsidian_vault_path: str,
-        neo4j_uri: str,
-        neo4j_user: str,
-        neo4j_REDACTED_SECRET: str,
-        postgres_url: str,
-        cache_service: CacheService | None = None,
-        host: str = "127.0.0.1",
-        port: int = 8000,
-    ):
+    def __init__(self) -> None:
         """Initialize the GraphQL service.
 
         Args:
@@ -791,7 +790,7 @@ class IntelligenceGraphQLService:
         self._setup_middleware()
         self._setup_routes()
 
-    def _setup_middleware(self):
+    def _setup_middleware(self) -> None:
         """Setup FastAPI middleware."""
         # CORS middleware
         self.app.add_middleware(
@@ -802,11 +801,11 @@ class IntelligenceGraphQLService:
             allow_headers=["*"],
         )
 
-    def _setup_routes(self):
+    def _setup_routes(self) -> None:
         """Setup FastAPI routes."""
 
         @self.app.get("/")
-        async def root():
+        async def root(self) -> None:
             """Root endpoint with service information."""
             return {
                 "service": "PAKE Intelligence Engine API",
@@ -820,7 +819,7 @@ class IntelligenceGraphQLService:
             }
 
         @self.app.get("/health")
-        async def health_check():
+        async def health_check(self) -> None:
             """Health check endpoint."""
             try:
                 if not all(
@@ -920,7 +919,7 @@ class IntelligenceGraphQLService:
             )
 
             # Setup GraphQL with context
-            async def get_context():
+            async def get_context(self) -> None:
                 return {
                     "intelligence_core": self.intelligence_core,
                     "nlp_service": self.nlp_service,
@@ -936,17 +935,20 @@ class IntelligenceGraphQLService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize Intelligence GraphQL Service: {e}")
+            logger.error("Failed to initialize Intelligence GraphQL Service: %s", e)
             return False
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the FastAPI service."""
         import uvicorn
 
         if not await self.initialize():
-            raise RuntimeError("Failed to initialize Intelligence GraphQL Service")
+            msg = "Failed to initialize Intelligence GraphQL Service"
+            raise RuntimeError(msg)
 
-        logger.info(f"Starting Intelligence GraphQL Service on {self.host}:{self.port}")
+        logger.info(
+            "Starting Intelligence GraphQL Service on %s:%s", self.host, self.port
+        )
 
         config = uvicorn.Config(
             app=self.app,
@@ -958,7 +960,7 @@ class IntelligenceGraphQLService:
         server = uvicorn.Server(config)
         await server.serve()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close all service connections."""
         try:
             if self.intelligence_core:
@@ -970,7 +972,7 @@ class IntelligenceGraphQLService:
             logger.info("Intelligence GraphQL Service closed")
 
         except Exception as e:
-            logger.error(f"Error closing GraphQL service: {e}")
+            logger.error("Error closing GraphQL service: %s", e)
 
 
 # Factory function for creating the service
@@ -1011,7 +1013,8 @@ async def create_intelligence_graphql_service(
     )
 
     if not await service.initialize():
-        raise RuntimeError("Failed to initialize Intelligence GraphQL Service")
+        msg = "Failed to initialize Intelligence GraphQL Service"
+        raise RuntimeError(msg)
 
     return service
 
@@ -1021,15 +1024,16 @@ if __name__ == "__main__":
     import asyncio
     import os
 
-    async def main():
+    async def main(self) -> None:
         # SECURITY: Fail-fast approach - no hardcoded fallbacks
         neo4j_REDACTED_SECRET = os.getenv("NEO4J_PASSWORD")
         if not neo4j_REDACTED_SECRET:
-            raise ValueError(
+            msg = (
                 "The NEO4J_PASSWORD environment variable is not set. "
                 "Please configure it before running the application. "
                 "This is a security requirement."
             )
+            raise ValueError(msg)
 
         service = await create_intelligence_graphql_service(
             obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH", "/path/to/vault"),

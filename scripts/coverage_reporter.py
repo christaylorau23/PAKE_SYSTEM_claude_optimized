@@ -88,7 +88,7 @@ class CoverageGap:
 class CoverageReporter:
     """Comprehensive test coverage reporting and monitoring"""
 
-    def __init__(self, project_root: Path):
+    def __init__(self) -> None:
         self.project_root = project_root
         self.coverage_dir = project_root / "coverage"
         self.reports_dir = project_root / "coverage_reports"
@@ -107,16 +107,16 @@ class CoverageReporter:
             CoverageLevel.COMBINED: 85.0,
         }
 
-        logger.info(f"CoverageReporter initialized for project: {project_root}")
+        logger.info("CoverageReporter initialized for project: %s", project_root)
 
     async def generate_coverage_report(self, level: CoverageLevel) -> CoverageMetrics:
         """Generate coverage report for specific test level"""
-        logger.info(f"Generating coverage report for {level.value} tests")
+        logger.info("Generating coverage report for %s tests", level.value)
 
         # Run tests with coverage
         test_dir = self.project_root / "tests" / level.value
         if not test_dir.exists():
-            logger.warning(f"Test directory not found: {test_dir}")
+            logger.warning("Test directory not found: %s", test_dir)
             return None
 
         # Configure coverage
@@ -194,7 +194,7 @@ class CoverageReporter:
         await self._save_coverage_metrics(metrics)
 
         logger.info(
-            f"Coverage report generated for {level.value}: {metrics.line_percentage:.2f}%"
+            # TODO: Fix unexpected colon - "Coverage report generated for %s: %s%", level.value, metrics.line_percentage:.2f
         )
         return metrics
 
@@ -271,7 +271,8 @@ class CoverageReporter:
         await self._save_coverage_metrics(combined_metrics)
 
         logger.info(
-            f"Combined coverage report generated: {combined_metrics.line_percentage:.2f}%"
+            "Combined coverage report generated: %.2f%",
+            combined_metrics.line_percentage,
         )
         return combined_metrics
 
@@ -326,7 +327,7 @@ class CoverageReporter:
 
             trends.append(trend)
 
-        logger.info(f"Coverage trends analyzed: {len(trends)} trends found")
+        logger.info("Coverage trends analyzed: %s trends found", len(trends))
         return trends
 
     async def identify_coverage_gaps(self) -> list[CoverageGap]:
@@ -370,10 +371,10 @@ class CoverageReporter:
             key=lambda x: {"high": 3, "medium": 2, "low": 1}[x.priority], reverse=True
         )
 
-        logger.info(f"Coverage gaps identified: {len(gaps)} gaps found")
+        logger.info("Coverage gaps identified: %s gaps found", len(gaps))
         return gaps
 
-    async def generate_coverage_dashboard(self) -> dict[str, Any]:
+    async def generate_coverage_dashboard(self) -> Dict[str, Any]:
         """Generate comprehensive coverage dashboard"""
         logger.info("Generating coverage dashboard")
 
@@ -466,7 +467,7 @@ class CoverageReporter:
         with open(dashboard_file, "w") as f:
             json.dump(dashboard, f, indent=2, default=str)
 
-        logger.info(f"Coverage dashboard generated: {dashboard_file}")
+        logger.info("Coverage dashboard generated: %s", dashboard_file)
         return dashboard
 
     async def enforce_quality_gates(self) -> bool:
@@ -483,19 +484,25 @@ class CoverageReporter:
         ]:
             metrics = await self._load_coverage_metrics(level)
             if not metrics:
-                logger.error(f"No coverage metrics found for {level.value}")
+                logger.error("No coverage metrics found for %s", level.value)
                 all_passed = False
                 continue
 
             threshold = self.thresholds[level]
             if metrics.line_percentage < threshold:
                 logger.error(
-                    f"Quality gate failed for {level.value}: {metrics.line_percentage:.2f}% < {threshold}%"
+                    "Quality gate failed for %s: %s < %s%",
+                    level.value,
+                    f"{metrics.line_percentage:.2f}%",
+                    threshold,
                 )
                 all_passed = False
             else:
                 logger.info(
-                    f"Quality gate passed for {level.value}: {metrics.line_percentage:.2f}% >= {threshold}%"
+                    "Quality gate passed for %s: %s >= %s%",
+                    level.value,
+                    f"{metrics.line_percentage:.2f}%",
+                    threshold,
                 )
 
         if all_passed:
@@ -516,7 +523,7 @@ class CoverageReporter:
                 count += content.count("def test_")
         return count
 
-    async def _save_coverage_metrics(self, metrics: CoverageMetrics):
+    async def _save_coverage_metrics(self) -> None:
         """Save coverage metrics to file"""
         metrics_file = self.trends_dir / f"{metrics.level.value}_coverage.json"
         with open(metrics_file, "w") as f:
@@ -524,7 +531,7 @@ class CoverageReporter:
 
     async def _load_coverage_metrics(
         self, level: CoverageLevel
-    ) -> Optional[CoverageMetrics]:
+    ) -> CoverageMetrics | None:
         """Load coverage metrics from file"""
         metrics_file = self.trends_dir / f"{level.value}_coverage.json"
         if not metrics_file.exists():
@@ -553,10 +560,9 @@ class CoverageReporter:
         # High priority for critical files
         if "auth" in file_path or "security" in file_path:
             return "high"
-        elif "api" in file_path or "service" in file_path:
+        if "api" in file_path or "service" in file_path:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
     def _generate_recommendation(self, file_path: str, line_num: int) -> str:
         """Generate recommendation for coverage gap"""
@@ -570,7 +576,7 @@ class CoverageReporter:
         combined_metrics,
         trends,
         gaps,
-    ) -> list[str]:
+    ) -> List[str]:
         """Generate overall recommendations"""
         recommendations = []
 
@@ -597,7 +603,7 @@ class CoverageReporter:
         return recommendations
 
 
-async def main():
+async def main(self) -> None:
     """Main function for coverage reporting"""
     project_root = Path(__file__).parent.parent
     reporter = CoverageReporter(project_root)

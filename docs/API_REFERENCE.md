@@ -1,7 +1,7 @@
 # PAKE System API Reference
 
-**Version**: 10.1.0  
-**Base URL**: `http://localhost:8000` (Development)  
+**Version**: 10.1.0
+**Base URL**: `http://localhost:8000` (Development)
 **Documentation**: This document provides comprehensive API reference for the PAKE (Personal AI Knowledge Engine) System.
 
 ## Table of Contents
@@ -564,7 +564,7 @@ class PAKEClient:
     def __init__(self, base_url="http://localhost:8000"):
         self.base_url = base_url
         self.session = requests.Session()
-    
+
     def search(self, query, sources=None, max_results=10, enable_ml=True):
         """Perform a search query"""
         payload = {
@@ -573,13 +573,13 @@ class PAKEClient:
             "max_results": max_results,
             "enable_ml_enhancement": enable_ml
         }
-        
+
         response = self.session.post(
             f"{self.base_url}/search",
             json=payload
         )
         return response.json()
-    
+
     def summarize(self, content, content_type="general"):
         """Summarize content"""
         payload = {
@@ -587,18 +587,18 @@ class PAKEClient:
             "content_type": content_type,
             "include_key_points": True
         }
-        
+
         response = self.session.post(
             f"{self.base_url}/summarize",
             json=payload
         )
         return response.json()
-    
+
     def get_dashboard(self):
         """Get ML intelligence dashboard"""
         response = self.session.get(f"{self.base_url}/ml/dashboard")
         return response.json()
-    
+
     def get_analytics_report(self, time_range="24h"):
         """Get comprehensive analytics report"""
         params = {"time_range": time_range, "include_predictions": True}
@@ -631,7 +631,7 @@ class PAKEClient {
     constructor(baseUrl = 'http://localhost:8000') {
         this.baseUrl = baseUrl;
     }
-    
+
     async search(query, options = {}) {
         const payload = {
             query,
@@ -639,47 +639,47 @@ class PAKEClient {
             max_results: options.maxResults || 10,
             enable_ml_enhancement: options.enableML !== false
         };
-        
+
         const response = await fetch(`${this.baseUrl}/search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
+
         return response.json();
     }
-    
+
     async summarize(content, contentType = 'general') {
         const payload = {
             content,
             content_type: contentType,
             include_key_points: true
         };
-        
+
         const response = await fetch(`${this.baseUrl}/summarize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
+
         return response.json();
     }
-    
+
     async getDashboard() {
         const response = await fetch(`${this.baseUrl}/ml/dashboard`);
         return response.json();
     }
-    
+
     async getAnalyticsReport(timeRange = '24h') {
         const params = new URLSearchParams({
             time_range: timeRange,
             include_predictions: 'true'
         });
-        
+
         const response = await fetch(
             `${this.baseUrl}/analytics/comprehensive-report?${params}`
         );
-        
+
         return response.json();
     }
 }

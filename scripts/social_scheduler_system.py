@@ -51,12 +51,12 @@ class ScheduledPost:
 
     id: str
     content: str
-    platforms: list[str]
+    platforms: List[str]
     scheduled_time: datetime
     status: PostStatus
-    media_files: list[str] = None
-    hashtags: list[str] = None
-    mentions: list[str] = None
+    media_files: List[str] = None
+    hashtags: List[str] = None
+    mentions: List[str] = None
     timezone: str = "UTC"
     recurring: bool = False
     frequency: ScheduleFrequency = ScheduleFrequency.ONCE
@@ -77,7 +77,7 @@ class PostingSchedule:
     """Platform-specific posting schedule"""
 
     platform: str
-    optimal_times: list[str]
+    optimal_times: List[str]
     timezone: str
     frequency_limits: dict[str, int]  # max posts per hour/day
     blackout_periods: list[tuple[str, str]] = None  # periods to avoid posting
@@ -86,7 +86,7 @@ class PostingSchedule:
 class SocialSchedulerSystem:
     """Advanced social media scheduling system"""
 
-    def __init__(self, db_path: str = "scheduler.db"):
+    def __init__(self) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class SocialSchedulerSystem:
         # Posting counters
         self.posting_counters = {}
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize SQLite database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -264,11 +264,11 @@ class SocialSchedulerSystem:
             else:
                 await self._schedule_single_post(post)
 
-            self.logger.info(f"Post {post.id} scheduled for {post.scheduled_time}")
+            self.logger.info("Post %s scheduled for %s", post.id, post.scheduled_time)
             return post.id
 
         except Exception as e:
-            self.logger.error(f"Failed to schedule post: {e}")
+            self.logger.error("Failed to schedule post: %s", e)
             raise
 
     async def _find_optimal_posting_time(
@@ -393,10 +393,7 @@ class SocialSchedulerSystem:
 
         daily_posts = await self._count_posts_in_timeframe(platform, day_start, day_end)
 
-        if daily_posts >= limits.get("day", 1000):
-            return False
-
-        return True
+        return not daily_posts >= limits.get("day", 1000)
 
     async def _count_posts_in_timeframe(
         self,
@@ -424,7 +421,7 @@ class SocialSchedulerSystem:
         conn.close()
         return count
 
-    async def _store_scheduled_post(self, post: ScheduledPost):
+    async def _store_scheduled_post(self) -> None:
         """Store scheduled post in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -466,7 +463,7 @@ class SocialSchedulerSystem:
         conn.commit()
         conn.close()
 
-    async def _schedule_single_post(self, post: ScheduledPost):
+    async def _schedule_single_post(self) -> None:
         """Schedule a single post using APScheduler"""
         self.scheduler.add_job(
             func=self._execute_post,
@@ -478,7 +475,7 @@ class SocialSchedulerSystem:
             misfire_grace_time=300,  # 5 minutes grace period
         )
 
-    async def _schedule_recurring_post(self, post: ScheduledPost):
+    async def _schedule_recurring_post(self) -> None:
         """Schedule a recurring post"""
         if post.frequency == ScheduleFrequency.DAILY:
             self.scheduler.add_job(
@@ -525,7 +522,8 @@ class SocialSchedulerSystem:
         # Basic cron parsing - in production use croniter
         parts = cron_expr.split()
         if len(parts) != 5:
-            raise ValueError("Invalid cron expression")
+            msg = "Invalid cron expression"
+            raise ValueError(msg)
 
         return {
             "minute": parts[0] if parts[0] != "*" else None,
@@ -535,15 +533,15 @@ class SocialSchedulerSystem:
             "day_of_week": parts[4] if parts[4] != "*" else None,
         }
 
-    async def _execute_post(self, post_id: str):
+    async def _execute_post(self) -> None:
         """Execute a scheduled post"""
         try:
-            self.logger.info(f"Executing scheduled post: {post_id}")
+            self.logger.info("Executing scheduled post: %s", post_id)
 
             # Load post from database
             post = await self._load_scheduled_post(post_id)
             if not post:
-                self.logger.error(f"Post {post_id} not found")
+                self.logger.error("Post %s not found", post_id)
                 return
 
             # Update status
@@ -597,10 +595,10 @@ class SocialSchedulerSystem:
             # Store analytics
             await self._store_posting_analytics(post, results)
 
-            self.logger.info(f"Post {post_id} executed successfully")
+            self.logger.info("Post %s executed successfully", post_id)
 
         except Exception as e:
-            self.logger.error(f"Failed to execute post {post_id}: {e}")
+            self.logger.error("Failed to execute post %s: %s", post_id, e)
 
             # Update post as failed and schedule retry if possible
             post = await self._load_scheduled_post(post_id)
@@ -613,7 +611,7 @@ class SocialSchedulerSystem:
                 else:
                     await self._update_post_status(post)
 
-    async def _schedule_retry(self, post: ScheduledPost):
+    async def _schedule_retry(self) -> None:
         """Schedule a retry for failed post"""
         post.retry_count += 1
         # Exponential backoff, max 1 hour
@@ -626,7 +624,10 @@ class SocialSchedulerSystem:
         await self._schedule_single_post(post)
 
         self.logger.info(
-            f"Scheduled retry {post.retry_count} for post {post.id} at {retry_time}",
+            "Scheduled retry %s for post %s at %s",
+            post.retry_count,
+            post.id,
+            retry_time,
         )
 
     async def _load_scheduled_post(self, post_id: str) -> ScheduledPost | None:
@@ -678,7 +679,7 @@ class SocialSchedulerSystem:
             error_message=row[19],
         )
 
-    async def _update_post_status(self, post: ScheduledPost):
+    async def _update_post_status(self) -> None:
         """Update post status in database"""
         post.updated_at = datetime.now(UTC)
 
@@ -704,7 +705,7 @@ class SocialSchedulerSystem:
         conn.commit()
         conn.close()
 
-    async def _store_posting_analytics(self, post: ScheduledPost, results: dict):
+    async def _store_posting_analytics(self) -> None:
         """Store posting analytics"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -723,12 +724,12 @@ class SocialSchedulerSystem:
         conn.commit()
         conn.close()
 
-    def start_scheduler(self):
+    def start_scheduler(self) -> None:
         """Start the scheduler"""
         self.scheduler.start()
         self.logger.info("Social media scheduler started")
 
-    def stop_scheduler(self):
+    def stop_scheduler(self) -> None:
         """Stop the scheduler"""
         self.scheduler.shutdown()
         self.logger.info("Social media scheduler stopped")
@@ -810,7 +811,7 @@ class SocialSchedulerSystem:
                 engagement_tracking=bool(row[20]) if row[20] is not None else True,
             )
         except Exception as e:
-            self.logger.error(f"Error converting row to ScheduledPost: {e}")
+            self.logger.error("Error converting row to ScheduledPost: %s", e)
             return None
 
     async def cancel_post(self, post_id: str) -> bool:
@@ -840,12 +841,12 @@ class SocialSchedulerSystem:
             conn.close()
 
             if success:
-                self.logger.info(f"Post {post_id} cancelled")
+                self.logger.info("Post %s cancelled", post_id)
 
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to cancel post {post_id}: {e}")
+            self.logger.error("Failed to cancel post %s: %s", post_id, e)
             return False
 
     async def get_posting_analytics(self, days: int = 30) -> dict:
@@ -901,7 +902,7 @@ class SocialSchedulerSystem:
 # Usage example
 
 
-async def demo_scheduler():
+async def demo_scheduler(self) -> None:
     """Demonstrate scheduler functionality"""
 
     # Initialize scheduler

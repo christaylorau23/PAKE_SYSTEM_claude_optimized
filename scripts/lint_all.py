@@ -12,23 +12,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_command(cmd, description):
+def run_command(self) -> None:
     """Run a command and log results."""
-    logger.info(f"Running {description}...")
+    logger.info("Running %s...", description)
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode == 0:
-            logger.info(f"✅ {description} passed")
+            logger.info("✅ %s passed", description)
             return True
-        logger.error(f"❌ {description} failed:")
+        logger.error("❌ %s failed:", description)
         logger.error(result.stderr)
         return False
     except Exception as e:
-        logger.error(f"❌ {description} failed with exception: {e}")
+        logger.error("❌ %s failed with exception: %s", description, e)
         return False
 
 
-def main():
+def main(self) -> None:
     """Run all linting checks."""
     project_root = Path(__file__).parent.parent
 
@@ -47,7 +47,7 @@ def main():
         if run_command(cmd, description):
             passed += 1
 
-    logger.info(f"\nLinting Summary: {passed}/{total} checks passed")
+    logger.info("\nLinting Summary: %s/%s checks passed", passed, total)
 
     if passed < total:
         sys.exit(1)

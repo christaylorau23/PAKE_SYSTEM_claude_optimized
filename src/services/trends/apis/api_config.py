@@ -1,4 +1,4 @@
-"""APIConfig - Centralized API configuration and key management
+"""APIConfig - Centralized API configuration and key management.
 
 Secure configuration management for all external API integrations.
 """
@@ -11,7 +11,7 @@ from typing import Any
 
 
 class APIProvider(Enum):
-    """Supported API providers"""
+    """Supported API providers."""
 
     GOOGLE_TRENDS = "google_trends"
     YOUTUBE = "youtube"
@@ -21,7 +21,7 @@ class APIProvider(Enum):
 
 @dataclass
 class APIEndpoint:
-    """API endpoint configuration"""
+    """API endpoint configuration."""
 
     base_url: str
     version: str
@@ -31,7 +31,7 @@ class APIEndpoint:
 
 
 class APIConfig:
-    """Centralized API configuration management
+    """Centralized API configuration management.
 
     Features:
     - Secure credential management
@@ -41,12 +41,12 @@ class APIConfig:
     - Configuration validation
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self._load_configuration()
 
-    def _load_configuration(self):
-        """Load API configurations from environment variables"""
+    def _load_configuration(self) -> None:
+        """Load API configurations from environment variables."""
         # Google Trends API Configuration
         self.google_trends = {
             "enabled": os.getenv("GOOGLE_TRENDS_ENABLED", "true").lower() == "true",
@@ -125,8 +125,8 @@ class APIConfig:
 
         self._validate_configuration()
 
-    def _validate_configuration(self):
-        """Validate API configurations"""
+    def _validate_configuration(self) -> None:
+        """Validate API configurations."""
         issues = []
 
         # Check YouTube API key
@@ -134,21 +134,19 @@ class APIConfig:
             issues.append("YouTube API enabled but YOUTUBE_API_KEY not set")
 
         # Check Twitter credentials
-        if self.twitter["enabled"]:
-            if not self.twitter["bearer_token"]:
-                issues.append("Twitter API enabled but TWITTER_BEARER_TOKEN not set")
+        if self.twitter["enabled"] and not self.twitter["bearer_token"]:
+            issues.append("Twitter API enabled but TWITTER_BEARER_TOKEN not set")
 
         # Check TikTok credentials
-        if self.tiktok["enabled"]:
-            if not self.tiktok["api_key"]:
-                issues.append("TikTok API enabled but TIKTOK_API_KEY not set")
+        if self.tiktok["enabled"] and not self.tiktok["api_key"]:
+            issues.append("TikTok API enabled but TIKTOK_API_KEY not set")
 
         if issues:
             for issue in issues:
-                self.logger.warning(f"Configuration issue: {issue}")
+                self.logger.warning("Configuration issue: %s", issue)
 
-    def get_api_config(self, provider: APIProvider) -> dict[str, Any]:
-        """Get configuration for specific API provider"""
+    def get_api_config(self, provider: APIProvider) -> Dict[str, Any]:
+        """Get configuration for specific API provider."""
         config_map = {
             APIProvider.GOOGLE_TRENDS: self.google_trends,
             APIProvider.YOUTUBE: self.youtube,
@@ -159,12 +157,12 @@ class APIConfig:
         return config_map.get(provider, {})
 
     def is_api_enabled(self, provider: APIProvider) -> bool:
-        """Check if API provider is enabled"""
+        """Check if API provider is enabled."""
         config = self.get_api_config(provider)
         return config.get("enabled", False)
 
     def get_auth_headers(self, provider: APIProvider) -> dict[str, str]:
-        """Get authentication headers for API provider"""
+        """Get authentication headers for API provider."""
         config = self.get_api_config(provider)
 
         if not config.get("requires_auth", False):
@@ -189,7 +187,7 @@ class APIConfig:
         return headers
 
     def get_auth_params(self, provider: APIProvider) -> dict[str, str]:
-        """Get authentication parameters for API provider"""
+        """Get authentication parameters for API provider."""
         config = self.get_api_config(provider)
 
         if not config.get("requires_auth", False):
@@ -207,7 +205,7 @@ class APIConfig:
         provider: APIProvider,
         endpoint_name: str,
     ) -> str | None:
-        """Get full URL for specific endpoint"""
+        """Get full URL for specific endpoint."""
         config = self.get_api_config(provider)
 
         if not config:
@@ -222,8 +220,8 @@ class APIConfig:
 
         return f"{base_url}{endpoint_path}"
 
-    def get_rate_limit_info(self, provider: APIProvider) -> dict[str, Any]:
-        """Get rate limit information for API provider"""
+    def get_rate_limit_info(self, provider: APIProvider) -> Dict[str, Any]:
+        """Get rate limit information for API provider."""
         # This would typically be loaded from a configuration file or database
         rate_limits = {
             APIProvider.GOOGLE_TRENDS: {
@@ -255,7 +253,7 @@ class APIConfig:
         return rate_limits.get(provider, {})
 
     def get_all_enabled_providers(self) -> list[APIProvider]:
-        """Get list of all enabled API providers"""
+        """Get list of all enabled API providers."""
         enabled = []
         for provider in APIProvider:
             if self.is_api_enabled(provider):
@@ -263,7 +261,7 @@ class APIConfig:
         return enabled
 
     def validate_provider_credentials(self, provider: APIProvider) -> bool:
-        """Validate that required credentials are present for provider"""
+        """Validate that required credentials are present for provider."""
         config = self.get_api_config(provider)
 
         if not config.get("enabled", False):
@@ -285,8 +283,8 @@ class APIConfig:
 
         return False
 
-    def get_configuration_summary(self) -> dict[str, Any]:
-        """Get summary of all API configurations"""
+    def get_configuration_summary(self) -> Dict[str, Any]:
+        """Get summary of all API configurations."""
         summary = {
             "enabled_providers": [],
             "configuration_issues": [],
@@ -310,22 +308,24 @@ class APIConfig:
 
         return summary
 
-    def reload_configuration(self):
-        """Reload configuration from environment variables"""
+    def reload_configuration(self) -> None:
+        """Reload configuration from environment variables."""
         self.logger.info("Reloading API configuration...")
         self._load_configuration()
 
-    def set_api_enabled(self, provider: APIProvider, enabled: bool):
-        """Enable or disable an API provider"""
+    def set_api_enabled(self) -> None:
+        """Enable or disable an API provider."""
         config = self.get_api_config(provider)
         if config:
             config["enabled"] = enabled
             self.logger.info(
-                f"{provider.value} API {'enabled' if enabled else 'disabled'}",
+                "%s API %s",
+                provider.value,
+                "enabled" if enabled else "disabled",
             )
 
-    def update_credentials(self, provider: APIProvider, credentials: dict[str, str]):
-        """Update credentials for an API provider"""
+    def update_credentials(self) -> None:
+        """Update credentials for an API provider."""
         config = self.get_api_config(provider)
         if not config:
             return False
@@ -336,7 +336,7 @@ class APIConfig:
 
         # Re-validate after update
         if self.validate_provider_credentials(provider):
-            self.logger.info(f"Updated credentials for {provider.value}")
+            self.logger.info("Updated credentials for %s", provider.value)
             return True
-        self.logger.error(f"Invalid credentials for {provider.value}")
+        self.logger.error("Invalid credentials for %s", provider.value)
         return False

@@ -17,24 +17,23 @@ import logging
 import time
 import zlib
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as redis
 from redis.asyncio import default_backoff
 from redis.asyncio.retry import Retry
 
-from ...utils.secure_serialization import deserialize, serialize
+from src.utils.secure_serialization import deserialize, serialize
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 class CacheLevel(Enum):
-    """Cache level definitions"""
+    """Cache level definitions."""
 
     L1_MEMORY = "l1_memory"
     L2_DISTRIBUTED = "l2_distributed"
@@ -42,7 +41,7 @@ class CacheLevel(Enum):
 
 
 class EvictionPolicy(Enum):
-    """Cache eviction policies"""
+    """Cache eviction policies."""
 
     LRU = "lru"  # Least Recently Used
     LFU = "lfu"  # Least Frequently Used
@@ -51,7 +50,7 @@ class EvictionPolicy(Enum):
 
 
 class CacheOperation(Enum):
-    """Cache operation types"""
+    """Cache operation types."""
 
     GET = "get"
     SET = "set"
@@ -62,7 +61,7 @@ class CacheOperation(Enum):
 
 @dataclass
 class CacheConfig:
-    """Configuration for cache layers"""
+    """Configuration for cache layers."""
 
     # L1 Memory Cache
     l1_enabled: bool = True
@@ -93,7 +92,7 @@ class CacheConfig:
 
 @dataclass
 class CacheEntry:
-    """Cache entry with metadata"""
+    """Cache entry with metadata."""
 
     key: str
     value: Any
@@ -103,12 +102,12 @@ class CacheEntry:
     ttl: int | None = None
     size: int = 0
     compressed: bool = False
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class CacheStatistics:
-    """Cache performance statistics"""
+    """Cache performance statistics."""
 
     hits: int = 0
     misses: int = 0
@@ -122,9 +121,9 @@ class CacheStatistics:
 
 
 class CacheLayer(ABC):
-    """Abstract base class for cache layers"""
+    """Abstract base class for cache layers."""
 
-    def __init__(self, level: CacheLevel, config: CacheConfig):
+    def __init__(self) -> None:
         self.level = level
         self.config = config
         self.statistics = CacheStatistics()
@@ -133,35 +132,35 @@ class CacheLayer(ABC):
 
     @abstractmethod
     async def get(self, key: str) -> Any | None:
-        """Get value from cache"""
+        """Get value from cache."""
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in cache"""
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Set value in cache."""
 
     @abstractmethod
     async def delete(self, key: str) -> bool:
-        """Delete value from cache"""
+        """Delete value from cache."""
 
     @abstractmethod
     async def exists(self, key: str) -> bool:
-        """Check if key exists in cache"""
+        """Check if key exists in cache."""
 
     @abstractmethod
     async def clear(self) -> bool:
-        """Clear all cache entries"""
+        """Clear all cache entries."""
 
     @abstractmethod
     async def size(self) -> int:
-        """Get cache size"""
+        """Get cache size."""
 
     def update_statistics(
         self,
         operation: CacheOperation,
-        hit: Optional[bool] = None,
-        access_time: Optional[float] = None,
+        hit: bool | None = None,
+        access_time: float | None = None,
     ) -> None:
-        """Update cache statistics"""
+        """Update cache statistics."""
         if operation == CacheOperation.GET:
             if hit:
                 self.statistics.hits += 1
@@ -188,21 +187,21 @@ class CacheLayer(ABC):
             )
 
     def get_statistics(self) -> CacheStatistics:
-        """Get cache statistics"""
+        """Get cache statistics."""
         return self.statistics
 
 
 class L1MemoryCache(CacheLayer):
-    """Level 1 in-memory cache"""
+    """Level 1 in-memory cache."""
 
-    def __init__(self, config: CacheConfig):
+    def __init__(self) -> None:
         super().__init__(CacheLevel.L1_MEMORY, config)
         self.cache: dict[str, CacheEntry] = {}
-        self.access_order: list[str] = []  # For LRU
+        self.access_order: List[str] = []  # For LRU
         self.frequency: dict[str, int] = {}  # For LFU
 
     async def get(self, key: str) -> Any | None:
-        """Get value from L1 cache"""
+        """Get value from L1 cache."""
         start_time = time.time()
 
         try:
@@ -246,7 +245,7 @@ class L1MemoryCache(CacheLayer):
             return None
 
         except Exception as e:
-            logger.error(f"L1 cache get error: {e}")
+            logger.error("L1 cache get error: %s", e)
             self.update_statistics(
                 CacheOperation.GET,
                 hit=False,
@@ -254,8 +253,8 @@ class L1MemoryCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in L1 cache"""
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Set value in L1 cache."""
         try:
             # Check if we need to evict
             if len(self.cache) >= self.config.l1_max_size and key not in self.cache:
@@ -281,11 +280,11 @@ class L1MemoryCache(CacheLayer):
             return True
 
         except Exception as e:
-            logger.error(f"L1 cache set error: {e}")
+            logger.error("L1 cache set error: %s", e)
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete value from L1 cache"""
+        """Delete value from L1 cache."""
         try:
             if key in self.cache:
                 del self.cache[key]
@@ -302,30 +301,30 @@ class L1MemoryCache(CacheLayer):
             return False
 
         except Exception as e:
-            logger.error(f"L1 cache delete error: {e}")
+            logger.error("L1 cache delete error: %s", e)
             return False
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in L1 cache"""
+        """Check if key exists in L1 cache."""
         return key in self.cache and not self._is_expired(self.cache[key])
 
     async def clear(self) -> bool:
-        """Clear L1 cache"""
+        """Clear L1 cache."""
         try:
             self.cache.clear()
             self.access_order.clear()
             self.frequency.clear()
             return True
         except Exception as e:
-            logger.error(f"L1 cache clear error: {e}")
+            logger.error("L1 cache clear error: %s", e)
             return False
 
     async def size(self) -> int:
-        """Get L1 cache size"""
+        """Get L1 cache size."""
         return len(self.cache)
 
-    async def _evict(self):
-        """Evict entries based on configured policy"""
+    async def _evict(self) -> None:
+        """Evict entries based on configured policy."""
         if not self.cache:
             return
 
@@ -356,7 +355,7 @@ class L1MemoryCache(CacheLayer):
         self.statistics.evictions += 1
 
     def _is_expired(self, entry: CacheEntry) -> bool:
-        """Check if cache entry is expired"""
+        """Check if cache entry is expired."""
         if entry.ttl is None:
             return False
 
@@ -364,7 +363,7 @@ class L1MemoryCache(CacheLayer):
         return age > entry.ttl
 
     def _calculate_size(self, value: Any) -> int:
-        """Calculate approximate size of cached value"""
+        """Calculate approximate size of cached value."""
         try:
             return len(serialize(value))
         except BaseException:
@@ -372,16 +371,16 @@ class L1MemoryCache(CacheLayer):
 
 
 class L2DistributedCache(CacheLayer):
-    """Level 2 Redis distributed cache"""
+    """Level 2 Redis distributed cache."""
 
-    def __init__(self, config: CacheConfig, redis_url: str = "redis://localhost:6379"):
+    def __init__(self) -> None:
         super().__init__(CacheLevel.L2_DISTRIBUTED, config)
         self.redis_url = redis_url
-        self.redis_pool: Optional[redis.ConnectionPool] = None
+        self.redis_pool: redis.ConnectionPool | None = None
         self.key_prefix = "pake:l2:"
 
     async def connect(self) -> None:
-        """Connect to Redis"""
+        """Connect to Redis."""
         if self.redis_pool is None:
             self.redis_pool = redis.ConnectionPool.from_url(
                 self.redis_url,
@@ -391,7 +390,7 @@ class L2DistributedCache(CacheLayer):
             )
 
     async def get(self, key: str) -> Any | None:
-        """Get value from L2 cache"""
+        """Get value from L2 cache."""
         start_time = time.time()
 
         try:
@@ -423,7 +422,7 @@ class L2DistributedCache(CacheLayer):
                 return None
 
         except Exception as e:
-            logger.error(f"L2 cache get error: {e}")
+            logger.error("L2 cache get error: %s", e)
             self.update_statistics(
                 CacheOperation.GET,
                 hit=False,
@@ -431,8 +430,8 @@ class L2DistributedCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in L2 cache"""
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Set value in L2 cache."""
         try:
             await self.connect()
 
@@ -458,11 +457,11 @@ class L2DistributedCache(CacheLayer):
                 return True
 
         except Exception as e:
-            logger.error(f"L2 cache set error: {e}")
+            logger.error("L2 cache set error: %s", e)
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete value from L2 cache"""
+        """Delete value from L2 cache."""
         try:
             await self.connect()
 
@@ -483,11 +482,11 @@ class L2DistributedCache(CacheLayer):
                 return False
 
         except Exception as e:
-            logger.error(f"L2 cache delete error: {e}")
+            logger.error("L2 cache delete error: %s", e)
             return False
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in L2 cache"""
+        """Check if key exists in L2 cache."""
         try:
             await self.connect()
 
@@ -496,11 +495,11 @@ class L2DistributedCache(CacheLayer):
                 return await r.exists(prefixed_key)
 
         except Exception as e:
-            logger.error(f"L2 cache exists error: {e}")
+            logger.error("L2 cache exists error: %s", e)
             return False
 
     async def clear(self) -> bool:
-        """Clear L2 cache"""
+        """Clear L2 cache."""
         try:
             await self.connect()
 
@@ -513,11 +512,11 @@ class L2DistributedCache(CacheLayer):
                 return True
 
         except Exception as e:
-            logger.error(f"L2 cache clear error: {e}")
+            logger.error("L2 cache clear error: %s", e)
             return False
 
     async def size(self) -> int:
-        """Get L2 cache size"""
+        """Get L2 cache size."""
         try:
             await self.connect()
 
@@ -532,21 +531,21 @@ class L2DistributedCache(CacheLayer):
                 )
 
         except Exception as e:
-            logger.error(f"L2 cache size error: {e}")
+            logger.error("L2 cache size error: %s", e)
             return 0
 
 
 class L3PersistentCache(CacheLayer):
-    """Level 3 persistent Redis cache with compression"""
+    """Level 3 persistent Redis cache with compression."""
 
-    def __init__(self, config: CacheConfig, redis_url: str = "redis://localhost:6379"):
+    def __init__(self) -> None:
         super().__init__(CacheLevel.L3_PERSISTENT, config)
         self.redis_url = redis_url
-        self.redis_pool: Optional[redis.ConnectionPool] = None
+        self.redis_pool: redis.ConnectionPool | None = None
         self.key_prefix = "pake:l3:"
 
     async def connect(self) -> None:
-        """Connect to Redis"""
+        """Connect to Redis."""
         if self.redis_pool is None:
             self.redis_pool = redis.ConnectionPool.from_url(
                 self.redis_url,
@@ -556,7 +555,7 @@ class L3PersistentCache(CacheLayer):
             )
 
     async def get(self, key: str) -> Any | None:
-        """Get value from L3 cache"""
+        """Get value from L3 cache."""
         start_time = time.time()
 
         try:
@@ -601,7 +600,7 @@ class L3PersistentCache(CacheLayer):
                 return None
 
         except Exception as e:
-            logger.error(f"L3 cache get error: {e}")
+            logger.error("L3 cache get error: %s", e)
             self.update_statistics(
                 CacheOperation.GET,
                 hit=False,
@@ -609,8 +608,8 @@ class L3PersistentCache(CacheLayer):
             )
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in L3 cache"""
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Set value in L3 cache."""
         try:
             await self.connect()
 
@@ -653,11 +652,11 @@ class L3PersistentCache(CacheLayer):
                 return True
 
         except Exception as e:
-            logger.error(f"L3 cache set error: {e}")
+            logger.error("L3 cache set error: %s", e)
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete value from L3 cache"""
+        """Delete value from L3 cache."""
         try:
             await self.connect()
 
@@ -674,11 +673,11 @@ class L3PersistentCache(CacheLayer):
                 return False
 
         except Exception as e:
-            logger.error(f"L3 cache delete error: {e}")
+            logger.error("L3 cache delete error: %s", e)
             return False
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in L3 cache"""
+        """Check if key exists in L3 cache."""
         try:
             await self.connect()
 
@@ -687,11 +686,11 @@ class L3PersistentCache(CacheLayer):
                 return await r.exists(prefixed_key)
 
         except Exception as e:
-            logger.error(f"L3 cache exists error: {e}")
+            logger.error("L3 cache exists error: %s", e)
             return False
 
     async def clear(self) -> bool:
-        """Clear L3 cache"""
+        """Clear L3 cache."""
         try:
             await self.connect()
 
@@ -704,11 +703,11 @@ class L3PersistentCache(CacheLayer):
                 return True
 
         except Exception as e:
-            logger.error(f"L3 cache clear error: {e}")
+            logger.error("L3 cache clear error: %s", e)
             return False
 
     async def size(self) -> int:
-        """Get L3 cache size"""
+        """Get L3 cache size."""
         try:
             await self.connect()
 
@@ -717,14 +716,14 @@ class L3PersistentCache(CacheLayer):
                 return len([k for k in keys if not k.endswith(b":meta")])
 
         except Exception as e:
-            logger.error(f"L3 cache size error: {e}")
+            logger.error("L3 cache size error: %s", e)
             return 0
 
 
 class MultiLayeredCacheStrategy:
-    """Multi-layered caching strategy coordinator"""
+    """Multi-layered caching strategy coordinator."""
 
-    def __init__(self, config: CacheConfig, redis_url: str = "redis://localhost:6379"):
+    def __init__(self) -> None:
         self.config = config
         self.redis_url = redis_url
 
@@ -745,14 +744,15 @@ class MultiLayeredCacheStrategy:
 
         # Cache warming and prefetching
         self.warming_tasks: list[asyncio.Task] = []
-        self.prefetch_patterns: dict[str, list[str]] = {}
+        self.prefetch_patterns: dict[str, List[str]] = {}
 
         logger.info(
-            f"MultiLayeredCacheStrategy initialized with {len(self.layers)} layers",
+            "MultiLayeredCacheStrategy initialized with %s layers",
+            len(self.layers),
         )
 
     async def get(self, namespace: str, key: str) -> Any | None:
-        """Get value from cache hierarchy"""
+        """Get value from cache hierarchy."""
         cache_key = f"{namespace}:{key}"
 
         # Try L1 first (fastest)
@@ -791,9 +791,9 @@ class MultiLayeredCacheStrategy:
         namespace: str,
         key: str,
         value: Any,
-        ttl_override: Optional[int] = None,
+        ttl_override: int | None = None,
     ) -> bool:
-        """Set value in appropriate cache layers"""
+        """Set value in appropriate cache layers."""
         cache_key = f"{namespace}:{key}"
         success = True
 
@@ -814,7 +814,7 @@ class MultiLayeredCacheStrategy:
                 success = success and layer_success
 
             except Exception as e:
-                logger.error(f"Failed to set in {level.value}: {e}")
+                logger.error("Failed to set in %s: %s", level.value, e)
                 success = False
 
         # Trigger prefetching if enabled
@@ -824,7 +824,7 @@ class MultiLayeredCacheStrategy:
         return success
 
     async def delete(self, namespace: str, key: str) -> bool:
-        """Delete value from all cache layers"""
+        """Delete value from all cache layers."""
         cache_key = f"{namespace}:{key}"
         success = True
 
@@ -834,13 +834,13 @@ class MultiLayeredCacheStrategy:
                 success = success and layer_success
 
             except Exception as e:
-                logger.error(f"Failed to delete from {level.value}: {e}")
+                logger.error("Failed to delete from %s: %s", level.value, e)
                 success = False
 
         return success
 
     async def invalidate_namespace(self, namespace: str) -> bool:
-        """Invalidate all keys in a namespace"""
+        """Invalidate all keys in a namespace."""
         # This is a simplified implementation
         # In production, you'd want to use Redis patterns or keep a registry
         success = True
@@ -853,13 +853,13 @@ class MultiLayeredCacheStrategy:
                     await layer.clear()
 
             except Exception as e:
-                logger.error(f"Failed to invalidate namespace in {level.value}: {e}")
+                logger.error("Failed to invalidate namespace in %s: %s", level.value, e)
                 success = False
 
         return success
 
-    async def warm_cache(self, namespace: str, keys: list[str], data_loader: Callable):
-        """Warm cache with data from data loader"""
+    async def warm_cache(self) -> None:
+        """Warm cache with data from data loader."""
         if not self.config.enable_warming:
             return
 
@@ -869,15 +869,12 @@ class MultiLayeredCacheStrategy:
 
         self.warming_tasks.append(warming_task)
 
-    async def _warm_cache_async(
-        self,
-        namespace: str,
-        keys: list[str],
-        data_loader: Callable,
-    ):
-        """Asynchronously warm cache"""
+    async def _warm_cache_async(self) -> None:
+        """Asynchronously warm cache."""
         logger.info(
-            f"Starting cache warming for namespace {namespace} with {len(keys)} keys",
+            "Starting cache warming for namespace %s with %s keys",
+            namespace,
+            len(keys),
         )
 
         for key in keys:
@@ -900,12 +897,12 @@ class MultiLayeredCacheStrategy:
                 await asyncio.sleep(0.01)
 
             except Exception as e:
-                logger.error(f"Cache warming error for key {key}: {e}")
+                logger.error("Cache warming error for key %s: %s", key, e)
 
-        logger.info(f"Cache warming completed for namespace {namespace}")
+        logger.info("Cache warming completed for namespace %s", namespace)
 
-    async def _trigger_prefetching(self, namespace: str, key: str, value: Any):
-        """Trigger predictive prefetching based on patterns"""
+    async def _trigger_prefetching(self) -> None:
+        """Trigger predictive prefetching based on patterns."""
         if not self.config.enable_prefetching:
             return
 
@@ -921,14 +918,14 @@ class MultiLayeredCacheStrategy:
                 for related_key in related_keys[:5]:  # Limit prefetching
                     asyncio.create_task(self._prefetch_key(namespace, related_key))
 
-    def _generate_related_keys(self, base_key: str, pattern: str) -> list[str]:
-        """Generate related keys based on patterns"""
+    def _generate_related_keys(self, base_key: str, pattern: str) -> List[str]:
+        """Generate related keys based on patterns."""
         # Simplified pattern matching
         related_keys = []
 
         if pattern == "sequential":
             # Generate sequential keys
-            if base_key.endswith("_0") or base_key.endswith("_1"):
+            if base_key.endswith(("_0", "_1")):
                 base = base_key.rsplit("_", 1)[0]
                 for i in range(1, 4):
                     related_keys.append(f"{base}_{i}")
@@ -942,8 +939,8 @@ class MultiLayeredCacheStrategy:
 
         return related_keys
 
-    async def _prefetch_key(self, namespace: str, key: str):
-        """Prefetch a specific key"""
+    async def _prefetch_key(self) -> None:
+        """Prefetch a specific key."""
         try:
             # Check if already cached
             cached_value = await self.get(namespace, key)
@@ -952,13 +949,13 @@ class MultiLayeredCacheStrategy:
 
             # In a real implementation, you'd load the data here
             # For now, we just log the prefetching attempt
-            logger.debug(f"Prefetching {namespace}:{key}")
+            logger.debug("Prefetching %s:%s", namespace, key)
 
         except Exception as e:
-            logger.error(f"Prefetching error for {namespace}:{key}: {e}")
+            logger.error("Prefetching error for %s:%s: %s", namespace, key, e)
 
     async def get_statistics(self) -> dict[str, CacheStatistics]:
-        """Get statistics for all cache layers"""
+        """Get statistics for all cache layers."""
         stats = {}
 
         for level, layer in self.layers.items():
@@ -966,8 +963,8 @@ class MultiLayeredCacheStrategy:
 
         return stats
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get health status of cache system"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get health status of cache system."""
         health = {
             "overall_status": "healthy",
             "layers": {},
@@ -998,7 +995,7 @@ class MultiLayeredCacheStrategy:
                 total_accesses += stats.hits + stats.misses
 
             except Exception as e:
-                logger.error(f"Health check error for {level.value}: {e}")
+                logger.error("Health check error for %s: %s", level.value, e)
                 health["layers"][level.value] = {"status": "unhealthy", "error": str(e)}
                 health["overall_status"] = "degraded"
 
@@ -1007,15 +1004,15 @@ class MultiLayeredCacheStrategy:
 
         return health
 
-    def add_prefetch_pattern(self, namespace: str, pattern: str):
-        """Add prefetch pattern for namespace"""
+    def add_prefetch_pattern(self) -> None:
+        """Add prefetch pattern for namespace."""
         if namespace not in self.prefetch_patterns:
             self.prefetch_patterns[namespace] = []
 
         self.prefetch_patterns[namespace].append(pattern)
 
-    async def cleanup(self):
-        """Cleanup cache resources"""
+    async def cleanup(self) -> None:
+        """Cleanup cache resources."""
         # Cancel warming tasks
         for task in self.warming_tasks:
             if not task.done():
@@ -1037,7 +1034,7 @@ class MultiLayeredCacheStrategy:
 async def create_standard_cache_strategy(
     redis_url: str = "redis://localhost:6379",
 ) -> MultiLayeredCacheStrategy:
-    """Create standard cache strategy"""
+    """Create standard cache strategy."""
     config = CacheConfig(
         l1_enabled=True,
         l1_max_size=1000,
@@ -1057,7 +1054,7 @@ async def create_standard_cache_strategy(
 async def create_high_performance_cache_strategy(
     redis_url: str = "redis://localhost:6379",
 ) -> MultiLayeredCacheStrategy:
-    """Create high-performance cache strategy"""
+    """Create high-performance cache strategy."""
     config = CacheConfig(
         l1_enabled=True,
         l1_max_size=5000,

@@ -150,7 +150,7 @@ variable "redis_snapshot_retention_limit" {
 # Cluster Access
 variable "cluster_admin_users" {
   description = "List of IAM users with cluster admin access"
-  type        = list(object({
+  type = list(object({
     userarn  = string
     username = string
     groups   = list(string)

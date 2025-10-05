@@ -1,4 +1,4 @@
-"""PAKE Enterprise Multi-Tenant API Module"""
+"""PAKE Enterprise Multi-Tenant API Module."""
 
 from .multi_tenant_server import app, config
 from .tenant_endpoints import tenant_router, user_router

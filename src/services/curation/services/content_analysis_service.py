@@ -1,4 +1,4 @@
-"""ContentAnalysisService
+"""ContentAnalysisService.
 
 Provides comprehensive content analysis including quality assessment, topic extraction,
 sentiment analysis, and readability scoring. This service is ML-enabled and integrates
@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import nltk
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class QualityMetrics:
-    """Comprehensive content quality metrics"""
+    """Comprehensive content quality metrics."""
 
     readability_score: float = 0.0  # 0-1 scale
     complexity_score: float = 0.0  # 0-1 scale (higher = more complex)
@@ -67,7 +67,7 @@ class QualityMetrics:
 
 @dataclass(frozen=True)
 class SentimentAnalysis:
-    """Sentiment analysis results"""
+    """Sentiment analysis results."""
 
     compound: float = 0.0  # Overall sentiment (-1 to 1)
     positive: float = 0.0  # Positive sentiment (0-1)
@@ -87,15 +87,15 @@ class SentimentAnalysis:
 
 @dataclass(frozen=True)
 class TopicExtraction:
-    """Extracted topics and keywords"""
+    """Extracted topics and keywords."""
 
-    primary_topics: list[str] = field(default_factory=list)
-    secondary_topics: list[str] = field(default_factory=list)
-    keywords: list[str] = field(default_factory=list)
-    entities: list[str] = field(default_factory=list)
+    primary_topics: List[str] = field(default_factory=list)
+    secondary_topics: List[str] = field(default_factory=list)
+    keywords: List[str] = field(default_factory=list)
+    entities: List[str] = field(default_factory=list)
     confidence_scores: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "primary_topics": self.primary_topics,
             "secondary_topics": self.secondary_topics,
@@ -107,7 +107,7 @@ class TopicExtraction:
 
 @dataclass(frozen=True)
 class ContentAnalysisResult:
-    """Complete content analysis result"""
+    """Complete content analysis result."""
 
     content_id: str
     quality_metrics: QualityMetrics
@@ -117,7 +117,7 @@ class ContentAnalysisResult:
     processing_time_ms: float = 0.0
     analysis_timestamp: datetime = field(default_factory=datetime.now)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "content_id": self.content_id,
             "quality_metrics": self.quality_metrics.to_dict(),
@@ -136,11 +136,7 @@ class ContentAnalysisService:
     topic extraction, sentiment analysis, and embedding generation.
     """
 
-    def __init__(
-        self,
-        embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        enable_gpu: bool = False,
-    ):
+    def __init__(self) -> None:
         """Initialize the content analysis service.
 
         Args:
@@ -166,14 +162,15 @@ class ContentAnalysisService:
         }
 
         logger.info(
-            f"ContentAnalysisService initialized with model: {embedding_model_name}",
+            "ContentAnalysisService initialized with model: %s",
+            embedding_model_name,
         )
 
     async def _load_models(self) -> None:
-        """Lazy load ML models to avoid startup delays"""
+        """Lazy load ML models to avoid startup delays."""
         if self._embedding_model is None:
 
-            def load_embedding_model():
+            def load_embedding_model(self) -> None:
                 device = "cuda" if self.enable_gpu else "cpu"
                 return SentenceTransformer(self.embedding_model_name, device=device)
 
@@ -198,7 +195,7 @@ class ContentAnalysisService:
         Returns:
             Complete analysis result with quality, sentiment, and topics
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         try:
             # Ensure models are loaded
@@ -208,7 +205,7 @@ class ContentAnalysisService:
             content_text = content_item.get_content_text()
 
             if not content_text.strip():
-                logger.warning(f"Empty content for item {content_item.id}")
+                logger.warning("Empty content for item %s", content_item.id)
                 return self._create_empty_result(str(content_item.id))
 
             # Run analysis components concurrently
@@ -227,7 +224,7 @@ class ContentAnalysisService:
             ) = await asyncio.gather(*tasks)
 
             # Calculate processing time
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             result = ContentAnalysisResult(
                 content_id=str(content_item.id),
@@ -236,18 +233,19 @@ class ContentAnalysisService:
                 topic_extraction=topic_extraction,
                 embedding=embedding,
                 processing_time_ms=processing_time,
-                analysis_timestamp=datetime.now(),
+                analysis_timestamp=datetime.now(UTC),
             )
 
             logger.info(
-                f"Content analysis completed for {content_item.id} in {
-                    processing_time:.2f}ms",
+                "Content analysis completed for %s in %sms",
+                content_item.id,
+                processing_time,
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error analyzing content {content_item.id}: {str(e)}")
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            logger.error("Error analyzing content %s: %s", content_item.id, str(e))
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return self._create_error_result(str(content_item.id), processing_time)
 
     async def _analyze_quality(
@@ -255,9 +253,9 @@ class ContentAnalysisService:
         content_text: str,
         content_item: ContentItem,
     ) -> QualityMetrics:
-        """Analyze content quality across multiple dimensions"""
+        """Analyze content quality across multiple dimensions."""
 
-        def analyze_quality_sync():
+        def analyze_quality_sync(self) -> None:
             try:
                 # Readability analysis
                 readability_score = self._calculate_readability_score(content_text)
@@ -304,7 +302,7 @@ class ContentAnalysisService:
                 )
 
             except Exception as e:
-                logger.error(f"Error in quality analysis: {str(e)}")
+                logger.error("Error in quality analysis: %s", str(e))
                 return QualityMetrics()
 
         # Run in thread pool to avoid blocking
@@ -312,7 +310,7 @@ class ContentAnalysisService:
         return await loop.run_in_executor(None, analyze_quality_sync)
 
     def _calculate_readability_score(self, text: str) -> float:
-        """Calculate readability score (0-1, higher = more readable)"""
+        """Calculate readability score (0-1, higher = more readable)."""
         try:
             # Use Flesch Reading Ease (0-100 scale)
             flesch_score = flesch_reading_ease(text)
@@ -323,7 +321,7 @@ class ContentAnalysisService:
             return 0.5  # Default medium readability
 
     def _calculate_complexity_score(self, text: str) -> float:
-        """Calculate content complexity (0-1, higher = more complex)"""
+        """Calculate content complexity (0-1, higher = more complex)."""
         try:
             # Flesch-Kincaid Grade Level
             grade_level = flesch_kincaid_grade(text)
@@ -357,7 +355,7 @@ class ContentAnalysisService:
             return 0.5  # Default medium complexity
 
     def _calculate_coherence_score(self, text: str) -> float:
-        """Calculate content coherence using linguistic features"""
+        """Calculate content coherence using linguistic features."""
         try:
             sentences = sent_tokenize(text)
             if len(sentences) < 2:
@@ -412,7 +410,7 @@ class ContentAnalysisService:
         text: str,
         content_item: ContentItem,
     ) -> float:
-        """Calculate content completeness based on various factors"""
+        """Calculate content completeness based on various factors."""
         try:
             word_count = len(word_tokenize(text))
 
@@ -449,7 +447,7 @@ class ContentAnalysisService:
         text: str,
         content_item: ContentItem,
     ) -> float:
-        """Calculate authority indicators from content and metadata"""
+        """Calculate authority indicators from content and metadata."""
         try:
             authority_score = 0.0
 
@@ -497,12 +495,12 @@ class ContentAnalysisService:
             return 0.3  # Default low-medium authority
 
     def _calculate_freshness_score(self, content_item: ContentItem) -> float:
-        """Calculate content freshness based on publication date"""
+        """Calculate content freshness based on publication date."""
         try:
             if not content_item.published_date:
                 return 0.5  # Unknown date, assume medium freshness
 
-            days_old = (datetime.now() - content_item.published_date).days
+            days_old = (datetime.now(UTC) - content_item.published_date).days
 
             # Freshness decay function
             if days_old <= 7:
@@ -519,9 +517,9 @@ class ContentAnalysisService:
             return 0.5
 
     async def _analyze_sentiment(self, text: str) -> SentimentAnalysis:
-        """Analyze content sentiment"""
+        """Analyze content sentiment."""
 
-        def analyze_sentiment_sync():
+        def analyze_sentiment_sync(self) -> None:
             try:
                 scores = self._sentiment_analyzer.polarity_scores(text)
 
@@ -541,16 +539,16 @@ class ContentAnalysisService:
                 )
 
             except Exception as e:
-                logger.error(f"Error in sentiment analysis: {str(e)}")
+                logger.error("Error in sentiment analysis: %s", str(e))
                 return SentimentAnalysis()
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, analyze_sentiment_sync)
 
     async def _extract_topics(self, text: str) -> TopicExtraction:
-        """Extract topics and keywords from content"""
+        """Extract topics and keywords from content."""
 
-        def extract_topics_sync():
+        def extract_topics_sync(self) -> None:
             try:
                 # Tokenize and clean text
                 words = word_tokenize(text.lower())
@@ -612,16 +610,16 @@ class ContentAnalysisService:
                 )
 
             except Exception as e:
-                logger.error(f"Error in topic extraction: {str(e)}")
+                logger.error("Error in topic extraction: %s", str(e))
                 return TopicExtraction()
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, extract_topics_sync)
 
     async def _generate_embedding(self, text: str) -> ContentEmbedding | None:
-        """Generate content embedding vector"""
+        """Generate content embedding vector."""
 
-        def generate_embedding_sync():
+        def generate_embedding_sync(self) -> None:
             try:
                 # Generate embedding
                 embedding_vector = self._embedding_model.encode(text)
@@ -633,7 +631,7 @@ class ContentAnalysisService:
                 )
 
             except Exception as e:
-                logger.error(f"Error generating embedding: {str(e)}")
+                logger.error("Error generating embedding: %s", str(e))
                 return None
 
         loop = asyncio.get_event_loop()
@@ -644,9 +642,9 @@ class ContentAnalysisService:
         content_text: str,
         url: str = "",
     ) -> ContentType:
-        """Classify content type based on text and URL analysis"""
+        """Classify content type based on text and URL analysis."""
 
-        def classify_sync():
+        def classify_sync(self) -> None:
             # URL-based classification
             url_lower = url.lower()
             if "arxiv.org" in url_lower or "pubmed" in url_lower:
@@ -685,7 +683,7 @@ class ContentAnalysisService:
         return await loop.run_in_executor(None, classify_sync)
 
     def _create_empty_result(self, content_id: str) -> ContentAnalysisResult:
-        """Create empty analysis result for content with no text"""
+        """Create empty analysis result for content with no text."""
         return ContentAnalysisResult(
             content_id=content_id,
             quality_metrics=QualityMetrics(),
@@ -699,7 +697,7 @@ class ContentAnalysisService:
         content_id: str,
         processing_time: float,
     ) -> ContentAnalysisResult:
-        """Create error analysis result"""
+        """Create error analysis result."""
         return ContentAnalysisResult(
             content_id=content_id,
             quality_metrics=QualityMetrics(),
@@ -713,9 +711,9 @@ class ContentAnalysisService:
         content_items: list[ContentItem],
         max_concurrent: int = 5,
     ) -> list[ContentAnalysisResult]:
-        """Analyze multiple content items concurrently"""
+        """Analyze multiple content items concurrently."""
 
-        async def analyze_with_semaphore(semaphore, content_item):
+        async def analyze_with_semaphore(self) -> None:
             async with semaphore:
                 return await self.analyze_content(content_item)
 
@@ -729,7 +727,9 @@ class ContentAnalysisService:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(
-                    f"Error analyzing content {content_items[i].id}: {str(result)}",
+                    "Error analyzing content %s: %s",
+                    content_items[i].id,
+                    str(result),
                 )
                 valid_results.append(
                     self._create_error_result(str(content_items[i].id), 0.0),

@@ -28,9 +28,7 @@ except ImportError:
 class VaultSecretsManager:
     """Manages migration of secrets to HashiCorp Vault."""
 
-    def __init__(
-        self, vault_url: str = "http://127.0.0.1:8200", vault_token: str = None
-    ):
+    def __init__(self) -> None:
         """
         Initialize Vault client.
 
@@ -63,7 +61,7 @@ class VaultSecretsManager:
             print(f"❌ Error connecting to Vault: {e}")
             return False
 
-    def create_secret(self, path: str, secret_data: dict[str, Any]) -> bool:
+    def create_secret(self, path: str, secret_data: Dict[str, Any]) -> bool:
         """
         Create or update a secret in Vault.
 
@@ -85,7 +83,7 @@ class VaultSecretsManager:
             print(f"❌ Error creating secret at {path}: {e}")
             return False
 
-    def migrate_all_secrets(self):
+    def migrate_all_secrets(self) -> None:
         """Migrate all secrets from codebase to Vault."""
         print("\n" + "=" * 60)
         print("PAKE System - Secrets Migration to Vault")
@@ -187,13 +185,10 @@ class VaultSecretsManager:
             print("3. Update config.py to fetch secrets from Vault")
             print("4. Set VAULT_URL and VAULT_TOKEN environment variables")
             return True
-        else:
-            print(
-                f"⚠️  Warning: Only {success_count} out of {total_count} secrets migrated"
-            )
-            return False
+        print(f"⚠️  Warning: Only {success_count} out of {total_count} secrets migrated")
+        return False
 
-    def verify_secrets(self):
+    def verify_secrets(self) -> None:
         """Verify that secrets can be read from Vault."""
         print("\n" + "=" * 60)
         print("Verifying Secrets in Vault")
@@ -217,7 +212,7 @@ class VaultSecretsManager:
         print("\n" + "=" * 60 + "\n")
 
 
-def main():
+def main(self) -> None:
     """Main entry point for secrets migration."""
     # Initialize Vault manager
     vault_manager = VaultSecretsManager()

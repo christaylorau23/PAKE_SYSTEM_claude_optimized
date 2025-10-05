@@ -5,7 +5,7 @@ These tests define the expected contracts and must fail before implementation.
 Following TDD principles from our systematic approach.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -13,28 +13,28 @@ import pytest
 class TestStreamingServiceContracts:
     """Contract tests for streaming service interfaces"""
 
-    def test_stream_manager_contract_fails(self):
+    def test_stream_manager_contract_fails(self) -> None:
         """Contract: StreamManager must provide start_stream, stop_stream, get_status"""
         # This test must fail until StreamManager is implemented
         with pytest.raises(ImportError):
             pass
 
-    def test_google_trends_stream_contract_fails(self):
+    def test_google_trends_stream_contract_fails(self) -> None:
         """Contract: GoogleTrendsStream must provide real-time trend detection"""
         with pytest.raises(ImportError):
             pass
 
-    def test_youtube_trends_stream_contract_fails(self):
+    def test_youtube_trends_stream_contract_fails(self) -> None:
         """Contract: YouTubeTrendsStream must provide viral content detection"""
         with pytest.raises(ImportError):
             pass
 
-    def test_twitter_trends_stream_contract_fails(self):
+    def test_twitter_trends_stream_contract_fails(self) -> None:
         """Contract: TwitterTrendsStream must provide hashtag and topic tracking"""
         with pytest.raises(ImportError):
             pass
 
-    def test_tiktok_trends_stream_contract_fails(self):
+    def test_tiktok_trends_stream_contract_fails(self) -> None:
         """Contract: TikTokTrendsStream must provide viral video trend detection"""
         with pytest.raises(ImportError):
             pass
@@ -43,7 +43,7 @@ class TestStreamingServiceContracts:
 class TestDataModelContracts:
     """Contract tests for core data models"""
 
-    def test_trend_signal_model_contract(self):
+    def test_trend_signal_model_contract(self) -> None:
         """Contract: TrendSignal must validate platform, keyword, momentum"""
         from datetime import datetime
 
@@ -58,7 +58,7 @@ class TestDataModelContracts:
             platform=Platform.GOOGLE_TRENDS,
             keyword="artificial intelligence",
             momentum=0.75,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             confidence=0.8,
             volume=1000,
             lifecycle_stage=TrendLifecycle.GROWING,
@@ -67,7 +67,7 @@ class TestDataModelContracts:
         assert signal.keyword == "artificial intelligence"
         assert signal.momentum == 0.75
 
-    def test_trend_correlation_model_contract(self):
+    def test_trend_correlation_model_contract(self) -> None:
         """Contract: TrendCorrelation must calculate cross-platform relationships"""
         from src.services.trends.models.trend_correlation import TrendCorrelation
 
@@ -76,7 +76,7 @@ class TestDataModelContracts:
         assert hasattr(TrendCorrelation, "__init__")
         # Test basic functionality will be implemented when needed
 
-    def test_investment_opportunity_model_contract(self):
+    def test_investment_opportunity_model_contract(self) -> None:
         """Contract: InvestmentOpportunity must map trends to investment vehicles"""
         from src.services.trends.models.investment_opportunity import (
             InvestmentOpportunity,
@@ -91,11 +91,11 @@ class TestDataModelContracts:
 class TestPerformanceContracts:
     """Contract tests for performance requirements"""
 
-    @pytest.mark.asyncio()
-    async def test_sub_second_analysis_contract_fails(self):
+    @pytest.mark.asyncio
+    async def test_sub_second_analysis_contract_fails(self) -> None:
         """Contract: Trend analysis must complete in <1 second"""
         # This test will fail until performance requirements are met
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         # Simulate trend analysis (will fail until implemented)
         with pytest.raises(ImportError):
@@ -104,10 +104,10 @@ class TestPerformanceContracts:
             analyzer = TrendAnalyzer()
             await analyzer.analyze_trends(["test_keyword"])
 
-        elapsed = (datetime.now() - start_time).total_seconds()
+        elapsed = (datetime.now(UTC) - start_time).total_seconds()
         assert elapsed < 1.0, f"Analysis took {elapsed}s, must be <1s"
 
-    def test_10k_trends_per_hour_contract_fails(self):
+    def test_10k_trends_per_hour_contract_fails(self) -> None:
         """Contract: System must process 10,000+ trends per hour"""
         # This test defines the throughput requirement
         required_throughput = 10000  # trends per hour
@@ -120,7 +120,7 @@ class TestPerformanceContracts:
             manager = StreamManager()
             assert manager.max_throughput >= required_per_second
 
-    def test_95_percent_prediction_accuracy_contract_fails(self):
+    def test_95_percent_prediction_accuracy_contract_fails(self) -> None:
         """Contract: Trend predictions must achieve 95% accuracy"""
         required_accuracy = 0.95
 
@@ -137,22 +137,22 @@ class TestPerformanceContracts:
 class TestAPIIntegrationContracts:
     """Contract tests for external API integrations"""
 
-    def test_google_trends_api_contract_fails(self):
+    def test_google_trends_api_contract_fails(self) -> None:
         """Contract: Google Trends API integration must handle rate limits"""
         with pytest.raises(ImportError):
             pass
 
-    def test_youtube_api_contract_fails(self):
+    def test_youtube_api_contract_fails(self) -> None:
         """Contract: YouTube Data API must track trending videos"""
         with pytest.raises(ImportError):
             pass
 
-    def test_twitter_api_contract_fails(self):
+    def test_twitter_api_contract_fails(self) -> None:
         """Contract: Twitter API v2 must stream trending topics"""
         with pytest.raises(ImportError):
             pass
 
-    def test_tiktok_api_contract_fails(self):
+    def test_tiktok_api_contract_fails(self) -> None:
         """Contract: TikTok Research API must detect viral content"""
         with pytest.raises(ImportError):
             pass
@@ -161,13 +161,13 @@ class TestAPIIntegrationContracts:
 class TestRedisStreamContracts:
     """Contract tests for Redis Streams integration"""
 
-    @pytest.mark.asyncio()
-    async def test_redis_stream_processing_contract_fails(self):
+    @pytest.mark.asyncio
+    async def test_redis_stream_processing_contract_fails(self) -> None:
         """Contract: Redis Streams must handle real-time event processing"""
         with pytest.raises(ImportError):
             pass
 
-    def test_stream_consumer_groups_contract_fails(self):
+    def test_stream_consumer_groups_contract_fails(self) -> None:
         """Contract: Consumer groups must enable parallel processing"""
         with pytest.raises(ImportError):
             pass

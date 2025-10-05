@@ -4,7 +4,7 @@ from src.utils.secure_serialization import SerializationFormat
 
 
 class TestSecurity:
-    def test_secure_serialization(self):
+    def test_secure_serialization(self) -> None:
         """Test secure serialization functionality."""
         test_data = {"test": "data", "number": 42}
 
@@ -16,7 +16,7 @@ class TestSecurity:
         deserialized = json.loads(serialized.decode("utf-8"))
         assert deserialized == test_data
 
-    def test_serialization_formats(self):
+    def test_serialization_formats(self) -> None:
         """Test different serialization formats."""
         test_data = {"test": "data"}
 

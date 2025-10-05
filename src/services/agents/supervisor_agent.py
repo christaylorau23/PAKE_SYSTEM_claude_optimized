@@ -20,10 +20,8 @@ from typing import Any
 
 from scripts.ingestion_pipeline import ContentItem
 
-from ..ingestion.orchestrator import IngestionConfig, IngestionPlan, IngestionResult
+from ..ingestion.orchestrator import IngestionPlan, IngestionResult
 from ..messaging.message_bus import (
-    Message,
-    MessageBus,
     MessagePriority,
     create_response_message,
     create_system_event,
@@ -35,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
-    """Task execution status"""
+    """Task execution status."""
 
     PENDING = "pending"
     ASSIGNED = "assigned"
@@ -46,7 +44,7 @@ class TaskStatus(Enum):
 
 
 class WorkerType(Enum):
-    """Types of worker agents"""
+    """Types of worker agents."""
 
     WEB_SCRAPER = "web_scraper"
     ARXIV_SERVICE = "arxiv_service"
@@ -57,12 +55,12 @@ class WorkerType(Enum):
 
 @dataclass
 class Task:
-    """Task representation for supervisor-worker coordination"""
+    """Task representation for supervisor-worker coordination."""
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: str = ""
     priority: MessagePriority = MessagePriority.NORMAL
-    data: dict[str, Any] = field(default_factory=dict)
+    data: Dict[str, Any] = field(default_factory=dict)
     assigned_worker: str | None = None
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -77,7 +75,7 @@ class Task:
 
 @dataclass
 class WorkerAgent:
-    """Worker agent registration and status"""
+    """Worker agent registration and status."""
 
     id: str
     type: WorkerType
@@ -87,7 +85,7 @@ class WorkerAgent:
     total_tasks_completed: int = 0
     total_tasks_failed: int = 0
     average_task_time: float = 0.0
-    capabilities: list[str] = field(default_factory=list)
+    capabilities: List[str] = field(default_factory=list)
     max_concurrent_tasks: int = 1
 
 
@@ -101,13 +99,8 @@ class SupervisorAgent:
     - Performance optimization
     """
 
-    def __init__(
-        self,
-        message_bus: MessageBus,
-        config: IngestionConfig,
-        agent_id: str = None,
-    ):
-        """Initialize supervisor agent"""
+    def __init__(self) -> None:
+        """Initialize supervisor agent."""
         self.agent_id = agent_id or f"supervisor_{uuid.uuid4().hex[:8]}"
         self.message_bus = message_bus
         self.config = config
@@ -119,7 +112,7 @@ class SupervisorAgent:
 
         # Worker management
         self.registered_workers: dict[str, WorkerAgent] = {}
-        self.worker_capabilities: dict[WorkerType, list[str]] = {
+        self.worker_capabilities: dict[WorkerType, List[str]] = {
             WorkerType.WEB_SCRAPER: ["web_scraping", "javascript_rendering"],
             WorkerType.ARXIV_SERVICE: ["academic_search", "arxiv_api"],
             WorkerType.PUBMED_SERVICE: ["biomedical_search", "pubmed_api"],
@@ -141,15 +134,15 @@ class SupervisorAgent:
         self._running = False
         self._background_tasks: list[asyncio.Task] = []
 
-        logger.info(f"SupervisorAgent {self.agent_id} initialized")
+        logger.info("SupervisorAgent %s initialized", self.agent_id)
 
-    async def start(self):
-        """Start supervisor agent and initialize messaging"""
+    async def start(self) -> None:
+        """Start supervisor agent and initialize messaging."""
         if self._running:
             return
 
         self._running = True
-        logger.info(f"Starting SupervisorAgent {self.agent_id}...")
+        logger.info("Starting SupervisorAgent %s...", self.agent_id)
 
         # Subscribe to core message streams
         await self._setup_message_handlers()
@@ -177,15 +170,15 @@ class SupervisorAgent:
         )
 
         await self.message_bus.publish("system:events", startup_event)
-        logger.info(f"SupervisorAgent {self.agent_id} started successfully")
+        logger.info("SupervisorAgent %s started successfully", self.agent_id)
 
-    async def stop(self):
-        """Stop supervisor agent and cleanup resources"""
+    async def stop(self) -> None:
+        """Stop supervisor agent and cleanup resources."""
         if not self._running:
             return
 
         self._running = False
-        logger.info(f"Stopping SupervisorAgent {self.agent_id}...")
+        logger.info("Stopping SupervisorAgent %s...", self.agent_id)
 
         # Cancel background tasks
         for task in self._background_tasks:
@@ -207,14 +200,16 @@ class SupervisorAgent:
         )
 
         await self.message_bus.publish("system:events", shutdown_event)
-        logger.info(f"SupervisorAgent {self.agent_id} stopped")
+        logger.info("SupervisorAgent %s stopped", self.agent_id)
 
     async def execute_ingestion_plan(self, plan: IngestionPlan) -> IngestionResult:
         """Execute ingestion plan using event-driven worker coordination.
 
         Transforms the original orchestrator workflow into distributed tasks.
         """
-        logger.info(f"Executing ingestion plan {plan.plan_id} for topic: {plan.topic}")
+        logger.info(
+            "Executing ingestion plan %s for topic: %s", plan.plan_id, plan.topic
+        )
         start_time = time.time()
 
         # Create tasks for each source
@@ -295,17 +290,18 @@ class SupervisorAgent:
             self.metrics["tasks_failed"] += sources_failed
 
         logger.info(
-            f"Completed ingestion plan {plan.plan_id}: "
-            f"{result.total_content_items} items from {sources_completed}/{
-                len(plan.sources)
-            } sources "
-            f"in {execution_time:.2f}s",
+            "Completed ingestion plan %s: %d items from %d/%d sources in %.2fs",
+            plan.plan_id,
+            result.total_content_items,
+            sources_completed,
+            len(plan.sources),
+            execution_time,
         )
 
         return result
 
-    async def register_worker(self, worker_agent: WorkerAgent):
-        """Register worker agent with supervisor"""
+    async def register_worker(self) -> None:
+        """Register worker agent with supervisor."""
         self.registered_workers[worker_agent.id] = worker_agent
         self.metrics["workers_active"] = len(self.registered_workers)
 
@@ -321,10 +317,12 @@ class SupervisorAgent:
         )
 
         await self.message_bus.publish("system:events", confirmation)
-        logger.info(f"Registered worker {worker_agent.id} ({worker_agent.type.value})")
+        logger.info(
+            "Registered worker %s (%s)", worker_agent.id, worker_agent.type.value
+        )
 
-    async def unregister_worker(self, worker_id: str):
-        """Unregister worker agent"""
+    async def unregister_worker(self) -> None:
+        """Unregister worker agent."""
         if worker_id in self.registered_workers:
             worker = self.registered_workers.pop(worker_id)
             self.metrics["workers_active"] = len(self.registered_workers)
@@ -336,10 +334,10 @@ class SupervisorAgent:
                     task.error = "Worker disconnected"
                     await self._reschedule_task(task)
 
-            logger.info(f"Unregistered worker {worker_id}")
+            logger.info("Unregistered worker %s", worker_id)
 
-    async def get_metrics(self) -> dict[str, Any]:
-        """Get supervisor agent metrics"""
+    async def get_metrics(self) -> Dict[str, Any]:
+        """Get supervisor agent metrics."""
         metrics = self.metrics.copy()
         metrics.update(
             {
@@ -362,8 +360,8 @@ class SupervisorAgent:
 
         return metrics
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform comprehensive health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform comprehensive health check."""
         health = {
             "status": "healthy",
             "supervisor_id": self.agent_id,
@@ -405,8 +403,8 @@ class SupervisorAgent:
 
         return health
 
-    async def _setup_message_handlers(self):
-        """Setup message stream handlers"""
+    async def _setup_message_handlers(self) -> None:
+        """Setup message stream handlers."""
         # Task responses from workers
         await self.message_bus.subscribe(
             "supervisor:responses",
@@ -431,7 +429,7 @@ class SupervisorAgent:
         logger.info("Message handlers setup complete")
 
     async def _execute_tasks_parallel(self, tasks: list[Task]) -> list[Any]:
-        """Execute multiple tasks in parallel through worker coordination"""
+        """Execute multiple tasks in parallel through worker coordination."""
         # Add tasks to active tracking
         for task in tasks:
             self.active_tasks[task.id] = task
@@ -445,7 +443,7 @@ class SupervisorAgent:
             completion_futures[task.id] = future
 
         # Monitor task completion
-        async def completion_monitor():
+        async def completion_monitor(self) -> None:
             while completion_futures:
                 completed_tasks = []
                 for task_id, future in completion_futures.items():
@@ -491,8 +489,8 @@ class SupervisorAgent:
 
         return results
 
-    async def _task_dispatcher(self):
-        """Background task dispatcher for worker coordination"""
+    async def _task_dispatcher(self) -> None:
+        """Background task dispatcher for worker coordination."""
         logger.info("Task dispatcher started")
 
         while self._running:
@@ -514,13 +512,13 @@ class SupervisorAgent:
             except TimeoutError:
                 continue
             except Exception as e:
-                logger.error(f"Task dispatcher error: {e}")
+                logger.error("Task dispatcher error: %s", e)
                 await asyncio.sleep(1)
 
         logger.info("Task dispatcher stopped")
 
     async def _find_available_worker(self, task: Task) -> WorkerAgent | None:
-        """Find available worker for task type"""
+        """Find available worker for task type."""
         # Map task types to worker types
         task_worker_mapping = {
             "web_ingestion": WorkerType.WEB_SCRAPER,
@@ -551,8 +549,8 @@ class SupervisorAgent:
         # Return worker with best performance
         return min(available_workers, key=lambda w: w.total_tasks_failed)
 
-    async def _assign_task_to_worker(self, task: Task, worker: WorkerAgent):
-        """Assign task to specific worker"""
+    async def _assign_task_to_worker(self) -> None:
+        """Assign task to specific worker."""
         task.assigned_worker = worker.id
         task.assigned_at = datetime.now(UTC)
         task.status = TaskStatus.ASSIGNED
@@ -572,10 +570,10 @@ class SupervisorAgent:
 
         await self.message_bus.publish("supervisor:tasks", task_message)
 
-        logger.debug(f"Assigned task {task.id} to worker {worker.id}")
+        logger.debug("Assigned task %s to worker %s", task.id, worker.id)
 
-    async def _handle_task_response(self, message: Message):
-        """Handle task response from worker"""
+    async def _handle_task_response(self) -> None:
+        """Handle task response from worker."""
         task_id = message.correlation_id
         if not task_id or task_id not in self.active_tasks:
             return
@@ -611,10 +609,10 @@ class SupervisorAgent:
             else:
                 worker.total_tasks_failed += 1
 
-        logger.debug(f"Task {task_id} completed with status {task.status}")
+        logger.debug("Task %s completed with status %s", task_id, task.status)
 
-    async def _handle_system_event(self, message: Message):
-        """Handle system-wide events"""
+    async def _handle_system_event(self) -> None:
+        """Handle system-wide events."""
         event_data = message.data
         event_type = event_data.get("event_type")
 
@@ -625,10 +623,10 @@ class SupervisorAgent:
         elif event_type == "worker_shutdown":
             await self._handle_worker_shutdown(message)
 
-        logger.debug(f"Processed system event: {event_type}")
+        logger.debug("Processed system event: %s", event_type)
 
-    async def _handle_worker_heartbeat(self, message: Message):
-        """Handle worker heartbeat"""
+    async def _handle_worker_heartbeat(self) -> None:
+        """Handle worker heartbeat."""
         worker_id = message.source
         if worker_id in self.registered_workers:
             worker = self.registered_workers[worker_id]
@@ -639,8 +637,8 @@ class SupervisorAgent:
             if "status" in heartbeat_data:
                 worker.status = heartbeat_data["status"]
 
-    async def _handle_worker_registration(self, message: Message):
-        """Handle new worker registration"""
+    async def _handle_worker_registration(self) -> None:
+        """Handle new worker registration."""
         event_data = message.data.get("event_data", {})
         worker_type = event_data.get("worker_type")
         worker_id = message.source
@@ -656,15 +654,15 @@ class SupervisorAgent:
                 )
                 await self.register_worker(worker)
             except ValueError:
-                logger.warning(f"Unknown worker type: {worker_type}")
+                logger.warning("Unknown worker type: %s", worker_type)
 
-    async def _handle_worker_shutdown(self, message: Message):
-        """Handle worker shutdown"""
+    async def _handle_worker_shutdown(self) -> None:
+        """Handle worker shutdown."""
         worker_id = message.source
         await self.unregister_worker(worker_id)
 
-    async def _handle_health_check(self, message: Message):
-        """Handle health check request"""
+    async def _handle_health_check(self) -> None:
+        """Handle health check request."""
         health = await self.health_check()
 
         response = create_response_message(
@@ -680,8 +678,8 @@ class SupervisorAgent:
             message,
         )
 
-    async def _health_monitor(self):
-        """Background health monitoring"""
+    async def _health_monitor(self) -> None:
+        """Background health monitoring."""
         logger.info("Health monitor started")
 
         while self._running:
@@ -695,19 +693,19 @@ class SupervisorAgent:
                             current_time - worker.last_heartbeat
                         ).total_seconds()
                         if time_since_heartbeat > 120:  # 2 minute timeout
-                            logger.warning(f"Worker {worker_id} health check timeout")
+                            logger.warning("Worker %s health check timeout", worker_id)
                             await self.unregister_worker(worker_id)
 
                 await asyncio.sleep(30)  # Check every 30 seconds
 
             except Exception as e:
-                logger.error(f"Health monitor error: {e}")
+                logger.error("Health monitor error: %s", e)
                 await asyncio.sleep(5)
 
         logger.info("Health monitor stopped")
 
-    async def _metrics_collector(self):
-        """Background metrics collection"""
+    async def _metrics_collector(self) -> None:
+        """Background metrics collection."""
         logger.info("Metrics collector started")
 
         while self._running:
@@ -736,13 +734,13 @@ class SupervisorAgent:
                 await asyncio.sleep(60)  # Publish every minute
 
             except Exception as e:
-                logger.error(f"Metrics collector error: {e}")
+                logger.error("Metrics collector error: %s", e)
                 await asyncio.sleep(5)
 
         logger.info("Metrics collector stopped")
 
-    async def _task_timeout_monitor(self):
-        """Monitor and handle task timeouts"""
+    async def _task_timeout_monitor(self) -> None:
+        """Monitor and handle task timeouts."""
         logger.info("Task timeout monitor started")
 
         while self._running:
@@ -759,7 +757,7 @@ class SupervisorAgent:
                         timed_out_tasks.append(task)
 
                 for task in timed_out_tasks:
-                    logger.warning(f"Task {task.id} timed out")
+                    logger.warning("Task %s timed out", task.id)
                     task.status = TaskStatus.TIMEOUT
                     task.error = "Task execution timeout"
 
@@ -784,17 +782,13 @@ class SupervisorAgent:
                 await asyncio.sleep(10)  # Check every 10 seconds
 
             except Exception as e:
-                logger.error(f"Task timeout monitor error: {e}")
+                logger.error("Task timeout monitor error: %s", e)
                 await asyncio.sleep(5)
 
         logger.info("Task timeout monitor stopped")
 
-    async def _apply_cognitive_processing(
-        self,
-        content_items: list[ContentItem],
-        plan: IngestionPlan,
-    ):
-        """Apply cognitive processing through worker agents"""
+    async def _apply_cognitive_processing(self) -> None:
+        """Apply cognitive processing through worker agents."""
         if not content_items:
             return
 
@@ -826,7 +820,7 @@ class SupervisorAgent:
         self,
         content_items: list[ContentItem],
     ) -> list[ContentItem]:
-        """Apply deduplication through performance optimizer worker"""
+        """Apply deduplication through performance optimizer worker."""
         if not content_items:
             return content_items
 
@@ -850,8 +844,8 @@ class SupervisorAgent:
 
         return content_items
 
-    async def _reschedule_task(self, task: Task):
-        """Reschedule failed task for retry"""
+    async def _reschedule_task(self) -> None:
+        """Reschedule failed task for retry."""
         if task.retry_count < task.max_retries:
             task.retry_count += 1
             task.status = TaskStatus.PENDING
@@ -859,17 +853,18 @@ class SupervisorAgent:
             task.assigned_at = None
             await self.task_queue.put(task)
             logger.info(
-                f"Rescheduled task {task.id} for retry ({task.retry_count}/{
-                    task.max_retries
-                })",
+                "Rescheduled task %s for retry (%s/%s)",
+                task.id,
+                task.retry_count,
+                task.max_retries,
             )
 
     def _calculate_execution_metrics(
         self,
         content_items: list[ContentItem],
         execution_time: float,
-    ) -> dict[str, Any]:
-        """Calculate execution metrics for ingestion result"""
+    ) -> Dict[str, Any]:
+        """Calculate execution metrics for ingestion result."""
         return {
             "supervisor_execution_time": execution_time,
             "total_content_items": len(content_items),

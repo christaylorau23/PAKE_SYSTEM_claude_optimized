@@ -48,7 +48,7 @@ class VideoGenerationService:
 # user_service.py
 from .notification_service import send_welcome_email
 
-# notification_service.py  
+# notification_service.py
 from .user_service import UserService  # Circular import!
 ```
 
@@ -88,7 +88,7 @@ class UserService:
 class UserService:
     def __init__(self, user_repo: AbstractUserRepository):
         self.user_repo = user_repo
-    
+
     async def create_user(self, email, password):
         # Pure business logic, no data access concerns
         user = create_user(email=email, hashed_password=hash_password(password))
@@ -151,13 +151,13 @@ class User:
     last_name: Optional[str] = None
     role: UserRole = UserRole.USER
     status: UserStatus = UserStatus.ACTIVE
-    
+
     @property
     def full_name(self) -> str:
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.email.split("@")[0]
-    
+
     def can_access_tenant(self, tenant_id: str) -> bool:
         return self.tenant_id == tenant_id
 ```
@@ -171,11 +171,11 @@ class UserRepository(BaseRepository[User], AbstractUserRepository[User]):
             query = sa.select(UserORM).where(UserORM.email == email)
             result = await session.execute(query)
             orm_user = result.scalar_one_or_none()
-            
+
             if orm_user:
                 return self._orm_to_domain(orm_user)
             return None
-    
+
     def _orm_to_domain(self, orm_user: UserORM) -> User:
         return User(
             id=orm_user.id,
@@ -195,7 +195,7 @@ class UserService:
         self.user_repository = user_repository
         self.auth_service = auth_service
         self.notification_service = notification_service
-    
+
     async def create_user(self, email: str, password: str, user_data: dict) -> ServiceResult:
         # 1. Validate input
         # 2. Create through auth service
@@ -225,7 +225,7 @@ class TestUserService:
     @pytest.fixture
     def mock_user_repository(self):
         return AsyncMock(spec=AbstractUserRepository)
-    
+
     @pytest.fixture
     def user_service(self, mock_user_repository, mock_auth_service, mock_notification_service):
         return UserService(
@@ -233,7 +233,7 @@ class TestUserService:
             auth_service=mock_auth_service,
             notification_service=mock_notification_service
         )
-    
+
     @pytest.mark.asyncio
     async def test_create_user_success(self, user_service, mock_user_repository):
         # Test implementation with mocked dependencies

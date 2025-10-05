@@ -20,14 +20,14 @@ from tests.factories import UserInDBFactory
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_database()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
+@pytest.mark.integration
+@pytest.mark.integration_database
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
 class TestAuthDatabaseIntegration:
     """Test authentication with real database operations"""
 
-    async def test_create_user_persists_to_database(self, mock_database):
+    async def test_create_user_persists_to_database(self) -> None:
         """Test that user creation persists data correctly"""
         # Arrange
         username = "newuser"
@@ -43,7 +43,7 @@ class TestAuthDatabaseIntegration:
         assert user.email == email
         assert "hashed_password" in user.__dict__ or hasattr(user, "hashed_password")
 
-    async def test_get_user_retrieves_from_database(self):
+    async def test_get_user_retrieves_from_database(self) -> None:
         """Test retrieving user from database"""
         # Arrange
         expected_user = "admin"
@@ -56,7 +56,7 @@ class TestAuthDatabaseIntegration:
         assert user.username == expected_user
         assert hasattr(user, "hashed_password")
 
-    async def test_get_user_returns_none_for_nonexistent(self):
+    async def test_get_user_returns_none_for_nonexistent(self) -> None:
         """Test that get_user returns None for non-existent user"""
         # Act
         user = await get_user("nonexistent_user_12345")
@@ -64,7 +64,7 @@ class TestAuthDatabaseIntegration:
         # Assert
         assert user is None
 
-    async def test_authenticate_user_success_with_correct_credentials(self):
+    async def test_authenticate_user_success_with_correct_credentials(self) -> None:
         """Test successful authentication with correct credentials"""
         # Arrange
         username = "admin"
@@ -78,7 +78,7 @@ class TestAuthDatabaseIntegration:
         assert user.username == username
         assert user.disabled is False
 
-    async def test_authenticate_user_fails_with_wrong_password(self):
+    async def test_authenticate_user_fails_with_wrong_password(self) -> None:
         """Test authentication failure with wrong password"""
         # Arrange
         username = "admin"
@@ -90,7 +90,7 @@ class TestAuthDatabaseIntegration:
         # Assert
         assert user is None
 
-    async def test_authenticate_user_fails_with_nonexistent_user(self):
+    async def test_authenticate_user_fails_with_nonexistent_user(self) -> None:
         """Test authentication failure with non-existent user"""
         # Act
         user = await authenticate_user("nonexistent", "password")
@@ -104,13 +104,13 @@ class TestAuthDatabaseIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
+@pytest.mark.integration
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
 class TestAuthServiceIntegration:
     """Test authentication service with mocked dependencies"""
 
-    async def test_full_authentication_flow(self, mock_database):
+    async def test_full_authentication_flow(self) -> None:
         """Test complete authentication workflow"""
         # Arrange
         from src.pake_system.auth.database import authenticate_user
@@ -128,7 +128,7 @@ class TestAuthServiceIntegration:
         # In real integration test, this would connect to test database
         assert user is None or user.username == username
 
-    async def test_password_change_flow(self, mock_database):
+    async def test_password_change_flow(self) -> None:
         """Test password change workflow"""
         # Arrange
         user_id = "user-123"
@@ -151,14 +151,14 @@ class TestAuthServiceIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_cache()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
+@pytest.mark.integration
+@pytest.mark.integration_cache
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
 class TestAuthCacheIntegration:
     """Test authentication with caching layer"""
 
-    async def test_session_stored_in_cache(self, mock_redis):
+    async def test_session_stored_in_cache(self) -> None:
         """Test that active sessions are stored in cache"""
         # Arrange
         session_id = "test-session-123"
@@ -175,7 +175,7 @@ class TestAuthCacheIntegration:
         # Assert
         assert result == user_id
 
-    async def test_session_expiration_in_cache(self, mock_redis):
+    async def test_session_expiration_in_cache(self) -> None:
         """Test that sessions expire from cache"""
         # Arrange
         session_id = "expiring-session"
@@ -196,13 +196,13 @@ class TestAuthCacheIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
+@pytest.mark.integration
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
 class TestAuthRateLimitingIntegration:
     """Test rate limiting integration"""
 
-    async def test_rate_limiting_blocks_excessive_attempts(self, mock_redis):
+    async def test_rate_limiting_blocks_excessive_attempts(self) -> None:
         """Test that rate limiting blocks too many attempts"""
         # Arrange
         username = "testuser"
@@ -210,7 +210,7 @@ class TestAuthRateLimitingIntegration:
         max_attempts = 5
 
         # Act - Simulate multiple failed login attempts
-        for i in range(max_attempts + 2):
+        for _i in range(max_attempts + 2):
             key = f"rate_limit:{ip_address}:{username}"
             current = mock_redis.get(key) or 0
             mock_redis.set(key, int(current) + 1)
@@ -220,7 +220,7 @@ class TestAuthRateLimitingIntegration:
         # Assert
         assert int(final_count) > max_attempts
 
-    async def test_rate_limiting_resets_after_window(self, mock_redis):
+    async def test_rate_limiting_resets_after_window(self) -> None:
         """Test that rate limiting resets after time window"""
         # Arrange
         username = "testuser"
@@ -241,14 +241,14 @@ class TestAuthRateLimitingIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
-@pytest.mark.slow()
+@pytest.mark.integration
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
+@pytest.mark.slow
 class TestAuthWorkflowIntegration:
     """Test complete multi-step authentication workflows"""
 
-    async def test_registration_to_login_workflow(self):
+    async def test_registration_to_login_workflow(self) -> None:
         """Test user registration followed by login"""
         # Arrange
         username = "newuser_workflow"
@@ -266,7 +266,7 @@ class TestAuthWorkflowIntegration:
         assert user.username == username
         assert authenticated_user is not None or username not in ["admin", "testuser"]
 
-    async def test_login_refresh_logout_workflow(self):
+    async def test_login_refresh_logout_workflow(self) -> None:
         """Test complete session lifecycle"""
         # Arrange
         username = "admin"
@@ -287,7 +287,7 @@ class TestAuthWorkflowIntegration:
         # Assert
         assert user is not None
 
-    async def test_password_reset_workflow(self):
+    async def test_password_reset_workflow(self) -> None:
         """Test password reset workflow"""
         # Arrange
         username = "admin"
@@ -313,13 +313,13 @@ class TestAuthWorkflowIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_auth()
-@pytest.mark.asyncio()
+@pytest.mark.integration
+@pytest.mark.integration_auth
+@pytest.mark.asyncio
 class TestAuthErrorHandling:
     """Test error handling in authentication integration"""
 
-    async def test_handles_database_connection_failure(self, mock_database):
+    async def test_handles_database_connection_failure(self) -> None:
         """Test graceful handling of database failures"""
         # Arrange
         mock_database.fetch_one = AsyncMock(
@@ -330,7 +330,7 @@ class TestAuthErrorHandling:
         # In real integration test, would handle connection failure
         # and return appropriate error
 
-    async def test_handles_cache_unavailable(self, mock_redis):
+    async def test_handles_cache_unavailable(self) -> None:
         """Test graceful handling when cache is unavailable"""
         # Arrange
         mock_redis.get = MagicMock(side_effect=Exception("Redis unavailable"))
@@ -338,7 +338,7 @@ class TestAuthErrorHandling:
         # Act & Assert
         # Should fall back to database-only auth
 
-    async def test_handles_invalid_token_format(self):
+    async def test_handles_invalid_token_format(self) -> None:
         """Test handling of malformed tokens"""
         # Arrange
         invalid_token = "not-a-valid-token"

@@ -24,7 +24,7 @@ import json
 import linecache
 import time
 import tracemalloc
-from datetime import datetime
+from datetime import UTC, datetime
 
 import psutil
 
@@ -34,7 +34,7 @@ from src.utils.secure_serialization import deserialize_from_file, serialize_to_f
 class MemoryProfiler:
     """Memory profiling and leak detection utility"""
 
-    def __init__(self, top_stats: int = 10):
+    def __init__(self) -> None:
         """
         Initialize memory profiler.
 
@@ -45,16 +45,16 @@ class MemoryProfiler:
         self.snapshots: list[tuple[str, tracemalloc.Snapshot]] = []
         self.process = psutil.Process()
 
-    def start(self):
+    def start(self) -> None:
         """Start memory profiling"""
         tracemalloc.start()
-        print(f"🔍 Memory profiling started at {datetime.now()}")
+        print(f"🔍 Memory profiling started at {datetime.now(UTC)}")
         print(f"Initial memory usage: {self._get_memory_mb():.2f} MB\n")
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop memory profiling"""
         tracemalloc.stop()
-        print(f"\n✅ Memory profiling stopped at {datetime.now()}")
+        print(f"\n✅ Memory profiling stopped at {datetime.now(UTC)}")
 
     def take_snapshot(self, label: str = "snapshot") -> tracemalloc.Snapshot:
         """
@@ -71,7 +71,7 @@ class MemoryProfiler:
         print(f"📸 Snapshot '{label}' taken - Memory: {self._get_memory_mb():.2f} MB")
         return snapshot
 
-    def display_top_stats(self, snapshot: tracemalloc.Snapshot | None = None):
+    def display_top_stats(self) -> None:
         """
         Display top memory consumers.
 
@@ -194,7 +194,7 @@ class MemoryProfiler:
         """Get current memory usage in MB"""
         return self.process.memory_info().rss / 1024 / 1024
 
-    def save_snapshot(self, snapshot: tracemalloc.Snapshot, filename: str):
+    def save_snapshot(self) -> None:
         """
         Save snapshot to file using secure serialization.
 
@@ -235,7 +235,7 @@ class MemoryProfiler:
         print(f"📂 Snapshot loaded from {filename}")
         return snapshot_data
 
-    def generate_report(self, output_file: str = "memory_profile_report.json"):
+    def generate_report(self) -> None:
         """
         Generate comprehensive memory profiling report.
 
@@ -247,7 +247,7 @@ class MemoryProfiler:
             return
 
         report = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "num_snapshots": len(self.snapshots),
             "snapshots": [],
             "memory_growth": [],
@@ -311,7 +311,7 @@ class MemoryProfiler:
         print(f"\n📄 Memory profiling report saved to {output_file}")
 
 
-async def profile_application(duration: int = 60, interval: int = 10):
+async def profile_application(self) -> None:
     """
     Profile application memory usage over time.
 
@@ -345,7 +345,7 @@ async def profile_application(duration: int = 60, interval: int = 10):
     profiler.stop()
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Memory Profiler")
     parser.add_argument(

@@ -1,4 +1,4 @@
-"""TrendAnalyzer - Advanced trend analysis and lifecycle prediction
+"""TrendAnalyzer - Advanced trend analysis and lifecycle prediction.
 
 Analyzes trend patterns, predicts lifecycle stages, and generates investment insights.
 """
@@ -8,7 +8,7 @@ import logging
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import numpy as np
@@ -18,7 +18,7 @@ from ..models.trend_signal import Platform, TrendLifecycle, TrendSignal
 
 @dataclass
 class TrendAnalysisResult:
-    """Result of comprehensive trend analysis"""
+    """Result of comprehensive trend analysis."""
 
     trend_signal: TrendSignal
     predicted_lifecycle_stage: TrendLifecycle
@@ -28,11 +28,11 @@ class TrendAnalysisResult:
     peak_prediction_days: int | None
     investment_score: float  # 0.0 to 1.0
     risk_assessment: dict[str, float]
-    supporting_evidence: list[str]
+    supporting_evidence: List[str]
 
 
 class TrendAnalyzer:
-    """Advanced trend analysis engine
+    """Advanced trend analysis engine.
 
     Capabilities:
     - Trend lifecycle prediction
@@ -43,7 +43,7 @@ class TrendAnalyzer:
     - Risk assessment
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.accuracy_threshold = 0.95  # For contract testing
 
@@ -60,7 +60,7 @@ class TrendAnalyzer:
         self,
         trends: list[TrendSignal],
     ) -> list[TrendAnalysisResult]:
-        """Analyze multiple trends and return comprehensive analysis results
+        """Analyze multiple trends and return comprehensive analysis results.
 
         Args:
             trends: List of trend signals to analyze
@@ -68,7 +68,7 @@ class TrendAnalyzer:
         Returns:
             List of analysis results with predictions and insights
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         results = []
 
@@ -79,19 +79,21 @@ class TrendAnalyzer:
         for i, result in enumerate(analysis_results):
             if isinstance(result, Exception):
                 self.logger.error(
-                    f"Error analyzing trend {trends[i].keyword}: {result}",
+                    "Error analyzing trend %s: %s",
+                    trends[i].keyword,
+                    result,
                 )
                 continue
             results.append(result)
 
         # Log performance
-        elapsed = (datetime.now() - start_time).total_seconds()
-        self.logger.info(f"Analyzed {len(trends)} trends in {elapsed:.3f}s")
+        elapsed = (datetime.now(UTC) - start_time).total_seconds()
+        self.logger.info("Analyzed %.3f%% trends in %.3f%%s", len(trends), elapsed)
 
         return results
 
     async def _analyze_single_trend(self, trend: TrendSignal) -> TrendAnalysisResult:
-        """Analyze a single trend signal"""
+        """Analyze a single trend signal."""
         # Add to historical data
         self.trend_history[trend.keyword].append(trend)
 
@@ -149,7 +151,7 @@ class TrendAnalyzer:
         trend: TrendSignal,
         history: list[TrendSignal],
     ) -> tuple[TrendLifecycle, float]:
-        """Predict the lifecycle stage with confidence"""
+        """Predict the lifecycle stage with confidence."""
         if len(history) < 2:
             # Not enough data, use current stage with low confidence
             return trend.lifecycle_stage, 0.5
@@ -192,7 +194,7 @@ class TrendAnalyzer:
         return TrendLifecycle.DECLINING, confidence - 0.1
 
     def _calculate_trend_direction(self, values: list[float]) -> float:
-        """Calculate trend direction (-1 to 1) using linear regression"""
+        """Calculate trend direction (-1 to 1) using linear regression."""
         if len(values) < 2:
             return 0.0
 
@@ -208,7 +210,7 @@ class TrendAnalyzer:
         return max(-1.0, min(1.0, slope))
 
     def _calculate_momentum_trajectory(self, history: list[TrendSignal]) -> list[float]:
-        """Calculate momentum trajectory over time"""
+        """Calculate momentum trajectory over time."""
         if len(history) < 2:
             return [history[0].momentum] if history else [0.0]
 
@@ -231,7 +233,7 @@ class TrendAnalyzer:
         return momentum_values
 
     def _calculate_volume_growth_rate(self, history: list[TrendSignal]) -> float:
-        """Calculate volume growth rate"""
+        """Calculate volume growth rate."""
         if len(history) < 2:
             return 0.0
 
@@ -254,7 +256,7 @@ class TrendAnalyzer:
         trend: TrendSignal,
         history: list[TrendSignal],
     ) -> int | None:
-        """Predict when trend will peak (days from now)"""
+        """Predict when trend will peak (days from now)."""
         if len(history) < 3:
             return None
 
@@ -291,7 +293,7 @@ class TrendAnalyzer:
         volume_growth_rate: float,
         momentum_trajectory: list[float],
     ) -> float:
-        """Calculate investment score (0.0 to 1.0)"""
+        """Calculate investment score (0.0 to 1.0)."""
         # Base score from trend strength
         base_score = trend.trend_strength
 
@@ -338,7 +340,7 @@ class TrendAnalyzer:
         trend: TrendSignal,
         history: list[TrendSignal],
     ) -> dict[str, float]:
-        """Assess various risk factors"""
+        """Assess various risk factors."""
         risks = {
             "volatility_risk": 0.0,
             "decline_risk": 0.0,
@@ -394,8 +396,8 @@ class TrendAnalyzer:
         predicted_stage: TrendLifecycle,
         volume_growth_rate: float,
         momentum_trajectory: list[float],
-    ) -> list[str]:
-        """Generate supporting evidence for analysis"""
+    ) -> List[str]:
+        """Generate supporting evidence for analysis."""
         evidence = []
 
         # Trend strength evidence
@@ -438,12 +440,12 @@ class TrendAnalyzer:
         self,
         keyword: str,
     ) -> TrendAnalysisResult | None:
-        """Get latest analysis for a specific trend keyword"""
+        """Get latest analysis for a specific trend keyword."""
         return self.analysis_cache.get(keyword)
 
-    async def clear_cache(self, older_than_hours: int = 24):
-        """Clear old cached analysis results"""
-        cutoff_time = datetime.now() - timedelta(hours=older_than_hours)
+    async def clear_cache(self) -> None:
+        """Clear old cached analysis results."""
+        cutoff_time = datetime.now(UTC) - timedelta(hours=older_than_hours)
 
         cleared_count = 0
         for keyword in list(self.analysis_cache.keys()):
@@ -452,10 +454,10 @@ class TrendAnalyzer:
                 del self.analysis_cache[keyword]
                 cleared_count += 1
 
-        self.logger.info(f"Cleared {cleared_count} cached analysis results")
+        self.logger.info("Cleared %s cached analysis results", cleared_count)
 
-    def get_analysis_statistics(self) -> dict[str, Any]:
-        """Get statistics about analysis performance"""
+    def get_analysis_statistics(self) -> Dict[str, Any]:
+        """Get statistics about analysis performance."""
         total_trends = sum(len(history) for history in self.trend_history.values())
 
         return {

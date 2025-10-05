@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Cosmic Calibration Coordinator - Advanced Autonomous Cognitive Evolution
-Central orchestration system for the self-optimization and evolution framework
+Central orchestration system for the self-optimization and evolution framework.
 
 Coordinates all metacognitive components to achieve continuous autonomous improvement
 of the PAKE cognitive architecture.
@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -69,8 +69,8 @@ class CalibrationEvent:
     severity: str  # info, warning, critical
     component: str
     description: str
-    impact_assessment: dict[str, Any]
-    recommended_actions: list[str]
+    impact_assessment: Dict[str, Any]
+    recommended_actions: List[str]
     auto_resolved: bool
 
 
@@ -89,7 +89,7 @@ class CosmicCalibrationCoordinator:
     - Maintain system stability during improvements
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.calibration_phase = CalibrationPhase.INITIALIZATION
 
@@ -122,7 +122,7 @@ class CosmicCalibrationCoordinator:
         # Coordination state
         self.system_metrics_history: list[CalibrationMetrics] = []
         self.calibration_events: list[CalibrationEvent] = []
-        self.active_optimizations: dict[str, dict[str, Any]] = {}
+        self.active_optimizations: dict[str, Dict[str, Any]] = {}
         self.last_optimization_time: datetime | None = None
 
         # Master optimization strategy
@@ -138,7 +138,7 @@ class CosmicCalibrationCoordinator:
         self.logger.info("Cosmic Calibration Coordinator initialized")
 
     def _setup_logging(self) -> logging.Logger:
-        """Setup master logging for cosmic calibration"""
+        """Setup master logging for cosmic calibration."""
         logger = logging.getLogger("CosmicCalibration")
         logger.setLevel(logging.INFO)
 
@@ -158,8 +158,8 @@ class CosmicCalibrationCoordinator:
 
         return logger
 
-    def _initialize_optimization_strategy(self) -> dict[str, Any]:
-        """Initialize the master optimization strategy"""
+    def _initialize_optimization_strategy(self) -> Dict[str, Any]:
+        """Initialize the master optimization strategy."""
         return {
             "priority_weights": {
                 "performance_improvement": 0.4,
@@ -181,7 +181,7 @@ class CosmicCalibrationCoordinator:
         }
 
     async def initialize(self) -> bool:
-        """Initialize the cosmic calibration coordinator and all components"""
+        """Initialize the cosmic calibration coordinator and all components."""
         try:
             self.logger.info("=== COSMIC CALIBRATION PROTOCOL INITIALIZATION ===")
 
@@ -205,15 +205,16 @@ class CosmicCalibrationCoordinator:
 
         except Exception as e:
             self.logger.error(
-                f"Failed to initialize Cosmic Calibration Coordinator: {e}",
+                "Failed to initialize Cosmic Calibration Coordinator: %s",
+                e,
             )
             return False
 
-    async def _initialize_calibration_log(self):
-        """Initialize the master Cosmic Calibration Log"""
+    async def _initialize_calibration_log(self) -> None:
+        """Initialize the master Cosmic Calibration Log."""
         log_header = f"""# Cosmic Calibration Protocol - Master Coordination Log
 
-**Initialization Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Initialization Date:** {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 **Protocol Version:** 1.0 - Advanced Autonomous Cognitive Evolution
 **System Status:** Cosmic Calibration ACTIVE
 
@@ -258,15 +259,16 @@ components to achieve continuous improvement while maintaining system stability.
         with open(self.calibration_log_path, "w", encoding="utf-8") as f:
             f.write(log_header)
 
-    async def _initialize_cognitive_components(self):
-        """Initialize all cognitive evolution components"""
+    async def _initialize_cognitive_components(self) -> None:
+        """Initialize all cognitive evolution components."""
         self.logger.info("Initializing cognitive evolution components...")
 
         # Initialize Autonomous Cognitive Engine
         cognitive_config = self.config.get("cognitive_engine", {})
         self.cognitive_engine = AutonomousCognitiveEngine(cognitive_config)
         if not await self.cognitive_engine.initialize():
-            raise Exception("Failed to initialize Autonomous Cognitive Engine")
+            msg = "Failed to initialize Autonomous Cognitive Engine"
+            raise Exception(msg)
 
         # Initialize Metacognitive Optimization Engine
         metacognitive_config = self.config.get("metacognitive_optimization", {})
@@ -274,24 +276,27 @@ components to achieve continuous improvement while maintaining system stability.
             metacognitive_config,
         )
         if not await self.metacognitive_optimizer.initialize():
-            raise Exception("Failed to initialize Metacognitive Optimization Engine")
+            msg = "Failed to initialize Metacognitive Optimization Engine"
+            raise Exception(msg)
 
         # Initialize Prompt Evolution System
         evolution_config = self.config.get("prompt_evolution", {})
         self.prompt_evolution = PromptEvolutionSystem(evolution_config)
         if not await self.prompt_evolution.initialize():
-            raise Exception("Failed to initialize Prompt Evolution System")
+            msg = "Failed to initialize Prompt Evolution System"
+            raise Exception(msg)
 
         # Initialize Self-Critique Analyzer
         critique_config = self.config.get("self_critique", {})
         self.self_critique = SelfCritiqueAnalyzer(critique_config)
         if not await self.self_critique.initialize():
-            raise Exception("Failed to initialize Self-Critique Analyzer")
+            msg = "Failed to initialize Self-Critique Analyzer"
+            raise Exception(msg)
 
         self.logger.info("All cognitive components initialized successfully")
 
-    async def _master_coordination_loop(self):
-        """Master coordination loop - orchestrates all optimization activities"""
+    async def _master_coordination_loop(self) -> None:
+        """Master coordination loop - orchestrates all optimization activities."""
         self.logger.info("Starting master coordination loop")
 
         while True:
@@ -329,11 +334,11 @@ components to achieve continuous improvement while maintaining system stability.
                 self.logger.info("=== MASTER COORDINATION CYCLE COMPLETED ===")
 
             except Exception as e:
-                self.logger.error(f"Error in master coordination loop: {e}")
+                self.logger.error("Error in master coordination loop: %s", e)
                 self.calibration_phase = CalibrationPhase.MONITORING
 
     async def _collect_system_metrics(self) -> CalibrationMetrics:
-        """Collect comprehensive system metrics from all components"""
+        """Collect comprehensive system metrics from all components."""
         # Get component statuses
         cognitive_status = (
             self.cognitive_engine.get_cognitive_status()
@@ -385,7 +390,7 @@ components to achieve continuous improvement while maintaining system stability.
         autonomous_capability = self._calculate_autonomous_capability_level()
 
         return CalibrationMetrics(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             overall_system_health=health,
             cognitive_performance_score=cognitive_score,
             optimization_efficiency=metacognitive_score,
@@ -402,9 +407,9 @@ components to achieve continuous improvement while maintaining system stability.
 
     def _calculate_cognitive_performance_score(
         self,
-        performance_metrics: dict[str, Any],
+        performance_metrics: Dict[str, Any],
     ) -> float:
-        """Calculate overall cognitive performance score"""
+        """Calculate overall cognitive performance score."""
         if not performance_metrics:
             return 0.5  # Default neutral score
 
@@ -425,8 +430,8 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(scores) if scores else 0.5
 
-    def _calculate_metacognitive_score(self, status: dict[str, Any]) -> float:
-        """Calculate metacognitive optimization effectiveness score"""
+    def _calculate_metacognitive_score(self, status: Dict[str, Any]) -> float:
+        """Calculate metacognitive optimization effectiveness score."""
         if not status:
             return 0.5
 
@@ -451,8 +456,8 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(factors) if factors else 0.5
 
-    def _calculate_evolution_score(self, status: dict[str, Any]) -> float:
-        """Calculate prompt evolution effectiveness score"""
+    def _calculate_evolution_score(self, status: Dict[str, Any]) -> float:
+        """Calculate prompt evolution effectiveness score."""
         if not status:
             return 0.5
 
@@ -473,8 +478,8 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(factors) if factors else 0.5
 
-    def _calculate_critique_score(self, status: dict[str, Any]) -> float:
-        """Calculate self-critique effectiveness score"""
+    def _calculate_critique_score(self, status: Dict[str, Any]) -> float:
+        """Calculate self-critique effectiveness score."""
         if not status:
             return 0.5
 
@@ -493,8 +498,8 @@ components to achieve continuous improvement while maintaining system stability.
         self,
         metrics: CalibrationMetrics,
         health: SystemHealth,
-    ) -> dict[str, Any]:
-        """Make high-level coordination decisions based on system state"""
+    ) -> Dict[str, Any]:
+        """Make high-level coordination decisions based on system state."""
         decisions = {
             "should_optimize": False,
             "optimization_priority": "none",
@@ -563,20 +568,19 @@ components to achieve continuous improvement while maintaining system stability.
             )
 
         # Check optimization cooldown
-        if (
-            self.last_optimization_time
-            and datetime.now() - self.last_optimization_time
-            < timedelta(seconds=self.optimization_cooldown)
-        ):
+        if self.last_optimization_time and datetime.now(
+            UTC
+        ) - self.last_optimization_time < timedelta(seconds=self.optimization_cooldown):
             decisions["should_optimize"] = False
             decisions["coordination_actions"].append("optimization_cooldown_active")
 
         return decisions
 
-    async def _execute_coordinated_optimization(self, decisions: dict[str, Any]):
-        """Execute coordinated optimization based on decisions"""
+    async def _execute_coordinated_optimization(self) -> None:
+        """Execute coordinated optimization based on decisions."""
         self.logger.info(
-            f"Executing coordinated optimization: {decisions['optimization_priority']} priority",
+            "Executing coordinated optimization: %s priority",
+            decisions["optimization_priority"],
         )
 
         optimization_tasks = []
@@ -606,18 +610,14 @@ components to achieve continuous improvement while maintaining system stability.
             await asyncio.gather(*optimization_tasks, return_exceptions=True)
 
         # Update last optimization time
-        self.last_optimization_time = datetime.now()
+        self.last_optimization_time = datetime.now(UTC)
 
         # Validate optimization results
         await self._validate_optimization_results(decisions)
 
-    async def _log_coordination_cycle(
-        self,
-        metrics: CalibrationMetrics,
-        decisions: dict[str, Any],
-    ):
-        """Log coordination cycle to the master calibration log"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    async def _log_coordination_cycle(self) -> None:
+        """Log coordination cycle to the master calibration log."""
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         log_entry = f"""
 ## Master Coordination Cycle - {timestamp}
@@ -651,8 +651,8 @@ components to achieve continuous improvement while maintaining system stability.
         with open(self.calibration_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    async def get_system_status(self) -> dict[str, Any]:
-        """Get comprehensive system status"""
+    async def get_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive system status."""
         latest_metrics = (
             self.system_metrics_history[-1] if self.system_metrics_history else None
         )
@@ -694,15 +694,15 @@ components to achieve continuous improvement while maintaining system stability.
             ),
         }
 
-    async def trigger_emergency_calibration(self, reason: str) -> dict[str, Any]:
-        """Trigger emergency calibration cycle"""
-        self.logger.warning(f"Emergency calibration triggered: {reason}")
+    async def trigger_emergency_calibration(self, reason: str) -> Dict[str, Any]:
+        """Trigger emergency calibration cycle."""
+        self.logger.warning("Emergency calibration triggered: %s", reason)
 
         # Create emergency event
         emergency_event = CalibrationEvent(
-            event_id=f"emergency_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            event_id=f"emergency_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
             event_type="emergency_calibration",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             severity="critical",
             component="coordinator",
             description=f"Emergency calibration triggered: {reason}",
@@ -729,8 +729,8 @@ components to achieve continuous improvement while maintaining system stability.
             "current_metrics": asdict(system_metrics),
         }
 
-    async def shutdown(self):
-        """Gracefully shutdown the cosmic calibration coordinator"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the cosmic calibration coordinator."""
         self.logger.info("=== COSMIC CALIBRATION PROTOCOL SHUTDOWN ===")
 
         # Shutdown all components
@@ -748,7 +748,7 @@ components to achieve continuous improvement while maintaining system stability.
 
         with open(self.calibration_log_path, "a", encoding="utf-8") as f:
             f.write(
-                f"\n\n## COSMIC CALIBRATION PROTOCOL SHUTDOWN - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
+                f"\n\n## COSMIC CALIBRATION PROTOCOL SHUTDOWN - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}\n\n",
             )
             f.write(
                 f"Final System Status: {json.dumps(final_status, indent=2, default=str)}\n\n",

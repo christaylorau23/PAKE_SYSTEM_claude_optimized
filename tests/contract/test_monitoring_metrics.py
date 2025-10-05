@@ -18,21 +18,19 @@ import pytest
 class TestMonitoringMetricsContract:
     """Contract tests for Prometheus metrics exposition"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def monitoring_base_url(self) -> str:
         """Monitoring API base URL for testing"""
         return "http://localhost:9090/api/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         """Async HTTP client for monitoring API calls"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_prometheus_metrics_endpoint_exists(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_prometheus_metrics_endpoint_exists(self) -> None:
         """
         Test that /metrics endpoint exists and returns Prometheus format
 
@@ -54,10 +52,8 @@ class TestMonitoringMetricsContract:
             or "application/openmetrics-text" in content_type
         ), f"Expected Prometheus metrics format, got: {content_type}"
 
-    @pytest.mark.asyncio()
-    async def test_required_pake_system_metrics(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_required_pake_system_metrics(self) -> None:
         """
         Test that required PAKE System metrics are exposed
 
@@ -84,10 +80,8 @@ class TestMonitoringMetricsContract:
                 metric_name in metrics_text
             ), f"Required metric '{metric_name}' not found in metrics exposition"
 
-    @pytest.mark.asyncio()
-    async def test_metrics_format_compliance(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_metrics_format_compliance(self) -> None:
         """
         Test that metrics follow Prometheus format specification
 
@@ -121,10 +115,8 @@ class TestMonitoringMetricsContract:
                     line.strip()
                 ), f"Invalid metric format: {line}"
 
-    @pytest.mark.asyncio()
-    async def test_custom_business_metrics_endpoint(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_custom_business_metrics_endpoint(self) -> None:
         """
         Test that custom business metrics endpoint returns JSON format
 
@@ -157,10 +149,8 @@ class TestMonitoringMetricsContract:
         service_metrics = custom_metrics["service_metrics"]
         assert isinstance(service_metrics, dict), "Service metrics should be an object"
 
-    @pytest.mark.asyncio()
-    async def test_metrics_filtering_by_service(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_metrics_filtering_by_service(self) -> None:
         """
         Test that metrics can be filtered by service name
 
@@ -187,15 +177,13 @@ class TestMonitoringMetricsContract:
 
                 if service_metrics:
                     # All metrics should be related to the requested service
-                    for metric_key in service_metrics.keys():
+                    for metric_key in service_metrics:
                         assert (
                             service in metric_key or metric_key == service
                         ), f"Metric {metric_key} not related to service {service}"
 
-    @pytest.mark.asyncio()
-    async def test_metrics_timeframe_filtering(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_metrics_timeframe_filtering(self) -> None:
         """
         Test that metrics support timeframe filtering
 
@@ -221,10 +209,8 @@ class TestMonitoringMetricsContract:
                 metrics
             ), f"Response should indicate timeframe {timeframe}"
 
-    @pytest.mark.asyncio()
-    async def test_metrics_response_time_performance(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_metrics_response_time_performance(self) -> None:
         """
         Test that metrics endpoints meet performance requirements
 
@@ -257,19 +243,17 @@ class TestMonitoringMetricsContract:
 class TestHealthCheckEndpoints:
     """Contract tests for health check endpoints"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def monitoring_base_url(self) -> str:
         return "http://localhost:9090/api/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_system_health_endpoint(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_system_health_endpoint(self) -> None:
         """
         Test system health check with dependency validation
 
@@ -300,10 +284,8 @@ class TestHealthCheckEndpoints:
             "unhealthy",
         ], f"Invalid health status: {health_data['status']}"
 
-    @pytest.mark.asyncio()
-    async def test_individual_service_health(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_individual_service_health(self) -> None:
         """
         Test health check for individual services
 
@@ -335,10 +317,8 @@ class TestHealthCheckEndpoints:
                     service_health["service_name"] == service
                 ), f"Service name mismatch: expected {service}, got {service_health['service_name']}"
 
-    @pytest.mark.asyncio()
-    async def test_health_check_with_metrics_inclusion(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_check_with_metrics_inclusion(self) -> None:
         """
         Test health check with performance metrics inclusion
 
@@ -369,19 +349,17 @@ class TestHealthCheckEndpoints:
 class TestAlertingEndpoints:
     """Contract tests for alerting and notification endpoints"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def monitoring_base_url(self) -> str:
         return "http://localhost:9090/api/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_active_alerts_endpoint(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_active_alerts_endpoint(self) -> None:
         """
         Test active alerts query endpoint
 
@@ -420,10 +398,8 @@ class TestAlertingEndpoints:
                 "info",
             ], f"Invalid alert severity: {alert['severity']}"
 
-    @pytest.mark.asyncio()
-    async def test_alert_creation_endpoint(
-        self, monitoring_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_alert_creation_endpoint(self) -> None:
         """
         Test custom alert rule creation
 

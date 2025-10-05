@@ -157,7 +157,7 @@ sc query PAKEKnowledgeService
 # Start service
 net start PAKEKnowledgeService
 
-# Stop service  
+# Stop service
 net stop PAKEKnowledgeService
 
 # Restart service

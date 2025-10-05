@@ -52,7 +52,7 @@ Double-click: `start_pake_automation.bat`
 # Start service
 python pake_service.py start
 
-# Stop service  
+# Stop service
 python pake_service.py stop
 
 # Remove service
@@ -167,7 +167,7 @@ stop_pake_automation.bat
 # Set custom vault path
 set VAULT_PATH=D:\MyCustomVault\vault
 
-# Set custom API bridge port  
+# Set custom API bridge port
 set BRIDGE_PORT=3001
 
 # Set custom MCP server URL

@@ -1,4 +1,4 @@
-"""Lightweight Semantic Search Service
+"""Lightweight Semantic Search Service.
 
 Provides efficient semantic search using TF-IDF vectorization and cosine similarity.
 This implementation avoids heavy ML dependencies while providing robust semantic capabilities.
@@ -7,7 +7,7 @@ This implementation avoids heavy ML dependencies while providing robust semantic
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
@@ -24,7 +24,7 @@ class SemanticMatch:
 
     text: str
     score: float
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
     id: str | None = None
 
 
@@ -34,7 +34,7 @@ class SemanticAnalytics:
 
     total_documents: int
     processing_time_ms: float
-    top_keywords: list[str]
+    top_keywords: List[str]
     semantic_clusters: int
     average_similarity: float
 
@@ -46,7 +46,7 @@ class LightweightSemanticService:
     making it fast and resource-efficient for production use.
     """
 
-    def __init__(self, cache_dir: str = "./cache/semantic"):
+    def __init__(self) -> None:
         """Initialize the semantic search service.
 
         Args:
@@ -83,15 +83,16 @@ class LightweightSemanticService:
                 self.document_metadata = data.get("metadata", [])
 
                 logger.info(
-                    f"Loaded semantic model with {len(self.documents)} documents",
+                    "Loaded semantic model with %s documents",
+                    len(self.documents),
                 )
                 return True
         except Exception as e:
-            logger.warning(f"Could not load semantic model: {e}")
+            logger.warning("Could not load semantic model: %s", e)
 
         return False
 
-    def _save_model(self):
+    def _save_model(self) -> None:
         """Save vectorizer and LSA model to cache using secure serialization."""
         try:
             model_path = os.path.join(self.cache_dir, "semantic_model.secure")
@@ -105,11 +106,11 @@ class LightweightSemanticService:
 
             serialize_to_file(data, model_path)
 
-            logger.info(f"Saved semantic model with {len(self.documents)} documents")
+            logger.info("Saved semantic model with %s documents", len(self.documents))
         except Exception as e:
-            logger.error(f"Could not save semantic model: {e}")
+            logger.error("Could not save semantic model: %s", e)
 
-    async def add_documents(self, documents: list[dict[str, Any]]) -> bool:
+    async def add_documents(self, documents: list[Dict[str, Any]]) -> bool:
         """Add documents to the semantic index.
 
         Args:
@@ -119,7 +120,7 @@ class LightweightSemanticService:
             bool: True if successful
         """
         try:
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
 
             # Extract text and metadata
             texts = []
@@ -159,19 +160,20 @@ class LightweightSemanticService:
             # Rebuild the semantic model
             await self._rebuild_model()
 
-            processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             logger.info(
-                f"Added {len(texts)} documents to semantic index in {
-                    processing_time:.2f}ms",
+                "Added %.2f documents to semantic index in %sms",
+                len(texts),
+                processing_time,
             )
 
             return True
 
         except Exception as e:
-            logger.error(f"Error adding documents to semantic index: {e}")
+            logger.error("Error adding documents to semantic index: %s", e)
             return False
 
-    async def _rebuild_model(self):
+    async def _rebuild_model(self) -> None:
         """Rebuild the TF-IDF and LSA models."""
         try:
             if not self.documents:
@@ -208,12 +210,13 @@ class LightweightSemanticService:
             self._save_model()
 
             logger.info(
-                f"Rebuilt semantic model: {len(self.documents)} docs, "
+                "Rebuilt semantic model: %s docs, %s",
+                len(self.documents),
                 f"{self.document_vectors.shape[1]} dimensions",
             )
 
         except Exception as e:
-            logger.error(f"Error rebuilding semantic model: {e}")
+            logger.error("Error rebuilding semantic model: %s", e)
             raise
 
     async def semantic_search(
@@ -269,11 +272,13 @@ class LightweightSemanticService:
                         ),
                     )
 
-            logger.info(f"Semantic search for '{query}': {len(matches)} matches found")
+            logger.info(
+                "Semantic search for '%s': %s matches found", query, len(matches)
+            )
             return matches
 
         except Exception as e:
-            logger.error(f"Error in semantic search: {e}")
+            logger.error("Error in semantic search: %s", e)
             return []
 
     async def find_similar_documents(
@@ -328,10 +333,10 @@ class LightweightSemanticService:
             return keywords
 
         except Exception as e:
-            logger.error(f"Error extracting keywords: {e}")
+            logger.error("Error extracting keywords: %s", e)
             return []
 
-    async def cluster_documents(self, num_clusters: int = 5) -> dict[str, Any]:
+    async def cluster_documents(self, num_clusters: int = 5) -> Dict[str, Any]:
         """Cluster documents using K-means on semantic vectors.
 
         Args:
@@ -387,7 +392,7 @@ class LightweightSemanticService:
             }
 
         except Exception as e:
-            logger.error(f"Error clustering documents: {e}")
+            logger.error("Error clustering documents: %s", e)
             return {"clusters": [], "assignments": []}
 
     async def get_analytics(self) -> SemanticAnalytics:
@@ -397,7 +402,7 @@ class LightweightSemanticService:
             Analytics object with index statistics
         """
         try:
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
 
             total_docs = len(self.documents)
 
@@ -442,7 +447,7 @@ class LightweightSemanticService:
                 min(max(total_docs // 10, 1), 20) if total_docs > 0 else 0
             )
 
-            processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             return SemanticAnalytics(
                 total_documents=total_docs,
@@ -453,7 +458,7 @@ class LightweightSemanticService:
             )
 
         except Exception as e:
-            logger.error(f"Error getting semantic analytics: {e}")
+            logger.error("Error getting semantic analytics: %s", e)
             return SemanticAnalytics(
                 total_documents=len(self.documents),
                 processing_time_ms=0.0,
@@ -462,7 +467,7 @@ class LightweightSemanticService:
                 average_similarity=0.0,
             )
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check the health of the semantic search service."""
         try:
             is_healthy = (

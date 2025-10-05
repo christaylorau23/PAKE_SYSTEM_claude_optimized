@@ -10,7 +10,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -31,17 +31,17 @@ class SecurityTestResult:
     passed: bool
     severity: str  # "critical", "high", "medium", "low"
     message: str
-    details: dict[str, Any] | None = None
+    details: Dict[str, Any] | None = None
 
 
 class SecurityTester:
     """Comprehensive security testing suite"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.results: list[SecurityTestResult] = []
         self.project_root = Path(__file__).parent.parent
 
-    def run_all_tests(self) -> dict[str, Any]:
+    def run_all_tests(self) -> Dict[str, Any]:
         """Run all security tests"""
         logger.info("🔒 Starting comprehensive security testing...")
 
@@ -56,7 +56,7 @@ class SecurityTester:
 
         return self._generate_report()
 
-    def _test_dependencies(self):
+    def _test_dependencies(self) -> None:
         """Test for vulnerable dependencies"""
         logger.info("📦 Testing dependencies...")
 
@@ -100,7 +100,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_hash_algorithms(self):
+    def _test_hash_algorithms(self) -> None:
         """Test for insecure hash algorithms"""
         logger.info("🔐 Testing hash algorithms...")
 
@@ -165,7 +165,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_serialization_security(self):
+    def _test_serialization_security(self) -> None:
         """Test for insecure serialization"""
         logger.info("📄 Testing serialization security...")
 
@@ -238,7 +238,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_network_security(self):
+    def _test_network_security(self) -> None:
         """Test network security configuration"""
         logger.info("🌐 Testing network security...")
 
@@ -310,7 +310,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_file_permissions(self):
+    def _test_file_permissions(self) -> None:
         """Test file permissions"""
         logger.info("📁 Testing file permissions...")
 
@@ -349,7 +349,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_secrets_management(self):
+    def _test_secrets_management(self) -> None:
         """Test secrets management"""
         logger.info("🔑 Testing secrets management...")
 
@@ -399,7 +399,7 @@ class SecurityTester:
                 ),
             )
 
-    def _test_input_validation(self):
+    def _test_input_validation(self) -> None:
         """Test input validation"""
         logger.info("✅ Testing input validation...")
 
@@ -437,7 +437,7 @@ class SecurityTester:
                 ),
             )
 
-    def _generate_report(self) -> dict[str, Any]:
+    def _generate_report(self) -> Dict[str, Any]:
         """Generate comprehensive security report"""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r.passed)
@@ -453,8 +453,8 @@ class SecurityTester:
         ]
         low_failed = [r for r in self.results if not r.passed and r.severity == "low"]
 
-        report = {
-            "timestamp": datetime.now().isoformat(),
+        return {
+            "timestamp": datetime.now(UTC).isoformat(),
             "summary": {
                 "total_tests": total_tests,
                 "passed": passed_tests,
@@ -480,9 +480,7 @@ class SecurityTester:
             "recommendations": self._generate_recommendations(),
         }
 
-        return report
-
-    def _generate_recommendations(self) -> list[str]:
+    def _generate_recommendations(self) -> List[str]:
         """Generate security recommendations"""
         recommendations = []
 
@@ -512,7 +510,7 @@ class SecurityTester:
         return recommendations
 
 
-def main():
+def main(self) -> None:
     """Main entry point for security testing"""
     logging.basicConfig(
         level=logging.INFO,

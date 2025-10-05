@@ -49,7 +49,7 @@ data "aws_caller_identity" "current" {}
 
 # VPC Configuration
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
   name = "${var.project_name}-vpc"
@@ -59,10 +59,10 @@ module "vpc" {
   private_subnets = var.private_subnet_cidrs
   public_subnets  = var.public_subnet_cidrs
 
-  enable_nat_gateway     = true
-  enable_vpn_gateway     = false
-  enable_dns_hostnames   = true
-  enable_dns_support     = true
+  enable_nat_gateway   = true
+  enable_vpn_gateway   = false
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   # Enable VPC Flow Logs
   enable_flow_log                      = true
@@ -83,8 +83,8 @@ module "eks" {
   cluster_name    = "${var.project_name}-eks"
   cluster_version = var.kubernetes_version
 
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnets
+  vpc_id                          = module.vpc.vpc_id
+  subnet_ids                      = module.vpc.private_subnets
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
@@ -117,7 +117,7 @@ module "eks" {
 
   # Cluster access entry
   manage_aws_auth_configmap = true
-  aws_auth_users = var.cluster_admin_users
+  aws_auth_users            = var.cluster_admin_users
 
   tags = {
     Name = "${var.project_name}-eks"
@@ -126,35 +126,36 @@ module "eks" {
 
 # RDS PostgreSQL Database
 module "rds" {
-  source = "terraform-aws-modules/rds/aws"
-  version = "~> 6.0"
+  source  = "terraform-aws-modules/rds/aws"
+  version = "~> 5.0"
 
   identifier = "${var.project_name}-postgres"
 
-  engine               = "postgres"
-  engine_version       = var.postgres_version
-  instance_class       = var.rds_instance_class
-  allocated_storage    = var.rds_allocated_storage
+  engine                = "postgres"
+  engine_version        = var.postgres_version
+  instance_class        = var.rds_instance_class
+  allocated_storage     = var.rds_allocated_storage
   max_allocated_storage = var.rds_max_allocated_storage
 
-  db_name  = var.database_name
-  username = var.database_username
-  REDACTED_SECRET = var.database_REDACTED_SECRET
+  db_name                     = var.database_name
+  username                    = var.database_username
+  password                    = var.database_REDACTED_SECRET
+  manage_master_user_password = false
 
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
   # Backup configuration
   backup_retention_period = var.backup_retention_period
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "Mon:04:00-Mon:05:00"
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "Mon:04:00-Mon:05:00"
 
   # Monitoring
   monitoring_interval = 60
   monitoring_role_arn = aws_iam_role.rds_enhanced_monitoring.arn
 
   # Performance Insights
-  performance_insights_enabled = true
+  performance_insights_enabled          = true
   performance_insights_retention_period = 7
 
   # Deletion protection
@@ -172,21 +173,21 @@ resource "aws_elasticache_subnet_group" "main" {
 }
 
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project_name}-redis"
-  description                = "Redis cluster for PAKE System"
+  replication_group_id = "${var.project_name}-redis"
+  description          = "Redis cluster for PAKE System"
 
-  node_type                  = var.redis_node_type
-  port                       = 6379
-  parameter_group_name       = "default.redis7"
+  node_type            = var.redis_node_type
+  port                 = 6379
+  parameter_group_name = "default.redis7"
 
-  num_cache_clusters         = var.redis_num_cache_nodes
+  num_cache_clusters = var.redis_num_cache_nodes
 
-  subnet_group_name          = aws_elasticache_subnet_group.main.name
-  security_group_ids         = [aws_security_group.redis.id]
+  subnet_group_name  = aws_elasticache_subnet_group.main.name
+  security_group_ids = [aws_security_group.redis.id]
 
   # Backup configuration
   snapshot_retention_limit = var.redis_snapshot_retention_limit
-  snapshot_window         = "03:00-05:00"
+  snapshot_window          = "03:00-05:00"
 
   # Maintenance
   maintenance_window = "sun:05:00-sun:07:00"

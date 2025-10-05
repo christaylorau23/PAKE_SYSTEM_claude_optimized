@@ -13,14 +13,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 # Generic type for domain entities
 T = TypeVar("T")
 
 
 class ServiceStatus(Enum):
-    """Service operation status"""
+    """Service operation status."""
 
     SUCCESS = "success"
     PARTIAL_SUCCESS = "partial_success"
@@ -31,16 +31,16 @@ class ServiceStatus(Enum):
 
 
 @dataclass(frozen=True)
-class ServiceResult(Generic[T]):
-    """Immutable service operation result"""
+class ServiceResult[T]:
+    """Immutable service operation result."""
 
     status: ServiceStatus
-    data: Optional[T] = None
-    error: Optional[str] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    data: T | None = None
+    error: str | None = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # No need for post_init since we have default values
         pass
 
@@ -50,52 +50,52 @@ class ServiceResult(Generic[T]):
 # ============================================================================
 
 
-class AbstractRepository(ABC, Generic[T]):
-    """Abstract base repository interface following Repository Pattern"""
+class AbstractRepository[T](ABC):
+    """Abstract base repository interface following Repository Pattern."""
 
     @abstractmethod
     async def create(self, entity: T) -> T:
-        """Create a new entity"""
+        """Create a new entity."""
 
     @abstractmethod
-    async def get_by_id(self, entity_id: str) -> Optional[T]:
-        """Get entity by ID"""
+    async def get_by_id(self, entity_id: str) -> T | None:
+        """Get entity by ID."""
 
     @abstractmethod
     async def update(self, entity: T) -> T:
-        """Update existing entity"""
+        """Update existing entity."""
 
     @abstractmethod
     async def delete(self, entity_id: str) -> bool:
-        """Delete entity by ID"""
+        """Delete entity by ID."""
 
     @abstractmethod
     async def list(self, limit: int = 100, offset: int = 0) -> list[T]:
-        """List entities with pagination"""
+        """List entities with pagination."""
 
 
 class AbstractUserRepository(AbstractRepository[T]):
-    """Abstract user repository interface"""
+    """Abstract user repository interface."""
 
     @abstractmethod
-    async def get_by_email(self, email: str) -> Optional[T]:
-        """Get user by email"""
+    async def get_by_email(self, email: str) -> T | None:
+        """Get user by email."""
 
     @abstractmethod
     async def get_by_tenant(self, tenant_id: str) -> list[T]:
-        """Get users by tenant"""
+        """Get users by tenant."""
 
 
 class AbstractContentRepository(AbstractRepository[T]):
-    """Abstract content repository interface"""
+    """Abstract content repository interface."""
 
     @abstractmethod
     async def search(self, query: str, limit: int = 50) -> list[T]:
-        """Search content by query"""
+        """Search content by query."""
 
     @abstractmethod
     async def get_by_source(self, source: str) -> list[T]:
-        """Get content by source"""
+        """Get content by source."""
 
 
 # ============================================================================
@@ -104,75 +104,75 @@ class AbstractContentRepository(AbstractRepository[T]):
 
 
 class AbstractNotificationService(ABC):
-    """Abstract notification service interface"""
+    """Abstract notification service interface."""
 
     @abstractmethod
     async def send_welcome_email(
-        self, email: str, user_data: dict[str, Any]
+        self, email: str, user_data: Dict[str, Any]
     ) -> ServiceResult[bool]:
-        """Send welcome email to new user"""
+        """Send welcome email to new user."""
 
     @abstractmethod
     async def send_notification(
         self, user_id: str, message: str, notification_type: str
     ) -> ServiceResult[bool]:
-        """Send notification to user"""
+        """Send notification to user."""
 
 
 class AbstractAuthenticationService(ABC):
-    """Abstract authentication service interface"""
+    """Abstract authentication service interface."""
 
     @abstractmethod
     async def authenticate_user(
         self, email: str, password: str
-    ) -> ServiceResult[dict[str, Any]]:
-        """Authenticate user credentials"""
+    ) -> ServiceResult[Dict[str, Any]]:
+        """Authenticate user credentials."""
 
     @abstractmethod
     async def create_user(
-        self, user_data: dict[str, Any]
-    ) -> ServiceResult[dict[str, Any]]:
-        """Create new user account"""
+        self, user_data: Dict[str, Any]
+    ) -> ServiceResult[Dict[str, Any]]:
+        """Create new user account."""
 
     @abstractmethod
-    async def validate_token(self, token: str) -> ServiceResult[dict[str, Any]]:
-        """Validate JWT token"""
+    async def validate_token(self, token: str) -> ServiceResult[Dict[str, Any]]:
+        """Validate JWT token."""
 
 
 class AbstractCacheService(ABC):
-    """Abstract cache service interface"""
+    """Abstract cache service interface."""
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
-        """Get value from cache"""
+    async def get(self, key: str) -> Any | None:
+        """Get value from cache."""
 
     @abstractmethod
     async def set(self, key: str, value: Any, ttl: int = 3600) -> bool:
-        """Set value in cache with TTL"""
+        """Set value in cache with TTL."""
 
     @abstractmethod
     async def delete(self, key: str) -> bool:
-        """Delete value from cache"""
+        """Delete value from cache."""
 
     @abstractmethod
     async def clear_pattern(self, pattern: str) -> int:
-        """Clear cache entries matching pattern"""
+        """Clear cache entries matching pattern."""
 
 
 class AbstractIngestionService(ABC):
-    """Abstract ingestion service interface"""
+    """Abstract ingestion service interface."""
 
     @abstractmethod
     async def ingest_content(
-        self, source: str, content_data: dict[str, Any]
+        self, source: str, content_data: Dict[str, Any]
     ) -> ServiceResult[str]:
-        """Ingest content from external source"""
+        """Ingest content from external source."""
 
     @abstractmethod
     async def process_batch(
-        self, batch_data: list[dict[str, Any]]
-    ) -> ServiceResult[list[str]]:
-        """Process batch of content items"""
+        self, batch_data: list[Dict[str, Any]]
+    ) -> ServiceResult[List[str]]:
+        """Process batch of content items."""
 
 
 # ============================================================================
@@ -181,37 +181,37 @@ class AbstractIngestionService(ABC):
 
 
 class AbstractDatabaseService(ABC):
-    """Abstract database service interface"""
+    """Abstract database service interface."""
 
     @abstractmethod
     async def execute_query(
-        self, query: str, params: Optional[dict[str, Any]] = None
-    ) -> ServiceResult[list[dict[str, Any]]]:
-        """Execute raw SQL query"""
+        self, query: str, params: Dict[str, Any] | None = None
+    ) -> ServiceResult[list[Dict[str, Any]]]:
+        """Execute raw SQL query."""
 
     @abstractmethod
-    async def health_check(self) -> ServiceResult[dict[str, Any]]:
-        """Check database health"""
+    async def health_check(self) -> ServiceResult[Dict[str, Any]]:
+        """Check database health."""
 
     @abstractmethod
-    async def get_connection(self):
-        """Get database connection"""
+    async def get_connection(self) -> None:
+        """Get database connection."""
 
 
 class AbstractVectorDatabaseService(ABC):
-    """Abstract vector database service interface"""
+    """Abstract vector database service interface."""
 
     @abstractmethod
     async def store_embedding(
-        self, content_id: str, embedding: list[float], metadata: dict[str, Any]
+        self, content_id: str, embedding: list[float], metadata: Dict[str, Any]
     ) -> ServiceResult[str]:
-        """Store vector embedding"""
+        """Store vector embedding."""
 
     @abstractmethod
     async def search_similar(
         self, query_embedding: list[float], limit: int = 10
-    ) -> ServiceResult[list[dict[str, Any]]]:
-        """Search for similar vectors"""
+    ) -> ServiceResult[list[Dict[str, Any]]]:
+        """Search for similar vectors."""
 
 
 # ============================================================================
@@ -220,37 +220,37 @@ class AbstractVectorDatabaseService(ABC):
 
 
 class AbstractExternalAPIService(ABC):
-    """Abstract external API service interface"""
+    """Abstract external API service interface."""
 
     @abstractmethod
     async def make_request(
-        self, endpoint: str, method: str, data: Optional[dict[str, Any]] = None
-    ) -> ServiceResult[dict[str, Any]]:
-        """Make HTTP request to external API"""
+        self, endpoint: str, method: str, data: Dict[str, Any] | None = None
+    ) -> ServiceResult[Dict[str, Any]]:
+        """Make HTTP request to external API."""
 
     @abstractmethod
-    async def health_check(self) -> ServiceResult[dict[str, Any]]:
-        """Check external API health"""
+    async def health_check(self) -> ServiceResult[Dict[str, Any]]:
+        """Check external API health."""
 
 
 class AbstractFirecrawlService(AbstractExternalAPIService):
-    """Abstract Firecrawl service interface"""
+    """Abstract Firecrawl service interface."""
 
     @abstractmethod
     async def scrape_url(
-        self, url: str, options: Optional[dict[str, Any]] = None
-    ) -> ServiceResult[dict[str, Any]]:
-        """Scrape URL content"""
+        self, url: str, options: Dict[str, Any] | None = None
+    ) -> ServiceResult[Dict[str, Any]]:
+        """Scrape URL content."""
 
 
 class AbstractArXivService(AbstractExternalAPIService):
-    """Abstract ArXiv service interface"""
+    """Abstract ArXiv service interface."""
 
     @abstractmethod
     async def search_papers(
         self, query: str, max_results: int = 10
-    ) -> ServiceResult[list[dict[str, Any]]]:
-        """Search ArXiv papers"""
+    ) -> ServiceResult[list[Dict[str, Any]]]:
+        """Search ArXiv papers."""
 
 
 # ============================================================================
@@ -259,19 +259,19 @@ class AbstractArXivService(AbstractExternalAPIService):
 
 
 class AbstractConfigService(ABC):
-    """Abstract configuration service interface"""
+    """Abstract configuration service interface."""
 
     @abstractmethod
     def get_config(self, key: str, default: Any = None) -> Any:
-        """Get configuration value"""
+        """Get configuration value."""
 
     @abstractmethod
-    def get_database_config(self) -> dict[str, Any]:
-        """Get database configuration"""
+    def get_database_config(self) -> Dict[str, Any]:
+        """Get database configuration."""
 
     @abstractmethod
-    def get_redis_config(self) -> dict[str, Any]:
-        """Get Redis configuration"""
+    def get_redis_config(self) -> Dict[str, Any]:
+        """Get Redis configuration."""
 
 
 # ============================================================================
@@ -280,54 +280,35 @@ class AbstractConfigService(ABC):
 
 
 class AbstractLoggingService(ABC):
-    """Abstract logging service interface"""
+    """Abstract logging service interface."""
 
     @abstractmethod
-    def log_info(self, message: str, metadata: Optional[dict[str, Any]] = None):
-        """Log info message"""
+    def log_info(self) -> None:
+        """Log info message."""
 
     @abstractmethod
-    def log_error(
-        self,
-        message: str,
-        error: Optional[Exception] = None,
-        metadata: Optional[dict[str, Any]] = None,
-    ):
-        """Log error message"""
+    def log_error(self) -> None:
+        """Log error message."""
 
     @abstractmethod
-    def log_performance(
-        self,
-        operation: str,
-        duration_ms: float,
-        metadata: Optional[dict[str, Any]] = None,
-    ):
-        """Log performance metrics"""
+    def log_performance(self) -> None:
+        """Log performance metrics."""
 
 
 class AbstractMetricsService(ABC):
-    """Abstract metrics service interface"""
+    """Abstract metrics service interface."""
 
     @abstractmethod
-    async def record_counter(
-        self, metric_name: str, value: int = 1, tags: Optional[dict[str, str]] = None
-    ):
-        """Record counter metric"""
+    async def record_counter(self) -> None:
+        """Record counter metric."""
 
     @abstractmethod
-    async def record_timer(
-        self,
-        metric_name: str,
-        duration_ms: float,
-        tags: Optional[dict[str, str]] = None,
-    ):
-        """Record timer metric"""
+    async def record_timer(self) -> None:
+        """Record timer metric."""
 
     @abstractmethod
-    async def record_gauge(
-        self, metric_name: str, value: float, tags: Optional[dict[str, str]] = None
-    ):
-        """Record gauge metric"""
+    async def record_gauge(self) -> None:
+        """Record gauge metric."""
 
 
 # ============================================================================
@@ -336,40 +317,35 @@ class AbstractMetricsService(ABC):
 
 
 class AbstractServiceFactory(ABC):
-    """Abstract service factory interface"""
+    """Abstract service factory interface."""
 
     @abstractmethod
     def create_user_service(self) -> "AbstractUserService":
-        """Create user service instance"""
+        """Create user service instance."""
 
     @abstractmethod
     def create_auth_service(self) -> AbstractAuthenticationService:
-        """Create authentication service instance"""
+        """Create authentication service instance."""
 
     @abstractmethod
     def create_notification_service(self) -> AbstractNotificationService:
-        """Create notification service instance"""
+        """Create notification service instance."""
 
 
 class AbstractUserService(ABC):
-    """Abstract user service interface"""
+    """Abstract user service interface."""
 
-    def __init__(
-        self,
-        user_repo: AbstractUserRepository,
-        auth_service: AbstractAuthenticationService,
-        notification_service: AbstractNotificationService,
-    ):
+    def __init__(self) -> None:
         self.user_repo = user_repo
         self.auth_service = auth_service
         self.notification_service = notification_service
 
     @abstractmethod
     async def create_user(
-        self, email: str, password: str, user_data: dict[str, Any]
-    ) -> ServiceResult[dict[str, Any]]:
-        """Create new user with authentication and notification"""
+        self, email: str, password: str, user_data: Dict[str, Any]
+    ) -> ServiceResult[Dict[str, Any]]:
+        """Create new user with authentication and notification."""
 
     @abstractmethod
-    async def get_user_profile(self, user_id: str) -> ServiceResult[dict[str, Any]]:
-        """Get user profile information"""
+    async def get_user_profile(self, user_id: str) -> ServiceResult[Dict[str, Any]]:
+        """Get user profile information."""

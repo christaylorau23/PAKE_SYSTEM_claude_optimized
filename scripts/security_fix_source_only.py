@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SourceOnlySecurityFixer:
     """Targeted security fixer for source code only"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.fixes_applied = []
         self.fixes_failed = []
@@ -45,7 +45,7 @@ class SourceOnlySecurityFixer:
             ".pytest_cache/",
         }
 
-    def fix_source_security(self):
+    def fix_source_security(self) -> None:
         """Fix security issues in source code only"""
         logger.info("🔒 Starting targeted security fixes for source code...")
 
@@ -59,7 +59,7 @@ class SourceOnlySecurityFixer:
             self._print_summary()
 
         except Exception as e:
-            logger.error(f"Security fixes failed: {e}")
+            logger.error("Security fixes failed: %s", e)
             sys.exit(1)
 
     def _is_source_file(self, file_path: Path) -> bool:
@@ -80,7 +80,7 @@ class SourceOnlySecurityFixer:
 
         return False
 
-    def _fix_source_hash_algorithms(self):
+    def _fix_source_hash_algorithms(self) -> None:
         """Fix hash algorithm usage in source code"""
         logger.info("🔐 Fixing hash algorithms in source code...")
 
@@ -106,7 +106,8 @@ class SourceOnlySecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed MD5 usage in {file_path.relative_to(self.project_root)}",
+                    "Fixed MD5 usage in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             # Find source files with SHA1 usage
@@ -130,19 +131,22 @@ class SourceOnlySecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed SHA1 usage in {file_path.relative_to(self.project_root)}",
+                    "Fixed SHA1 usage in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("source_hash_algorithms")
             logger.info(
-                f"✅ Fixed hash algorithms in {len(md5_files)} MD5 files and {len(sha1_files)} SHA1 files",
+                "✅ Fixed hash algorithms in %s MD5 files and %s SHA1 files",
+                len(md5_files),
+                len(sha1_files),
             )
 
         except Exception as e:
             self.fixes_failed.append(("source_hash_algorithms", str(e)))
-            logger.error(f"❌ Source hash algorithm fix failed: {e}")
+            logger.error("❌ Source hash algorithm fix failed: %s", e)
 
-    def _fix_source_serialization(self):
+    def _fix_source_serialization(self) -> None:
         """Fix serialization security in source code"""
         logger.info("📄 Fixing serialization in source code...")
 
@@ -214,26 +218,27 @@ class SourceOnlySecurityFixer:
                         lines = content.split("\n")
                         import_index = 0
                         for i, line in enumerate(lines):
-                            if line.startswith("import ") or line.startswith("from "):
+                            if line.startswith(("import ", "from ")):
                                 import_index = i + 1
 
                         lines.insert(import_index, import_line)
                         content = "\n".join(lines)
 
                     file_path.write_text(content, encoding="utf-8")
-                    logger.info(f"Fixed pickle usage in {relative_path}")
+                    logger.info("Fixed pickle usage in %s", relative_path)
                     fixed_count += 1
 
             self.fixes_applied.append("source_serialization")
             logger.info(
-                f"✅ Fixed serialization in {fixed_count} critical source files",
+                "✅ Fixed serialization in %s critical source files",
+                fixed_count,
             )
 
         except Exception as e:
             self.fixes_failed.append(("source_serialization", str(e)))
-            logger.error(f"❌ Source serialization fix failed: {e}")
+            logger.error("❌ Source serialization fix failed: %s", e)
 
-    def _fix_source_network_bindings(self):
+    def _fix_source_network_bindings(self) -> None:
         """Fix network binding security in source code"""
         logger.info("🌐 Fixing network bindings in source code...")
 
@@ -260,19 +265,21 @@ class SourceOnlySecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed network binding in {file_path.relative_to(self.project_root)}",
+                    "Fixed network binding in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("source_network_bindings")
             logger.info(
-                f"✅ Fixed network bindings in {len(binding_files)} source files",
+                "✅ Fixed network bindings in %s source files",
+                len(binding_files),
             )
 
         except Exception as e:
             self.fixes_failed.append(("source_network_bindings", str(e)))
-            logger.error(f"❌ Source network binding fix failed: {e}")
+            logger.error("❌ Source network binding fix failed: %s", e)
 
-    def _fix_source_hardcoded_secrets(self):
+    def _fix_source_hardcoded_secrets(self) -> None:
         """Fix hardcoded secrets in source code"""
         logger.info("🔑 Fixing hardcoded secrets in source code...")
 
@@ -341,19 +348,20 @@ class SourceOnlySecurityFixer:
                         content = "\n".join(lines)
 
                     file_path.write_text(content, encoding="utf-8")
-                    logger.info(f"Fixed hardcoded secrets in {relative_path}")
+                    logger.info("Fixed hardcoded secrets in %s", relative_path)
                     fixed_count += 1
 
             self.fixes_applied.append("source_hardcoded_secrets")
             logger.info(
-                f"✅ Fixed hardcoded secrets in {fixed_count} critical source files",
+                "✅ Fixed hardcoded secrets in %s critical source files",
+                fixed_count,
             )
 
         except Exception as e:
             self.fixes_failed.append(("source_hardcoded_secrets", str(e)))
-            logger.error(f"❌ Source hardcoded secrets fix failed: {e}")
+            logger.error("❌ Source hardcoded secrets fix failed: %s", e)
 
-    def _fix_source_input_validation(self):
+    def _fix_source_input_validation(self) -> None:
         """Fix input validation issues in source code"""
         logger.info("✅ Fixing input validation in source code...")
 
@@ -384,17 +392,18 @@ class SourceOnlySecurityFixer:
 
                 file_path.write_text(content, encoding="utf-8")
                 logger.info(
-                    f"Fixed SQL injection risk in {file_path.relative_to(self.project_root)}",
+                    "Fixed SQL injection risk in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("source_input_validation")
-            logger.info(f"✅ Fixed input validation in {len(sql_files)} source files")
+            logger.info("✅ Fixed input validation in %s source files", len(sql_files))
 
         except Exception as e:
             self.fixes_failed.append(("source_input_validation", str(e)))
-            logger.error(f"❌ Source input validation fix failed: {e}")
+            logger.error("❌ Source input validation fix failed: %s", e)
 
-    def _backup_file(self, file_path: Path):
+    def _backup_file(self) -> None:
         """Create backup of file before modification"""
         relative_path = file_path.relative_to(self.project_root)
         backup_path = self.backup_dir / relative_path
@@ -404,7 +413,7 @@ class SourceOnlySecurityFixer:
 
         shutil.copy2(file_path, backup_path)
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         """Print fix summary"""
         print("\n" + "=" * 60)
         print("🔒 SOURCE CODE SECURITY FIX SUMMARY")
@@ -432,7 +441,7 @@ class SourceOnlySecurityFixer:
             print("\n✅ Source code security fixes completed successfully!")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     logging.basicConfig(
         level=logging.INFO,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PAKE+ Command Line Interface
 User-friendly wrapper for all PAKE+ system operations
-Addresses all recurring deployment and management issues
+Addresses all recurring deployment and management issues.
 """
 
 import argparse
@@ -10,9 +10,8 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 # Add scripts directory to path
 SCRIPTS_DIR = Path(__file__).parent / "scripts"
@@ -34,46 +33,46 @@ class Colors:
     END = "\033[0m"
 
     @staticmethod
-    def blue(text):
+    def blue(text: str) -> str:
         return f"{Colors.BLUE}{text}{Colors.END}"
 
     @staticmethod
-    def green(text):
+    def green(text: str) -> str:
         return f"{Colors.GREEN}{text}{Colors.END}"
 
     @staticmethod
-    def yellow(text):
+    def yellow(text: str) -> str:
         return f"{Colors.YELLOW}{text}{Colors.END}"
 
     @staticmethod
-    def red(text):
+    def red(text: str) -> str:
         return f"{Colors.RED}{text}{Colors.END}"
 
     @staticmethod
-    def purple(text):
+    def purple(text: str) -> str:
         return f"{Colors.PURPLE}{text}{Colors.END}"
 
     @staticmethod
-    def cyan(text):
+    def cyan(text: str) -> str:
         return f"{Colors.CYAN}{text}{Colors.END}"
 
     @staticmethod
-    def bold(text):
+    def bold(text: str) -> str:
         return f"{Colors.BOLD}{text}{Colors.END}"
 
 
 class PAKECommandLineInterface:
-    """Main PAKE+ command line interface"""
+    """Main PAKE+ command line interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_dir = Path(__file__).parent
         self.scripts_dir = self.base_dir / "scripts"
 
         # Ensure we're in the right directory
         os.chdir(self.base_dir)
 
-    def print_banner(self):
-        """Print PAKE+ banner"""
+    def print_banner(self) -> None:
+        """Print PAKE+ banner."""
         banner = f"""
 {Colors.cyan("=" * 80)}
 {Colors.bold(Colors.blue("PAKE+ System - Personal Autonomous Knowledge Engine Plus"))}
@@ -82,8 +81,8 @@ class PAKECommandLineInterface:
 """
         print(banner)
 
-    def print_help(self):
-        """Print comprehensive help"""
+    def print_help(self) -> None:
+        """Print comprehensive help."""
         help_text = f""" {Colors.bold("AVAILABLE COMMANDS:")}
 
 {Colors.yellow("🚀 DEPLOYMENT COMMANDS")}
@@ -152,7 +151,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
         print(help_text)
 
     async def handle_command(self, args: argparse.Namespace) -> int:
-        """Handle command execution"""
+        """Handle command execution."""
         command = args.command
 
         try:
@@ -216,7 +215,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
     # Deployment Commands
     async def _handle_deploy(self, args: argparse.Namespace) -> int:
-        """Handle full deployment"""
+        """Handle full deployment."""
         print(f"{Colors.blue('🚀 Starting PAKE+ Full Deployment...')}")
 
         try:
@@ -256,7 +255,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_quick_deploy(self, args: argparse.Namespace) -> int:
-        """Handle quick deployment"""
+        """Handle quick deployment."""
         print(f"{Colors.blue('⚡ Starting PAKE+ Quick Deployment...')}")
 
         # Set quick deployment flags
@@ -266,14 +265,14 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
         return await self._handle_deploy(args)
 
     async def _handle_dev_deploy(self, args: argparse.Namespace) -> int:
-        """Handle development deployment"""
+        """Handle development deployment."""
         print(f"{Colors.blue('🛠️ Starting PAKE+ Development Deployment...')}")
 
         args.dev = True
         return await self._handle_deploy(args)
 
     async def _handle_prod_deploy(self, args: argparse.Namespace) -> int:
-        """Handle production deployment"""
+        """Handle production deployment."""
         print(f"{Colors.blue('🏭 Starting PAKE+ Production Deployment...')}")
 
         args.dev = False
@@ -281,7 +280,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
     # Service Management Commands
     async def _handle_start(self, args: argparse.Namespace) -> int:
-        """Handle service start"""
+        """Handle service start."""
         try:
             from enhanced_service_manager import PAKEServiceManager
 
@@ -307,7 +306,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_stop(self, args: argparse.Namespace) -> int:
-        """Handle service stop"""
+        """Handle service stop."""
         try:
             from enhanced_service_manager import PAKEServiceManager
 
@@ -333,7 +332,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_restart(self, args: argparse.Namespace) -> int:
-        """Handle service restart"""
+        """Handle service restart."""
         try:
             from enhanced_service_manager import PAKEServiceManager
 
@@ -361,7 +360,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_status(self, args: argparse.Namespace) -> int:
-        """Handle status check"""
+        """Handle status check."""
         try:
             from enhanced_service_manager import PAKEServiceManager
 
@@ -382,7 +381,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_logs(self, args: argparse.Namespace) -> int:
-        """Handle log viewing"""
+        """Handle log viewing."""
         logs_dir = self.base_dir / "logs"
 
         if not logs_dir.exists():
@@ -432,7 +431,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
             for i, log_file in enumerate(log_files[:5]):
                 size_mb = log_file.stat().st_size / (1024 * 1024)
-                mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
+                mtime = datetime.fromtimestamp(log_file.stat().st_mtime, tz=UTC)
 
                 print(
                     f"  {i + 1}. {log_file.name} ({size_mb:.1f}MB, {mtime.strftime('%Y-%m-%d %H:%M:%S')})",
@@ -454,7 +453,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
         return 0
 
     async def _handle_health(self, args: argparse.Namespace) -> int:
-        """Handle health check"""
+        """Handle health check."""
         try:
             from service_health_monitor import PAKEServiceMonitor
 
@@ -485,7 +484,10 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
                 results = await monitor.check_all_services()
 
                 if args.json:
-                    output = {"timestamp": datetime.now().isoformat(), "services": {}}
+                    output = {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "services": {},
+                    }
 
                     for service_name, result in results.items():
                         output["services"][service_name] = {
@@ -517,7 +519,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
     # Testing Commands
     async def _handle_test(self, args: argparse.Namespace) -> int:
-        """Handle testing"""
+        """Handle testing."""
         try:
             from comprehensive_system_test import PAKESystemTestSuite
 
@@ -548,7 +550,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
             return 1
 
     async def _handle_validate(self, args: argparse.Namespace) -> int:
-        """Handle validation"""
+        """Handle validation."""
         print(f"{Colors.blue('✅ Validating PAKE+ system configuration...')}")
 
         validation_checks = [
@@ -592,7 +594,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
     # Information Commands
     async def _handle_version(self, args: argparse.Namespace) -> int:
-        """Handle version display"""
+        """Handle version display."""
         version_info = {
             "pake_version": "2.0.0",
             "build_date": "2025-09-02",
@@ -618,7 +620,7 @@ Platform: {Colors.green(version_info["platform"])}
         return 0
 
     async def _handle_info(self, args: argparse.Namespace) -> int:
-        """Handle system info display"""
+        """Handle system info display."""
         info = {
             "base_directory": str(self.base_dir),
             "scripts_directory": str(self.scripts_dir),
@@ -652,7 +654,7 @@ Environment Variables:
         return 0
 
     async def _handle_docs(self, args: argparse.Namespace) -> int:
-        """Handle documentation"""
+        """Handle documentation."""
         docs_files = [
             "README.md",
             "COMPLETE_AUTOMATION_GUIDE.md",
@@ -673,7 +675,7 @@ Environment Variables:
         return 0
 
     async def _handle_troubleshoot(self, args: argparse.Namespace) -> int:
-        """Handle troubleshooting guide"""
+        """Handle troubleshooting guide."""
         troubleshoot_guide = f"""
 {Colors.bold("🔧 PAKE+ Troubleshooting Guide")}
 {Colors.cyan("=" * 50)}
@@ -735,7 +737,7 @@ Environment Variables:
 
     # Fallback methods for when modules aren't available
     async def _fallback_deploy(self, args: argparse.Namespace) -> int:
-        """Fallback deployment method"""
+        """Fallback deployment method."""
         print(f"{Colors.yellow('⚠️  Using fallback deployment method...')}")
 
         try:
@@ -768,7 +770,7 @@ Environment Variables:
         command: str,
         args: argparse.Namespace,
     ) -> int:
-        """Fallback service command"""
+        """Fallback service command."""
         print(f"{Colors.yellow(f'⚠️  Using fallback {command} method...')}")
 
         if command == "start":
@@ -826,7 +828,7 @@ Environment Variables:
         return 1
 
     async def _fallback_status(self, args: argparse.Namespace) -> int:
-        """Fallback status check"""
+        """Fallback status check."""
         print(f"{Colors.yellow('⚠️  Using fallback status check...')}")
 
         try:
@@ -858,7 +860,7 @@ Environment Variables:
             return 1
 
     async def _fallback_health(self, args: argparse.Namespace) -> int:
-        """Fallback health check"""
+        """Fallback health check."""
         print(f"{Colors.yellow('⚠️  Using basic health check...')}")
 
         services_to_check = [
@@ -886,7 +888,7 @@ Environment Variables:
 
     # Validation helper methods
     async def _validate_docker(self) -> tuple:
-        """Validate Docker availability"""
+        """Validate Docker availability."""
         try:
             process = await asyncio.create_subprocess_exec(
                 "docker",
@@ -906,7 +908,7 @@ Environment Variables:
             return False, f"Docker check failed: {str(e)}"
 
     async def _validate_directories(self) -> tuple:
-        """Validate directory structure"""
+        """Validate directory structure."""
         required_dirs = ["scripts", "docker", "vault", "logs", "data"]
         missing_dirs = []
 
@@ -919,7 +921,7 @@ Environment Variables:
         return True, f"All {len(required_dirs)} directories exist"
 
     async def _validate_config_files(self) -> tuple:
-        """Validate configuration files"""
+        """Validate configuration files."""
         required_files = ["docker/docker-compose.yml", ".env.example"]
 
         missing_files = []
@@ -933,7 +935,7 @@ Environment Variables:
         return True, "All configuration files exist"
 
     async def _validate_ports(self) -> tuple:
-        """Validate network ports"""
+        """Validate network ports."""
         ports_to_check = [5432, 6379, 8000, 3000]
         busy_ports = []
 
@@ -955,7 +957,7 @@ Environment Variables:
         return True, "All required ports are free"
 
     async def _validate_permissions(self) -> tuple:
-        """Validate file permissions"""
+        """Validate file permissions."""
         try:
             test_file = self.base_dir / f".pake_permission_test_{int(time.time())}"
             test_file.write_text("test")
@@ -967,8 +969,8 @@ Environment Variables:
             return False, f"Permission issue: {str(e)}"
 
     # Helper methods
-    def _print_status(self, status: dict[str, Any]):
-        """Print formatted status"""
+    def _print_status(self) -> None:
+        """Print formatted status."""
         print(f"{Colors.blue('📊 PAKE+ System Status')}")
         print(
             f"Overall Status: {self._format_status(status.get('overall_status', 'unknown'))}",
@@ -997,7 +999,7 @@ Environment Variables:
                     print(f"    Restart attempts: {info['restart_attempts']}")
 
     def _format_status(self, status: str) -> str:
-        """Format status with color"""
+        """Format status with color."""
         color_map = {
             "healthy": Colors.green,
             "running": Colors.green,
@@ -1010,8 +1012,8 @@ Environment Variables:
         color_func = color_map.get(status.lower(), Colors.white)
         return color_func(status.upper())
 
-    def _print_post_deployment_info(self):
-        """Print post-deployment information"""
+    def _print_post_deployment_info(self) -> None:
+        """Print post-deployment information."""
         info = f""" {Colors.green("🎉 PAKE+ System Ready!")}
 
 {Colors.bold("Service Endpoints:")}
@@ -1139,7 +1141,7 @@ Environment Variables:
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Create argument parser"""
+    """Create argument parser."""
     parser = argparse.ArgumentParser(
         description="PAKE+ System - Personal Autonomous Knowledge Engine Plus",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1208,8 +1210,8 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def main():
-    """Main entry point"""
+async def main() -> int:
+    """Main entry point."""
     parser = create_parser()
     args = parser.parse_args()
 

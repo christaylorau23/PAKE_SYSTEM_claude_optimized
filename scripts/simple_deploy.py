@@ -11,7 +11,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-def safe_print(message):
+def safe_print(self) -> None:
     """Print without Unicode issues on Windows"""
     try:
         print(message)
@@ -20,7 +20,7 @@ def safe_print(message):
         print(safe_message)
 
 
-def create_simple_analytics():
+def create_simple_analytics(self) -> None:
     """Create simple analytics HTML page"""
 
     html_content = """<!DOCTYPE html>
@@ -133,7 +133,7 @@ def create_simple_analytics():
     return str(dashboard_dir / "index.html")
 
 
-def check_deployment_status():
+def check_deployment_status(self) -> None:
     """Check what's already deployed"""
 
     safe_print("PAKE+ Production Deployment Status")
@@ -182,7 +182,7 @@ def check_deployment_status():
     return True
 
 
-async def main():
+async def main(self) -> None:
     """Main deployment function"""
 
     safe_print("PAKE+ Advanced Services Deployment")

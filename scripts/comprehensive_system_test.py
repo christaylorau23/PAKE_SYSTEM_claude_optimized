@@ -13,7 +13,7 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -44,7 +44,7 @@ class TestResult:
     success: bool
     duration: float
     message: str = ""
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Dict[str, Any] = field(default_factory=dict)
     error: str | None = None
     timestamp: datetime = field(default_factory=datetime.now)
 
@@ -52,7 +52,7 @@ class TestResult:
 class PAKESystemTestSuite:
     """Comprehensive PAKE+ system testing and validation"""
 
-    def __init__(self, test_config: dict[str, Any] = None):
+    def __init__(self) -> None:
         self.base_dir = Path(__file__).parent.parent
         self.logs_dir = self.base_dir / "logs"
         self.data_dir = self.base_dir / "data"
@@ -67,7 +67,7 @@ class PAKESystemTestSuite:
         self.skip_slow_tests = self.config.get("skip_slow_tests", False)
 
         # Test state
-        self.test_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.test_session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         self.test_results: list[TestResult] = []
         self.test_start_time = None
 
@@ -75,10 +75,11 @@ class PAKESystemTestSuite:
         self.setup_logging()
 
         self.logger.info(
-            f"PAKE System Test Suite initialized (Session: {self.test_session_id})",
+            "PAKE System Test Suite initialized (Session: %s)",
+            self.test_session_id,
         )
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """Setup comprehensive test logging"""
         log_file = self.logs_dir / f"system_tests_{self.test_session_id}.log"
 
@@ -103,7 +104,7 @@ class PAKESystemTestSuite:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
-    async def run_all_tests(self) -> dict[str, Any]:
+    async def run_all_tests(self) -> Dict[str, Any]:
         """Run comprehensive system tests"""
         self.test_start_time = time.time()
 
@@ -135,7 +136,7 @@ class PAKESystemTestSuite:
         all_results = []
 
         for category, category_name, test_function in test_categories:
-            self.logger.info(f"\n📂 {category_name}")
+            self.logger.info("\n📂 %s", category_name)
             self.logger.info("-" * 50)
 
             try:
@@ -148,15 +149,21 @@ class PAKESystemTestSuite:
 
                 if category_success == category_total:
                     self.logger.info(
-                        f"✅ {category_name}: {category_success}/{category_total} tests passed",
+                        "✅ %s: %s/%s tests passed",
+                        category_name,
+                        category_success,
+                        category_total,
                     )
                 else:
                     self.logger.error(
-                        f"❌ {category_name}: {category_success}/{category_total} tests passed",
+                        "❌ %s: %s/%s tests passed",
+                        category_name,
+                        category_success,
+                        category_total,
                     )
 
             except Exception as e:
-                self.logger.error(f"💥 {category_name} failed with exception: {e}")
+                self.logger.error("💥 %s failed with exception: %s", category_name, e)
                 error_result = TestResult(
                     test_name=f"{category.value}_category_failure",
                     category=category,
@@ -186,11 +193,11 @@ class PAKESystemTestSuite:
 
         self.logger.info("\n" + "=" * 80)
         self.logger.info("📊 TEST SUMMARY")
-        self.logger.info(f"Total Tests: {total_tests}")
-        self.logger.info(f"Passed: {passed_tests}")
-        self.logger.info(f"Failed: {total_tests - passed_tests}")
-        self.logger.info(f"Critical Failures: {critical_failures}")
-        self.logger.info(f"Duration: {test_duration:.1f} seconds")
+        self.logger.info("Total Tests: %s", total_tests)
+        self.logger.info("Passed: %s", passed_tests)
+        self.logger.info("Failed: %s", total_tests - passed_tests)
+        self.logger.info("Critical Failures: %s", critical_failures)
+        self.logger.info("Duration: %.1f%% seconds", test_duration)
 
         overall_success = critical_failures == 0 and passed_tests >= (
             total_tests * 0.9
@@ -438,7 +445,7 @@ class PAKESystemTestSuite:
         severity: TestSeverity,
     ) -> TestResult:
         """Execute a single test with timing and error handling"""
-        self.logger.info(f"  Running {test_name}...")
+        self.logger.info("  Running %s...", test_name)
 
         start_time = time.time()
 
@@ -457,9 +464,13 @@ class PAKESystemTestSuite:
             )
 
             if success:
-                self.logger.info(f"    ✅ {test_name}: {message} ({duration:.2f}s)")
+                self.logger.info(
+                    "    ✅ %.2f%%: %.2f%% (%.2f%%s)", test_name, message, duration
+                )
             else:
-                self.logger.error(f"    ❌ {test_name}: {message} ({duration:.2f}s)")
+                self.logger.error(
+                    "    ❌ %.2f%%: %.2f%% (%.2f%%s)", test_name, message, duration
+                )
 
             return result
 
@@ -467,7 +478,10 @@ class PAKESystemTestSuite:
             duration = time.time() - start_time
 
             self.logger.error(
-                f"    💥 {test_name}: Exception - {str(e)} ({duration:.2f}s)",
+                "    💥 %.2f: Exception - %s (%ss)",
+                test_name,
+                str(e),
+                duration,
             )
 
             return TestResult(
@@ -481,7 +495,7 @@ class PAKESystemTestSuite:
             )
 
     # Infrastructure Tests
-    async def _test_docker_availability(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_docker_availability(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test Docker availability and status"""
         try:
             # Check Docker version
@@ -521,7 +535,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Docker test failed: {e}", {}
 
-    async def _test_docker_compose_file(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_docker_compose_file(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test Docker Compose configuration"""
         try:
             compose_file = self.base_dir / "docker" / "docker-compose.yml"
@@ -567,7 +581,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Compose file test failed: {e}", {}
 
-    async def _test_docker_services_running(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_docker_services_running(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test Docker services are running"""
         try:
             compose_file = self.base_dir / "docker" / "docker-compose.yml"
@@ -614,7 +628,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Service status test failed: {e}", {}
 
-    async def _test_port_accessibility(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_port_accessibility(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test required ports are accessible"""
         ports_to_test = {
             5432: "PostgreSQL",
@@ -652,7 +666,7 @@ class PAKESystemTestSuite:
             {"accessible_ports": accessible_ports},
         )
 
-    async def _test_directory_structure(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_directory_structure(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test directory structure is correct"""
         required_dirs = [
             "scripts",
@@ -691,7 +705,7 @@ class PAKESystemTestSuite:
             {"directories": existing_dirs},
         )
 
-    async def _test_file_permissions(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_file_permissions(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test file permissions"""
         test_locations = [self.base_dir, self.vault_dir, self.logs_dir, self.data_dir]
 
@@ -719,7 +733,7 @@ class PAKESystemTestSuite:
 
         return True, f"Permissions OK for {len(test_locations)} locations", {}
 
-    async def _test_disk_space(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_disk_space(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test disk space availability"""
         try:
             disk_usage = shutil.disk_usage(self.base_dir)
@@ -750,7 +764,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Disk space test failed: {e}", {}
 
-    async def _test_network_connectivity(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_network_connectivity(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test network connectivity"""
         # Test external connectivity (optional)
         test_hosts = [("8.8.8.8", 53, "Google DNS"), ("1.1.1.1", 53, "Cloudflare DNS")]
@@ -782,7 +796,7 @@ class PAKESystemTestSuite:
         )
 
     # Service Tests
-    async def _test_postgres_connection(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_postgres_connection(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test PostgreSQL connection"""
         try:
             # Test basic connection
@@ -829,7 +843,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"PostgreSQL not accessible: {e}", {}
 
-    async def _test_redis_connection(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_redis_connection(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test Redis connection"""
         try:
             reader, writer = await asyncio.wait_for(
@@ -853,7 +867,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Redis connection failed: {e}", {}
 
-    async def _test_mcp_server_health(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_mcp_server_health(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test MCP server health"""
         try:
             # Test HTTP health endpoint
@@ -898,7 +912,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"MCP server health test failed: {e}", {}
 
-    async def _test_api_bridge_health(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_api_bridge_health(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test API bridge health"""
         try:
             reader, writer = await asyncio.wait_for(
@@ -913,7 +927,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"API bridge not accessible: {e}", {}
 
-    async def _test_n8n_health(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_n8n_health(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test n8n health"""
         try:
             reader, writer = await asyncio.wait_for(
@@ -928,7 +942,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"n8n not accessible: {e}", {}
 
-    async def _test_service_dependencies(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_service_dependencies(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test service dependency relationships"""
         # This would test that services start in correct order
         # For now, just verify critical services are running
@@ -963,7 +977,7 @@ class PAKESystemTestSuite:
             {"running_services": running_services},
         )
 
-    async def _test_service_startup_order(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_service_startup_order(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test services can start in correct dependency order"""
         # This is a placeholder - in a real test we'd restart services
         # and verify they come up in the right order
@@ -971,13 +985,13 @@ class PAKESystemTestSuite:
 
     async def _test_service_restart_capability(
         self,
-    ) -> tuple[bool, str, dict[str, Any]]:
+    ) -> tuple[bool, str, Dict[str, Any]]:
         """Test services can be restarted"""
         # This is a placeholder - would need careful implementation
         return True, "Service restart capability not tested (placeholder)", {}
 
     # Data Layer Tests
-    async def _test_database_schema(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_database_schema(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test database schema exists and is correct"""
         try:
             import psycopg2
@@ -1029,7 +1043,7 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Database schema test failed: {e}", {}
 
-    async def _test_database_indices(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_database_indices(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test database indices exist"""
         try:
             import psycopg2
@@ -1079,12 +1093,12 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Database indices test failed: {e}", {}
 
-    async def _test_database_functions(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_database_functions(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test database functions exist"""
         # Placeholder for database function tests
         return True, "Database functions not tested (placeholder)", {}
 
-    async def _test_vault_structure(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_vault_structure(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test vault directory structure"""
         required_dirs = [
             "00-Inbox",
@@ -1118,7 +1132,7 @@ class PAKESystemTestSuite:
             {"directories": existing_dirs},
         )
 
-    async def _test_vault_permissions(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_vault_permissions(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test vault permissions"""
         test_file = self.vault_dir / "00-Inbox" / f".test_{int(time.time())}.md"
 
@@ -1140,23 +1154,23 @@ class PAKESystemTestSuite:
         except Exception as e:
             return False, f"Vault permission test failed: {e}", {}
 
-    async def _test_data_backup_systems(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_data_backup_systems(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test data backup systems"""
         # Placeholder for backup system tests
         return True, "Data backup systems not tested (placeholder)", {}
 
-    async def _test_content_ingestion(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_content_ingestion(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test content ingestion pipeline"""
         # Placeholder for content ingestion tests
         return True, "Content ingestion not tested (placeholder)", {}
 
     # Integration Tests
-    async def _test_api_workflow(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_api_workflow(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test complete API workflow"""
         # Placeholder for API workflow tests
         return True, "API workflow not tested (placeholder)", {}
 
-    async def _test_note_creation_flow(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_note_creation_flow(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test note creation and processing flow"""
         try:
             # Create test note
@@ -1164,8 +1178,8 @@ class PAKESystemTestSuite:
 
             test_content = f"""---
 pake_id: "test-{int(time.time())}"
-created: "{datetime.now().isoformat()}"
-modified: "{datetime.now().isoformat()}"
+created: "{datetime.now(UTC).isoformat()}"
+modified: "{datetime.now(UTC).isoformat()}"
 type: "test_note"
 status: "draft"
 confidence_score: 0.8
@@ -1201,17 +1215,17 @@ Testing the complete note creation and processing workflow.
         except Exception as e:
             return False, f"Note creation flow failed: {e}", {}
 
-    async def _test_content_processing_flow(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_content_processing_flow(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test content processing flow"""
         # Placeholder for content processing tests
         return True, "Content processing flow not tested (placeholder)", {}
 
-    async def _test_search_functionality(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_search_functionality(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test search functionality"""
         # Placeholder for search tests
         return True, "Search functionality not tested (placeholder)", {}
 
-    async def _test_git_hooks(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_git_hooks(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test Git hooks installation and functionality"""
         try:
             hooks_dir = self.base_dir / ".git" / "hooks"
@@ -1236,30 +1250,30 @@ Testing the complete note creation and processing workflow.
         except Exception as e:
             return False, f"Git hooks test failed: {e}", {}
 
-    async def _test_automation_workflows(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_automation_workflows(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test automation workflows"""
         # Placeholder for automation workflow tests
         return True, "Automation workflows not tested (placeholder)", {}
 
     async def _test_cross_service_communication(
         self,
-    ) -> tuple[bool, str, dict[str, Any]]:
+    ) -> tuple[bool, str, Dict[str, Any]]:
         """Test cross-service communication"""
         # Placeholder for cross-service communication tests
         return True, "Cross-service communication not tested (placeholder)", {}
 
     # Performance Tests
-    async def _test_response_times(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_response_times(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test API response times"""
         # Placeholder for response time tests
         return True, "Response times not tested (placeholder)", {}
 
-    async def _test_concurrent_requests(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_concurrent_requests(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test concurrent request handling"""
         # Placeholder for concurrent request tests
         return True, "Concurrent requests not tested (placeholder)", {}
 
-    async def _test_memory_usage(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_memory_usage(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test memory usage"""
         try:
             import psutil
@@ -1284,18 +1298,18 @@ Testing the complete note creation and processing workflow.
         except Exception as e:
             return False, f"Memory usage test failed: {e}", {}
 
-    async def _test_database_performance(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_database_performance(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test database query performance"""
         # Placeholder for database performance tests
         return True, "Database performance not tested (placeholder)", {}
 
-    async def _test_large_content_handling(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_large_content_handling(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test handling of large content"""
         # Placeholder for large content tests
         return True, "Large content handling not tested (placeholder)", {}
 
     # Security Tests
-    async def _test_environment_variables(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_environment_variables(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test environment variables security"""
         security_issues = []
 
@@ -1315,27 +1329,27 @@ Testing the complete note creation and processing workflow.
 
         return True, "Environment variables security OK", {}
 
-    async def _test_file_permissions_security(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_file_permissions_security(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test file permissions for security"""
         # Placeholder for file permission security tests
         return True, "File permissions security not tested (placeholder)", {}
 
-    async def _test_network_security(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_network_security(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test network security"""
         # Placeholder for network security tests
         return True, "Network security not tested (placeholder)", {}
 
-    async def _test_input_validation(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_input_validation(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test input validation"""
         # Placeholder for input validation tests
         return True, "Input validation not tested (placeholder)", {}
 
-    async def _test_authentication_systems(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_authentication_systems(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test authentication systems"""
         # Placeholder for authentication tests
         return True, "Authentication systems not tested (placeholder)", {}
 
-    async def _test_secrets_management(self) -> tuple[bool, str, dict[str, Any]]:
+    async def _test_secrets_management(self) -> tuple[bool, str, Dict[str, Any]]:
         """Test secrets management"""
         # Check for .env file existence
         env_file = self.base_dir / ".env"
@@ -1352,7 +1366,7 @@ Testing the complete note creation and processing workflow.
 
         return True, "Secrets management OK", {"env_file_exists": True}
 
-    def _result_to_dict(self, result: TestResult) -> dict[str, Any]:
+    def _result_to_dict(self, result: TestResult) -> Dict[str, Any]:
         """Convert TestResult to dictionary"""
         return {
             "test_name": result.test_name,
@@ -1397,7 +1411,7 @@ Testing the complete note creation and processing workflow.
         # Generate report
         report = f"""# PAKE+ System Test Report
 Session ID: {self.test_session_id}
-Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 Duration: {total_duration:.1f} seconds
 
 ## Summary
@@ -1475,12 +1489,12 @@ Duration: {total_duration:.1f} seconds
         with open(report_file, "w") as f:
             f.write(report)
 
-        self.logger.info(f"Test report saved: {report_file}")
+        self.logger.info("Test report saved: %s", report_file)
 
         return report
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     import argparse
 

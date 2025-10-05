@@ -42,11 +42,11 @@ WHERE stat[1] != null
 ## Confidence Distribution
 
 ```dataview
-TABLE 
+TABLE
   round(confidence_score, 1) as "Confidence Score",
   length(rows) as "Count"
 FROM ""
-WHERE confidence_score != null 
+WHERE confidence_score != null
 AND file.name != "Dashboard"
 GROUP BY round(confidence_score, 1)
 SORT confidence_score DESC
@@ -55,7 +55,7 @@ SORT confidence_score DESC
 ## Unverified Knowledge (Action Required)
 
 ```dataview
-TABLE 
+TABLE
   file.link as "Note",
   confidence_score as "Confidence",
   dateformat(date(created), "MMM dd") as "Created",

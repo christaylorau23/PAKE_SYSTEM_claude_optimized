@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Multi-Tier Caching System
-Phase 2B Sprint 4: Production-scale intelligent caching with multi-tier architecture
+Phase 2B Sprint 4: Production-scale intelligent caching with multi-tier architecture.
 
 Provides enterprise caching with memory, disk, and distributed tiers,
 intelligent invalidation, and performance optimization.
@@ -22,13 +22,17 @@ from typing import Any
 
 import aiofiles
 
-from ...utils.secure_serialization import deserialize, serialize
+from src.utils.secure_serialization import deserialize, serialize
+from src.utils.synchronization_primitives import (
+    AsyncSafeDict,
+    get_sync_monitor,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class CacheTier(Enum):
-    """Cache tier levels"""
+    """Cache tier levels."""
 
     MEMORY = "memory"
     DISK = "disk"
@@ -36,7 +40,7 @@ class CacheTier(Enum):
 
 
 class CachePolicy(Enum):
-    """Cache eviction policies"""
+    """Cache eviction policies."""
 
     LRU = "lru"  # Least Recently Used
     LFU = "lfu"  # Least Frequently Used
@@ -46,15 +50,15 @@ class CachePolicy(Enum):
 
 @dataclass(frozen=True)
 class CacheKey:
-    """Immutable cache key with metadata"""
+    """Immutable cache key with metadata."""
 
     namespace: str
     key: str
     version: str = "1.0"
-    tags: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
     def to_string(self) -> str:
-        """Convert to string representation"""
+        """Convert to string representation."""
         tag_str = ",".join(sorted(self.tags)) if self.tags else ""
         return f"{self.namespace}:{self.key}:v{self.version}:{
             hashlib.sha256(tag_str.encode()).hexdigest()[:8]
@@ -63,7 +67,7 @@ class CacheKey:
 
 @dataclass(frozen=True)
 class CacheEntry:
-    """Immutable cache entry with metadata"""
+    """Immutable cache entry with metadata."""
 
     key: CacheKey
     value: Any
@@ -78,7 +82,7 @@ class CacheEntry:
 
 @dataclass(frozen=True)
 class CacheConfig:
-    """Multi-tier cache configuration"""
+    """Multi-tier cache configuration."""
 
     # Memory tier
     memory_max_size: int = 100 * 1024 * 1024  # 100MB
@@ -104,7 +108,7 @@ class CacheConfig:
 
 @dataclass
 class CacheStats:
-    """Cache statistics and metrics"""
+    """Cache statistics and metrics."""
 
     hits: dict[CacheTier, int] = field(
         default_factory=lambda: dict.fromkeys(CacheTier, 0),
@@ -136,7 +140,7 @@ class CacheStats:
     successful_requests: int = 0
 
     def calculate_hit_rate(self) -> float:
-        """Calculate overall cache hit rate based on successful requests"""
+        """Calculate overall cache hit rate based on successful requests."""
         if self.total_requests == 0:
             return 0.0
 
@@ -145,41 +149,47 @@ class CacheStats:
 
 
 class CacheTierInterface(ABC):
-    """Abstract interface for cache tier implementations"""
+    """Abstract interface for cache tier implementations."""
 
     @abstractmethod
     async def get(self, key: CacheKey) -> CacheEntry | None:
-        """Get entry from cache tier"""
+        """Get entry from cache tier."""
 
     @abstractmethod
     async def set(self, entry: CacheEntry) -> bool:
-        """Set entry in cache tier"""
+        """Set entry in cache tier."""
 
     @abstractmethod
     async def delete(self, key: CacheKey) -> bool:
-        """Delete entry from cache tier"""
+        """Delete entry from cache tier."""
 
     @abstractmethod
     async def clear(self) -> bool:
-        """Clear all entries from tier"""
+        """Clear all entries from tier."""
 
     @abstractmethod
     async def size(self) -> int:
-        """Get number of entries in tier"""
+        """Get number of entries in tier."""
 
 
 class MemoryCacheTier(CacheTierInterface):
-    """In-memory cache tier with LRU/LFU eviction"""
+    """In-memory cache tier with LRU/LFU eviction."""
 
-    def __init__(self, config: CacheConfig):
+    def __init__(self) -> None:
         self.config = config
         self._cache: dict[str, CacheEntry] = {}
-        self._access_order: list[str] = []  # For LRU
+        self._access_order: List[str] = []  # For LRU
         self._lock = asyncio.Lock()
         self._current_size = 0
 
+        # Register with synchronization monitor
+        sync_monitor = get_sync_monitor()
+        sync_monitor.register_async_dict(
+            f"memory_cache_{id(self)}", AsyncSafeDict(self._cache)
+        )
+
     async def get(self, key: CacheKey) -> CacheEntry | None:
-        """Get entry from memory cache"""
+        """Get entry from memory cache."""
         async with self._lock:
             key_str = key.to_string()
 
@@ -213,7 +223,7 @@ class MemoryCacheTier(CacheTierInterface):
             return updated_entry
 
     async def set(self, entry: CacheEntry) -> bool:
-        """Set entry in memory cache"""
+        """Set entry in memory cache."""
         async with self._lock:
             key_str = entry.key.to_string()
 
@@ -256,7 +266,7 @@ class MemoryCacheTier(CacheTierInterface):
             return True
 
     async def delete(self, key: CacheKey) -> bool:
-        """Delete entry from memory cache"""
+        """Delete entry from memory cache."""
         async with self._lock:
             key_str = key.to_string()
 
@@ -273,7 +283,7 @@ class MemoryCacheTier(CacheTierInterface):
             return False
 
     async def clear(self) -> bool:
-        """Clear all entries from memory cache"""
+        """Clear all entries from memory cache."""
         async with self._lock:
             self._cache.clear()
             self._access_order.clear()
@@ -281,18 +291,18 @@ class MemoryCacheTier(CacheTierInterface):
             return True
 
     async def size(self) -> int:
-        """Get number of entries in memory cache"""
+        """Get number of entries in memory cache."""
         return len(self._cache)
 
     def _calculate_entry_size(self, entry: CacheEntry) -> int:
-        """Calculate approximate size of cache entry"""
+        """Calculate approximate size of cache entry."""
         try:
             return len(serialize(entry.value))
         except BaseException:
             return len(str(entry.value).encode("utf-8"))
 
     def _calculate_content_hash(self, value: Any) -> str:
-        """Calculate content hash for deduplication"""
+        """Calculate content hash for deduplication."""
         try:
             content = serialize(value)
         except BaseException:
@@ -301,19 +311,19 @@ class MemoryCacheTier(CacheTierInterface):
         return hashlib.sha256(content).hexdigest()
 
     def _calculate_expiry(self) -> datetime:
-        """Calculate expiry time based on TTL"""
+        """Calculate expiry time based on TTL."""
         return datetime.now(UTC) + timedelta(
             seconds=self.config.memory_ttl_seconds,
         )
 
-    def _update_access_order(self, key_str: str):
-        """Update access order for LRU eviction"""
+    def _update_access_order(self) -> None:
+        """Update access order for LRU eviction."""
         if key_str in self._access_order:
             self._access_order.remove(key_str)
         self._access_order.append(key_str)
 
-    async def _ensure_capacity(self, new_entry_size: int):
-        """Ensure cache has capacity for new entry"""
+    async def _ensure_capacity(self) -> None:
+        """Ensure cache has capacity for new entry."""
         # Check size limits
         while (
             self._current_size + new_entry_size > self.config.memory_max_size
@@ -326,8 +336,8 @@ class MemoryCacheTier(CacheTierInterface):
             lru_key = self._access_order[0]
             await self._evict_entry(lru_key)
 
-    async def _evict_entry(self, key_str: str):
-        """Evict specific entry"""
+    async def _evict_entry(self) -> None:
+        """Evict specific entry."""
         if key_str in self._cache:
             entry = self._cache[key_str]
             self._current_size -= entry.size_bytes
@@ -336,23 +346,23 @@ class MemoryCacheTier(CacheTierInterface):
             if key_str in self._access_order:
                 self._access_order.remove(key_str)
 
-    async def _remove_expired(self, key_str: str):
-        """Remove expired entry"""
+    async def _remove_expired(self) -> None:
+        """Remove expired entry."""
         await self._evict_entry(key_str)
 
 
 class DiskCacheTier(CacheTierInterface):
-    """Disk-based cache tier with file storage"""
+    """Disk-based cache tier with file storage."""
 
-    def __init__(self, config: CacheConfig):
+    def __init__(self) -> None:
         self.config = config
         self.cache_dir = Path(config.disk_path)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
-        self._metadata: dict[str, dict[str, Any]] = {}
+        self._metadata: dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
 
     async def get(self, key: CacheKey) -> CacheEntry | None:
-        """Get entry from disk cache"""
+        """Get entry from disk cache."""
         async with self._lock:
             key_str = key.to_string()
             file_path = self._get_file_path(key_str)
@@ -407,11 +417,11 @@ class DiskCacheTier(CacheTierInterface):
                 return entry
 
             except Exception as e:
-                logger.warning(f"Failed to read disk cache entry {key_str}: {e}")
+                logger.warning("Failed to read disk cache entry %s: %s", key_str, e)
                 return None
 
     async def set(self, entry: CacheEntry) -> bool:
-        """Set entry in disk cache"""
+        """Set entry in disk cache."""
         async with self._lock:
             key_str = entry.key.to_string()
             file_path = self._get_file_path(key_str)
@@ -443,17 +453,17 @@ class DiskCacheTier(CacheTierInterface):
                 return True
 
             except Exception as e:
-                logger.error(f"Failed to write disk cache entry {key_str}: {e}")
+                logger.error("Failed to write disk cache entry %s: %s", key_str, e)
                 return False
 
     async def delete(self, key: CacheKey) -> bool:
-        """Delete entry from disk cache"""
+        """Delete entry from disk cache."""
         async with self._lock:
             key_str = key.to_string()
             return await self._remove_file(key_str)
 
     async def clear(self) -> bool:
-        """Clear all entries from disk cache"""
+        """Clear all entries from disk cache."""
         async with self._lock:
             try:
                 for file_path in self.cache_dir.glob("*.cache"):
@@ -464,31 +474,31 @@ class DiskCacheTier(CacheTierInterface):
                 self._metadata.clear()
                 return True
             except Exception as e:
-                logger.error(f"Failed to clear disk cache: {e}")
+                logger.error("Failed to clear disk cache: %s", e)
                 return False
 
     async def size(self) -> int:
-        """Get number of entries in disk cache"""
+        """Get number of entries in disk cache."""
         return len(list(self.cache_dir.glob("*.cache")))
 
     def _get_file_path(self, key_str: str) -> Path:
-        """Get file path for cache key"""
+        """Get file path for cache key."""
         safe_key = hashlib.sha256(key_str.encode()).hexdigest()
         return self.cache_dir / f"{safe_key}.cache"
 
     def _get_metadata_path(self, key_str: str) -> Path:
-        """Get metadata file path for cache key"""
+        """Get metadata file path for cache key."""
         safe_key = hashlib.sha256(key_str.encode()).hexdigest()
         return self.cache_dir / f"{safe_key}.meta"
 
     def _calculate_expiry(self) -> datetime:
-        """Calculate expiry time based on TTL"""
+        """Calculate expiry time based on TTL."""
         return datetime.now(UTC) + timedelta(
             seconds=self.config.disk_ttl_seconds,
         )
 
-    async def _update_metadata(self, key_str: str, entry: CacheEntry):
-        """Update metadata file"""
+    async def _update_metadata(self) -> None:
+        """Update metadata file."""
         metadata = {
             "key": key_str,
             "created_at": entry.created_at.isoformat(),
@@ -504,7 +514,7 @@ class DiskCacheTier(CacheTierInterface):
             await f.write(json.dumps(metadata))
 
     async def _remove_file(self, key_str: str) -> bool:
-        """Remove cache file and metadata"""
+        """Remove cache file and metadata."""
         try:
             file_path = self._get_file_path(key_str)
             metadata_path = self._get_metadata_path(key_str)
@@ -516,7 +526,7 @@ class DiskCacheTier(CacheTierInterface):
 
             return True
         except Exception as e:
-            logger.warning(f"Failed to remove disk cache file {key_str}: {e}")
+            logger.warning("Failed to remove disk cache file %s: %s", key_str, e)
             return False
 
 
@@ -532,7 +542,7 @@ class MultiTierCacheManager:
     - Compression and encryption support
     """
 
-    def __init__(self, config: CacheConfig):
+    def __init__(self) -> None:
         self.config = config
         self.stats = CacheStats()
 
@@ -544,7 +554,7 @@ class MultiTierCacheManager:
         # Initialize distributed tier if configured
         if config.redis_url:
             # In production: initialize Redis connection
-            logger.info(f"Redis caching configured: {config.redis_url}")
+            logger.info("Redis caching configured: %s", config.redis_url)
 
         self._promotion_threshold = 3  # Access count for promotion
         self._demotion_threshold = 1800  # Seconds for demotion
@@ -625,7 +635,7 @@ class MultiTierCacheManager:
         return memory_success or disk_success
 
     async def delete(self, key: CacheKey) -> bool:
-        """Delete value from all cache tiers"""
+        """Delete value from all cache tiers."""
         results = []
 
         # Delete from all tiers
@@ -646,12 +656,12 @@ class MultiTierCacheManager:
         return any(results)
 
     async def clear(self, namespace: str | None = None) -> bool:
-        """Clear cache entries, optionally by namespace"""
+        """Clear cache entries, optionally by namespace."""
         results = []
 
         if namespace:
             # Clear specific namespace (would need iteration in production)
-            logger.info(f"Clearing cache namespace: {namespace}")
+            logger.info("Clearing cache namespace: %s", namespace)
             return True
 
         # Clear all tiers
@@ -664,17 +674,17 @@ class MultiTierCacheManager:
 
         return all(results)
 
-    async def invalidate_by_tags(self, tags: list[str]) -> int:
-        """Invalidate cache entries by tags"""
+    async def invalidate_by_tags(self, tags: List[str]) -> int:
+        """Invalidate cache entries by tags."""
         # Mock implementation - in production would iterate through entries
         invalidated_count = 0
-        logger.info(f"Invalidating cache entries with tags: {tags}")
+        logger.info("Invalidating cache entries with tags: %s", tags)
 
         # Would implement tag-based invalidation logic here
         return invalidated_count
 
     async def get_stats(self) -> CacheStats:
-        """Get comprehensive cache statistics"""
+        """Get comprehensive cache statistics."""
         # Update current sizes
         self.stats.total_items[CacheTier.MEMORY] = await self.memory_tier.size()
         self.stats.total_items[CacheTier.DISK] = await self.disk_tier.size()
@@ -684,11 +694,11 @@ class MultiTierCacheManager:
 
         return self.stats
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform cache health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform cache health check."""
         stats = await self.get_stats()
 
-        health_status = {
+        return {
             "status": "healthy",
             "tiers": {
                 "memory": {
@@ -712,10 +722,8 @@ class MultiTierCacheManager:
             },
         }
 
-        return health_status
-
-    async def _consider_promotion(self, entry: CacheEntry):
-        """Consider promoting entry to higher tier"""
+    async def _consider_promotion(self) -> None:
+        """Consider promoting entry to higher tier."""
         # Already in memory tier (highest)
         if entry.tier == CacheTier.MEMORY:
             return
@@ -725,8 +733,8 @@ class MultiTierCacheManager:
             await self.memory_tier.set(entry)
             self.stats.sets[CacheTier.MEMORY] += 1
 
-    def _update_response_time(self, response_time: float):
-        """Update average response time"""
+    def _update_response_time(self) -> None:
+        """Update average response time."""
         if self.stats.average_response_time == 0:
             self.stats.average_response_time = response_time
         else:
@@ -735,8 +743,8 @@ class MultiTierCacheManager:
                 self.stats.average_response_time * 0.9 + response_time * 0.1
             )
 
-    async def close(self):
-        """Close cache manager and clean up resources"""
+    async def close(self) -> None:
+        """Close cache manager and clean up resources."""
         await self.memory_tier.clear()
 
         if self.distributed_tier:

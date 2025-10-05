@@ -6,7 +6,7 @@ Comprehensive logging service implementing enterprise best practices for:
 - Correlation IDs and context
 - Performance monitoring
 - Audit trails
-- Compliance logging
+- Compliance logging.
 """
 
 import asyncio
@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field, validator
@@ -40,7 +40,7 @@ except ImportError:
 
 
 class LogLevel(Enum):
-    """Standard log levels with numeric values for filtering"""
+    """Standard log levels with numeric values for filtering."""
 
     DEBUG = (10, "DEBUG")
     INFO = (20, "INFO")
@@ -48,13 +48,13 @@ class LogLevel(Enum):
     ERROR = (40, "ERROR")
     CRITICAL = (50, "CRITICAL")
 
-    def __init__(self, level: int, name: str):
+    def __init__(self) -> None:
         self.level = level
         self.name = name
 
 
 class LogCategory(Enum):
-    """Log categories for better organization"""
+    """Log categories for better organization."""
 
     APPLICATION = "application"
     SECURITY = "security"
@@ -69,7 +69,7 @@ class LogCategory(Enum):
 
 
 class SecurityLevel(Enum):
-    """Security classification levels"""
+    """Security classification levels."""
 
     PUBLIC = "public"
     INTERNAL = "internal"
@@ -79,7 +79,7 @@ class SecurityLevel(Enum):
 
 @dataclass
 class LoggingConfig:
-    """Centralized logging configuration"""
+    """Centralized logging configuration."""
 
     # Basic settings
     service_name: str = "pake-system"
@@ -116,20 +116,23 @@ class LoggingConfig:
     tracing_enabled: bool = True
     alerting_enabled: bool = True
 
-    def __post_init__(self):
-        """Validate configuration"""
+    def __post_init__(self) -> None:
+        """Validate configuration."""
         if self.log_level not in LogLevel:
-            raise ValueError(f"Invalid log level: {self.log_level}")
+            msg = f"Invalid log level: {self.log_level}"
+            raise ValueError(msg)
 
         if self.max_file_size_mb <= 0:
-            raise ValueError("Max file size must be positive")
+            msg = "Max file size must be positive"
+            raise ValueError(msg)
 
         if self.backup_count < 0:
-            raise ValueError("Backup count cannot be negative")
+            msg = "Backup count cannot be negative"
+            raise ValueError(msg)
 
 
 class SensitiveDataMasker:
-    """Utility class to mask sensitive data in logs"""
+    """Utility class to mask sensitive data in logs."""
 
     # Common patterns for sensitive data
     SENSITIVE_PATTERNS = {
@@ -145,7 +148,7 @@ class SensitiveDataMasker:
 
     @classmethod
     def mask_string(cls, text: str, mask_char: str = "*") -> str:
-        """Mask sensitive data in a string"""
+        """Mask sensitive data in a string."""
         if not isinstance(text, str):
             return text
 
@@ -169,14 +172,14 @@ class SensitiveDataMasker:
 
     @classmethod
     def _partial_mask(cls, text: str, mask_char: str) -> str:
-        """Partially mask text (show first and last characters)"""
+        """Partially mask text (show first and last characters)."""
         if len(text) <= 4:
             return mask_char * len(text)
         return text[0] + mask_char * (len(text) - 2) + text[-1]
 
     @classmethod
-    def mask_dict(cls, data: dict[str, Any], mask_char: str = "*") -> dict[str, Any]:
-        """Recursively mask sensitive data in a dictionary"""
+    def mask_dict(cls, data: Dict[str, Any], mask_char: str = "*") -> Dict[str, Any]:
+        """Recursively mask sensitive data in a dictionary."""
         if not isinstance(data, dict):
             return data
 
@@ -212,27 +215,27 @@ class SensitiveDataMasker:
 
 
 class LogContext:
-    """Context manager for adding contextual information to logs"""
+    """Context manager for adding contextual information to logs."""
 
-    def __init__(self, logger: "EnterpriseLoggingService", **context):
+    def __init__(self) -> None:
         self.logger = logger
         self.context = context
         self.previous_context = {}
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         # Store previous context
         self.previous_context = self.logger.context.copy()
         # Add new context
         self.logger.context.update(self.context)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self) -> None:
         # Restore previous context
         self.logger.context = self.previous_context
 
 
 class LogEntry(BaseModel):
-    """Structured log entry model"""
+    """Structured log entry model."""
 
     # Core fields
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -248,45 +251,45 @@ class LogEntry(BaseModel):
     environment: str = Field(default="development", description="Environment")
 
     # Request/Correlation tracking
-    correlation_id: Optional[str] = Field(
+    correlation_id: str | None = Field(
         None, description="Correlation ID for request tracing"
     )
-    request_id: Optional[str] = Field(None, description="Request ID")
-    session_id: Optional[str] = Field(None, description="Session ID")
-    user_id: Optional[str] = Field(None, description="User ID")
+    request_id: str | None = Field(None, description="Request ID")
+    session_id: str | None = Field(None, description="Session ID")
+    user_id: str | None = Field(None, description="User ID")
 
     # System information
-    hostname: Optional[str] = Field(None, description="Hostname")
-    process_id: Optional[int] = Field(None, description="Process ID")
-    thread_id: Optional[str] = Field(None, description="Thread ID")
+    hostname: str | None = Field(None, description="Hostname")
+    process_id: int | None = Field(None, description="Process ID")
+    thread_id: str | None = Field(None, description="Thread ID")
 
     # Performance metrics
-    duration_ms: Optional[float] = Field(
+    duration_ms: float | None = Field(
         None, description="Operation duration in milliseconds"
     )
-    memory_usage_mb: Optional[float] = Field(None, description="Memory usage in MB")
-    cpu_usage_percent: Optional[float] = Field(None, description="CPU usage percentage")
+    memory_usage_mb: float | None = Field(None, description="Memory usage in MB")
+    cpu_usage_percent: float | None = Field(None, description="CPU usage percentage")
 
     # Error information
-    error_code: Optional[str] = Field(None, description="Error code")
-    error_type: Optional[str] = Field(None, description="Error type")
-    stack_trace: Optional[str] = Field(None, description="Stack trace")
+    error_code: str | None = Field(None, description="Error code")
+    error_type: str | None = Field(None, description="Error type")
+    stack_trace: str | None = Field(None, description="Stack trace")
 
     # Security information
     security_level: str = Field(
         default=SecurityLevel.INTERNAL.value, description="Security classification"
     )
-    ip_address: Optional[str] = Field(None, description="Client IP address")
-    user_agent: Optional[str] = Field(None, description="User agent")
+    ip_address: str | None = Field(None, description="Client IP address")
+    user_agent: str | None = Field(None, description="User agent")
 
     # Additional context
-    extra_data: dict[str, Any] = Field(
+    extra_data: Dict[str, Any] = Field(
         default_factory=dict, description="Additional structured data"
     )
 
     @validator("extra_data")
-    def validate_extra_data(cls, v):
-        """Ensure extra_data doesn't contain sensitive information"""
+    def validate_extra_data(self) -> None:
+        """Ensure extra_data doesn't contain sensitive information."""
         if isinstance(v, dict):
             return SensitiveDataMasker.mask_dict(v)
         return v
@@ -299,14 +302,14 @@ class EnterpriseLoggingService:
     - Correlation IDs and context
     - Performance monitoring
     - Audit trails
-    - Compliance logging
+    - Compliance logging.
     """
 
-    def __init__(self, config: LoggingConfig = None):
+    def __init__(self) -> None:
         self.config = config or LoggingConfig()
-        self.context: dict[str, Any] = {}
+        self.context: Dict[str, Any] = {}
         self.loggers: dict[str, logging.Logger] = {}
-        self.metrics_buffer: list[dict[str, Any]] = []
+        self.metrics_buffer: list[Dict[str, Any]] = []
         self.audit_logs: list[LogEntry] = []
 
         # Initialize logging infrastructure
@@ -318,8 +321,8 @@ class EnterpriseLoggingService:
         if self.config.async_logging:
             self._start_background_tasks()
 
-    def _setup_logging(self):
-        """Setup structured logging with structlog"""
+    def _setup_logging(self) -> None:
+        """Setup structured logging with structlog."""
         # Configure structlog processors
         processors = [
             structlog.stdlib.filter_by_level,
@@ -346,8 +349,8 @@ class EnterpriseLoggingService:
             cache_logger_on_first_use=True,
         )
 
-    def _setup_file_handlers(self):
-        """Setup file handlers for different log categories"""
+    def _setup_file_handlers(self) -> None:
+        """Setup file handlers for different log categories."""
         if not self.config.file_enabled:
             return
 
@@ -368,8 +371,8 @@ class EnterpriseLoggingService:
         for category in categories:
             self._create_file_handler(log_dir, category)
 
-    def _create_file_handler(self, log_dir: Path, category: str):
-        """Create a file handler for a specific category"""
+    def _create_file_handler(self) -> None:
+        """Create a file handler for a specific category."""
         try:
             from logging.handlers import RotatingFileHandler
 
@@ -395,8 +398,8 @@ class EnterpriseLoggingService:
         except Exception as e:
             print(f"Failed to create file handler for {category}: {e}", file=sys.stderr)
 
-    def _setup_console_handler(self):
-        """Setup console handler"""
+    def _setup_console_handler(self) -> None:
+        """Setup console handler."""
         if not self.config.console_enabled:
             return
 
@@ -421,8 +424,8 @@ class EnterpriseLoggingService:
         root_logger.addHandler(console_handler)
         root_logger.setLevel(self.config.log_level.level)
 
-    def _start_background_tasks(self):
-        """Start background tasks for async logging"""
+    def _start_background_tasks(self) -> None:
+        """Start background tasks for async logging."""
         # This would be implemented with asyncio tasks in a real application
 
     # ========================================================================
@@ -430,17 +433,17 @@ class EnterpriseLoggingService:
     # ========================================================================
 
     def with_context(self, **context) -> LogContext:
-        """Create a context manager for adding contextual information"""
+        """Create a context manager for adding contextual information."""
         return LogContext(self, **context)
 
     def with_correlation_id(self, correlation_id: str = None) -> LogContext:
-        """Add correlation ID for request tracing"""
+        """Add correlation ID for request tracing."""
         if correlation_id is None:
             correlation_id = str(uuid.uuid4())
         return self.with_context(correlation_id=correlation_id)
 
     def with_user(self, user_id: str, username: str = None) -> LogContext:
-        """Add user context for audit logging"""
+        """Add user context for audit logging."""
         context = {"user_id": user_id}
         if username:
             context["username"] = username
@@ -454,7 +457,7 @@ class EnterpriseLoggingService:
         ip: str = None,
         user_agent: str = None,
     ) -> LogContext:
-        """Add request context for API logging"""
+        """Add request context for API logging."""
         context = {}
         if request_id:
             context["request_id"] = request_id
@@ -479,7 +482,7 @@ class EnterpriseLoggingService:
         category: LogCategory = LogCategory.APPLICATION,
         **kwargs,
     ) -> LogEntry:
-        """Create a structured log entry"""
+        """Create a structured log entry."""
         # Merge context and kwargs
         log_data = {**self.context, **kwargs}
 
@@ -504,8 +507,8 @@ class EnterpriseLoggingService:
 
         return entry
 
-    def _log_entry(self, entry: LogEntry):
-        """Log a structured entry"""
+    def _log_entry(self) -> None:
+        """Log a structured entry."""
         # Get appropriate logger
         logger_name = f"{self.config.service_name}.{entry.category}"
         logger = logging.getLogger(logger_name)
@@ -525,35 +528,23 @@ class EnterpriseLoggingService:
         elif entry.level == LogLevel.CRITICAL.name:
             logger.critical(entry.message, extra=log_dict)
 
-    def debug(
-        self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs
-    ):
-        """Log debug message"""
+    def debug(self) -> None:
+        """Log debug message."""
         entry = self._create_log_entry(LogLevel.DEBUG, message, category, **kwargs)
         self._log_entry(entry)
 
-    def info(
-        self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs
-    ):
-        """Log info message"""
+    def info(self) -> None:
+        """Log info message."""
         entry = self._create_log_entry(LogLevel.INFO, message, category, **kwargs)
         self._log_entry(entry)
 
-    def warning(
-        self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs
-    ):
-        """Log warning message"""
+    def warning(self) -> None:
+        """Log warning message."""
         entry = self._create_log_entry(LogLevel.WARNING, message, category, **kwargs)
         self._log_entry(entry)
 
-    def error(
-        self,
-        message: str,
-        category: LogCategory = LogCategory.APPLICATION,
-        error: Exception = None,
-        **kwargs,
-    ):
-        """Log error message with optional exception"""
+    def error(self) -> None:
+        """Log error message with optional exception."""
         if error:
             kwargs.update(
                 {
@@ -568,10 +559,8 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(LogLevel.ERROR, message, category, **kwargs)
         self._log_entry(entry)
 
-    def critical(
-        self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs
-    ):
-        """Log critical message"""
+    def critical(self) -> None:
+        """Log critical message."""
         entry = self._create_log_entry(LogLevel.CRITICAL, message, category, **kwargs)
         self._log_entry(entry)
 
@@ -579,18 +568,8 @@ class EnterpriseLoggingService:
     # Specialized Logging Methods
     # ========================================================================
 
-    def security(
-        self,
-        message: str,
-        event: str = None,
-        user_id: str = None,
-        ip: str = None,
-        user_agent: str = None,
-        success: bool = None,
-        reason: str = None,
-        **kwargs,
-    ):
-        """Log security events"""
+    def security(self) -> None:
+        """Log security events."""
         security_data = {
             "event": event,
             "success": success,
@@ -608,17 +587,8 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def audit(
-        self,
-        message: str,
-        event_type: str,
-        action: str,
-        result: str,
-        user_id: str = None,
-        resource: str = None,
-        **kwargs,
-    ):
-        """Log audit events for compliance"""
+    def audit(self) -> None:
+        """Log audit events for compliance."""
         audit_data = {
             "event_type": event_type,
             "action": action,
@@ -637,16 +607,8 @@ class EnterpriseLoggingService:
         # Store in audit logs for compliance
         self.audit_logs.append(entry)
 
-    def performance(
-        self,
-        message: str,
-        operation: str = None,
-        duration_ms: float = None,
-        memory_mb: float = None,
-        cpu_percent: float = None,
-        **kwargs,
-    ):
-        """Log performance metrics"""
+    def performance(self) -> None:
+        """Log performance metrics."""
         perf_data = {
             "operation": operation,
             "duration_ms": duration_ms,
@@ -660,18 +622,8 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def api(
-        self,
-        message: str,
-        method: str = None,
-        path: str = None,
-        status_code: int = None,
-        duration_ms: float = None,
-        user_id: str = None,
-        error: Exception = None,
-        **kwargs,
-    ):
-        """Log API requests/responses"""
+    def api(self) -> None:
+        """Log API requests/responses."""
         api_data = {
             "method": method,
             "path": path,
@@ -697,17 +649,8 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.API, **api_data)
         self._log_entry(entry)
 
-    def database(
-        self,
-        message: str,
-        operation: str = None,
-        table: str = None,
-        duration_ms: float = None,
-        row_count: int = None,
-        error: Exception = None,
-        **kwargs,
-    ):
-        """Log database operations"""
+    def database(self) -> None:
+        """Log database operations."""
         db_data = {
             "operation": operation,
             "table": table,
@@ -724,18 +667,8 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.DATABASE, **db_data)
         self._log_entry(entry)
 
-    def business(
-        self,
-        message: str,
-        event: str = None,
-        user_id: str = None,
-        entity_type: str = None,
-        entity_id: str = None,
-        action: str = None,
-        metadata: dict = None,
-        **kwargs,
-    ):
-        """Log business events"""
+    def business(self) -> None:
+        """Log business events."""
         business_data = {
             "event": event,
             "entity_type": entity_type,
@@ -758,7 +691,7 @@ class EnterpriseLoggingService:
 
     @asynccontextmanager
     async def timer(self, operation: str = None) -> AsyncGenerator[None, None]:
-        """Context manager for timing operations"""
+        """Context manager for timing operations."""
         start_time = time.time()
         if operation:
             self.debug(
@@ -788,15 +721,15 @@ class EnterpriseLoggingService:
                 duration_ms=duration_ms,
             )
 
-    def trace_operation(self, operation_name: str):
-        """Decorator to trace an operation"""
+    def trace_operation(self) -> None:
+        """Decorator to trace an operation."""
 
-        def decorator(func):
-            async def async_wrapper(*args, **kwargs):
+        def decorator(self) -> None:
+            async def async_wrapper(self) -> None:
                 async with self.timer(operation_name):
                     return await func(*args, **kwargs)
 
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(self) -> None:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
@@ -821,8 +754,7 @@ class EnterpriseLoggingService:
 
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper
-            else:
-                return sync_wrapper
+            return sync_wrapper
 
         return decorator
 
@@ -837,7 +769,7 @@ class EnterpriseLoggingService:
         event_type: str = None,
         user_id: str = None,
     ) -> list[LogEntry]:
-        """Get filtered audit logs"""
+        """Get filtered audit logs."""
         filtered_logs = self.audit_logs
 
         if start_date:
@@ -860,8 +792,8 @@ class EnterpriseLoggingService:
 
         return sorted(filtered_logs, key=lambda x: x.timestamp, reverse=True)
 
-    def generate_compliance_report(self, days: int = 30) -> dict[str, Any]:
-        """Generate compliance report for audit logs"""
+    def generate_compliance_report(self, days: int = 30) -> Dict[str, Any]:
+        """Generate compliance report for audit logs."""
         end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
 
@@ -909,11 +841,11 @@ class EnterpriseLoggingService:
 # ========================================================================
 
 # Create global logger instance
-_global_logger: Optional[EnterpriseLoggingService] = None
+_global_logger: EnterpriseLoggingService | None = None
 
 
 def get_enterprise_logger(config: LoggingConfig = None) -> EnterpriseLoggingService:
-    """Get or create global enterprise logger instance"""
+    """Get or create global enterprise logger instance."""
     global _global_logger
     if _global_logger is None:
         _global_logger = EnterpriseLoggingService(config)
@@ -922,7 +854,7 @@ def get_enterprise_logger(config: LoggingConfig = None) -> EnterpriseLoggingServ
 
 # Convenience function for quick access
 def get_logger() -> EnterpriseLoggingService:
-    """Get the global enterprise logger"""
+    """Get the global enterprise logger."""
     return get_enterprise_logger()
 
 
@@ -985,13 +917,13 @@ if __name__ == "__main__":
     # Timer usage
     import asyncio
 
-    async def example_async_operation():
+    async def example_async_operation(self) -> None:
         async with logger.timer("expensive_operation"):
             await asyncio.sleep(0.1)  # Simulate work
 
     # Decorator usage
     @logger.trace_operation("data_processing")
-    def process_data():
+    def process_data(self) -> None:
         time.sleep(0.05)  # Simulate work
         return "processed"
 

@@ -11,13 +11,13 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
+from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.rss_service import (
     FeedConfiguration,
     FeedItem,
     RSSFeedService,
 )
-
-from scripts.ingestion_pipeline import ContentItem
 
 
 class TestRSSFeedService:
@@ -26,8 +26,8 @@ class TestRSSFeedService:
     Tests feed parsing, content filtering, and cognitive integration.
     """
 
-    @pytest.fixture()
-    def rss_config(self):
+    @pytest.fixture
+    def rss_config(self) -> None:
         """Standard RSS feed configuration"""
         return FeedConfiguration(
             url="https://example.com/rss.xml",
@@ -38,8 +38,8 @@ class TestRSSFeedService:
             min_content_length=150,
         )
 
-    @pytest.fixture()
-    def atom_config(self):
+    @pytest.fixture
+    def atom_config(self) -> None:
         """Atom feed configuration"""
         return FeedConfiguration(
             url="https://example.com/atom.xml",
@@ -51,20 +51,20 @@ class TestRSSFeedService:
             exclude_keywords=["spam", "advertisement"],
         )
 
-    @pytest.fixture()
-    def mock_cognitive_engine(self):
+    @pytest.fixture
+    def mock_cognitive_engine(self) -> None:
         """Mock cognitive engine for quality assessment"""
         engine = Mock()
         engine.assess_content_quality = AsyncMock(return_value=0.82)
         return engine
 
-    @pytest.fixture()
-    def rss_service(self, mock_cognitive_engine):
+    @pytest.fixture
+    def rss_service(self) -> None:
         """Create RSS service instance"""
         return RSSFeedService(cognitive_engine=mock_cognitive_engine)
 
-    @pytest.fixture()
-    def sample_rss_content(self):
+    @pytest.fixture
+    def sample_rss_content(self) -> None:
         """Sample RSS 2.0 XML content"""
         return """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -96,8 +96,8 @@ class TestRSSFeedService:
     </channel>
 </rss>"""
 
-    @pytest.fixture()
-    def sample_atom_content(self):
+    @pytest.fixture
+    def sample_atom_content(self) -> None:
         """Sample Atom 1.0 XML content"""
         return """<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -127,13 +127,8 @@ class TestRSSFeedService:
     # RSS FEED PARSING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_fetch_and_parse_rss_feed_successfully(
-        self,
-        rss_service,
-        rss_config,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_fetch_and_parse_rss_feed_successfully(self) -> None:
         """
         Test: Should fetch and parse RSS 2.0 feeds with proper
         item extraction and metadata preservation.
@@ -168,13 +163,8 @@ class TestRSSFeedService:
         assert "Artificial Intelligence" in item.categories
         assert item.feed_name == rss_config.name
 
-    @pytest.mark.asyncio()
-    async def test_should_parse_atom_feeds_correctly(
-        self,
-        rss_service,
-        atom_config,
-        sample_atom_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_parse_atom_feeds_correctly(self) -> None:
         """
         Test: Should parse Atom 1.0 feeds with proper namespace handling
         and content extraction.
@@ -205,12 +195,8 @@ class TestRSSFeedService:
             item.content
         )  # Should have content from both summary and content elements
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_malformed_xml_gracefully(
-        self,
-        rss_service,
-        rss_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_malformed_xml_gracefully(self) -> None:
         """
         Test: Should handle malformed XML feeds with proper error reporting
         and recovery strategies.
@@ -244,12 +230,8 @@ class TestRSSFeedService:
     # CONTENT FILTERING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_apply_keyword_filtering_accurately(
-        self,
-        rss_service,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_apply_keyword_filtering_accurately(self) -> None:
         """
         Test: Should filter RSS items by keywords with case-insensitive matching
         and support for multiple keyword patterns.
@@ -279,12 +261,8 @@ class TestRSSFeedService:
             keywords_lower = [kw.lower() for kw in config.keyword_filters]
             assert any(keyword in content_text for keyword in keywords_lower)
 
-    @pytest.mark.asyncio()
-    async def test_should_exclude_content_by_exclude_keywords(
-        self,
-        rss_service,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_exclude_content_by_exclude_keywords(self) -> None:
         """
         Test: Should exclude RSS items containing specified exclude keywords
         to filter out unwanted content.
@@ -316,8 +294,8 @@ class TestRSSFeedService:
                 keyword in content_text for keyword in exclude_keywords_lower
             )
 
-    @pytest.mark.asyncio()
-    async def test_should_apply_minimum_content_length_filter(self, rss_service):
+    @pytest.mark.asyncio
+    async def test_should_apply_minimum_content_length_filter(self) -> None:
         """
         Test: Should filter out RSS items with insufficient content length
         to focus on substantial articles.
@@ -365,12 +343,8 @@ class TestRSSFeedService:
     # DEDUPLICATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_deduplicate_items_by_url_and_title(
-        self,
-        rss_service,
-        rss_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_deduplicate_items_by_url_and_title(self) -> None:
         """
         Test: Should remove duplicate items based on URL and title similarity
         to avoid processing the same content multiple times.
@@ -424,13 +398,8 @@ class TestRSSFeedService:
     # COGNITIVE INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_cognitive_quality_assessment(
-        self,
-        rss_service,
-        rss_config,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_integrate_cognitive_quality_assessment(self) -> None:
         """
         Test: Should apply cognitive quality assessment to RSS feed items
         and incorporate quality scores into item metadata.
@@ -460,12 +429,8 @@ class TestRSSFeedService:
     # HTTP CACHING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_http_304_not_modified_efficiently(
-        self,
-        rss_service,
-        rss_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_http_304_not_modified_efficiently(self) -> None:
         """
         Test: Should handle HTTP 304 Not Modified responses efficiently
         using ETags and Last-Modified headers for bandwidth optimization.
@@ -501,13 +466,8 @@ class TestRSSFeedService:
     # CONTENT ITEM CONVERSION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_convert_feed_items_to_content_items_correctly(
-        self,
-        rss_service,
-        rss_config,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_convert_feed_items_to_content_items_correctly(self) -> None:
         """
         Test: Should convert RSS feed items to standardized ContentItem format
         with comprehensive metadata preservation.
@@ -553,8 +513,8 @@ class TestRSSFeedService:
     # ERROR HANDLING TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_http_errors_gracefully(self, rss_service, rss_config):
+    @pytest.mark.asyncio
+    async def test_should_handle_http_errors_gracefully(self) -> None:
         """
         Test: Should handle HTTP errors (404, 500, etc.) with proper
         error reporting and recovery strategies.
@@ -574,12 +534,8 @@ class TestRSSFeedService:
         assert result.http_status == 404
         assert result.execution_time > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_network_timeouts_appropriately(
-        self,
-        rss_service,
-        rss_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_network_timeouts_appropriately(self) -> None:
         """
         Test: Should handle network timeouts with proper error reporting
         and timeout configuration.
@@ -599,8 +555,8 @@ class TestRSSFeedService:
     # HEALTH CHECK AND MAINTENANCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_comprehensive_health_status(self, rss_service):
+    @pytest.mark.asyncio
+    async def test_should_provide_comprehensive_health_status(self) -> None:
         """
         Test: Should provide detailed health check information including
         cache statistics and service availability.
@@ -619,13 +575,8 @@ class TestRSSFeedService:
         assert health_status["feed_cache_size"] >= 0
         assert health_status["item_cache_size"] >= 0
 
-    @pytest.mark.asyncio()
-    async def test_should_cleanup_resources_properly(
-        self,
-        rss_service,
-        rss_config,
-        sample_rss_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_cleanup_resources_properly(self) -> None:
         """
         Test: Should properly close connections and clean up resources
         when service is shut down.
@@ -657,7 +608,7 @@ class TestRSSFeedService:
 class TestFeedDataStructures:
     """Test RSS/Atom feed-specific data structures"""
 
-    def test_feed_configuration_should_have_sensible_defaults(self):
+    def test_feed_configuration_should_have_sensible_defaults(self) -> None:
         """
         Test: FeedConfiguration should provide reasonable default values
         for all configuration parameters.
@@ -677,7 +628,7 @@ class TestFeedDataStructures:
         assert config.enable_full_content_extraction
         assert config.custom_headers == {}
 
-    def test_feed_item_should_be_immutable(self):
+    def test_feed_item_should_be_immutable(self) -> None:
         """
         Test: FeedItem instances should be immutable to ensure
         data integrity throughout processing pipeline.

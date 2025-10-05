@@ -17,7 +17,7 @@ copy .env.template .env
 You need to get these **3 essential credentials** (I'll tell you exactly how):
 
 1. **Firecrawl API Key** (for web scraping)
-2. **PubMed Email** (free, just your email)  
+2. **PubMed Email** (free, just your email)
 3. **Your Email Credentials** (for email integration)
 
 ### **Step 3: Run Validation Script**
@@ -54,7 +54,7 @@ python scripts/setup_production_apis.py
   2. Security → 2-Step Verification → App Passwords
   3. Generate REDACTED_SECRET for "PAKE System"
   4. Use your Gmail + app REDACTED_SECRET
-- **Where to put it**: 
+- **Where to put it**:
   ```
   EMAIL_USERNAME=your_email@gmail.com
   EMAIL_PASSWORD=your_16_character_app_REDACTED_SECRET
@@ -71,7 +71,7 @@ python scripts/setup_production_apis.py
 
 #### **OpenAI API** (Enhanced AI Processing)
 - **Get it**: https://platform.openai.com/api-keys
-- **What you need**: API Key  
+- **What you need**: API Key
 - **Put in**: `OPENAI_API_KEY=sk-your_key`
 
 ---
@@ -82,7 +82,7 @@ Once you have the credentials, I will:
 
 1. ✅ **Validate all API connections**
 2. ✅ **Deploy advanced email integration service**
-3. ✅ **Activate social media monitoring** 
+3. ✅ **Activate social media monitoring**
 4. ✅ **Set up RSS feed automation**
 5. ✅ **Deploy real-time analytics dashboard**
 6. ✅ **Create production monitoring**
@@ -106,7 +106,7 @@ FIRECRAWL_API_KEY=your_actual_firecrawl_key
 PUBMED_EMAIL=your_email@domain.com
 VAULT_PATH=D:\Knowledge-Vault
 
-# RECOMMENDED  
+# RECOMMENDED
 EMAIL_USERNAME=your_email@gmail.com
 EMAIL_PASSWORD=your_gmail_app_REDACTED_SECRET
 ```
@@ -116,7 +116,7 @@ EMAIL_PASSWORD=your_gmail_app_REDACTED_SECRET
 python scripts/setup_production_apis.py
 ```
 
-### **Step 4: Deploy Advanced Services** 
+### **Step 4: Deploy Advanced Services**
 ```bash
 python scripts/deploy_advanced_services.py
 ```
@@ -134,14 +134,14 @@ After completing these steps, you'll have:
 
 ### **✅ Production-Ready Features**
 - 🌐 **Real web scraping** with JavaScript rendering
-- 📚 **Live academic paper search** from ArXiv  
+- 📚 **Live academic paper search** from ArXiv
 - 🏥 **Biomedical literature** from PubMed
 - 📧 **Email knowledge extraction** from your inbox
 - 📱 **Social media monitoring** (if configured)
 - 📡 **RSS feed automation** for news/blogs
 - 📊 **Real-time analytics dashboard** at http://localhost:3002
 
-### **✅ Enhanced Capabilities**  
+### **✅ Enhanced Capabilities**
 - **Sub-second multi-source research** on any topic
 - **Intelligent content deduplication** across sources
 - **Quality-based ranking and filtering**
@@ -157,7 +157,7 @@ After completing these steps, you'll have:
 - Verify your account has available credits
 - Test with a simple webpage first
 
-### **"PubMed rate limited"**  
+### **"PubMed rate limited"**
 - Add your API key: `PUBMED_API_KEY=your_ncbi_key`
 - Get it free at: https://www.ncbi.nlm.nih.gov/account/
 
@@ -182,9 +182,9 @@ After completing these steps, you'll have:
 When everything is working, you'll see:
 ```
 ✅ PAKE+ SYSTEM - PRODUCTION READINESS REPORT
-✅ Firecrawl API: Working correctly  
+✅ Firecrawl API: Working correctly
 ✅ PubMed API: Working correctly
-✅ ArXiv API: Working correctly  
+✅ ArXiv API: Working correctly
 ✅ Email Integration: Connected and operational
 ✅ Pipeline Test: 8 items collected from 4 sources in 0.12s
 

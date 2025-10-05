@@ -1,7 +1,7 @@
 # Quickstart Guide: Intelligent Content Curation
 
-**Feature**: 001-intelligent-content-curation  
-**Date**: 2025-01-23  
+**Feature**: 001-intelligent-content-curation
+**Date**: 2025-01-23
 **Status**: Complete
 
 ## Overview
@@ -488,5 +488,5 @@ After completing the quickstart validation:
 
 ---
 
-*Quickstart guide completed: 2025-01-23*  
+*Quickstart guide completed: 2025-01-23*
 *Ready for production deployment*

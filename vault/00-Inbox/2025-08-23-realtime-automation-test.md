@@ -42,7 +42,7 @@ def real_time_processing(file_path):
 ## Analysis Factors
 This note should score well on:
 - **Length**: Medium-length content (0.15 points)
-- **Structure**: Headers, lists, code blocks (0.2 points) 
+- **Structure**: Headers, lists, code blocks (0.2 points)
 - **Source**: Local system (0.15 points)
 - **Tags**: Will be added automatically
 - **Connections**: Will be established through processing

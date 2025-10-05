@@ -14,12 +14,11 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 # OpenTelemetry imports
 from opentelemetry import metrics, trace
@@ -37,14 +36,17 @@ from opentelemetry.sdk.metrics.export import (
 from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.trace import SpanKind, Status, StatusCode
+from opentelemetry.trace import Status, StatusCode
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 class ObservabilityLevel(Enum):
-    """Observability detail levels"""
+    """Observability detail levels."""
 
     MINIMAL = "minimal"
     STANDARD = "standard"
@@ -53,7 +55,7 @@ class ObservabilityLevel(Enum):
 
 
 class MetricType(Enum):
-    """Types of metrics"""
+    """Types of metrics."""
 
     COUNTER = "counter"
     HISTOGRAM = "histogram"
@@ -63,7 +65,7 @@ class MetricType(Enum):
 
 @dataclass
 class TelemetryConfig:
-    """Configuration for telemetry system"""
+    """Configuration for telemetry system."""
 
     service_name: str = "pake-system"
     service_version: str = "2.0.0"
@@ -95,9 +97,9 @@ class TelemetryConfig:
 
 
 class TelemetrySystem:
-    """Centralized telemetry system for PAKE observability"""
+    """Centralized telemetry system for PAKE observability."""
 
-    def __init__(self, config: TelemetryConfig = None):
+    def __init__(self) -> None:
         self.config = config or TelemetryConfig()
 
         # OpenTelemetry components
@@ -107,7 +109,7 @@ class TelemetrySystem:
         self.meter = None
 
         # Custom metrics
-        self.custom_metrics: dict[str, Any] = {}
+        self.custom_metrics: Dict[str, Any] = {}
         self.metric_callbacks: dict[str, Callable] = {}
 
         # Performance tracking
@@ -119,10 +121,10 @@ class TelemetrySystem:
         self._background_tasks: list[asyncio.Task] = []
         self._running = False
 
-        logger.info(f"TelemetrySystem initialized for {self.config.service_name}")
+        logger.info("TelemetrySystem initialized for %s", self.config.service_name)
 
-    async def initialize(self):
-        """Initialize telemetry system"""
+    async def initialize(self) -> None:
+        """Initialize telemetry system."""
         if self._running:
             return
 
@@ -145,7 +147,7 @@ class TelemetrySystem:
                     await self._setup_tracing(resource)
                 except Exception as e:
                     logger.warning(
-                        f"Failed to setup tracing: {e}. Continuing without tracing.",
+                        "Failed to setup tracing: %s. Continuing without tracing.", e,
                     )
 
             # Initialize metrics
@@ -154,7 +156,7 @@ class TelemetrySystem:
                     await self._setup_metrics(resource)
                 except Exception as e:
                     logger.warning(
-                        f"Failed to setup metrics: {e}. Continuing without metrics.",
+                        "Failed to setup metrics: %s. Continuing without metrics.", e,
                     )
 
             # Setup instrumentation
@@ -162,7 +164,7 @@ class TelemetrySystem:
                 await self._setup_instrumentation()
             except Exception as e:
                 logger.warning(
-                    f"Failed to setup instrumentation: {e}. Continuing without instrumentation.",
+                    "Failed to setup instrumentation: %s. Continuing without instrumentation.", e,
                 )
 
             # Setup structured logging
@@ -171,7 +173,7 @@ class TelemetrySystem:
                     await self._setup_structured_logging()
                 except Exception as e:
                     logger.warning(
-                        f"Failed to setup structured logging: {e}. Continuing without structured logging.",
+                        "Failed to setup structured logging: %s. Continuing without structured logging.", e,
                     )
 
             # Start background tasks
@@ -182,7 +184,7 @@ class TelemetrySystem:
                 ]
             except Exception as e:
                 logger.warning(
-                    f"Failed to start background tasks: {e}. Continuing without background tasks.",
+                    "Failed to start background tasks: %s. Continuing without background tasks.", e,
                 )
                 self._background_tasks = []
 
@@ -192,14 +194,14 @@ class TelemetrySystem:
             )
 
         except Exception as e:
-            logger.error(f"Failed to initialize telemetry system: {e}")
+            logger.error("Failed to initialize telemetry system: %s", e)
             logger.info(
                 "Continuing without telemetry - system will operate with reduced observability",
             )
             self._running = False
 
-    async def shutdown(self):
-        """Shutdown telemetry system"""
+    async def shutdown(self) -> None:
+        """Shutdown telemetry system."""
         if not self._running:
             return
 
@@ -223,8 +225,8 @@ class TelemetrySystem:
         self._running = False
         logger.info("Observability framework shutdown complete")
 
-    async def _setup_tracing(self, resource: Resource):
-        """Setup distributed tracing"""
+    async def _setup_tracing(self) -> None:
+        """Setup distributed tracing."""
         self.tracer_provider = TracerProvider(resource=resource)
 
         # Add exporters
@@ -249,8 +251,8 @@ class TelemetrySystem:
 
         logger.info("Distributed tracing initialized")
 
-    async def _setup_metrics(self, resource: Resource):
-        """Setup metrics collection"""
+    async def _setup_metrics(self) -> None:
+        """Setup metrics collection."""
         readers = []
 
         # Console metrics reader
@@ -274,10 +276,10 @@ class TelemetrySystem:
             prometheus_reader = PrometheusMetricReader(port=self.config.prometheus_port)
             readers.append(prometheus_reader)
             logger.info(
-                f"Prometheus metrics available at http://localhost:{self.config.prometheus_port}/metrics",
+                "Prometheus metrics available at http://localhost:%s/metrics", self.config.prometheus_port,
             )
         except Exception as e:
-            logger.warning(f"Failed to setup Prometheus reader: {e}")
+            logger.warning("Failed to setup Prometheus reader: %s", e)
 
         # Create meter provider
         self.meter_provider = MeterProvider(resource=resource, metric_readers=readers)
@@ -293,8 +295,8 @@ class TelemetrySystem:
 
         logger.info("Metrics collection initialized")
 
-    async def _setup_custom_metrics(self):
-        """Setup custom application metrics"""
+    async def _setup_custom_metrics(self) -> None:
+        """Setup custom application metrics."""
         if not self.config.enable_custom_metrics or not self.meter:
             return
 
@@ -367,24 +369,24 @@ class TelemetrySystem:
 
         logger.info("Custom metrics initialized")
 
-    async def _setup_instrumentation(self):
-        """Setup automatic instrumentation"""
+    async def _setup_instrumentation(self) -> None:
+        """Setup automatic instrumentation."""
         if self.config.enable_redis_instrumentation:
             try:
                 RedisInstrumentor().instrument()
                 logger.info("Redis instrumentation enabled")
             except Exception as e:
-                logger.warning(f"Failed to instrument Redis: {e}")
+                logger.warning("Failed to instrument Redis: %s", e)
 
         if self.config.enable_asyncio_instrumentation:
             try:
                 AsyncioInstrumentor().instrument()
                 logger.info("Asyncio instrumentation enabled")
             except Exception as e:
-                logger.warning(f"Failed to instrument asyncio: {e}")
+                logger.warning("Failed to instrument asyncio: %s", e)
 
-    async def _setup_structured_logging(self):
-        """Setup structured logging with trace correlation"""
+    async def _setup_structured_logging(self) -> None:
+        """Setup structured logging with trace correlation."""
         # Configure logging format
         log_format = {
             "timestamp": "%(asctime)s",
@@ -400,7 +402,7 @@ class TelemetrySystem:
 
         # Create custom formatter
         class StructuredFormatter(logging.Formatter):
-            def format(self, record):
+            def format(self) -> None:
                 # Add trace context if available
                 if hasattr(record, "trace_id"):
                     span = trace.get_current_span()
@@ -439,13 +441,8 @@ class TelemetrySystem:
         logger.info("Structured logging initialized")
 
     @contextmanager
-    def trace_operation(
-        self,
-        operation_name: str,
-        attributes: dict[str, Any] = None,
-        span_kind: SpanKind = SpanKind.INTERNAL,
-    ):
-        """Context manager for tracing operations"""
+    def trace_operation(self) -> None:
+        """Context manager for tracing operations."""
         if not self.tracer:
             yield None
             return
@@ -500,13 +497,8 @@ class TelemetrySystem:
                     ][-1000:]
 
     @asynccontextmanager
-    async def trace_async_operation(
-        self,
-        operation_name: str,
-        attributes: dict[str, Any] = None,
-        span_kind: SpanKind = SpanKind.INTERNAL,
-    ):
-        """Async context manager for tracing operations"""
+    async def trace_async_operation(self) -> None:
+        """Async context manager for tracing operations."""
         if not self.tracer:
             yield None
             return
@@ -548,16 +540,10 @@ class TelemetrySystem:
                         {"operation": operation_name},
                     )
 
-    def record_metric(
-        self,
-        metric_name: str,
-        value: float,
-        attributes: dict[str, str] = None,
-        metric_type: MetricType = MetricType.COUNTER,
-    ):
-        """Record a custom metric"""
+    def record_metric(self) -> None:
+        """Record a custom metric."""
         if metric_name not in self.custom_metrics:
-            logger.warning(f"Metric {metric_name} not found in custom metrics")
+            logger.warning("Metric %s not found in custom metrics", metric_name)
             return
 
         metric = self.custom_metrics[metric_name]
@@ -570,14 +556,8 @@ class TelemetrySystem:
         elif metric_type == MetricType.UP_DOWN_COUNTER:
             metric.add(value, attrs)
 
-    def record_task_execution(
-        self,
-        task_type: str,
-        duration: float,
-        success: bool = True,
-        agent_id: str = None,
-    ):
-        """Record task execution metrics"""
+    def record_task_execution(self) -> None:
+        """Record task execution metrics."""
         attributes = {"task_type": task_type}
         if agent_id:
             attributes["agent_id"] = agent_id
@@ -595,13 +575,8 @@ class TelemetrySystem:
         if not success and "error_counter" in self.custom_metrics:
             self.custom_metrics["error_counter"].add(1, attributes)
 
-    def record_message_processing(
-        self,
-        message_type: str,
-        agent_type: str,
-        success: bool = True,
-    ):
-        """Record message processing metrics"""
+    def record_message_processing(self) -> None:
+        """Record message processing metrics."""
         if "message_counter" in self.custom_metrics:
             attributes = {
                 "message_type": message_type,
@@ -610,8 +585,8 @@ class TelemetrySystem:
             }
             self.custom_metrics["message_counter"].add(1, attributes)
 
-    def record_cache_operation(self, hit: bool, cache_level: str = "unknown"):
-        """Record cache operation metrics"""
+    def record_cache_operation(self) -> None:
+        """Record cache operation metrics."""
         attributes = {"cache_level": cache_level}
 
         if hit and "cache_hits" in self.custom_metrics:
@@ -619,18 +594,14 @@ class TelemetrySystem:
         elif not hit and "cache_misses" in self.custom_metrics:
             self.custom_metrics["cache_misses"].add(1, attributes)
 
-    def record_content_quality(
-        self,
-        quality_score: float,
-        source_type: str = "unknown",
-    ):
-        """Record content quality metrics"""
+    def record_content_quality(self) -> None:
+        """Record content quality metrics."""
         if "content_quality" in self.custom_metrics:
             attributes = {"source_type": source_type}
             self.custom_metrics["content_quality"].record(quality_score, attributes)
 
-    def update_active_agents(self, count: int, agent_type: str = "all"):
-        """Update active agents count"""
+    def update_active_agents(self) -> None:
+        """Update active agents count."""
         if "active_agents" in self.custom_metrics:
             attributes = {"agent_type": agent_type}
             # This is a gauge, so we set the absolute value
@@ -638,8 +609,8 @@ class TelemetrySystem:
             if current_span and current_span.is_recording():
                 current_span.set_attribute("active_agents_count", count)
 
-    async def _metrics_collection_loop(self):
-        """Background metrics collection loop"""
+    async def _metrics_collection_loop(self) -> None:
+        """Background metrics collection loop."""
         logger.info("Starting metrics collection loop")
 
         while self._running:
@@ -653,13 +624,13 @@ class TelemetrySystem:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics collection error: {e}")
+                logger.error("Metrics collection error: %s", e)
                 await asyncio.sleep(5)
 
         logger.info("Metrics collection loop stopped")
 
-    async def _health_monitoring_loop(self):
-        """Background health monitoring loop"""
+    async def _health_monitoring_loop(self) -> None:
+        """Background health monitoring loop."""
         logger.info("Starting health monitoring loop")
 
         while self._running:
@@ -668,20 +639,20 @@ class TelemetrySystem:
                 health_status = await self._check_system_health()
 
                 if not health_status["healthy"]:
-                    logger.warning(f"System health degraded: {health_status}")
+                    logger.warning("System health degraded: %s", health_status)
 
                 await asyncio.sleep(60)  # Check every minute
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health monitoring error: {e}")
+                logger.error("Health monitoring error: %s", e)
                 await asyncio.sleep(10)
 
         logger.info("Health monitoring loop stopped")
 
-    async def _collect_performance_metrics(self):
-        """Collect performance metrics"""
+    async def _collect_performance_metrics(self) -> None:
+        """Collect performance metrics."""
         # Calculate and emit operation timing statistics
         for operation, timings in self.operation_timings.items():
             if timings:
@@ -691,12 +662,12 @@ class TelemetrySystem:
 
                 # Log performance statistics
                 logger.debug(
-                    f"Operation {operation}: avg={avg_time:.3f}s, max={
-                        max_time:.3f}s, min={min_time:.3f}s",
+                    "Operation %s: avg=%.3fs, max=%.3fs, min=%.3fs", operation, avg_time,
+                        max_time, min_time,
                 )
 
-    async def _collect_system_metrics(self):
-        """Collect system-level metrics"""
+    async def _collect_system_metrics(self) -> None:
+        """Collect system-level metrics."""
         try:
             import psutil
 
@@ -706,8 +677,8 @@ class TelemetrySystem:
         except ImportError:
             logger.warning("psutil not available for system metrics")
 
-    async def _check_system_health(self) -> dict[str, Any]:
-        """Check overall system health"""
+    async def _check_system_health(self) -> Dict[str, Any]:
+        """Check overall system health."""
         health_status = {
             "healthy": True,
             "checks": {},
@@ -750,7 +721,7 @@ class TelemetrySystem:
         return health_status
 
     def _get_cpu_usage(self, options: CallbackOptions) -> list[Observation]:
-        """Callback for CPU usage metric"""
+        """Callback for CPU usage metric."""
         try:
             import psutil
 
@@ -760,7 +731,7 @@ class TelemetrySystem:
             return [Observation(0.0)]
 
     def _get_memory_usage(self, options: CallbackOptions) -> list[Observation]:
-        """Callback for memory usage metric"""
+        """Callback for memory usage metric."""
         try:
             import psutil
 
@@ -769,8 +740,8 @@ class TelemetrySystem:
         except ImportError:
             return [Observation(0.0)]
 
-    def get_telemetry_summary(self) -> dict[str, Any]:
-        """Get telemetry system summary"""
+    def get_telemetry_summary(self) -> Dict[str, Any]:
+        """Get telemetry system summary."""
         return {
             "service": self.config.service_name,
             "version": self.config.service_version,
@@ -791,7 +762,7 @@ _telemetry_instance = None
 
 
 def get_telemetry() -> TelemetrySystem:
-    """Get global telemetry instance"""
+    """Get global telemetry instance."""
     global _telemetry_instance
     if _telemetry_instance is None:
         _telemetry_instance = TelemetrySystem()
@@ -799,32 +770,32 @@ def get_telemetry() -> TelemetrySystem:
 
 
 def initialize_telemetry(config: TelemetryConfig = None) -> TelemetrySystem:
-    """Initialize global telemetry system"""
+    """Initialize global telemetry system."""
     global _telemetry_instance
     _telemetry_instance = TelemetrySystem(config)
     return _telemetry_instance
 
 
 async def setup_observability(config: TelemetryConfig = None) -> TelemetrySystem:
-    """Setup and initialize observability system"""
+    """Setup and initialize observability system."""
     telemetry = initialize_telemetry(config)
     await telemetry.initialize()
     return telemetry
 
 
 # Convenience decorators
-def trace_function(operation_name: str = None, attributes: dict[str, Any] = None):
-    """Decorator for tracing functions"""
+def trace_function(self) -> None:
+    """Decorator for tracing functions."""
 
-    def decorator(func):
-        async def async_wrapper(*args, **kwargs):
+    def decorator(self) -> None:
+        async def async_wrapper(self) -> None:
             name = operation_name or f"{func.__module__}.{func.__qualname__}"
             telemetry = get_telemetry()
 
             async with telemetry.trace_async_operation(name, attributes):
                 return await func(*args, **kwargs)
 
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             name = operation_name or f"{func.__module__}.{func.__qualname__}"
             telemetry = get_telemetry()
 
@@ -838,14 +809,11 @@ def trace_function(operation_name: str = None, attributes: dict[str, Any] = None
     return decorator
 
 
-def record_execution_time(
-    metric_name: str = "execution_time",
-    attributes: dict[str, str] = None,
-):
-    """Decorator for recording execution time"""
+def record_execution_time(self) -> None:
+    """Decorator for recording execution time."""
 
-    def decorator(func):
-        async def async_wrapper(*args, **kwargs):
+    def decorator(self) -> None:
+        async def async_wrapper(self) -> None:
             telemetry = get_telemetry()
             start_time = time.time()
 
@@ -870,7 +838,7 @@ def record_execution_time(
                 )
                 raise
 
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             telemetry = get_telemetry()
             start_time = time.time()
 
@@ -904,7 +872,7 @@ def record_execution_time(
 
 # Configuration presets
 def create_development_config() -> TelemetryConfig:
-    """Create development telemetry configuration"""
+    """Create development telemetry configuration."""
     return TelemetryConfig(
         environment="development",
         observability_level=ObservabilityLevel.DEBUG,
@@ -920,7 +888,7 @@ def create_production_config(
     trace_endpoint: str = None,
     metrics_endpoint: str = None,
 ) -> TelemetryConfig:
-    """Create production telemetry configuration"""
+    """Create production telemetry configuration."""
     return TelemetryConfig(
         environment="production",
         observability_level=ObservabilityLevel.STANDARD,
@@ -935,7 +903,7 @@ def create_production_config(
 
 
 def create_testing_config() -> TelemetryConfig:
-    """Create testing telemetry configuration"""
+    """Create testing telemetry configuration."""
     return TelemetryConfig(
         environment="testing",
         observability_level=ObservabilityLevel.MINIMAL,

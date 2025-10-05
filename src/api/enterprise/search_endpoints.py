@@ -4,7 +4,7 @@ World-class search endpoints with tenant isolation, ML enhancement, and comprehe
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -45,7 +45,7 @@ async def perform_search(
         raise HTTPException(status_code=400, detail="Tenant context required")
 
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
 
         # Validate input parameters
         validation = await security_enforcer.validate_input_parameters(request.dict())
@@ -67,7 +67,7 @@ async def perform_search(
         )
 
         result = await orchestrator.execute_ingestion_plan(plan)
-        execution_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        execution_time_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         # Process results
         processed_results = await process_search_results(
@@ -89,7 +89,7 @@ async def perform_search(
                     )
                     processed_results = enhanced_results
             except Exception as e:
-                logger.warning(f"ML enhancement failed: {e}")
+                logger.warning("ML enhancement failed: %s", e)
 
         # Content summarization if enabled
         if request.enable_summarization and processed_results:
@@ -104,7 +104,7 @@ async def perform_search(
                             )
                             result_item["summary"] = summary
             except Exception as e:
-                logger.warning(f"Content summarization failed: {e}")
+                logger.warning("Content summarization failed: %s", e)
 
         # Save search history (background task)
         background_tasks.add_task(
@@ -126,7 +126,9 @@ async def perform_search(
 
         if not scan_result["clean"]:
             logger.warning(
-                f"Security scan warning for tenant {tenant_id}: {scan_result}",
+                "Security scan warning for tenant %s: %s",
+                tenant_id,
+                scan_result,
             )
 
         # Record search metrics
@@ -160,7 +162,7 @@ async def perform_search(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Search error for tenant {tenant_id}: {e}")
+        logger.error("Search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search service error")
 
 
@@ -172,7 +174,7 @@ async def get_search_history(
     user_filter: str | None = None,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get search history for current tenant"""
+    """Get search history for current tenant."""
     tenant_id = get_current_tenant_id()
     user_id = get_current_user_id()
 
@@ -229,7 +231,7 @@ async def get_search_history(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Search history error for tenant {tenant_id}: {e}")
+        logger.error("Search history error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search history service error")
 
 
@@ -239,7 +241,7 @@ async def get_search_analytics(
     days: int = 30,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get search analytics for current tenant"""
+    """Get search analytics for current tenant."""
     tenant_id = get_current_tenant_id()
 
     if not tenant_id:
@@ -254,7 +256,7 @@ async def get_search_analytics(
         return {"success": True, "analytics": analytics}
 
     except Exception as e:
-        logger.error(f"Search analytics error for tenant {tenant_id}: {e}")
+        logger.error("Search analytics error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search analytics service error")
 
 
@@ -265,7 +267,7 @@ async def get_popular_searches(
     days: int = 7,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get popular searches within tenant"""
+    """Get popular searches within tenant."""
     tenant_id = get_current_tenant_id()
 
     if not tenant_id:
@@ -288,7 +290,7 @@ async def get_popular_searches(
         }
 
     except Exception as e:
-        logger.error(f"Popular searches error for tenant {tenant_id}: {e}")
+        logger.error("Popular searches error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Popular searches service error")
 
 
@@ -298,7 +300,7 @@ async def save_search(
     request: SearchRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Save search query for later use"""
+    """Save search query for later use."""
     tenant_id = get_current_tenant_id()
     user_id = get_current_user_id()
 
@@ -341,7 +343,7 @@ async def save_search(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Save search error for tenant {tenant_id}: {e}")
+        logger.error("Save search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Save search service error")
 
 
@@ -352,7 +354,7 @@ async def get_saved_searches(
     public_only: bool = False,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get saved searches for current tenant"""
+    """Get saved searches for current tenant."""
     tenant_id = get_current_tenant_id()
     user_id = get_current_user_id()
 
@@ -408,7 +410,7 @@ async def get_saved_searches(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Get saved searches error for tenant {tenant_id}: {e}")
+        logger.error("Get saved searches error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Saved searches service error")
 
 
@@ -432,7 +434,7 @@ async def quick_search(
         raise HTTPException(status_code=400, detail="Tenant context required")
 
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
 
         # Validate input
         validation = await security_enforcer.validate_input_parameters(request.dict())
@@ -466,7 +468,7 @@ async def quick_search(
         )
 
         result = await orchestrator.execute_ingestion_plan(plan)
-        execution_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        execution_time_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         # Process results
         processed_results = await process_search_results(
@@ -493,7 +495,7 @@ async def quick_search(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Quick search error for tenant {tenant_id}: {e}")
+        logger.error("Quick search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Quick search service error")
 
 
@@ -505,8 +507,8 @@ async def process_search_results(
     request,
     tenant_id: str,
     user_id: str,
-) -> list[dict[str, Any]]:
-    """Process raw search results into standardized format"""
+) -> list[Dict[str, Any]]:
+    """Process raw search results into standardized format."""
     processed_results = []
 
     try:
@@ -521,7 +523,7 @@ async def process_search_results(
                         "timestamp": getattr(
                             item,
                             "timestamp",
-                            datetime.utcnow(),
+                            datetime.now(UTC),
                         ).isoformat(),
                         "relevance_score": getattr(item, "relevance_score", 0.0),
                         "metadata": getattr(item, "metadata", {}),
@@ -539,20 +541,12 @@ async def process_search_results(
         return processed_results
 
     except Exception as e:
-        logger.error(f"Error processing search results: {e}")
+        logger.error("Error processing search results: %s", e)
         return []
 
 
-async def save_search_history(
-    tenant_id: str,
-    user_id: str,
-    query: str,
-    sources: list[str],
-    results_count: int,
-    execution_time_ms: float,
-    results: list[dict[str, Any]],
-):
-    """Background task to save search history"""
+async def save_search_history(self) -> None:
+    """Background task to save search history."""
     try:
         if not dal:
             return
@@ -576,17 +570,17 @@ async def save_search_history(
             },
         )
 
-        logger.debug(f"Search history saved for tenant {tenant_id}")
+        logger.debug("Search history saved for tenant %s", tenant_id)
 
     except Exception as e:
-        logger.error(f"Error saving search history: {e}")
+        logger.error("Error saving search history: %s", e)
 
 
 def calculate_quality_score(
-    results: list[dict[str, Any]],
+    results: list[Dict[str, Any]],
     execution_time_ms: float,
 ) -> float:
-    """Calculate search quality score based on results and performance"""
+    """Calculate search quality score based on results and performance."""
     try:
         if not results:
             return 0.0
@@ -611,12 +605,12 @@ def calculate_quality_score(
         return round(total_score, 2)
 
     except Exception as e:
-        logger.error(f"Error calculating quality score: {e}")
+        logger.error("Error calculating quality score: %s", e)
         return 0.5
 
 
-async def select_optimal_sources(query: str, tenant_id: str) -> list[str]:
-    """Intelligently select optimal sources based on query analysis"""
+async def select_optimal_sources(query: str, tenant_id: str) -> List[str]:
+    """Intelligently select optimal sources based on query analysis."""
     try:
         # Default sources
         sources = ["web"]
@@ -670,7 +664,7 @@ async def select_optimal_sources(query: str, tenant_id: str) -> list[str]:
         return sources
 
     except Exception as e:
-        logger.error(f"Error selecting optimal sources: {e}")
+        logger.error("Error selecting optimal sources: %s", e)
         return ["web"]  # Fallback to web only
 
 
@@ -686,10 +680,10 @@ class QuickSearchRequest(BaseModel):
 class SavedSearchRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     query: str = Field(..., min_length=1, max_length=500)
-    sources: list[str] = Field(default=["web"])
-    filters: dict[str, Any] | None = Field(default=None)
+    sources: List[str] = Field(default=["web"])
+    filters: Dict[str, Any] | None = Field(default=None)
     is_public: bool = Field(default=False)
-    tags: list[str] | None = Field(default=None)
+    tags: List[str] | None = Field(default=None)
 
 
 # Search metrics

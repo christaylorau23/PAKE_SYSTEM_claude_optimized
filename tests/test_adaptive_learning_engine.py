@@ -7,6 +7,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
+
 from services.ai.adaptive_learning_engine import (
     AdaptiveLearningConfig,
     AdaptiveLearningEngine,
@@ -24,8 +25,8 @@ from services.ai.adaptive_learning_engine import (
 )
 
 
-@pytest.fixture()
-def learning_config():
+@pytest.fixture
+def learning_config(self) -> None:
     """Test configuration for adaptive learning"""
     return AdaptiveLearningConfig(
         learning_rate=0.2,
@@ -42,18 +43,18 @@ def learning_config():
     )
 
 
-@pytest.fixture()
-def learning_engine(learning_config):
+@pytest.fixture
+def learning_engine(self) -> None:
     """Adaptive learning engine instance for testing"""
     return AdaptiveLearningEngine(learning_config)
 
 
-@pytest.fixture()
-def sample_interactions():
+@pytest.fixture
+def sample_interactions(self) -> None:
     """Sample user interactions for testing"""
     base_time = datetime.now(UTC)
 
-    interactions = [
+    return [
         UserInteraction(
             user_id="user_1",
             interaction_type=UserBehaviorType.CONTENT_VIEW,
@@ -97,11 +98,9 @@ def sample_interactions():
         ),
     ]
 
-    return interactions
 
-
-@pytest.fixture()
-def sample_recommendation_requests():
+@pytest.fixture
+def sample_recommendation_requests(self) -> None:
     """Sample recommendation requests for testing"""
     return [
         RecommendationRequest(
@@ -123,11 +122,8 @@ def sample_recommendation_requests():
 class TestAdaptiveLearningEngine:
     """Test the main adaptive learning engine functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_initialize_learning_engine_with_configuration(
-        self,
-        learning_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_initialize_learning_engine_with_configuration(self) -> None:
         """
         Test: Should initialize adaptive learning engine with proper configuration
         and default state ready for learning operations.
@@ -151,12 +147,8 @@ class TestAdaptiveLearningEngine:
         assert metrics["cache_hits"] == 0
         assert metrics["cache_misses"] == 0
 
-    @pytest.mark.asyncio()
-    async def test_should_record_user_interactions_and_update_profiles(
-        self,
-        learning_engine,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_record_user_interactions_and_update_profiles(self) -> None:
         """
         Test: Should record user interactions and automatically update
         user profiles with learned preferences in real-time.
@@ -188,13 +180,10 @@ class TestAdaptiveLearningEngine:
         assert metrics["interactions_processed"] == 3
         assert metrics["learning_updates"] >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_generate_personalized_recommendations_for_existing_user(
         self,
-        learning_engine,
-        sample_interactions,
-        sample_recommendation_requests,
-    ):
+    ) -> None:
         """
         Test: Should generate personalized recommendations based on learned
         user preferences with appropriate confidence and reasoning.
@@ -236,12 +225,8 @@ class TestAdaptiveLearningEngine:
         scores = [rec.relevance_score for rec in result.recommendations]
         assert scores == sorted(scores, reverse=True)
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_fallback_recommendations_for_new_users(
-        self,
-        learning_engine,
-        sample_recommendation_requests,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_provide_fallback_recommendations_for_new_users(self) -> None:
         """
         Test: Should provide fallback recommendations for users without
         sufficient interaction history or profile data.
@@ -261,12 +246,8 @@ class TestAdaptiveLearningEngine:
             assert rec.relevance_score > 0
             assert "Popular content" in rec.reasoning[0]
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_interaction_processing_safely(
-        self,
-        learning_engine,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_interaction_processing_safely(self) -> None:
         """
         Test: Should handle concurrent interaction processing without
         race conditions and maintain data consistency.
@@ -309,13 +290,8 @@ class TestAdaptiveLearningEngine:
             assert profile is not None
             assert profile.total_interactions == 4  # Each user has 4 interactions
 
-    @pytest.mark.asyncio()
-    async def test_should_implement_recommendation_caching_effectively(
-        self,
-        learning_engine,
-        sample_interactions,
-        sample_recommendation_requests,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_implement_recommendation_caching_effectively(self) -> None:
         """
         Test: Should cache recommendations and serve from cache when appropriate
         to improve performance and reduce computational overhead.
@@ -345,11 +321,8 @@ class TestAdaptiveLearningEngine:
         assert len(result1.recommendations) == len(result2.recommendations)
         assert result1.strategy_used == result2.strategy_used
 
-    @pytest.mark.asyncio()
-    async def test_should_apply_learning_confidence_levels_appropriately(
-        self,
-        learning_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_apply_learning_confidence_levels_appropriately(self) -> None:
         """
         Test: Should calculate and apply learning confidence levels based on
         interaction history volume and user engagement patterns.
@@ -398,12 +371,10 @@ class TestAdaptiveLearningEngine:
             LearningConfidence.VERY_HIGH,
         ]
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_handle_learning_strategy_selection_intelligently(
         self,
-        learning_engine,
-        sample_interactions,
-    ):
+    ) -> None:
         """
         Test: Should select appropriate learning strategies based on user profile
         confidence and available data for optimal recommendation quality.
@@ -433,12 +404,8 @@ class TestAdaptiveLearningEngine:
             LearningConfidence.VERY_HIGH,
         ]
 
-    @pytest.mark.asyncio()
-    async def test_should_track_comprehensive_learning_metrics(
-        self,
-        learning_engine,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_track_comprehensive_learning_metrics(self) -> None:
         """
         Test: Should track comprehensive metrics for monitoring learning
         effectiveness and system performance.
@@ -472,12 +439,8 @@ class TestAdaptiveLearningEngine:
 class TestCollaborativeFilter:
     """Test collaborative filtering functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_calculate_user_similarity_accurately(
-        self,
-        learning_config,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_calculate_user_similarity_accurately(self) -> None:
         """
         Test: Should calculate user similarity based on shared content
         interactions and cache results for performance.
@@ -498,12 +461,8 @@ class TestCollaborativeFilter:
         cached_similarity = collab_filter.calculate_user_similarity("user_1", "user_2")
         assert cached_similarity == similarity
 
-    @pytest.mark.asyncio()
-    async def test_should_find_similar_users_effectively(
-        self,
-        learning_config,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_find_similar_users_effectively(self) -> None:
         """
         Test: Should find and rank similar users based on interaction
         patterns and content overlap.
@@ -529,8 +488,8 @@ class TestCollaborativeFilter:
 class TestContentBasedFilter:
     """Test content-based filtering functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_update_content_features_correctly(self, learning_config):
+    @pytest.mark.asyncio
+    async def test_should_update_content_features_correctly(self) -> None:
         """
         Test: Should extract and normalize content features for
         similarity calculations and recommendations.
@@ -556,11 +515,8 @@ class TestContentBasedFilter:
         assert "quality" in features
         assert features["quality"] == 0.85
 
-    @pytest.mark.asyncio()
-    async def test_should_calculate_content_similarity_with_user_profile(
-        self,
-        learning_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_calculate_content_similarity_with_user_profile(self) -> None:
         """
         Test: Should calculate how well content matches user profile
         preferences across topics, sources, and content types.
@@ -598,8 +554,8 @@ class TestContentBasedFilter:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio()
-    async def test_should_create_production_adaptive_learning_engine(self):
+    @pytest.mark.asyncio
+    async def test_should_create_production_adaptive_learning_engine(self) -> None:
         """
         Test: Should create production-optimized adaptive learning engine
         with appropriate configuration for scale and performance.
@@ -627,7 +583,7 @@ class TestProductionConfiguration:
 class TestDataStructures:
     """Test data structure serialization and immutability"""
 
-    def test_user_interaction_should_be_immutable_and_serializable(self):
+    def test_user_interaction_should_be_immutable_and_serializable(self) -> None:
         """
         Test: UserInteraction should be immutable and properly serializable
         for storage and transmission across system components.
@@ -654,7 +610,7 @@ class TestDataStructures:
         assert interaction.context_metadata["source"] == "test_source"
         assert isinstance(interaction.timestamp, datetime)
 
-    def test_user_profile_should_serialize_learning_state_completely(self):
+    def test_user_profile_should_serialize_learning_state_completely(self) -> None:
         """
         Test: UserProfile should serialize complete learning state including
         preferences, confidence levels, and interaction statistics.
@@ -677,7 +633,9 @@ class TestDataStructures:
         assert profile.total_interactions == 25
         assert isinstance(profile.last_updated, datetime)
 
-    def test_recommendation_result_should_serialize_with_comprehensive_metadata(self):
+    def test_recommendation_result_should_serialize_with_comprehensive_metadata(
+        self,
+    ) -> None:
         """
         Test: RecommendationResult should serialize with comprehensive metadata
         including processing metrics and strategy information.

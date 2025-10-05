@@ -13,8 +13,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from scripts.ingestion_pipeline import ContentItem
-
 from ..ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 from ..messaging.message_bus import MessageBus
 from .base_worker import BaseWorkerAgent, WorkerCapabilityBuilder
@@ -30,13 +28,8 @@ class PubMedWorker(BaseWorkerAgent):
     for comprehensive medical literature retrieval with NCBI compliance.
     """
 
-    def __init__(
-        self,
-        message_bus: MessageBus,
-        email: str = "worker@pake.example.com",
-        worker_id: str = None,
-    ):
-        """Initialize PubMed worker"""
+    def __init__(self) -> None:
+        """Initialize PubMed worker."""
         # Define worker capabilities
         capabilities = [
             WorkerCapabilityBuilder("biomedical_literature_search")
@@ -121,9 +114,9 @@ class PubMedWorker(BaseWorkerAgent):
             "Letter",
         ]
 
-        logger.info(f"PubMedWorker {self.worker_id} initialized with email: {email}")
+        logger.info("PubMedWorker %s initialized with email: %s", self.worker_id, email)
 
-    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process PubMed search task.
 
         Handles 'pubmed_ingestion' tasks from the supervisor with biomedical search parameters.
@@ -199,7 +192,8 @@ class PubMedWorker(BaseWorkerAgent):
             serializable_items = [item.__dict__ for item in content_items]
 
             logger.info(
-                f"PubMed search completed: {len(content_items)} papers retrieved",
+                "PubMed search completed: %s papers retrieved",
+                len(content_items),
             )
 
             return {
@@ -216,7 +210,7 @@ class PubMedWorker(BaseWorkerAgent):
                         len(item.content or "") for item in content_items
                     ),
                     "unique_authors": len(
-                        set(item.author for item in content_items if item.author),
+                        {item.author for item in content_items if item.author},
                     ),
                     "clinical_papers": len(
                         [
@@ -231,15 +225,15 @@ class PubMedWorker(BaseWorkerAgent):
             }
 
         except Exception as e:
-            logger.error(f"PubMed worker task processing error: {e}")
+            logger.error("PubMed worker task processing error: %s", e)
             return {
                 "success": False,
                 "error": f"Task processing failed: {str(e)}",
                 "result": None,
             }
 
-    def _validate_mesh_terms(self, mesh_terms: list[str]) -> list[str]:
-        """Validate and filter MeSH terms"""
+    def _validate_mesh_terms(self, mesh_terms: List[str]) -> List[str]:
+        """Validate and filter MeSH terms."""
         if not mesh_terms:
             return self.default_mesh_terms
 
@@ -248,13 +242,13 @@ class PubMedWorker(BaseWorkerAgent):
         valid_mesh_terms = [term for term in mesh_terms if term and len(term) > 2]
 
         if not valid_mesh_terms:
-            logger.warning(f"No valid MeSH terms from {mesh_terms}, using defaults")
+            logger.warning("No valid MeSH terms from %s, using defaults", mesh_terms)
             return self.default_mesh_terms
 
         return valid_mesh_terms
 
-    def _validate_publication_types(self, pub_types: list[str]) -> list[str]:
-        """Validate publication types"""
+    def _validate_publication_types(self, pub_types: List[str]) -> List[str]:
+        """Validate publication types."""
         if not pub_types:
             return ["Journal Article"]
 
@@ -263,20 +257,15 @@ class PubMedWorker(BaseWorkerAgent):
 
         if not valid_types:
             logger.warning(
-                f"No valid publication types from {pub_types}, using default",
+                "No valid publication types from %s, using default",
+                pub_types,
             )
             return ["Journal Article"]
 
         return valid_types
 
-    def _enhance_content_metadata(
-        self,
-        content_item: ContentItem,
-        plan_context: dict[str, Any],
-        source_data: dict[str, Any],
-        cognitive_applied: bool,
-    ):
-        """Enhance content item with PubMed-specific metadata"""
+    def _enhance_content_metadata(self) -> None:
+        """Enhance content item with PubMed-specific metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
 
@@ -343,8 +332,8 @@ class PubMedWorker(BaseWorkerAgent):
             else:
                 content_item.metadata["evidence_level"] = "medium"
 
-    async def _on_start(self):
-        """PubMed worker specific startup logic"""
+    async def _on_start(self) -> None:
+        """PubMed worker specific startup logic."""
         # Test PubMed service connection
         try:
             test_query = PubMedSearchQuery(
@@ -357,24 +346,24 @@ class PubMedWorker(BaseWorkerAgent):
             test_result = await self.pubmed_service.search_papers(test_query)
 
             if test_result.success:
-                logger.info(f"PubMedWorker {self.worker_id} service test successful")
+                logger.info("PubMedWorker %s service test successful", self.worker_id)
             else:
                 logger.warning(
-                    f"PubMedWorker {self.worker_id} service test warning: {
-                        test_result.error
-                    }",
+                    "PubMedWorker %s service test warning: %s",
+                    self.worker_id,
+                    test_result.error,
                 )
 
         except Exception as e:
-            logger.error(f"PubMedWorker {self.worker_id} service test failed: {e}")
+            logger.error("PubMedWorker %s service test failed: %s", self.worker_id, e)
 
-    async def _on_stop(self):
-        """PubMed worker specific cleanup logic"""
+    async def _on_stop(self) -> None:
+        """PubMed worker specific cleanup logic."""
         # No specific cleanup needed for stateless worker
-        logger.info(f"PubMedWorker {self.worker_id} cleanup completed")
+        logger.info("PubMedWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get PubMed worker specific health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get PubMed worker specific health status."""
         base_health = await super().get_health_status()
 
         # Add PubMed-specific health information
@@ -441,7 +430,7 @@ async def create_pubmed_worker(
 
 # Task type handlers for different PubMed search scenarios
 class PubMedTaskTypes:
-    """PubMed task type definitions"""
+    """PubMed task type definitions."""
 
     BASIC_SEARCH = "pubmed_search_basic"
     CLINICAL_TRIALS = "pubmed_search_clinical"
@@ -453,13 +442,13 @@ class PubMedTaskTypes:
 
 
 def create_pubmed_task_data(
-    terms: list[str],
-    mesh_terms: list[str] = None,
-    publication_types: list[str] = None,
+    terms: List[str],
+    mesh_terms: List[str] = None,
+    publication_types: List[str] = None,
     max_results: int = 8,
     task_type: str = PubMedTaskTypes.BASIC_SEARCH,
     **kwargs,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Create task data for PubMed search operations.
 
     Args:
@@ -562,6 +551,6 @@ PUBMED_DOMAIN_MESH_TERMS = {
 }
 
 
-def get_mesh_terms_for_domain(domain: str) -> list[str]:
-    """Get MeSH terms for a medical domain"""
+def get_mesh_terms_for_domain(domain: str) -> List[str]:
+    """Get MeSH terms for a medical domain."""
     return PUBMED_DOMAIN_MESH_TERMS.get(domain.lower(), ["Algorithms"])

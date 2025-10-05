@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+
 from services.content.deduplication_service import (
     AdvancedContentDeduplicationService,
     ContentFingerprint,
@@ -35,8 +36,8 @@ class TestAdvancedContentDeduplicationService:
     Tests exact matching, fuzzy similarity, ML-powered detection, and performance.
     """
 
-    @pytest.fixture()
-    def dedup_config(self):
+    @pytest.fixture
+    def dedup_config(self) -> None:
         """Standard deduplication configuration for testing"""
         return DeduplicationConfig(
             exact_match_threshold=1.0,
@@ -58,14 +59,14 @@ class TestAdvancedContentDeduplicationService:
         )
 
     @pytest_asyncio.fixture
-    async def dedup_service(self, dedup_config):
+    async def dedup_service(self) -> None:
         """Create deduplication service instance for testing"""
         service = AdvancedContentDeduplicationService(dedup_config)
         yield service
         await service.clear_fingerprints()
 
-    @pytest.fixture()
-    def sample_content_items(self):
+    @pytest.fixture
+    def sample_content_items(self) -> None:
         """Sample content items for testing"""
         return [
             {
@@ -110,11 +111,8 @@ class TestAdvancedContentDeduplicationService:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_initialize_deduplication_service_with_config(
-        self,
-        dedup_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_initialize_deduplication_service_with_config(self) -> None:
         """
         Test: Should initialize deduplication service with proper configuration
         and detection methods.
@@ -136,12 +134,8 @@ class TestAdvancedContentDeduplicationService:
         assert service.stats["total_processed"] == 0
         assert service.stats["duplicates_found"] == 0
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_exact_duplicate_content_correctly(
-        self,
-        dedup_service,
-        sample_content_items,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_detect_exact_duplicate_content_correctly(self) -> None:
         """
         Test: Should detect exact duplicate content using hash-based matching
         with proper similarity scoring.
@@ -171,12 +165,8 @@ class TestAdvancedContentDeduplicationService:
         assert result2.duplicate_of == item1["id"]
         assert result2.action_taken == DuplicateAction.SKIP
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_fuzzy_similar_content_with_threshold(
-        self,
-        dedup_service,
-        sample_content_items,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_detect_fuzzy_similar_content_with_threshold(self) -> None:
         """
         Test: Should detect near-duplicate content using fuzzy hashing
         with configurable similarity thresholds.
@@ -210,8 +200,8 @@ class TestAdvancedContentDeduplicationService:
             # If not detected as duplicate, similarity should be below threshold
             assert result3.similarity_score < 0.80
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_title_based_similarity_detection(self, dedup_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_title_based_similarity_detection(self) -> None:
         """
         Test: Should detect duplicates based on title similarity
         using token-based comparison.
@@ -235,11 +225,8 @@ class TestAdvancedContentDeduplicationService:
             assert result2.method_used == DeduplicationMethod.TITLE_SIMILARITY
             assert result2.similarity_score >= 0.90
 
-    @pytest.mark.asyncio()
-    async def test_should_create_comprehensive_content_fingerprints(
-        self,
-        dedup_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_create_comprehensive_content_fingerprints(self) -> None:
         """
         Test: Should create detailed content fingerprints with all
         relevant metadata and hashing information.
@@ -271,12 +258,8 @@ class TestAdvancedContentDeduplicationService:
         assert fingerprint.content_length == len(content)
         assert fingerprint.created_at is not None
 
-    @pytest.mark.asyncio()
-    async def test_should_process_batch_content_efficiently(
-        self,
-        dedup_service,
-        sample_content_items,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_process_batch_content_efficiently(self) -> None:
         """
         Test: Should process multiple content items in batch
         with efficient memory usage and duplicate detection.
@@ -308,7 +291,7 @@ class TestAdvancedContentDeduplicationService:
     # Content Normalization Tests
     # ========================================================================
 
-    def test_content_normalizer_should_handle_html_and_whitespace(self, dedup_config):
+    def test_content_normalizer_should_handle_html_and_whitespace(self) -> None:
         """
         Test: ContentNormalizer should properly clean HTML tags
         and normalize whitespace for consistent comparison.
@@ -329,7 +312,7 @@ class TestAdvancedContentDeduplicationService:
         assert "\t" not in normalized  # No tabs
         assert "\n" not in normalized  # No newlines
 
-    def test_content_normalizer_should_normalize_urls_consistently(self, dedup_config):
+    def test_content_normalizer_should_normalize_urls_consistently(self) -> None:
         """
         Test: ContentNormalizer should normalize URLs for consistent
         duplicate detection regardless of tracking parameters.
@@ -354,10 +337,7 @@ class TestAdvancedContentDeduplicationService:
         normalized = normalizer.normalize_url(http_url)
         assert normalized.startswith("https://")
 
-    def test_content_normalizer_should_extract_significant_title_tokens(
-        self,
-        dedup_config,
-    ):
+    def test_content_normalizer_should_extract_significant_title_tokens(self) -> None:
         """
         Test: ContentNormalizer should extract meaningful tokens
         from titles while filtering stop words and short tokens.
@@ -382,8 +362,8 @@ class TestAdvancedContentDeduplicationService:
     # Performance and Scalability Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_maintain_performance_under_high_volume(self, dedup_service):
+    @pytest.mark.asyncio
+    async def test_should_maintain_performance_under_high_volume(self) -> None:
         """
         Test: Should maintain acceptable performance when processing
         large volumes of content for deduplication.
@@ -425,11 +405,8 @@ class TestAdvancedContentDeduplicationService:
         assert stats["total_processed"] == len(content_items)
         assert stats["duplicates_found"] >= 1
 
-    @pytest.mark.asyncio()
-    async def test_should_manage_memory_usage_with_fingerprint_limits(
-        self,
-        dedup_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_manage_memory_usage_with_fingerprint_limits(self) -> None:
         """
         Test: Should properly manage memory by limiting stored fingerprints
         and removing oldest entries when limit is reached.
@@ -457,8 +434,8 @@ class TestAdvancedContentDeduplicationService:
         )
         assert not result.is_duplicate
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_deduplication_safely(self, dedup_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_deduplication_safely(self) -> None:
         """
         Test: Should handle concurrent deduplication requests
         without race conditions or data corruption.
@@ -491,8 +468,8 @@ class TestAdvancedContentDeduplicationService:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_empty_and_malformed_content(self, dedup_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_empty_and_malformed_content(self) -> None:
         """
         Test: Should gracefully handle empty content, None values,
         and malformed input data.
@@ -519,8 +496,8 @@ class TestAdvancedContentDeduplicationService:
             <= dedup_service.config.max_content_length
         )
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_malformed_metadata_gracefully(self, dedup_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_malformed_metadata_gracefully(self) -> None:
         """
         Test: Should handle malformed, missing, or invalid metadata
         without crashing the deduplication process.
@@ -545,12 +522,8 @@ class TestAdvancedContentDeduplicationService:
         )
         assert isinstance(result2, DeduplicationResult)
 
-    @pytest.mark.asyncio()
-    async def test_should_export_and_import_fingerprints_correctly(
-        self,
-        dedup_service,
-        sample_content_items,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_export_and_import_fingerprints_correctly(self) -> None:
         """
         Test: Should export fingerprints to file and maintain
         data integrity during serialization.
@@ -600,14 +573,14 @@ class TestDeduplicationDetectors:
     Test suite for individual deduplication detection algorithms.
     """
 
-    @pytest.fixture()
-    def normalizer(self):
+    @pytest.fixture
+    def normalizer(self) -> None:
         """Content normalizer for detector testing"""
         config = DeduplicationConfig()
         return ContentNormalizer(config)
 
-    @pytest.fixture()
-    def sample_fingerprints(self, normalizer):
+    @pytest.fixture
+    def sample_fingerprints(self) -> None:
         """Sample fingerprints for detector testing"""
         import hashlib
 
@@ -633,12 +606,8 @@ class TestDeduplicationDetectors:
 
         return fingerprints
 
-    @pytest.mark.asyncio()
-    async def test_exact_hash_detector_should_identify_identical_content(
-        self,
-        normalizer,
-        sample_fingerprints,
-    ):
+    @pytest.mark.asyncio
+    async def test_exact_hash_detector_should_identify_identical_content(self) -> None:
         """
         Test: ExactHashDetector should correctly identify identical content
         using SHA-256 hash comparison.
@@ -670,12 +639,8 @@ class TestDeduplicationDetectors:
         assert similarity == 0.0
         assert matching_fingerprint is None
 
-    @pytest.mark.asyncio()
-    async def test_fuzzy_hash_detector_should_find_similar_content(
-        self,
-        normalizer,
-        sample_fingerprints,
-    ):
+    @pytest.mark.asyncio
+    async def test_fuzzy_hash_detector_should_find_similar_content(self) -> None:
         """
         Test: FuzzyHashDetector should identify similar but not identical
         content using fuzzy hashing techniques.
@@ -699,8 +664,8 @@ class TestDeduplicationDetectors:
             assert similarity >= config.fuzzy_similarity_threshold
             assert matching_fingerprint is not None
 
-    @pytest.mark.asyncio()
-    async def test_title_similarity_detector_should_compare_titles(self, normalizer):
+    @pytest.mark.asyncio
+    async def test_title_similarity_detector_should_compare_titles(self) -> None:
         """
         Test: TitleSimilarityDetector should identify content with
         similar titles using token-based comparison.
@@ -740,7 +705,7 @@ class TestDeduplicationConfiguration:
     Test suite for deduplication configuration and settings.
     """
 
-    def test_deduplication_config_should_have_sensible_defaults(self):
+    def test_deduplication_config_should_have_sensible_defaults(self) -> None:
         """
         Test: DeduplicationConfig should provide reasonable default values
         for production use.
@@ -761,9 +726,9 @@ class TestDeduplicationConfiguration:
         assert DeduplicationMethod.EXACT_HASH in config.enabled_methods
 
         # Check default action is reasonable
-        assert config.default_action in [action for action in DuplicateAction]
+        assert config.default_action in list(DuplicateAction)
 
-    def test_deduplication_result_should_serialize_correctly(self):
+    def test_deduplication_result_should_serialize_correctly(self) -> None:
         """
         Test: DeduplicationResult should properly serialize to dictionary
         for JSON export and API responses.

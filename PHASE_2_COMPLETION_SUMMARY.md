@@ -62,7 +62,7 @@ Phase 2: Architectural Refactoring and Decoupling has been successfully implemen
 class VideoGenerationService:
     def __init__(self):
         self.setupProviders()      # Provider management
-        self.setupStorage()        # Storage management  
+        self.setupStorage()        # Storage management
         self.setupMonitoring()     # Monitoring
         self.setupRateLimiting()   # Rate limiting
         self.setupFileUpload()     # File handling
@@ -102,7 +102,7 @@ class UserService:
 class UserService:
     def __init__(self, user_repo: AbstractUserRepository):
         self.user_repo = user_repo
-    
+
     async def create_user(self, email, password):
         user = create_user(email=email, hashed_password=hash_password(password))
         return await self.user_repo.create(user)  # Pure business logic

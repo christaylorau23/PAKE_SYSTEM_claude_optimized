@@ -11,7 +11,7 @@ import statistics
 import sys
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -78,17 +78,17 @@ class SystemResourceUsage:
 class PerformanceBenchmark:
     """Comprehensive performance benchmarking suite"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url
         self.session = None
         self.results: list[BenchmarkResult] = []
         self.resource_usage: list[SystemResourceUsage] = []
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> None:
         self.session = aiohttp.ClientSession()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self) -> None:
         if self.session:
             await self.session.close()
 
@@ -104,7 +104,7 @@ class PerformanceBenchmark:
             memory_available_mb=memory.available / (1024 * 1024),
             disk_usage_percent=disk.percent,
             network_io_bytes=sum(psutil.net_io_counters()._asdict().values()),
-            timestamp=datetime.now().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
     async def benchmark_endpoint(
@@ -133,7 +133,8 @@ class PerformanceBenchmark:
                     response_text = await response.text()
                     status_code = response.status
             else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+                msg = f"Unsupported HTTP method: {method}"
+                raise ValueError(msg)
 
             duration_ms = (time.time() - start_time) * 1000
             response_size_bytes = len(response_text.encode("utf-8"))
@@ -146,7 +147,7 @@ class PerformanceBenchmark:
                 status_code=status_code,
                 response_size_bytes=response_size_bytes,
                 success=200 <= status_code < 300,
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             )
 
         except Exception as e:
@@ -160,7 +161,7 @@ class PerformanceBenchmark:
                 response_size_bytes=0,
                 success=False,
                 error_message=str(e),
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             )
 
     async def run_load_test(
@@ -174,9 +175,10 @@ class PerformanceBenchmark:
     ) -> list[BenchmarkResult]:
         """Run load test with concurrent requests"""
         logger.info(
-            f"Running load test: {test_name} ({concurrent_requests} concurrent, {
-                total_requests
-            } total)",
+            "Running load test: %s (%s concurrent, %s total)",
+            test_name,
+            concurrent_requests,
+            total_requests,
         )
 
         # Record system resources at start
@@ -184,7 +186,7 @@ class PerformanceBenchmark:
 
         semaphore = asyncio.Semaphore(concurrent_requests)
 
-        async def make_request():
+        async def make_request(self) -> None:
             async with semaphore:
                 return await self.benchmark_endpoint(
                     test_name,
@@ -216,7 +218,7 @@ class PerformanceBenchmark:
                         response_size_bytes=0,
                         success=False,
                         error_message=str(result),
-                        timestamp=datetime.now().isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                 )
 
@@ -291,7 +293,7 @@ class PerformanceBenchmark:
             system_memory_percent=memory_percent,
         )
 
-    async def run_comprehensive_benchmark(self) -> dict[str, Any]:
+    async def run_comprehensive_benchmark(self) -> Dict[str, Any]:
         """Run comprehensive benchmark suite"""
         logger.info("Starting comprehensive performance benchmark suite")
 
@@ -353,7 +355,7 @@ class PerformanceBenchmark:
                     "event": {
                         "type": "create",
                         "filepath": "/test/file.md",
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     },
                     "vault_path": "/test/vault",
                 },
@@ -368,7 +370,7 @@ class PerformanceBenchmark:
             method = test_config[2]
             payload = test_config[3] if len(test_config) > 3 else None
 
-            logger.info(f"Running benchmark: {test_name}")
+            logger.info("Running benchmark: %s", test_name)
 
             # Run load test
             results = await self.run_load_test(
@@ -390,17 +392,19 @@ class PerformanceBenchmark:
             }
 
             logger.info(
-                f"Completed {test_name}: {metrics.success_rate:.1f}% success rate, {
-                    metrics.avg_duration_ms:.1f}ms avg",
+                "Completed %.1f: %.1f% success rate, %sms avg",
+                test_name,
+                metrics.success_rate,
+                metrics.avg_duration_ms,
             )
 
         return all_results
 
-    def generate_report(self, results: dict[str, Any]) -> str:
+    def generate_report(self, results: Dict[str, Any]) -> str:
         """Generate comprehensive performance report"""
         report = []
         report.append("# PAKE System Performance Benchmark Report")
-        report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
 
         # Summary table
@@ -513,7 +517,7 @@ class PerformanceBenchmark:
         return "\n".join(report)
 
 
-async def main():
+async def main(self) -> None:
     """Main benchmark execution"""
     logger.info("Starting PAKE System Performance Benchmark")
 
@@ -525,19 +529,19 @@ async def main():
         report = benchmark.generate_report(results)
 
         # Save results
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
         # Save JSON results
         results_file = f"performance_results_{timestamp}.json"
         with open(results_file, "w") as f:
             json.dump(results, f, indent=2)
-        logger.info(f"Results saved to {results_file}")
+        logger.info("Results saved to %s", results_file)
 
         # Save markdown report
         report_file = f"performance_report_{timestamp}.md"
         with open(report_file, "w") as f:
             f.write(report)
-        logger.info(f"Report saved to {report_file}")
+        logger.info("Report saved to %s", report_file)
 
         # Print summary
         print("\n" + "=" * 60)

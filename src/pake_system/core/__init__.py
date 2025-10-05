@@ -1,5 +1,5 @@
 """PAKE System Core Module
-Enterprise-grade configuration, logging, and caching
+Enterprise-grade configuration, logging, and caching.
 """
 
 from .cache import CacheService, cache_key, get_cache_service

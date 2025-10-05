@@ -1,0 +1,203 @@
+# PAKE System - CI Resource Constraint Simulation Makefile
+# Provides easy commands for simulating GitHub Actions runner limitations
+
+.PHONY: help ci-simulate ci-test ci-docker ci-pytest ci-monitor ci-validate ci-clean
+.PHONY: ci-ubuntu ci-macos ci-windows ci-all-runners ci-flaky ci-performance
+
+# Default runner type
+RUNNER_TYPE ?= ubuntu-latest
+TEST_MODE ?= all
+VERBOSE ?= false
+WORKERS ?= 1
+
+# Script paths
+CI_SIMULATION_SCRIPT = scripts/ci-resource-simulation.sh
+CI_TESTING_SCRIPT = scripts/ci-comprehensive-testing.sh
+
+# Color codes
+BLUE = \033[0;34m
+GREEN = \033[0;32m
+YELLOW = \033[1;33m
+RED = \033[0;31m
+NC = \033[0m
+
+help: ## Show this help message
+	@echo "$(BLUE)PAKE System - CI Resource Constraint Simulation$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Available Commands:$(NC)"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "$(YELLOW)Runner Types:$(NC)"
+	@echo "  ubuntu-latest    - 2 CPU cores, 7GB RAM (default)"
+	@echo "  ubuntu-22.04     - 2 CPU cores, 7GB RAM"
+	@echo "  ubuntu-20.04     - 2 CPU cores, 7GB RAM"
+	@echo "  windows-latest   - 2 CPU cores, 7GB RAM"
+	@echo "  windows-2022    - 2 CPU cores, 7GB RAM"
+	@echo "  macos-latest     - 3 CPU cores, 14GB RAM"
+	@echo "  macos-13         - 3 CPU cores, 14GB RAM"
+	@echo "  macos-12         - 3 CPU cores, 14GB RAM"
+	@echo ""
+	@echo "$(YELLOW)Test Modes:$(NC)"
+	@echo "  all              - Run all test suites (default)"
+	@echo "  unit             - Run unit tests only"
+	@echo "  integration      - Run integration tests only"
+	@echo "  e2e              - Run end-to-end tests only"
+	@echo "  performance      - Run performance tests only"
+	@echo "  security         - Run security tests only"
+	@echo "  flaky            - Run flaky test detection"
+	@echo "  smoke            - Run smoke tests only"
+	@echo "  ci-sensitive     - Run CI-sensitive tests only"
+	@echo "  resource-intensive - Run resource-intensive tests only"
+	@echo ""
+	@echo "$(YELLOW)Examples:$(NC)"
+	@echo "  make ci-simulate RUNNER_TYPE=ubuntu-latest"
+	@echo "  make ci-test RUNNER_TYPE=macos-latest TEST_MODE=unit"
+	@echo "  make ci-docker RUNNER_TYPE=windows-latest"
+	@echo "  make ci-pytest RUNNER_TYPE=ubuntu-latest WORKERS=1"
+
+ci-simulate: ## Run basic CI simulation (docker-test mode)
+	@echo "$(BLUE)Running CI simulation for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_SIMULATION_SCRIPT) $(RUNNER_TYPE) docker-test
+
+ci-test: ## Run comprehensive CI testing
+	@echo "$(BLUE)Running comprehensive CI testing for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_TESTING_SCRIPT) $(RUNNER_TYPE) $(TEST_MODE) $(VERBOSE) $(WORKERS)
+
+ci-docker: ## Run Docker-based CI simulation
+	@echo "$(BLUE)Running Docker-based CI simulation for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_SIMULATION_SCRIPT) $(RUNNER_TYPE) docker-test
+
+ci-pytest: ## Run pytest with CI constraints
+	@echo "$(BLUE)Running pytest with CI constraints for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_SIMULATION_SCRIPT) $(RUNNER_TYPE) pytest-ci
+
+ci-monitor: ## Monitor resource usage during CI simulation
+	@echo "$(BLUE)Monitoring resource usage for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_SIMULATION_SCRIPT) $(RUNNER_TYPE) monitor
+
+ci-validate: ## Validate CI environment simulation setup
+	@echo "$(BLUE)Validating CI environment simulation for $(RUNNER_TYPE)...$(NC)"
+	@$(CI_SIMULATION_SCRIPT) $(RUNNER_TYPE) validate
+
+ci-clean: ## Clean up CI simulation resources
+	@echo "$(BLUE)Cleaning up CI simulation resources...$(NC)"
+	@docker-compose -f docker-compose.ci-simulation.yml down -v 2>/dev/null || true
+	@docker-compose -f docker-compose.macos-ci.yml down -v 2>/dev/null || true
+	@docker-compose -f docker-compose.windows-ci.yml down -v 2>/dev/null || true
+	@docker system prune -f
+	@echo "$(GREEN)Cleanup completed$(NC)"
+
+# Runner-specific shortcuts
+ci-ubuntu: ## Run CI simulation with ubuntu-latest runner
+	@$(MAKE) ci-simulate RUNNER_TYPE=ubuntu-latest
+
+ci-macos: ## Run CI simulation with macos-latest runner
+	@$(MAKE) ci-simulate RUNNER_TYPE=macos-latest
+
+ci-windows: ## Run CI simulation with windows-latest runner
+	@$(MAKE) ci-simulate RUNNER_TYPE=windows-latest
+
+ci-all-runners: ## Run CI simulation with all runner types
+	@echo "$(BLUE)Running CI simulation with all runner types...$(NC)"
+	@$(MAKE) ci-ubuntu
+	@$(MAKE) ci-macos
+	@$(MAKE) ci-windows
+	@echo "$(GREEN)All runner simulations completed$(NC)"
+
+# Test-specific shortcuts
+ci-flaky: ## Run flaky test detection
+	@$(MAKE) ci-test TEST_MODE=flaky
+
+ci-performance: ## Run performance tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=performance
+
+ci-unit: ## Run unit tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=unit
+
+ci-integration: ## Run integration tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=integration
+
+ci-e2e: ## Run end-to-end tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=e2e
+
+ci-security: ## Run security tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=security
+
+ci-smoke: ## Run smoke tests with CI constraints
+	@$(MAKE) ci-test TEST_MODE=smoke
+
+ci-ci-sensitive: ## Run CI-sensitive tests
+	@$(MAKE) ci-test TEST_MODE=ci-sensitive
+
+ci-resource-intensive: ## Run resource-intensive tests
+	@$(MAKE) ci-test TEST_MODE=resource-intensive
+
+# Docker Compose shortcuts
+ci-docker-ubuntu: ## Run Docker Compose CI simulation for ubuntu-latest
+	@echo "$(BLUE)Starting Docker Compose CI simulation for ubuntu-latest...$(NC)"
+	@docker-compose -f docker-compose.ci-simulation.yml up --build --abort-on-container-exit
+
+ci-docker-macos: ## Run Docker Compose CI simulation for macos-latest
+	@echo "$(BLUE)Starting Docker Compose CI simulation for macos-latest...$(NC)"
+	@docker-compose -f docker-compose.macos-ci.yml up --build --abort-on-container-exit
+
+ci-docker-windows: ## Run Docker Compose CI simulation for windows-latest
+	@echo "$(BLUE)Starting Docker Compose CI simulation for windows-latest...$(NC)"
+	@docker-compose -f docker-compose.windows-ci.yml up --build --abort-on-container-exit
+
+# Development shortcuts
+ci-dev: ## Run CI simulation in development mode (verbose)
+	@$(MAKE) ci-test VERBOSE=true
+
+ci-quick: ## Run quick CI simulation (smoke tests only)
+	@$(MAKE) ci-test TEST_MODE=smoke
+
+ci-full: ## Run full CI simulation (all tests with verbose output)
+	@$(MAKE) ci-test TEST_MODE=all VERBOSE=true
+
+# Maintenance commands
+ci-setup: ## Setup CI simulation environment
+	@echo "$(BLUE)Setting up CI simulation environment...$(NC)"
+	@mkdir -p logs reports
+	@pip install pytest pytest-cov pytest-xdist pytest-timeout psutil
+	@echo "$(GREEN)CI simulation environment setup completed$(NC)"
+
+ci-status: ## Show CI simulation status
+	@echo "$(BLUE)CI Simulation Status$(NC)"
+	@echo "Runner Type: $(RUNNER_TYPE)"
+	@echo "Test Mode: $(TEST_MODE)"
+	@echo "Workers: $(WORKERS)"
+	@echo "Verbose: $(VERBOSE)"
+	@echo ""
+	@echo "$(YELLOW)Docker Status:$(NC)"
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(pake-|postgres|redis)" || echo "No CI containers running"
+	@echo ""
+	@echo "$(YELLOW)Resource Usage:$(NC)"
+	@docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" 2>/dev/null || echo "No containers to monitor"
+
+# Documentation
+ci-docs: ## Show CI simulation documentation
+	@echo "$(BLUE)PAKE System - CI Resource Constraint Simulation Documentation$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Overview:$(NC)"
+	@echo "This Makefile provides easy commands for simulating GitHub Actions runner"
+	@echo "limitations locally. It helps identify timing-sensitive bugs and race"
+	@echo "conditions that only surface under resource-constrained CI environments."
+	@echo ""
+	@echo "$(YELLOW)Key Features:$(NC)"
+	@echo "  - Simulates different GitHub Actions runner types"
+	@echo "  - Applies CPU and memory constraints"
+	@echo "  - Runs tests with CI-optimized settings"
+	@echo "  - Monitors resource usage"
+	@echo "  - Generates comprehensive reports"
+	@echo ""
+	@echo "$(YELLOW)Quick Start:$(NC)"
+	@echo "  1. make ci-setup          # Setup environment"
+	@echo "  2. make ci-validate       # Validate setup"
+	@echo "  3. make ci-simulate       # Run basic simulation"
+	@echo "  4. make ci-test           # Run comprehensive testing"
+	@echo ""
+	@echo "$(YELLOW)For more information, see:$(NC)"
+	@echo "  - docs/CI_RESOURCE_CONSTRAINT_GUIDE.md"
+	@echo "  - scripts/ci-resource-simulation.sh --help"
+	@echo "  - scripts/ci-comprehensive-testing.sh --help"

@@ -24,7 +24,7 @@ from pake_mcp_server import JsonFormatter, SecurityError, VaultManager
 class TestSpecificExceptionHandling:
     """Test that specific exceptions are caught instead of generic Exception"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment for each test"""
         self.temp_vault = Path(tempfile.mkdtemp(prefix="test_error_vault_"))
         self.vault_manager = VaultManager(self.temp_vault)
@@ -35,12 +35,12 @@ class TestSpecificExceptionHandling:
         (self.temp_vault / "01-Projects").mkdir(exist_ok=True)
         (self.temp_vault / "02-Areas").mkdir(exist_ok=True)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after each test"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
 
-    def test_file_not_found_specific_handling(self):
+    def test_file_not_found_specific_handling(self) -> None:
         """Test that FileNotFoundError is caught specifically"""
         with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
             result = self.vault_manager.parse_frontmatter(Path("/nonexistent/file.md"))
@@ -48,7 +48,7 @@ class TestSpecificExceptionHandling:
             # Should return empty metadata instead of crashing
             assert result == {"metadata": {}, "content": "", "has_frontmatter": False}
 
-    def test_permission_error_specific_handling(self):
+    def test_permission_error_specific_handling(self) -> None:
         """Test that PermissionError is caught specifically"""
         with patch("builtins.open", side_effect=PermissionError("Permission denied")):
             result = self.vault_manager.parse_frontmatter(Path("/restricted/file.md"))
@@ -56,7 +56,7 @@ class TestSpecificExceptionHandling:
             # Should return empty metadata instead of crashing
             assert result == {"metadata": {}, "content": "", "has_frontmatter": False}
 
-    def test_unicode_decode_error_specific_handling(self):
+    def test_unicode_decode_error_specific_handling(self) -> None:
         """Test that UnicodeDecodeError is caught specifically"""
         with patch(
             "builtins.open",
@@ -67,7 +67,7 @@ class TestSpecificExceptionHandling:
             # Should return empty metadata instead of crashing
             assert result == {"metadata": {}, "content": "", "has_frontmatter": False}
 
-    def test_create_note_file_access_errors(self):
+    def test_create_note_file_access_errors(self) -> None:
         """Test create_note handles file access errors specifically"""
         # Test FileNotFoundError
         with patch(
@@ -84,7 +84,7 @@ class TestSpecificExceptionHandling:
                 self.vault_manager.create_note("Test Note", "Content", "SourceNote")
             assert "insufficient permissions or path not found" in str(exc_info.value)
 
-    def test_create_note_unicode_error_handling(self):
+    def test_create_note_unicode_error_handling(self) -> None:
         """Test create_note handles Unicode encoding errors"""
         with patch("builtins.open", mock_open()) as mock_file:
             # Mock the write operation to raise UnicodeEncodeError
@@ -104,7 +104,7 @@ class TestSpecificExceptionHandling:
                 )
             assert "invalid characters in content" in str(exc_info.value)
 
-    def test_create_note_invalid_parameters(self):
+    def test_create_note_invalid_parameters(self) -> None:
         """Test create_note handles invalid parameter types"""
         with pytest.raises(ValueError) as exc_info:
             self.vault_manager.create_note(
@@ -122,7 +122,7 @@ class TestSpecificExceptionHandling:
             )  # Invalid content type
         assert "invalid parameters" in str(exc_info.value)
 
-    def test_search_notes_error_handling(self):
+    def test_search_notes_error_handling(self) -> None:
         """Test search_notes handles various errors gracefully"""
         # Create a file that will cause issues during processing
         problem_file = self.temp_vault / "00-Inbox" / "problem.md"
@@ -143,7 +143,7 @@ class TestSpecificExceptionHandling:
             )
             assert results == []
 
-    def test_get_note_by_id_error_handling(self):
+    def test_get_note_by_id_error_handling(self) -> None:
         """Test get_note_by_id handles errors without exposing details"""
         # Test with invalid pake_id parameter type
         with patch("pathlib.Path.rglob", side_effect=TypeError("Invalid argument")):
@@ -159,7 +159,7 @@ class TestSpecificExceptionHandling:
 class TestSecurityErrorHandling:
     """Test security-specific error scenarios"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment"""
         self.temp_vault = Path(tempfile.mkdtemp(prefix="test_security_vault_"))
         self.vault_manager = VaultManager(self.temp_vault)
@@ -167,12 +167,12 @@ class TestSecurityErrorHandling:
         # Create expected folder structure
         (self.temp_vault / "00-Inbox").mkdir(exist_ok=True)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after tests"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
 
-    def test_security_error_not_wrapped(self):
+    def test_security_error_not_wrapped(self) -> None:
         """Test that SecurityError is re-raised without wrapping"""
         with pytest.raises(SecurityError) as exc_info:
             self.vault_manager.create_note(
@@ -185,7 +185,7 @@ class TestSecurityErrorHandling:
         assert isinstance(exc_info.value, SecurityError)
         assert "Path traversal attempt detected" in str(exc_info.value)
 
-    def test_security_error_logged_appropriately(self):
+    def test_security_error_logged_appropriately(self) -> None:
         """Test that security errors are logged without exposing sensitive details"""
         with patch("pake_mcp_server.logger") as mock_logger:
             with pytest.raises(SecurityError):
@@ -203,7 +203,7 @@ class TestSecurityErrorHandling:
 class TestMCPToolErrorHandling:
     """Test MCP tool error handling and client response sanitization"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment"""
         self.temp_vault = Path(tempfile.mkdtemp(prefix="test_mcp_vault_"))
         # Import after setting up path
@@ -214,12 +214,12 @@ class TestMCPToolErrorHandling:
         vault_manager.vault_path = self.temp_vault
         (self.temp_vault / "00-Inbox").mkdir(parents=True, exist_ok=True)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after tests"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
 
-    def test_tool_security_error_sanitized(self):
+    def test_tool_security_error_sanitized(self) -> None:
         """Test that tool execution sanitizes security errors for client"""
         import asyncio
 
@@ -232,7 +232,7 @@ class TestMCPToolErrorHandling:
             "type": "SourceNote",
         }
 
-        async def test_security_error():
+        async def test_security_error(self) -> None:
             result = await handle_call_tool("notes_from_schema", arguments)
             response_text = result[0].text
             response_data = json.loads(response_text)
@@ -248,7 +248,7 @@ class TestMCPToolErrorHandling:
 
         asyncio.run(test_security_error())
 
-    def test_tool_invalid_parameters_sanitized(self):
+    def test_tool_invalid_parameters_sanitized(self) -> None:
         """Test that tool execution sanitizes parameter validation errors"""
         import asyncio
 
@@ -260,7 +260,7 @@ class TestMCPToolErrorHandling:
             "content": "",  # Invalid empty content
         }
 
-        async def test_validation_error():
+        async def test_validation_error(self) -> None:
             result = await handle_call_tool("notes_from_schema", arguments)
             response_text = result[0].text
             response_data = json.loads(response_text)
@@ -272,7 +272,7 @@ class TestMCPToolErrorHandling:
 
         asyncio.run(test_validation_error())
 
-    def test_tool_file_system_error_sanitized(self):
+    def test_tool_file_system_error_sanitized(self) -> None:
         """Test that tool execution sanitizes file system errors"""
         import asyncio
 
@@ -290,7 +290,7 @@ class TestMCPToolErrorHandling:
                 "type": "SourceNote",
             }
 
-            async def test_fs_error():
+            async def test_fs_error(self) -> None:
                 result = await handle_call_tool("notes_from_schema", arguments)
                 response_text = result[0].text
                 response_data = json.loads(response_text)
@@ -309,7 +309,7 @@ class TestMCPToolErrorHandling:
 class TestStructuredJSONLogging:
     """Test JSON structured logging functionality"""
 
-    def test_json_formatter_basic_structure(self):
+    def test_json_formatter_basic_structure(self) -> None:
         """Test that JSON formatter produces correct structure"""
         formatter = JsonFormatter()
 
@@ -339,12 +339,13 @@ class TestStructuredJSONLogging:
         assert log_data["function"] == "test_function"
         assert log_data["line"] == 42
 
-    def test_json_formatter_with_exception(self):
+    def test_json_formatter_with_exception(self) -> None:
         """Test JSON formatter includes exception information"""
         formatter = JsonFormatter()
 
         try:
-            raise ValueError("Test exception")
+            msg = "Test exception"
+            raise ValueError(msg)
         except ValueError:
             exc_info = sys.exc_info()
 
@@ -369,7 +370,7 @@ class TestStructuredJSONLogging:
         assert "ValueError: Test exception" in log_data["exception"]
         assert "Traceback" in log_data["exception"]
 
-    def test_json_formatter_extra_fields(self):
+    def test_json_formatter_extra_fields(self) -> None:
         """Test JSON formatter includes extra fields from log record"""
         formatter = JsonFormatter()
 
@@ -395,7 +396,7 @@ class TestStructuredJSONLogging:
         assert log_data["user_id"] == "user123"
         assert log_data["request_id"] == "req456"
 
-    def test_logger_configuration(self):
+    def test_logger_configuration(self) -> None:
         """Test that logger is properly configured with JSON formatter"""
         # Import to trigger logger configuration
         from pake_mcp_server import logger
@@ -424,17 +425,17 @@ class TestStructuredJSONLogging:
 class TestErrorInformationDisclosurePrevention:
     """Test that sensitive information is not disclosed in error responses"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment"""
         self.temp_vault = Path(tempfile.mkdtemp(prefix="test_disclosure_vault_"))
         self.vault_manager = VaultManager(self.temp_vault)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after tests"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
 
-    def test_no_file_path_disclosure(self):
+    def test_no_file_path_disclosure(self) -> None:
         """Test that file paths are not disclosed in error messages"""
         sensitive_path = "/sensitive/system/path/file.md"
 
@@ -447,7 +448,7 @@ class TestErrorInformationDisclosurePrevention:
             # Should not contain the sensitive path
             assert result == {"metadata": {}, "content": "", "has_frontmatter": False}
 
-    def test_no_stack_trace_in_responses(self):
+    def test_no_stack_trace_in_responses(self) -> None:
         """Test that stack traces are not included in client responses"""
         import asyncio
 
@@ -461,7 +462,7 @@ class TestErrorInformationDisclosurePrevention:
         ):
             arguments = {"title": "Test Note", "content": "Test content"}
 
-            async def test_no_stack():
+            async def test_no_stack(self) -> None:
                 result = await handle_call_tool("notes_from_schema", arguments)
                 response_text = result[0].text
 
@@ -472,7 +473,7 @@ class TestErrorInformationDisclosurePrevention:
 
         asyncio.run(test_no_stack())
 
-    def test_sanitized_error_messages(self):
+    def test_sanitized_error_messages(self) -> None:
         """Test that error messages are sanitized for client consumption"""
         import asyncio
 
@@ -499,7 +500,7 @@ class TestErrorInformationDisclosurePrevention:
             with patch.object(self.vault_manager, "create_note", side_effect=error):
                 arguments = {"title": "Test Note", "content": "Test content"}
 
-                async def test_sanitized():
+                async def test_sanitized(self) -> None:
                     result = await handle_call_tool("notes_from_schema", arguments)
                     response_text = result[0].text
                     response_data = json.loads(response_text)

@@ -1,4 +1,4 @@
-"""Correlation Analysis Engine
+"""Correlation Analysis Engine.
 
 Provides sophisticated correlation analysis between different metrics,
 time series, and entities with statistical significance testing and
@@ -58,7 +58,7 @@ class CorrelationResult:
     strength: str  # "weak", "moderate", "strong", "very_strong"
     sample_size: int
     method_used: str
-    additional_metrics: dict[str, Any]
+    additional_metrics: Dict[str, Any]
 
 
 @dataclass
@@ -71,19 +71,19 @@ class TimeSeriesCorrelation:
     best_lag: int
     best_correlation: float
     lead_lag_relationship: str  # "a_leads_b", "b_leads_a", "simultaneous"
-    granger_causality: dict[str, Any] | None = None
+    granger_causality: Dict[str, Any] | None = None
 
 
 @dataclass
 class CorrelationMatrix:
     """Complete correlation matrix analysis."""
 
-    metrics: list[str]
+    metrics: List[str]
     correlation_matrix: np.ndarray
     p_value_matrix: np.ndarray
     significance_matrix: np.ndarray
-    cluster_groups: list[list[str]]
-    principal_components: dict[str, Any] | None = None
+    cluster_groups: list[List[str]]
+    principal_components: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -96,7 +96,7 @@ class CausalAnalysis:
     confidence: float
     lag_days: int
     causal_type: str  # "direct", "indirect", "spurious"
-    supporting_evidence: list[str]
+    supporting_evidence: List[str]
 
 
 class CorrelationEngine:
@@ -104,7 +104,7 @@ class CorrelationEngine:
     between different metrics, entities, and time series.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the correlation engine."""
         self.scaler = StandardScaler()
         self.correlation_cache = {}
@@ -145,12 +145,16 @@ class CorrelationEngine:
         try:
             # Validate inputs
             if len(data_a) != len(data_b):
-                raise ValueError("Datasets must have the same length")
+                msg = "Datasets must have the same length"
+                raise ValueError(msg)
 
             if len(data_a) < self.config["min_sample_size"]:
-                raise ValueError(
+                msg = (
                     f"Insufficient data: {len(data_a)} < "
-                    f"{self.config['min_sample_size']}",
+                    f"{self.config['min_sample_size']}"
+                )
+                raise ValueError(
+                    msg,
                 )
 
             # Convert to numpy arrays and handle missing values
@@ -163,7 +167,8 @@ class CorrelationEngine:
             arr_b = arr_b[valid_mask]
 
             if len(arr_a) < self.config["min_sample_size"]:
-                raise ValueError("Insufficient valid data after cleaning")
+                msg = "Insufficient valid data after cleaning"
+                raise ValueError(msg)
 
             # Perform correlation analysis based on method
             if method == CorrelationMethod.PEARSON:
@@ -177,7 +182,8 @@ class CorrelationEngine:
             elif method == CorrelationMethod.DISTANCE:
                 result = await self._distance_correlation(arr_a, arr_b)
             else:
-                raise ValueError(f"Unknown correlation method: {method}")
+                msg = f"Unknown correlation method: {method}"
+                raise ValueError(msg)
 
             # Calculate confidence interval
             ci = await self._calculate_confidence_interval(
@@ -219,7 +225,7 @@ class CorrelationEngine:
             )
 
         except Exception as e:
-            logger.error(f"Correlation analysis failed: {e}")
+            logger.error("Correlation analysis failed: %s", e)
             # Return empty result on error
             return CorrelationResult(
                 metric_a=metric_a,
@@ -253,7 +259,7 @@ class CorrelationEngine:
             return {"correlation": correlation, "p_value": p_value}
 
         except Exception as e:
-            logger.error(f"Pearson correlation failed: {e}")
+            logger.error("Pearson correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
     async def _spearman_correlation(
@@ -273,7 +279,7 @@ class CorrelationEngine:
             return {"correlation": correlation, "p_value": p_value}
 
         except Exception as e:
-            logger.error(f"Spearman correlation failed: {e}")
+            logger.error("Spearman correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
     async def _kendall_correlation(
@@ -293,7 +299,7 @@ class CorrelationEngine:
             return {"correlation": correlation, "p_value": p_value}
 
         except Exception as e:
-            logger.error(f"Kendall correlation failed: {e}")
+            logger.error("Kendall correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
     async def _partial_correlation(
@@ -308,7 +314,7 @@ class CorrelationEngine:
             return await self._pearson_correlation(arr_a, arr_b)
 
         except Exception as e:
-            logger.error(f"Partial correlation failed: {e}")
+            logger.error("Partial correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
     async def _distance_correlation(
@@ -342,7 +348,7 @@ class CorrelationEngine:
             return {"correlation": correlation, "p_value": p_value}
 
         except Exception as e:
-            logger.error(f"Distance correlation failed: {e}")
+            logger.error("Distance correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
     async def _calculate_confidence_interval(
@@ -377,7 +383,7 @@ class CorrelationEngine:
             return (ci_lower, ci_upper)
 
         except Exception as e:
-            logger.error(f"Confidence interval calculation failed: {e}")
+            logger.error("Confidence interval calculation failed: %s", e)
             return (0.0, 0.0)
 
     def _classify_relationship(
@@ -402,10 +408,7 @@ class CorrelationEngine:
             strength = "weak"
 
         # Determine direction
-        if correlation > 0:
-            relationship_type = "positive"
-        else:
-            relationship_type = "negative"
+        relationship_type = "positive" if correlation > 0 else "negative"
 
         return relationship_type, strength
 
@@ -444,7 +447,8 @@ class CorrelationEngine:
             end_time = min(df_a["timestamp"].max(), df_b["timestamp"].max())
 
             if start_time >= end_time:
-                raise ValueError("No overlapping time period between series")
+                msg = "No overlapping time period between series"
+                raise ValueError(msg)
 
             # Filter to common time range
             df_a = df_a[
@@ -468,7 +472,8 @@ class CorrelationEngine:
             df_b = df_b.loc[common_index]
 
             if len(df_a) < self.config["min_sample_size"]:
-                raise ValueError("Insufficient overlapping data")
+                msg = "Insufficient overlapping data"
+                raise ValueError(msg)
 
             # Calculate cross-correlation at different lags
             correlation_at_lag = {}
@@ -523,7 +528,7 @@ class CorrelationEngine:
             )
 
         except Exception as e:
-            logger.error(f"Time series correlation analysis failed: {e}")
+            logger.error("Time series correlation analysis failed: %s", e)
             return TimeSeriesCorrelation(
                 series_a_name=series_a_name,
                 series_b_name=series_b_name,
@@ -552,7 +557,8 @@ class CorrelationEngine:
             n_metrics = len(metrics)
 
             if n_metrics < 2:
-                raise ValueError("Need at least 2 metrics for correlation matrix")
+                msg = "Need at least 2 metrics for correlation matrix"
+                raise ValueError(msg)
 
             # Convert to DataFrame
             df = pd.DataFrame(data_matrix)
@@ -561,7 +567,8 @@ class CorrelationEngine:
             df = df.dropna()
 
             if len(df) < self.config["min_sample_size"]:
-                raise ValueError("Insufficient data after cleaning")
+                msg = "Insufficient data after cleaning"
+                raise ValueError(msg)
 
             # Calculate correlation matrix
             correlation_matrix = df.corr().values
@@ -599,7 +606,7 @@ class CorrelationEngine:
             )
 
         except Exception as e:
-            logger.error(f"Correlation matrix analysis failed: {e}")
+            logger.error("Correlation matrix analysis failed: %s", e)
             return CorrelationMatrix(
                 metrics=[],
                 correlation_matrix=np.array([]),
@@ -611,9 +618,9 @@ class CorrelationEngine:
     async def _cluster_correlated_metrics(
         self,
         correlation_matrix: np.ndarray,
-        metrics: list[str],
+        metrics: List[str],
         significance_matrix: np.ndarray,
-    ) -> list[list[str]]:
+    ) -> list[List[str]]:
         """Cluster metrics based on correlation patterns."""
         try:
             # Use absolute correlation values for clustering
@@ -648,10 +655,10 @@ class CorrelationEngine:
             return cluster_groups
 
         except Exception as e:
-            logger.error(f"Metric clustering failed: {e}")
+            logger.error("Metric clustering failed: %s", e)
             return [[metric] for metric in metrics]
 
-    async def _perform_pca(self, df: pd.DataFrame) -> dict[str, Any]:
+    async def _perform_pca(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Perform Principal Component Analysis."""
         try:
             # Standardize the data
@@ -677,7 +684,7 @@ class CorrelationEngine:
             }
 
         except Exception as e:
-            logger.error(f"PCA analysis failed: {e}")
+            logger.error("PCA analysis failed: %s", e)
             return {}
 
     async def detect_causal_relationships(
@@ -766,7 +773,10 @@ class CorrelationEngine:
 
                     except Exception as e:
                         logger.warning(
-                            f"Causal analysis failed for {metric_a} -> {metric_b}: {e}",
+                            "Causal analysis failed for %s -> %s: %s",
+                            metric_a,
+                            metric_b,
+                            e,
                         )
                         continue
 
@@ -776,14 +786,14 @@ class CorrelationEngine:
             return causal_relationships
 
         except Exception as e:
-            logger.error(f"Causal relationship detection failed: {e}")
+            logger.error("Causal relationship detection failed: %s", e)
             return []
 
     async def analyze_correlations(
         self,
-        metrics: list[str],
+        metrics: List[str],
         time_range: str = "24h",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Analyze correlations between multiple metrics.
 
         Args:
@@ -845,12 +855,12 @@ class CorrelationEngine:
                         )
 
                         # Fill correlation matrix
-                        correlation_matrix[
-                            i, j
-                        ] = correlation_result.correlation_coefficient
-                        correlation_matrix[
-                            j, i
-                        ] = correlation_result.correlation_coefficient
+                        correlation_matrix[i, j] = (
+                            correlation_result.correlation_coefficient
+                        )
+                        correlation_matrix[j, i] = (
+                            correlation_result.correlation_coefficient
+                        )
 
                 # Diagonal is 1.0
                 correlation_matrix[i, i] = 1.0
@@ -876,7 +886,7 @@ class CorrelationEngine:
             }
 
         except Exception as e:
-            logger.error(f"Correlation analysis failed: {e}")
+            logger.error("Correlation analysis failed: %s", e)
             return {
                 "correlations": [],
                 "summary": {
@@ -889,7 +899,7 @@ class CorrelationEngine:
 
     async def _generate_mock_metrics_data(
         self,
-        metrics: list[str],
+        metrics: List[str],
         time_range: str,
     ) -> dict[str, list[float]]:
         """Generate mock data for multiple metrics."""
@@ -962,7 +972,7 @@ class CorrelationEngine:
             return mock_data
 
         except Exception as e:
-            logger.error(f"Mock metrics data generation failed: {e}")
+            logger.error("Mock metrics data generation failed: %s", e)
             # Return minimal data
             return {metric: [100.0] for metric in metrics}
 
@@ -979,7 +989,7 @@ class CorrelationEngine:
         except Exception:
             return 24
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check the health of the correlation engine."""
         try:
             # Test basic functionality

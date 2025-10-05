@@ -13,20 +13,22 @@ import asyncio
 import logging
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..messaging.message_bus import Message, MessageBus, MessagePriority, MessageType
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 class ProtocolType(Enum):
-    """Communication protocol types"""
+    """Communication protocol types."""
 
     REQUEST_RESPONSE = "request_response"
     PUBLISH_SUBSCRIBE = "publish_subscribe"
@@ -36,7 +38,7 @@ class ProtocolType(Enum):
 
 
 class CommunicationPattern(Enum):
-    """Communication patterns between agents"""
+    """Communication patterns between agents."""
 
     SUPERVISOR_TO_WORKER = "supervisor_to_worker"
     WORKER_TO_SUPERVISOR = "worker_to_supervisor"
@@ -47,7 +49,7 @@ class CommunicationPattern(Enum):
 
 @dataclass(frozen=True)
 class ProtocolMessage:
-    """Standardized protocol message structure"""
+    """Standardized protocol message structure."""
 
     protocol_version: str = "1.0"
     message_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -56,8 +58,8 @@ class ProtocolMessage:
     sender_id: str = ""
     receiver_id: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    payload: dict[str, Any] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    payload: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     ttl: int | None = None  # Time to live in seconds
     retry_count: int = 0
     max_retries: int = 3
@@ -65,7 +67,7 @@ class ProtocolMessage:
 
 @dataclass
 class ProtocolConfig:
-    """Configuration for communication protocols"""
+    """Configuration for communication protocols."""
 
     default_timeout: float = 30.0
     max_retries: int = 3
@@ -78,9 +80,9 @@ class ProtocolConfig:
 
 
 class ProtocolHandler(ABC):
-    """Abstract base class for protocol handlers"""
+    """Abstract base class for protocol handlers."""
 
-    def __init__(self, protocol_type: ProtocolType, config: ProtocolConfig = None):
+    def __init__(self) -> None:
         self.protocol_type = protocol_type
         self.config = config or ProtocolConfig()
         self.middleware: list[Callable] = []
@@ -90,27 +92,27 @@ class ProtocolHandler(ABC):
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle incoming protocol message"""
+        """Handle incoming protocol message."""
 
-    def add_middleware(self, middleware: Callable):
-        """Add middleware to protocol handler"""
+    def add_middleware(self) -> None:
+        """Add middleware to protocol handler."""
         self.middleware.append(middleware)
 
     async def process_middleware(self, message: ProtocolMessage) -> ProtocolMessage:
-        """Process message through middleware chain"""
+        """Process message through middleware chain."""
         for middleware_func in self.middleware:
             try:
                 message = await middleware_func(message)
             except Exception as e:
-                logger.warning(f"Middleware processing error: {e}")
+                logger.warning("Middleware processing error: %s", e)
 
         return message
 
 
 class RequestResponseProtocol(ProtocolHandler):
-    """Request-Response communication protocol"""
+    """Request-Response communication protocol."""
 
-    def __init__(self, config: ProtocolConfig = None):
+    def __init__(self) -> None:
         super().__init__(ProtocolType.REQUEST_RESPONSE, config)
         self.pending_requests: dict[str, asyncio.Future] = {}
 
@@ -120,7 +122,7 @@ class RequestResponseProtocol(ProtocolHandler):
         request: ProtocolMessage,
         timeout: float = None,
     ) -> ProtocolMessage:
-        """Send request and wait for response"""
+        """Send request and wait for response."""
         timeout = timeout or self.config.default_timeout
         correlation_id = request.correlation_id or str(uuid.uuid4())
 
@@ -138,11 +140,11 @@ class RequestResponseProtocol(ProtocolHandler):
             await message_bus.publish(stream, bus_message)
 
             # Wait for response
-            response = await asyncio.wait_for(response_future, timeout=timeout)
-            return response
+            return await asyncio.wait_for(response_future, timeout=timeout)
 
         except TimeoutError:
-            raise TimeoutError(f"Request {correlation_id} timed out after {timeout}s")
+            msg = f"Request {correlation_id} timed out after {timeout}s"
+            raise TimeoutError(msg)
         finally:
             # Cleanup
             self.pending_requests.pop(correlation_id, None)
@@ -151,7 +153,7 @@ class RequestResponseProtocol(ProtocolHandler):
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle incoming request or response"""
+        """Handle incoming request or response."""
         # Process through middleware
         message = await self.process_middleware(message)
 
@@ -169,11 +171,11 @@ class RequestResponseProtocol(ProtocolHandler):
         self,
         request: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle incoming request - to be overridden by subclasses"""
+        """Handle incoming request - to be overridden by subclasses."""
         return None
 
     def _protocol_to_bus_message(self, protocol_msg: ProtocolMessage) -> Message:
-        """Convert protocol message to bus message"""
+        """Convert protocol message to bus message."""
         return Message(
             type=MessageType.TASK_REQUEST,
             priority=MessagePriority.NORMAL,
@@ -185,7 +187,7 @@ class RequestResponseProtocol(ProtocolHandler):
         )
 
     def _get_stream_for_pattern(self, pattern: CommunicationPattern) -> str:
-        """Get Redis stream name for communication pattern"""
+        """Get Redis stream name for communication pattern."""
         if pattern == CommunicationPattern.SUPERVISOR_TO_WORKER:
             return "supervisor:tasks"
         if pattern == CommunicationPattern.WORKER_TO_SUPERVISOR:
@@ -198,19 +200,14 @@ class RequestResponseProtocol(ProtocolHandler):
 
 
 class PublishSubscribeProtocol(ProtocolHandler):
-    """Publish-Subscribe communication protocol"""
+    """Publish-Subscribe communication protocol."""
 
-    def __init__(self, config: ProtocolConfig = None):
+    def __init__(self) -> None:
         super().__init__(ProtocolType.PUBLISH_SUBSCRIBE, config)
         self.subscribers: dict[str, list[Callable]] = {}
 
-    async def publish(
-        self,
-        message_bus: MessageBus,
-        topic: str,
-        message: ProtocolMessage,
-    ):
-        """Publish message to topic"""
+    async def publish(self) -> None:
+        """Publish message to topic."""
         # Process through middleware
         message = await self.process_middleware(message)
 
@@ -221,13 +218,8 @@ class PublishSubscribeProtocol(ProtocolHandler):
         stream = f"pubsub:{topic}"
         await message_bus.publish(stream, bus_message)
 
-    async def subscribe(
-        self,
-        message_bus: MessageBus,
-        topic: str,
-        handler: Callable[[ProtocolMessage], None],
-    ):
-        """Subscribe to topic with handler"""
+    async def subscribe(self) -> None:
+        """Subscribe to topic with handler."""
         if topic not in self.subscribers:
             self.subscribers[topic] = []
 
@@ -241,7 +233,7 @@ class PublishSubscribeProtocol(ProtocolHandler):
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle incoming published message"""
+        """Handle incoming published message."""
         # Process through middleware
         message = await self.process_middleware(message)
 
@@ -255,18 +247,18 @@ class PublishSubscribeProtocol(ProtocolHandler):
                     else:
                         handler(message)
                 except Exception as e:
-                    logger.error(f"Subscriber handler error: {e}")
+                    logger.error("Subscriber handler error: %s", e)
 
         return None
 
-    async def _handle_subscription_message(self, bus_message: Message):
-        """Handle message from subscription stream"""
+    async def _handle_subscription_message(self) -> None:
+        """Handle message from subscription stream."""
         # Convert bus message to protocol message
         protocol_msg = self._bus_to_protocol_message(bus_message)
         await self.handle_message(protocol_msg)
 
     def _protocol_to_bus_message(self, protocol_msg: ProtocolMessage) -> Message:
-        """Convert protocol message to bus message"""
+        """Convert protocol message to bus message."""
         return Message(
             type=MessageType.SYSTEM_EVENT,
             priority=MessagePriority.NORMAL,
@@ -276,7 +268,7 @@ class PublishSubscribeProtocol(ProtocolHandler):
         )
 
     def _bus_to_protocol_message(self, bus_msg: Message) -> ProtocolMessage:
-        """Convert bus message to protocol message"""
+        """Convert bus message to protocol message."""
         return ProtocolMessage(
             sender_id=bus_msg.source,
             receiver_id=bus_msg.target,
@@ -287,21 +279,21 @@ class PublishSubscribeProtocol(ProtocolHandler):
 
 
 class TaskCoordinationProtocol(ProtocolHandler):
-    """Task coordination protocol for Supervisor-Worker interactions"""
+    """Task coordination protocol for Supervisor-Worker interactions."""
 
-    def __init__(self, config: ProtocolConfig = None):
+    def __init__(self) -> None:
         super().__init__(ProtocolType.TASK_COORDINATION, config)
-        self.active_tasks: dict[str, dict[str, Any]] = {}
+        self.active_tasks: dict[str, Dict[str, Any]] = {}
         self.worker_status: dict[str, str] = {}
 
     async def assign_task(
         self,
         message_bus: MessageBus,
         worker_id: str,
-        task_data: dict[str, Any],
+        task_data: Dict[str, Any],
         priority: MessagePriority = MessagePriority.NORMAL,
     ) -> str:
-        """Assign task to worker and return task ID"""
+        """Assign task to worker and return task ID."""
         task_id = str(uuid.uuid4())
 
         # Create task assignment message
@@ -331,16 +323,11 @@ class TaskCoordinationProtocol(ProtocolHandler):
         # Send assignment
         await self._send_protocol_message(message_bus, assignment_msg)
 
-        logger.debug(f"Assigned task {task_id} to worker {worker_id}")
+        logger.debug("Assigned task %s to worker %s", task_id, worker_id)
         return task_id
 
-    async def report_task_progress(
-        self,
-        message_bus: MessageBus,
-        task_id: str,
-        progress: dict[str, Any],
-    ):
-        """Report task progress from worker"""
+    async def report_task_progress(self) -> None:
+        """Report task progress from worker."""
         progress_msg = ProtocolMessage(
             pattern=CommunicationPattern.WORKER_TO_SUPERVISOR,
             sender_id=progress.get("worker_id", "unknown"),
@@ -357,14 +344,8 @@ class TaskCoordinationProtocol(ProtocolHandler):
 
         await self._send_protocol_message(message_bus, progress_msg)
 
-    async def complete_task(
-        self,
-        message_bus: MessageBus,
-        task_id: str,
-        result: dict[str, Any],
-        success: bool = True,
-    ):
-        """Complete task and report result"""
+    async def complete_task(self) -> None:
+        """Complete task and report result."""
         completion_msg = ProtocolMessage(
             pattern=CommunicationPattern.WORKER_TO_SUPERVISOR,
             sender_id=result.get("worker_id", "unknown"),
@@ -387,13 +368,13 @@ class TaskCoordinationProtocol(ProtocolHandler):
             self.active_tasks[task_id]["result"] = result
 
         await self._send_protocol_message(message_bus, completion_msg)
-        logger.debug(f"Task {task_id} completed with success={success}")
+        logger.debug("Task %s completed with success=%s", task_id, success)
 
     async def handle_message(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle task coordination messages"""
+        """Handle task coordination messages."""
         # Process through middleware
         message = await self.process_middleware(message)
 
@@ -406,19 +387,19 @@ class TaskCoordinationProtocol(ProtocolHandler):
             return await self._handle_progress_report(message)
         if action == "complete_task":
             return await self._handle_task_completion(message)
-        logger.warning(f"Unknown task coordination action: {action}")
+        logger.warning("Unknown task coordination action: %s", action)
         return None
 
     async def _handle_task_assignment(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle task assignment (worker perspective)"""
+        """Handle task assignment (worker perspective)."""
         task_id = message.correlation_id
         task_data = message.payload.get("task_data", {})
 
         # Acknowledge assignment
-        ack_msg = ProtocolMessage(
+        return ProtocolMessage(
             pattern=CommunicationPattern.WORKER_TO_SUPERVISOR,
             sender_id=message.receiver_id,
             receiver_id=message.sender_id,
@@ -435,13 +416,11 @@ class TaskCoordinationProtocol(ProtocolHandler):
             },
         )
 
-        return ack_msg
-
     async def _handle_progress_report(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle progress report (supervisor perspective)"""
+        """Handle progress report (supervisor perspective)."""
         task_id = message.correlation_id
         progress = message.payload.get("progress", {})
 
@@ -451,14 +430,14 @@ class TaskCoordinationProtocol(ProtocolHandler):
             self.active_tasks[task_id]["progress"] = progress
             self.active_tasks[task_id]["last_update"] = datetime.now(UTC)
 
-        logger.debug(f"Task {task_id} progress updated: {progress}")
+        logger.debug("Task %s progress updated: %s", task_id, progress)
         return None
 
     async def _handle_task_completion(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle task completion (supervisor perspective)"""
+        """Handle task completion (supervisor perspective)."""
         task_id = message.correlation_id
         result = message.payload.get("result", {})
         success = message.payload.get("success", True)
@@ -469,15 +448,11 @@ class TaskCoordinationProtocol(ProtocolHandler):
             self.active_tasks[task_id]["result"] = result
             self.active_tasks[task_id]["completed_at"] = datetime.now(UTC)
 
-        logger.info(f"Task {task_id} completed with success={success}")
+        logger.info("Task %s completed with success=%s", task_id, success)
         return None
 
-    async def _send_protocol_message(
-        self,
-        message_bus: MessageBus,
-        message: ProtocolMessage,
-    ):
-        """Send protocol message via message bus"""
+    async def _send_protocol_message(self) -> None:
+        """Send protocol message via message bus."""
         bus_message = Message(
             type=(
                 MessageType.TASK_REQUEST
@@ -498,31 +473,26 @@ class TaskCoordinationProtocol(ProtocolHandler):
         )
         await message_bus.publish(stream, bus_message)
 
-    def get_active_tasks(self) -> dict[str, dict[str, Any]]:
-        """Get all active tasks"""
+    def get_active_tasks(self) -> dict[str, Dict[str, Any]]:
+        """Get all active tasks."""
         return self.active_tasks.copy()
 
-    def get_task_status(self, task_id: str) -> dict[str, Any] | None:
-        """Get specific task status"""
+    def get_task_status(self, task_id: str) -> Dict[str, Any] | None:
+        """Get specific task status."""
         return self.active_tasks.get(task_id)
 
 
 class HealthMonitoringProtocol(ProtocolHandler):
-    """Health monitoring protocol for system-wide health checks"""
+    """Health monitoring protocol for system-wide health checks."""
 
-    def __init__(self, config: ProtocolConfig = None):
+    def __init__(self) -> None:
         super().__init__(ProtocolType.EVENT_SOURCING, config)
-        self.health_status: dict[str, dict[str, Any]] = {}
-        self.health_history: list[dict[str, Any]] = []
+        self.health_status: dict[str, Dict[str, Any]] = {}
+        self.health_history: list[Dict[str, Any]] = []
         self.max_history = 1000
 
-    async def send_heartbeat(
-        self,
-        message_bus: MessageBus,
-        agent_id: str,
-        health_data: dict[str, Any],
-    ):
-        """Send heartbeat with health data"""
+    async def send_heartbeat(self) -> None:
+        """Send heartbeat with health data."""
         heartbeat_msg = ProtocolMessage(
             pattern=CommunicationPattern.HEALTH_MONITORING,
             sender_id=agent_id,
@@ -541,8 +511,8 @@ class HealthMonitoringProtocol(ProtocolHandler):
         self,
         message_bus: MessageBus,
         target_agent: str = None,
-    ) -> dict[str, Any]:
-        """Request health check from agent(s)"""
+    ) -> Dict[str, Any]:
+        """Request health check from agent(s)."""
         check_msg = ProtocolMessage(
             pattern=CommunicationPattern.SYSTEM_BROADCAST,
             sender_id="health_monitor",
@@ -569,7 +539,7 @@ class HealthMonitoringProtocol(ProtocolHandler):
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle health monitoring messages"""
+        """Handle health monitoring messages."""
         # Process through middleware
         message = await self.process_middleware(message)
 
@@ -581,14 +551,14 @@ class HealthMonitoringProtocol(ProtocolHandler):
             return await self._handle_health_check_request(message)
         if action == "health_check_response":
             return await self._handle_health_check_response(message)
-        logger.warning(f"Unknown health monitoring action: {action}")
+        logger.warning("Unknown health monitoring action: %s", action)
         return None
 
     async def _handle_heartbeat(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle heartbeat message"""
+        """Handle heartbeat message."""
         agent_id = message.payload.get("agent_id")
         health_data = message.payload.get("health_data", {})
 
@@ -614,7 +584,7 @@ class HealthMonitoringProtocol(ProtocolHandler):
             if len(self.health_history) > self.max_history:
                 self.health_history = self.health_history[-self.max_history :]
 
-            logger.debug(f"Received heartbeat from {agent_id}")
+            logger.debug("Received heartbeat from %s", agent_id)
 
         return None
 
@@ -622,10 +592,10 @@ class HealthMonitoringProtocol(ProtocolHandler):
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle health check request"""
+        """Handle health check request."""
         # This would be implemented by individual agents
         # Return health status
-        response_msg = ProtocolMessage(
+        return ProtocolMessage(
             pattern=CommunicationPattern.HEALTH_MONITORING,
             sender_id=message.receiver_id or "unknown",
             receiver_id=message.sender_id,
@@ -642,13 +612,11 @@ class HealthMonitoringProtocol(ProtocolHandler):
             },
         )
 
-        return response_msg
-
     async def _handle_health_check_response(
         self,
         message: ProtocolMessage,
     ) -> ProtocolMessage | None:
-        """Handle health check response"""
+        """Handle health check response."""
         agent_id = message.payload.get("agent_id")
         health_status = message.payload.get("health_status", {})
 
@@ -662,16 +630,12 @@ class HealthMonitoringProtocol(ProtocolHandler):
                 ),
             }
 
-            logger.debug(f"Received health check response from {agent_id}")
+            logger.debug("Received health check response from %s", agent_id)
 
         return None
 
-    async def _send_health_message(
-        self,
-        message_bus: MessageBus,
-        message: ProtocolMessage,
-    ):
-        """Send health monitoring message"""
+    async def _send_health_message(self) -> None:
+        """Send health monitoring message."""
         bus_message = Message(
             type=MessageType.HEALTH_CHECK,
             priority=MessagePriority.NORMAL,
@@ -683,8 +647,8 @@ class HealthMonitoringProtocol(ProtocolHandler):
 
         await message_bus.publish("health:checks", bus_message)
 
-    def get_system_health(self) -> dict[str, Any]:
-        """Get overall system health status"""
+    def get_system_health(self) -> Dict[str, Any]:
+        """Get overall system health status."""
         total_agents = len(self.health_status)
         healthy_agents = len(
             [
@@ -708,17 +672,18 @@ class HealthMonitoringProtocol(ProtocolHandler):
 
 # Protocol middleware functions
 async def logging_middleware(message: ProtocolMessage) -> ProtocolMessage:
-    """Middleware for logging protocol messages"""
+    """Middleware for logging protocol messages."""
     logger.debug(
-        f"Protocol message: {message.sender_id} -> {message.receiver_id} ({
-            message.pattern.value
-        })",
+        "Protocol message: %s -> %s (%s)",
+        message.sender_id,
+        message.receiver_id,
+        message.pattern.value,
     )
     return message
 
 
 async def timing_middleware(message: ProtocolMessage) -> ProtocolMessage:
-    """Middleware for message timing"""
+    """Middleware for message timing."""
     if "timing" not in message.metadata:
         message.metadata["timing"] = {
             "received_at": datetime.now(UTC).isoformat(),
@@ -727,9 +692,10 @@ async def timing_middleware(message: ProtocolMessage) -> ProtocolMessage:
 
 
 async def validation_middleware(message: ProtocolMessage) -> ProtocolMessage:
-    """Middleware for message validation"""
+    """Middleware for message validation."""
     if not message.sender_id:
-        raise ValueError("Message must have sender_id")
+        msg = "Message must have sender_id"
+        raise ValueError(msg)
 
     if not message.payload:
         logger.warning("Message has empty payload")
@@ -739,13 +705,13 @@ async def validation_middleware(message: ProtocolMessage) -> ProtocolMessage:
 
 # Protocol factory
 class ProtocolFactory:
-    """Factory for creating protocol handlers"""
+    """Factory for creating protocol handlers."""
 
     @staticmethod
     def create_request_response_protocol(
         config: ProtocolConfig = None,
     ) -> RequestResponseProtocol:
-        """Create request-response protocol handler"""
+        """Create request-response protocol handler."""
         protocol = RequestResponseProtocol(config)
         protocol.add_middleware(logging_middleware)
         protocol.add_middleware(timing_middleware)
@@ -756,7 +722,7 @@ class ProtocolFactory:
     def create_pubsub_protocol(
         config: ProtocolConfig = None,
     ) -> PublishSubscribeProtocol:
-        """Create publish-subscribe protocol handler"""
+        """Create publish-subscribe protocol handler."""
         protocol = PublishSubscribeProtocol(config)
         protocol.add_middleware(logging_middleware)
         protocol.add_middleware(timing_middleware)
@@ -766,7 +732,7 @@ class ProtocolFactory:
     def create_task_coordination_protocol(
         config: ProtocolConfig = None,
     ) -> TaskCoordinationProtocol:
-        """Create task coordination protocol handler"""
+        """Create task coordination protocol handler."""
         protocol = TaskCoordinationProtocol(config)
         protocol.add_middleware(logging_middleware)
         protocol.add_middleware(timing_middleware)
@@ -777,7 +743,7 @@ class ProtocolFactory:
     def create_health_monitoring_protocol(
         config: ProtocolConfig = None,
     ) -> HealthMonitoringProtocol:
-        """Create health monitoring protocol handler"""
+        """Create health monitoring protocol handler."""
         protocol = HealthMonitoringProtocol(config)
         protocol.add_middleware(logging_middleware)
         protocol.add_middleware(timing_middleware)
@@ -786,7 +752,7 @@ class ProtocolFactory:
 
 # Protocol utilities
 def create_standard_config() -> ProtocolConfig:
-    """Create standard protocol configuration"""
+    """Create standard protocol configuration."""
     return ProtocolConfig(
         default_timeout=30.0,
         max_retries=3,
@@ -800,7 +766,7 @@ def create_standard_config() -> ProtocolConfig:
 
 
 def create_high_performance_config() -> ProtocolConfig:
-    """Create high-performance protocol configuration"""
+    """Create high-performance protocol configuration."""
     return ProtocolConfig(
         default_timeout=10.0,
         max_retries=2,
@@ -814,7 +780,7 @@ def create_high_performance_config() -> ProtocolConfig:
 
 
 def create_secure_config() -> ProtocolConfig:
-    """Create secure protocol configuration"""
+    """Create secure protocol configuration."""
     return ProtocolConfig(
         default_timeout=45.0,
         max_retries=3,

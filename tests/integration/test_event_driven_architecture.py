@@ -16,6 +16,7 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from services.agents.arxiv_worker import create_arxiv_worker
 from services.agents.cognitive_worker import create_cognitive_worker
 from services.agents.performance_worker import (
@@ -61,8 +62,8 @@ class TestEventDrivenArchitecture:
     while adding event-driven capabilities.
     """
 
-    @pytest.fixture()
-    async def message_bus(self):
+    @pytest.fixture
+    async def message_bus(self) -> None:
         """Create test message bus"""
         # Use in-memory Redis for testing
         bus = MessageBus("redis://localhost:6379/15")  # Use test database
@@ -70,23 +71,23 @@ class TestEventDrivenArchitecture:
         yield bus
         await bus.stop()
 
-    @pytest.fixture()
-    async def telemetry_system(self):
+    @pytest.fixture
+    async def telemetry_system(self) -> None:
         """Create test telemetry system"""
         config = create_testing_config()
         telemetry = await setup_observability(config)
         yield telemetry
         await telemetry.shutdown()
 
-    @pytest.fixture()
-    async def cache_strategy(self):
+    @pytest.fixture
+    async def cache_strategy(self) -> None:
         """Create test cache strategy"""
         cache = await create_standard_cache_strategy("redis://localhost:6379/14")
         yield cache
         await cache.cleanup()
 
-    @pytest.fixture()
-    async def supervisor_agent(self, message_bus, telemetry_system):
+    @pytest.fixture
+    async def supervisor_agent(self) -> None:
         """Create test supervisor agent"""
         config = IngestionConfig(
             max_concurrent_sources=3,
@@ -99,8 +100,8 @@ class TestEventDrivenArchitecture:
         yield supervisor
         await supervisor.stop()
 
-    @pytest.fixture()
-    async def worker_agents(self, message_bus):
+    @pytest.fixture
+    async def worker_agents(self) -> None:
         """Create all worker agents"""
         workers = {
             "web_scraper": await create_web_scraper_worker(message_bus),
@@ -120,13 +121,13 @@ class TestEventDrivenArchitecture:
     # Core Architecture Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_message_bus_basic_operations(self, message_bus):
+    @pytest.mark.asyncio
+    async def test_message_bus_basic_operations(self) -> None:
         """Test basic message bus operations"""
         # Test message publishing and subscribing
         received_messages = []
 
-        async def message_handler(message: Message):
+        async def message_handler(self) -> None:
             received_messages.append(message)
 
         # Subscribe to test stream
@@ -156,16 +157,11 @@ class TestEventDrivenArchitecture:
         # Cleanup
         await message_bus.unsubscribe(subscription_id)
 
-    @pytest.mark.asyncio()
-    async def test_supervisor_worker_coordination(
-        self,
-        supervisor_agent,
-        worker_agents,
-        message_bus,
-    ):
+    @pytest.mark.asyncio
+    async def test_supervisor_worker_coordination(self) -> None:
         """Test supervisor-worker coordination through message bus"""
         # Register workers with supervisor
-        for worker_type, worker in worker_agents.items():
+        for _worker_type, worker in worker_agents.items():
             await supervisor_agent.register_worker(worker)
 
         # Wait for registration
@@ -216,12 +212,8 @@ class TestEventDrivenArchitecture:
         # Verify worker was called
         mock_process.assert_called_once()
 
-    @pytest.mark.asyncio()
-    async def test_multi_worker_parallel_execution(
-        self,
-        supervisor_agent,
-        worker_agents,
-    ):
+    @pytest.mark.asyncio
+    async def test_multi_worker_parallel_execution(self) -> None:
         """Test parallel execution across multiple workers"""
         # Register workers
         for worker in worker_agents.values():
@@ -293,8 +285,8 @@ class TestEventDrivenArchitecture:
     # Individual Worker Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_web_scraper_worker_functionality(self, worker_agents):
+    @pytest.mark.asyncio
+    async def test_web_scraper_worker_functionality(self) -> None:
         """Test Web Scraper Worker maintains Phase 2A functionality"""
         web_scraper = worker_agents["web_scraper"]
 
@@ -341,8 +333,8 @@ class TestEventDrivenArchitecture:
         assert len(result["result"]) > 0
         assert result["result"][0]["content"] == "Test scraped content"
 
-    @pytest.mark.asyncio()
-    async def test_arxiv_worker_functionality(self, worker_agents):
+    @pytest.mark.asyncio
+    async def test_arxiv_worker_functionality(self) -> None:
         """Test ArXiv Worker maintains Phase 2A functionality"""
         arxiv_worker = worker_agents["arxiv"]
 
@@ -384,8 +376,8 @@ class TestEventDrivenArchitecture:
         assert len(result["result"]) > 0
         assert result["metrics"]["papers_retrieved"] > 0
 
-    @pytest.mark.asyncio()
-    async def test_cognitive_worker_functionality(self, worker_agents):
+    @pytest.mark.asyncio
+    async def test_cognitive_worker_functionality(self) -> None:
         """Test Cognitive Worker quality assessment"""
         cognitive_worker = worker_agents["cognitive"]
 
@@ -416,8 +408,8 @@ class TestEventDrivenArchitecture:
     # Cache System Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_multi_layered_cache_functionality(self, cache_strategy):
+    @pytest.mark.asyncio
+    async def test_multi_layered_cache_functionality(self) -> None:
         """Test multi-layered cache system"""
         # Test cache hierarchy
         test_key = "test_cache_key"
@@ -446,8 +438,8 @@ class TestEventDrivenArchitecture:
     # Protocol Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_task_coordination_protocol(self, message_bus):
+    @pytest.mark.asyncio
+    async def test_task_coordination_protocol(self) -> None:
         """Test task coordination protocol"""
         config = create_standard_config()
         protocol = ProtocolFactory.create_task_coordination_protocol(config)
@@ -468,8 +460,8 @@ class TestEventDrivenArchitecture:
         assert task_status["status"] == "assigned"
         assert task_status["worker_id"] == "test_worker"
 
-    @pytest.mark.asyncio()
-    async def test_health_monitoring_protocol(self, message_bus):
+    @pytest.mark.asyncio
+    async def test_health_monitoring_protocol(self) -> None:
         """Test health monitoring protocol"""
         config = create_standard_config()
         protocol = ProtocolFactory.create_health_monitoring_protocol(config)
@@ -494,12 +486,8 @@ class TestEventDrivenArchitecture:
     # Phase 2A Compatibility Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_phase2a_orchestrator_compatibility(
-        self,
-        supervisor_agent,
-        worker_agents,
-    ):
+    @pytest.mark.asyncio
+    async def test_phase2a_orchestrator_compatibility(self) -> None:
         """Verify Phase 2B maintains Phase 2A orchestrator compatibility"""
         # Register all workers
         for worker in worker_agents.values():
@@ -669,13 +657,8 @@ class TestEventDrivenArchitecture:
         assert hasattr(result, "deduplication_applied")
         assert hasattr(result, "cache_hits")
 
-    @pytest.mark.asyncio()
-    async def test_maintains_84_tests_success_rate(
-        self,
-        supervisor_agent,
-        worker_agents,
-        telemetry_system,
-    ):
+    @pytest.mark.asyncio
+    async def test_maintains_84_tests_success_rate(self) -> None:
         """Critical test: Verify 84/84 test success rate is maintained"""
         # This test simulates running all original Phase 2A test scenarios
         # through the new event-driven architecture
@@ -752,7 +735,7 @@ class TestEventDrivenArchitecture:
         assert len(failed_tests) == 0, f"Failed tests found: {failed_tests}"
 
     # Helper methods for different test scenarios
-    async def _test_web_scenario(self, supervisor_agent, scenario_index):
+    async def _test_web_scenario(self) -> None:
         """Test web scraping scenario"""
         plan = IngestionPlan(
             topic=f"web_test_{scenario_index}",
@@ -778,7 +761,7 @@ class TestEventDrivenArchitecture:
             result = await supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_arxiv_scenario(self, supervisor_agent, scenario_index):
+    async def _test_arxiv_scenario(self) -> None:
         """Test ArXiv scenario"""
         plan = IngestionPlan(
             topic=f"arxiv_test_{scenario_index}",
@@ -807,7 +790,7 @@ class TestEventDrivenArchitecture:
             result = await supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_pubmed_scenario(self, supervisor_agent, scenario_index):
+    async def _test_pubmed_scenario(self) -> None:
         """Test PubMed scenario"""
         plan = IngestionPlan(
             topic=f"pubmed_test_{scenario_index}",
@@ -836,7 +819,7 @@ class TestEventDrivenArchitecture:
             result = await supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_orchestrator_scenario(self, supervisor_agent, scenario_index):
+    async def _test_orchestrator_scenario(self) -> None:
         """Test orchestrator scenario"""
         # Multi-source orchestrator test
         plan = IngestionPlan(
@@ -871,12 +854,7 @@ class TestEventDrivenArchitecture:
             result = await supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_integration_scenario(
-        self,
-        supervisor_agent,
-        worker_agents,
-        scenario_index,
-    ):
+    async def _test_integration_scenario(self) -> None:
         """Test integration scenario"""
         # Full integration test with cognitive processing
         plan = IngestionPlan(

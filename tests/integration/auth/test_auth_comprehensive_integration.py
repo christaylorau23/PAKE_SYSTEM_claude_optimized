@@ -15,8 +15,8 @@ from tests.factories import UserInDBFactory
 class TestAuthenticationIntegration:
     """Integration tests for authentication system"""
 
-    @pytest.mark.asyncio()
-    async def test_user_registration_and_login_flow(self, test_database):
+    @pytest.mark.asyncio
+    async def test_user_registration_and_login_flow(self) -> None:
         """Test complete user registration and login flow"""
         # Arrange
         user_data = UserCreateFactory()
@@ -47,8 +47,8 @@ class TestAuthenticationIntegration:
             user_data["password"], authenticated_user.hashed_password
         )
 
-    @pytest.mark.asyncio()
-    async def test_user_lookup_integration(self, test_database):
+    @pytest.mark.asyncio
+    async def test_user_lookup_integration(self) -> None:
         """Test user lookup with database integration"""
         # Arrange
         user_data = UserInDBFactory()
@@ -67,8 +67,8 @@ class TestAuthenticationIntegration:
         assert found_user.username == user_data["username"]
         assert found_user.email == user_data["email"]
 
-    @pytest.mark.asyncio()
-    async def test_password_verification_integration(self, test_database):
+    @pytest.mark.asyncio
+    async def test_password_verification_integration(self) -> None:
         """Test password verification with database integration"""
         # Arrange
         password = "SecurePassword123!"
@@ -89,8 +89,8 @@ class TestAuthenticationIntegration:
         assert authenticated_user is not None
         assert verify_password(password, authenticated_user.hashed_password)
 
-    @pytest.mark.asyncio()
-    async def test_multiple_users_integration(self, test_database):
+    @pytest.mark.asyncio
+    async def test_multiple_users_integration(self) -> None:
         """Test multiple users can be created and retrieved"""
         # Arrange
         users_data = [UserInDBFactory() for _ in range(5)]
@@ -123,8 +123,8 @@ class TestAuthenticationIntegration:
 class TestAPIIntegration:
     """Integration tests for API endpoints"""
 
-    @pytest.mark.asyncio()
-    async def test_login_endpoint_integration(self, test_client):
+    @pytest.mark.asyncio
+    async def test_login_endpoint_integration(self) -> None:
         """Test login endpoint with real authentication flow"""
         # Arrange
         username = "testuser"
@@ -152,8 +152,8 @@ class TestAPIIntegration:
         assert token_data["token_type"] == "bearer"
         assert "refresh_token" in token_data
 
-    @pytest.mark.asyncio()
-    async def test_login_endpoint_invalid_credentials(self, test_client):
+    @pytest.mark.asyncio
+    async def test_login_endpoint_invalid_credentials(self) -> None:
         """Test login endpoint with invalid credentials"""
         # Arrange
         username = "testuser"
@@ -177,8 +177,8 @@ class TestAPIIntegration:
         # Assert
         assert response.status_code == 401
 
-    @pytest.mark.asyncio()
-    async def test_protected_endpoint_integration(self, test_client):
+    @pytest.mark.asyncio
+    async def test_protected_endpoint_integration(self) -> None:
         """Test protected endpoint with authentication"""
         # Arrange
         username = "testuser"
@@ -208,8 +208,8 @@ class TestAPIIntegration:
         user_data = response.json()
         assert user_data["username"] == username
 
-    @pytest.mark.asyncio()
-    async def test_protected_endpoint_no_auth(self, test_client):
+    @pytest.mark.asyncio
+    async def test_protected_endpoint_no_auth(self) -> None:
         """Test protected endpoint without authentication"""
         # Act
         response = test_client.get("/auth/me")
@@ -217,8 +217,8 @@ class TestAPIIntegration:
         # Assert
         assert response.status_code == 401
 
-    @pytest.mark.asyncio()
-    async def test_protected_endpoint_invalid_token(self, test_client):
+    @pytest.mark.asyncio
+    async def test_protected_endpoint_invalid_token(self) -> None:
         """Test protected endpoint with invalid token"""
         # Act
         response = test_client.get(
@@ -228,8 +228,8 @@ class TestAPIIntegration:
         # Assert
         assert response.status_code == 401
 
-    @pytest.mark.asyncio()
-    async def test_user_registration_endpoint(self, test_client):
+    @pytest.mark.asyncio
+    async def test_user_registration_endpoint(self) -> None:
         """Test user registration endpoint"""
         # Arrange
         user_data = {
@@ -249,8 +249,8 @@ class TestAPIIntegration:
         assert user_response["email"] == user_data["email"]
         assert "hashed_password" not in user_response  # Password should not be returned
 
-    @pytest.mark.asyncio()
-    async def test_user_registration_weak_password(self, test_client):
+    @pytest.mark.asyncio
+    async def test_user_registration_weak_password(self) -> None:
         """Test user registration with weak password"""
         # Arrange
         user_data = {
@@ -267,8 +267,8 @@ class TestAPIIntegration:
         assert response.status_code == 400
         assert "Password validation failed" in response.json()["detail"]
 
-    @pytest.mark.asyncio()
-    async def test_password_generation_endpoint(self, test_client):
+    @pytest.mark.asyncio
+    async def test_password_generation_endpoint(self) -> None:
         """Test password generation endpoint"""
         # Act
         response = test_client.get("/auth/generate-password")
@@ -279,8 +279,8 @@ class TestAPIIntegration:
         assert "password" in password_data
         assert len(password_data["password"]) >= 12
 
-    @pytest.mark.asyncio()
-    async def test_password_validation_endpoint(self, test_client):
+    @pytest.mark.asyncio
+    async def test_password_validation_endpoint(self) -> None:
         """Test password validation endpoint"""
         # Arrange
         password_data = {"password": "SecurePassword123!"}
@@ -294,8 +294,8 @@ class TestAPIIntegration:
         assert validation_result["is_valid"] is True
         assert len(validation_result["errors"]) == 0
 
-    @pytest.mark.asyncio()
-    async def test_password_validation_weak_password(self, test_client):
+    @pytest.mark.asyncio
+    async def test_password_validation_weak_password(self) -> None:
         """Test password validation with weak password"""
         # Arrange
         password_data = {"password": "weak"}
@@ -309,8 +309,8 @@ class TestAPIIntegration:
         assert validation_result["is_valid"] is False
         assert len(validation_result["errors"]) > 0
 
-    @pytest.mark.asyncio()
-    async def test_refresh_token_endpoint(self, test_client):
+    @pytest.mark.asyncio
+    async def test_refresh_token_endpoint(self) -> None:
         """Test refresh token endpoint"""
         # Arrange
         username = "testuser"
@@ -342,8 +342,8 @@ class TestAPIIntegration:
         assert "token_type" in token_data
         assert token_data["token_type"] == "bearer"
 
-    @pytest.mark.asyncio()
-    async def test_logout_endpoint(self, test_client):
+    @pytest.mark.asyncio
+    async def test_logout_endpoint(self) -> None:
         """Test logout endpoint"""
         # Arrange
         username = "testuser"
@@ -376,8 +376,8 @@ class TestAPIIntegration:
 class TestDatabaseIntegration:
     """Integration tests for database operations"""
 
-    @pytest.mark.asyncio()
-    async def test_database_connection_integration(self, test_database):
+    @pytest.mark.asyncio
+    async def test_database_connection_integration(self) -> None:
         """Test database connection and basic operations"""
         # Arrange
         user_data = UserInDBFactory()
@@ -394,8 +394,8 @@ class TestDatabaseIntegration:
         assert created_user is not None
         assert created_user.username == user_data["username"]
 
-    @pytest.mark.asyncio()
-    async def test_database_transaction_integration(self, test_database):
+    @pytest.mark.asyncio
+    async def test_database_transaction_integration(self) -> None:
         """Test database transaction handling"""
         # Arrange
         users_data = [UserInDBFactory() for _ in range(3)]
@@ -420,8 +420,8 @@ class TestDatabaseIntegration:
             assert retrieved_user is not None
             assert retrieved_user.username == user_data["username"]
 
-    @pytest.mark.asyncio()
-    async def test_database_concurrent_access(self, test_database):
+    @pytest.mark.asyncio
+    async def test_database_concurrent_access(self) -> None:
         """Test database concurrent access patterns"""
         # Arrange
         users_data = [UserInDBFactory() for _ in range(5)]
@@ -458,8 +458,8 @@ class TestDatabaseIntegration:
 class TestExternalServiceIntegration:
     """Integration tests for external service interactions"""
 
-    @pytest.mark.asyncio()
-    async def test_external_api_mock_integration(self, mock_external_api):
+    @pytest.mark.asyncio
+    async def test_external_api_mock_integration(self) -> None:
         """Test integration with external API services"""
         # Arrange
         mock_external_api.get.return_value = {
@@ -475,8 +475,8 @@ class TestExternalServiceIntegration:
         assert len(response["data"]) == 1
         assert response["data"][0]["id"] == 1
 
-    @pytest.mark.asyncio()
-    async def test_redis_integration(self, mock_redis):
+    @pytest.mark.asyncio
+    async def test_redis_integration(self) -> None:
         """Test integration with Redis caching"""
         # Arrange
         mock_redis.set.return_value = True
@@ -490,8 +490,8 @@ class TestExternalServiceIntegration:
         assert set_result is True
         assert get_result == '{"cached_data": "test"}'
 
-    @pytest.mark.asyncio()
-    async def test_email_service_integration(self, mock_email_service):
+    @pytest.mark.asyncio
+    async def test_email_service_integration(self) -> None:
         """Test integration with email service"""
         # Arrange
         mock_email_service.send_email.return_value = {
@@ -512,8 +512,8 @@ class TestExternalServiceIntegration:
 class TestErrorHandlingIntegration:
     """Integration tests for error handling"""
 
-    @pytest.mark.asyncio()
-    async def test_database_error_handling(self, test_database):
+    @pytest.mark.asyncio
+    async def test_database_error_handling(self) -> None:
         """Test database error handling"""
         # Arrange
         invalid_user_data = {
@@ -527,8 +527,8 @@ class TestErrorHandlingIntegration:
         with pytest.raises(Exception):  # Should raise validation error
             await create_user(**invalid_user_data)
 
-    @pytest.mark.asyncio()
-    async def test_api_error_handling(self, test_client):
+    @pytest.mark.asyncio
+    async def test_api_error_handling(self) -> None:
         """Test API error handling"""
         # Act
         response = test_client.post("/auth/token", data={})  # Empty data
@@ -536,8 +536,8 @@ class TestErrorHandlingIntegration:
         # Assert
         assert response.status_code == 422  # Validation error
 
-    @pytest.mark.asyncio()
-    async def test_authentication_error_handling(self, test_client):
+    @pytest.mark.asyncio
+    async def test_authentication_error_handling(self) -> None:
         """Test authentication error handling"""
         # Act
         response = test_client.get("/auth/me")  # No authentication
@@ -545,8 +545,8 @@ class TestErrorHandlingIntegration:
         # Assert
         assert response.status_code == 401  # Unauthorized
 
-    @pytest.mark.asyncio()
-    async def test_rate_limiting_integration(self, test_client):
+    @pytest.mark.asyncio
+    async def test_rate_limiting_integration(self) -> None:
         """Test rate limiting integration"""
         # Arrange
         username = "testuser"
@@ -577,8 +577,8 @@ class TestErrorHandlingIntegration:
 class TestPerformanceIntegration:
     """Integration tests for performance characteristics"""
 
-    @pytest.mark.asyncio()
-    async def test_concurrent_user_creation_performance(self, test_database):
+    @pytest.mark.asyncio
+    async def test_concurrent_user_creation_performance(self) -> None:
         """Test performance of concurrent user creation"""
         import time
 
@@ -604,8 +604,8 @@ class TestPerformanceIntegration:
         assert len(created_users) == 10
         assert end_time - start_time < 5.0  # Should complete within 5 seconds
 
-    @pytest.mark.asyncio()
-    async def test_authentication_performance(self, test_client):
+    @pytest.mark.asyncio
+    async def test_authentication_performance(self) -> None:
         """Test authentication performance"""
         import time
 

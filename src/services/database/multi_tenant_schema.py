@@ -8,7 +8,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import asyncpg
@@ -35,7 +35,7 @@ Base = declarative_base()
 
 
 class Tenant(Base):
-    """Central tenant management model"""
+    """Central tenant management model."""
 
     __tablename__ = "tenants"
 
@@ -54,10 +54,10 @@ class Tenant(Base):
     status: Mapped[str] = mapped_column(String(50), default="active")
     # basic, professional, enterprise
     plan: Mapped[str] = mapped_column(String(50), default="basic")
-    settings: Mapped[dict[str, Any] | None] = mapped_column(
+    settings: Mapped[Dict[str, Any] | None] = mapped_column(
         JSON,
     )  # Tenant-specific settings
-    limits: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # Resource limits
+    limits: Mapped[Dict[str, Any] | None] = mapped_column(JSON)  # Resource limits
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -92,7 +92,7 @@ class Tenant(Base):
 
 
 class User(Base):
-    """User account model with tenant association"""
+    """User account model with tenant association."""
 
     __tablename__ = "users"
 
@@ -116,7 +116,7 @@ class User(Base):
         String(50),
         default="user",
     )  # user, admin, super_admin
-    preferences: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    preferences: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -136,7 +136,7 @@ class User(Base):
 
 
 class SearchHistory(Base):
-    """Search history tracking model with tenant association"""
+    """Search history tracking model with tenant association."""
 
     __tablename__ = "search_history"
 
@@ -155,12 +155,12 @@ class SearchHistory(Base):
         nullable=True,
     )  # Nullable for anonymous searches
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
     results_count: Mapped[int] = mapped_column(Integer, default=0)
     execution_time_ms: Mapped[float] = mapped_column(sa.Float)
     cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
     quality_score: Mapped[float | None] = mapped_column(sa.Float)
-    query_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    query_metadata: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -168,7 +168,7 @@ class SearchHistory(Base):
 
 
 class SavedSearch(Base):
-    """Saved search queries model with tenant association"""
+    """Saved search queries model with tenant association."""
 
     __tablename__ = "saved_searches"
 
@@ -185,10 +185,10 @@ class SavedSearch(Base):
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    filters: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    filters: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
-    tags: Mapped[list[str] | None] = mapped_column(JSON)
+    tags: Mapped[List[str] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -201,7 +201,7 @@ class SavedSearch(Base):
 
 
 class SystemMetrics(Base):
-    """System performance metrics model with tenant association"""
+    """System performance metrics model with tenant association."""
 
     __tablename__ = "system_metrics"
 
@@ -217,7 +217,7 @@ class SystemMetrics(Base):
     )
     # 'search_performance', 'cache_stats', etc.
     metric_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    metric_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metric_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -228,7 +228,7 @@ class SystemMetrics(Base):
 
 
 class TenantInvitation(Base):
-    """Tenant invitation management"""
+    """Tenant invitation management."""
 
     __tablename__ = "tenant_invitations"
 
@@ -257,7 +257,7 @@ class TenantInvitation(Base):
 
 
 class TenantActivity(Base):
-    """Tenant activity logging for audit and analytics"""
+    """Tenant activity logging for audit and analytics."""
 
     __tablename__ = "tenant_activity"
 
@@ -274,14 +274,14 @@ class TenantActivity(Base):
     user_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     # 'login', 'search', 'admin_action', etc.
     activity_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    activity_data: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    activity_data: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     ip_address: Mapped[str | None] = mapped_column(String(45))  # IPv6 compatible
     user_agent: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class TenantResourceUsage(Base):
-    """Tenant resource usage tracking"""
+    """Tenant resource usage tracking."""
 
     __tablename__ = "tenant_resource_usage"
 
@@ -309,12 +309,12 @@ class TenantResourceUsage(Base):
 
 
 class MultiTenantIndexes:
-    """Centralized index definitions for optimal multi-tenant performance"""
+    """Centralized index definitions for optimal multi-tenant performance."""
 
     @staticmethod
-    def create_indexes():
-        """Create all performance indexes for multi-tenant queries"""
-        indexes = [
+    def create_indexes(self) -> None:
+        """Create all performance indexes for multi-tenant queries."""
+        return [
             # Tenant-based indexes for all tables
             Index("idx_users_tenant_id", User.tenant_id),
             Index("idx_search_history_tenant_id", SearchHistory.tenant_id),
@@ -368,12 +368,11 @@ class MultiTenantIndexes:
             Index("idx_tenants_domain", Tenant.domain),
             Index("idx_tenants_plan", Tenant.plan),
         ]
-        return indexes
 
 
 @dataclass
 class MultiTenantDatabaseConfig:
-    """Multi-tenant database configuration"""
+    """Multi-tenant database configuration."""
 
     host: str = "localhost"
     port: int = 5432
@@ -405,7 +404,7 @@ class MultiTenantPostgreSQLService:
     - Cross-tenant analytics capabilities
     """
 
-    def __init__(self, config: MultiTenantDatabaseConfig):
+    def __init__(self) -> None:
         self.config = config
         self._pool: Pool | None = None
         self._engine = None
@@ -418,7 +417,7 @@ class MultiTenantPostgreSQLService:
         logger.info("Multi-tenant PostgreSQL service initialized")
 
     async def initialize(self) -> None:
-        """Initialize database connections and run migrations"""
+        """Initialize database connections and run migrations."""
         try:
             # Create asyncpg connection pool
             self._pool = await asyncpg.create_pool(
@@ -455,12 +454,13 @@ class MultiTenantPostgreSQLService:
 
         except Exception as e:
             logger.error(
-                f"❌ Failed to initialize multi-tenant PostgreSQL service: {e}",
+                "❌ Failed to initialize multi-tenant PostgreSQL service: %s",
+                e,
             )
             raise
 
     async def close(self) -> None:
-        """Close database connections"""
+        """Close database connections."""
         if self._pool:
             await self._pool.close()
         if self._engine:
@@ -468,7 +468,7 @@ class MultiTenantPostgreSQLService:
         logger.info("Multi-tenant PostgreSQL service closed")
 
     async def _run_migrations(self) -> None:
-        """Run multi-tenant database migrations"""
+        """Run multi-tenant database migrations."""
         try:
             # Create tables if they don't exist
             async with self._engine.begin() as conn:
@@ -480,11 +480,11 @@ class MultiTenantPostgreSQLService:
                     try:
                         await conn.run_sync(lambda conn: index.create(conn))
                     except Exception as e:
-                        logger.warning(f"Index creation warning: {e}")
+                        logger.warning("Index creation warning: %s", e)
 
             logger.info("Multi-tenant database migrations completed successfully")
         except Exception as e:
-            logger.error(f"Multi-tenant migration error: {e}")
+            logger.error("Multi-tenant migration error: %s", e)
             raise
 
     # Tenant Management Methods
@@ -495,10 +495,10 @@ class MultiTenantPostgreSQLService:
         display_name: str,
         domain: str | None = None,
         plan: str = "basic",
-        settings: dict[str, Any] | None = None,
-        limits: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Create a new tenant"""
+        settings: Dict[str, Any] | None = None,
+        limits: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Create a new tenant."""
         async with self._session_maker() as session:
             tenant = Tenant(
                 name=name,
@@ -512,11 +512,11 @@ class MultiTenantPostgreSQLService:
             await session.commit()
             await session.refresh(tenant)
 
-            logger.info(f"Created tenant: {name} ({tenant.id})")
+            logger.info("Created tenant: %s (%s)", name, tenant.id)
             return self._tenant_to_dict(tenant)
 
-    async def get_tenant_by_id(self, tenant_id: str) -> dict[str, Any] | None:
-        """Get tenant by ID"""
+    async def get_tenant_by_id(self, tenant_id: str) -> Dict[str, Any] | None:
+        """Get tenant by ID."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(Tenant).where(Tenant.id == tenant_id),
@@ -524,8 +524,8 @@ class MultiTenantPostgreSQLService:
             tenant = result.scalar_one_or_none()
             return self._tenant_to_dict(tenant) if tenant else None
 
-    async def get_tenant_by_domain(self, domain: str) -> dict[str, Any] | None:
-        """Get tenant by domain"""
+    async def get_tenant_by_domain(self, domain: str) -> Dict[str, Any] | None:
+        """Get tenant by domain."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(Tenant).where(Tenant.domain == domain),
@@ -533,20 +533,20 @@ class MultiTenantPostgreSQLService:
             tenant = result.scalar_one_or_none()
             return self._tenant_to_dict(tenant) if tenant else None
 
-    async def get_tenant_by_name(self, name: str) -> dict[str, Any] | None:
-        """Get tenant by name"""
+    async def get_tenant_by_name(self, name: str) -> Dict[str, Any] | None:
+        """Get tenant by name."""
         async with self._session_maker() as session:
             result = await session.execute(sa.select(Tenant).where(Tenant.name == name))
             tenant = result.scalar_one_or_none()
             return self._tenant_to_dict(tenant) if tenant else None
 
     async def update_tenant_status(self, tenant_id: str, status: str) -> bool:
-        """Update tenant status"""
+        """Update tenant status."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.update(Tenant)
                 .where(Tenant.id == tenant_id)
-                .values(status=status, updated_at=datetime.utcnow()),
+                .values(status=status, updated_at=datetime.now(UTC)),
             )
             await session.commit()
             return result.rowcount > 0
@@ -555,8 +555,8 @@ class MultiTenantPostgreSQLService:
         self,
         status: str | None = None,
         plan: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """Get all tenants with optional filtering"""
+    ) -> list[Dict[str, Any]]:
+        """Get all tenants with optional filtering."""
         async with self._session_maker() as session:
             query = sa.select(Tenant)
 
@@ -579,8 +579,8 @@ class MultiTenantPostgreSQLService:
         REDACTED_SECRET_hash: str,
         full_name: str | None = None,
         role: str = "user",
-    ) -> dict[str, Any]:
-        """Create a new user within a tenant"""
+    ) -> Dict[str, Any]:
+        """Create a new user within a tenant."""
         async with self._session_maker() as session:
             user = User(
                 tenant_id=tenant_id,
@@ -594,15 +594,15 @@ class MultiTenantPostgreSQLService:
             await session.commit()
             await session.refresh(user)
 
-            logger.info(f"Created user: {username} in tenant {tenant_id}")
+            logger.info("Created user: %s in tenant %s", username, tenant_id)
             return self._user_to_dict(user)
 
     async def get_user_by_username(
         self,
         tenant_id: str,
         username: str,
-    ) -> dict[str, Any] | None:
-        """Get user by username within tenant"""
+    ) -> Dict[str, Any] | None:
+        """Get user by username within tenant."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(User).where(
@@ -617,8 +617,8 @@ class MultiTenantPostgreSQLService:
         self,
         tenant_id: str,
         user_id: str,
-    ) -> dict[str, Any] | None:
-        """Get user by ID within tenant"""
+    ) -> Dict[str, Any] | None:
+        """Get user by ID within tenant."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(User).where(User.tenant_id == tenant_id, User.id == user_id),
@@ -631,8 +631,8 @@ class MultiTenantPostgreSQLService:
         tenant_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Get all users within a tenant"""
+    ) -> list[Dict[str, Any]]:
+        """Get all users within a tenant."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(User)
@@ -650,15 +650,15 @@ class MultiTenantPostgreSQLService:
         self,
         tenant_id: str,
         query: str,
-        sources: list[str],
+        sources: List[str],
         results_count: int,
         execution_time_ms: float,
         user_id: str | None = None,
         cache_hit: bool = False,
         quality_score: float | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> str:
-        """Save search to history within tenant"""
+        """Save search to history within tenant."""
         async with self._session_maker() as session:
             search = SearchHistory(
                 tenant_id=tenant_id,
@@ -675,7 +675,7 @@ class MultiTenantPostgreSQLService:
             await session.commit()
             await session.refresh(search)
 
-            logger.debug(f"Saved search history: {search.id} for tenant {tenant_id}")
+            logger.debug("Saved search history: %s for tenant %s", search.id, tenant_id)
             return search.id
 
     async def get_tenant_search_history(
@@ -683,8 +683,8 @@ class MultiTenantPostgreSQLService:
         tenant_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Get search history within tenant"""
+    ) -> list[Dict[str, Any]]:
+        """Get search history within tenant."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(SearchHistory)
@@ -700,9 +700,9 @@ class MultiTenantPostgreSQLService:
         self,
         tenant_id: str,
         days: int = 30,
-    ) -> dict[str, Any]:
-        """Get search analytics within tenant"""
-        since = datetime.utcnow() - timedelta(days=days)
+    ) -> Dict[str, Any]:
+        """Get search analytics within tenant."""
+        since = datetime.now(UTC) - timedelta(days=days)
 
         async with self._pool.acquire() as conn:
             # Total searches for tenant
@@ -754,12 +754,13 @@ class MultiTenantPostgreSQLService:
 
     # Cross-Tenant Analytics (Platform-Level)
 
-    async def get_platform_analytics(self, days: int = 30) -> dict[str, Any]:
-        """Get platform-wide analytics across all tenants"""
+    async def get_platform_analytics(self, days: int = 30) -> Dict[str, Any]:
+        """Get platform-wide analytics across all tenants."""
         if not self.config.cross_tenant_analytics:
-            raise ValueError("Cross-tenant analytics is disabled")
+            msg = "Cross-tenant analytics is disabled"
+            raise ValueError(msg)
 
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(UTC) - timedelta(days=days)
 
         async with self._pool.acquire() as conn:
             # Total tenants
@@ -811,11 +812,11 @@ class MultiTenantPostgreSQLService:
         tenant_id: str,
         activity_type: str,
         user_id: str | None = None,
-        activity_data: dict[str, Any] | None = None,
+        activity_data: Dict[str, Any] | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> str:
-        """Log tenant activity for audit trail"""
+        """Log tenant activity for audit trail."""
         async with self._session_maker() as session:
             activity = TenantActivity(
                 tenant_id=tenant_id,
@@ -829,7 +830,7 @@ class MultiTenantPostgreSQLService:
             await session.commit()
             await session.refresh(activity)
 
-            logger.debug(f"Logged activity: {activity_type} for tenant {tenant_id}")
+            logger.debug("Logged activity: %s for tenant %s", activity_type, tenant_id)
             return activity.id
 
     async def get_tenant_activity(
@@ -838,8 +839,8 @@ class MultiTenantPostgreSQLService:
         activity_type: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Get tenant activity log"""
+    ) -> list[Dict[str, Any]]:
+        """Get tenant activity log."""
         async with self._session_maker() as session:
             query = sa.select(TenantActivity).where(
                 TenantActivity.tenant_id == tenant_id,
@@ -858,8 +859,8 @@ class MultiTenantPostgreSQLService:
 
     # Health Check
 
-    async def health_check(self) -> dict[str, Any]:
-        """Multi-tenant database health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Multi-tenant database health check."""
         try:
             async with self._pool.acquire() as conn:
                 # Test basic connectivity
@@ -898,8 +899,8 @@ class MultiTenantPostgreSQLService:
 
     # Helper Methods
 
-    def _tenant_to_dict(self, tenant: Tenant) -> dict[str, Any]:
-        """Convert Tenant model to dictionary"""
+    def _tenant_to_dict(self, tenant: Tenant) -> Dict[str, Any]:
+        """Convert Tenant model to dictionary."""
         return {
             "id": tenant.id,
             "name": tenant.name,
@@ -914,8 +915,8 @@ class MultiTenantPostgreSQLService:
             "expires_at": tenant.expires_at.isoformat() if tenant.expires_at else None,
         }
 
-    def _user_to_dict(self, user: User) -> dict[str, Any]:
-        """Convert User model to dictionary"""
+    def _user_to_dict(self, user: User) -> Dict[str, Any]:
+        """Convert User model to dictionary."""
         return {
             "id": user.id,
             "tenant_id": user.tenant_id,
@@ -931,8 +932,8 @@ class MultiTenantPostgreSQLService:
             "last_login": user.last_login.isoformat() if user.last_login else None,
         }
 
-    def _search_history_to_dict(self, search: SearchHistory) -> dict[str, Any]:
-        """Convert SearchHistory model to dictionary"""
+    def _search_history_to_dict(self, search: SearchHistory) -> Dict[str, Any]:
+        """Convert SearchHistory model to dictionary."""
         return {
             "id": search.id,
             "tenant_id": search.tenant_id,
@@ -947,8 +948,8 @@ class MultiTenantPostgreSQLService:
             "created_at": search.created_at.isoformat(),
         }
 
-    def _tenant_activity_to_dict(self, activity: TenantActivity) -> dict[str, Any]:
-        """Convert TenantActivity model to dictionary"""
+    def _tenant_activity_to_dict(self, activity: TenantActivity) -> Dict[str, Any]:
+        """Convert TenantActivity model to dictionary."""
         return {
             "id": activity.id,
             "tenant_id": activity.tenant_id,
@@ -967,7 +968,7 @@ class MultiTenantPostgreSQLService:
 async def create_multi_tenant_database_service(
     config: MultiTenantDatabaseConfig | None = None,
 ) -> MultiTenantPostgreSQLService:
-    """Create and initialize multi-tenant database service"""
+    """Create and initialize multi-tenant database service."""
     if config is None:
         config = MultiTenantDatabaseConfig()
 
@@ -977,10 +978,8 @@ async def create_multi_tenant_database_service(
 
 
 @asynccontextmanager
-async def get_multi_tenant_database_service(
-    config: MultiTenantDatabaseConfig | None = None,
-):
-    """Context manager for multi-tenant database service"""
+async def get_multi_tenant_database_service(self) -> None:
+    """Context manager for multi-tenant database service."""
     service = await create_multi_tenant_database_service(config)
     try:
         yield service
@@ -993,7 +992,7 @@ _multi_tenant_db_service: MultiTenantPostgreSQLService | None = None
 
 
 async def get_multi_tenant_database() -> MultiTenantPostgreSQLService:
-    """Get global multi-tenant database service instance"""
+    """Get global multi-tenant database service instance."""
     global _multi_tenant_db_service
     if _multi_tenant_db_service is None:
         _multi_tenant_db_service = await create_multi_tenant_database_service()
@@ -1002,7 +1001,7 @@ async def get_multi_tenant_database() -> MultiTenantPostgreSQLService:
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         async with get_multi_tenant_database_service() as db:
             # Health check
             health = await db.health_check()

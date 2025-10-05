@@ -100,7 +100,7 @@ output "redis_security_group_id" {
 # Terraform State Bucket (if created)
 output "terraform_state_bucket_name" {
   description = "Name of the S3 bucket for Terraform state"
-  value       = var.create_terraform_state_bucket ? aws_s3_bucket.terraform_state[0].bucket : null
+  value       = var.create_terraform_state_bucket ? aws_s3_bucket.terraform_state[0].bucket : ""
 }
 
 # Common outputs for applications

@@ -10,7 +10,7 @@ import os
 # Import our core models
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.services.curation.models.content_item import ContentItem, ContentType
 from src.services.curation.models.content_source import ContentSource, SourceType
@@ -29,20 +29,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 class CurationIntegrationTest:
     """Comprehensive integration test suite"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.test_results = []
         self.content_items = []
         self.users = []
         self.interactions = []
 
-    def log_test(self, test_name: str, passed: bool, details: str = ""):
+    def log_test(self) -> None:
         """Log test result"""
         self.test_results.append(
             {
                 "test": test_name,
                 "passed": passed,
                 "details": details,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
         status = "✅ PASS" if passed else "❌ FAIL"
@@ -50,7 +50,7 @@ class CurationIntegrationTest:
         if details and not passed:
             print(f"    Details: {details}")
 
-    async def test_content_creation_and_validation(self):
+    async def test_content_creation_and_validation(self) -> None:
         """Test content item creation and validation"""
         print("\n🧪 Testing Content Creation & Validation...")
 
@@ -110,7 +110,7 @@ class CurationIntegrationTest:
             self.log_test("Content Creation", False, str(e))
             return False
 
-    async def test_user_profile_management(self):
+    async def test_user_profile_management(self) -> None:
         """Test user profile creation and management"""
         print("\n👤 Testing User Profile Management...")
 
@@ -138,13 +138,14 @@ class CurationIntegrationTest:
             self.log_test("User Profile Management", False, str(e))
             return False
 
-    async def test_interaction_tracking(self):
+    async def test_interaction_tracking(self) -> None:
         """Test user interaction tracking"""
         print("\n🔄 Testing Interaction Tracking...")
 
         try:
             if not self.users or not self.content_items:
-                raise Exception("Need users and content for interaction testing")
+                msg = "Need users and content for interaction testing"
+                raise Exception(msg)
 
             user = self.users[0]
             content = self.content_items[0]
@@ -154,7 +155,7 @@ class CurationIntegrationTest:
                 user_id=user.user_id,
                 content_id=content.id,
                 interaction_type=InteractionType.SAVE,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 duration=180,
             )
 
@@ -176,7 +177,7 @@ class CurationIntegrationTest:
                     user_id=user.user_id,
                     content_id=content.id,
                     interaction_type=itype,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                 )
                 self.interactions.append(test_interaction)
 
@@ -188,13 +189,14 @@ class CurationIntegrationTest:
             self.log_test("Interaction Tracking", False, str(e))
             return False
 
-    async def test_feedback_processing(self):
+    async def test_feedback_processing(self) -> None:
         """Test feedback processing"""
         print("\n⭐ Testing Feedback Processing...")
 
         try:
             if not self.users or not self.content_items:
-                raise Exception("Need users and content for feedback testing")
+                msg = "Need users and content for feedback testing"
+                raise Exception(msg)
 
             user = self.users[0]
             content = self.content_items[0]
@@ -205,7 +207,7 @@ class CurationIntegrationTest:
                 content_id=content.id,
                 feedback_type=FeedbackType.RATING,
                 feedback_value=4.5,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
             self.log_test("Rating Feedback", feedback.feedback_value == 4.5)
@@ -216,7 +218,7 @@ class CurationIntegrationTest:
                 content_id=content.id,
                 feedback_type=FeedbackType.RELEVANCE,
                 feedback_value=0.8,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
             self.log_test(
@@ -230,7 +232,7 @@ class CurationIntegrationTest:
             self.log_test("Feedback Processing", False, str(e))
             return False
 
-    async def test_content_sources(self):
+    async def test_content_sources(self) -> None:
         """Test content source management"""
         print("\n📡 Testing Content Source Management...")
 
@@ -265,7 +267,7 @@ class CurationIntegrationTest:
             self.log_test("Content Source Management", False, str(e))
             return False
 
-    async def test_topic_categories(self):
+    async def test_topic_categories(self) -> None:
         """Test topic category management"""
         print("\n📚 Testing Topic Category Management...")
 
@@ -305,13 +307,14 @@ class CurationIntegrationTest:
             self.log_test("Topic Category Management", False, str(e))
             return False
 
-    async def test_recommendation_creation(self):
+    async def test_recommendation_creation(self) -> None:
         """Test recommendation creation"""
         print("\n🎯 Testing Recommendation Creation...")
 
         try:
             if not self.users or not self.content_items:
-                raise Exception("Need users and content for recommendation testing")
+                msg = "Need users and content for recommendation testing"
+                raise Exception(msg)
 
             user = self.users[0]
             content = self.content_items[0]
@@ -339,13 +342,14 @@ class CurationIntegrationTest:
             self.log_test("Recommendation Creation", False, str(e))
             return False
 
-    async def test_end_to_end_workflow(self):
+    async def test_end_to_end_workflow(self) -> None:
         """Test complete end-to-end workflow"""
         print("\n🚀 Testing End-to-End Workflow...")
 
         try:
             if not self.users or not self.content_items or not self.interactions:
-                raise Exception("Need complete data for end-to-end testing")
+                msg = "Need complete data for end-to-end testing"
+                raise Exception(msg)
 
             # Simulate complete user journey
             user = self.users[0]
@@ -356,7 +360,7 @@ class CurationIntegrationTest:
                 user_id=user.user_id,
                 content_id=content.id,
                 interaction_type=InteractionType.VIEW,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 duration=45,
             )
 
@@ -366,7 +370,7 @@ class CurationIntegrationTest:
                 content_id=content.id,
                 feedback_type=FeedbackType.RATING,
                 feedback_value=4.0,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
             # 3. User saves content
@@ -374,7 +378,7 @@ class CurationIntegrationTest:
                 user_id=user.user_id,
                 content_id=content.id,
                 interaction_type=InteractionType.SAVE,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
             # 4. Generate recommendation
@@ -397,13 +401,13 @@ class CurationIntegrationTest:
             self.log_test("End-to-End Workflow", False, str(e))
             return False
 
-    async def test_performance_characteristics(self):
+    async def test_performance_characteristics(self) -> None:
         """Test performance characteristics"""
         print("\n⚡ Testing Performance Characteristics...")
 
         try:
             # Test batch operations
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
 
             # Create multiple content items
             content_batch = []
@@ -418,7 +422,7 @@ class CurationIntegrationTest:
                 )
                 content_batch.append(content)
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             self.log_test(
                 "Batch Processing",
@@ -437,7 +441,7 @@ class CurationIntegrationTest:
             self.log_test("Performance Testing", False, str(e))
             return False
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run all integration tests"""
         print("🧪 INTELLIGENT CONTENT CURATION SYSTEM - INTEGRATION TESTS")
         print("=" * 70)
@@ -488,11 +492,10 @@ class CurationIntegrationTest:
         return passed_tests == total_tests
 
 
-async def main():
+async def main(self) -> None:
     """Main test runner"""
     test_suite = CurationIntegrationTest()
-    success = await test_suite.run_all_tests()
-    return success
+    return await test_suite.run_all_tests()
 
 
 if __name__ == "__main__":

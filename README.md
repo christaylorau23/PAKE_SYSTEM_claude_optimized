@@ -104,6 +104,16 @@ PAKE is a **production-ready enterprise knowledge management platform** that com
 > - Hybrid Claude Code (planning) → Cursor IDE (implementation) → Claude Code (refactoring) workflow
 > - Project constitution available at `.specify/memory/constitution.md`
 
+### Prerequisites
+
+- **Python 3.12.8** with Poetry 1.8.3
+- **Node.js 22.18.0** with npm
+- **PostgreSQL 15+** database
+- **Redis 7+** for caching
+- **Docker** (optional, for containerized deployment)
+
+> 📋 **Environment Setup**: See [Environment Setup Guide](docs/ENVIRONMENT_SETUP_GUIDE.md) for detailed instructions on aligning your local environment with CI/CD requirements.
+
 ### **Production Deployment (Kubernetes)**
 
 ```bash
@@ -125,7 +135,18 @@ kubectl port-forward -n pake-system svc/pake-backend-service 8000:8000
 
 ### **Development Setup**
 
-#### 🆕 **Poetry-Based Setup (Recommended)**
+#### 🆕 **Automated Setup (Recommended)**
+
+```bash
+# Run automated environment setup and validation
+chmod +x scripts/setup_environment.sh
+./scripts/setup_environment.sh
+
+# Validate environment matches CI requirements
+python3 scripts/validate_environment.py
+```
+
+#### **Poetry-Based Setup (Manual)**
 
 ```bash
 # 1. Install Poetry (if not already installed)
@@ -361,6 +382,7 @@ k8s/deploy.sh staging
 
 - [Development Setup](docs/DEVELOPMENT.md)
 - [Architecture Guide](docs/ARCHITECTURE.md)
+- [Poetry Lock File Enforcement Guide](docs/POETRY_LOCK_FILE_ENFORCEMENT_GUIDE.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 

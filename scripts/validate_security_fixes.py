@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class SecurityValidator:
     """Validate security fixes implementation."""
 
-    def __init__(self, repo_path: str = "."):
+    def __init__(self) -> None:
         """
         Initialize security validator.
 
@@ -42,7 +42,7 @@ class SecurityValidator:
         self.repo_path = Path(repo_path).resolve()
         self.validation_results = {}
 
-    def check_hardcoded_secrets(self) -> tuple[bool, list[str]]:
+    def check_hardcoded_secrets(self) -> tuple[bool, List[str]]:
         """
         Check for hardcoded secrets in the codebase.
 
@@ -86,7 +86,7 @@ class SecurityValidator:
                         found_secrets.append(f"{py_file}: {match}")
 
             except Exception as e:
-                logger.warning(f"Error reading {py_file}: {e}")
+                logger.warning("Error reading %s: %s", py_file, e)
 
         # Search through YAML files
         for yaml_file in self.repo_path.rglob("*.yaml"):
@@ -112,7 +112,7 @@ class SecurityValidator:
                         found_secrets.append(f"{yaml_file}: {match}")
 
             except Exception as e:
-                logger.warning(f"Error reading {yaml_file}: {e}")
+                logger.warning("Error reading %s: %s", yaml_file, e)
 
         success = len(found_secrets) == 0
         self.validation_results["hardcoded_secrets"] = {
@@ -123,9 +123,9 @@ class SecurityValidator:
         if success:
             logger.info("✅ No hardcoded secrets found")
         else:
-            logger.error(f"❌ Found {len(found_secrets)} potential hardcoded secrets")
+            logger.error("❌ Found %s potential hardcoded secrets", len(found_secrets))
             for secret in found_secrets:
-                logger.error(f"   {secret}")
+                logger.error("   %s", secret)
 
         return success, found_secrets
 
@@ -185,7 +185,7 @@ class SecurityValidator:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error checking Vault integration: {e}")
+            logger.error("❌ Error checking Vault integration: %s", e)
             self.validation_results["vault_integration"] = {
                 "success": False,
                 "error": str(e),
@@ -228,7 +228,7 @@ class SecurityValidator:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error checking fail-fast security: {e}")
+            logger.error("❌ Error checking fail-fast security: %s", e)
             self.validation_results["fail_fast_security"] = {
                 "success": False,
                 "error": str(e),
@@ -279,7 +279,7 @@ class SecurityValidator:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error checking Kubernetes secrets: {e}")
+            logger.error("❌ Error checking Kubernetes secrets: %s", e)
             self.validation_results["kubernetes_secrets"] = {
                 "success": False,
                 "error": str(e),
@@ -330,7 +330,7 @@ class SecurityValidator:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error checking .trufflehog-ignore: {e}")
+            logger.error("❌ Error checking .trufflehog-ignore: %s", e)
             self.validation_results["trufflehog_ignore"] = {
                 "success": False,
                 "error": str(e),
@@ -364,7 +364,7 @@ class SecurityValidator:
                 if not result:
                     all_passed = False
             except Exception as e:
-                logger.error(f"❌ Validation check failed: {e}")
+                logger.error("❌ Validation check failed: %s", e)
                 all_passed = False
 
         # Print summary
@@ -374,9 +374,9 @@ class SecurityValidator:
 
         for check_name, result in self.validation_results.items():
             status = "✅ PASS" if result["success"] else "❌ FAIL"
-            logger.info(f"{check_name}: {status}")
+            logger.info("%s: %s", check_name, status)
             if not result["success"] and "error" in result:
-                logger.info(f"   Error: {result['error']}")
+                logger.info("   Error: %s", result["error"])
 
         if all_passed:
             logger.info("")
@@ -390,12 +390,9 @@ class SecurityValidator:
         return all_passed
 
 
-def main():
+def main(self) -> None:
     """Main entry point for security validation."""
-    if len(sys.argv) > 1:
-        repo_path = sys.argv[1]
-    else:
-        repo_path = "."
+    repo_path = sys.argv[1] if len(sys.argv) > 1 else "."
 
     validator = SecurityValidator(repo_path)
     success = validator.run_validation()

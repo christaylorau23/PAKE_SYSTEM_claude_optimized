@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Social Media Integration Service
-Phase 2B Sprint 3: Multi-platform social media content ingestion
+Phase 2B Sprint 3: Multi-platform social media content ingestion.
 
 Provides enterprise social media integration with Twitter, LinkedIn, Reddit,
 intelligent content filtering, and cognitive quality assessment.
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class SocialPlatform(Enum):
-    """Supported social media platforms"""
+    """Supported social media platforms."""
 
     TWITTER = "twitter"
     LINKEDIN = "linkedin"
@@ -32,13 +32,13 @@ class SocialPlatform(Enum):
 
 @dataclass(frozen=True)
 class SocialMediaQuery:
-    """Immutable social media search query configuration"""
+    """Immutable social media search query configuration."""
 
     platform: SocialPlatform
-    keywords: list[str] = field(default_factory=list)
-    hashtags: list[str] = field(default_factory=list)
-    accounts: list[str] = field(default_factory=list)  # @username or u/username
-    subreddits: list[str] = field(default_factory=list)  # Reddit only
+    keywords: List[str] = field(default_factory=list)
+    hashtags: List[str] = field(default_factory=list)
+    accounts: List[str] = field(default_factory=list)  # @username or u/username
+    subreddits: List[str] = field(default_factory=list)  # Reddit only
     date_range: dict[str, datetime] | None = None
     max_results: int = 100
     min_engagement: int = 0  # Minimum likes/upvotes/reactions
@@ -50,7 +50,7 @@ class SocialMediaQuery:
 
 @dataclass(frozen=True)
 class SocialMediaConfig:
-    """Social media API configuration"""
+    """Social media API configuration."""
 
     platform: SocialPlatform
     api_credentials: dict[str, str]
@@ -62,7 +62,7 @@ class SocialMediaConfig:
 
 @dataclass(frozen=True)
 class SocialMediaPost:
-    """Immutable social media post representation"""
+    """Immutable social media post representation."""
 
     post_id: str
     platform: SocialPlatform
@@ -72,20 +72,20 @@ class SocialMediaPost:
     timestamp: datetime
     url: str
     engagement_metrics: dict[str, int]  # likes, shares, comments, etc.
-    hashtags: list[str] = field(default_factory=list)
-    mentions: list[str] = field(default_factory=list)
-    media_urls: list[str] = field(default_factory=list)
+    hashtags: List[str] = field(default_factory=list)
+    mentions: List[str] = field(default_factory=list)
+    media_urls: List[str] = field(default_factory=list)
     location: str | None = None
     language: str = "en"
     sentiment_score: float = 0.0  # -1 to 1
     quality_score: float = 0.0
-    thread_context: dict[str, Any] | None = None
+    thread_context: Dict[str, Any] | None = None
     original_post_id: str | None = None  # For retweets/reposts
 
 
 @dataclass(frozen=True)
 class SocialMediaResult:
-    """Immutable result from social media ingestion"""
+    """Immutable result from social media ingestion."""
 
     success: bool
     platform: SocialPlatform
@@ -114,19 +114,18 @@ class SocialMediaService:
     - Multi-language support
     """
 
-    def __init__(self, configs: list[SocialMediaConfig], cognitive_engine=None):
-        """Initialize social media service with platform configurations"""
+    def __init__(self) -> None:
+        """Initialize social media service with platform configurations."""
         self.configs = {config.platform: config for config in configs}
         self.cognitive_engine = cognitive_engine
         self._client_pool: dict[SocialPlatform, Any] = {}
         self._session_pool: dict[SocialPlatform, aiohttp.ClientSession] = {}
         self._post_cache: dict[str, SocialMediaPost] = {}
-        self._rate_limits: dict[SocialPlatform, dict[str, Any]] = {}
+        self._rate_limits: dict[SocialPlatform, Dict[str, Any]] = {}
 
         logger.info(
-            f"Initialized SocialMediaService for platforms: {
-                list(self.configs.keys())
-            }",
+            "Initialized SocialMediaService for platforms: %s",
+            list(self.configs.keys()),
         )
 
     async def search_posts(self, query: SocialMediaQuery) -> SocialMediaResult:
@@ -136,14 +135,17 @@ class SocialMediaService:
         and cognitive quality assessment.
         """
         logger.info(
-            f"Starting {query.platform.value} search for keywords: {query.keywords}",
+            "Starting %s search for keywords: %s",
+            query.platform.value,
+            query.keywords,
         )
         start_time = asyncio.get_event_loop().time()
 
         try:
             # Check platform availability
             if query.platform not in self.configs:
-                raise ValueError(f"Platform {query.platform.value} not configured")
+                msg = f"Platform {query.platform.value} not configured"
+                raise ValueError(msg)
 
             # Get platform client
             client = await self._get_platform_client(query.platform)
@@ -156,9 +158,12 @@ class SocialMediaService:
             elif query.platform == SocialPlatform.REDDIT:
                 raw_posts = await self._search_reddit(client, query)
             else:
-                raise ValueError(f"Unsupported platform: {query.platform.value}")
+                msg = f"Unsupported platform: {query.platform.value}"
+                raise ValueError(msg)
 
-            logger.info(f"Found {len(raw_posts)} raw posts from {query.platform.value}")
+            logger.info(
+                "Found %s raw posts from %s", len(raw_posts), query.platform.value
+            )
 
             # Apply intelligent filtering
             filtered_posts = await self._apply_content_filters(raw_posts, query)
@@ -198,7 +203,8 @@ class SocialMediaService:
             )
 
             logger.info(
-                f"Social media search completed: {len(final_posts)} posts retrieved",
+                "Social media search completed: %s posts retrieved",
+                len(final_posts),
             )
             return result
 
@@ -206,7 +212,7 @@ class SocialMediaService:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001
-            logger.error(f"Social media search failed: {e}")
+            logger.error("Social media search failed: %s", e)
 
             return SocialMediaResult(
                 success=False,
@@ -216,12 +222,12 @@ class SocialMediaService:
                 execution_time=execution_time,
             )
 
-    async def _get_platform_client(self, platform: SocialPlatform):
-        """Get or create client for specific platform"""
+    async def _get_platform_client(self) -> None:
+        """Get or create client for specific platform."""
         if platform not in self._client_pool:
             config = self.configs[platform]
 
-            logger.info(f"Creating {platform.value} API client")
+            logger.info("Creating %s API client", platform.value)
 
             # Create HTTP session for platform
             session = aiohttp.ClientSession(
@@ -242,7 +248,8 @@ class SocialMediaService:
                 # Reddit API client
                 client = await self._create_reddit_client(config, session)
             else:
-                raise ValueError(f"Unsupported platform: {platform.value}")
+                msg = f"Unsupported platform: {platform.value}"
+                raise ValueError(msg)
 
             self._client_pool[platform] = client
 
@@ -259,7 +266,7 @@ class SocialMediaService:
         client: Any,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Search Twitter using API v2"""
+        """Search Twitter using API v2."""
         try:
             # Build search query
             search_query = (
@@ -302,12 +309,12 @@ class SocialMediaService:
                     # Fallback to mock data for testing
                     return self._generate_mock_twitter_posts(query)
                 error_text = await response.text()
-                logger.error(f"Twitter API error {response.status}: {error_text}")
+                logger.error("Twitter API error %s: %s", response.status, error_text)
                 # Fallback to mock data
                 return self._generate_mock_twitter_posts(query)
 
         except Exception as e:
-            logger.error(f"Twitter search failed: {e}")
+            logger.error("Twitter search failed: %s", e)
             # Fallback to mock data when API fails
             return self._generate_mock_twitter_posts(query)
 
@@ -316,7 +323,7 @@ class SocialMediaService:
         client: Any,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Search LinkedIn using LinkedIn API"""
+        """Search LinkedIn using LinkedIn API."""
         try:
             # LinkedIn API has limited search capabilities - use posts/shares endpoint
             params = {
@@ -347,12 +354,12 @@ class SocialMediaService:
                     # Fallback to mock data for testing
                     return self._generate_mock_linkedin_posts(query)
                 error_text = await response.text()
-                logger.error(f"LinkedIn API error {response.status}: {error_text}")
+                logger.error("LinkedIn API error %s: %s", response.status, error_text)
                 # Fallback to mock data
                 return self._generate_mock_linkedin_posts(query)
 
         except Exception as e:
-            logger.error(f"LinkedIn search failed: {e}")
+            logger.error("LinkedIn search failed: %s", e)
             # Fallback to mock data when API fails
             return self._generate_mock_linkedin_posts(query)
 
@@ -361,7 +368,7 @@ class SocialMediaService:
         client: Any,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Search Reddit using Reddit API"""
+        """Search Reddit using Reddit API."""
         # Mock implementation - replace with actual Reddit API calls
         mock_posts = self._generate_mock_reddit_posts(query)
 
@@ -376,7 +383,7 @@ class SocialMediaService:
         self,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Generate realistic mock Twitter posts for testing"""
+        """Generate realistic mock Twitter posts for testing."""
         base_posts = [
             {
                 "content": "Excited to announce our new AI research breakthrough in natural language processing! The future of human-computer interaction is here. #AI #MachineLearning #Innovation",
@@ -418,11 +425,10 @@ class SocialMediaService:
                     continue
 
             # Apply hashtag filtering
-            if query.hashtags:
-                if not any(
-                    hashtag in post_data["hashtags"] for hashtag in query.hashtags
-                ):
-                    continue
+            if query.hashtags and not any(
+                hashtag in post_data["hashtags"] for hashtag in query.hashtags
+            ):
+                continue
 
             post_id = f"twitter_{i}_{
                 hashlib.sha256(post_data['content'].encode()).hexdigest()[:8]
@@ -457,7 +463,7 @@ class SocialMediaService:
         self,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Generate realistic mock LinkedIn posts for testing"""
+        """Generate realistic mock LinkedIn posts for testing."""
         base_posts = [
             {
                 "content": """🚀 Thrilled to share insights from our latest AI implementation at the company.
@@ -534,7 +540,7 @@ What's your experience with AI in the workplace? Would love to hear your thought
         self,
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Generate realistic mock Reddit posts for testing"""
+        """Generate realistic mock Reddit posts for testing."""
         base_posts = [
             {
                 "content": """Has anyone else noticed how AI is quietly revolutionizing scientific research?
@@ -614,7 +620,7 @@ What fields do you think will be transformed next?""",
         posts: list[SocialMediaPost],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Apply intelligent content filtering"""
+        """Apply intelligent content filtering."""
         filtered_posts = []
 
         for post in posts:
@@ -654,7 +660,7 @@ What fields do you think will be transformed next?""",
         self,
         posts: list[SocialMediaPost],
     ) -> list[SocialMediaPost]:
-        """Apply sentiment analysis to posts"""
+        """Apply sentiment analysis to posts."""
         analyzed_posts = []
 
         for post in posts:
@@ -687,7 +693,7 @@ What fields do you think will be transformed next?""",
         return analyzed_posts
 
     def _calculate_sentiment(self, text: str) -> float:
-        """Simple sentiment analysis implementation"""
+        """Simple sentiment analysis implementation."""
         positive_words = [
             "great",
             "excellent",
@@ -733,7 +739,7 @@ What fields do you think will be transformed next?""",
         self,
         posts: list[SocialMediaPost],
     ) -> list[SocialMediaPost]:
-        """Apply cognitive quality assessment to posts"""
+        """Apply cognitive quality assessment to posts."""
         assessed_posts = []
 
         for post in posts:
@@ -767,7 +773,7 @@ What fields do you think will be transformed next?""",
                 assessed_posts.append(assessed_post)
 
             except Exception as e:
-                logger.warning(f"Failed to assess post {post.post_id}: {e}")
+                logger.warning("Failed to assess post %s: %s", post.post_id, e)
                 assessed_posts.append(post)  # Keep original
 
         return assessed_posts
@@ -777,7 +783,7 @@ What fields do you think will be transformed next?""",
         posts: list[SocialMediaPost],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Sort posts by relevance and engagement"""
+        """Sort posts by relevance and engagement."""
 
         def relevance_score(post: SocialMediaPost) -> float:
             score = 0.0
@@ -812,7 +818,7 @@ What fields do you think will be transformed next?""",
         result: SocialMediaResult,
         source_name: str,
     ) -> list[ContentItem]:
-        """Convert social media posts to ContentItem format"""
+        """Convert social media posts to ContentItem format."""
         content_items = []
 
         for post in result.posts:
@@ -845,14 +851,14 @@ What fields do you think will be transformed next?""",
             content_items.append(content_item)
 
         logger.info(
-            f"Converted {len(content_items)} {
-                result.platform.value
-            } posts to content items",
+            "Converted %s %s posts to content items",
+            len(content_items),
+            result.platform.value,
         )
         return content_items
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform social media service health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform social media service health check."""
         health_status = {
             "status": "healthy",
             "platforms": {},
@@ -862,7 +868,7 @@ What fields do you think will be transformed next?""",
             ),
         }
 
-        for platform, config in self.configs.items():
+        for platform, _config in self.configs.items():
             platform_health = {
                 "configured": True,
                 "rate_limit_remaining": self._rate_limits.get(platform, {}).get(
@@ -876,8 +882,8 @@ What fields do you think will be transformed next?""",
 
         return health_status
 
-    async def close(self):
-        """Clean up connections and resources"""
+    async def close(self) -> None:
+        """Clean up connections and resources."""
         # Close HTTP sessions
         for session in self._session_pool.values():
             await session.close()
@@ -888,12 +894,8 @@ What fields do you think will be transformed next?""",
         self._rate_limits.clear()
         logger.info("SocialMediaService closed")
 
-    async def _create_twitter_client(
-        self,
-        config: SocialMediaConfig,
-        session: aiohttp.ClientSession,
-    ):
-        """Create Twitter API v2 client"""
+    async def _create_twitter_client(self) -> None:
+        """Create Twitter API v2 client."""
         credentials = config.api_credentials
         return {
             "platform": "twitter",
@@ -902,12 +904,8 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_linkedin_client(
-        self,
-        config: SocialMediaConfig,
-        session: aiohttp.ClientSession,
-    ):
-        """Create LinkedIn API client"""
+    async def _create_linkedin_client(self) -> None:
+        """Create LinkedIn API client."""
         credentials = config.api_credentials
         return {
             "platform": "linkedin",
@@ -916,12 +914,8 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_reddit_client(
-        self,
-        config: SocialMediaConfig,
-        session: aiohttp.ClientSession,
-    ):
-        """Create Reddit API client"""
+    async def _create_reddit_client(self) -> None:
+        """Create Reddit API client."""
         credentials = config.api_credentials
         return {
             "platform": "reddit",
@@ -932,10 +926,10 @@ What fields do you think will be transformed next?""",
 
     async def _parse_twitter_response(
         self,
-        data: dict[str, Any],
+        data: Dict[str, Any],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Parse Twitter API v2 response into SocialMediaPost objects"""
+        """Parse Twitter API v2 response into SocialMediaPost objects."""
         posts = []
 
         if "data" not in data:
@@ -989,7 +983,9 @@ What fields do you think will be transformed next?""",
 
             except Exception as e:
                 logger.warning(
-                    f"Failed to parse Twitter tweet {tweet.get('id', 'unknown')}: {e}",
+                    "Failed to parse Twitter tweet %s: %s",
+                    tweet.get("id", "unknown"),
+                    e,
                 )
                 continue
 
@@ -997,10 +993,10 @@ What fields do you think will be transformed next?""",
 
     async def _parse_linkedin_response(
         self,
-        data: dict[str, Any],
+        data: Dict[str, Any],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
-        """Parse LinkedIn API response into SocialMediaPost objects"""
+        """Parse LinkedIn API response into SocialMediaPost objects."""
         posts = []
 
         if "elements" not in data:
@@ -1038,7 +1034,9 @@ What fields do you think will be transformed next?""",
 
             except Exception as e:
                 logger.warning(
-                    f"Failed to parse LinkedIn share {share.get('id', 'unknown')}: {e}",
+                    "Failed to parse LinkedIn share %s: %s",
+                    share.get("id", "unknown"),
+                    e,
                 )
                 continue
 

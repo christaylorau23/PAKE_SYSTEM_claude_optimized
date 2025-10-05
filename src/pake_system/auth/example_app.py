@@ -1,4 +1,4 @@
-"""Example FastAPI application demonstrating OAuth2 authentication
+r"""Example FastAPI application demonstrating OAuth2 authentication.
 
 This example shows how to:
 1. Set up the authentication system
@@ -60,7 +60,7 @@ async def root() -> dict[str, str]:
 
 @app.get("/protected")
 async def protected_route(
-    current_user: Annotated[User, Depends(get_current_active_user)]
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, str]:
     """Protected endpoint - requires authentication.
 
@@ -88,7 +88,7 @@ async def protected_route(
 
 @app.get("/admin")
 async def admin_route(
-    current_user: Annotated[User, Depends(get_current_active_user)]
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, str]:
     """Admin-only endpoint.
 
@@ -121,8 +121,8 @@ async def admin_route(
 
 
 @app.exception_handler(401)
-async def unauthorized_handler(request, exc):
-    """Custom handler for unauthorized errors"""
+async def unauthorized_handler(self) -> None:
+    """Custom handler for unauthorized errors."""
     return JSONResponse(
         status_code=401,
         content={

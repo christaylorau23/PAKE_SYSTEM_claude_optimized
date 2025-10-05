@@ -16,20 +16,20 @@ from typing import Any
 class SecurityValidator:
     """Security validation runner"""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.project_root = Path(__file__).parent.parent
-        self.results: list[tuple[str, bool, str, dict[str, Any]]] = []
+        self.results: list[tuple[str, bool, str, Dict[str, Any]]] = []
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
             print(f"[{timestamp}] [{level}] {message}")
 
     def run_command(
-        self, name: str, command: list[str], description: str
-    ) -> tuple[str, bool, str, dict[str, Any]]:
+        self, name: str, command: List[str], description: str
+    ) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run a command and return results"""
         self.log(f"Running {name}: {description}")
         start_time = time.time()
@@ -53,11 +53,10 @@ class SecurityValidator:
             if result.returncode == 0:
                 self.log(f"✅ {name} passed ({duration:.2f}s)", "INFO")
                 return name, True, result.stdout, security_info
-            else:
-                self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
-                if self.verbose:
-                    self.log(f"Error: {result.stderr}", "ERROR")
-                return name, False, result.stderr, security_info
+            self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
+            if self.verbose:
+                self.log(f"Error: {result.stderr}", "ERROR")
+            return name, False, result.stderr, security_info
 
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
@@ -70,7 +69,7 @@ class SecurityValidator:
 
     def _parse_security_output(
         self, tool: str, stdout: str, stderr: str
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Parse security tool output for structured information"""
         info = {"tool": tool, "issues": [], "summary": {}}
 
@@ -112,7 +111,7 @@ class SecurityValidator:
                     info["summary"] = {
                         "vulnerabilities": len(safety_data),
                         "packages_affected": len(
-                            set(vuln.get("package") for vuln in safety_data)
+                            {vuln.get("package") for vuln in safety_data}
                         ),
                     }
                 except json.JSONDecodeError:
@@ -148,7 +147,7 @@ class SecurityValidator:
 
         return info
 
-    def run_bandit_check(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_bandit_check(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run Bandit security analysis"""
         command = [
             "poetry",
@@ -165,21 +164,21 @@ class SecurityValidator:
 
         return self.run_command("bandit", command, description)
 
-    def run_pip_audit_check(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_pip_audit_check(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run pip-audit for vulnerable dependencies"""
         command = ["poetry", "run", "pip-audit", "--format=json"]
         description = "Scan for vulnerable Python dependencies"
 
         return self.run_command("pip-audit", command, description)
 
-    def run_safety_check(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_safety_check(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run Safety check"""
         command = ["poetry", "run", "safety", "check", "--json"]
         description = "Additional Python security checks"
 
         return self.run_command("safety", command, description)
 
-    def run_detect_secrets_check(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_detect_secrets_check(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run detect-secrets scan"""
         command = [
             "poetry",
@@ -193,14 +192,14 @@ class SecurityValidator:
 
         return self.run_command("detect-secrets", command, description)
 
-    def run_gitleaks_check(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_gitleaks_check(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run gitleaks scan"""
         command = ["gitleaks", "detect", "--source", ".", "--verbose"]
         description = "Scan git history for secrets"
 
         return self.run_command("gitleaks", command, description)
 
-    def run_custom_security_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_custom_security_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run custom security test suite"""
         command = ["poetry", "run", "python", "scripts/security_test_suite.py"]
         description = "Run comprehensive security test suite"
@@ -229,7 +228,7 @@ class SecurityValidator:
         # Return success if all checks passed
         return all(result[1] for result in checks)
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print validation summary"""
         print("\n" + "=" * 60)
         print("🔒 SECURITY VALIDATION SUMMARY")
@@ -241,7 +240,7 @@ class SecurityValidator:
         print(f"📊 Total Checks: {total}")
         print(f"✅ Passed: {passed}")
         print(f"❌ Failed: {total - passed}")
-        print(f"📈 Success Rate: {(passed/total*100):.1f}%")
+        print(f"📈 Success Rate: {(passed / total * 100):.1f}%")
 
         print("\n📋 Results by Tool:")
         for name, success, output, info in self.results:
@@ -278,7 +277,7 @@ class SecurityValidator:
             print("   - Fix security vulnerabilities in code")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Security Validation")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")

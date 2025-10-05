@@ -12,7 +12,7 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 # Visualization and reporting
 try:
@@ -60,7 +60,7 @@ class PerformanceReport:
 class VibeAnalyticsEngine:
     """Main analytics and optimization engine"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = "analytics_config.json") -> None:
         """Initialize analytics engine"""
         self.config = self._load_config(config_path)
         self.logger = self._setup_logging()
@@ -132,7 +132,7 @@ class VibeAnalyticsEngine:
 
         return logging.getLogger(__name__)
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize SQLite database for analytics storage"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -234,7 +234,7 @@ class VibeAnalyticsEngine:
                 clients["slack"] = WebClient(token=self.config["slack_token"])
                 self.logger.info("Slack client initialized")
             except Exception as e:
-                self.logger.error(f"Failed to initialize Slack client: {e}")
+                self.logger.error("Failed to initialize Slack client: %s", e)
 
         # Import social media clients from our existing modules
         try:
@@ -248,7 +248,7 @@ class VibeAnalyticsEngine:
 
             self.logger.info("Social media clients initialized")
         except ImportError as e:
-            self.logger.warning(f"Social media modules not available: {e}")
+            self.logger.warning("Social media modules not available: %s", e)
 
         return clients
 
@@ -324,7 +324,7 @@ class VibeAnalyticsEngine:
             return rules
 
         except Exception as e:
-            self.logger.error(f"Failed to load optimization rules: {e}")
+            self.logger.error("Failed to load optimization rules: %s", e)
             return self._get_default_optimization_rules()
 
     def _get_default_optimization_rules(self) -> list[dict]:
@@ -379,7 +379,7 @@ class VibeAnalyticsEngine:
                 all_metrics["platforms"][platform] = metrics
                 await self._store_platform_metrics(platform, metrics)
             except Exception as e:
-                self.logger.error(f"Failed to collect metrics for {platform}: {e}")
+                self.logger.error("Failed to collect metrics for %s: %s", platform, e)
                 all_metrics["platforms"][platform] = {"error": str(e)}
 
         # Calculate aggregated metrics
@@ -420,11 +420,11 @@ class VibeAnalyticsEngine:
             client = self.clients["social_analytics"]
 
             # Get recent metrics (last 24 hours)
-            end_date = datetime.now()
+            end_date = datetime.now(UTC)
             start_date = end_date - timedelta(days=1)
 
             # This would integrate with our existing analytics system
-            metrics = {
+            return {
                 "followers": await self._get_follower_count("twitter"),
                 "engagement_rate": await self._get_engagement_rate("twitter"),
                 "impressions": await self._get_impressions("twitter"),
@@ -432,16 +432,14 @@ class VibeAnalyticsEngine:
                 "top_posts": await self._get_top_posts("twitter", limit=5),
             }
 
-            return metrics
-
         except Exception as e:
-            self.logger.error(f"Twitter metrics collection failed: {e}")
+            self.logger.error("Twitter metrics collection failed: %s", e)
             return {"error": str(e)}
 
     async def _collect_instagram_metrics(self) -> dict:
         """Collect Instagram metrics"""
         try:
-            metrics = {
+            return {
                 "followers": await self._get_follower_count("instagram"),
                 "engagement_rate": await self._get_engagement_rate("instagram"),
                 "reach": await self._get_reach("instagram"),
@@ -449,16 +447,14 @@ class VibeAnalyticsEngine:
                 "reels_performance": await self._get_reels_metrics("instagram"),
             }
 
-            return metrics
-
         except Exception as e:
-            self.logger.error(f"Instagram metrics collection failed: {e}")
+            self.logger.error("Instagram metrics collection failed: %s", e)
             return {"error": str(e)}
 
     async def _collect_tiktok_metrics(self) -> dict:
         """Collect TikTok metrics"""
         try:
-            metrics = {
+            return {
                 "followers": await self._get_follower_count("tiktok"),
                 "views": await self._get_total_views("tiktok"),
                 "engagement_rate": await self._get_engagement_rate("tiktok"),
@@ -466,16 +462,14 @@ class VibeAnalyticsEngine:
                 "trending_hashtags": await self._get_trending_hashtags("tiktok"),
             }
 
-            return metrics
-
         except Exception as e:
-            self.logger.error(f"TikTok metrics collection failed: {e}")
+            self.logger.error("TikTok metrics collection failed: %s", e)
             return {"error": str(e)}
 
     async def _collect_linkedin_metrics(self) -> dict:
         """Collect LinkedIn metrics"""
         try:
-            metrics = {
+            return {
                 "connections": await self._get_connections_count("linkedin"),
                 "post_impressions": await self._get_impressions("linkedin"),
                 "engagement_rate": await self._get_engagement_rate("linkedin"),
@@ -483,16 +477,14 @@ class VibeAnalyticsEngine:
                 "lead_generation": await self._get_lead_metrics("linkedin"),
             }
 
-            return metrics
-
         except Exception as e:
-            self.logger.error(f"LinkedIn metrics collection failed: {e}")
+            self.logger.error("LinkedIn metrics collection failed: %s", e)
             return {"error": str(e)}
 
     async def _collect_reddit_metrics(self) -> dict:
         """Collect Reddit metrics"""
         try:
-            metrics = {
+            return {
                 "post_karma": await self._get_karma_score("reddit"),
                 "upvotes": await self._get_total_upvotes("reddit"),
                 "comments": await self._get_comment_count("reddit"),
@@ -500,10 +492,8 @@ class VibeAnalyticsEngine:
                 "trending_posts": await self._get_trending_posts("reddit"),
             }
 
-            return metrics
-
         except Exception as e:
-            self.logger.error(f"Reddit metrics collection failed: {e}")
+            self.logger.error("Reddit metrics collection failed: %s", e)
             return {"error": str(e)}
 
     # Platform-specific metric getters (simplified implementations)
@@ -759,7 +749,9 @@ class VibeAnalyticsEngine:
 
         return scores
 
-    async def _store_platform_metrics(self, platform: str, metrics: dict):
+    async def _store_platform_metrics(
+        self, metrics: dict[str, Any], platform: str
+    ) -> None:
         """Store platform metrics in database"""
         if "error" in metrics:
             return
@@ -771,7 +763,7 @@ class VibeAnalyticsEngine:
 
         # Store individual metrics
         for metric_name, value in metrics.items():
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 cursor.execute(
                     """
                     INSERT INTO metrics (metric_name, value, timestamp, platform, metadata)
@@ -813,7 +805,7 @@ class VibeAnalyticsEngine:
 
         # Create report object
         report = PerformanceReport(
-            date=datetime.now().strftime("%Y-%m-%d"),
+            date=datetime.now(UTC).strftime("%Y-%m-%d"),
             executive_summary=executive_summary,
             content_performance=content_analysis,
             conversion_metrics=conversion_analysis,
@@ -882,7 +874,7 @@ class VibeAnalyticsEngine:
                 return response.choices[0].message.content.strip()
 
             except Exception as e:
-                self.logger.error(f"Failed to generate AI summary: {e}")
+                self.logger.error("Failed to generate AI summary: %s", e)
 
         # Fallback template-based summary
         if summary_data["overall_score"] >= 80:
@@ -1128,7 +1120,7 @@ class VibeAnalyticsEngine:
             return recommendations[:5]  # Return top 5
 
         except Exception as e:
-            self.logger.error(f"Failed to generate AI recommendations: {e}")
+            self.logger.error("Failed to generate AI recommendations: %s", e)
             return self._generate_template_recommendations(metrics)
 
     def _generate_template_recommendations(self, metrics: dict) -> list[str]:
@@ -1197,7 +1189,7 @@ class VibeAnalyticsEngine:
                 ),
             )
             fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                polar={"radialaxis": {"visible": True, "range": [0, 100]}},
                 showlegend=True,
                 title="Performance Score Breakdown",
             )
@@ -1225,7 +1217,7 @@ class VibeAnalyticsEngine:
 
             # Engagement trend line (simulated data)
             dates = [
-                (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+                (datetime.now(UTC) - timedelta(days=i)).strftime("%Y-%m-%d")
                 for i in range(7, 0, -1)
             ]
             import random
@@ -1239,7 +1231,7 @@ class VibeAnalyticsEngine:
                     y=engagement_values,
                     mode="lines+markers",
                     name="Engagement Rate",
-                    line=dict(color="#1f77b4", width=3),
+                    line={"color": "#1f77b4", "width": 3},
                 ),
             )
             fig_trend.update_layout(
@@ -1252,7 +1244,7 @@ class VibeAnalyticsEngine:
             )
 
         except Exception as e:
-            self.logger.error(f"Failed to create visualizations: {e}")
+            self.logger.error("Failed to create visualizations: %s", e)
             visualizations["error"] = f"Visualization creation failed: {str(e)}"
 
         return visualizations
@@ -1326,7 +1318,7 @@ class VibeAnalyticsEngine:
             ) * 100
 
         # Platform-specific ROI (simulated)
-        for platform in metrics["platforms"].keys():
+        for platform in metrics["platforms"]:
             if "error" not in metrics["platforms"][platform]:
                 roi_analysis["platform_roi"][platform] = {
                     "spend": random.randint(200, 1000),
@@ -1336,7 +1328,7 @@ class VibeAnalyticsEngine:
 
         return roi_analysis
 
-    async def _store_alerts(self, alerts: list[str]):
+    async def _store_alerts(self, alerts: list[str]) -> None:
         """Store alerts in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -1367,7 +1359,7 @@ class VibeAnalyticsEngine:
         conn.commit()
         conn.close()
 
-    async def _store_report(self, report: PerformanceReport):
+    async def _store_report(self, report: PerformanceReport) -> None:
         """Store performance report in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -1383,7 +1375,7 @@ class VibeAnalyticsEngine:
         conn.commit()
         conn.close()
 
-    async def _send_slack_report(self, report: PerformanceReport):
+    async def _send_slack_report(self, report: PerformanceReport) -> None:
         """Send formatted report to Slack"""
         if "slack" not in self.clients:
             return
@@ -1446,10 +1438,10 @@ class VibeAnalyticsEngine:
             channel = self.config["channels"]["reports"]
             await self.clients["slack"].chat_postMessage(channel=channel, blocks=blocks)
 
-            self.logger.info(f"Report sent to Slack channel {channel}")
+            self.logger.info("Report sent to Slack channel %s", channel)
 
         except Exception as e:
-            self.logger.error(f"Failed to send Slack report: {e}")
+            self.logger.error("Failed to send Slack report: %s", e)
 
     def _format_top_metrics_for_slack(self, report: PerformanceReport) -> str:
         """Format top metrics for Slack display"""
@@ -1489,7 +1481,7 @@ class VibeAnalyticsEngine:
 # Usage and testing functions
 
 
-async def main():
+async def main(self) -> None:
     """Main function for testing analytics engine"""
 
     # Initialize analytics engine

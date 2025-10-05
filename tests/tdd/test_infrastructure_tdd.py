@@ -12,13 +12,13 @@ import yaml
 class TestInfrastructureTDD:
     """Test-Driven Development for Infrastructure components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.infra_dir = self.project_root / "infra" / "terraform"
         self.k8s_dir = self.project_root / "k8s"
 
-    def test_terraform_configuration_structure(self):
+    def test_terraform_configuration_structure(self) -> None:
         """TDD: Test Terraform configuration has proper structure"""
         # Arrange
         terraform_files = [
@@ -40,7 +40,7 @@ class TestInfrastructureTDD:
                 len(content) > 100
             ), f"Terraform file {file_name} should have substantial content"
 
-    def test_terraform_provider_configuration(self):
+    def test_terraform_provider_configuration(self) -> None:
         """TDD: Test Terraform providers are properly configured"""
         # Arrange
         main_tf_path = self.infra_dir / "main.tf"
@@ -55,7 +55,7 @@ class TestInfrastructureTDD:
         assert "kubernetes" in content, "Should configure Kubernetes provider"
         assert "helm" in content, "Should configure Helm provider"
 
-    def test_terraform_resource_definitions(self):
+    def test_terraform_resource_definitions(self) -> None:
         """TDD: Test Terraform resources are properly defined"""
         # Arrange
         main_tf_path = self.infra_dir / "main.tf"
@@ -76,7 +76,7 @@ class TestInfrastructureTDD:
         for resource in required_resources:
             assert resource in content, f"Should define {resource}"
 
-    def test_terraform_variables_validation(self):
+    def test_terraform_variables_validation(self) -> None:
         """TDD: Test Terraform variables have proper validation"""
         # Arrange
         variables_tf_path = self.infra_dir / "variables.tf"
@@ -93,7 +93,7 @@ class TestInfrastructureTDD:
             'variable "database_REDACTED_SECRET"' in content
         ), "Should define database_REDACTED_SECRET variable"
 
-    def test_terraform_outputs_completeness(self):
+    def test_terraform_outputs_completeness(self) -> None:
         """TDD: Test Terraform outputs provide all necessary information"""
         # Arrange
         outputs_tf_path = self.infra_dir / "outputs.tf"
@@ -114,7 +114,7 @@ class TestInfrastructureTDD:
         for output in required_outputs:
             assert output in content, f"Should define {output}"
 
-    def test_terraform_backend_configuration(self):
+    def test_terraform_backend_configuration(self) -> None:
         """TDD: Test Terraform backend is properly configured"""
         # Arrange
         main_tf_path = self.infra_dir / "main.tf"
@@ -127,7 +127,7 @@ class TestInfrastructureTDD:
         assert 'backend "s3"' in content, "Should configure S3 backend"
         assert "terraform.tfstate" in content, "Should specify state file location"
 
-    def test_terraform_environment_configuration(self):
+    def test_terraform_environment_configuration(self) -> None:
         """TDD: Test environment-specific configurations exist"""
         # Arrange
         tfvars_example = self.infra_dir / "terraform.tfvars.example"
@@ -144,7 +144,7 @@ class TestInfrastructureTDD:
             "database_REDACTED_SECRET" in content
         ), "Should define database_REDACTED_SECRET"
 
-    def test_kubernetes_manifests_structure(self):
+    def test_kubernetes_manifests_structure(self) -> None:
         """TDD: Test Kubernetes manifests have proper structure"""
         # Arrange
         helm_chart_dir = self.k8s_dir / "helm" / "pake-system"
@@ -161,7 +161,7 @@ class TestInfrastructureTDD:
             file_path = helm_chart_dir / file_name
             assert file_path.exists(), f"Helm chart file {file_name} should exist"
 
-    def test_helm_chart_metadata(self):
+    def test_helm_chart_metadata(self) -> None:
         """TDD: Test Helm chart has proper metadata"""
         # Arrange
         chart_yaml_path = self.k8s_dir / "helm" / "pake-system" / "Chart.yaml"
@@ -177,7 +177,7 @@ class TestInfrastructureTDD:
         assert "appVersion" in chart_data, "Should have app version"
         assert "dependencies" in chart_data, "Should have dependencies"
 
-    def test_helm_values_consistency(self):
+    def test_helm_values_consistency(self) -> None:
         """TDD: Test Helm values files are consistent"""
         # Arrange
         helm_chart_dir = self.k8s_dir / "helm" / "pake-system"
@@ -197,7 +197,7 @@ class TestInfrastructureTDD:
                     section in values_data
                 ), f"{values_file} should have {section} section"
 
-    def test_argocd_application_manifests(self):
+    def test_argocd_application_manifests(self) -> None:
         """TDD: Test ArgoCD application manifests are properly configured"""
         # Arrange
         argocd_dir = self.k8s_dir / "argocd" / "applications"

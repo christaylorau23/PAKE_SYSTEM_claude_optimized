@@ -1,0 +1,11 @@
+# Add this step to your GitHub Actions workflow
+- name: Check Filesystem Compatibility
+  run: |
+    echo "🔍 Checking filesystem compatibility..."
+    python scripts/ci_filesystem_check.py
+    if [ $? -ne 0 ]; then
+      echo "❌ Filesystem compatibility issues detected"
+      echo "Please fix the issues listed above before merging"
+      exit 1
+    fi
+    echo "✅ Filesystem compatibility check passed"

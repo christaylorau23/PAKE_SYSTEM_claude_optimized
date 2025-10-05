@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-PAKE System - Vercel API Entry Point
-Simplified FastAPI application for Vercel deployment
+"""PAKE System - Vercel API Entry Point
+Simplified FastAPI application for Vercel deployment.
 """
 
-from fastapi import FastAPI, HTTPException
+from datetime import UTC, datetime
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-from datetime import datetime
 
 # Create FastAPI app
 app = FastAPI(
@@ -16,7 +16,7 @@ app = FastAPI(
     description="Enterprise Knowledge Management & AI Research Platform",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Add CORS middleware
@@ -28,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Pydantic models
 class HealthResponse(BaseModel):
     status: str
@@ -35,16 +36,18 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: str
 
+
 class SystemInfo(BaseModel):
     name: str
     version: str
     description: str
-    features: list[str]
+    features: List[str]
+
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    """Main landing page"""
+async def root(self) -> None:
+    """Main landing page."""
     html_content = """
     <!DOCTYPE html>
     <html lang="en">
@@ -107,19 +110,21 @@ async def root():
     """
     return HTMLResponse(content=html_content)
 
+
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
-    """Health check endpoint"""
+async def health_check(self) -> None:
+    """Health check endpoint."""
     return HealthResponse(
         status="healthy",
         message="PAKE System is running successfully",
         version="1.0.0",
-        timestamp=datetime.now().isoformat()
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
+
 @app.get("/system", response_model=SystemInfo)
-async def system_info():
-    """System information endpoint"""
+async def system_info(self) -> None:
+    """System information endpoint."""
     return SystemInfo(
         name="PAKE System",
         version="1.0.0",
@@ -132,20 +137,21 @@ async def system_info():
             "Enterprise Security",
             "RESTful API",
             "GraphQL Support",
-            "WebSocket Real-time Updates"
-        ]
+            "WebSocket Real-time Updates",
+        ],
     )
 
+
 @app.get("/api/v1/search")
-async def search_knowledge(query: str = "", limit: int = 10):
-    """Knowledge search endpoint"""
+async def search_knowledge(self) -> None:
+    """Knowledge search endpoint."""
     results = [
         {
             "id": f"result_{i}",
             "title": f"Search Result {i}",
             "content": f"This is a mock search result for query: '{query}'",
             "relevance": 0.9 - (i * 0.1),
-            "source": "PAKE System Knowledge Base"
+            "source": "PAKE System Knowledge Base",
         }
         for i in range(min(limit, 5))
     ]
@@ -154,12 +160,13 @@ async def search_knowledge(query: str = "", limit: int = 10):
         "query": query,
         "results": results,
         "total": len(results),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
+
 @app.post("/api/v1/analyze")
-async def analyze_content(data: dict):
-    """AI content analysis endpoint"""
+async def analyze_content(self) -> None:
+    """AI content analysis endpoint."""
     content = data.get("content", "")
 
     analysis = {
@@ -169,62 +176,65 @@ async def analyze_content(data: dict):
         "confidence": 0.85,
         "recommendations": [
             "Consider adding more technical details",
-            "Include examples for better understanding"
-        ]
+            "Include examples for better understanding",
+        ],
     }
 
-    return {
-        "analysis": analysis,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"analysis": analysis, "timestamp": datetime.now(UTC).isoformat()}
+
 
 @app.get("/api/v1/services")
-async def list_services():
-    """List available PAKE System services"""
+async def list_services(self) -> None:
+    """List available PAKE System services."""
     services = [
         {
             "name": "Knowledge Management",
             "status": "active",
-            "endpoints": ["/api/v1/search", "/api/v1/analyze"]
+            "endpoints": ["/api/v1/search", "/api/v1/analyze"],
         },
         {
             "name": "AI Research Engine",
             "status": "active",
-            "endpoints": ["/api/v1/research", "/api/v1/insights"]
+            "endpoints": ["/api/v1/research", "/api/v1/insights"],
         },
         {
             "name": "Multi-tenant Auth",
             "status": "active",
-            "endpoints": ["/api/v1/auth", "/api/v1/tenants"]
+            "endpoints": ["/api/v1/auth", "/api/v1/tenants"],
         },
         {
             "name": "Analytics Dashboard",
             "status": "active",
-            "endpoints": ["/api/v1/metrics", "/api/v1/reports"]
-        }
+            "endpoints": ["/api/v1/metrics", "/api/v1/reports"],
+        },
     ]
 
-    return {
-        "services": services,
-        "total": len(services),
-        "status": "operational"
-    }
+    return {"services": services, "total": len(services), "status": "operational"}
+
 
 # Error handlers
 @app.exception_handler(404)
-async def not_found_handler(request, exc):
+async def not_found_handler(self) -> None:
     return JSONResponse(
         status_code=404,
-        content={"error": "Endpoint not found", "message": "The requested resource does not exist"}
+        content={
+            "error": "Endpoint not found",
+            "message": "The requested resource does not exist",
+        },
     )
+
 
 @app.exception_handler(500)
-async def internal_error_handler(request, exc):
+async def internal_error_handler(self) -> None:
     return JSONResponse(
         status_code=500,
-        content={"error": "Internal server error", "message": "An unexpected error occurred"}
+        content={
+            "error": "Internal server error",
+            "message": "An unexpected error occurred",
+        },
     )
 
+
 # Vercel handler
-def handler(request):
+def handler(self) -> None:
     return app(request.scope, request.receive, request.send)

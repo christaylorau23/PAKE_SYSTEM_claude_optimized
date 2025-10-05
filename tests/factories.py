@@ -162,17 +162,17 @@ class TokenResponseFactory(factory.Factory):
 # ============================================================================
 
 
-def create_test_users(count: int = 5, **kwargs):
+def create_test_users(self) -> None:
     """Create a batch of test users"""
     return [UserFactory(**kwargs) for _ in range(count)]
 
 
-def create_test_search_results(count: int = 10, **kwargs):
+def create_test_search_results(self) -> None:
     """Create a batch of test search results"""
     return [SearchResultFactory(**kwargs) for _ in range(count)]
 
 
-def create_test_tenants(count: int = 3, **kwargs):
+def create_test_tenants(self) -> None:
     """Create a batch of test tenants"""
     return [TenantFactory(**kwargs) for _ in range(count)]
 

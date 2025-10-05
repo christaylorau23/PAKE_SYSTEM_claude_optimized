@@ -15,7 +15,7 @@ import string
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from src.services.database.multi_tenant_schema import (
@@ -131,11 +131,7 @@ class TenantProvisioner:
     - Health validation
     """
 
-    def __init__(
-        self,
-        db_config: MultiTenantDatabaseConfig,
-        kubeconfig_path: str | None = None,
-    ):
+    def __init__(self) -> None:
         self.db_config = db_config
         self.kubeconfig_path = kubeconfig_path
         self.db_service: MultiTenantPostgreSQLService | None = None
@@ -152,7 +148,7 @@ class TenantProvisioner:
             await self.db_service.initialize()
             logger.info("✅ Database service initialized")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize database service: {e}")
+            logger.error("❌ Failed to initialize database service: %s", e)
             raise
 
     async def close(self) -> None:
@@ -197,7 +193,7 @@ class TenantProvisioner:
         domain: str | None,
         plan: str,
         admin_email: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Create tenant in database"""
         try:
             # Create tenant in database
@@ -207,7 +203,7 @@ class TenantProvisioner:
                 domain=domain,
                 plan=plan,
                 settings={
-                    "provisioned_at": datetime.utcnow().isoformat(),
+                    "provisioned_at": datetime.now(UTC).isoformat(),
                     "admin_email": admin_email,
                     "provisioning_method": "automated",
                 },
@@ -225,7 +221,9 @@ class TenantProvisioner:
             )
 
             logger.info(
-                f"✅ Created database tenant: {tenant['name']} ({tenant['id']})",
+                "✅ Created database tenant: %s (%s)",
+                tenant["name"],
+                tenant["id"],
             )
             self.provisioning_stats["tenants_created"] += 1
 
@@ -239,7 +237,7 @@ class TenantProvisioner:
 
     def _generate_k8s_manifests(
         self,
-        tenant_data: dict[str, Any],
+        tenant_data: Dict[str, Any],
         credentials: dict[str, str],
     ) -> str:
         """Generate Kubernetes manifests for tenant"""
@@ -269,7 +267,7 @@ class TenantProvisioner:
         manifest = manifest.replace("{{TENANT_DOMAIN}}", tenant_domain)
         manifest = manifest.replace("{{TENANT_PLAN}}", tenant_plan)
         manifest = manifest.replace("{{TENANT_STATUS}}", "active")
-        manifest = manifest.replace("{{CREATED_AT}}", datetime.utcnow().isoformat())
+        manifest = manifest.replace("{{CREATED_AT}}", datetime.now(UTC).isoformat())
         manifest = manifest.replace("{{TENANT_ADMIN_USER}}", admin_email)
 
         # Plan-specific resource limits
@@ -328,16 +326,14 @@ class TenantProvisioner:
             "{{JWT_SECRET_B64}}",
             self._base64_encode(credentials["jwt_secret"]),
         )
-        manifest = manifest.replace(
+        return manifest.replace(
             "{{ENCRYPTION_KEY_B64}}",
             self._base64_encode(credentials["encryption_key"]),
         )
 
-        return manifest
-
     async def create_k8s_namespace(
         self,
-        tenant_data: dict[str, Any],
+        tenant_data: Dict[str, Any],
         credentials: dict[str, str],
     ) -> bool:
         """Create Kubernetes namespace and resources"""
@@ -362,7 +358,7 @@ class TenantProvisioner:
             # Clean up temporary file
             os.remove(manifest_path)
 
-            logger.info(f"✅ Created Kubernetes namespace: tenant-{tenant_id}")
+            logger.info("✅ Created Kubernetes namespace: tenant-%s", tenant_id)
             self.provisioning_stats["namespaces_created"] += 1
 
             return True
@@ -378,7 +374,7 @@ class TenantProvisioner:
             self.provisioning_stats["errors"].append(error_msg)
             return False
 
-    async def validate_tenant_provisioning(self, tenant_id: str) -> dict[str, Any]:
+    async def validate_tenant_provisioning(self, tenant_id: str) -> Dict[str, Any]:
         """Validate tenant provisioning"""
         try:
             # Check database tenant
@@ -419,9 +415,9 @@ class TenantProvisioner:
         domain: str | None,
         plan: str,
         admin_email: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Complete tenant provisioning process"""
-        logger.info(f"🚀 Starting tenant provisioning: {tenant_name}")
+        logger.info("🚀 Starting tenant provisioning: %s", tenant_name)
 
         try:
             # Generate credentials
@@ -470,18 +466,18 @@ class TenantProvisioner:
                 ],
             }
 
-            logger.info(f"🎉 Tenant provisioning completed: {tenant_name}")
+            logger.info("🎉 Tenant provisioning completed: %s", tenant_name)
             return report
 
         except Exception as e:
-            logger.error(f"❌ Tenant provisioning failed: {e}")
+            logger.error("❌ Tenant provisioning failed: %s", e)
             return {
                 "status": "failed",
                 "error": str(e),
                 "provisioning_stats": self.provisioning_stats,
             }
 
-    async def list_tenants(self) -> list[dict[str, Any]]:
+    async def list_tenants(self) -> list[Dict[str, Any]]:
         """List all provisioned tenants"""
         try:
             tenants = await self.db_service.get_all_tenants()
@@ -509,16 +505,16 @@ class TenantProvisioner:
             return tenant_list
 
         except Exception as e:
-            logger.error(f"Failed to list tenants: {e}")
+            logger.error("Failed to list tenants: %s", e)
             return []
 
     async def delete_tenant(
         self,
         tenant_id: str,
         force: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Delete tenant and all associated resources"""
-        logger.info(f"🗑️ Starting tenant deletion: {tenant_id}")
+        logger.info("🗑️ Starting tenant deletion: %s", tenant_id)
 
         try:
             # Get tenant data
@@ -539,7 +535,7 @@ class TenantProvisioner:
             # Update tenant status in database
             await self.db_service.update_tenant_status(tenant_id, "deleted")
 
-            logger.info(f"✅ Tenant deleted: {tenant_id}")
+            logger.info("✅ Tenant deleted: %s", tenant_id)
             return {
                 "status": "success",
                 "tenant_id": tenant_id,
@@ -548,11 +544,11 @@ class TenantProvisioner:
             }
 
         except Exception as e:
-            logger.error(f"❌ Tenant deletion failed: {e}")
+            logger.error("❌ Tenant deletion failed: %s", e)
             return {"status": "failed", "error": str(e)}
 
 
-async def main():
+async def main(self) -> None:
     """Main provisioning function"""
     parser = argparse.ArgumentParser(description="PAKE System Tenant Provisioning")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -618,7 +614,7 @@ async def main():
             if args.output_report:
                 with open(args.output_report, "w") as f:
                     json.dump(result, f, indent=2)
-                logger.info(f"📄 Provisioning report saved to: {args.output_report}")
+                logger.info("📄 Provisioning report saved to: %s", args.output_report)
 
             print("\n" + "=" * 60)
             print("TENANT PROVISIONING SUMMARY")

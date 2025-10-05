@@ -1,4 +1,4 @@
-"""External API Management
+"""External API Management.
 
 Secure API integration and rate limiting:
 - API key configuration and management

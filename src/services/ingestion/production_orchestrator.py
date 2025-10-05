@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Production-Grade Ingestion Orchestrator
-Phase 2B Sprint 2: Real API integration and advanced features
+Phase 2B Sprint 2: Real API integration and advanced features.
 
 Building on Phase 2A success (94% test success rate) with production enhancements.
 """
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ProductionConfig:
-    """Production configuration for real API integration"""
+    """Production configuration for real API integration."""
 
     # Real API credentials
     firecrawl_api_key: str | None = None
@@ -66,7 +66,7 @@ class ProductionConfig:
 
 @dataclass
 class APIHealthStatus:
-    """API health monitoring status"""
+    """API health monitoring status."""
 
     service_name: str
     is_healthy: bool
@@ -79,12 +79,12 @@ class APIHealthStatus:
 
 @dataclass
 class QueryOptimizationResult:
-    """Result from cognitive query optimization"""
+    """Result from cognitive query optimization."""
 
     original_query: str
     optimized_query: str
     optimization_confidence: float
-    suggested_sources: list[str]
+    suggested_sources: List[str]
     estimated_improvement: float
 
 
@@ -98,14 +98,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     - Enterprise-level error handling and resilience
     """
 
-    def __init__(
-        self,
-        config: IngestionConfig,
-        production_config: ProductionConfig,
-        cognitive_engine=None,
-        n8n_manager=None,
-    ):
-        """Initialize production orchestrator"""
+    def __init__(self) -> None:
+        """Initialize production orchestrator."""
         super().__init__(config, cognitive_engine, n8n_manager)
 
         self.production_config = production_config
@@ -123,8 +117,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             "ProductionIngestionOrchestrator initialized with real API integration",
         )
 
-    def _initialize_production_services(self):
-        """Initialize services with real API configurations"""
+    def _initialize_production_services(self) -> None:
+        """Initialize services with real API configurations."""
         # Real Firecrawl service
         if self.production_config.firecrawl_api_key:
             self.firecrawl_service = FirecrawlService(
@@ -150,8 +144,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             )
             logger.info("Initialized PubMed service with real NCBI API")
 
-    def _setup_api_monitoring(self):
-        """Setup API health monitoring and rate limiting"""
+    def _setup_api_monitoring(self) -> None:
+        """Setup API health monitoring and rate limiting."""
         for service_name in ["firecrawl", "arxiv", "ncbi"]:
             self.api_health_status[service_name] = APIHealthStatus(
                 service_name=service_name,
@@ -161,7 +155,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             )
 
     async def get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session with proper configuration"""
+        """Get or create HTTP session with proper configuration."""
         if self.session is None or self.session.closed:
             timeout = aiohttp.ClientTimeout(
                 total=self.production_config.api_timeout_seconds,
@@ -189,7 +183,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         for better content quality and relevance.
         """
         logger.info(
-            f"Optimizing queries for plan {plan.plan_id} with cognitive feedback",
+            "Optimizing queries for plan %s with cognitive feedback", plan.plan_id,
         )
 
         if not self.cognitive_engine:
@@ -217,12 +211,13 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
                 optimized_sources.append(optimized_source)
 
                 logger.info(
-                    f"Optimized {source.source_type} query with {
-                        optimization_result.optimization_confidence:.2f} confidence",
+                    "Optimized %s query with %.2f confidence",
+                    source.source_type,
+                    optimization_result.optimization_confidence,
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to optimize {source.source_type} query: {e}")
+                logger.warning("Failed to optimize %s query: %s", source.source_type, e)
                 optimized_sources.append(source)  # Use original if optimization fails
 
         # Create optimized plan
@@ -237,15 +232,15 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             enable_deduplication=plan.enable_deduplication,
         )
 
-        logger.info(f"Created optimized plan with {len(optimized_sources)} sources")
+        logger.info("Created optimized plan with %s sources", len(optimized_sources))
         return optimized_plan
 
     def _extract_historical_context(
         self,
         source: IngestionSource,
         historical_results: list[IngestionResult],
-    ) -> dict[str, Any]:
-        """Extract relevant historical context for query optimization"""
+    ) -> Dict[str, Any]:
+        """Extract relevant historical context for query optimization."""
         context = {
             "source_type": source.source_type,
             "average_quality": 0.0,
@@ -293,9 +288,9 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     async def _get_cognitive_optimization(
         self,
         source: IngestionSource,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> QueryOptimizationResult:
-        """Get cognitive optimization suggestions"""
+        """Get cognitive optimization suggestions."""
         # Mock implementation - would integrate with real cognitive engine
         optimization_prompt = f"""
         Optimize this query for better results:
@@ -326,9 +321,9 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     def _fallback_optimization(
         self,
         source: IngestionSource,
-        context: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Fallback optimization when cognitive engine is unavailable"""
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Fallback optimization when cognitive engine is unavailable."""
         import copy
 
         optimized_params = copy.deepcopy(source.query_parameters)
@@ -376,7 +371,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         source: IngestionSource,
         optimization: QueryOptimizationResult,
     ) -> IngestionSource:
-        """Apply optimization results to source"""
+        """Apply optimization results to source."""
         try:
             optimized_params = json.loads(optimization.optimized_query)
         except BaseException:
@@ -407,7 +402,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         - Real-time quality monitoring
         - Adaptive concurrency control
         """
-        logger.info(f"Executing plan {plan.plan_id} with adaptive scaling")
+        logger.info("Executing plan %s with adaptive scaling", plan.plan_id)
 
         # Pre-execution optimization
         if enable_optimization and self.cognitive_engine:
@@ -456,8 +451,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             # Restore original configuration
             self.config = original_config
 
-    async def _check_api_health(self):
-        """Check health of all configured APIs"""
+    async def _check_api_health(self) -> None:
+        """Check health of all configured APIs."""
         health_checks = []
 
         for service_name in ["firecrawl", "arxiv", "ncbi"]:
@@ -465,8 +460,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
 
         await asyncio.gather(*health_checks, return_exceptions=True)
 
-    async def _check_service_health(self, service_name: str):
-        """Check health of a specific service"""
+    async def _check_service_health(self) -> None:
+        """Check health of a specific service."""
         start_time = datetime.now(UTC)
 
         try:
@@ -494,13 +489,13 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
                     )
 
                     logger.debug(
-                        f"{service_name} health check: {
-                            'healthy' if is_healthy else 'unhealthy'
-                        } ({response_time:.0f}ms)",
+                        "%s health check: %s (%.0fms)", service_name,
+                            "healthy" if is_healthy else "unhealthy",
+                        response_time,
                     )
 
         except Exception as e:
-            logger.warning(f"Health check failed for {service_name}: {e}")
+            logger.warning("Health check failed for %s: %s", service_name, e)
             self.api_health_status[service_name] = APIHealthStatus(
                 service_name=service_name,
                 is_healthy=False,
@@ -509,7 +504,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             )
 
     def _calculate_optimal_concurrency(self) -> int:
-        """Calculate optimal concurrency based on API health"""
+        """Calculate optimal concurrency based on API health."""
         base_concurrency = self.config.max_concurrent_sources
 
         # Reduce concurrency if APIs are struggling
@@ -521,7 +516,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             reduction_factor = max(0.5, 1 - (unhealthy_apis * 0.2))
             optimal = max(1, int(base_concurrency * reduction_factor))
             logger.info(
-                f"Reduced concurrency to {optimal} due to {unhealthy_apis} unhealthy APIs",
+                "Reduced concurrency to %s due to %s unhealthy APIs", optimal, unhealthy_apis,
             )
             return optimal
 
@@ -533,14 +528,14 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         if avg_response_time < 100:  # All APIs responding under 100ms
             optimal = min(10, base_concurrency + 2)
             logger.info(
-                f"Increased concurrency to {optimal} due to excellent API performance",
+                "Increased concurrency to %s due to excellent API performance", optimal,
             )
             return optimal
 
         return base_concurrency
 
     async def _execute_with_monitoring(self, plan: IngestionPlan) -> IngestionResult:
-        """Execute plan with comprehensive monitoring"""
+        """Execute plan with comprehensive monitoring."""
         # Execute using base orchestrator with enhanced monitoring
         result = await self.execute_ingestion_plan(plan)
 
@@ -561,8 +556,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
 
         return result
 
-    async def _update_performance_metrics(self, result: IngestionResult):
-        """Update long-term performance metrics for learning"""
+    async def _update_performance_metrics(self) -> None:
+        """Update long-term performance metrics for learning."""
         # Store performance data for cognitive optimization
         performance_data = {
             "plan_id": result.plan_id,
@@ -573,10 +568,10 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         }
 
         # In production, this would be stored in a database
-        logger.info(f"Performance data: {performance_data}")
+        logger.info("Performance data: %s", performance_data)
 
-    async def get_production_status(self) -> dict[str, Any]:
-        """Get comprehensive production status"""
+    async def get_production_status(self) -> Dict[str, Any]:
+        """Get comprehensive production status."""
         return {
             "orchestrator_version": "2.0-production",
             "total_executions": self.execution_metrics.get("plans_executed", 0),
@@ -601,8 +596,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             },
         }
 
-    async def close(self):
-        """Clean shutdown of production resources"""
+    async def close(self) -> None:
+        """Clean shutdown of production resources."""
         if self.session and not self.session.closed:
             await self.session.close()
         logger.info("Production orchestrator shutdown complete")

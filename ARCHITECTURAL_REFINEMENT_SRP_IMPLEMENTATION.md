@@ -36,7 +36,7 @@ class SecretsManager:
         Orchestrator: Delegates setup to specialized methods
         """
         self.provider = provider
-        
+
         # Clear sequence of responsibilities
         self._validate_provider_parameter()      # 1. Validation
         self._configure_logging()                # 2. Logging setup
@@ -58,7 +58,7 @@ def _validate_provider_parameter(self) -> None:
     """
     if not isinstance(self.provider, SecretProvider):
         raise ValueError(f"Provider must be a SecretProvider enum value")
-    
+
     # Provider-specific validation
     if self.provider == SecretProvider.AZURE_KEY_VAULT:
         if not os.getenv('AZURE_KEY_VAULT_URL'):
@@ -184,16 +184,16 @@ def _initialize_aws_client(self):
         session_kwargs = {}
         if self.provider_config.get('profile'):
             session_kwargs['profile_name'] = self.provider_config['profile']
-        
+
         session = boto3.Session(**session_kwargs)
-        
+
         client_kwargs = {
             'service_name': 'secretsmanager',
             'region_name': self.provider_config['region']
         }
         if self.provider_config.get('endpoint_url'):
             client_kwargs['endpoint_url'] = self.provider_config['endpoint_url']
-        
+
         self.aws_client = session.client(**client_kwargs)
         self.logger.info("AWS Secrets Manager client initialized")
     except Exception as e:
@@ -212,7 +212,7 @@ def test_validate_provider_parameter_invalid_type(self):
     """Test parameter validation with invalid provider type"""
     manager = SecretsManager()
     manager.provider = "invalid_provider"  # Not a SecretProvider enum
-    
+
     with pytest.raises(ValueError, match="Provider must be a SecretProvider enum value"):
         manager._validate_provider_parameter()
 
@@ -220,12 +220,12 @@ def test_configure_aws_provider(self):
     """Test AWS provider-specific configuration"""
     manager = SecretsManager()
     manager.logger = Mock()
-    
+
     os.environ['AWS_DEFAULT_REGION'] = 'us-west-2'
     os.environ['AWS_PROFILE'] = 'test-profile'
-    
+
     manager._configure_aws_provider()
-    
+
     assert manager.provider_config['region'] == 'us-west-2'
     assert manager.provider_config['profile'] == 'test-profile'
     manager.logger.info.assert_called_with("AWS Secrets Manager provider configured")
@@ -240,9 +240,9 @@ def test_full_initialization_local_provider(self):
     """Test complete initialization with local provider"""
     with tempfile.TemporaryDirectory() as temp_dir:
         os.environ['LOCAL_SECRETS_ENCRYPTION_KEY'] = 'test-key'
-        
+
         manager = SecretsManager(SecretProvider.LOCAL_FILE)
-        
+
         # Verify all components are initialized
         assert manager.provider == SecretProvider.LOCAL_FILE
         assert manager.logger is not None
@@ -293,7 +293,7 @@ This refactoring serves as a model for applying SOLID principles throughout the 
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: September 27, 2025  
-**Architecture Review**: Completed  
+**Document Version**: 1.0
+**Last Updated**: September 27, 2025
+**Architecture Review**: Completed
 **Testing Status**: Comprehensive test suite implemented

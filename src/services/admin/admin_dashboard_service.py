@@ -6,7 +6,7 @@ Comprehensive admin dashboard with user management, system monitoring, and analy
 import asyncio
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserAction(Enum):
-    """Admin actions on users"""
+    """Admin actions on users."""
 
     ACTIVATE = "activate"
     DEACTIVATE = "deactivate"
@@ -32,7 +32,7 @@ class UserAction(Enum):
 
 
 class SystemMetricType(Enum):
-    """System metric categories"""
+    """System metric categories."""
 
     PERFORMANCE = "performance"
     USAGE = "usage"
@@ -44,7 +44,7 @@ class SystemMetricType(Enum):
 
 @dataclass
 class UserSummary:
-    """User summary for admin dashboard"""
+    """User summary for admin dashboard."""
 
     id: str
     username: str
@@ -58,12 +58,12 @@ class UserSummary:
     total_execution_time: float
     avg_quality_score: float | None
     is_online: bool
-    preferences: dict[str, Any]
+    preferences: Dict[str, Any]
 
 
 @dataclass
 class SystemHealth:
-    """System health status"""
+    """System health status."""
 
     status: str  # healthy, degraded, unhealthy
     uptime_seconds: float
@@ -81,7 +81,7 @@ class SystemHealth:
 
 @dataclass
 class SystemAnalytics:
-    """Comprehensive system analytics"""
+    """Comprehensive system analytics."""
 
     total_users: int
     active_users_24h: int
@@ -99,7 +99,7 @@ class SystemAnalytics:
 
 @dataclass
 class SecurityEvent:
-    """Security event tracking"""
+    """Security event tracking."""
 
     id: str
     event_type: str
@@ -107,7 +107,7 @@ class SecurityEvent:
     user_id: str | None
     ip_address: str
     user_agent: str
-    details: dict[str, Any]
+    details: Dict[str, Any]
     timestamp: datetime
     resolved: bool = False
 
@@ -124,14 +124,7 @@ class AdminDashboardService:
     - Maintenance operations
     """
 
-    def __init__(
-        self,
-        database_service: PostgreSQLService,
-        auth_service: JWTAuthenticationService,
-        search_history_service: SearchHistoryService,
-        websocket_manager: WebSocketManager | None = None,
-        cache_service: RedisCacheService | None = None,
-    ):
+    def __init__(self) -> None:
         self.database_service = database_service
         self.auth_service = auth_service
         self.search_history_service = search_history_service
@@ -154,8 +147,8 @@ class AdminDashboardService:
         search_query: str | None = None,
         filter_active: bool | None = None,
         filter_admin: bool | None = None,
-    ) -> dict[str, Any]:
-        """Get all users with filtering and pagination"""
+    ) -> Dict[str, Any]:
+        """Get all users with filtering and pagination."""
         try:
             # Build filters
             filters = {}
@@ -212,16 +205,17 @@ class AdminDashboardService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get users: {e}")
+            logger.error("Failed to get users: %s", e)
             raise
 
-    async def get_user_details(self, user_id: str) -> dict[str, Any]:
-        """Get detailed user information"""
+    async def get_user_details(self, user_id: str) -> Dict[str, Any]:
+        """Get detailed user information."""
         try:
             # Get user data
             user = await self.database_service.get_user_by_id(user_id)
             if not user:
-                raise ValueError("User not found")
+                msg = "User not found"
+                raise ValueError(msg)
 
             # Get search history analytics
             search_analytics = await self.search_history_service.get_user_analytics(
@@ -264,7 +258,7 @@ class AdminDashboardService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get user details: {e}")
+            logger.error("Failed to get user details: %s", e)
             raise
 
     async def perform_user_action(
@@ -275,17 +269,19 @@ class AdminDashboardService:
         reason: str | None = None,
         **kwargs,
     ) -> bool:
-        """Perform admin action on user"""
+        """Perform admin action on user."""
         try:
             # Verify admin permissions
             admin_user = await self.database_service.get_user_by_id(admin_user_id)
             if not admin_user or not admin_user.get("is_admin"):
-                raise ValueError("Insufficient permissions")
+                msg = "Insufficient permissions"
+                raise ValueError(msg)
 
             # Get target user
             target_user = await self.database_service.get_user_by_id(target_user_id)
             if not target_user:
-                raise ValueError("Target user not found")
+                msg = "Target user not found"
+                raise ValueError(msg)
 
             success = False
 
@@ -365,7 +361,7 @@ class AdminDashboardService:
                             "admin_user": admin_user["username"],
                             "target_user": target_user["username"],
                             "action": action.value,
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                         },
                         admin_only=True,
                     )
@@ -373,13 +369,13 @@ class AdminDashboardService:
             return success
 
         except Exception as e:
-            logger.error(f"Failed to perform user action {action}: {e}")
+            logger.error("Failed to perform user action %s: %s", action, e)
             raise
 
     # System Monitoring
 
     async def get_system_health(self) -> SystemHealth:
-        """Get current system health status"""
+        """Get current system health status."""
         try:
             # Check cache first
             cache_key = "admin:system_health"
@@ -456,11 +452,11 @@ class AdminDashboardService:
             return health
 
         except Exception as e:
-            logger.error(f"Failed to get system health: {e}")
+            logger.error("Failed to get system health: %s", e)
             raise
 
     async def get_system_analytics(self, days: int = 30) -> SystemAnalytics:
-        """Get comprehensive system analytics"""
+        """Get comprehensive system analytics."""
         try:
             # Check cache
             cache_key = f"admin:system_analytics:{days}"
@@ -470,7 +466,7 @@ class AdminDashboardService:
                     return SystemAnalytics(**cached_analytics)
 
             # Calculate date range
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
 
             # Gather analytics data
             analytics_data = await asyncio.gather(
@@ -528,7 +524,7 @@ class AdminDashboardService:
             return analytics
 
         except Exception as e:
-            logger.error(f"Failed to get system analytics: {e}")
+            logger.error("Failed to get system analytics: %s", e)
             raise
 
     async def get_security_events(
@@ -537,7 +533,7 @@ class AdminDashboardService:
         severity: str | None = None,
         resolved: bool | None = None,
     ) -> list[SecurityEvent]:
-        """Get security events and alerts"""
+        """Get security events and alerts."""
         try:
             # Build filters
             filters = {}
@@ -571,13 +567,13 @@ class AdminDashboardService:
             return security_events
 
         except Exception as e:
-            logger.error(f"Failed to get security events: {e}")
+            logger.error("Failed to get security events: %s", e)
             raise
 
     # System Configuration
 
-    async def get_system_config(self) -> dict[str, Any]:
-        """Get current system configuration"""
+    async def get_system_config(self) -> Dict[str, Any]:
+        """Get current system configuration."""
         try:
             config = await self.database_service.get_system_config()
 
@@ -587,7 +583,7 @@ class AdminDashboardService:
                 "cache_enabled": self.cache_service is not None,
                 "active_features": [],
                 "version": "2.0.0",
-                "last_updated": datetime.utcnow().isoformat(),
+                "last_updated": datetime.now(UTC).isoformat(),
             }
 
             # Determine active features
@@ -599,20 +595,21 @@ class AdminDashboardService:
             return {"database_config": config, "runtime_config": runtime_config}
 
         except Exception as e:
-            logger.error(f"Failed to get system config: {e}")
+            logger.error("Failed to get system config: %s", e)
             raise
 
     async def update_system_config(
         self,
         admin_user_id: str,
-        config_updates: dict[str, Any],
+        config_updates: Dict[str, Any],
     ) -> bool:
-        """Update system configuration"""
+        """Update system configuration."""
         try:
             # Verify admin permissions
             admin_user = await self.database_service.get_user_by_id(admin_user_id)
             if not admin_user or not admin_user.get("is_admin"):
-                raise ValueError("Insufficient permissions")
+                msg = "Insufficient permissions"
+                raise ValueError(msg)
 
             # Update configuration
             success = await self.database_service.update_system_config(config_updates)
@@ -634,7 +631,7 @@ class AdminDashboardService:
                             "type": "config_update",
                             "admin_user": admin_user["username"],
                             "updates": list(config_updates.keys()),
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                         },
                         admin_only=True,
                     )
@@ -642,7 +639,7 @@ class AdminDashboardService:
             return success
 
         except Exception as e:
-            logger.error(f"Failed to update system config: {e}")
+            logger.error("Failed to update system config: %s", e)
             raise
 
     # Maintenance Operations
@@ -652,13 +649,14 @@ class AdminDashboardService:
         admin_user_id: str,
         operation: str,
         **kwargs,
-    ) -> dict[str, Any]:
-        """Perform system maintenance operations"""
+    ) -> Dict[str, Any]:
+        """Perform system maintenance operations."""
         try:
             # Verify admin permissions
             admin_user = await self.database_service.get_user_by_id(admin_user_id)
             if not admin_user or not admin_user.get("is_admin"):
-                raise ValueError("Insufficient permissions")
+                msg = "Insufficient permissions"
+                raise ValueError(msg)
 
             result = {"success": False, "message": "", "details": {}}
 
@@ -679,7 +677,7 @@ class AdminDashboardService:
 
             elif operation == "cleanup_old_data":
                 days = kwargs.get("days", 90)
-                cutoff_date = datetime.utcnow() - timedelta(days=days)
+                cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
                 # Clean old search history
                 deleted_searches = (
@@ -734,13 +732,13 @@ class AdminDashboardService:
             return result
 
         except Exception as e:
-            logger.error(f"Failed to perform maintenance operation {operation}: {e}")
+            logger.error("Failed to perform maintenance operation %s: %s", operation, e)
             raise
 
     # Helper Methods
 
-    async def _get_user_search_stats(self, user_id: str) -> dict[str, Any]:
-        """Get user search statistics"""
+    async def _get_user_search_stats(self, user_id: str) -> Dict[str, Any]:
+        """Get user search statistics."""
         try:
             stats = await self.database_service.get_user_search_summary(user_id)
             return {
@@ -756,7 +754,7 @@ class AdminDashboardService:
             }
 
     async def _check_database_health(self) -> str:
-        """Check database health"""
+        """Check database health."""
         try:
             await self.database_service.health_check()
             return "healthy"
@@ -764,7 +762,7 @@ class AdminDashboardService:
             return "error"
 
     async def _check_redis_health(self) -> str:
-        """Check Redis health"""
+        """Check Redis health."""
         try:
             if self.cache_service:
                 await self.cache_service.ping()
@@ -774,7 +772,7 @@ class AdminDashboardService:
             return "error"
 
     async def _check_websocket_health(self) -> str:
-        """Check WebSocket health"""
+        """Check WebSocket health."""
         try:
             if self.websocket_manager:
                 # Simple health check based on connection count
@@ -785,8 +783,8 @@ class AdminDashboardService:
         except BaseException:
             return "error"
 
-    async def _get_performance_metrics(self) -> dict[str, Any]:
-        """Get system performance metrics"""
+    async def _get_performance_metrics(self) -> Dict[str, Any]:
+        """Get system performance metrics."""
         try:
             import psutil
 
@@ -822,39 +820,39 @@ class AdminDashboardService:
                 "error_rate": 0,
             }
         except Exception as e:
-            logger.error(f"Failed to get performance metrics: {e}")
+            logger.error("Failed to get performance metrics: %s", e)
             return {}
 
-    async def _get_user_statistics(self, start_date: datetime) -> dict[str, Any]:
-        """Get user statistics"""
+    async def _get_user_statistics(self, start_date: datetime) -> Dict[str, Any]:
+        """Get user statistics."""
         try:
             return await self.database_service.get_user_statistics(start_date)
         except Exception as e:
-            logger.error(f"Failed to get user statistics: {e}")
+            logger.error("Failed to get user statistics: %s", e)
             return {}
 
-    async def _get_search_statistics(self, start_date: datetime) -> dict[str, Any]:
-        """Get search statistics"""
+    async def _get_search_statistics(self, start_date: datetime) -> Dict[str, Any]:
+        """Get search statistics."""
         try:
             return await self.database_service.get_search_statistics(start_date)
         except Exception as e:
-            logger.error(f"Failed to get search statistics: {e}")
+            logger.error("Failed to get search statistics: %s", e)
             return {}
 
-    async def _get_performance_statistics(self, start_date: datetime) -> dict[str, Any]:
-        """Get performance statistics"""
+    async def _get_performance_statistics(self, start_date: datetime) -> Dict[str, Any]:
+        """Get performance statistics."""
         try:
             return await self.database_service.get_performance_statistics(start_date)
         except Exception as e:
-            logger.error(f"Failed to get performance statistics: {e}")
+            logger.error("Failed to get performance statistics: %s", e)
             return {}
 
-    async def _get_error_statistics(self, start_date: datetime) -> dict[str, Any]:
-        """Get error statistics"""
+    async def _get_error_statistics(self, start_date: datetime) -> Dict[str, Any]:
+        """Get error statistics."""
         try:
             return await self.database_service.get_error_statistics(start_date)
         except Exception as e:
-            logger.error(f"Failed to get error statistics: {e}")
+            logger.error("Failed to get error statistics: %s", e)
             return {}
 
     async def _log_admin_action(
@@ -863,9 +861,9 @@ class AdminDashboardService:
         target_user_id: str | None,
         action: str,
         reason: str | None,
-        details: dict[str, Any],
+        details: Dict[str, Any],
     ) -> None:
-        """Log admin action for audit trail"""
+        """Log admin action for audit trail."""
         try:
             await self.database_service.log_admin_action(
                 admin_user_id=admin_user_id,
@@ -873,10 +871,10 @@ class AdminDashboardService:
                 action=action,
                 reason=reason,
                 details=details,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             )
         except Exception as e:
-            logger.error(f"Failed to log admin action: {e}")
+            logger.error("Failed to log admin action: %s", e)
 
 
 # Factory function
@@ -889,7 +887,7 @@ async def create_admin_dashboard_service(
     websocket_manager: WebSocketManager | None = None,
     cache_service: RedisCacheService | None = None,
 ) -> AdminDashboardService:
-    """Create and initialize admin dashboard service"""
+    """Create and initialize admin dashboard service."""
     service = AdminDashboardService(
         database_service,
         auth_service,

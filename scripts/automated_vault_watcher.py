@@ -12,7 +12,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiohttp
@@ -110,7 +110,7 @@ class ConfidenceEngine:
 class SimpleVectorEmbedding:
     """Simple vector embedding using basic text analysis"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.embeddings_cache = {}
 
     def create_embedding(self, text: str) -> list:
@@ -153,7 +153,9 @@ class SimpleVectorEmbedding:
 class VaultWatcher(FileSystemEventHandler):
     """Watches vault for changes and triggers automated processing"""
 
-    def __init__(self, vault_path: str, api_bridge_url: str = "http://localhost:3000"):
+    def __init__(
+        self, vault_path: str = "vault", api_bridge_url: str = "http://localhost:3001"
+    ) -> None:
         self.vault_path = Path(vault_path)
         self.api_bridge_url = api_bridge_url
         self.confidence_engine = ConfidenceEngine()
@@ -168,9 +170,9 @@ class VaultWatcher(FileSystemEventHandler):
         # Load existing processed files
         self.load_processing_state()
 
-        logger.info(f"Initialized VaultWatcher for {vault_path}")
+        logger.info("Initialized VaultWatcher for %s", vault_path)
 
-    def load_processing_state(self):
+    def load_processing_state(self) -> None:
         """Load previously processed files state"""
         state_file = Path("data/processing_state.json")
         if state_file.exists():
@@ -178,12 +180,13 @@ class VaultWatcher(FileSystemEventHandler):
                 with open(state_file) as f:
                     self.processed_files = json.load(f)
                 logger.info(
-                    f"Loaded {len(self.processed_files)} processed files from state",
+                    "Loaded %s processed files from state",
+                    len(self.processed_files),
                 )
             except Exception as e:
-                logger.error(f"Error loading processing state: {e}")
+                logger.error("Error loading processing state: %s", e)
 
-    def save_processing_state(self):
+    def save_processing_state(self) -> None:
         """Save processing state"""
         os.makedirs("data", exist_ok=True)
         state_file = Path("data/processing_state.json")
@@ -191,7 +194,7 @@ class VaultWatcher(FileSystemEventHandler):
             with open(state_file, "w") as f:
                 json.dump(self.processed_files, f, indent=2)
         except Exception as e:
-            logger.error(f"Error saving processing state: {e}")
+            logger.error("Error saving processing state: %s", e)
 
     def get_file_hash(self, file_path: Path) -> str:
         """Get hash of file content"""
@@ -202,7 +205,7 @@ class VaultWatcher(FileSystemEventHandler):
         except Exception:
             return ""
 
-    def on_modified(self, event):
+    def on_modified(self, event) -> None:
         """Handle file modification events"""
         if event.is_directory:
             return
@@ -217,10 +220,10 @@ class VaultWatcher(FileSystemEventHandler):
         if any(part.startswith(("_", ".")) for part in file_path.parts):
             return
 
-        logger.info(f"File modified: {file_path}")
+        logger.info("File modified: %s", file_path)
         asyncio.create_task(self.queue_for_processing(file_path))
 
-    def on_created(self, event):
+    def on_created(self, event) -> None:
         """Handle file creation events"""
         if event.is_directory:
             return
@@ -235,17 +238,17 @@ class VaultWatcher(FileSystemEventHandler):
         if any(part.startswith(("_", ".")) for part in file_path.parts):
             return
 
-        logger.info(f"File created: {file_path}")
+        logger.info("File created: %s", file_path)
         asyncio.create_task(self.queue_for_processing(file_path))
 
-    async def queue_for_processing(self, file_path: Path):
+    async def queue_for_processing(self, file_path: Path) -> None:
         """Add file to processing queue if it has changed"""
         current_hash = self.get_file_hash(file_path)
         stored_hash = self.processed_files.get(str(file_path))
 
         if current_hash != stored_hash and current_hash:
             await self.processing_queue.put(file_path)
-            logger.info(f"Queued for processing: {file_path}")
+            logger.info("Queued for processing: %s", file_path)
 
     async def process_file(self, file_path: Path) -> ProcessingResult:
         """Automatically process a single file"""
@@ -280,7 +283,7 @@ class VaultWatcher(FileSystemEventHandler):
                 {
                     "pake_id": pake_id,
                     "confidence_score": confidence_score,
-                    "last_processed": datetime.now().isoformat(),
+                    "last_processed": datetime.now(UTC).isoformat(),
                     "ai_summary": ai_summary,
                     "vector_dimensions": len(embedding),
                     "automated_processing": True,
@@ -316,14 +319,16 @@ class VaultWatcher(FileSystemEventHandler):
             )
 
             logger.info(
-                f"[SUCCESS] Processed {file_path}: confidence={
-                    confidence_score:.2f}, time={processing_time:.2f}s",
+                "[SUCCESS] Processed %s: confidence=%s, time=%ss",
+                file_path,
+                f"{confidence_score:.2f}",
+                processing_time,
             )
             return result
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error(f"[ERROR] Error processing {file_path}: {e}")
+            logger.error("[ERROR] Error processing %s: %s", file_path, e)
             return ProcessingResult(
                 pake_id="",
                 confidence_score=0.0,
@@ -366,7 +371,9 @@ class VaultWatcher(FileSystemEventHandler):
 
         return " | ".join(summary_parts)
 
-    def update_knowledge_graph(self, pake_id: str, content: str, metadata: dict):
+    def update_knowledge_graph(
+        self, pake_id: str, content: str, metadata: dict
+    ) -> None:
         """Update simple knowledge graph"""
         self.knowledge_graph[pake_id] = {
             "title": (
@@ -377,7 +384,7 @@ class VaultWatcher(FileSystemEventHandler):
             "tags": metadata.get("tags", []),
             "connections": metadata.get("connections", []),
             "confidence": metadata.get("confidence_score", 0.0),
-            "last_updated": datetime.now().isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
         }
 
         # Save knowledge graph
@@ -385,7 +392,7 @@ class VaultWatcher(FileSystemEventHandler):
         with open("data/knowledge_graph.json", "w") as f:
             json.dump(self.knowledge_graph, f, indent=2)
 
-    def save_vector_embedding(self, pake_id: str, embedding: list):
+    def save_vector_embedding(self, pake_id: str, embedding: list) -> None:
         """Save vector embedding to file"""
         os.makedirs("data/vectors", exist_ok=True)
         vector_file = Path(f"data/vectors/{pake_id}.json")
@@ -394,13 +401,13 @@ class VaultWatcher(FileSystemEventHandler):
             "pake_id": pake_id,
             "embedding": embedding,
             "dimensions": len(embedding),
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         with open(vector_file, "w") as f:
             json.dump(vector_data, f)
 
-    async def processing_worker(self):
+    async def processing_worker(self) -> None:
         """Background worker to process files from queue"""
         while True:
             try:
@@ -423,15 +430,15 @@ class VaultWatcher(FileSystemEventHandler):
                                 json=notification,
                             )
                     except Exception as e:
-                        logger.warning(f"Could not notify API bridge: {e}")
+                        logger.warning("Could not notify API bridge: %s", e)
 
                 self.processing_queue.task_done()
 
             except Exception as e:
-                logger.error(f"Error in processing worker: {e}")
+                logger.error("Error in processing worker: %s", e)
                 await asyncio.sleep(1)
 
-    def process_existing_files(self):
+    def process_existing_files(self) -> None:
         """Process all existing files in vault on startup"""
         logger.info("Processing existing files in vault...")
 
@@ -446,7 +453,7 @@ class VaultWatcher(FileSystemEventHandler):
             if current_hash != stored_hash and current_hash:
                 asyncio.create_task(self.queue_for_processing(file_path))
 
-    async def start_automation(self):
+    async def start_automation(self) -> None:
         """Start the automated processing system"""
         logger.info("[STARTUP] Starting PAKE+ Automated Vault Processing")
 
@@ -461,7 +468,7 @@ class VaultWatcher(FileSystemEventHandler):
         observer.schedule(self, str(self.vault_path), recursive=True)
         observer.start()
 
-        logger.info(f"[WATCHING] Vault: {self.vault_path}")
+        logger.info("[WATCHING] Vault: %s", self.vault_path)
         logger.info("[ACTIVE] Automated processing is ACTIVE")
         logger.info(
             "[INFO] Any new or modified .md files will be automatically processed!",
@@ -471,7 +478,7 @@ class VaultWatcher(FileSystemEventHandler):
             while True:
                 queue_size = self.processing_queue.qsize()
                 if queue_size > 0:
-                    logger.info(f"[QUEUE] Processing queue: {queue_size} files")
+                    logger.info("[QUEUE] Processing queue: %s files", queue_size)
                 await asyncio.sleep(30)  # Status update every 30 seconds
 
         except KeyboardInterrupt:
@@ -482,7 +489,7 @@ class VaultWatcher(FileSystemEventHandler):
         observer.join()
 
 
-async def main():
+async def main(self) -> None:
     """Main automation entry point"""
     vault_path = os.environ.get("VAULT_PATH", "D:\\Knowledge-Vault")
     api_bridge_url = os.environ.get("API_BRIDGE_URL", "http://localhost:3000")

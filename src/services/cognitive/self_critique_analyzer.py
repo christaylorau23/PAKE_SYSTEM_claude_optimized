@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Self-Critique Analyzer - Advanced Autonomous Cognitive Evolution
-Part of the Cosmic Calibration Protocol
+Part of the Cosmic Calibration Protocol.
 
 Multi-model cross-examination system to identify improvement opportunities
 and perform autonomous self-assessment of cognitive processes.
@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -49,10 +49,10 @@ class CritiqueResult:
     timestamp: datetime
 
     # Analysis results
-    strengths: list[str]
-    weaknesses: list[str]
-    inconsistencies: list[str]
-    improvement_opportunities: list[str]
+    strengths: List[str]
+    weaknesses: List[str]
+    inconsistencies: List[str]
+    improvement_opportunities: List[str]
 
     # Scoring
     overall_quality_score: float  # 0.0 to 1.0
@@ -60,31 +60,31 @@ class CritiqueResult:
     reliability_score: float
 
     # Evidence and reasoning
-    supporting_evidence: list[str]
-    critique_reasoning: list[str]
-    validation_results: dict[ValidationMethod, dict[str, Any]]
+    supporting_evidence: List[str]
+    critique_reasoning: List[str]
+    validation_results: dict[ValidationMethod, Dict[str, Any]]
 
     # Recommendations
-    immediate_actions: list[str]
-    long_term_improvements: list[str]
+    immediate_actions: List[str]
+    long_term_improvements: List[str]
     priority_level: str
 
 
 @dataclass
 class ModelConsensus:
-    participating_models: list[str]
+    participating_models: List[str]
     agreement_level: float
-    consensus_points: list[str]
-    disagreement_points: list[str]
+    consensus_points: List[str]
+    disagreement_points: List[str]
     confidence_scores: dict[str, float]
-    final_consensus: dict[str, Any]
+    final_consensus: Dict[str, Any]
 
 
 @dataclass
 class SelfAssessment:
     assessment_id: str
     assessment_timestamp: datetime
-    cognitive_components_analyzed: list[str]
+    cognitive_components_analyzed: List[str]
 
     # Performance metrics
     overall_performance_score: float
@@ -92,13 +92,13 @@ class SelfAssessment:
     trend_analysis: dict[str, str]  # improving, stable, declining
 
     # Self-identified issues
-    performance_gaps: list[str]
-    bottlenecks: list[str]
-    failure_patterns: list[str]
+    performance_gaps: List[str]
+    bottlenecks: List[str]
+    failure_patterns: List[str]
 
     # Self-improvement suggestions
-    optimization_recommendations: list[str]
-    resource_requirements: dict[str, Any]
+    optimization_recommendations: List[str]
+    resource_requirements: Dict[str, Any]
     implementation_priority: dict[str, int]
 
 
@@ -114,7 +114,7 @@ class SelfCritiqueAnalyzer:
     - Deep reasoning analysis
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
 
         # Critique configuration
@@ -138,8 +138,8 @@ class SelfCritiqueAnalyzer:
         self.consensus_cache: dict[str, ModelConsensus] = {}
 
         # Analysis patterns
-        self.failure_patterns: dict[str, list[dict[str, Any]]] = {}
-        self.improvement_tracking: dict[str, dict[str, Any]] = {}
+        self.failure_patterns: dict[str, list[Dict[str, Any]]] = {}
+        self.improvement_tracking: dict[str, Dict[str, Any]] = {}
 
         # Setup logging
         self.logger = self._setup_logging()
@@ -149,7 +149,7 @@ class SelfCritiqueAnalyzer:
         self.logger.info("Self-Critique Analyzer initialized")
 
     def _setup_logging(self) -> logging.Logger:
-        """Setup dedicated logging for self-critique processes"""
+        """Setup dedicated logging for self-critique processes."""
         logger = logging.getLogger("SelfCritique")
         logger.setLevel(logging.INFO)
 
@@ -170,7 +170,7 @@ class SelfCritiqueAnalyzer:
         return logger
 
     async def initialize(self) -> bool:
-        """Initialize the self-critique analyzer"""
+        """Initialize the self-critique analyzer."""
         try:
             self.logger.info("Initializing Self-Critique Analyzer...")
 
@@ -186,14 +186,14 @@ class SelfCritiqueAnalyzer:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize self-critique analyzer: {e}")
+            self.logger.error("Failed to initialize self-critique analyzer: %s", e)
             return False
 
-    async def _initialize_critique_log(self):
-        """Initialize the Self-Critique Log"""
+    async def _initialize_critique_log(self) -> None:
+        """Initialize the Self-Critique Log."""
         log_header = f"""# Self-Critique Analysis Log - Advanced Autonomous Cognitive Evolution
 
-**Initialization Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Initialization Date:** {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 **Analysis Protocol:** Multi-Model Cross-Examination
 **System Status:** Active Self-Assessment
 
@@ -219,8 +219,8 @@ and validate system performance through multi-model consensus and adversarial te
         with open(self.critique_log_path, "w", encoding="utf-8") as f:
             f.write(log_header)
 
-    async def _continuous_critique_loop(self):
-        """Continuous self-critique and analysis loop"""
+    async def _continuous_critique_loop(self) -> None:
+        """Continuous self-critique and analysis loop."""
         self.logger.info("Starting continuous self-critique loop")
 
         while True:
@@ -248,10 +248,10 @@ and validate system performance through multi-model consensus and adversarial te
                     await self._trigger_improvement_cycle(critique_result)
 
             except Exception as e:
-                self.logger.error(f"Error in critique loop: {e}")
+                self.logger.error("Error in critique loop: %s", e)
 
-    async def _deep_analysis_loop(self):
-        """Deep comprehensive analysis loop"""
+    async def _deep_analysis_loop(self) -> None:
+        """Deep comprehensive analysis loop."""
         self.logger.info("Starting deep analysis loop")
 
         while True:
@@ -283,7 +283,7 @@ and validate system performance through multi-model consensus and adversarial te
                 await self._log_deep_analysis(self_assessment, improvement_roadmap)
 
             except Exception as e:
-                self.logger.error(f"Error in deep analysis loop: {e}")
+                self.logger.error("Error in deep analysis loop: %s", e)
 
     async def _perform_critique(
         self,
@@ -291,13 +291,14 @@ and validate system performance through multi-model consensus and adversarial te
         level: CritiqueLevel,
         domain: CritiqueDomain,
     ) -> CritiqueResult:
-        """Perform a critique analysis of a target process"""
-        critique_id = f"{target_process}_{domain.value}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        """Perform a critique analysis of a target process."""
+        critique_id = f"{target_process}_{domain.value}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
         self.logger.info(
-            f"Performing {level.value} critique of {target_process} in {
-                domain.value
-            } domain",
+            "Performing %s critique of %s in %s domain",
+            level.value,
+            target_process,
+            domain.value,
         )
 
         # Multi-model validation
@@ -324,7 +325,7 @@ and validate system performance through multi-model consensus and adversarial te
         }
 
         # Analyze and compile critique
-        critique_result = await self._compile_critique_analysis(
+        return await self._compile_critique_analysis(
             critique_id,
             target_process,
             level,
@@ -332,14 +333,12 @@ and validate system performance through multi-model consensus and adversarial te
             validation_results,
         )
 
-        return critique_result
-
     async def _get_multi_model_consensus(
         self,
         target_process: str,
         domain: CritiqueDomain,
     ) -> ModelConsensus:
-        """Get consensus from multiple models about a process"""
+        """Get consensus from multiple models about a process."""
         # Generate critique prompt for each model
         critique_prompt = self._generate_critique_prompt(target_process, domain)
 
@@ -354,24 +353,22 @@ and validate system performance through multi-model consensus and adversarial te
                 confidence_scores[model] = response.get("confidence", 0.0)
 
             except Exception as e:
-                self.logger.warning(f"Failed to get response from {model}: {e}")
+                self.logger.warning("Failed to get response from %s: %s", model, e)
                 model_responses[model] = {"error": str(e)}
                 confidence_scores[model] = 0.0
 
         # Analyze consensus
-        consensus = await self._analyze_model_consensus(
+        return await self._analyze_model_consensus(
             model_responses,
             confidence_scores,
         )
-
-        return consensus
 
     def _generate_critique_prompt(
         self,
         target_process: str,
         domain: CritiqueDomain,
     ) -> str:
-        """Generate a critique prompt for multi-model analysis"""
+        """Generate a critique prompt for multi-model analysis."""
         domain_focuses = {
             CritiqueDomain.REASONING: "logical reasoning, inference quality, and conclusion validity",
             CritiqueDomain.ACCURACY: "factual correctness, evidence quality, and information reliability",
@@ -381,7 +378,7 @@ and validate system performance through multi-model consensus and adversarial te
             CritiqueDomain.CREATIVITY: "innovative thinking, novel connections, and creative problem-solving",
         }
 
-        prompt = f"""You are an expert critic and quality analyst. Your task is to perform a comprehensive critique of the {
+        return f"""You are an expert critic and quality analyst. Your task is to perform a comprehensive critique of the {
             target_process
         } process, specifically focusing on {domain_focuses[domain]}.
 
@@ -407,14 +404,12 @@ Provide your response in JSON format with the following structure:
     "reasoning": ["reason1", "reason2", ...]
 } """
 
-        return prompt
-
     async def _query_model_for_critique(
         self,
         model: str,
         prompt: str,
-    ) -> dict[str, Any]:
-        """Query a specific model for critique analysis"""
+    ) -> Dict[str, Any]:
+        """Query a specific model for critique analysis."""
         # Simulate model query - in production this would call actual model APIs
         await asyncio.sleep(1)  # Simulate API call delay
 
@@ -479,10 +474,10 @@ Provide your response in JSON format with the following structure:
 
     async def _analyze_model_consensus(
         self,
-        model_responses: dict[str, dict[str, Any]],
+        model_responses: dict[str, Dict[str, Any]],
         confidence_scores: dict[str, float],
     ) -> ModelConsensus:
-        """Analyze consensus across model responses"""
+        """Analyze consensus across model responses."""
         participating_models = list(model_responses.keys())
 
         # Calculate agreement level
@@ -542,8 +537,8 @@ Provide your response in JSON format with the following structure:
         )
 
     async def _perform_comprehensive_self_assessment(self) -> SelfAssessment:
-        """Perform comprehensive self-assessment of cognitive architecture"""
-        assessment_id = f"self_assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        """Perform comprehensive self-assessment of cognitive architecture."""
+        assessment_id = f"self_assessment_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
         # Analyze cognitive components
         components_to_analyze = [
@@ -584,7 +579,7 @@ Provide your response in JSON format with the following structure:
 
         return SelfAssessment(
             assessment_id=assessment_id,
-            assessment_timestamp=datetime.now(),
+            assessment_timestamp=datetime.now(UTC),
             cognitive_components_analyzed=components_to_analyze,
             overall_performance_score=overall_score,
             component_scores=component_scores,
@@ -597,9 +592,9 @@ Provide your response in JSON format with the following structure:
             implementation_priority={},
         )
 
-    async def _log_critique_cycle(self, critique_result: CritiqueResult):
-        """Log critique cycle to the critique log"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    async def _log_critique_cycle(self) -> None:
+        """Log critique cycle to the critique log."""
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         log_entry = f"""
 ## Critique Cycle - {timestamp}
@@ -629,8 +624,8 @@ Provide your response in JSON format with the following structure:
         with open(self.critique_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    def get_status(self) -> dict[str, Any]:
-        """Get current status of self-critique analyzer"""
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status of self-critique analyzer."""
         recent_critiques = self.critique_history[-5:] if self.critique_history else []
 
         return {
@@ -649,13 +644,13 @@ Provide your response in JSON format with the following structure:
                 recent_critiques[-1].timestamp.isoformat() if recent_critiques else None
             ),
             "critique_domains_analyzed": list(
-                set(c.domain.value for c in self.critique_history),
+                {c.domain.value for c in self.critique_history},
             ),
             "self_assessments_completed": len(self.self_assessments),
         }
 
-    async def shutdown(self):
-        """Gracefully shutdown the self-critique analyzer"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the self-critique analyzer."""
         self.logger.info("Shutting down Self-Critique Analyzer...")
 
         # Save final critique summary
@@ -663,7 +658,7 @@ Provide your response in JSON format with the following structure:
 
         with open(self.critique_log_path, "a", encoding="utf-8") as f:
             f.write(
-                f"\n\n## System Shutdown - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
+                f"\n\n## System Shutdown - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}\n\n",
             )
             f.write(f"Final Status: {json.dumps(final_status, indent=2)}\n\n")
 

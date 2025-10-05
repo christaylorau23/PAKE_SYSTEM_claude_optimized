@@ -7,7 +7,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ..database.postgresql_service import (
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class DatabaseIngestionConfig(CachedIngestionConfig):
-    """Extended configuration with database integration"""
+    """Extended configuration with database integration."""
 
     # Database settings
     enable_database: bool = True
@@ -54,7 +54,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
     - Search history and saved searches support
     """
 
-    def __init__(self, config: DatabaseIngestionConfig, **kwargs):
+    def __init__(self) -> None:
         # Initialize parent cached orchestrator
         super().__init__(config, **kwargs)
 
@@ -72,7 +72,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         logger.info("DatabaseIngestionOrchestrator initialized with PostgreSQL support")
 
     async def initialize_database(self) -> None:
-        """Initialize PostgreSQL database service"""
+        """Initialize PostgreSQL database service."""
         if self.database_config.enable_database:
             try:
                 # Use provided config or default
@@ -86,12 +86,13 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
             except Exception as e:
                 logger.warning(
-                    f"⚠️ Failed to initialize PostgreSQL, continuing without database: {e}",
+                    "⚠️ Failed to initialize PostgreSQL, continuing without database: %s",
+                    e,
                 )
                 self.database_service = None
 
     async def initialize_cache(self) -> None:
-        """Initialize both cache and database"""
+        """Initialize both cache and database."""
         # Initialize Redis cache from parent
         await super().initialize_cache()
 
@@ -99,7 +100,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         await self.initialize_database()
 
     async def close(self) -> None:
-        """Clean up both cache and database services"""
+        """Clean up both cache and database services."""
         # Close parent cache service
         await super().close()
 
@@ -112,7 +113,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         plan: IngestionPlan,
         user_id: str | None = None,
     ) -> IngestionResult:
-        """Execute ingestion plan with full persistence tracking"""
+        """Execute ingestion plan with full persistence tracking."""
         start_time = time.time()
 
         # Execute plan using parent cached orchestrator
@@ -131,10 +132,12 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                     user_id=user_id,
                 )
                 self.database_metrics["searches_saved"] += 1
-                self.database_metrics["last_database_save"] = datetime.now().isoformat()
+                self.database_metrics["last_database_save"] = datetime.now(
+                    UTC
+                ).isoformat()
 
             except Exception as e:
-                logger.error(f"Failed to save search history: {e}")
+                logger.error("Failed to save search history: %s", e)
                 self.database_metrics["database_errors"] += 1
 
         # Save system metrics if enabled
@@ -144,7 +147,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                 self.database_metrics["metrics_saved"] += 1
 
             except Exception as e:
-                logger.error(f"Failed to save system metrics: {e}")
+                logger.error("Failed to save system metrics: %s", e)
                 self.database_metrics["database_errors"] += 1
 
         return result
@@ -155,7 +158,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         result: IngestionResult,
         user_id: str | None = None,
     ) -> None:
-        """Save search execution to history"""
+        """Save search execution to history."""
         if not self.database_service:
             return
 
@@ -195,10 +198,10 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             metadata=metadata,
         )
 
-        logger.debug(f"Saved search history for query: {plan.topic}")
+        logger.debug("Saved search history for query: %s", plan.topic)
 
     async def _save_performance_metrics(self, result: IngestionResult) -> None:
-        """Save system performance metrics"""
+        """Save system performance metrics."""
         if not self.database_service:
             return
 
@@ -228,12 +231,12 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         user_id: str,
         name: str,
         query: str,
-        sources: list[str],
-        filters: dict[str, Any] | None = None,
+        sources: List[str],
+        filters: Dict[str, Any] | None = None,
         is_public: bool = False,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
     ) -> str | None:
-        """Save a user's search query for later use"""
+        """Save a user's search query for later use."""
         if not self.database_service:
             logger.warning("Database service not available for saving search")
             return None
@@ -249,11 +252,11 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                 tags=tags,
             )
 
-            logger.info(f"Saved user search: {name} for user {user_id}")
+            logger.info("Saved user search: %s for user %s", name, user_id)
             return search_id
 
         except Exception as e:
-            logger.error(f"Failed to save user search: {e}")
+            logger.error("Failed to save user search: %s", e)
             return None
 
     async def get_user_search_history(
@@ -261,8 +264,8 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         user_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Get user's search history"""
+    ) -> list[Dict[str, Any]]:
+        """Get user's search history."""
         if not self.database_service:
             return []
 
@@ -273,24 +276,24 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                 offset=offset,
             )
         except Exception as e:
-            logger.error(f"Failed to get user search history: {e}")
+            logger.error("Failed to get user search history: %s", e)
             return []
 
-    async def get_user_saved_searches(self, user_id: str) -> list[dict[str, Any]]:
-        """Get user's saved searches"""
+    async def get_user_saved_searches(self, user_id: str) -> list[Dict[str, Any]]:
+        """Get user's saved searches."""
         if not self.database_service:
             return []
 
         try:
             return await self.database_service.get_user_saved_searches(user_id)
         except Exception as e:
-            logger.error(f"Failed to get user saved searches: {e}")
+            logger.error("Failed to get user saved searches: %s", e)
             return []
 
     # Analytics methods
 
-    async def get_search_analytics(self, days: int = 30) -> dict[str, Any]:
-        """Get comprehensive search analytics"""
+    async def get_search_analytics(self, days: int = 30) -> Dict[str, Any]:
+        """Get comprehensive search analytics."""
         if not self.database_service:
             return {"error": "Database service not available"}
 
@@ -305,26 +308,26 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             return analytics
 
         except Exception as e:
-            logger.error(f"Failed to get search analytics: {e}")
+            logger.error("Failed to get search analytics: %s", e)
             return {"error": str(e)}
 
     async def get_popular_searches(
         self,
         limit: int = 10,
         days: int = 7,
-    ) -> list[dict[str, Any]]:
-        """Get most popular search queries"""
+    ) -> list[Dict[str, Any]]:
+        """Get most popular search queries."""
         if not self.database_service:
             return []
 
         try:
             return await self.database_service.get_popular_searches(limit, days)
         except Exception as e:
-            logger.error(f"Failed to get popular searches: {e}")
+            logger.error("Failed to get popular searches: %s", e)
             return []
 
-    async def get_comprehensive_statistics(self) -> dict[str, Any]:
-        """Get comprehensive system statistics combining cache and database"""
+    async def get_comprehensive_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive system statistics combining cache and database."""
         stats = {}
 
         # Get execution metrics from parent
@@ -365,7 +368,7 @@ async def create_database_orchestrator(
     database_config: DatabaseConfig | None = None,
     **config_kwargs,
 ) -> DatabaseIngestionOrchestrator:
-    """Create and initialize a database-aware orchestrator"""
+    """Create and initialize a database-aware orchestrator."""
     # Prepare configuration
     config_dict = {
         "enable_database": True,
@@ -386,7 +389,7 @@ async def create_database_orchestrator(
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         # Create database-aware orchestrator
         orchestrator = await create_database_orchestrator()
 

@@ -10,6 +10,7 @@ import time
 import numpy as np
 import pytest
 import pytest_asyncio
+
 from services.ai.semantic_search_engine import (
     RankingStrategy,
     SearchMode,
@@ -27,14 +28,14 @@ from services.ai.semantic_search_engine import (
 )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestSemanticSearchEngine:
     """
     Test suite for the main Semantic Search Engine functionality.
     """
 
     @pytest_asyncio.fixture
-    async def semantic_engine(self):
+    async def semantic_engine(self) -> None:
         """Create semantic search engine for testing"""
         config = SemanticConfig(
             embedding_dimensionality=100,
@@ -45,8 +46,8 @@ class TestSemanticSearchEngine:
         )
         return SemanticSearchEngine(config)
 
-    @pytest.fixture()
-    def sample_content_items(self):
+    @pytest.fixture
+    def sample_content_items(self) -> None:
         """Sample content for testing"""
         return [
             (
@@ -76,8 +77,8 @@ class TestSemanticSearchEngine:
             ),
         ]
 
-    @pytest.fixture()
-    def sample_search_queries(self):
+    @pytest.fixture
+    def sample_search_queries(self) -> None:
         """Sample search queries for testing"""
         return [
             SemanticSearchQuery(
@@ -104,8 +105,7 @@ class TestSemanticSearchEngine:
 
     async def test_should_initialize_semantic_search_engine_with_configuration(
         self,
-        semantic_engine,
-    ):
+    ) -> None:
         """
         Test: Should initialize semantic search engine with proper
         configuration and component setup.
@@ -121,7 +121,7 @@ class TestSemanticSearchEngine:
         assert semantic_engine.stats["total_embeddings"] == 0
         assert semantic_engine.stats["total_searches"] == 0
 
-    async def test_should_index_single_content_successfully(self, semantic_engine):
+    async def test_should_index_single_content_successfully(self) -> None:
         """
         Test: Should index single piece of content and generate
         proper vector embedding with metadata storage.
@@ -153,11 +153,7 @@ class TestSemanticSearchEngine:
         assert "indexed_at" in stored_metadata
         assert stored_metadata["content_length"] == len(content)
 
-    async def test_should_batch_index_multiple_content_items_efficiently(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_batch_index_multiple_content_items_efficiently(self) -> None:
         """
         Test: Should efficiently index multiple content items in batch
         with proper embedding generation and metadata storage.
@@ -184,11 +180,7 @@ class TestSemanticSearchEngine:
             assert content_id in semantic_engine.embeddings_store
             assert content_id in semantic_engine.content_metadata
 
-    async def test_should_perform_semantic_search_with_relevance_ranking(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_perform_semantic_search_with_relevance_ranking(self) -> None:
         """
         Test: Should perform semantic search and return results
         ranked by relevance with proper scoring.
@@ -227,11 +219,7 @@ class TestSemanticSearchEngine:
         assert stats["total_searches"] == 1
         assert stats["average_search_time"] > 0
 
-    async def test_should_find_similar_content_with_similarity_scoring(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_find_similar_content_with_similarity_scoring(self) -> None:
         """
         Test: Should find content similar to a specific item
         with accurate similarity scoring and ranking.
@@ -265,11 +253,7 @@ class TestSemanticSearchEngine:
     # Search Functionality Tests
     # ========================================================================
 
-    async def test_should_handle_different_search_modes_appropriately(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_handle_different_search_modes_appropriately(self) -> None:
         """
         Test: Should handle different search modes (semantic, fuzzy, hybrid)
         with appropriate result variation and performance.
@@ -306,11 +290,7 @@ class TestSemanticSearchEngine:
             for result in response.results:
                 assert result.search_mode == mode
 
-    async def test_should_apply_different_similarity_metrics_correctly(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_apply_different_similarity_metrics_correctly(self) -> None:
         """
         Test: Should apply different similarity metrics (cosine, euclidean, dot product)
         with measurable differences in results.
@@ -350,9 +330,7 @@ class TestSemanticSearchEngine:
 
     async def test_should_apply_ranking_strategies_with_different_outcomes(
         self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    ) -> None:
         """
         Test: Should apply different ranking strategies (relevance, quality, recency, hybrid)
         with observable impact on result ordering.
@@ -394,11 +372,7 @@ class TestSemanticSearchEngine:
     # Caching and Performance Tests
     # ========================================================================
 
-    async def test_should_utilize_search_caching_for_repeated_queries(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_utilize_search_caching_for_repeated_queries(self) -> None:
         """
         Test: Should cache search results and utilize cache for
         repeated queries with improved performance.
@@ -434,8 +408,7 @@ class TestSemanticSearchEngine:
 
     async def test_should_handle_large_volume_content_indexing_efficiently(
         self,
-        semantic_engine,
-    ):
+    ) -> None:
         """
         Test: Should efficiently handle indexing of large volumes of content
         with reasonable performance and memory usage.
@@ -480,10 +453,7 @@ class TestSemanticSearchEngine:
         assert search_time < 5.0
         assert len(response.results) > 0
 
-    async def test_should_handle_empty_and_invalid_content_gracefully(
-        self,
-        semantic_engine,
-    ):
+    async def test_should_handle_empty_and_invalid_content_gracefully(self) -> None:
         """
         Test: Should handle empty, invalid, or malformed content
         without errors and with appropriate fallback behavior.
@@ -528,7 +498,7 @@ class TestSemanticSearchEngine:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    async def test_should_handle_concurrent_operations_safely(self, semantic_engine):
+    async def test_should_handle_concurrent_operations_safely(self) -> None:
         """
         Test: Should handle concurrent indexing and searching operations
         without data corruption or race conditions.
@@ -544,10 +514,10 @@ class TestSemanticSearchEngine:
         ]
 
         # Define concurrent operations
-        async def index_operation():
+        async def index_operation(self) -> None:
             return await semantic_engine.batch_index_content(concurrent_content[:10])
 
-        async def search_operation():
+        async def search_operation(self) -> None:
             query = SemanticSearchQuery(query_text="machine learning", max_results=5)
             return await semantic_engine.semantic_search(query)
 
@@ -572,11 +542,7 @@ class TestSemanticSearchEngine:
         assert len(semantic_engine.embeddings_store) >= 10
         assert semantic_engine.stats["total_embeddings"] >= 10
 
-    async def test_should_clear_index_and_reset_statistics_properly(
-        self,
-        semantic_engine,
-        sample_content_items,
-    ):
+    async def test_should_clear_index_and_reset_statistics_properly(self) -> None:
         """
         Test: Should properly clear search index, caches, and reset
         statistics without leaving residual data.
@@ -604,27 +570,24 @@ class TestSemanticSearchEngine:
         assert semantic_engine.stats["cache_hits"] == 0
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestEmbeddingComponents:
     """
     Test suite for individual embedding and similarity components.
     """
 
     @pytest_asyncio.fixture
-    def tfidf_generator(self):
+    def tfidf_generator(self) -> None:
         """Create TF-IDF embedding generator for testing"""
         config = SemanticConfig(embedding_dimensionality=50)
         return TFIDFEmbeddingGenerator(config)
 
     @pytest_asyncio.fixture
-    def similarity_calculator(self):
+    def similarity_calculator(self) -> None:
         """Create similarity calculator for testing"""
         return SimilarityCalculator()
 
-    async def test_tfidf_generator_should_create_normalized_embeddings(
-        self,
-        tfidf_generator,
-    ):
+    async def test_tfidf_generator_should_create_normalized_embeddings(self) -> None:
         """
         Test: TF-IDF generator should create properly normalized vector embeddings
         with correct dimensionality and mathematical properties.
@@ -650,9 +613,7 @@ class TestEmbeddingComponents:
 
     async def test_similarity_calculator_should_compute_accurate_similarity_scores(
         self,
-        tfidf_generator,
-        similarity_calculator,
-    ):
+    ) -> None:
         """
         Test: Similarity calculator should compute accurate similarity scores
         using different metrics with expected mathematical properties.
@@ -713,8 +674,7 @@ class TestEmbeddingComponents:
 
     async def test_embedding_generator_should_handle_batch_processing_efficiently(
         self,
-        tfidf_generator,
-    ):
+    ) -> None:
         """
         Test: Embedding generator should efficiently process multiple documents
         in batch with consistent quality and performance.
@@ -768,13 +728,13 @@ class TestEmbeddingComponents:
             assert np.sum(np.abs(vector_np)) > 0  # Not all zeros
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.
     """
 
-    async def test_should_create_production_semantic_search_engine(self):
+    async def test_should_create_production_semantic_search_engine(self) -> None:
         """
         Test: Should create production-ready semantic search engine
         with optimized configuration and performance settings.
@@ -826,7 +786,7 @@ class TestDataStructures:
     Test suite for semantic search data structures and serialization.
     """
 
-    def test_vector_embedding_should_serialize_correctly(self):
+    def test_vector_embedding_should_serialize_correctly(self) -> None:
         """
         Test: VectorEmbedding should properly serialize to dictionary
         for JSON export and API responses.
@@ -847,7 +807,7 @@ class TestDataStructures:
         assert embedding_dict["embedding_model"] == "test_model"
         assert "creation_timestamp" in embedding_dict
 
-    def test_semantic_search_response_should_serialize_completely(self):
+    def test_semantic_search_response_should_serialize_completely(self) -> None:
         """
         Test: SemanticSearchResponse should serialize all components
         correctly for comprehensive API responses.

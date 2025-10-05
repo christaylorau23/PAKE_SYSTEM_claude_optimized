@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Real-Time Monitoring Dashboard
-Phase 2B Sprint 4: Production-scale monitoring and observability
+Phase 2B Sprint 4: Production-scale monitoring and observability.
 
 Provides real-time performance monitoring, health checks, and operational insights
 for the PAKE ingestion pipeline and caching systems.
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class HealthStatus(Enum):
-    """System health status levels"""
+    """System health status levels."""
 
     HEALTHY = "healthy"
     WARNING = "warning"
@@ -31,7 +31,7 @@ class HealthStatus(Enum):
 
 
 class MetricType(Enum):
-    """Types of metrics tracked"""
+    """Types of metrics tracked."""
 
     COUNTER = "counter"
     GAUGE = "gauge"
@@ -41,14 +41,14 @@ class MetricType(Enum):
 
 @dataclass(frozen=True)
 class MetricPoint:
-    """Immutable metric data point"""
+    """Immutable metric data point."""
 
     timestamp: datetime
     value: float
     labels: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "timestamp": self.timestamp.isoformat(),
             "value": self.value,
@@ -58,15 +58,15 @@ class MetricPoint:
 
 @dataclass
 class SystemHealth:
-    """System health assessment"""
+    """System health assessment."""
 
     overall_status: HealthStatus = HealthStatus.UNKNOWN
     component_health: dict[str, HealthStatus] = field(default_factory=dict)
-    alerts: list[str] = field(default_factory=list)
+    alerts: List[str] = field(default_factory=list)
     last_check: datetime | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "overall_status": self.overall_status.value,
             "component_health": {k: v.value for k, v in self.component_health.items()},
@@ -77,7 +77,7 @@ class SystemHealth:
 
 @dataclass
 class DashboardConfig:
-    """Real-time dashboard configuration"""
+    """Real-time dashboard configuration."""
 
     # Update intervals
     metric_update_interval: float = 1.0  # seconds
@@ -101,23 +101,23 @@ class DashboardConfig:
 
 
 class MetricCollector(ABC):
-    """Abstract base for metric collectors"""
+    """Abstract base for metric collectors."""
 
     @abstractmethod
     async def collect_metrics(self) -> dict[str, list[MetricPoint]]:
-        """Collect metrics from the system"""
+        """Collect metrics from the system."""
 
 
 class IngestionMetrics(MetricCollector):
-    """Collects ingestion pipeline metrics"""
+    """Collects ingestion pipeline metrics."""
 
-    def __init__(self, orchestrator_manager=None, cache_manager=None):
+    def __init__(self) -> None:
         self.orchestrator_manager = orchestrator_manager
         self.cache_manager = cache_manager
         self._start_time = time.time()
 
     async def collect_metrics(self) -> dict[str, list[MetricPoint]]:
-        """Collect ingestion and caching metrics"""
+        """Collect ingestion and caching metrics."""
         metrics = {}
         now = datetime.now(UTC)
 
@@ -163,15 +163,15 @@ class IngestionMetrics(MetricCollector):
 
 
 class SystemHealthChecker:
-    """Monitors system health and generates alerts"""
+    """Monitors system health and generates alerts."""
 
-    def __init__(self, config: DashboardConfig, metric_collector: MetricCollector):
+    def __init__(self) -> None:
         self.config = config
         self.metric_collector = metric_collector
         self._alerts = []
 
     async def check_health(self) -> SystemHealth:
-        """Perform comprehensive health check"""
+        """Perform comprehensive health check."""
         health = SystemHealth()
         health.last_check = datetime.now(UTC)
 
@@ -198,7 +198,7 @@ class SystemHealthChecker:
             health.alerts = self._get_active_alerts()
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.error("Health check failed: %s", e)
             health.overall_status = HealthStatus.CRITICAL
             health.component_health["system"] = HealthStatus.CRITICAL
             health.alerts = [f"Health check system error: {str(e)}"]
@@ -210,7 +210,7 @@ class SystemHealthChecker:
         self,
         metrics: dict[str, list[MetricPoint]],
     ) -> HealthStatus:
-        """Check cache system health"""
+        """Check cache system health."""
         if "cache_hit_rate" not in metrics:
             return HealthStatus.UNKNOWN
 
@@ -229,7 +229,7 @@ class SystemHealthChecker:
         self,
         metrics: dict[str, list[MetricPoint]],
     ) -> HealthStatus:
-        """Check ingestion pipeline health"""
+        """Check ingestion pipeline health."""
         if "ingestion_success_rate" not in metrics:
             return HealthStatus.UNKNOWN
 
@@ -252,7 +252,7 @@ class SystemHealthChecker:
         return HealthStatus.HEALTHY
 
     async def _check_system_resources(self) -> HealthStatus:
-        """Check system resource utilization"""
+        """Check system resource utilization."""
         # In production, this would check real system metrics
         # For now, simulate resource checks
 
@@ -278,7 +278,7 @@ class SystemHealthChecker:
         self,
         component_health: dict[str, HealthStatus],
     ) -> HealthStatus:
-        """Calculate overall system status"""
+        """Calculate overall system status."""
         if not component_health:
             return HealthStatus.UNKNOWN
 
@@ -292,13 +292,13 @@ class SystemHealthChecker:
             return HealthStatus.HEALTHY
         return HealthStatus.UNKNOWN
 
-    def _add_alert(self, message: str):
-        """Add alert to the active alerts list"""
+    def _add_alert(self) -> None:
+        """Add alert to the active alerts list."""
         if message not in self._alerts:
             self._alerts.append(message)
 
-    def _get_active_alerts(self) -> list[str]:
-        """Get current active alerts"""
+    def _get_active_alerts(self) -> List[str]:
+        """Get current active alerts."""
         return self._alerts.copy()
 
 
@@ -307,7 +307,7 @@ class RealTimeMonitoringDashboard:
     Provides live metrics, health monitoring, and alerting.
     """
 
-    def __init__(self, config: DashboardConfig = None):
+    def __init__(self) -> None:
         self.config = config or DashboardConfig()
         self.metrics_history: dict[str, list[MetricPoint]] = {}
         self.is_running = False
@@ -322,8 +322,8 @@ class RealTimeMonitoringDashboard:
 
         logger.info("Initialized RealTimeMonitoringDashboard")
 
-    async def start(self):
-        """Start the monitoring dashboard"""
+    async def start(self) -> None:
+        """Start the monitoring dashboard."""
         self.is_running = True
         logger.info("Starting Real-Time Monitoring Dashboard")
 
@@ -337,16 +337,16 @@ class RealTimeMonitoringDashboard:
         try:
             await asyncio.gather(*tasks)
         except Exception as e:
-            logger.error(f"Dashboard error: {e}")
+            logger.error("Dashboard error: %s", e)
             await self.stop()
 
-    async def stop(self):
-        """Stop the monitoring dashboard"""
+    async def stop(self) -> None:
+        """Stop the monitoring dashboard."""
         logger.info("Stopping Real-Time Monitoring Dashboard")
         self.is_running = False
 
-    async def _metric_collection_loop(self):
-        """Background loop for metric collection"""
+    async def _metric_collection_loop(self) -> None:
+        """Background loop for metric collection."""
         while self.is_running:
             try:
                 # Collect metrics
@@ -365,12 +365,12 @@ class RealTimeMonitoringDashboard:
                 self.current_metrics = new_metrics
 
             except Exception as e:
-                logger.error(f"Metric collection error: {e}")
+                logger.error("Metric collection error: %s", e)
 
             await asyncio.sleep(self.config.metric_update_interval)
 
-    async def _health_check_loop(self):
-        """Background loop for health monitoring"""
+    async def _health_check_loop(self) -> None:
+        """Background loop for health monitoring."""
         while self.is_running:
             try:
                 self.current_health = await self.health_checker.check_health()
@@ -378,18 +378,19 @@ class RealTimeMonitoringDashboard:
                 # Log critical alerts
                 if self.current_health.overall_status == HealthStatus.CRITICAL:
                     logger.critical(
-                        f"CRITICAL SYSTEM STATUS: {self.current_health.alerts}",
+                        "CRITICAL SYSTEM STATUS: %s",
+                        self.current_health.alerts,
                     )
                 elif self.current_health.alerts:
-                    logger.warning(f"System alerts: {self.current_health.alerts}")
+                    logger.warning("System alerts: %s", self.current_health.alerts)
 
             except Exception as e:
-                logger.error(f"Health check error: {e}")
+                logger.error("Health check error: %s", e)
 
             await asyncio.sleep(self.config.health_check_interval)
 
-    async def _dashboard_update_loop(self):
-        """Background loop for dashboard updates"""
+    async def _dashboard_update_loop(self) -> None:
+        """Background loop for dashboard updates."""
         while self.is_running:
             try:
                 # Generate dashboard data
@@ -397,15 +398,15 @@ class RealTimeMonitoringDashboard:
 
                 # In production, this would update WebSocket connections
                 # or write to a shared data store for the web dashboard
-                logger.debug(f"Dashboard updated: {len(dashboard_data)} metrics")
+                logger.debug("Dashboard updated: %s metrics", len(dashboard_data))
 
             except Exception as e:
-                logger.error(f"Dashboard update error: {e}")
+                logger.error("Dashboard update error: %s", e)
 
             await asyncio.sleep(self.config.dashboard_refresh_interval)
 
-    def _trim_metric_history(self, metric_name: str):
-        """Remove old metric data points"""
+    def _trim_metric_history(self) -> None:
+        """Remove old metric data points."""
         if metric_name not in self.metrics_history:
             return
 
@@ -424,9 +425,8 @@ class RealTimeMonitoringDashboard:
                     hasattr(p, "timestamp")
                     and hasattr(p, "value")
                     and hasattr(p, "to_dict")
-                ):
-                    if p.timestamp > cutoff_time:
-                        valid_points.append(p)
+                ) and p.timestamp > cutoff_time:
+                    valid_points.append(p)
             except Exception:
                 # Skip corrupted points
                 continue
@@ -437,8 +437,8 @@ class RealTimeMonitoringDashboard:
 
         self.metrics_history[metric_name] = valid_points
 
-    async def get_dashboard_data(self) -> dict[str, Any]:
-        """Get comprehensive dashboard data"""
+    async def get_dashboard_data(self) -> Dict[str, Any]:
+        """Get comprehensive dashboard data."""
         return {
             "timestamp": datetime.now(UTC).isoformat(),
             "health": self.current_health.to_dict(),
@@ -468,11 +468,11 @@ class RealTimeMonitoringDashboard:
         }
 
     async def get_health_status(self) -> SystemHealth:
-        """Get current system health status"""
+        """Get current system health status."""
         return self.current_health
 
-    async def get_metrics_summary(self) -> dict[str, Any]:
-        """Get metrics summary for API endpoints"""
+    async def get_metrics_summary(self) -> Dict[str, Any]:
+        """Get metrics summary for API endpoints."""
         summary = {}
 
         for metric_name, points in self.current_metrics.items():
@@ -487,18 +487,18 @@ class RealTimeMonitoringDashboard:
         return summary
 
     async def export_metrics(self, filepath: str) -> bool:
-        """Export current metrics to JSON file"""
+        """Export current metrics to JSON file."""
         try:
             dashboard_data = await self.get_dashboard_data()
 
             async with aiofiles.open(filepath, "w") as f:
                 await f.write(json.dumps(dashboard_data, indent=2, default=str))
 
-            logger.info(f"Metrics exported to {filepath}")
+            logger.info("Metrics exported to %s", filepath)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to export metrics: {e}")
+            logger.error("Failed to export metrics: %s", e)
             return False
 
 
@@ -528,7 +528,7 @@ async def create_production_dashboard(
 
 if __name__ == "__main__":
     # Example standalone usage
-    async def main():
+    async def main(self) -> None:
         dashboard = RealTimeMonitoringDashboard()
 
         # Start dashboard (would run indefinitely)

@@ -252,8 +252,8 @@ system_alerts_table = Table(
 )
 
 
-def start_mappers():
-    """Initialize all mappers to connect domain models to database tables"""
+def start_mappers(self) -> None:
+    """Initialize all mappers to connect domain models to database tables."""
     try:
         # Map User domain model to users table
         mapper(User, users_table)
@@ -282,27 +282,27 @@ def start_mappers():
         logger.info("All domain model mappers initialized successfully")
 
     except Exception as e:
-        logger.error(f"Error initializing mappers: {e}")
+        logger.error("Error initializing mappers: %s", e)
         raise
 
 
-def create_all_tables(engine):
-    """Create all tables in the database"""
+def create_all_tables(self) -> None:
+    """Create all tables in the database."""
     try:
         metadata.create_all(engine)
         logger.info("All database tables created successfully")
     except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
+        logger.error("Error creating database tables: %s", e)
         raise
 
 
-def drop_all_tables(engine):
-    """Drop all tables from the database"""
+def drop_all_tables(self) -> None:
+    """Drop all tables from the database."""
     try:
         metadata.drop_all(engine)
         logger.info("All database tables dropped successfully")
     except Exception as e:
-        logger.error(f"Error dropping database tables: {e}")
+        logger.error("Error dropping database tables: %s", e)
         raise
 
 

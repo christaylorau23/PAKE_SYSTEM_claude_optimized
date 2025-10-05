@@ -1,5 +1,5 @@
 """PAKE System - Performance Optimization Module
-Advanced performance optimization and monitoring
+Advanced performance optimization and monitoring.
 """
 
 from .optimization_service import (

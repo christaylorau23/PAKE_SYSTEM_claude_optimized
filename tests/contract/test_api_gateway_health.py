@@ -19,21 +19,19 @@ import pytest
 class TestAPIGatewayHealthContract:
     """Contract tests for API Gateway health endpoint"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def api_gateway_base_url(self) -> str:
         """API Gateway base URL for testing"""
         return "http://localhost:8080/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         """Async HTTP client for API calls"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_health_endpoint_exists(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_endpoint_exists(self) -> None:
         """
         Test that /health endpoint exists and is accessible
 
@@ -49,10 +47,8 @@ class TestAPIGatewayHealthContract:
             503,
         ], f"Health endpoint returned {response.status_code}, expected 200 or 503"
 
-    @pytest.mark.asyncio()
-    async def test_health_response_schema(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_response_schema(self) -> None:
         """
         Test that /health endpoint returns correct JSON schema
 
@@ -95,10 +91,8 @@ class TestAPIGatewayHealthContract:
             health_data["services"], dict
         ), "Services field must be an object"
 
-    @pytest.mark.asyncio()
-    async def test_health_endpoint_response_time(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_endpoint_response_time(self) -> None:
         """
         Test that /health endpoint meets performance requirements
 
@@ -119,10 +113,8 @@ class TestAPIGatewayHealthContract:
             response_time < 1.0
         ), f"Health endpoint took {response_time:.3f}s, must be <1s"
 
-    @pytest.mark.asyncio()
-    async def test_health_includes_downstream_services(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_includes_downstream_services(self) -> None:
         """
         Test that health endpoint includes downstream service status
 
@@ -161,10 +153,8 @@ class TestAPIGatewayHealthContract:
                 "unknown",
             ], f"Invalid status for service {service_name}: {service_health['status']}"
 
-    @pytest.mark.asyncio()
-    async def test_health_endpoint_content_type(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_endpoint_content_type(self) -> None:
         """
         Test that /health endpoint returns correct content type
 
@@ -174,14 +164,14 @@ class TestAPIGatewayHealthContract:
         response = await http_client.get(f"{api_gateway_base_url}/health")
 
         assert response.status_code in [200, 503]
-        assert response.headers["content-type"].startswith(
+        assert response.headers[
+            "content-type"
+        ].startswith(
             "application/json"
         ), f"Expected application/json content type, got: {response.headers.get('content-type')}"
 
-    @pytest.mark.asyncio()
-    async def test_health_endpoint_supports_query_parameters(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_health_endpoint_supports_query_parameters(self) -> None:
         """
         Test that /health endpoint supports optional query parameters
 
@@ -213,10 +203,8 @@ class TestAPIGatewayHealthContract:
 class TestAPIGatewayHealthPerformance:
     """Performance contract tests for API Gateway health endpoint"""
 
-    @pytest.mark.asyncio()
-    async def test_health_endpoint_concurrent_load(
-        self, api_gateway_base_url: str = "http://localhost:8080/v1"
-    ):
+    @pytest.mark.asyncio
+    async def test_health_endpoint_concurrent_load(self) -> None:
         """
         Test health endpoint under concurrent load
 
@@ -224,7 +212,7 @@ class TestAPIGatewayHealthPerformance:
         Performance Target: All requests complete within 5 seconds
         """
 
-        async def single_health_check():
+        async def single_health_check(self) -> None:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{api_gateway_base_url}/health")
                 return response.status_code in [200, 503]

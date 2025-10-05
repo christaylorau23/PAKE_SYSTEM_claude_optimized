@@ -34,22 +34,22 @@ class TestMLServices:
     """Test ML service functionality"""
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_semantic_search_service_import(self):
+    def test_semantic_search_service_import(self) -> None:
         """Test that SemanticSearchService can be imported"""
         assert SemanticSearchService is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_content_summarization_service_import(self):
+    def test_content_summarization_service_import(self) -> None:
         """Test that ContentSummarizationService can be imported"""
         assert ContentSummarizationService is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_ml_analytics_service_import(self):
+    def test_ml_analytics_service_import(self) -> None:
         """Test that MLAnalyticsAggregationService can be imported"""
         assert MLAnalyticsAggregationService is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_service_factory_functions(self):
+    def test_service_factory_functions(self) -> None:
         """Test that service factory functions exist"""
         assert callable(get_semantic_search_service)
         assert callable(get_content_summarization_service)
@@ -57,7 +57,7 @@ class TestMLServices:
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
     @patch("src.services.ml.semantic_search_service.SemanticSearchService")
-    def test_semantic_search_service_creation(self, mock_service):
+    def test_semantic_search_service_creation(self) -> None:
         """Test semantic search service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -69,7 +69,7 @@ class TestMLServices:
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
     @patch("src.services.ml.content_summarization_service.ContentSummarizationService")
-    def test_content_summarization_service_creation(self, mock_service):
+    def test_content_summarization_service_creation(self) -> None:
         """Test content summarization service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -80,8 +80,10 @@ class TestMLServices:
         assert service is not None
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    @patch("src.services.ml.analytics_aggregation_service.MLAnalyticsAggregationService")
-    def test_ml_analytics_service_creation(self, mock_service):
+    @patch(
+        "src.services.ml.analytics_aggregation_service.MLAnalyticsAggregationService"
+    )
+    def test_ml_analytics_service_creation(self) -> None:
         """Test ML analytics service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -96,7 +98,7 @@ class TestMLServiceIntegration:
     """Test ML service integration and basic functionality"""
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_ml_services_module_structure(self):
+    def test_ml_services_module_structure(self) -> None:
         """Test that ML services module has expected structure"""
         import src.services.ml as ml_module
 
@@ -110,7 +112,7 @@ class TestMLServiceIntegration:
         for export in expected_exports:
             assert hasattr(ml_module, export), f"Missing export: {export}"
 
-    def test_ml_services_graceful_degradation(self):
+    def test_ml_services_graceful_degradation(self) -> None:
         """Test that system handles ML service unavailability gracefully"""
         # This test should always pass even if ML services are not available
         try:
@@ -126,7 +128,7 @@ class TestMLServiceIntegration:
 class TestMLServiceConfiguration:
     """Test ML service configuration and setup"""
 
-    def test_mock_ml_service_config(self):
+    def test_mock_ml_service_config(self) -> None:
         """Test mock ML service configuration for CI environments"""
         # Create a mock configuration that ML services might expect
         mock_config = {
@@ -140,7 +142,7 @@ class TestMLServiceConfiguration:
         assert mock_config["batch_size"] == 32
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
-    def test_service_initialization_without_models(self):
+    def test_service_initialization_without_models(self) -> None:
         """Test that services can be initialized without actual ML models"""
         # This test verifies that services can be created even if models aren't loaded
         with patch(
@@ -158,10 +160,10 @@ class TestMLServiceConfiguration:
 class MockSemanticSearchService:
     """Mock semantic search service for testing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.initialized = False
 
-    async def search(self, query: str, limit: int = 10):
+    async def search(self) -> None:
         """Mock search functionality"""
         return [{"text": f"Mock result for: {query}", "score": 0.9}]
 
@@ -169,10 +171,10 @@ class MockSemanticSearchService:
 class MockContentSummarizationService:
     """Mock content summarization service for testing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.initialized = False
 
-    async def summarize(self, content: str, max_length: int = 100):
+    async def summarize(self) -> None:
         """Mock summarization functionality"""
         return f"Mock summary of content (length: {len(content)})"
 
@@ -180,10 +182,10 @@ class MockContentSummarizationService:
 class MockMLAnalyticsService:
     """Mock ML analytics service for testing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.initialized = False
 
-    async def analyze(self, data):
+    async def analyze(self) -> None:
         """Mock analytics functionality"""
         return {"status": "analyzed", "data_points": len(data) if data else 0}
 
@@ -191,26 +193,26 @@ class MockMLAnalyticsService:
 class TestMockMLServices:
     """Test mock ML services when actual services aren't available"""
 
-    def test_mock_semantic_search(self):
+    def test_mock_semantic_search(self) -> None:
         """Test mock semantic search service"""
         service = MockSemanticSearchService()
         assert service is not None
         assert hasattr(service, "search")
 
-    def test_mock_content_summarization(self):
+    def test_mock_content_summarization(self) -> None:
         """Test mock content summarization service"""
         service = MockContentSummarizationService()
         assert service is not None
         assert hasattr(service, "summarize")
 
-    def test_mock_ml_analytics(self):
+    def test_mock_ml_analytics(self) -> None:
         """Test mock ML analytics service"""
         service = MockMLAnalyticsService()
         assert service is not None
         assert hasattr(service, "analyze")
 
-    @pytest.mark.asyncio()
-    async def test_mock_service_functionality(self):
+    @pytest.mark.asyncio
+    async def test_mock_service_functionality(self) -> None:
         """Test that mock services provide expected functionality"""
         search_service = MockSemanticSearchService()
         summarization_service = MockContentSummarizationService()

@@ -9,8 +9,8 @@ This document details the Docker containerization and orchestration changes made
 ### New Files Created
 
 #### 1. `docker-compose.override.yml` (Root Directory)
-**Purpose**: Extends the base PAKE Docker Compose configuration with optional AI security services  
-**Size**: 7,128 bytes  
+**Purpose**: Extends the base PAKE Docker Compose configuration with optional AI security services
+**Size**: 7,128 bytes
 **Location**: `/docker-compose.override.yml`
 
 **Key Features**:
@@ -42,7 +42,7 @@ elasticsearch:
   profiles: [elk, security-monitoring, full]
 ```
 
-##### Logstash Service  
+##### Logstash Service
 ```yaml
 logstash:
   image: logstash:8.11.0
@@ -105,8 +105,8 @@ security-dashboard:
 ```
 
 #### 2. `Dockerfile.ai-security` (Docker Directory)
-**Purpose**: Container definition for AI Security Monitor service  
-**Size**: 1,305 bytes  
+**Purpose**: Container definition for AI Security Monitor service
+**Size**: 1,305 bytes
 **Location**: `/docker/Dockerfile.ai-security`
 
 **Build Strategy**: Multi-stage build for optimized production image
@@ -181,7 +181,7 @@ API_HOST=0.0.0.0
 API_PORT=8080
 LOG_LEVEL=INFO
 
-# AI/LLM Settings  
+# AI/LLM Settings
 LLM_PROVIDER=mock
 LLM_MODEL=gpt-3.5-turbo
 OPENAI_API_KEY=your_openai_key_here
@@ -263,7 +263,7 @@ healthcheck:
 ### Dependency Chain
 ```
 AI Security Monitor → Elasticsearch (healthy) + MCP Server (started)
-Security Dashboard → AI Security Monitor (healthy) + Kibana (healthy)  
+Security Dashboard → AI Security Monitor (healthy) + Kibana (healthy)
 Kibana → Elasticsearch (healthy)
 Logstash → Elasticsearch (healthy)
 Filebeat → Elasticsearch (healthy)
@@ -377,7 +377,7 @@ docker compose --profile full up -d --build
 # Check service status
 docker compose ps
 
-# View service logs  
+# View service logs
 docker compose logs [service_name]
 
 # Test connectivity

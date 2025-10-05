@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Advanced Content Deduplication Service
-Phase 2B Sprint 4: ML-powered content deduplication with similarity detection
+Phase 2B Sprint 4: ML-powered content deduplication with similarity detection.
 
 Provides intelligent content deduplication using multiple algorithms:
 - Hash-based exact duplicate detection
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class DeduplicationMethod(Enum):
-    """Content deduplication methods"""
+    """Content deduplication methods."""
 
     EXACT_HASH = "exact_hash"  # SHA-256 hash matching
     CONTENT_HASH = "content_hash"  # Content-only hash (no metadata)
@@ -35,7 +35,7 @@ class DeduplicationMethod(Enum):
 
 
 class DuplicateAction(Enum):
-    """Actions to take when duplicates are found"""
+    """Actions to take when duplicates are found."""
 
     SKIP = "skip"  # Skip duplicate content
     MERGE = "merge"  # Merge duplicate content
@@ -46,7 +46,7 @@ class DuplicateAction(Enum):
 
 @dataclass(frozen=True)
 class ContentFingerprint:
-    """Immutable content fingerprint for deduplication"""
+    """Immutable content fingerprint for deduplication."""
 
     content_hash: str  # Primary content hash
     metadata_hash: str  # Metadata hash
@@ -56,8 +56,8 @@ class ContentFingerprint:
     content_length: int = 0  # Content length
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "content_hash": self.content_hash,
             "metadata_hash": self.metadata_hash,
@@ -71,7 +71,7 @@ class ContentFingerprint:
 
 @dataclass
 class DeduplicationResult:
-    """Result of deduplication analysis"""
+    """Result of deduplication analysis."""
 
     is_duplicate: bool = False
     method_used: DeduplicationMethod | None = None
@@ -81,8 +81,8 @@ class DeduplicationResult:
     fingerprint: ContentFingerprint | None = None
     processing_time_ms: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "is_duplicate": self.is_duplicate,
             "method_used": self.method_used.value if self.method_used else None,
@@ -96,7 +96,7 @@ class DeduplicationResult:
 
 @dataclass
 class DeduplicationConfig:
-    """Configuration for content deduplication"""
+    """Configuration for content deduplication."""
 
     # Similarity thresholds
     exact_match_threshold: float = 1.0  # Exact matches
@@ -133,9 +133,9 @@ class DeduplicationConfig:
 
 
 class ContentNormalizer:
-    """Normalizes content for consistent deduplication"""
+    """Normalizes content for consistent deduplication."""
 
-    def __init__(self, config: DeduplicationConfig):
+    def __init__(self) -> None:
         self.config = config
 
         # Pre-compiled regex patterns for performance
@@ -144,7 +144,7 @@ class ContentNormalizer:
         self.url_param_pattern = re.compile(r"[?&]utm_[^&]*")
 
     def normalize_content(self, content: str) -> str:
-        """Normalize content for consistent comparison"""
+        """Normalize content for consistent comparison."""
         if not content:
             return ""
 
@@ -165,7 +165,7 @@ class ContentNormalizer:
         return normalized
 
     def normalize_url(self, url: str) -> str:
-        """Normalize URL for consistent comparison"""
+        """Normalize URL for consistent comparison."""
         if not url:
             return ""
 
@@ -185,7 +185,7 @@ class ContentNormalizer:
         return normalized
 
     def extract_title_tokens(self, title: str) -> set[str]:
-        """Extract significant tokens from title for similarity comparison"""
+        """Extract significant tokens from title for similarity comparison."""
         if not title:
             return set()
 
@@ -212,41 +212,37 @@ class ContentNormalizer:
             "with",
             "by",
         }
-        significant_tokens = {
-            token for token in tokens if len(token) > 2 and token not in stop_words
-        }
-
-        return significant_tokens
+        return {token for token in tokens if len(token) > 2 and token not in stop_words}
 
 
 class DuplicationDetector(ABC):
-    """Abstract base class for duplication detection algorithms"""
+    """Abstract base class for duplication detection algorithms."""
 
     @abstractmethod
     async def detect_duplicate(
         self,
         content: str,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
         existing_fingerprints: list[ContentFingerprint],
     ) -> tuple[bool, float, ContentFingerprint | None]:
         """Detect if content is a duplicate.
-        Returns: (is_duplicate, similarity_score, matching_fingerprint)
+        Returns: (is_duplicate, similarity_score, matching_fingerprint).
         """
 
 
 class ExactHashDetector(DuplicationDetector):
-    """Exact hash-based duplicate detection"""
+    """Exact hash-based duplicate detection."""
 
-    def __init__(self, normalizer: ContentNormalizer):
+    def __init__(self) -> None:
         self.normalizer = normalizer
 
     async def detect_duplicate(
         self,
         content: str,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
         existing_fingerprints: list[ContentFingerprint],
     ) -> tuple[bool, float, ContentFingerprint | None]:
-        """Detect exact duplicates using SHA-256 hash"""
+        """Detect exact duplicates using SHA-256 hash."""
         # Normalize content for hashing
         normalized_content = self.normalizer.normalize_content(content)
         content_hash = hashlib.sha256(normalized_content.encode("utf-8")).hexdigest()
@@ -260,14 +256,14 @@ class ExactHashDetector(DuplicationDetector):
 
 
 class FuzzyHashDetector(DuplicationDetector):
-    """Fuzzy hash-based near-duplicate detection"""
+    """Fuzzy hash-based near-duplicate detection."""
 
-    def __init__(self, normalizer: ContentNormalizer, config: DeduplicationConfig):
+    def __init__(self) -> None:
         self.normalizer = normalizer
         self.config = config
 
     def _compute_fuzzy_hash(self, content: str) -> str:
-        """Compute fuzzy hash using shingling technique"""
+        """Compute fuzzy hash using shingling technique."""
         normalized = self.normalizer.normalize_content(content)
 
         # Create character n-grams (shingles)
@@ -279,15 +275,13 @@ class FuzzyHashDetector(DuplicationDetector):
             shingles.add(hashlib.sha256(shingle.encode("utf-8")).hexdigest()[:8])
 
         # Create fuzzy hash from top shingles
-        sorted_shingles = sorted(list(shingles))[:50]  # Top 50 shingles
-        fuzzy_hash = hashlib.sha256(
+        sorted_shingles = sorted(shingles)[:50]  # Top 50 shingles
+        return hashlib.sha256(
             "".join(sorted_shingles).encode("utf-8"),
         ).hexdigest()
 
-        return fuzzy_hash
-
     def _calculate_fuzzy_similarity(self, hash1: str, hash2: str) -> float:
-        """Calculate similarity between two fuzzy hashes"""
+        """Calculate similarity between two fuzzy hashes."""
         if not hash1 or not hash2:
             return 0.0
 
@@ -297,17 +291,15 @@ class FuzzyHashDetector(DuplicationDetector):
             return 0.0
 
         matches = sum(c1 == c2 for c1, c2 in zip(hash1, hash2, strict=False))
-        similarity = matches / len(hash1)
-
-        return similarity
+        return matches / len(hash1)
 
     async def detect_duplicate(
         self,
         content: str,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
         existing_fingerprints: list[ContentFingerprint],
     ) -> tuple[bool, float, ContentFingerprint | None]:
-        """Detect near-duplicates using fuzzy hashing"""
+        """Detect near-duplicates using fuzzy hashing."""
         fuzzy_hash = self._compute_fuzzy_hash(content)
         best_similarity = 0.0
         best_match = None
@@ -328,9 +320,9 @@ class FuzzyHashDetector(DuplicationDetector):
 
 
 class TitleSimilarityDetector(DuplicationDetector):
-    """Title-based similarity detection"""
+    """Title-based similarity detection."""
 
-    def __init__(self, normalizer: ContentNormalizer, config: DeduplicationConfig):
+    def __init__(self) -> None:
         self.normalizer = normalizer
         self.config = config
 
@@ -339,7 +331,7 @@ class TitleSimilarityDetector(DuplicationDetector):
         tokens1: set[str],
         tokens2: set[str],
     ) -> float:
-        """Calculate Jaccard similarity between title token sets"""
+        """Calculate Jaccard similarity between title token sets."""
         if not tokens1 or not tokens2:
             return 0.0
 
@@ -351,10 +343,10 @@ class TitleSimilarityDetector(DuplicationDetector):
     async def detect_duplicate(
         self,
         content: str,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
         existing_fingerprints: list[ContentFingerprint],
     ) -> tuple[bool, float, ContentFingerprint | None]:
-        """Detect duplicates based on title similarity"""
+        """Detect duplicates based on title similarity."""
         # Extract title from metadata
         title = (
             metadata.get("title", "") or metadata.get("subject", "") or content[:100]
@@ -384,7 +376,7 @@ class AdvancedContentDeduplicationService:
     Provides ML-powered similarity detection and configurable policies.
     """
 
-    def __init__(self, config: DeduplicationConfig = None):
+    def __init__(self) -> None:
         self.config = config or DeduplicationConfig()
         self.normalizer = ContentNormalizer(self.config)
 
@@ -406,8 +398,8 @@ class AdvancedContentDeduplicationService:
 
         logger.info("Initialized AdvancedContentDeduplicationService")
 
-    def _initialize_detectors(self):
-        """Initialize enabled detection methods"""
+    def _initialize_detectors(self) -> None:
+        """Initialize enabled detection methods."""
         for method in self.config.enabled_methods:
             if method == DeduplicationMethod.EXACT_HASH:
                 self.detectors[method] = ExactHashDetector(self.normalizer)
@@ -424,7 +416,7 @@ class AdvancedContentDeduplicationService:
         self,
         content_id: str,
         content: str,
-        metadata: dict[str, Any] = None,
+        metadata: Dict[str, Any] = None,
     ) -> DeduplicationResult:
         """Check if content is a duplicate and return detailed analysis."""
         import time
@@ -435,7 +427,7 @@ class AdvancedContentDeduplicationService:
 
         # Validate input
         if len(content) > self.config.max_content_length:
-            logger.warning(f"Content length exceeds limit: {len(content)}")
+            logger.warning("Content length exceeds limit: %s", len(content))
             content = content[: self.config.max_content_length]
 
         try:
@@ -501,7 +493,7 @@ class AdvancedContentDeduplicationService:
             return result
 
         except Exception as e:
-            logger.error(f"Error in duplicate check: {e}")
+            logger.error("Error in duplicate check: %s", e)
             processing_time = (time.time() - start_time) * 1000
 
             return DeduplicationResult(
@@ -512,9 +504,9 @@ class AdvancedContentDeduplicationService:
     async def _create_fingerprint(
         self,
         content: str,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
     ) -> ContentFingerprint:
-        """Create content fingerprint for future comparison"""
+        """Create content fingerprint for future comparison."""
         # Normalize content
         normalized_content = self.normalizer.normalize_content(content)
 
@@ -550,8 +542,8 @@ class AdvancedContentDeduplicationService:
             content_length=len(content),
         )
 
-    def _store_fingerprint(self, content_id: str, fingerprint: ContentFingerprint):
-        """Store fingerprint for future comparisons"""
+    def _store_fingerprint(self) -> None:
+        """Store fingerprint for future comparisons."""
         # Memory management - remove oldest fingerprints if limit exceeded
         if len(self.fingerprints) >= self.config.max_fingerprints_memory:
             # Remove oldest 10% of fingerprints
@@ -573,13 +565,8 @@ class AdvancedContentDeduplicationService:
         self.fingerprints[fingerprint.content_hash] = fingerprint
         self.content_id_mapping[fingerprint.content_hash] = content_id
 
-    def _update_stats(
-        self,
-        method: DeduplicationMethod | None,
-        processing_time: float,
-        is_duplicate: bool,
-    ):
-        """Update processing statistics"""
+    def _update_stats(self) -> None:
+        """Update processing statistics."""
         self.stats["total_processed"] += 1
         self.stats["processing_time_total"] += processing_time
 
@@ -591,10 +578,10 @@ class AdvancedContentDeduplicationService:
 
     async def batch_check_duplicates(
         self,
-        content_items: list[tuple[str, str, dict[str, Any]]],
+        content_items: list[tuple[str, str, Dict[str, Any]]],
     ) -> list[DeduplicationResult]:
         """Check multiple content items for duplicates in batch.
-        Items format: [(content_id, content, metadata), ...]
+        Items format: [(content_id, content, metadata), ...].
         """
         results = []
 
@@ -613,8 +600,8 @@ class AdvancedContentDeduplicationService:
 
         return results
 
-    def get_statistics(self) -> dict[str, Any]:
-        """Get deduplication processing statistics"""
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get deduplication processing statistics."""
         stats = self.stats.copy()
 
         if stats["total_processed"] > 0:
@@ -632,14 +619,14 @@ class AdvancedContentDeduplicationService:
 
         return stats
 
-    async def clear_fingerprints(self):
-        """Clear all stored fingerprints (for testing or maintenance)"""
+    async def clear_fingerprints(self) -> None:
+        """Clear all stored fingerprints (for testing or maintenance)."""
         self.fingerprints.clear()
         self.content_id_mapping.clear()
         logger.info("Cleared all content fingerprints")
 
     async def export_fingerprints(self, filepath: str) -> bool:
-        """Export fingerprints to JSON file"""
+        """Export fingerprints to JSON file."""
         try:
             export_data = {
                 "fingerprints": {
@@ -656,11 +643,13 @@ class AdvancedContentDeduplicationService:
             async with aiofiles.open(filepath, "w") as f:
                 await f.write(json.dumps(export_data, indent=2))
 
-            logger.info(f"Exported {len(self.fingerprints)} fingerprints to {filepath}")
+            logger.info(
+                "Exported %s fingerprints to %s", len(self.fingerprints), filepath
+            )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to export fingerprints: {e}")
+            logger.error("Failed to export fingerprints: %s", e)
             return False
 
 
@@ -668,7 +657,7 @@ class AdvancedContentDeduplicationService:
 async def create_production_deduplication_service() -> (
     AdvancedContentDeduplicationService
 ):
-    """Create production-ready deduplication service with optimized settings"""
+    """Create production-ready deduplication service with optimized settings."""
     config = DeduplicationConfig(
         fuzzy_similarity_threshold=0.80,  # More permissive for near-duplicates
         semantic_similarity_threshold=0.85,  # ML similarity threshold
@@ -688,7 +677,7 @@ async def create_production_deduplication_service() -> (
 
 if __name__ == "__main__":
     # Example standalone usage
-    async def main():
+    async def main(self) -> None:
         service = AdvancedContentDeduplicationService()
 
         # Test content

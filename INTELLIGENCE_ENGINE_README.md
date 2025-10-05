@@ -17,7 +17,7 @@ The system implements a **modular monolithic architecture** that provides the or
 The system's knowledge management follows a three-pillar approach:
 
 1. **📁 Obsidian Vault** - Human-readable text and personal knowledge
-2. **🕸️ Neo4j Graph Database** - Explicit relationships between entities  
+2. **🕸️ Neo4j Graph Database** - Explicit relationships between entities
 3. **🔍 PostgreSQL + pgvector** - Semantic search and similarity analysis
 
 ### Multi-Stage Insight Generation Pipeline
@@ -55,7 +55,7 @@ graph TD
 
 ### ✅ Multi-Source Data Ingestion
 - **Tier 1**: Structured APIs & RSS feeds (high reliability)
-- **Tier 2**: Static web scraping (medium reliability)  
+- **Tier 2**: Static web scraping (medium reliability)
 - **Tier 3**: Dynamic content scraping (lower reliability)
 - **Intelligent orchestration** with graceful fallback mechanisms
 
@@ -461,7 +461,7 @@ tests/
 ```python
 {
     "spacy_model": "en_core_web_sm",
-    "embedding_model": "all-MiniLM-L6-v2", 
+    "embedding_model": "all-MiniLM-L6-v2",
     "sentiment_model": "cardiffnlp/twitter-roberta-base-sentiment-latest",
     "confidence_threshold": 0.7,
     "max_entities_per_document": 100,
@@ -642,7 +642,7 @@ spec:
 ### Health Check Endpoints
 
 - **`/health`** - Overall system health
-- **`/health/nlp`** - NLP service health  
+- **`/health/nlp`** - NLP service health
 - **`/health/vector-db`** - Vector database health
 - **`/health/knowledge-graph`** - Neo4j health
 - **`/health/cache`** - Redis cache health
@@ -677,7 +677,7 @@ intelligence_engine_error_rate
       },
       {
         "title": "Response Time",
-        "type": "graph", 
+        "type": "graph",
         "targets": [
           {
             "expr": "histogram_quantile(0.95, intelligence_engine_request_duration_seconds_bucket)"

@@ -10,7 +10,7 @@ import time
 import traceback
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +25,6 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
-    Request,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -142,11 +141,11 @@ dal: TenantAwareDataAccessLayer | None = None
 security_enforcer: TenantIsolationEnforcer | None = None
 
 # Service orchestrators per tenant (cached)
-tenant_orchestrators: dict[str, Any] = {}
+tenant_orchestrators: Dict[str, Any] = {}
 
 
 class ServerConfig:
-    """Enterprise server configuration"""
+    """Enterprise server configuration."""
 
     # Server settings
     HOST: str = os.getenv("PAKE_HOST", "127.0.0.1")
@@ -161,10 +160,11 @@ class ServerConfig:
     DB_USER: str = os.getenv("PAKE_DB_USER", "pake_user")
     DB_PASSWORD: str = os.getenv("PAKE_DB_PASSWORD")
     if not DB_PASSWORD:
-        raise ValueError(
+        msg = (
             "PAKE_DB_PASSWORD environment variable is required. "
             "Please configure this secret in your environment or Azure Key Vault."
         )
+        raise ValueError(msg)
 
     # Redis settings
     REDIS_URL: str = os.getenv("PAKE_REDIS_URL", "redis://localhost:6379")
@@ -172,11 +172,12 @@ class ServerConfig:
     # Security settings
     JWT_SECRET: str = os.getenv("PAKE_JWT_SECRET")
     if not JWT_SECRET:
-        raise ValueError(
+        msg = (
             "PAKE_JWT_SECRET environment variable is required. "
             "Please configure this secret in your environment or Azure Key Vault."
         )
-    ALLOWED_HOSTS: list[str] = os.getenv("PAKE_ALLOWED_HOSTS", "*").split(",")
+        raise ValueError(msg)
+    ALLOWED_HOSTS: List[str] = os.getenv("PAKE_ALLOWED_HOSTS", "*").split(",")
 
     # API settings
     API_PREFIX: str = "/api/v1"
@@ -204,7 +205,7 @@ config = ServerConfig()
 
 
 class TenantAwareBaseModel(BaseModel):
-    """Base model with tenant context validation"""
+    """Base model with tenant context validation."""
 
     class Config:
         json_encoders = {
@@ -214,10 +215,10 @@ class TenantAwareBaseModel(BaseModel):
 
 
 class SearchRequest(TenantAwareBaseModel):
-    """Multi-tenant search request"""
+    """Multi-tenant search request."""
 
     query: str = Field(..., min_length=1, max_length=500, description="Search query")
-    sources: list[str] = Field(
+    sources: List[str] = Field(
         default=["web", "arxiv", "pubmed"],
         description="Data sources to search",
     )
@@ -235,24 +236,25 @@ class SearchRequest(TenantAwareBaseModel):
         default=False,
         description="Enable content summarization",
     )
-    filters: dict[str, Any] | None = Field(
+    filters: Dict[str, Any] | None = Field(
         default=None,
         description="Search filters",
     )
 
     @validator("sources")
-    def validate_sources(cls, v):
+    def validate_sources(self) -> None:
         allowed_sources = ["web", "arxiv", "pubmed", "github", "stackoverflow"]
         invalid_sources = [s for s in v if s not in allowed_sources]
         if invalid_sources:
+            msg = f"Invalid sources: {invalid_sources}. Allowed: {allowed_sources}"
             raise ValueError(
-                f"Invalid sources: {invalid_sources}. Allowed: {allowed_sources}",
+                msg,
             )
         return v
 
 
 class TenantCreateRequest(TenantAwareBaseModel):
-    """Tenant creation request"""
+    """Tenant creation request."""
 
     name: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9-_]+$")
     display_name: str = Field(..., min_length=3, max_length=100)
@@ -264,7 +266,7 @@ class TenantCreateRequest(TenantAwareBaseModel):
 
 
 class UserCreateRequest(TenantAwareBaseModel):
-    """User creation request"""
+    """User creation request."""
 
     username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
     email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
@@ -274,7 +276,7 @@ class UserCreateRequest(TenantAwareBaseModel):
 
 
 class LoginRequest(TenantAwareBaseModel):
-    """Login request"""
+    """Login request."""
 
     username: str = Field(..., min_length=1, max_length=50)
     REDACTED_SECRET: str = Field(..., min_length=1, max_length=100)
@@ -286,8 +288,8 @@ class LoginRequest(TenantAwareBaseModel):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage application lifecycle with proper startup and shutdown"""
+async def lifespan(self) -> None:
+    """Manage application lifecycle with proper startup and shutdown."""
     # Startup
     logger.info("🚀 Starting PAKE Enterprise Multi-Tenant Server...")
 
@@ -307,16 +309,18 @@ async def lifespan(app: FastAPI):
             setup_tracing()
 
         logger.info("✅ PAKE Enterprise Server started successfully!")
-        logger.info(f"🌐 Server ready at http://{config.HOST}:{config.PORT}")
-        logger.info(f"📚 API docs at http://{config.HOST}:{config.PORT}/docs")
+        logger.info("🌐 Server ready at http://%s:%s", config.HOST, config.PORT)
+        logger.info("📚 API docs at http://%s:%s/docs", config.HOST, config.PORT)
         logger.info(
-            f"🔍 GraphQL playground at http://{config.HOST}:{config.PORT}/graphql",
+            "🔍 GraphQL playground at http://%s:%s/graphql",
+            config.HOST,
+            config.PORT,
         )
 
         yield
 
     except Exception as e:
-        logger.error(f"❌ Failed to start server: {e}")
+        logger.error("❌ Failed to start server: %s", e)
         logger.error(traceback.format_exc())
         raise
     finally:
@@ -326,8 +330,8 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Server shutdown complete")
 
 
-async def initialize_services():
-    """Initialize all multi-tenant services"""
+async def initialize_services(self) -> None:
+    """Initialize all multi-tenant services."""
     global db_service, tenant_service, auth_service, dal, security_enforcer
 
     try:
@@ -367,44 +371,47 @@ async def initialize_services():
         logger.info("✅ Tenant isolation security enforcer initialized")
 
     except Exception as e:
-        logger.error(f"Failed to initialize services: {e}")
+        logger.error("Failed to initialize services: %s", e)
         raise
 
 
-async def perform_startup_health_checks():
-    """Perform comprehensive health checks on startup"""
+async def perform_startup_health_checks(self) -> None:
+    """Perform comprehensive health checks on startup."""
     logger.info("🔍 Performing startup health checks...")
 
     # Database health check
     db_health = await db_service.health_check()
     if db_health["status"] != "healthy":
-        raise RuntimeError(f"Database health check failed: {db_health}")
+        msg = f"Database health check failed: {db_health}"
+        raise RuntimeError(msg)
 
     # Auth service health check
     auth_health = await auth_service.health_check()
     if auth_health["status"] != "healthy":
-        raise RuntimeError(f"Auth service health check failed: {auth_health}")
+        msg = f"Auth service health check failed: {auth_health}"
+        raise RuntimeError(msg)
 
     # Security enforcer health check
     security_health = await security_enforcer.health_check()
     if security_health["status"] != "healthy":
-        raise RuntimeError(f"Security enforcer health check failed: {security_health}")
+        msg = f"Security enforcer health check failed: {security_health}"
+        raise RuntimeError(msg)
 
     logger.info("✅ All health checks passed")
 
 
-def setup_monitoring():
-    """Setup Prometheus monitoring"""
+def setup_monitoring(self) -> None:
+    """Setup Prometheus monitoring."""
     logger.info("📊 Setting up Prometheus monitoring...")
 
 
-def setup_tracing():
-    """Setup OpenTelemetry distributed tracing"""
+def setup_tracing(self) -> None:
+    """Setup OpenTelemetry distributed tracing."""
     logger.info("🔍 Setting up OpenTelemetry tracing...")
 
 
-async def cleanup_services():
-    """Cleanup all services on shutdown"""
+async def cleanup_services(self) -> None:
+    """Cleanup all services on shutdown."""
     global db_service, tenant_orchestrators
 
     try:
@@ -421,7 +428,7 @@ async def cleanup_services():
         logger.info("✅ Services cleanup complete")
 
     except Exception as e:
-        logger.error(f"Error during cleanup: {e}")
+        logger.error("Error during cleanup: %s", e)
 
 
 # FastAPI application with enterprise configuration
@@ -439,7 +446,7 @@ app = FastAPI(
 # Middleware configuration (order matters!)
 
 # Trusted host middleware (security)
-if ["*"] != config.ALLOWED_HOSTS:
+if config.ALLOWED_HOSTS != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.ALLOWED_HOSTS)
 
 # Tenant context middleware (must be early in chain)
@@ -468,8 +475,8 @@ if config.ENABLE_GZIP:
 
 
 @app.middleware("http")
-async def request_logging_middleware(request: Request, call_next):
-    """Log requests and collect metrics"""
+async def request_logging_middleware(self) -> None:
+    """Log requests and collect metrics."""
     start_time = time.time()
 
     # Get tenant context
@@ -512,7 +519,7 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """Get current authenticated user"""
+    """Get current authenticated user."""
     if not auth_service:
         raise HTTPException(
             status_code=503,
@@ -530,7 +537,7 @@ async def get_current_user(
 
 
 async def get_tenant_orchestrator(tenant_id: str) -> Any:
-    """Get or create orchestrator for tenant"""
+    """Get or create orchestrator for tenant."""
     if not ORCHESTRATOR_AVAILABLE:
         raise HTTPException(
             status_code=503,
@@ -542,7 +549,7 @@ async def get_tenant_orchestrator(tenant_id: str) -> Any:
         config = IngestionConfig()
         orchestrator = IngestionOrchestrator(config)
         tenant_orchestrators[tenant_id] = orchestrator
-        logger.info(f"Created new orchestrator for tenant {tenant_id}")
+        logger.info("Created new orchestrator for tenant %s", tenant_id)
 
     return tenant_orchestrators[tenant_id]
 
@@ -553,12 +560,12 @@ async def get_tenant_orchestrator(tenant_id: str) -> Any:
 
 
 @app.get("/health")
-async def health_check():
-    """Comprehensive health check"""
+async def health_check(self) -> None:
+    """Comprehensive health check."""
     try:
         health_data = {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": "1.0.0",
             "services": {},
         }
@@ -586,14 +593,14 @@ async def health_check():
             content={
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
 
 
 @app.get("/metrics")
-async def metrics_endpoint():
-    """Prometheus metrics endpoint"""
+async def metrics_endpoint(self) -> None:
+    """Prometheus metrics endpoint."""
     if not config.ENABLE_METRICS:
         raise HTTPException(status_code=404, detail="Metrics disabled")
 
@@ -601,8 +608,8 @@ async def metrics_endpoint():
 
 
 @app.get("/")
-async def root():
-    """API root with system information"""
+async def root(self) -> None:
+    """API root with system information."""
     return {
         "name": "PAKE Enterprise Multi-Tenant API",
         "version": "1.0.0",
@@ -635,8 +642,8 @@ async def root():
 
 
 @app.post(f"{config.API_PREFIX}/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    """Authenticate user and return JWT tokens"""
+async def login(self) -> None:
+    """Authenticate user and return JWT tokens."""
     if not auth_service:
         raise HTTPException(
             status_code=503,
@@ -682,13 +689,13 @@ async def login(request: LoginRequest):
         raise
     except Exception as e:
         AUTH_ATTEMPTS.labels(tenant_id=tenant_id, success="error").inc()
-        logger.error(f"Authentication error: {e}")
+        logger.error("Authentication error: %s", e)
         raise HTTPException(status_code=500, detail="Authentication service error")
 
 
 @app.post(f"{config.API_PREFIX}/auth/refresh")
-async def refresh_token(refresh_token: str):
-    """Refresh access token"""
+async def refresh_token(self) -> None:
+    """Refresh access token."""
     if not auth_service:
         raise HTTPException(
             status_code=503,
@@ -704,13 +711,13 @@ async def refresh_token(refresh_token: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Token refresh error: {e}")
+        logger.error("Token refresh error: %s", e)
         raise HTTPException(status_code=500, detail="Token refresh service error")
 
 
 @app.post(f"{config.API_PREFIX}/auth/logout")
 async def logout(current_user: dict = Depends(get_current_user)):
-    """Logout user and invalidate tokens"""
+    """Logout user and invalidate tokens."""
     if not auth_service:
         raise HTTPException(
             status_code=503,
@@ -722,11 +729,10 @@ async def logout(current_user: dict = Depends(get_current_user)):
         # This would typically come from the Bearer token
         # IMPLEMENTATION NEEDED: Extract actual Bearer token from Authorization header
         # Current implementation uses placeholder - requires proper JWT token extraction
-        result = await auth_service.logout_user("access_token_here")
-        return result
+        return await auth_service.logout_user("access_token_here")
 
     except Exception as e:
-        logger.error(f"Logout error: {e}")
+        logger.error("Logout error: %s", e)
         raise HTTPException(status_code=500, detail="Logout service error")
 
 

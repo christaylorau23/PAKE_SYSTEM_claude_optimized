@@ -34,7 +34,7 @@ sudo ./aws/install
 # Configure AWS credentials
 aws configure
 # AWS Access Key ID: [Your Access Key]
-# AWS Secret Access Key: [Your Secret Key]  
+# AWS Secret Access Key: [Your Secret Key]
 # Default region: us-east-1
 # Default output format: json
 
@@ -127,13 +127,13 @@ from secrets_manager import get_secret_manager
 async def test():
     sm = get_secret_manager()
     print(f'Secret Manager: {sm.backend.name}')
-    
+
     db_config = await sm.get_database_config()
     print(f'Database Host: {db_config[\"host\"]}')
-    
-    redis_config = await sm.get_redis_config()  
+
+    redis_config = await sm.get_redis_config()
     print(f'Redis Host: {redis_config[\"host\"]}')
-    
+
     openai_key = await sm.get_api_key('openai')
     print(f'OpenAI Key: {openai_key[:10]}...' if openai_key else 'Not configured')
 
@@ -165,7 +165,7 @@ OPENAI_API_KEY=sk-your_dev_key
 ### Staging (AWS Secrets Manager)
 ```bash
 # Environment variables
-export NODE_ENV=staging  
+export NODE_ENV=staging
 export AWS_REGION=us-east-1
 export PAKE_SECRET_PREFIX=pake-system-staging
 ```
@@ -289,7 +289,7 @@ python mcp-servers/base_server.py --log-level debug
 # Store multiple API keys in one JSON secret:
 {
   "openai": "sk-your-key",
-  "anthropic": "your-key", 
+  "anthropic": "your-key",
   "elevenlabs": "your-key"
 }
 
@@ -327,7 +327,7 @@ export AWS_REGION=us-west-2
 
 ✅ **AWS Secrets Created**
 - [ ] Database credentials
-- [ ] Redis credentials  
+- [ ] Redis credentials
 - [ ] Service REDACTED_SECRETs
 - [ ] API keys updated
 
@@ -347,7 +347,7 @@ export AWS_REGION=us-west-2
 - [ ] Regular rotation scheduled
 - [ ] Backup strategy implemented
 
-✅ **Verification**  
+✅ **Verification**
 - [ ] Secret loading tested
 - [ ] Database connectivity verified
 - [ ] Application endpoints responding

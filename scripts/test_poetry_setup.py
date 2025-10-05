@@ -17,7 +17,7 @@ import sys
 from typing import Optional
 
 
-def test_import(package: str, optional: bool = False) -> tuple[bool, Optional[str]]:
+def test_import(package: str, optional: bool = False) -> tuple[bool, str | None]:
     """Test if a package can be imported."""
     try:
         module = importlib.import_module(package)
@@ -31,7 +31,7 @@ def test_import(package: str, optional: bool = False) -> tuple[bool, Optional[st
         return False, f"Unexpected error: {e}"
 
 
-def test_core_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
+def test_core_dependencies() -> dict[str, tuple[bool, str | None]]:
     """Test core production dependencies."""
     core_packages = [
         "fastapi",
@@ -58,7 +58,7 @@ def test_core_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     return results
 
 
-def test_dev_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
+def test_dev_dependencies() -> dict[str, tuple[bool, str | None]]:
     """Test development dependencies."""
     dev_packages = ["pytest", "black", "isort", "mypy", "ruff", "bandit", "coverage"]
 
@@ -70,7 +70,7 @@ def test_dev_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     return results
 
 
-def test_optional_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
+def test_optional_dependencies() -> dict[str, tuple[bool, str | None]]:
     """Test optional dependency groups."""
     optional_packages = {
         # Trends group
@@ -94,7 +94,7 @@ def test_optional_dependencies() -> dict[str, tuple[bool, Optional[str]]]:
     return results
 
 
-def test_poetry_environment():
+def test_poetry_environment(self) -> None:
     """Test Poetry-specific environment setup."""
     import os
 
@@ -115,7 +115,7 @@ def test_poetry_environment():
         print(f"⚠️  Python path may not be from Poetry: {python_path}")
 
 
-def print_results(category: str, results: dict[str, tuple[bool, Optional[str]]]):
+def print_results(self) -> None:
     """Print test results for a category."""
     print(f"\n📦 {category} Dependencies:")
     print("-" * 40)
@@ -153,7 +153,7 @@ def print_results(category: str, results: dict[str, tuple[bool, Optional[str]]])
     )
 
 
-def test_basic_functionality():
+def test_basic_functionality(self) -> None:
     """Test basic functionality of key components."""
     print("\n🧪 Testing Basic Functionality...")
     print("-" * 40)
@@ -199,7 +199,7 @@ def test_basic_functionality():
         print(f"  ❌ Pytest: {e}")
 
 
-def main():
+def main(self) -> None:
     """Main test function."""
     print("🧪 PAKE System - Poetry Setup Validation")
     print("=" * 50)

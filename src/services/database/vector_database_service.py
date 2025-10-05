@@ -1,4 +1,4 @@
-"""Vector Database Service
+"""Vector Database Service.
 
 PostgreSQL with pgvector implementation following the Personal Intelligence Engine blueprint.
 Provides semantic search capabilities, vector similarity operations, and integration
@@ -60,7 +60,7 @@ class VectorSearchResult:
     id: str
     content: str
     similarity_score: float
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
     vector_type: VectorType
     created_at: datetime
     updated_at: datetime
@@ -93,7 +93,7 @@ class DocumentVector(Base):
     )  # Default for all-MiniLM-L6-v2
     vector_type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     source: Mapped[str] = mapped_column(Text, nullable=True, index=True)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    metadata_: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -143,7 +143,7 @@ class EntityVector(Base):
         index=True,
     )
     context_window: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    metadata_: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -216,13 +216,7 @@ class VectorDatabaseService:
     - Comprehensive analytics and monitoring
     """
 
-    def __init__(
-        self,
-        database_url: str,
-        embedding_dimensions: int = 384,
-        cache_service: CacheService | None = None,
-        max_connections: int = 20,
-    ):
+    def __init__(self) -> None:
         """Initialize Vector Database Service.
 
         Args:
@@ -291,7 +285,7 @@ class VectorDatabaseService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize vector database: {e}")
+            logger.error("Failed to initialize vector database: %s", e)
             self._connection_healthy = False
             return False
 
@@ -323,14 +317,14 @@ class VectorDatabaseService:
                 for query in index_queries:
                     try:
                         await conn.execute(sa.text(query))
-                        logger.debug(f"Created vector index: {query.split()[4]}")
+                        logger.debug("Created vector index: %s", query.split()[4])
                     except Exception as e:
-                        logger.warning(f"Failed to create index: {e}")
+                        logger.warning("Failed to create index: %s", e)
 
                 logger.info("Vector indexes created successfully")
 
         except Exception as e:
-            logger.error(f"Error creating vector indexes: {e}")
+            logger.error("Error creating vector indexes: %s", e)
 
     async def _verify_pgvector(self) -> None:
         """Verify pgvector extension is working correctly."""
@@ -340,9 +334,10 @@ class VectorDatabaseService:
             )
             distance = result.scalar()
             if distance is None:
-                raise RuntimeError("pgvector extension verification failed")
+                msg = "pgvector extension verification failed"
+                raise RuntimeError(msg)
 
-            logger.info(f"pgvector verified successfully (test distance: {distance})")
+            logger.info("pgvector verified successfully (test distance: %s)", distance)
 
     async def insert_document_vector(
         self,
@@ -351,7 +346,7 @@ class VectorDatabaseService:
         embedding: np.ndarray,
         vector_type: VectorType = VectorType.DOCUMENT_EMBEDDING,
         source: str | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> VectorInsertResult:
         """Insert a document vector into the database.
 
@@ -369,10 +364,13 @@ class VectorDatabaseService:
         try:
             # Validate embedding dimensions
             if embedding.shape[0] != self.embedding_dimensions:
-                raise ValueError(
+                msg = (
                     f"Embedding dimension mismatch: expected {
                         self.embedding_dimensions
-                    }, got {embedding.shape[0]}",
+                    }, got {embedding.shape[0]}"
+                )
+                raise ValueError(
+                    msg,
                 )
 
             # Convert numpy array to pgvector format
@@ -427,7 +425,7 @@ class VectorDatabaseService:
                 )
 
         except Exception as e:
-            logger.error(f"Error inserting document vector: {e}")
+            logger.error("Error inserting document vector: %s", e)
             return VectorInsertResult(
                 id="",
                 success=False,
@@ -444,7 +442,7 @@ class VectorDatabaseService:
         neo4j_node_id: str | None = None,
         source_document_id: str | None = None,
         context_window: str | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> VectorInsertResult:
         """Insert an entity vector for knowledge graph integration.
 
@@ -464,10 +462,13 @@ class VectorDatabaseService:
         try:
             # Validate embedding dimensions
             if embedding.shape[0] != self.embedding_dimensions:
-                raise ValueError(
+                msg = (
                     f"Embedding dimension mismatch: expected {
                         self.embedding_dimensions
-                    }, got {embedding.shape[0]}",
+                    }, got {embedding.shape[0]}"
+                )
+                raise ValueError(
+                    msg,
                 )
 
             vector_data = embedding.tolist()
@@ -534,7 +535,7 @@ class VectorDatabaseService:
                 )
 
         except Exception as e:
-            logger.error(f"Error inserting entity vector: {e}")
+            logger.error("Error inserting entity vector: %s", e)
             return VectorInsertResult(
                 id="",
                 success=False,
@@ -564,7 +565,7 @@ class VectorDatabaseService:
         Returns:
             List[VectorSearchResult]: Search results
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         try:
             # Generate cache key
@@ -639,7 +640,7 @@ class VectorDatabaseService:
                     search_results.append(search_result)
 
                 # Update statistics
-                processing_time = (datetime.now() - start_time).total_seconds() * 1000
+                processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 self._stats["searches_performed"] += 1
                 self._stats["total_search_time_ms"] += processing_time
                 self._stats["average_search_time_ms"] = (
@@ -661,20 +662,16 @@ class VectorDatabaseService:
                     await self.cache_service.set(cache_key, cache_data, ttl=1800)
 
                 logger.debug(
-                    f"Semantic search found {len(search_results)} results in {
-                        processing_time:.2f}ms",
+                    "Semantic search found %s results in %sms", len(search_results),
+                    processing_time,
                 )
                 return search_results
 
         except Exception as e:
-            logger.error(f"Error performing semantic search: {e}")
+            logger.error("Error performing semantic search: %s", e)
             return []
 
-    def _get_similarity_expression(
-        self,
-        metric: SimilarityMetric,
-        query_vector: list[float],
-    ):
+    def _get_similarity_expression(self) -> None:
         """Get SQLAlchemy expression for similarity calculation."""
         query_vector_str = str(query_vector)
 
@@ -695,7 +692,7 @@ class VectorDatabaseService:
         entity_type_filter: str | None = None,
         limit: int = 10,
         similarity_threshold: float = 0.8,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Find similar entities for knowledge graph expansion.
 
         Args:
@@ -747,14 +744,14 @@ class VectorDatabaseService:
                     }
                     similar_entities.append(entity_data)
 
-                logger.debug(f"Found {len(similar_entities)} similar entities")
+                logger.debug("Found %s similar entities", len(similar_entities))
                 return similar_entities
 
         except Exception as e:
-            logger.error(f"Error finding similar entities: {e}")
+            logger.error("Error finding similar entities: %s", e)
             return []
 
-    async def get_database_stats(self) -> dict[str, Any]:
+    async def get_database_stats(self) -> Dict[str, Any]:
         """Get comprehensive database statistics."""
         try:
             async with self.async_session_maker() as session:
@@ -801,7 +798,7 @@ class VectorDatabaseService:
                 }
 
         except Exception as e:
-            logger.error(f"Error getting database stats: {e}")
+            logger.error("Error getting database stats: %s", e)
             return {"error": str(e), "connection_healthy": False}
 
     async def cleanup_old_vectors(self, days_old: int = 30) -> int:
@@ -837,23 +834,25 @@ class VectorDatabaseService:
                 await session.commit()
 
                 deleted_count = doc_result.rowcount + query_result.rowcount
-                logger.info(f"Cleaned up {deleted_count} old vectors")
+                logger.info("Cleaned up %s old vectors", deleted_count)
                 return deleted_count
 
         except Exception as e:
-            logger.error(f"Error cleaning up old vectors: {e}")
+            logger.error("Error cleaning up old vectors: %s", e)
             return 0
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for the vector database."""
         try:
+                pass
             # Test basic database connectivity
             async with self.async_session_maker() as session:
                 result = await session.execute(sa.text("SELECT 1 as test"))
                 test_value = result.scalar()
 
                 if test_value != 1:
-                    raise RuntimeError("Basic database test failed")
+                    msg = "Basic database test failed"
+                    raise RuntimeError(msg)
 
             # Test vector operations
             test_vector = np.random.rand(self.embedding_dimensions).astype(np.float32)
@@ -895,7 +894,7 @@ class VectorDatabaseService:
                 logger.info("Vector database connections closed")
 
         except Exception as e:
-            logger.error(f"Error closing vector database: {e}")
+            logger.error("Error closing vector database: %s", e)
 
 
 # Singleton instance

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System Enterprise Secrets Manager
-Production-grade secrets management with Azure Key Vault integration
+Production-grade secrets management with Azure Key Vault integration.
 """
 
 import asyncio
@@ -8,7 +8,6 @@ import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class SecretType(Enum):
-    """Types of secrets managed by the system"""
+    """Types of secrets managed by the system."""
 
     API_KEY = "api_key"
     DATABASE_PASSWORD = "database_password"
@@ -29,27 +28,27 @@ class SecretType(Enum):
 
 @dataclass
 class SecretConfig:
-    """Configuration for secret management"""
+    """Configuration for secret management."""
 
     vault_url: str
     secret_name: str
     secret_type: SecretType
     rotation_interval_days: int = 90
-    fallback_env_var: Optional[str] = None
+    fallback_env_var: str | None = None
     required: bool = True
 
 
 class EnterpriseSecretsManager:
-    """Enterprise-grade secrets management with Azure Key Vault"""
+    """Enterprise-grade secrets management with Azure Key Vault."""
 
-    def __init__(self, vault_url: Optional[str] = None):
-        """Initialize secrets manager
+    def __init__(self) -> None:
+        """Initialize secrets manager.
 
         Args:
             vault_url: Azure Key Vault URL. If None, will use environment variable
         """
         self.vault_url = vault_url or os.getenv("AZURE_KEY_VAULT_URL")
-        self.client: Optional[SecretClient] = None
+        self.client: SecretClient | None = None
         self._secrets_cache: dict[str, str] = {}
 
         if not self.vault_url:
@@ -60,17 +59,17 @@ class EnterpriseSecretsManager:
             self._initialize_client()
 
     def _initialize_client(self) -> None:
-        """Initialize Azure Key Vault client"""
+        """Initialize Azure Key Vault client."""
         try:
             credential = DefaultAzureCredential()
             self.client = SecretClient(vault_url=self.vault_url, credential=credential)
-            logger.info(f"Connected to Azure Key Vault: {self.vault_url}")
+            logger.info("Connected to Azure Key Vault: %s", self.vault_url)
         except Exception as e:
-            logger.error(f"Failed to initialize Azure Key Vault client: {e}")
+            logger.error("Failed to initialize Azure Key Vault client: %s", e)
             self.client = None
 
     async def get_secret(self, config: SecretConfig) -> str:
-        """Retrieve a secret with fail-fast security
+        """Retrieve a secret with fail-fast security.
 
         Args:
             config: Secret configuration
@@ -88,18 +87,19 @@ class EnterpriseSecretsManager:
                 if secret_value:
                     self._secrets_cache[config.secret_name] = secret_value
                     logger.debug(
-                        f"Retrieved secret '{config.secret_name}' from Azure Key Vault"
+                        "Retrieved secret '%s' from Azure Key Vault", config.secret_name
                     )
                     return secret_value
             except Exception as e:
-                logger.warning(f"Failed to retrieve secret from vault: {e}")
+                logger.warning("Failed to retrieve secret from vault: %s", e)
 
         # Try environment variable fallback
         if config.fallback_env_var:
             env_value = os.getenv(config.fallback_env_var)
             if env_value:
                 logger.debug(
-                    f"Retrieved secret '{config.secret_name}' from environment variable"
+                    "Retrieved secret '%s' from environment variable",
+                    config.secret_name,
                 )
                 return env_value
 
@@ -116,17 +116,19 @@ class EnterpriseSecretsManager:
 
         return ""
 
-    async def _get_from_vault(self, secret_name: str) -> Optional[str]:
-        """Get secret from Azure Key Vault"""
+    async def _get_from_vault(self, secret_name: str) -> str | None:
+        """Get secret from Azure Key Vault."""
         try:
             secret = self.client.get_secret(secret_name)
             return secret.value
         except Exception as e:
-            logger.error(f"Failed to retrieve secret '{secret_name}' from vault: {e}")
+            logger.error(
+                "Failed to retrieve secret '%s' from vault: %s", secret_name, e
+            )
             return None
 
     async def rotate_secret(self, config: SecretConfig, new_value: str) -> bool:
-        """Rotate a secret in Azure Key Vault
+        """Rotate a secret in Azure Key Vault.
 
         Args:
             config: Secret configuration
@@ -146,16 +148,16 @@ class EnterpriseSecretsManager:
             # Update cache
             self._secrets_cache[config.secret_name] = new_value
 
-            logger.info(f"Successfully rotated secret '{config.secret_name}'")
+            logger.info("Successfully rotated secret '%s'", config.secret_name)
             return True
         except Exception as e:
-            logger.error(f"Failed to rotate secret '{config.secret_name}': {e}")
+            logger.error("Failed to rotate secret '%s': %s", config.secret_name, e)
             return False
 
     async def validate_all_secrets(
         self, configs: dict[str, SecretConfig]
     ) -> dict[str, bool]:
-        """Validate all required secrets are available
+        """Validate all required secrets are available.
 
         Args:
             configs: Dictionary of secret configurations
@@ -169,10 +171,10 @@ class EnterpriseSecretsManager:
             try:
                 await self.get_secret(config)
                 results[name] = True
-                logger.debug(f"Secret '{name}' validation: PASSED")
+                logger.debug("Secret '%s' validation: PASSED", name)
             except ValueError:
                 results[name] = False
-                logger.error(f"Secret '{name}' validation: FAILED")
+                logger.error("Secret '%s' validation: FAILED", name)
 
         return results
 
@@ -225,7 +227,7 @@ PAKE_SECRET_CONFIGS = {
 
 
 async def initialize_secrets_manager() -> EnterpriseSecretsManager:
-    """Initialize and validate secrets manager"""
+    """Initialize and validate secrets manager."""
     manager = EnterpriseSecretsManager()
 
     # Validate all required secrets
@@ -233,10 +235,11 @@ async def initialize_secrets_manager() -> EnterpriseSecretsManager:
 
     failed_secrets = [name for name, passed in validation_results.items() if not passed]
     if failed_secrets:
-        raise ValueError(
+        msg = (
             f"Failed to validate required secrets: {', '.join(failed_secrets)}. "
             f"Please configure them in Azure Key Vault or environment variables."
         )
+        raise ValueError(msg)
 
     logger.info("All required secrets validated successfully")
     return manager
@@ -244,27 +247,27 @@ async def initialize_secrets_manager() -> EnterpriseSecretsManager:
 
 # Convenience functions for common secrets
 async def get_api_key() -> str:
-    """Get API key with fail-fast security"""
+    """Get API key with fail-fast security."""
     manager = EnterpriseSecretsManager()
     return await manager.get_secret(PAKE_SECRET_CONFIGS["api_key"])
 
 
 async def get_jwt_secret() -> str:
-    """Get JWT secret with fail-fast security"""
+    """Get JWT secret with fail-fast security."""
     manager = EnterpriseSecretsManager()
     return await manager.get_secret(PAKE_SECRET_CONFIGS["jwt_secret"])
 
 
 async def get_database_password() -> str:
-    """Get database password with fail-fast security"""
+    """Get database password with fail-fast security."""
     manager = EnterpriseSecretsManager()
     return await manager.get_secret(PAKE_SECRET_CONFIGS["database_password"])
 
 
 if __name__ == "__main__":
 
-    async def main():
-        """Test secrets manager"""
+    async def main(self) -> None:
+        """Test secrets manager."""
         try:
             manager = await initialize_secrets_manager()
             print("✅ Secrets manager initialized successfully")

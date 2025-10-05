@@ -43,7 +43,7 @@ def __init__(self, provider: SecretProvider = SecretProvider.LOCAL_FILE):
     self.secrets_cache: Dict[str, str] = {}  # Responsibility 2: Data structures
     self.access_logs: List[SecretAccessLog] = []
     self.metadata_store: Dict[str, SecretMetadata] = {}
-    
+
     # Responsibility 3: Complex provider initialization
     if self.provider == SecretProvider.AWS_SECRETS_MANAGER:
         self.aws_client = boto3.client('secretsmanager')
@@ -90,7 +90,7 @@ def _validate_provider_parameter(self) -> None:
     """Single responsibility: Parameter validation only"""
     if not isinstance(self.provider, SecretProvider):
         raise ValueError(f"Provider must be a SecretProvider enum value")
-    
+
     # Provider-specific validation
     if self.provider == SecretProvider.AZURE_KEY_VAULT:
         if not os.getenv('AZURE_KEY_VAULT_URL'):
@@ -117,7 +117,7 @@ def __init__(self, provider: SecretProvider = SecretProvider.LOCAL_FILE):
     Orchestrator: Delegates setup to specialized methods
     """
     self.provider = provider
-    
+
     # Clear sequence of responsibilities
     self._validate_provider_parameter()      # 1. Validation
     self._configure_logging()                # 2. Logging setup
@@ -139,20 +139,20 @@ def test_validate_provider_parameter_invalid_type(self):
     """Test parameter validation with invalid provider type"""
     manager = SecretsManager()
     manager.provider = "invalid_provider"  # Not a SecretProvider enum
-    
+
     with pytest.raises(ValueError, match="Provider must be a SecretProvider enum value"):
         manager._validate_provider_parameter()
 
 def test_configure_logging(self):
     """Test logging configuration"""
     manager = SecretsManager()
-    
+
     with patch.object(manager, '_setup_logger') as mock_setup:
         mock_logger = Mock()
         mock_setup.return_value = mock_logger
-        
+
         manager._configure_logging()
-        
+
         mock_setup.assert_called_once()
         assert manager.logger == mock_logger
 ```
@@ -166,9 +166,9 @@ def test_full_initialization_local_provider(self):
     """Test complete initialization with local provider"""
     with tempfile.TemporaryDirectory() as temp_dir:
         os.environ['LOCAL_SECRETS_ENCRYPTION_KEY'] = 'test-key'
-        
+
         manager = SecretsManager(SecretProvider.LOCAL_FILE)
-        
+
         # Verify all components are initialized
         assert manager.provider == SecretProvider.LOCAL_FILE
         assert manager.logger is not None

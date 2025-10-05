@@ -16,9 +16,9 @@ human_notes: ""
 # {{date:YYYY-MM-DD}} - Daily Note
 
 ## 🎯 Today's Focus
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
 
 ## 📝 Meeting Notes
 
@@ -34,11 +34,11 @@ SORT confidence_score DESC
 ```
 
 ## ✅ Completed Tasks
-- [x] 
+- [x]
 
 ## 🔄 For Tomorrow
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 ## 📊 Confidence Score Distribution
 ```dataview

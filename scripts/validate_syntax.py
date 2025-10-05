@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 class SyntaxValidator:
     """Validates syntax across Python and JavaScript files"""
 
-    def __init__(self, base_path: str = "."):
+    def __init__(self) -> None:
         self.base_path = Path(base_path)
-        self.errors: list[dict[str, Any]] = []
+        self.errors: list[Dict[str, Any]] = []
 
         # Pattern definitions based on monorepo issues we found
         self.python_patterns = {
@@ -65,7 +65,7 @@ class SyntaxValidator:
             },
         }
 
-    def validate_file(self, file_path: Path) -> list[dict[str, Any]]:
+    def validate_file(self, file_path: Path) -> list[Dict[str, Any]]:
         """Validate a single file for syntax issues"""
         file_errors = []
 
@@ -111,7 +111,7 @@ class SyntaxValidator:
                     file_errors.append(error)
 
         except Exception as e:
-            logger.error(f"Error reading file {file_path}: {e}")
+            logger.error("Error reading file %s: %s", file_path, e)
 
         return file_errors
 
@@ -136,12 +136,12 @@ class SyntaxValidator:
 
         return "\n".join(context)
 
-    def validate_directory(self, extensions: list[str] = None) -> None:
+    def validate_directory(self, extensions: List[str] = None) -> None:
         """Validate all files in directory tree"""
         if extensions is None:
             extensions = [".py", ".js", ".ts"]
 
-        logger.info(f"Starting validation of {self.base_path}")
+        logger.info("Starting validation of %s", self.base_path)
 
         file_count = 0
         for ext in extensions:
@@ -165,7 +165,7 @@ class SyntaxValidator:
                 self.errors.extend(file_errors)
                 file_count += 1
 
-        logger.info(f"Validated {file_count} files")
+        logger.info("Validated %s files", file_count)
 
     def report_errors(self) -> int:
         """Report all found errors and return error count"""
@@ -178,20 +178,20 @@ class SyntaxValidator:
         warnings = [e for e in self.errors if e["severity"] == "warning"]
 
         if critical_errors:
-            logger.error(f"🚨 Found {len(critical_errors)} critical syntax errors:")
+            logger.error("🚨 Found %s critical syntax errors:", len(critical_errors))
             for error in critical_errors:
-                logger.error(f"\n  File: {error['file']}:{error['line']}")
-                logger.error(f"  Issue: {error['description']}")
-                logger.error(f"  Pattern: {error['pattern']}")
-                logger.error(f"  Context:\n{error['context']}")
+                logger.error("\n  File: %s:%s", error["file"], error["line"])
+                logger.error("  Issue: %s", error["description"])
+                logger.error("  Pattern: %s", error["pattern"])
+                logger.error("  Context:\n%s", error["context"])
                 logger.error("-" * 80)
 
         if warnings:
-            logger.warning(f"⚠️  Found {len(warnings)} warnings:")
+            logger.warning("⚠️  Found %s warnings:", len(warnings))
             for warning in warnings:
-                logger.warning(f"\n  File: {warning['file']}:{warning['line']}")
-                logger.warning(f"  Issue: {warning['description']}")
-                logger.warning(f"  Context:\n{warning['context']}")
+                logger.warning("\n  File: %s:%s", warning["file"], warning["line"])
+                logger.warning("  Issue: %s", warning["description"])
+                logger.warning("  Context:\n%s", warning["context"])
 
         return len(critical_errors)
 
@@ -237,18 +237,20 @@ class SyntaxValidator:
                     if not dry_run:
                         with open(file_path, "w", encoding="utf-8") as f:
                             f.write(content)
-                        logger.info(f"🔧 Fixed {error['pattern']} in {file_path}")
+                        logger.info("🔧 Fixed %s in %s", error["pattern"], file_path)
                     else:
-                        logger.info(f"🔍 Would fix {error['pattern']} in {file_path}")
+                        logger.info(
+                            "🔍 Would fix %s in %s", error["pattern"], file_path
+                        )
                     fixes_applied += 1
 
             except Exception as e:
-                logger.error(f"Error fixing file {file_path}: {e}")
+                logger.error("Error fixing file %s: %s", file_path, e)
 
         return fixes_applied
 
 
-def main():
+def main(self) -> None:
     """Main validation function"""
     import argparse
 
@@ -276,7 +278,7 @@ def main():
     if args.fix:
         fixes = validator.fix_common_issues(dry_run=args.dry_run)
         if fixes:
-            logger.info(f"Applied {fixes} fixes")
+            logger.info("Applied %s fixes", fixes)
 
     # Exit with error code if critical issues found
     sys.exit(1 if critical_count > 0 else 0)

@@ -1,0 +1,274 @@
+# PAKE System - CI Resource Constraint Simulation
+# Docker Compose configuration for simulating GitHub Actions runner limitations
+#
+# This configuration applies resource constraints to simulate:
+# - ubuntu-latest: 2 CPU cores, 7GB RAM
+# - macos-latest: 3 CPU cores, 14GB RAM
+# - windows-latest: 2 CPU cores, 7GB RAM
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with CI resource constraints
+  postgres-ci:
+    image: postgres:15-alpine
+    container_name: pake-postgres-ci
+    environment:
+      POSTGRES_DB: pake_system_test
+      POSTGRES_USER: pake_test
+      POSTGRES_PASSWORD: test_password_ci_simulation
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_ci_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pake_test -d pake_system_test']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'          # Allocate 0.5 CPU cores to PostgreSQL
+          memory: 1g           # Allocate 1GB RAM to PostgreSQL
+        reservations:
+          cpus: '0.25'         # Reserve 0.25 CPU cores
+          memory: 512m         # Reserve 512MB RAM
+    restart: unless-stopped
+    networks:
+      - pake-ci-network
+
+  # Redis Cache with CI resource constraints
+  redis-ci:
+    image: redis:7-alpine
+    container_name: pake-redis-ci
+    ports:
+      - '6381:6379'
+    volumes:
+      - redis_ci_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'        # Allocate 0.25 CPU cores to Redis
+          memory: 256m         # Allocate 256MB RAM to Redis
+        reservations:
+          cpus: '0.1'          # Reserve 0.1 CPU cores
+          memory: 128m         # Reserve 128MB RAM
+    restart: unless-stopped
+    networks:
+      - pake-ci-network
+
+  # PAKE Backend with CI resource constraints
+  pake-backend-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    container_name: pake-backend-ci
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://pake_test:test_password_ci_simulation@postgres-ci:5432/pake_system_test
+      REDIS_URL: redis://redis-ci:6379/0
+
+      # CI-specific environment variables
+      CI: 'true'
+      GITHUB_ACTIONS: 'true'
+      ENVIRONMENT: 'ci-simulation'
+      LOG_LEVEL: 'info'
+
+      # JWT and security
+      JWT_SECRET_KEY: 'ci-simulation-secret-key-not-for-production'
+      JWT_ALGORITHM: 'HS256'
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: '30'
+
+      # API configuration
+      API_V1_STR: '/api/v1'
+      PROJECT_NAME: 'PAKE System CI Simulation'
+
+      # Test configuration
+      PYTEST_WORKERS: '1'
+      PYTEST_TIMEOUT: '300'
+      PYTEST_MAX_FAILURES: '3'
+
+      # External API keys (use test values)
+      FIRECRAWL_API_KEY: '${FIRECRAWL_API_KEY:-test-key}'
+      PUBMED_EMAIL: '${PUBMED_EMAIL:-test@example.com}'
+
+      # Vault configuration
+      VAULT_PATH: '/app/vault'
+
+    ports:
+      - '8003:8000'  # Different port to avoid conflicts
+    volumes:
+      - ./vault:/app/vault:ro
+      - ./logs:/app/logs
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+    depends_on:
+      postgres-ci:
+        condition: service_healthy
+      redis-ci:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'            # Simulate ubuntu-latest: 2 CPU cores
+          memory: 7g           # Simulate ubuntu-latest: 7GB RAM
+        reservations:
+          cpus: '1'            # Reserve 1 CPU core
+          memory: 2g           # Reserve 2GB RAM
+    restart: unless-stopped
+    networks:
+      - pake-ci-network
+    command: >
+      sh -c "
+        echo '🔧 CI Simulation Environment Starting...' &&
+        echo '   CPU Cores: 2 (ubuntu-latest simulation)' &&
+        echo '   Memory: 7GB (ubuntu-latest simulation)' &&
+        echo '   Workers: 1 (CI-optimized)' &&
+        echo '   Timeout: 300s' &&
+        echo '' &&
+        echo '⏳ Waiting for services to be ready...' &&
+        sleep 15 &&
+        echo '🧪 Running tests with CI resource constraints...' &&
+        python -m pytest tests/
+          -v
+          --tb=short
+          --maxfail=3
+          --durations=5
+          --disable-warnings
+          --timeout=300
+          --timeout-method=thread
+          -x
+          --junitxml=/app/logs/ci-test-results.xml
+          --cov=src
+          --cov-report=xml:/app/logs/coverage.xml
+          --cov-report=html:/app/logs/htmlcov
+          --cov-fail-under=80
+      "
+
+  # TypeScript Bridge with CI resource constraints
+  bridge-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile.bridge
+    container_name: pake-bridge-ci
+    environment:
+      # CI-specific environment variables
+      CI: 'true'
+      GITHUB_ACTIONS: 'true'
+      NODE_ENV: 'test'
+
+      # Bridge configuration
+      VAULT_PATH: '/app/vault'
+      BRIDGE_PORT: '3001'
+      MCP_SERVER_URL: 'http://pake-backend-ci:8000'
+
+      # Test configuration
+      JEST_WORKERS: '1'
+      JEST_TIMEOUT: '30000'
+
+    ports:
+      - '3002:3001'  # Different port to avoid conflicts
+    volumes:
+      - ./vault:/app/vault:ro
+      - ./src/bridge:/app/src:ro
+    depends_on:
+      - pake-backend-ci
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'         # Allocate 0.5 CPU cores to Bridge
+          memory: 1g           # Allocate 1GB RAM to Bridge
+        reservations:
+          cpus: '0.25'         # Reserve 0.25 CPU cores
+          memory: 512m         # Reserve 512MB RAM
+    restart: unless-stopped
+    networks:
+      - pake-ci-network
+    command: >
+      sh -c "
+        echo '🌉 TypeScript Bridge CI Simulation Starting...' &&
+        echo '   CPU Cores: 0.5' &&
+        echo '   Memory: 1GB' &&
+        echo '   Workers: 1 (CI-optimized)' &&
+        echo '' &&
+        echo '⏳ Waiting for backend to be ready...' &&
+        sleep 20 &&
+        echo '🧪 Running TypeScript tests with CI constraints...' &&
+        npm test -- --maxWorkers=1 --timeout=30000 --verbose
+      "
+
+  # Resource Monitor (optional)
+  resource-monitor:
+    image: alpine:latest
+    container_name: pake-resource-monitor-ci
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: >
+      sh -c "
+        echo '📊 CI Resource Monitor Starting...' &&
+        echo 'Monitoring resource usage every 30 seconds...' &&
+        while true; do
+          echo '=== Resource Usage Report ===' &&
+          echo 'Timestamp: $$(date)' &&
+          echo '' &&
+          echo 'Container Resource Usage:' &&
+          docker stats --no-stream --format 'table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}' &&
+          echo '' &&
+          echo 'System Resource Usage:' &&
+          echo 'CPU: $$(top -bn1 | grep 'Cpu(s)' | awk '{print $$2}' | cut -d'%' -f1)%' &&
+          echo 'Memory: $$(free | grep Mem | awk '{printf \"%.1f%%\", $$3/$$2 * 100.0}')' &&
+          echo '' &&
+          sleep 30
+        done
+      "
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'          # Minimal CPU for monitoring
+          memory: 64m          # Minimal memory for monitoring
+    restart: unless-stopped
+    networks:
+      - pake-ci-network
+
+volumes:
+  postgres_ci_data:
+    driver: local
+  redis_ci_data:
+    driver: local
+
+networks:
+  pake-ci-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

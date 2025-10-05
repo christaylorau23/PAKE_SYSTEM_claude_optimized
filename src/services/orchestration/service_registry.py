@@ -1,5 +1,5 @@
 """Minimal Service Registry Implementation
-Task T039 - Phase 18 Production System Integration
+Task T039 - Phase 18 Production System Integration.
 
 This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
@@ -7,8 +7,8 @@ Following TDD Green Phase - just enough to pass tests, then refactor.
 
 import asyncio
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -24,21 +24,21 @@ class ServiceConfig(BaseModel):
     health_check_url: str
     health_check_interval_seconds: int = 30
     health_timeout_seconds: int = 5
-    resource_requirements: Optional[dict[str, Any]] = None
-    endpoints: Optional[list[dict[str, Any]]] = None
-    dependencies: Optional[list[dict[str, Any]]] = None
-    labels: Optional[dict[str, str]] = None
+    resource_requirements: Dict[str, Any] | None = None
+    endpoints: list[Dict[str, Any]] | None = None
+    dependencies: list[Dict[str, Any]] | None = None
+    labels: dict[str, str] | None = None
 
 
 class ServiceUpdate(BaseModel):
-    service_version: Optional[str] = None
-    labels: Optional[dict[str, str]] = None
-    resource_requirements: Optional[dict[str, Any]] = None
+    service_version: str | None = None
+    labels: dict[str, str] | None = None
+    resource_requirements: Dict[str, Any] | None = None
 
 
 # In-memory storage for TDD (will be replaced with database)
-registered_services: dict[str, dict[str, Any]] = {}
-service_health_status: dict[str, dict[str, Any]] = {}
+registered_services: dict[str, Dict[str, Any]] = {}
+service_health_status: dict[str, Dict[str, Any]] = {}
 
 
 app = FastAPI(
@@ -49,8 +49,8 @@ app = FastAPI(
 
 
 @app.post("/api/v1/services/register", status_code=201)
-async def register_service(service_config: ServiceConfig):
-    """Minimal service registration to satisfy test_service_registry_integration.py
+async def register_service(self) -> None:
+    """Minimal service registration to satisfy test_service_registry_integration.py.
 
     This implements just enough to pass the integration tests:
     - Accepts service configuration
@@ -65,9 +65,9 @@ async def register_service(service_config: ServiceConfig):
     service_data.update(
         {
             "service_id": service_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-            "deployed_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
+            "deployed_at": datetime.now(UTC).isoformat(),
             "status": "HEALTHY",
         }
     )
@@ -80,9 +80,9 @@ async def register_service(service_config: ServiceConfig):
         "service_id": service_id,
         "service_name": service_config.service_name,
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "response_time_ms": 5.0,
-        "last_check": datetime.utcnow().isoformat(),
+        "last_check": datetime.now(UTC).isoformat(),
     }
 
     # Mock health monitoring activation
@@ -97,11 +97,11 @@ async def register_service(service_config: ServiceConfig):
 
 @app.get("/api/v1/services")
 async def list_services(
-    environment: Optional[str] = Query(None),
-    service_type: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
+    environment: str | None = Query(None),
+    service_type: str | None = Query(None),
+    status: str | None = Query(None),
 ):
-    """Service discovery with filtering"""
+    """Service discovery with filtering."""
     services = list(registered_services.values())
 
     # Apply filters
@@ -120,8 +120,8 @@ async def list_services(
 
 
 @app.get("/api/v1/services/{service_id}")
-async def get_service(service_id: str):
-    """Get individual service configuration"""
+async def get_service(self) -> None:
+    """Get individual service configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -129,8 +129,8 @@ async def get_service(service_id: str):
 
 
 @app.put("/api/v1/services/{service_id}")
-async def update_service(service_id: str, update: ServiceUpdate):
-    """Update service configuration"""
+async def update_service(self) -> None:
+    """Update service configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -148,14 +148,14 @@ async def update_service(service_id: str, update: ServiceUpdate):
     if update.resource_requirements:
         service["resource_requirements"] = update.resource_requirements
 
-    service["updated_at"] = datetime.utcnow().isoformat()
+    service["updated_at"] = datetime.now(UTC).isoformat()
 
     return service
 
 
 @app.delete("/api/v1/services/{service_id}")
-async def deregister_service(service_id: str):
-    """Remove service from registry"""
+async def deregister_service(self) -> None:
+    """Remove service from registry."""
     if service_id in registered_services:
         del registered_services[service_id]
 
@@ -171,7 +171,7 @@ async def get_service_health(
     include_dependencies: bool = Query(False),
     include_metrics: bool = Query(False),
 ):
-    """Get service health status"""
+    """Get service health status."""
     if service_id not in service_health_status:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -188,7 +188,7 @@ async def get_service_health(
             health["dependencies"][dep_name] = {
                 "status": "healthy",
                 "response_time_ms": 10.0,
-                "last_check": datetime.utcnow().isoformat(),
+                "last_check": datetime.now(UTC).isoformat(),
             }
 
     if include_metrics:
@@ -203,8 +203,8 @@ async def get_service_health(
 
 
 @app.get("/api/v1/services/{service_id}/dependencies")
-async def get_service_dependencies(service_id: str):
-    """Get service dependencies"""
+async def get_service_dependencies(self) -> None:
+    """Get service dependencies."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -215,14 +215,14 @@ async def get_service_dependencies(service_id: str):
     for dep in dependencies:
         dep["dependency_id"] = str(uuid.uuid4())
         dep["status"] = "healthy"
-        dep["last_check"] = datetime.utcnow().isoformat()
+        dep["last_check"] = datetime.now(UTC).isoformat()
 
     return dependencies
 
 
 @app.put("/api/v1/services/{service_id}/health-config")
-async def update_health_config(service_id: str, config: dict[str, Any]):
-    """Update health check configuration"""
+async def update_health_config(self) -> None:
+    """Update health check configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -237,19 +237,19 @@ async def update_health_config(service_id: str, config: dict[str, Any]):
     if "health_timeout_seconds" in config:
         service["health_timeout_seconds"] = config["health_timeout_seconds"]
 
-    service["updated_at"] = datetime.utcnow().isoformat()
+    service["updated_at"] = datetime.now(UTC).isoformat()
 
     return {"status": "updated", "service_id": service_id}
 
 
-async def mock_health_monitoring(service_id: str):
-    """Mock health monitoring background task"""
+async def mock_health_monitoring(self) -> None:
+    """Mock health monitoring background task."""
     while service_id in service_health_status:
         # Update health status
         service_health_status[service_id].update(
             {
-                "timestamp": datetime.utcnow().isoformat(),
-                "last_check": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
+                "last_check": datetime.now(UTC).isoformat(),
                 "response_time_ms": 5.0
                 + (hash(service_id) % 10),  # Mock variable response time
             }

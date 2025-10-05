@@ -18,27 +18,28 @@ import pytest
 class MockTestClient:
     """Mock test client - replace with actual FastAPI test client"""
 
-    def get(self, url: str, headers: dict[str, str] = None):
+    def get(self) -> None:
         # This will fail initially - no implementation exists yet
+        msg = "GET /curation/user/preferences endpoint not implemented"
         raise NotImplementedError(
-            "GET /curation/user/preferences endpoint not implemented",
+            msg,
         )
 
 
-@pytest.fixture()
-def test_client():
+@pytest.fixture
+def test_client(self) -> None:
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture()
-def auth_headers():
+@pytest.fixture
+def auth_headers(self) -> None:
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture()
-def invalid_auth_headers():
+@pytest.fixture
+def invalid_auth_headers(self) -> None:
     """Provide invalid authentication headers"""
     return {"Authorization": "Bearer invalid_token"}
 
@@ -46,7 +47,7 @@ def invalid_auth_headers():
 class TestUserPreferencesGetContract:
     """Contract tests for GET /curation/user/preferences endpoint"""
 
-    def test_get_user_preferences_success_schema(self, test_client, auth_headers):
+    def test_get_user_preferences_success_schema(self) -> None:
         """Test successful user preferences response schema"""
 
         # This test MUST fail initially
@@ -83,7 +84,7 @@ class TestUserPreferencesGetContract:
         # assert 0.0 <= data["diversity_preference"] <= 1.0
         # assert 0.0 <= data["quality_threshold"] <= 1.0
 
-    def test_get_user_preferences_default_values(self, test_client, auth_headers):
+    def test_get_user_preferences_default_values(self) -> None:
         """Test that user preferences have appropriate default values"""
 
         # This test MUST fail initially
@@ -109,7 +110,7 @@ class TestUserPreferencesGetContract:
         # assert "recency_weight" in data["temporal_preferences"]
         # assert "authority_weight" in data["temporal_preferences"]
 
-    def test_get_user_preferences_interests_validation(self, test_client, auth_headers):
+    def test_get_user_preferences_interests_validation(self) -> None:
         """Test that interests are properly validated"""
 
         # This test MUST fail initially
@@ -130,11 +131,7 @@ class TestUserPreferencesGetContract:
         #     assert len(interest.strip()) > 0
         #     assert interest == interest.strip()  # No leading/trailing spaces
 
-    def test_get_user_preferences_source_preferences_structure(
-        self,
-        test_client,
-        auth_headers,
-    ):
+    def test_get_user_preferences_source_preferences_structure(self) -> None:
         """Test source preferences structure"""
 
         # This test MUST fail initially
@@ -158,11 +155,7 @@ class TestUserPreferencesGetContract:
         #     assert isinstance(source, str)
         #     assert len(source.strip()) > 0
 
-    def test_get_user_preferences_temporal_preferences_validation(
-        self,
-        test_client,
-        auth_headers,
-    ):
+    def test_get_user_preferences_temporal_preferences_validation(self) -> None:
         """Test temporal preferences validation"""
 
         # This test MUST fail initially
@@ -182,7 +175,7 @@ class TestUserPreferencesGetContract:
         # total_weight = temporal_prefs["recency_weight"] + temporal_prefs["authority_weight"]
         # assert 0.5 <= total_weight <= 1.0
 
-    def test_get_user_preferences_unauthorized(self, test_client):
+    def test_get_user_preferences_unauthorized(self) -> None:
         """Test unauthorized access returns 401"""
 
         # This test MUST fail initially
@@ -194,11 +187,7 @@ class TestUserPreferencesGetContract:
         # data = response.json()
         # assert data["error"] == "Authentication required"
 
-    def test_get_user_preferences_invalid_token(
-        self,
-        test_client,
-        invalid_auth_headers,
-    ):
+    def test_get_user_preferences_invalid_token(self) -> None:
         """Test invalid authentication token returns 401"""
 
         # This test MUST fail initially
@@ -213,7 +202,7 @@ class TestUserPreferencesGetContract:
         # data = response.json()
         # assert "error" in data
 
-    def test_get_user_preferences_new_user(self, test_client, auth_headers):
+    def test_get_user_preferences_new_user(self) -> None:
         """Test preferences for a new user (should have defaults)"""
 
         # This test MUST fail initially
@@ -236,7 +225,7 @@ class TestUserPreferencesGetContract:
         # assert len(data["source_preferences"]["preferred_sources"]) >= 0
         # assert len(data["source_preferences"]["avoided_sources"]) >= 0
 
-    def test_get_user_preferences_server_error(self, test_client, auth_headers):
+    def test_get_user_preferences_server_error(self) -> None:
         """Test server error handling returns 500"""
 
         # This test MUST fail initially - no error handling implemented
@@ -253,7 +242,7 @@ class TestUserPreferencesGetContract:
         # assert "error" in data
         # assert "request_id" in data
 
-    def test_get_user_preferences_response_time(self, test_client, auth_headers):
+    def test_get_user_preferences_response_time(self) -> None:
         """Test response time meets performance requirements"""
 
         import time
@@ -272,7 +261,7 @@ class TestUserPreferencesGetContract:
         # assert response_time < 0.1  # Less than 100ms for simple data retrieval
         # assert response.status_code == 200
 
-    def test_get_user_preferences_consistency(self, test_client, auth_headers):
+    def test_get_user_preferences_consistency(self) -> None:
         """Test that multiple calls return consistent data"""
 
         # This test MUST fail initially
@@ -308,8 +297,8 @@ def validate_uuid(value: str) -> bool:
 # Test fixtures for data validation
 
 
-@pytest.fixture()
-def sample_user_preferences_response():
+@pytest.fixture
+def sample_user_preferences_response(self) -> None:
     """Sample user preferences response for validation testing"""
     return {
         "user_id": str(uuid.uuid4()),
@@ -324,8 +313,8 @@ def sample_user_preferences_response():
     }
 
 
-@pytest.fixture()
-def sample_default_preferences():
+@pytest.fixture
+def sample_default_preferences(self) -> None:
     """Sample default preferences for new user"""
     return {
         "user_id": str(uuid.uuid4()),
@@ -337,8 +326,8 @@ def sample_default_preferences():
     }
 
 
-@pytest.fixture()
-def sample_configured_preferences():
+@pytest.fixture
+def sample_configured_preferences(self) -> None:
     """Sample fully configured user preferences"""
     return {
         "user_id": str(uuid.uuid4()),

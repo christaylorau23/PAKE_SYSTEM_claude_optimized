@@ -55,7 +55,7 @@ class Phase2BDemo:
     hierarchical supervisor-worker architecture with full feature parity.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.message_bus = None
         self.supervisor = None
         self.workers = {}
@@ -69,7 +69,7 @@ class Phase2BDemo:
         self.phase2a_results = None
         self.phase2b_results = None
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize all Phase 2B components"""
         logger.info("🚀 Initializing Phase 2B Event-Driven Architecture...")
 
@@ -127,7 +127,7 @@ class Phase2BDemo:
         logger.info("🔗 Registering workers with supervisor...")
         for worker_name, worker in self.workers.items():
             await self.supervisor.register_worker(worker)
-            logger.info(f"   ✅ {worker_name} worker registered")
+            logger.info("   ✅ %s worker registered", worker_name)
 
         # Wait for registration to complete
         await asyncio.sleep(2.0)
@@ -137,7 +137,7 @@ class Phase2BDemo:
         # Display system status
         await self._display_system_status()
 
-    async def demonstrate_phase2a_vs_phase2b(self):
+    async def demonstrate_phase2a_vs_phase2b(self) -> None:
         """Demonstrate Phase 2A vs Phase 2B performance and capabilities"""
         logger.info("\n🔬 DEMONSTRATION: Phase 2A vs Phase 2B Comparison")
         logger.info("=" * 60)
@@ -158,7 +158,7 @@ class Phase2BDemo:
         # Compare results
         await self._compare_results()
 
-    async def demonstrate_new_capabilities(self):
+    async def demonstrate_new_capabilities(self) -> None:
         """Demonstrate new Phase 2B capabilities"""
         logger.info("\n✨ DEMONSTRATION: New Phase 2B Capabilities")
         logger.info("=" * 50)
@@ -183,7 +183,7 @@ class Phase2BDemo:
         logger.info("\n🛡️ 5. Advanced Error Handling & Recovery")
         await self._demonstrate_resilience()
 
-    async def validate_84_test_compatibility(self):
+    async def validate_84_test_compatibility(self) -> None:
         """Validate that all 84 Phase 2A tests pass with Phase 2B architecture"""
         logger.info("\n✅ VALIDATION: 84/84 Test Compatibility Check")
         logger.info("=" * 50)
@@ -197,13 +197,13 @@ class Phase2BDemo:
         }
 
         total_tests = sum(test_categories.values())
-        logger.info(f"📋 Running {total_tests} compatibility tests...")
+        logger.info("📋 Running %s compatibility tests...", total_tests)
 
         passed_tests = 0
         failed_tests = []
 
         for category, count in test_categories.items():
-            logger.info(f"\n🧪 Testing {category} ({count} tests)...")
+            logger.info("\n🧪 Testing %s (%s tests)...", category, count)
 
             for i in range(count):
                 test_name = f"{category}_test_{i + 1}"
@@ -219,21 +219,21 @@ class Phase2BDemo:
         success_rate = (passed_tests / total_tests) * 100
 
         logger.info("\n📊 TEST RESULTS:")
-        logger.info(f"   Total Tests: {total_tests}")
-        logger.info(f"   Passed: {passed_tests}")
-        logger.info(f"   Failed: {len(failed_tests)}")
-        logger.info(f"   Success Rate: {success_rate:.1f}%")
+        logger.info("   Total Tests: %s", total_tests)
+        logger.info("   Passed: %s", passed_tests)
+        logger.info("   Failed: %s", len(failed_tests))
+        logger.info("   Success Rate: %.1f%%%", success_rate)
 
         if success_rate >= 100.0:
             logger.info("   🎉 SUCCESS: All Phase 2A tests compatible with Phase 2B!")
         else:
-            logger.error(f"   ❌ FAILURE: {len(failed_tests)} tests failed")
+            logger.error("   ❌ FAILURE: %s tests failed", len(failed_tests))
             for test in failed_tests:
-                logger.error(f"     - {test}")
+                logger.error("     - %s", test)
 
         return success_rate >= 100.0
 
-    async def _execute_phase2a(self, plan: IngestionPlan):
+    async def _execute_phase2a(self) -> None:
         """Execute test plan using Phase 2A orchestrator"""
         # Create original orchestrator
         config = IngestionConfig(
@@ -275,18 +275,18 @@ class Phase2BDemo:
                 error_details=[],
             )
 
-            logger.info(f"   ✅ Phase 2A completed in {self.phase2a_time:.2f}s")
+            logger.info("   ✅ Phase 2A completed in %.2f%%s", self.phase2a_time)
             logger.info(
-                f"   📄 Retrieved {
+                "   📄 Retrieved %s content items",
                     self.phase2a_results.total_content_items
-                } content items",
+                ,
             )
 
         except Exception as e:
-            logger.error(f"   ❌ Phase 2A execution failed: {e}")
+            logger.error("   ❌ Phase 2A execution failed: %s", e)
             self.phase2a_results = None
 
-    async def _execute_phase2b(self, plan: IngestionPlan):
+    async def _execute_phase2b(self) -> None:
         """Execute test plan using Phase 2B event-driven architecture"""
         start_time = time.time()
 
@@ -300,19 +300,19 @@ class Phase2BDemo:
             self.phase2b_results = await self.supervisor.execute_ingestion_plan(plan)
             self.phase2b_time = time.time() - start_time
 
-            logger.info(f"   ✅ Phase 2B completed in {self.phase2b_time:.2f}s")
+            logger.info("   ✅ Phase 2B completed in %.2f%%s", self.phase2b_time)
             logger.info(
-                f"   📄 Retrieved {
+                "   📄 Retrieved %s content items",
                     self.phase2b_results.total_content_items
-                } content items",
+                ,
             )
-            logger.info(f"   👥 Used {len(self.workers)} worker agents")
+            logger.info("   👥 Used %s worker agents", len(self.workers))
 
         except Exception as e:
-            logger.error(f"   ❌ Phase 2B execution failed: {e}")
+            logger.error("   ❌ Phase 2B execution failed: %s", e)
             self.phase2b_results = None
 
-    async def _compare_results(self):
+    async def _compare_results(self) -> None:
         """Compare Phase 2A vs Phase 2B results"""
         logger.info("\n📊 COMPARISON RESULTS:")
         logger.info("=" * 30)
@@ -324,14 +324,14 @@ class Phase2BDemo:
             ) * 100
 
             logger.info("⏱️  Execution Time:")
-            logger.info(f"   Phase 2A: {self.phase2a_time:.2f}s")
-            logger.info(f"   Phase 2B: {self.phase2b_time:.2f}s")
-            logger.info(f"   Improvement: {performance_improvement:+.1f}%")
+            logger.info("   Phase 2A: %.2f%%s", self.phase2a_time)
+            logger.info("   Phase 2B: %.2f%%s", self.phase2b_time)
+            logger.info("   Improvement: %s", f"{performance_improvement:+.1f}%")
 
             # Feature comparison
             logger.info("\n🎯 Success Rate:")
-            logger.info(f"   Phase 2A: {self.phase2a_results.success}")
-            logger.info(f"   Phase 2B: {self.phase2b_results.success}")
+            logger.info("   Phase 2A: %s", self.phase2a_results.success)
+            logger.info("   Phase 2B: %s", self.phase2b_results.success)
 
             logger.info("\n📈 New Capabilities in Phase 2B:")
             logger.info("   ✅ Event-driven messaging")
@@ -343,7 +343,7 @@ class Phase2BDemo:
         else:
             logger.warning("⚠️  Incomplete results - comparison not possible")
 
-    async def _demonstrate_observability(self):
+    async def _demonstrate_observability(self) -> None:
         """Demonstrate observability capabilities"""
         with self.telemetry.trace_operation("demo_observability"):
             logger.info("   📊 Collecting real-time metrics...")
@@ -355,17 +355,17 @@ class Phase2BDemo:
 
             # Get system health
             health = await self.supervisor.health_check()
-            logger.info(f"   🏥 System Health: {health['status']}")
+            logger.info("   🏥 System Health: %s", health["status"])
             logger.info(
-                f"   👥 Active Workers: {health['metrics']['registered_workers']}",
+                "   👥 Active Workers: %s", health["metrics"]["registered_workers"],
             )
 
             # Get telemetry summary
             summary = self.telemetry.get_telemetry_summary()
-            logger.info(f"   📈 Operations Tracked: {summary['operations_tracked']}")
-            logger.info(f"   📏 Custom Metrics: {summary['custom_metrics_count']}")
+            logger.info("   📈 Operations Tracked: %s", summary["operations_tracked"])
+            logger.info("   📏 Custom Metrics: %s", summary["custom_metrics_count"])
 
-    async def _demonstrate_caching(self):
+    async def _demonstrate_caching(self) -> None:
         """Demonstrate multi-layered caching"""
         # Test cache operations
         test_key = "demo_cache_test"
@@ -386,19 +386,19 @@ class Phase2BDemo:
         cached_data = await self.cache_strategy.get("demo_namespace", test_key)
         access_time = time.time() - start_time
 
-        logger.info(f"   🎯 Cache hit in {access_time * 1000:.1f}ms")
-        logger.info(f"   ✅ Retrieved: {cached_data['content']}")
+        logger.info("   🎯 Cache hit in %.1f%%ms", access_time * 1000)
+        logger.info("   ✅ Retrieved: %s", cached_data["content"])
 
         # Get cache statistics
         stats = await self.cache_strategy.get_statistics()
-        logger.info(f"   📊 Cache layers active: {len(stats)}")
+        logger.info("   📊 Cache layers active: %s", len(stats))
 
         for layer, stat in stats.items():
             logger.info(
-                f"      {layer}: {stat.hits} hits, {stat.hit_rate:.1%} hit rate",
+                "      %s: %s hits, %s hit rate", layer, stat.hits, stat.hit_rate:.1%,
             )
 
-    async def _demonstrate_protocols(self):
+    async def _demonstrate_protocols(self) -> None:
         """Demonstrate communication protocols"""
         # Test task coordination protocol
         protocol = self.protocols["task_coordination"]
@@ -412,11 +412,11 @@ class Phase2BDemo:
             task_data={"type": "demo", "priority": "high"},
         )
 
-        logger.info(f"   ✅ Task {task_id[:8]} assigned via protocol")
+        logger.info("   ✅ Task %s assigned via protocol", task_id[:8])
 
         # Check task status
         status = protocol.get_task_status(task_id)
-        logger.info(f"   📋 Task status: {status['status']}")
+        logger.info("   📋 Task status: %s", status["status"])
 
         # Test health monitoring protocol
         health_protocol = self.protocols["health_monitoring"]
@@ -432,32 +432,32 @@ class Phase2BDemo:
 
         # Get system health
         system_health = health_protocol.get_system_health()
-        logger.info(f"   ✅ System health: {system_health['overall_status']}")
-        logger.info(f"   👥 Healthy agents: {system_health['healthy_agents']}")
+        logger.info("   ✅ System health: %s", system_health["overall_status"])
+        logger.info("   👥 Healthy agents: %s", system_health["healthy_agents"])
 
-    async def _demonstrate_scalability(self):
+    async def _demonstrate_scalability(self) -> None:
         """Demonstrate scalability features"""
         logger.info("   👥 Testing horizontal scalability...")
 
         # Simulate adding more workers
         logger.info("   📈 Current workers:")
-        for worker_name in self.workers.keys():
-            logger.info(f"      ✅ {worker_name}")
+        for worker_name in self.workers:
+            logger.info("      ✅ %s", worker_name)
 
         # Show parallel task execution capability
         logger.info("   ⚡ Parallel execution capability:")
         logger.info(
-            f"      Max concurrent sources: {
+            "      Max concurrent sources: %s",
                 self.supervisor.config.max_concurrent_sources
-            }",
+            ,
         )
 
         # Get supervisor metrics
         metrics = await self.supervisor.get_metrics()
-        logger.info(f"      Active tasks: {metrics['active_tasks']}")
-        logger.info(f"      Worker breakdown: {metrics['worker_breakdown']}")
+        logger.info("      Active tasks: %s", metrics["active_tasks"])
+        logger.info("      Worker breakdown: %s", metrics["worker_breakdown"])
 
-    async def _demonstrate_resilience(self):
+    async def _demonstrate_resilience(self) -> None:
         """Demonstrate error handling and resilience"""
         logger.info("   🛡️ Testing error handling and recovery...")
 
@@ -480,7 +480,7 @@ class Phase2BDemo:
         logger.info("   ⚡ Circuit breakers operational")
         logger.info("   🏥 Health monitoring continuous")
 
-    async def _simulate_test_execution(self, category: str, test_number: int):
+    async def _simulate_test_execution(self) -> None:
         """Simulate execution of a Phase 2A test through Phase 2B architecture"""
         # Create test plan based on category
         if category == "firecrawl_service":
@@ -499,7 +499,8 @@ class Phase2BDemo:
             result = await self.supervisor.execute_ingestion_plan(plan)
 
             if not result.success:
-                raise Exception(f"Test execution failed: {result.error_details}")
+                msg = f"Test execution failed: {result.error_details}"
+                raise Exception(msg)
 
     def _create_comprehensive_test_plan(self) -> IngestionPlan:
         """Create comprehensive test plan for comparison"""
@@ -656,48 +657,48 @@ class Phase2BDemo:
             enable_deduplication=True,
         )
 
-    async def _display_system_status(self):
+    async def _display_system_status(self) -> None:
         """Display current system status"""
         logger.info("\n🖥️  SYSTEM STATUS:")
         logger.info("=" * 30)
 
         # Message bus status
         bus_health = await self.message_bus.health_check()
-        logger.info(f"📡 Message Bus: {bus_health['status']}")
-        logger.info(f"   Redis Connected: {bus_health['redis_connected']}")
-        logger.info(f"   Active Consumers: {bus_health['consumers_active']}")
+        logger.info("📡 Message Bus: %s", bus_health["status"])
+        logger.info("   Redis Connected: %s", bus_health["redis_connected"])
+        logger.info("   Active Consumers: %s", bus_health["consumers_active"])
 
         # Supervisor status
         supervisor_health = await self.supervisor.health_check()
-        logger.info(f"🎯 Supervisor Agent: {supervisor_health['status']}")
+        logger.info("🎯 Supervisor Agent: %s", supervisor_health["status"])
         logger.info(
-            f"   Registered Workers: {
-                supervisor_health['metrics']['registered_workers']
-            }",
+            "   Registered Workers: %s",
+                supervisor_health["metrics"]["registered_workers"]
+            ,
         )
 
         # Worker status
-        logger.info(f"👷 Worker Agents: {len(self.workers)} active")
+        logger.info("👷 Worker Agents: %s active", len(self.workers))
         for name, worker in self.workers.items():
             worker_health = await worker.get_health_status()
-            logger.info(f"   {name}: {worker_health['status']}")
+            logger.info("   %s: %s", name, worker_health["status"])
 
         # Cache status
         cache_health = await self.cache_strategy.get_health_status()
-        logger.info(f"💾 Cache System: {cache_health['overall_status']}")
-        logger.info(f"   Total Hit Rate: {cache_health['total_hit_rate']:.1%}")
+        logger.info("💾 Cache System: %s", cache_health["overall_status"])
+        logger.info("   Total Hit Rate: %s", cache_health["total_hit_rate"]:.1%)
 
         # Telemetry status
         telemetry_summary = self.telemetry.get_telemetry_summary()
         logger.info(
-            f"📊 Observability: {
-                'Active' if telemetry_summary['running'] else 'Inactive'
-            }",
+            "📊 Observability: %s",
+                "Active" if telemetry_summary["running"] else "Inactive"
+            ,
         )
-        logger.info(f"   Metrics Enabled: {telemetry_summary['metrics_enabled']}")
-        logger.info(f"   Tracing Enabled: {telemetry_summary['tracing_enabled']}")
+        logger.info("   Metrics Enabled: %s", telemetry_summary["metrics_enabled"])
+        logger.info("   Tracing Enabled: %s", telemetry_summary["tracing_enabled"])
 
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Cleanup all resources"""
         logger.info("\n🧹 Cleaning up resources...")
 
@@ -724,7 +725,7 @@ class Phase2BDemo:
         logger.info("✅ Cleanup completed")
 
 
-async def main():
+async def main(self) -> None:
     """Main demo execution"""
     print("🚀 PAKE System - Phase 2B Event-Driven Architecture Demo")
     print("=" * 60)
@@ -736,6 +737,7 @@ async def main():
     demo = Phase2BDemo()
 
     try:
+            pass
         # Initialize Phase 2B system
         await demo.initialize()
 
@@ -762,7 +764,7 @@ async def main():
         print("\n🚀 Phase 2B transformation complete!")
 
     except Exception as e:
-        logger.error(f"❌ Demo failed: {e}")
+        logger.error("❌ Demo failed: %s", e)
         raise
     finally:
         await demo.cleanup()

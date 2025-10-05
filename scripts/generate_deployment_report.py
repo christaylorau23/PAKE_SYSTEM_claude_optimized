@@ -7,26 +7,24 @@ Generate comprehensive deployment reports for CI/CD pipeline
 import argparse
 import json
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
 class DeploymentReportGenerator:
     """Generate comprehensive deployment reports"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.report = {
             "deployment_info": {},
             "quality_gates": {},
             "performance_metrics": {},
             "security_status": {},
             "recommendations": [],
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
-    def add_deployment_info(
-        self, image_tag: str, environment: str, deployed_by: str, deployment_time: str
-    ):
+    def add_deployment_info(self) -> None:
         """Add deployment information"""
         self.report["deployment_info"] = {
             "image_tag": image_tag,
@@ -36,7 +34,7 @@ class DeploymentReportGenerator:
             "deployment_id": f"{environment}-{image_tag[:8]}-{int(time.time())}",
         }
 
-    def add_quality_gates(self, ci_results: dict[str, Any]):
+    def add_quality_gates(self) -> None:
         """Add CI quality gate results"""
         self.report["quality_gates"] = {
             "lint_and_format": ci_results.get("lint_and_format", {}),
@@ -51,7 +49,7 @@ class DeploymentReportGenerator:
             else "failed",
         }
 
-    def add_performance_metrics(self, performance_data: dict[str, Any]):
+    def add_performance_metrics(self) -> None:
         """Add performance metrics"""
         self.report["performance_metrics"] = {
             "response_times": performance_data.get("response_times", {}),
@@ -63,7 +61,7 @@ class DeploymentReportGenerator:
             ),
         }
 
-    def add_security_status(self, security_data: dict[str, Any]):
+    def add_security_status(self) -> None:
         """Add security status"""
         self.report["security_status"] = {
             "vulnerability_scan": security_data.get("vulnerability_scan", {}),
@@ -72,7 +70,7 @@ class DeploymentReportGenerator:
             "overall_security_score": self._calculate_security_score(security_data),
         }
 
-    def _calculate_performance_score(self, performance_data: dict[str, Any]) -> int:
+    def _calculate_performance_score(self, performance_data: Dict[str, Any]) -> int:
         """Calculate overall performance score (0-100)"""
         # Simplified scoring logic
         score = 100
@@ -95,7 +93,7 @@ class DeploymentReportGenerator:
 
         return max(0, score)
 
-    def _calculate_security_score(self, security_data: dict[str, Any]) -> int:
+    def _calculate_security_score(self, security_data: Dict[str, Any]) -> int:
         """Calculate overall security score (0-100)"""
         # Simplified scoring logic
         score = 100
@@ -112,7 +110,7 @@ class DeploymentReportGenerator:
 
         return max(0, score)
 
-    def generate_recommendations(self):
+    def generate_recommendations(self) -> None:
         """Generate recommendations based on the deployment data"""
         recommendations = []
 
@@ -171,26 +169,26 @@ class DeploymentReportGenerator:
 # PAKE System Deployment Report
 
 ## Deployment Information
-- **Environment**: {deployment_info.get('environment', 'Unknown')}
-- **Image Tag**: {deployment_info.get('image_tag', 'Unknown')}
-- **Deployed By**: {deployment_info.get('deployed_by', 'Unknown')}
-- **Deployment Time**: {deployment_info.get('deployment_time', 'Unknown')}
-- **Deployment ID**: {deployment_info.get('deployment_id', 'Unknown')}
+- **Environment**: {deployment_info.get("environment", "Unknown")}
+- **Image Tag**: {deployment_info.get("image_tag", "Unknown")}
+- **Deployed By**: {deployment_info.get("deployed_by", "Unknown")}
+- **Deployment Time**: {deployment_info.get("deployment_time", "Unknown")}
+- **Deployment ID**: {deployment_info.get("deployment_id", "Unknown")}
 
 ## Quality Gates Status
-- **Overall Status**: {quality_gates.get('overall_status', 'Unknown').upper()}
-- **Lint & Format**: {quality_gates.get('lint_and_format', {}).get('status', 'Unknown')}
-- **Static Analysis**: {quality_gates.get('static_analysis', {}).get('status', 'Unknown')}
-- **Security Scan**: {quality_gates.get('security_scan', {}).get('status', 'Unknown')}
-- **Test Coverage**: {quality_gates.get('test_coverage', {}).get('status', 'Unknown')}
+- **Overall Status**: {quality_gates.get("overall_status", "Unknown").upper()}
+- **Lint & Format**: {quality_gates.get("lint_and_format", {}).get("status", "Unknown")}
+- **Static Analysis**: {quality_gates.get("static_analysis", {}).get("status", "Unknown")}
+- **Security Scan**: {quality_gates.get("security_scan", {}).get("status", "Unknown")}
+- **Test Coverage**: {quality_gates.get("test_coverage", {}).get("status", "Unknown")}
 
 ## Performance Metrics
 - **Performance Score**: {performance_score}/100
-- **Status**: {'✅ Good' if performance_score >= 80 else '⚠️ Needs Improvement' if performance_score >= 60 else '❌ Poor'}
+- **Status**: {"✅ Good" if performance_score >= 80 else "⚠️ Needs Improvement" if performance_score >= 60 else "❌ Poor"}
 
 ## Security Status
 - **Security Score**: {security_score}/100
-- **Status**: {'✅ Secure' if security_score >= 90 else '⚠️ Needs Attention' if security_score >= 70 else '❌ Vulnerable'}
+- **Status**: {"✅ Secure" if security_score >= 90 else "⚠️ Needs Attention" if security_score >= 70 else "❌ Vulnerable"}
 
 ## Recommendations
 """
@@ -203,18 +201,18 @@ class DeploymentReportGenerator:
 
         return summary
 
-    def save_report(self, filename: str):
+    def save_report(self) -> None:
         """Save the complete report to file"""
         with open(filename, "w") as f:
             json.dump(self.report, f, indent=2)
         print(f"📄 Deployment report saved to {filename}")
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print the summary to console"""
         print(self.generate_summary())
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="PAKE System Deployment Report Generator"

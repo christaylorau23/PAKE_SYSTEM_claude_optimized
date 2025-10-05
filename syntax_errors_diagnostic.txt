@@ -1,0 +1,442 @@
+Python Syntax Error Diagnostic Report
+Total files checked: 62464
+Files with errors: 118
+
+monitoring/health_monitoring.py:   File "monitoring/health_monitoring.py", line 808
+    self.logger.warning("Memory usage is high: %s%", memory.percent:.1f)
+                                                                     ^
+SyntaxError: invalid decimal literal
+
+tests/conftest_enhanced.py:   File "tests/conftest_enhanced.py", line 114
+    async with self.test_db_manager.test_database(
+    ^^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+src/cosmic_calibration_demo.py:   File "src/cosmic_calibration_demo.py", line 322
+    "   Quality: %s", critique_status["recent_average_quality"]:.3f,
+                                                                 ^
+SyntaxError: invalid decimal literal
+
+src/cosmic_calibration_demo_simple.py:   File "src/cosmic_calibration_demo_simple.py", line 288
+    "   Performance: %s", self.component_status["cognitive_engine"]["performance"]:.3f,
+                                                                                    ^
+SyntaxError: invalid decimal literal
+
+scripts/optimization_engine.py: Sorry: IndentationError: unindent does not match any outer indentation level (optimization_engine.py, line 415)
+scripts/unified_deployment.py: Sorry: IndentationError: unindent does not match any outer indentation level (unified_deployment.py, line 306)
+scripts/automated_vault_watcher.py:   File "scripts/automated_vault_watcher.py", line 320
+    confidence_score:.2f, processing_time,
+                      ^
+SyntaxError: invalid decimal literal
+
+scripts/comprehensive_system_test.py: Sorry: IndentationError: unindent does not match any outer indentation level (comprehensive_system_test.py, line 489)
+scripts/run_dal_integration_tests.py: Sorry: IndentationError: unindent does not match any outer indentation level (run_dal_integration_tests.py, line 229)
+scripts/coverage_reporter.py:   File "scripts/coverage_reporter.py", line 493
+    "Quality gate failed for %s: %s% < %s%", level.value, metrics.line_percentage:.2f, threshold
+                                                                                   ^
+SyntaxError: invalid decimal literal
+
+scripts/phase2b_integration_demo.py:   File "scripts/phase2b_integration_demo.py", line 329
+    logger.info("   Improvement: %s%", performance_improvement:+.1f)
+                                                                 ^
+SyntaxError: invalid decimal literal
+
+scripts/deploy_curation_system.py:   File "scripts/deploy_curation_system.py", line 175
+    logger.info("Cache hit rate: %s", cache_hit_rate:.2%)
+                                                    ^
+SyntaxError: invalid syntax
+
+scripts/run_comprehensive_tests.py:   File "scripts/run_comprehensive_tests.py", line 278
+    "❌ Unit tests took %ss > 60s", self.results["unit"]["time"]:.2f
+                                                                 ^
+SyntaxError: invalid decimal literal
+
+scripts/ultra_comprehensive_test_suite.py: Sorry: IndentationError: unindent does not match any outer indentation level (ultra_comprehensive_test_suite.py, line 379)
+scripts/enhanced_service_manager.py:   File "scripts/enhanced_service_manager.py", line 335
+    )
+    ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '{' on line 334
+
+scripts/ultra_monitoring_system.py: Sorry: IndentationError: unindent does not match any outer indentation level (ultra_monitoring_system.py, line 324)
+scripts/multitenant_performance_test.py: Sorry: IndentationError: unindent does not match any outer indentation level (multitenant_performance_test.py, line 261)
+scripts/service_enhanced_vault_watcher.py: Sorry: IndentationError: unindent does not match any outer indentation level (service_enhanced_vault_watcher.py, line 391)
+.venv/lib/python3.12/site-packages/tornado/gen.py:   File ".venv/lib/python3.12/site-packages/tornado/gen.py", line 763
+    gen = result_future = first_yielded: Optional[ignore] = None
+                                       ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/aiohttp/client_exceptions.py:   File ".venv/lib/python3.12/site-packages/aiohttp/client_exceptions.py", line 21
+    ssl = SSLContext: Optional[ignore] = None[assignment]
+                    ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/aiohttp/client_reqrep.py:   File ".venv/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 287
+    status: int: Optional[ignore] = None[assignment] # Status-Code
+               ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/pytest_benchmark/utils.py:   File ".venv/lib/python3.12/site-packages/pytest_benchmark/utils.py", line 267
+    def parse_compare_fail(self) -> None:'
+                                         ^
+SyntaxError: unterminated string literal (detected at line 267)
+
+.venv/lib/python3.12/site-packages/huggingface_hub/_webhooks_server.py:   File ".venv/lib/python3.12/site-packages/huggingface_hub/_webhooks_server.py", line 35
+    FastAPI = Request = JSONResponse: Optional[ignore] = None [misc, assignment]
+                                    ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/pkg_resources/__init__.py:   File ".venv/lib/python3.12/site-packages/pkg_resources/__init__.py", line 1933
+    module_path: str | None: Optional[ignore] = None[assignment]
+                           ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/pyparsing/core.py:   File ".venv/lib/python3.12/site-packages/pyparsing/core.py", line 253
+    _trim_arity_call_line: traceback.StackSummary: Optional[ignore] = None[assignment]
+                                                 ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/torch/library.py:   File ".venv/lib/python3.12/site-packages/torch/library.py", line 1353
+    nonlocal op, lib
+    ^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'lib' found
+
+.venv/lib/python3.12/site-packages/pygments/unistring.py:   File ".venv/lib/python3.12/site-packages/pygments/unistring.py", line 119
+    footer = content[content.find("def combine(self) -> None:]
+                                  ^
+SyntaxError: unterminated string literal (detected at line 119)
+
+.venv/lib/python3.12/site-packages/elastic_transport/_async_transport.py:   File ".venv/lib/python3.12/site-packages/elastic_transport/_async_transport.py", line 171
+    self._loop: asyncio.AbstractEventLoop: Optional[ignore] = None[assignment]
+                                         ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/_pytest/logging.py:   File ".venv/lib/python3.12/site-packages/_pytest/logging.py", line 861
+    stream: TerminalReporter: Optional[ignore] = None
+                            ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/attr/_next_gen.py:   File ".venv/lib/python3.12/site-packages/attr/_next_gen.py", line 354
+    nonlocal frozen, on_setattr
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'frozen' found
+
+.venv/lib/python3.12/site-packages/aiohappyeyeballs/impl.py:   File ".venv/lib/python3.12/site-packages/aiohappyeyeballs/impl.py", line 232
+    exceptions = my_exceptions: Optional[ignore] = None[assignment]
+                              ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/twisted/protocols/ftp.py:   File ".venv/lib/python3.12/site-packages/twisted/protocols/ftp.py", line 22
+    pwd = grp: Optional[ignore] = None[assignment]
+             ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/twisted/internet/base.py:   File ".venv/lib/python3.12/site-packages/twisted/internet/base.py", line 1334
+    addressFamily: socket.AddressFamily: Optional[ignore] = None[assignment]
+                                       ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/twisted/conch/ssh/channel.py:   File ".venv/lib/python3.12/site-packages/twisted/conch/ssh/channel.py", line 55
+    name: bytes: Optional[ignore] = None[assignment]  # only needed for client channels
+               ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/twisted/protocols/test/test_tls.py:   File ".venv/lib/python3.12/site-packages/twisted/protocols/test/test_tls.py", line 46
+    TLS_METHOD = TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD: Optional[ignore] = None[assignment]
+                                                               ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/alembic/script/revision.py:   File ".venv/lib/python3.12/site-packages/alembic/script/revision.py", line 1554
+    revision: str: Optional[ignore] = None[assignment]
+                 ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/alembic/autogenerate/api.py:   File ".venv/lib/python3.12/site-packages/alembic/autogenerate/api.py", line 329
+    migration_context: MigrationContext: Optional[ignore] = None[assignment]
+                                       ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/base.py:   File ".venv/lib/python3.12/site-packages/sqlalchemy/sql/base.py", line 1723
+    __hash__: Optional[int] | None: Optional[ignore] = None
+                                  ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/sqlalchemy/testing/config.py:   File ".venv/lib/python3.12/site-packages/sqlalchemy/testing/config.py", line 43
+    options: Namespace: Optional[ignore] = None
+                      ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/sqlalchemy/testing/plugin/plugin_base.py:   File ".venv/lib/python3.12/site-packages/sqlalchemy/testing/plugin/plugin_base.py", line 56
+    options: Namespace: Optional[ignore] = None
+                      ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/sklearn/externals/array_api_extra/testing.py:   File ".venv/lib/python3.12/site-packages/sklearn/externals/array_api_extra/testing.py", line 226
+    tags: Dict[str, Any] | None: Optional[ignore] = None[explicit-any]
+                               ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/strawberry/django/views.py:   File ".venv/lib/python3.12/site-packages/strawberry/django/views.py", line 195
+    schema: BaseSchema: Optional[ignore] = None
+                      ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/faker/providers/__init__.py:   File ".venv/lib/python3.12/site-packages/faker/providers/__init__.py", line 555
+    self, elements: ElementsType[T] = ("a", "b", "c"), length: Optional[int] | None: Optional[ignore] = None[assignment]
+                                                                                   ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/torch/profiler/profiler.py:   File ".venv/lib/python3.12/site-packages/torch/profiler/profiler.py", line 513
+    nonlocal worker_name
+    ^^^^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'worker_name' found
+
+.venv/lib/python3.12/site-packages/torch/_dynamo/utils.py:   File ".venv/lib/python3.12/site-packages/torch/_dynamo/utils.py", line 600
+    ) -> Generator[Any, None, None]:
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/torch/mps/__init__.py:   File ".venv/lib/python3.12/site-packages/torch/mps/__init__.py", line 16
+    _default_mps_generator: torch._C.Generator: Optional[ignore] = None[assignment]
+                                              ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/torch/_inductor/mkldnn_lowerings.py:   File ".venv/lib/python3.12/site-packages/torch/_inductor/mkldnn_lowerings.py", line 642
+    nonlocal bias
+    ^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'bias' found
+
+.venv/lib/python3.12/site-packages/torch/_inductor/graph.py:   File ".venv/lib/python3.12/site-packages/torch/_inductor/graph.py", line 389
+    self.device_ops: DeviceOpOverrides: Optional[ignore] = None[assignment]
+                                      ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/torch/nn/modules/module.py:   File ".venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790
+    nonlocal result, args, kwargs
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'args' found
+
+.venv/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:   File ".venv/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py", line 2123
+    tensor_source: Source: Optional[ignore] = None[assignment]
+                         ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/torch/utils/data/datapipes/gen_pyi.py:   File ".venv/lib/python3.12/site-packages/torch/utils/data/datapipes/gen_pyi.py", line 126
+    if method_name and ("def __init__(self) -> None:
+                        ^
+SyntaxError: unterminated string literal (detected at line 126)
+
+.venv/lib/python3.12/site-packages/torch/_dynamo/backends/torchxla.py:   File ".venv/lib/python3.12/site-packages/torch/_dynamo/backends/torchxla.py", line 34
+    nonlocal model
+    ^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'model' found
+
+.venv/lib/python3.12/site-packages/torch/testing/_internal/logging_utils.py:   File ".venv/lib/python3.12/site-packages/torch/testing/_internal/logging_utils.py", line 163
+    nonlocal record_list
+    ^^^^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'record_list' found
+
+.venv/lib/python3.12/site-packages/elastic_transport/_node/_http_aiohttp.py:   File ".venv/lib/python3.12/site-packages/elastic_transport/_node/_http_aiohttp.py", line 129
+    self._loop: asyncio.AbstractEventLoop: Optional[ignore] = None[assignment]
+                                         ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/_pytest/_code/code.py:   File ".venv/lib/python3.12/site-packages/_pytest/_code/code.py", line 402
+    ) -> "Traceback":
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/pip/_vendor/pkg_resources/__init__.py:   File ".venv/lib/python3.12/site-packages/pip/_vendor/pkg_resources/__init__.py", line 1895
+    module_path: str | None: Optional[ignore] = None[assignment]
+                           ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/pip/_vendor/pygments/unistring.py:   File ".venv/lib/python3.12/site-packages/pip/_vendor/pygments/unistring.py", line 119
+    footer = content[content.find("def combine(self) -> None:]
+                                  ^
+SyntaxError: unterminated string literal (detected at line 119)
+
+.venv/lib/python3.12/site-packages/scipy/stats/_resampling.py:   File ".venv/lib/python3.12/site-packages/scipy/stats/_resampling.py", line 2085
+    batch: int: Optional[ignore] = None[assignment]
+              ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/scipy/_lib/array_api_extra/testing.py:   File ".venv/lib/python3.12/site-packages/scipy/_lib/array_api_extra/testing.py", line 264
+    tags: Dict[str, Any] | None: Optional[ignore] = None[explicit-any]
+                               ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/sphinx/environment/__init__.py:   File ".venv/lib/python3.12/site-packages/sphinx/environment/__init__.py", line 154
+    self.config: Config: Optional[ignore] = None[assignment]
+                       ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/django/test/testcases.py:   File ".venv/lib/python3.12/site-packages/django/test/testcases.py", line 1527
+    nonlocal condition
+    ^^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'condition' found
+
+.venv/lib/python3.12/site-packages/django/template/library.py:   File ".venv/lib/python3.12/site-packages/django/template/library.py", line 166
+    nonlocal end_name
+    ^^^^^^^^^^^^^^^^^
+SyntaxError: no binding for nonlocal 'end_name' found
+
+.venv/lib/python3.12/site-packages/cleo/commands/command.py:   File ".venv/lib/python3.12/site-packages/cleo/commands/command.py", line 43
+    self._io: IO: Optional[ignore] = None[assignment]
+                ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/cleo/io/inputs/input.py:   File ".venv/lib/python3.12/site-packages/cleo/io/inputs/input.py", line 21
+    self._stream: TextIO: Optional[ignore] = None[assignment]
+                        ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/uvicorn/protocols/websockets/websockets_impl.py:   File ".venv/lib/python3.12/site-packages/uvicorn/protocols/websockets/websockets_impl.py", line 76
+    self.transport: asyncio.Transport: Optional[ignore] = None[assignment]
+                                     ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/uvicorn/protocols/websockets/wsproto_impl.py:   File ".venv/lib/python3.12/site-packages/uvicorn/protocols/websockets/wsproto_impl.py", line 62
+    self.transport: asyncio.Transport: Optional[ignore] = None[assignment]
+                                     ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py:   File ".venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 84
+    self.transport: asyncio.Transport: Optional[ignore] = None[assignment]
+                                     ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py:   File ".venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 76
+    self.transport: asyncio.Transport: Optional[ignore] = None[assignment]
+                                     ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/azure/core/pipeline/transport/_base.py:   File ".venv/lib/python3.12/site-packages/azure/core/pipeline/transport/_base.py", line 436
+    self.status_code: int: Optional[ignore] = None
+                         ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/debugpy/_vendored/pydevd/pydevd_attach_to_process/winappdbg/interactive.py:   File ".venv/lib/python3.12/site-packages/debugpy/_vendored/pydevd/pydevd_attach_to_process/winappdbg/interactive.py", line 950
+    def ask_user(self) -> None: "):
+                                ^
+SyntaxError: unterminated string literal (detected at line 950)
+
+.venv/lib/python3.12/site-packages/google/api_core/operations_v1/operations_rest_client_async.py:   File ".venv/lib/python3.12/site-packages/google/api_core/operations_v1/operations_rest_client_async.py", line 110
+    ) -> operations_pb2.Operation:
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/rest.py:   File ".venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/rest.py", line 159
+    ) -> operations_pb2.ListOperationsResponse:
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/base.py:   File ".venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/base.py", line 57
+    ) -> None:
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/rest_asyncio.py:   File ".venv/lib/python3.12/site-packages/google/api_core/operations_v1/transports/rest_asyncio.py", line 74
+    ) -> None:
+    ^
+SyntaxError: unmatched ')'
+
+.venv/lib/python3.12/site-packages/gevent/resolver/_addresses.py:   File ".venv/lib/python3.12/site-packages/gevent/resolver/_addresses.py", line 67
+    def _ipv6_inet_aton(self) -> None:(\d+\.\d+\.\d+\.\d+)$'),
+                                        ^
+SyntaxError: unexpected character after line continuation character
+
+.venv/lib/python3.12/site-packages/chromadb/api/collection_configuration.py:   File ".venv/lib/python3.12/site-packages/chromadb/api/collection_configuration.py", line 436
+    config: CreateHNSWConfiguration, ef: Optional[EmbeddingFunction] | None: Optional[ignore] = None
+                                                                           ^
+SyntaxError: invalid syntax
+
+.venv/lib/python3.12/site-packages/werkzeug/routing/rules.py:   File ".venv/lib/python3.12/site-packages/werkzeug/routing/rules.py", line 481
+    self.map: Map: Optional[ignore] = None
+                 ^
+SyntaxError: invalid syntax
+
+tests/integration/test_dal_integration.py: Sorry: IndentationError: unexpected indent (test_dal_integration.py, line 109)
+src/utils/error_handling.py:   File "src/utils/error_handling.py", line 399
+    "Retry attempt %.2f/%s ", attempt + 1, retry_policy.max_attempts
+                                           ^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/utils/test_polling.py:   File "src/utils/test_polling.py", line 107
+    "Polling succeeded for %s after %s attempts in %ss", operation_name, attempts, total_time:.2f
+                                                                                               ^
+SyntaxError: invalid decimal literal
+
+src/utils/synchronization_primitives.py: Sorry: IndentationError: expected an indented block after 'except' statement on line 71 (synchronization_primitives.py, line 72)
+src/utils/async_task_queue.py: Sorry: IndentationError: unindent does not match any outer indentation level (async_task_queue.py, line 388)
+src/security/tenant_isolation_enforcer.py:   File "src/security/tenant_isolation_enforcer.py", line 621
+    "Security violation detected: %s ", violation.violation_type
+                                        ^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/services/semantic/lightweight_semantic_service.py:   File "src/services/semantic/lightweight_semantic_service.py", line 211
+    "Rebuilt semantic model: %s docs, ", len(self.documents)
+                                         ^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/services/performance/optimization_service.py:   File "src/services/performance/optimization_service.py", line 747
+    "Deduplication complete: %s unique items (%s reduction)", len(unique_items), dedup_ratio:.2%,
+                                                                                            ^
+SyntaxError: invalid syntax
+
+src/services/workflows/n8n_workflow_manager.py: Sorry: IndentationError: unindent does not match any outer indentation level (n8n_workflow_manager.py, line 382)
+src/services/knowledge/intelligence_core_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (intelligence_core_service.py, line 583)
+src/services/ai/semantic_search_engine.py: Sorry: IndentationError: unindent does not match any outer indentation level (semantic_search_engine.py, line 637)
+src/services/ai/realtime_processing_pipeline.py: Sorry: IndentationError: unindent does not match any outer indentation level (realtime_processing_pipeline.py, line 402)
+src/services/analytics/intelligence_insight_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (intelligence_insight_service.py, line 279)
+src/services/database/vector_database_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (vector_database_service.py, line 465)
+src/services/repositories/optimized_queries.py:   File "src/services/repositories/optimized_queries.py", line 106
+    "Loaded service %s with ", service.service_name
+                               ^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/services/monitoring/enterprise_monitoring_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (enterprise_monitoring_service.py, line 436)
+src/services/agents/supervisor_agent.py: Sorry: IndentationError: unindent does not match any outer indentation level (supervisor_agent.py, line 496)
+src/services/testing/migration_validator.py:   File "src/services/testing/migration_validator.py", line 229
+    "Migration validation completed in %ss", validation_duration.total_seconds():.2f
+                                                                                  ^
+SyntaxError: invalid decimal literal
+
+src/services/observability/telemetry.py: Sorry: IndentationError: unindent does not match any outer indentation level (telemetry.py, line 620)
+src/services/ingestion/orchestrator.py:   File "src/services/ingestion/orchestrator.py", line 560
+    "Completed ingestion plan %s: ", plan.plan_id
+
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/services/ingestion/cached_orchestrator.py: Sorry: IndentationError: unindent does not match any outer indentation level (cached_orchestrator.py, line 428)
+src/services/ingestion/production_orchestrator.py: Sorry: IndentationError: unindent does not match any outer indentation level (production_orchestrator.py, line 444)
+src/services/logging/centralized_structlog_config.py: Sorry: IndentationError: expected an indented block after 'except' statement on line 41 (centralized_structlog_config.py, line 43)
+src/services/security/enterprise_security.py: Sorry: IndentationError: unindent does not match any outer indentation level (enterprise_security.py, line 419)
+src/services/wealth/automated_signal_generator.py:   File "src/services/wealth/automated_signal_generator.py", line 683
+    signal.signal_type.value
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+src/services/wealth/vector_intelligence_database.py: Sorry: IndentationError: unindent does not match any outer indentation level (vector_intelligence_database.py, line 356)
+src/services/wealth/opportunity_scanner.py: Sorry: IndentationError: unindent does not match any outer indentation level (opportunity_scanner.py, line 476)
+src/services/wealth/data_ingestion_pipeline.py: Sorry: IndentationError: unindent does not match any outer indentation level (data_ingestion_pipeline.py, line 544)
+src/services/wealth/google_trends_analyzer.py: Sorry: IndentationError: unindent does not match any outer indentation level (google_trends_analyzer.py, line 1004)
+src/services/nlp/intelligence_nlp_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (intelligence_nlp_service.py, line 256)
+src/services/graph/knowledge_graph_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (knowledge_graph_service.py, line 125)
+src/services/ml/ml_pipeline_demo.py:   File "src/services/ml/ml_pipeline_demo.py", line 491
+    "  Average latency: %sms", serving_stats["average_latency_ms"]:.2f,
+                                                                    ^
+SyntaxError: invalid decimal literal
+
+src/services/trends/apis/rate_limit_controller.py:   File "src/services/trends/apis/rate_limit_controller.py", line 186
+    cost_per_request:.2f, self.daily_budget,
+                      ^
+SyntaxError: invalid decimal literal
+
+src/services/curation/integration/curation_orchestrator.py: Sorry: IndentationError: unindent does not match any outer indentation level (curation_orchestrator.py, line 132)
+src/services/curation/services/content_analysis_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (content_analysis_service.py, line 260)
+src/services/curation/services/user_preference_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (user_preference_service.py, line 200)
+src/services/curation/services/feedback_processing_service.py: Sorry: IndentationError: unindent does not match any outer indentation level (feedback_processing_service.py, line 196)
+src/services/curation/ml/model_trainer.py: Sorry: IndentationError: unindent does not match any outer indentation level (model_trainer.py, line 270)
+src/services/curation/ml/prediction_engine.py: Sorry: IndentationError: unindent does not match any outer indentation level (prediction_engine.py, line 224)
+src/services/curation/ml/feature_extractor.py: Sorry: IndentationError: expected an indented block after 'except' statement on line 534 (feature_extractor.py, line 535)
+auth-middleware/src/audit_integration.py: Sorry: IndentationError: expected an indented block after 'except' statement on line 504 (audit_integration.py, line 505)

@@ -1,14 +1,14 @@
-"""Neo4j Database Service
+"""Neo4j Database Service.
 
 Provides core Neo4j database connectivity and operations for the PAKE System.
 Handles entity creation, relationship management, and graph querying.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from neo4j import GraphDatabase, Transaction
+from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, TransientError
 
 logger = logging.getLogger(__name__)
@@ -21,12 +21,7 @@ class Neo4jService:
     with async support and comprehensive error handling.
     """
 
-    def __init__(
-        self,
-        uri: str = "bolt://localhost:7687",
-        user: str = "neo4j",
-        REDACTED_SECRET: str = "pake_system_pass",
-    ):
+    def __init__(self) -> None:
         """Initialize Neo4j service with connection parameters.
 
         Args:
@@ -57,17 +52,17 @@ class Neo4jService:
             with self.driver.session() as session:
                 session.run("RETURN 1")
 
-            logger.info(f"Connected to Neo4j at {self.uri}")
+            logger.info("Connected to Neo4j at %s", self.uri)
             return True
 
         except ServiceUnavailable as e:
-            logger.error(f"Neo4j service unavailable: {e}")
+            logger.error("Neo4j service unavailable: %s", e)
             return False
         except Exception as e:
-            logger.error(f"Failed to connect to Neo4j: {e}")
+            logger.error("Failed to connect to Neo4j: %s", e)
             return False
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Close Neo4j driver connection."""
         if self.driver:
             self.driver.close()
@@ -88,7 +83,8 @@ class Neo4jService:
             List of result records as dictionaries
         """
         if not self.driver:
-            raise RuntimeError("Neo4j driver not connected")
+            msg = "Neo4j driver not connected"
+            raise RuntimeError(msg)
 
         try:
             with self.driver.session() as session:
@@ -96,10 +92,10 @@ class Neo4jService:
                 return [record.data() for record in result]
 
         except TransientError as e:
-            logger.warning(f"Transient Neo4j error: {e}")
+            logger.warning("Transient Neo4j error: %s", e)
             raise
         except Exception as e:
-            logger.error(f"Neo4j query error: {e}")
+            logger.error("Neo4j query error: %s", e)
             raise
 
     def execute_write_transaction(
@@ -117,9 +113,10 @@ class Neo4jService:
             List of result records
         """
         if not self.driver:
-            raise RuntimeError("Neo4j driver not connected")
+            msg = "Neo4j driver not connected"
+            raise RuntimeError(msg)
 
-        def _transaction_function(tx: Transaction):
+        def _transaction_function(self) -> None:
             result = tx.run(query, parameters or {})
             return [record.data() for record in result]
 
@@ -128,12 +125,12 @@ class Neo4jService:
                 return session.execute_write(_transaction_function)
 
         except Exception as e:
-            logger.error(f"Neo4j write transaction error: {e}")
+            logger.error("Neo4j write transaction error: %s", e)
             raise
 
     # Entity Management
 
-    def create_entity(self, entity_type: str, properties: dict[str, Any]) -> str:
+    def create_entity(self, entity_type: str, properties: Dict[str, Any]) -> str:
         """Create a new entity in the graph.
 
         Args:
@@ -145,7 +142,7 @@ class Neo4jService:
         """
         # Add metadata
         properties = properties.copy()
-        properties["created_at"] = datetime.utcnow().isoformat()
+        properties["created_at"] = datetime.now(UTC).isoformat()
         properties["entity_type"] = entity_type
 
         query = f"""
@@ -156,12 +153,13 @@ class Neo4jService:
         result = self.execute_write_transaction(query, {"props": properties})
         if result:
             entity_id = result[0]["entity_id"]
-            logger.info(f"Created {entity_type} entity with ID: {entity_id}")
+            logger.info("Created %s entity with ID: %s", entity_type, entity_id)
             return str(entity_id)
 
-        raise RuntimeError("Failed to create entity")
+        msg = "Failed to create entity"
+        raise RuntimeError(msg)
 
-    def update_entity(self, entity_id: str, properties: dict[str, Any]) -> bool:
+    def update_entity(self, entity_id: str, properties: Dict[str, Any]) -> bool:
         """Update an existing entity.
 
         Args:
@@ -173,7 +171,7 @@ class Neo4jService:
         """
         # Add update timestamp
         properties = properties.copy()
-        properties["updated_at"] = datetime.utcnow().isoformat()
+        properties["updated_at"] = datetime.now(UTC).isoformat()
 
         query = """
         MATCH (e) WHERE id(e) = $entity_id
@@ -188,7 +186,7 @@ class Neo4jService:
 
         success = len(result) > 0
         if success:
-            logger.info(f"Updated entity {entity_id}")
+            logger.info("Updated entity %s", entity_id)
 
         return success
 
@@ -245,7 +243,7 @@ class Neo4jService:
     def search_entities(
         self,
         search_term: str,
-        entity_types: list[str] | None = None,
+        entity_types: List[str] | None = None,
         limit: int = 50,
     ) -> list[dict]:
         """Search entities by text content.
@@ -258,10 +256,7 @@ class Neo4jService:
         Returns:
             List of matching entities
         """
-        if entity_types:
-            type_filter = ":" + "|".join(entity_types)
-        else:
-            type_filter = ""
+        type_filter = ":" + "|".join(entity_types) if entity_types else ""
 
         query = f"""
         MATCH (e{type_filter})
@@ -305,7 +300,7 @@ class Neo4jService:
             str: Relationship ID
         """
         properties = properties or {}
-        properties["created_at"] = datetime.utcnow().isoformat()
+        properties["created_at"] = datetime.now(UTC).isoformat()
         properties["relationship_type"] = relationship_type
 
         query = f"""
@@ -327,13 +322,15 @@ class Neo4jService:
         if result:
             rel_id = result[0]["rel_id"]
             logger.info(
-                f"Created {relationship_type} relationship: {from_entity_id} -> {
-                    to_entity_id
-                }",
+                "Created %s relationship: %s -> %s",
+                relationship_type,
+                from_entity_id,
+                to_entity_id,
             )
             return str(rel_id)
 
-        raise RuntimeError("Failed to create relationship")
+        msg = "Failed to create relationship"
+        raise RuntimeError(msg)
 
     def get_entity_relationships(
         self,
@@ -383,7 +380,7 @@ class Neo4jService:
 
     # Graph Analysis
 
-    def get_graph_stats(self) -> dict[str, Any]:
+    def get_graph_stats(self) -> Dict[str, Any]:
         """Get basic graph statistics.
 
         Returns:
@@ -405,7 +402,7 @@ class Neo4jService:
                 else:
                     stats[stat_name] = result[0]["count"]
             except Exception as e:
-                logger.warning(f"Failed to get {stat_name}: {e}")
+                logger.warning("Failed to get %s: %s", stat_name, e)
                 stats[stat_name] = 0
 
         return stats
@@ -415,7 +412,7 @@ class Neo4jService:
         center_entity_id: str,
         depth: int = 2,
         max_nodes: int = 50,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get a subgraph centered on a specific entity.
 
         Args:
@@ -485,7 +482,7 @@ class Neo4jService:
 
     # Health and Maintenance
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Perform health check on Neo4j connection.
 
         Returns:
@@ -499,7 +496,7 @@ class Neo4jService:
                 "connection": "connected",
                 "uri": self.uri,
                 "stats": stats,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -508,7 +505,7 @@ class Neo4jService:
                 "connection": "failed",
                 "error": str(e),
                 "uri": self.uri,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
 

@@ -12,34 +12,35 @@ T = TypeVar("T")
 
 
 class DIContainer:
-    """Simple dependency injection container"""
+    """Simple dependency injection container."""
 
-    def __init__(self):
-        self._services: dict[str, Any] = {}
-        self._singletons: dict[str, Any] = {}
+    def __init__(self) -> None:
+        self._services: Dict[str, Any] = {}
+        self._singletons: Dict[str, Any] = {}
 
     def register_singleton(self, interface: type[T], implementation: type[T]) -> None:
-        """Register a singleton implementation for an interface"""
+        """Register a singleton implementation for an interface."""
         interface_name = interface.__name__
         self._services[interface_name] = implementation
         logger.info(
-            f"Registered singleton: {interface_name} -> {implementation.__name__}"
+            "Registered singleton: %s -> %s", interface_name, implementation.__name__
         )
 
     def register_transient(self, interface: type[T], implementation: type[T]) -> None:
-        """Register a transient implementation for an interface"""
+        """Register a transient implementation for an interface."""
         interface_name = interface.__name__
         self._services[interface_name] = implementation
         logger.info(
-            f"Registered transient: {interface_name} -> {implementation.__name__}"
+            "Registered transient: %s -> %s", interface_name, implementation.__name__
         )
 
     def get(self, interface: type[T]) -> T:
-        """Get an instance of the interface"""
+        """Get an instance of the interface."""
         interface_name = interface.__name__
 
         if interface_name not in self._services:
-            raise ValueError(f"No implementation registered for {interface_name}")
+            msg = f"No implementation registered for {interface_name}"
+            raise ValueError(msg)
 
         implementation = self._services[interface_name]
 
@@ -57,18 +58,17 @@ class DIContainer:
         return instance
 
     def get_with_dependencies(self, interface: type[T], **kwargs) -> T:
-        """Get an instance with specific dependencies injected"""
+        """Get an instance with specific dependencies injected."""
         interface_name = interface.__name__
 
         if interface_name not in self._services:
-            raise ValueError(f"No implementation registered for {interface_name}")
+            msg = f"No implementation registered for {interface_name}"
+            raise ValueError(msg)
 
         implementation = self._services[interface_name]
 
         # Create instance with injected dependencies
-        instance = implementation(**kwargs)
-
-        return instance
+        return implementation(**kwargs)
 
 
 # Global container instance
@@ -76,7 +76,7 @@ container = DIContainer()
 
 
 def register_ingestion_services() -> None:
-    """Register all ingestion-related services in the container"""
+    """Register all ingestion-related services in the container."""
     from .interfaces import (
         IngestionPlanBuilderInterface,
         SourceExecutorInterface,
@@ -92,7 +92,7 @@ def register_ingestion_services() -> None:
 
 
 def get_orchestrator_with_injection() -> "IngestionOrchestratorRefactored":
-    """Get orchestrator instance with proper dependency injection"""
+    """Get orchestrator instance with proper dependency injection."""
     from .IngestionOrchestratorRefactored import IngestionOrchestratorRefactored
     from .interfaces import (
         IngestionPlanBuilderInterface,
@@ -114,4 +114,4 @@ def get_orchestrator_with_injection() -> "IngestionOrchestratorRefactored":
 try:
     register_ingestion_services()
 except ImportError as e:
-    logger.warning(f"Could not register ingestion services: {e}")
+    logger.warning("Could not register ingestion services: %s", e)

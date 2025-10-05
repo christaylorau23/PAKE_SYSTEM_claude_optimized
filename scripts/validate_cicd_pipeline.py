@@ -14,7 +14,7 @@ from pathlib import Path
 class CICDPipelineValidator:
     """Validates CI/CD pipeline configuration"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.results = {
             "validation_results": [],
@@ -242,7 +242,7 @@ class CICDPipelineValidator:
 
         return all_passed
 
-    def save_report(self, filename: str = "cicd_validation_report.json"):
+    def save_report(self) -> None:
         """Save validation results to file"""
         report_path = self.project_root / filename
         with open(report_path, "w") as f:
@@ -250,7 +250,7 @@ class CICDPipelineValidator:
         print(f"📄 Validation report saved to {report_path}")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     validator = CICDPipelineValidator()
     success = validator.run_all_validations()

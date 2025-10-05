@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Feature Engineering Service
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Provides comprehensive feature engineering capabilities including feature extraction,
 transformation, selection, and automated feature pipeline management.
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class FeatureType(Enum):
-    """Types of features"""
+    """Types of features."""
 
     NUMERICAL = "numerical"
     CATEGORICAL = "categorical"
@@ -36,7 +36,7 @@ class FeatureType(Enum):
 
 
 class TransformationType(Enum):
-    """Types of feature transformations"""
+    """Types of feature transformations."""
 
     SCALING = "scaling"
     ENCODING = "encoding"
@@ -49,7 +49,7 @@ class TransformationType(Enum):
 
 
 class SelectionMethod(Enum):
-    """Feature selection methods"""
+    """Feature selection methods."""
 
     CORRELATION = "correlation"
     MUTUAL_INFORMATION = "mutual_information"
@@ -62,18 +62,18 @@ class SelectionMethod(Enum):
 
 @dataclass(frozen=True)
 class FeatureDefinition:
-    """Immutable feature definition"""
+    """Immutable feature definition."""
 
     feature_name: str
     feature_type: FeatureType
     description: str = ""
     source_column: str | None = None
-    transformation_pipeline: list[str] = field(default_factory=list)
-    validation_rules: dict[str, Any] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    transformation_pipeline: List[str] = field(default_factory=list)
+    validation_rules: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "feature_name": self.feature_name,
             "feature_type": self.feature_type.value,
@@ -87,7 +87,7 @@ class FeatureDefinition:
 
 @dataclass(frozen=True)
 class FeatureSet:
-    """Immutable feature set definition"""
+    """Immutable feature set definition."""
 
     feature_set_id: str
     feature_set_name: str
@@ -95,10 +95,10 @@ class FeatureSet:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     version: str = "1.0"
     description: str = ""
-    tags: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "feature_set_id": self.feature_set_id,
             "feature_set_name": self.feature_set_name,
@@ -112,18 +112,18 @@ class FeatureSet:
 
 @dataclass(frozen=True)
 class FeaturePipeline:
-    """Immutable feature pipeline definition"""
+    """Immutable feature pipeline definition."""
 
     pipeline_id: str
     pipeline_name: str
     feature_set_id: str
-    transformations: list[dict[str, Any]]
-    output_schema: dict[str, Any]
+    transformations: list[Dict[str, Any]]
+    output_schema: Dict[str, Any]
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     version: str = "1.0"
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "pipeline_id": self.pipeline_id,
             "pipeline_name": self.pipeline_name,
@@ -137,7 +137,7 @@ class FeaturePipeline:
 
 @dataclass(frozen=True)
 class FeatureProcessingResult:
-    """Immutable feature processing result"""
+    """Immutable feature processing result."""
 
     pipeline_id: str
     input_data_shape: tuple[int, int]
@@ -145,12 +145,12 @@ class FeatureProcessingResult:
     processing_time_ms: float
     features_created: int
     features_dropped: int
-    validation_errors: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    validation_errors: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     processed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "pipeline_id": self.pipeline_id,
             "input_data_shape": self.input_data_shape,
@@ -166,7 +166,7 @@ class FeatureProcessingResult:
 
 @dataclass
 class FeatureEngineeringConfig:
-    """Configuration for feature engineering service"""
+    """Configuration for feature engineering service."""
 
     # Storage settings
     feature_storage_path: str = "/tmp/pake_features"
@@ -195,35 +195,35 @@ class FeatureEngineeringConfig:
 
 
 class FeatureTransformer(ABC):
-    """Abstract base class for feature transformers"""
+    """Abstract base class for feature transformers."""
 
     @abstractmethod
     def fit(self, data: pd.DataFrame) -> "FeatureTransformer":
-        """Fit transformer to data"""
+        """Fit transformer to data."""
 
     @abstractmethod
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Transform data"""
+        """Transform data."""
 
     @abstractmethod
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Fit and transform data"""
+        """Fit and transform data."""
 
     @abstractmethod
-    def get_feature_names(self) -> list[str]:
-        """Get output feature names"""
+    def get_feature_names(self) -> List[str]:
+        """Get output feature names."""
 
 
 class NumericalScaler(FeatureTransformer):
-    """Numerical feature scaler"""
+    """Numerical feature scaler."""
 
-    def __init__(self, method: str = "standard"):
+    def __init__(self) -> None:
         self.method = method
         self.scaler = None
         self.feature_names = []
 
     def fit(self, data: pd.DataFrame) -> "NumericalScaler":
-        """Fit scaler to numerical data"""
+        """Fit scaler to numerical data."""
         from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
         if self.method == "standard":
@@ -233,7 +233,8 @@ class NumericalScaler(FeatureTransformer):
         elif self.method == "robust":
             self.scaler = RobustScaler()
         else:
-            raise ValueError(f"Unsupported scaling method: {self.method}")
+            msg = f"Unsupported scaling method: {self.method}"
+            raise ValueError(msg)
 
         # Select numerical columns
         numerical_cols = data.select_dtypes(include=[np.number]).columns
@@ -245,9 +246,10 @@ class NumericalScaler(FeatureTransformer):
         return self
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Transform numerical data"""
+        """Transform numerical data."""
         if self.scaler is None:
-            raise ValueError("Scaler not fitted")
+            msg = "Scaler not fitted"
+            raise ValueError(msg)
 
         numerical_cols = data.select_dtypes(include=[np.number]).columns
         if len(numerical_cols) == 0:
@@ -259,18 +261,18 @@ class NumericalScaler(FeatureTransformer):
         return transformed_data
 
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Fit and transform data"""
+        """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> list[str]:
-        """Get feature names"""
+    def get_feature_names(self) -> List[str]:
+        """Get feature names."""
         return self.feature_names
 
 
 class CategoricalEncoder(FeatureTransformer):
-    """Categorical feature encoder"""
+    """Categorical feature encoder."""
 
-    def __init__(self, method: str = "onehot", handle_unknown: str = "ignore"):
+    def __init__(self) -> None:
         self.method = method
         self.handle_unknown = handle_unknown
         self.encoder = None
@@ -278,7 +280,7 @@ class CategoricalEncoder(FeatureTransformer):
         self.categorical_columns = []
 
     def fit(self, data: pd.DataFrame) -> "CategoricalEncoder":
-        """Fit encoder to categorical data"""
+        """Fit encoder to categorical data."""
         from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
 
         # Select categorical columns
@@ -319,7 +321,7 @@ class CategoricalEncoder(FeatureTransformer):
         return self
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Transform categorical data"""
+        """Transform categorical data."""
         if self.encoder is None or len(self.categorical_columns) == 0:
             return data.copy()
 
@@ -351,18 +353,18 @@ class CategoricalEncoder(FeatureTransformer):
         return transformed_data
 
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Fit and transform data"""
+        """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> list[str]:
-        """Get feature names"""
+    def get_feature_names(self) -> List[str]:
+        """Get feature names."""
         return self.feature_names
 
 
 class TextFeatureExtractor(FeatureTransformer):
-    """Text feature extractor"""
+    """Text feature extractor."""
 
-    def __init__(self, method: str = "tfidf", max_features: int = 1000):
+    def __init__(self) -> None:
         self.method = method
         self.max_features = max_features
         self.extractor = None
@@ -370,7 +372,7 @@ class TextFeatureExtractor(FeatureTransformer):
         self.text_columns = []
 
     def fit(self, data: pd.DataFrame) -> "TextFeatureExtractor":
-        """Fit text extractor"""
+        """Fit text extractor."""
         from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
         # Select text columns
@@ -400,7 +402,8 @@ class TextFeatureExtractor(FeatureTransformer):
                 ngram_range=(1, 2),
             )
         else:
-            raise ValueError(f"Unsupported text extraction method: {self.method}")
+            msg = f"Unsupported text extraction method: {self.method}"
+            raise ValueError(msg)
 
         self.extractor.fit(text_data)
         self.feature_names = [
@@ -410,7 +413,7 @@ class TextFeatureExtractor(FeatureTransformer):
         return self
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Transform text data"""
+        """Transform text data."""
         if self.extractor is None or len(self.text_columns) == 0:
             return data.copy()
 
@@ -432,23 +435,21 @@ class TextFeatureExtractor(FeatureTransformer):
 
         # Drop original text columns and add extracted features
         transformed_data = data.drop(columns=self.text_columns)
-        transformed_data = pd.concat([transformed_data, extracted_df], axis=1)
-
-        return transformed_data
+        return pd.concat([transformed_data, extracted_df], axis=1)
 
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Fit and transform data"""
+        """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> list[str]:
-        """Get feature names"""
+    def get_feature_names(self) -> List[str]:
+        """Get feature names."""
         return self.feature_names
 
 
 class FeatureSelector(FeatureTransformer):
-    """Feature selector"""
+    """Feature selector."""
 
-    def __init__(self, method: SelectionMethod, k: int = 10):
+    def __init__(self) -> None:
         self.method = method
         self.k = k
         self.selector = None
@@ -460,7 +461,7 @@ class FeatureSelector(FeatureTransformer):
         data: pd.DataFrame,
         target: pd.Series | None = None,
     ) -> "FeatureSelector":
-        """Fit feature selector"""
+        """Fit feature selector."""
         from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
         from sklearn.feature_selection import (
             f_classif,
@@ -543,7 +544,7 @@ class FeatureSelector(FeatureTransformer):
         return self
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Transform data by selecting features"""
+        """Transform data by selecting features."""
         return data[self.selected_features]
 
     def fit_transform(
@@ -551,18 +552,18 @@ class FeatureSelector(FeatureTransformer):
         data: pd.DataFrame,
         target: pd.Series | None = None,
     ) -> pd.DataFrame:
-        """Fit and transform data"""
+        """Fit and transform data."""
         return self.fit(data, target).transform(data)
 
-    def get_feature_names(self) -> list[str]:
-        """Get selected feature names"""
+    def get_feature_names(self) -> List[str]:
+        """Get selected feature names."""
         return self.selected_features
 
 
 class FeatureStore:
-    """Feature store for managing feature definitions and metadata"""
+    """Feature store for managing feature definitions and metadata."""
 
-    def __init__(self, storage_path: str):
+    def __init__(self) -> None:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -573,8 +574,8 @@ class FeatureStore:
         # Load existing definitions
         self._load_feature_definitions()
 
-    def _load_feature_definitions(self):
-        """Load existing feature definitions from storage"""
+    def _load_feature_definitions(self) -> None:
+        """Load existing feature definitions from storage."""
         try:
             # Load feature sets
             feature_sets_file = self.storage_path / "feature_sets.json"
@@ -614,14 +615,16 @@ class FeatureStore:
                         self.feature_pipelines[pipeline.pipeline_id] = pipeline
 
             logger.info(
-                f"Loaded {len(self.feature_sets)} feature sets and {len(self.feature_pipelines)} pipelines",
+                "Loaded %s feature sets and %s pipelines",
+                len(self.feature_sets),
+                len(self.feature_pipelines),
             )
 
         except Exception as e:
-            logger.error(f"Failed to load feature definitions: {e}")
+            logger.error("Failed to load feature definitions: %s", e)
 
-    def _save_feature_definitions(self):
-        """Save feature definitions to storage"""
+    def _save_feature_definitions(self) -> None:
+        """Save feature definitions to storage."""
         try:
             # Save feature sets
             feature_sets_data = [fs.to_dict() for fs in self.feature_sets.values()]
@@ -636,56 +639,56 @@ class FeatureStore:
             logger.info("Saved feature definitions")
 
         except Exception as e:
-            logger.error(f"Failed to save feature definitions: {e}")
+            logger.error("Failed to save feature definitions: %s", e)
 
     def register_feature_set(self, feature_set: FeatureSet) -> bool:
-        """Register a new feature set"""
+        """Register a new feature set."""
         try:
             self.feature_sets[feature_set.feature_set_id] = feature_set
             self._save_feature_definitions()
-            logger.info(f"Registered feature set {feature_set.feature_set_id}")
+            logger.info("Registered feature set %s", feature_set.feature_set_id)
             return True
         except Exception as e:
-            logger.error(f"Failed to register feature set: {e}")
+            logger.error("Failed to register feature set: %s", e)
             return False
 
     def register_feature_pipeline(self, pipeline: FeaturePipeline) -> bool:
-        """Register a new feature pipeline"""
+        """Register a new feature pipeline."""
         try:
             self.feature_pipelines[pipeline.pipeline_id] = pipeline
             self._save_feature_definitions()
-            logger.info(f"Registered feature pipeline {pipeline.pipeline_id}")
+            logger.info("Registered feature pipeline %s", pipeline.pipeline_id)
             return True
         except Exception as e:
-            logger.error(f"Failed to register feature pipeline: {e}")
+            logger.error("Failed to register feature pipeline: %s", e)
             return False
 
     def get_feature_set(self, feature_set_id: str) -> FeatureSet | None:
-        """Get feature set by ID"""
+        """Get feature set by ID."""
         return self.feature_sets.get(feature_set_id)
 
     def get_feature_pipeline(self, pipeline_id: str) -> FeaturePipeline | None:
-        """Get feature pipeline by ID"""
+        """Get feature pipeline by ID."""
         return self.feature_pipelines.get(pipeline_id)
 
     def list_feature_sets(self) -> list[FeatureSet]:
-        """List all feature sets"""
+        """List all feature sets."""
         return list(self.feature_sets.values())
 
     def list_feature_pipelines(self) -> list[FeaturePipeline]:
-        """List all feature pipelines"""
+        """List all feature pipelines."""
         return list(self.feature_pipelines.values())
 
-    def cache_features(self, cache_key: str, features: pd.DataFrame):
-        """Cache processed features"""
+    def cache_features(self) -> None:
+        """Cache processed features."""
         self.feature_cache[cache_key] = features.copy()
 
     def get_cached_features(self, cache_key: str) -> pd.DataFrame | None:
-        """Get cached features"""
+        """Get cached features."""
         return self.feature_cache.get(cache_key)
 
-    def clear_cache(self):
-        """Clear feature cache"""
+    def clear_cache(self) -> None:
+        """Clear feature cache."""
         self.feature_cache.clear()
 
 
@@ -694,7 +697,7 @@ class FeatureEngineer:
     Provides comprehensive feature engineering capabilities with automated pipelines.
     """
 
-    def __init__(self, config: FeatureEngineeringConfig = None):
+    def __init__(self) -> None:
         self.config = config or FeatureEngineeringConfig()
 
         # Initialize feature store
@@ -721,14 +724,15 @@ class FeatureEngineer:
         pipeline_id: str,
         target: pd.Series | None = None,
     ) -> tuple[pd.DataFrame, FeatureProcessingResult]:
-        """Process features using specified pipeline"""
+        """Process features using specified pipeline."""
         start_time = time.time()
 
         try:
             # Get pipeline definition
             pipeline = self.feature_store.get_feature_pipeline(pipeline_id)
             if not pipeline:
-                raise ValueError(f"Pipeline {pipeline_id} not found")
+                msg = f"Pipeline {pipeline_id} not found"
+                raise ValueError(msg)
 
             # Check cache
             cache_key = self._generate_cache_key(data, pipeline_id)
@@ -736,7 +740,7 @@ class FeatureEngineer:
                 cached_features = self.feature_store.get_cached_features(cache_key)
                 if cached_features is not None:
                     self.stats["cache_hits"] += 1
-                    logger.info(f"Using cached features for pipeline {pipeline_id}")
+                    logger.info("Using cached features for pipeline %s", pipeline_id)
                     return cached_features, self._create_processing_result(
                         pipeline_id,
                         data.shape,
@@ -783,20 +787,20 @@ class FeatureEngineer:
             self.stats["features_dropped"] += features_dropped
             self.stats["processing_time_total"] += processing_time
 
-            logger.info(f"Processed features with pipeline {pipeline_id}")
+            logger.info("Processed features with pipeline %s", pipeline_id)
             return processed_data, result
 
         except Exception as e:
-            logger.error(f"Feature processing failed: {e}")
+            logger.error("Feature processing failed: %s", e)
             raise
 
     async def _apply_transformation(
         self,
         data: pd.DataFrame,
-        transformation: dict[str, Any],
+        transformation: Dict[str, Any],
         target: pd.Series | None = None,
     ) -> tuple[pd.DataFrame, int, int]:
-        """Apply a single transformation"""
+        """Apply a single transformation."""
         try:
             transformation_type = transformation.get("type")
             params = transformation.get("params", {})
@@ -838,11 +842,11 @@ class FeatureEngineer:
             return data, features_created, features_dropped
 
         except Exception as e:
-            logger.error(f"Transformation failed: {e}")
+            logger.error("Transformation failed: %s", e)
             raise
 
     def _generate_cache_key(self, data: pd.DataFrame, pipeline_id: str) -> str:
-        """Generate cache key for data and pipeline"""
+        """Generate cache key for data and pipeline."""
         data_hash = hashlib.sha256(pd.util.hash_pandas_object(data).values).hexdigest()[
             :16
         ]
@@ -857,7 +861,7 @@ class FeatureEngineer:
         features_created: int,
         features_dropped: int,
     ) -> FeatureProcessingResult:
-        """Create processing result"""
+        """Create processing result."""
         return FeatureProcessingResult(
             pipeline_id=pipeline_id,
             input_data_shape=input_shape,
@@ -873,7 +877,7 @@ class FeatureEngineer:
         target: pd.Series | None = None,
         pipeline_name: str = "auto_pipeline",
     ) -> str:
-        """Create an automated feature pipeline"""
+        """Create an automated feature pipeline."""
         try:
             pipeline_id = f"{pipeline_name}_{int(time.time())}"
             transformations = []
@@ -920,15 +924,15 @@ class FeatureEngineer:
             # Register pipeline
             self.feature_store.register_feature_pipeline(pipeline)
 
-            logger.info(f"Created automated pipeline {pipeline_id}")
+            logger.info("Created automated pipeline %s", pipeline_id)
             return pipeline_id
 
         except Exception as e:
-            logger.error(f"Failed to create automated pipeline: {e}")
+            logger.error("Failed to create automated pipeline: %s", e)
             raise
 
-    def get_processing_statistics(self) -> dict[str, Any]:
-        """Get processing statistics"""
+    def get_processing_statistics(self) -> Dict[str, Any]:
+        """Get processing statistics."""
         stats = self.stats.copy()
 
         if stats["pipelines_executed"] > 0:
@@ -951,7 +955,7 @@ class FeatureEngineer:
 
 # Production-ready factory functions
 def create_production_feature_engineer() -> FeatureEngineer:
-    """Create production-ready feature engineer"""
+    """Create production-ready feature engineer."""
     config = FeatureEngineeringConfig(
         feature_storage_path="/tmp/pake_features/production",
         pipeline_storage_path="/tmp/pake_pipelines/production",
@@ -975,7 +979,7 @@ def create_production_feature_engineer() -> FeatureEngineer:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         engineer = FeatureEngineer()
 
         # Create sample data

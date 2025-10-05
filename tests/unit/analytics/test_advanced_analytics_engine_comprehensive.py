@@ -25,8 +25,8 @@ from src.services.analytics.advanced_analytics_engine import (
 class TestAdvancedAnalyticsEngineComprehensive:
     """Comprehensive unit tests for AdvancedAnalyticsEngine"""
 
-    @pytest.fixture()
-    def mock_dependencies(self):
+    @pytest.fixture
+    def mock_dependencies(self) -> None:
         """Create mocked dependencies for AdvancedAnalyticsEngine"""
         return {
             "trend_service": AsyncMock(spec=TrendAnalysisService),
@@ -37,22 +37,29 @@ class TestAdvancedAnalyticsEngineComprehensive:
             "semantic_search": AsyncMock(),
         }
 
-    @pytest.fixture()
-    def analytics_engine(self, mock_dependencies):
+    @pytest.fixture
+    def analytics_engine(self) -> None:
         """Create AdvancedAnalyticsEngine instance with mocked dependencies"""
-        with patch(
-            "src.services.analytics.advanced_analytics_engine.TrendAnalysisService"
-        ) as mock_trend, patch(
-            "src.services.analytics.advanced_analytics_engine.CorrelationEngine"
-        ) as mock_corr, patch(
-            "src.services.analytics.advanced_analytics_engine.PredictiveAnalyticsService"
-        ) as mock_pred, patch(
-            "src.services.analytics.advanced_analytics_engine.InsightGenerationService"
-        ) as mock_insight, patch(
-            "src.services.analytics.advanced_analytics_engine.AnalyticsAggregationService"
-        ) as mock_ml, patch(
-            "src.services.analytics.advanced_analytics_engine.get_semantic_search_service"
-        ) as mock_search:
+        with (
+            patch(
+                "src.services.analytics.advanced_analytics_engine.TrendAnalysisService"
+            ) as mock_trend,
+            patch(
+                "src.services.analytics.advanced_analytics_engine.CorrelationEngine"
+            ) as mock_corr,
+            patch(
+                "src.services.analytics.advanced_analytics_engine.PredictiveAnalyticsService"
+            ) as mock_pred,
+            patch(
+                "src.services.analytics.advanced_analytics_engine.InsightGenerationService"
+            ) as mock_insight,
+            patch(
+                "src.services.analytics.advanced_analytics_engine.AnalyticsAggregationService"
+            ) as mock_ml,
+            patch(
+                "src.services.analytics.advanced_analytics_engine.get_semantic_search_service"
+            ) as mock_search,
+        ):
             mock_trend.return_value = mock_dependencies["trend_service"]
             mock_corr.return_value = mock_dependencies["correlation_engine"]
             mock_pred.return_value = mock_dependencies["predictive_service"]
@@ -66,10 +73,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # PRIMARY USE CASES - Normal Operation Paths
     # ============================================================================
 
-    @pytest.mark.unit_functional()
-    async def test_generate_comprehensive_report_success(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_generate_comprehensive_report_success(self) -> None:
         """Test successful comprehensive report generation"""
         # Arrange
         time_range = "24h"
@@ -142,10 +147,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         ].generate_predictions.assert_called_once()
         mock_dependencies["insight_service"].generate_insights.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_analyze_system_health_success(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_analyze_system_health_success(self) -> None:
         """Test successful system health analysis"""
         # Arrange
         mock_dependencies["trend_service"].get_system_metrics.return_value = {
@@ -180,8 +183,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert health_report["health_score"] == 0.85
         assert len(health_report["issues"]) == 1
 
-    @pytest.mark.unit_functional()
-    async def test_detect_anomalies_success(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_detect_anomalies_success(self) -> None:
         """Test successful anomaly detection"""
         # Arrange
         mock_dependencies["trend_service"].detect_anomalies.return_value = {
@@ -208,10 +211,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert len(anomaly_report["anomalies"]) == 1
         assert anomaly_report["anomaly_score"] == 0.92
 
-    @pytest.mark.unit_functional()
-    async def test_generate_predictive_insights_success(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_generate_predictive_insights_success(self) -> None:
         """Test successful predictive insights generation"""
         # Arrange
         mock_dependencies["predictive_service"].generate_predictions.return_value = {
@@ -254,8 +255,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert len(predictive_report["predictions"]["predictions"]) == 1
         assert len(predictive_report["insights"]["insights"]) == 1
 
-    @pytest.mark.unit_functional()
-    async def test_get_cached_insights_success(self, analytics_engine):
+    @pytest.mark.unit_functional
+    async def test_get_cached_insights_success(self) -> None:
         """Test successful cached insights retrieval"""
         # Arrange - Set up cache
         cache_key = "test_insights"
@@ -276,10 +277,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # EDGE CASES - Boundary Conditions and Edge Cases
     # ============================================================================
 
-    @pytest.mark.unit_edge_case()
-    async def test_generate_report_with_minimal_data(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_generate_report_with_minimal_data(self) -> None:
         """Test report generation with minimal data"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -312,10 +311,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert len(report["predictions"]["predictions"]) == 0
         assert len(report["insights"]["insights"]) == 0
 
-    @pytest.mark.unit_edge_case()
-    async def test_generate_report_without_predictions(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_generate_report_without_predictions(self) -> None:
         """Test report generation without predictions"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -344,8 +341,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert "recommendations" not in report
         mock_dependencies["predictive_service"].generate_predictions.assert_not_called()
 
-    @pytest.mark.unit_edge_case()
-    async def test_cache_expiration_handling(self, analytics_engine):
+    @pytest.mark.unit_edge_case
+    async def test_cache_expiration_handling(self) -> None:
         """Test cache expiration handling"""
         # Arrange - Set up expired cache entry
         cache_key = "expired_insights"
@@ -362,10 +359,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         # Assert
         assert insights is None  # Should return None for expired cache
 
-    @pytest.mark.unit_edge_case()
-    async def test_concurrent_report_generation(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_concurrent_report_generation(self) -> None:
         """Test concurrent report generation"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -404,8 +399,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ERROR HANDLING - Exception Scenarios and Error Cases
     # ============================================================================
 
-    @pytest.mark.unit_error_handling()
-    async def test_trend_service_failure(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_trend_service_failure(self) -> None:
         """Test handling of trend service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.side_effect = Exception(
@@ -416,10 +411,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         with pytest.raises(Exception, match="Trend service unavailable"):
             await analytics_engine.generate_comprehensive_report()
 
-    @pytest.mark.unit_error_handling()
-    async def test_correlation_engine_failure(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_correlation_engine_failure(self) -> None:
         """Test handling of correlation engine failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -435,10 +428,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         with pytest.raises(Exception, match="Correlation engine failed"):
             await analytics_engine.generate_comprehensive_report()
 
-    @pytest.mark.unit_error_handling()
-    async def test_predictive_service_failure(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_predictive_service_failure(self) -> None:
         """Test handling of predictive service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -461,8 +452,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
                 include_predictions=True
             )
 
-    @pytest.mark.unit_error_handling()
-    async def test_insight_service_failure(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_insight_service_failure(self) -> None:
         """Test handling of insight service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -483,8 +474,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         with pytest.raises(Exception, match="Insight service failed"):
             await analytics_engine.generate_comprehensive_report()
 
-    @pytest.mark.unit_error_handling()
-    async def test_ml_services_unavailable(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_ml_services_unavailable(self) -> None:
         """Test handling when ML services are unavailable"""
         # Arrange - Simulate ML services being None
         analytics_engine.ml_aggregation = None
@@ -517,8 +508,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert report is not None
         # Should succeed even without ML services
 
-    @pytest.mark.unit_error_handling()
-    async def test_invalid_time_range(self, analytics_engine):
+    @pytest.mark.unit_error_handling
+    async def test_invalid_time_range(self) -> None:
         """Test handling of invalid time range"""
         # Arrange
         invalid_time_range = "invalid_range"
@@ -533,10 +524,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # PERFORMANCE TESTS - Algorithm Efficiency and Performance
     # ============================================================================
 
-    @pytest.mark.unit_performance()
-    async def test_report_generation_performance(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_performance
+    async def test_report_generation_performance(self) -> None:
         """Test report generation performance"""
         import time
 
@@ -571,8 +560,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert execution_time < 2.0  # Should complete within 2 seconds
         assert report is not None
 
-    @pytest.mark.unit_performance()
-    async def test_cache_performance(self, analytics_engine):
+    @pytest.mark.unit_performance
+    async def test_cache_performance(self) -> None:
         """Test cache performance"""
         import time
 
@@ -594,10 +583,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert execution_time < 0.1  # Cache lookup should be very fast
         assert insights is not None
 
-    @pytest.mark.unit_performance()
-    async def test_memory_usage_with_large_datasets(
-        self, analytics_engine, mock_dependencies
-    ):
+    @pytest.mark.unit_performance
+    async def test_memory_usage_with_large_datasets(self) -> None:
         """Test memory usage with large datasets"""
         # Arrange - Create large dataset
         large_trends = [{"topic": f"Topic{i}", "growth_rate": 0.1} for i in range(1000)]
@@ -632,8 +619,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # SECURITY TESTS - Authentication and Authorization
     # ============================================================================
 
-    @pytest.mark.unit_security()
-    async def test_input_sanitization(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_security
+    async def test_input_sanitization(self) -> None:
         """Test input sanitization for security"""
         # Arrange
         malicious_time_range = "24h'; DROP TABLE analytics; --"
@@ -664,8 +651,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
                 time_range=malicious_time_range
             )
 
-    @pytest.mark.unit_security()
-    async def test_cache_key_validation(self, analytics_engine):
+    @pytest.mark.unit_security
+    async def test_cache_key_validation(self) -> None:
         """Test cache key validation for security"""
         # Arrange
         malicious_cache_key = "../../etc/passwd"
@@ -674,8 +661,8 @@ class TestAdvancedAnalyticsEngineComprehensive:
         with pytest.raises(ValueError):
             await analytics_engine.get_cached_insights(malicious_cache_key)
 
-    @pytest.mark.unit_security()
-    async def test_data_privacy_protection(self, analytics_engine, mock_dependencies):
+    @pytest.mark.unit_security
+    async def test_data_privacy_protection(self) -> None:
         """Test data privacy protection"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {

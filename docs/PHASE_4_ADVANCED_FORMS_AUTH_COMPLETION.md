@@ -350,7 +350,7 @@ function AuthPage() {
   const { signIn, user, isLoading } = useAuth();
 
   return (
-    <LoginForm 
+    <LoginForm
       onSuccess={() => router.push('/dashboard')}
       showBiometric={true}
       showSocialLogin={true}
@@ -410,7 +410,7 @@ The PAKE System now stands as a **transcendent web application** ready for enter
 
 ---
 
-**Developed with ❤️ by the PAKE System Team**  
+**Developed with ❤️ by the PAKE System Team**
 *Advancing the state of the art in cognitive web applications*
 
 ---

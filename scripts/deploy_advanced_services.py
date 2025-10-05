@@ -7,7 +7,7 @@ Deploy email integration, social media monitoring, RSS feeds, and analytics dash
 import asyncio
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Add project root to path
@@ -18,13 +18,13 @@ sys.path.insert(0, str(project_root))
 class ServiceDeployer:
     """Deploy and manage advanced PAKE services"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.deployed_services = []
         self.service_status = {}
 
-    def log_status(self, service: str, status: str, message: str):
+    def log_status(self) -> None:
         """Log service status"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.now(UTC).strftime("%H:%M:%S")
         status_icon = {
             "SUCCESS": "✅",
             "ERROR": "❌",
@@ -41,7 +41,7 @@ class ServiceDeployer:
             {"timestamp": timestamp, "status": status, "message": message},
         )
 
-    async def deploy_email_integration(self):
+    async def deploy_email_integration(self) -> None:
         """Deploy email integration service"""
         self.log_status("EMAIL", "DEPLOYING", "Setting up email integration service...")
 
@@ -65,7 +65,7 @@ import imaplib
 import smtplib
 from email.mime.text import MimeText
 from email.mime.multipart import MimeMultipart
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List, Dict, Optional, AsyncGenerator
 from dataclasses import dataclass
 import aiohttp
@@ -88,7 +88,7 @@ class EmailMessage:
 class EmailIntegrationService:
     """Enhanced email integration with multiple providers"""
 
-    def __init__(self, config: Dict = None):
+    def __init__(self) -> None:
         self.config = config or self._load_config()
         self.connected = False
 
@@ -149,7 +149,7 @@ class EmailIntegrationService:
                     subject="Important Research Paper",
                     sender="researcher@university.edu",
                     recipient=self.config['username'],
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     content="I found this interesting paper on machine learning...",
                     confidence_score=0.85
                 ),
@@ -158,7 +158,7 @@ class EmailIntegrationService:
                     subject="Meeting Notes",
                     sender="colleague@company.com",
                     recipient=self.config['username'],
-                    timestamp=datetime.now() - timedelta(hours=2),
+                    timestamp=datetime.now(UTC) - timedelta(hours=2),
                     content="Here are the notes from our discussion...",
                     confidence_score=0.75
                 )
@@ -229,7 +229,7 @@ class EmailIntegrationService:
             )
             return False
 
-    async def deploy_social_media_monitoring(self):
+    async def deploy_social_media_monitoring(self) -> None:
         """Deploy social media monitoring services"""
         self.log_status("SOCIAL", "DEPLOYING", "Setting up social media monitoring...")
 
@@ -286,7 +286,7 @@ class EmailIntegrationService:
             )
             return False
 
-    async def deploy_rss_automation(self):
+    async def deploy_rss_automation(self) -> None:
         """Deploy RSS feed automation"""
         self.log_status("RSS", "DEPLOYING", "Setting up RSS feed automation...")
 
@@ -337,7 +337,7 @@ class EmailIntegrationService:
             self.log_status("RSS", "ERROR", f"RSS service deployment failed: {str(e)}")
             return False
 
-    async def deploy_analytics_dashboard(self):
+    async def deploy_analytics_dashboard(self) -> None:
         """Deploy real-time analytics dashboard"""
         self.log_status("ANALYTICS", "DEPLOYING", "Setting up analytics dashboard...")
 
@@ -357,7 +357,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Optional
 from pathlib import Path
 import psutil
@@ -366,7 +366,7 @@ import os
 class AnalyticsDashboard:
     """Real-time analytics and monitoring dashboard"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.app = FastAPI(title="PAKE+ Analytics Dashboard")
         self.active_connections: List[WebSocket] = []
         self.metrics = {
@@ -377,19 +377,19 @@ class AnalyticsDashboard:
         }
         self.setup_routes()
 
-    def setup_routes(self):
+    def setup_routes(self) -> None:
         """Setup dashboard routes"""
 
         @self.app.get("/", response_class=HTMLResponse)
-        async def dashboard_home():
+        async def dashboard_home(self) -> None:
             return self.get_dashboard_html()
 
         @self.app.get("/api/metrics")
-        async def get_metrics():
+        async def get_metrics(self) -> None:
             return await self.collect_current_metrics()
 
         @self.app.websocket("/ws/live-metrics")
-        async def websocket_endpoint(websocket: WebSocket):
+        async def websocket_endpoint(self) -> None:
             await self.websocket_manager(websocket)
 
     async def collect_current_metrics(self) -> Dict:
@@ -425,7 +425,7 @@ class AnalyticsDashboard:
             }
 
             return {
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': datetime.now(UTC).isoformat(),
                 'system_health': {
                     'cpu_percent': cpu_percent,
                     'memory_percent': memory.percent,
@@ -439,9 +439,9 @@ class AnalyticsDashboard:
             }
 
         except Exception as e:
-            return {'error': str(e), 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e), 'timestamp': datetime.now(UTC).isoformat()}
 
-    async def websocket_manager(self, websocket: WebSocket):
+    async def websocket_manager(self) -> None:
         """Manage WebSocket connections for live updates"""
         await websocket.accept()
         self.active_connections.append(websocket)
@@ -582,7 +582,7 @@ class AnalyticsDashboard:
             )
             return False
 
-    async def test_advanced_integration(self):
+    async def test_advanced_integration(self) -> None:
         """Test advanced services integration"""
         self.log_status(
             "INTEGRATION",
@@ -642,7 +642,7 @@ class AnalyticsDashboard:
         successful_services = len(self.deployed_services)
 
         report = {
-            "deployment_timestamp": datetime.now().isoformat(),
+            "deployment_timestamp": datetime.now(UTC).isoformat(),
             "total_services_attempted": total_services,
             "successful_deployments": successful_services,
             "success_rate": (
@@ -666,7 +666,7 @@ class AnalyticsDashboard:
         else:
             failed_services = [
                 service
-                for service in self.service_status.keys()
+                for service in self.service_status
                 if service not in self.deployed_services
             ]
             report["next_steps"] = [
@@ -679,7 +679,7 @@ class AnalyticsDashboard:
         return report
 
 
-async def main():
+async def main(self) -> None:
     """Main deployment process"""
     print("🚀 PAKE+ ADVANCED SERVICES DEPLOYMENT")
     print("=" * 60)

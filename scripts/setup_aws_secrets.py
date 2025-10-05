@@ -19,15 +19,14 @@ logger = logging.getLogger(__name__)
 def generate_strong_REDACTED_SECRET(length: int = 16) -> str:
     """Generate a strong REDACTED_SECRET with mixed characters"""
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    REDACTED_SECRET = "".join(secrets.choice(alphabet) for _ in range(length))
-    return REDACTED_SECRET
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def create_aws_secrets(region: str = "us-east-1") -> None:
     """Create all required secrets in AWS Secrets Manager"""
     try:
         client = boto3.client("secretsmanager", region_name=region)
-        logger.info(f"Connected to AWS Secrets Manager in {region}")
+        logger.info("Connected to AWS Secrets Manager in %s", region)
 
         # Generate new strong REDACTED_SECRETs
         db_REDACTED_SECRET = generate_strong_REDACTED_SECRET(20)
@@ -88,7 +87,8 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
                 try:
                     client.describe_secret(SecretId=secret_config["name"])
                     logger.warning(
-                        f"Secret {secret_config['name']} already exists, skipping...",
+                        "Secret %s already exists, skipping...",
+                        secret_config["name"],
                     )
                     continue
                 except client.exceptions.ResourceNotFoundException:
@@ -120,10 +120,12 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
                     },
                 )
 
-                logger.info(f"✅ Created secret: {secret_config['name']}")
+                logger.info("✅ Created secret: %s", secret_config["name"])
 
             except Exception as e:
-                logger.error(f"❌ Failed to create secret {secret_config['name']}: {e}")
+                logger.error(
+                    "❌ Failed to create secret %s: %s", secret_config["name"], e
+                )
                 continue
 
         # Create IAM policy for PAKE system to access these secrets
@@ -168,7 +170,7 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
         print("- Rotate secrets regularly (recommended: every 90 days)")
 
     except Exception as e:
-        logger.error(f"Failed to setup AWS secrets: {e}")
+        logger.error("Failed to setup AWS secrets: %s", e)
         sys.exit(1)
 
 
@@ -214,7 +216,7 @@ def create_iam_policy(secrets: list, region: str) -> None:
         # Check if policy already exists
         try:
             iam.get_policy(PolicyArn=f"arn:aws:iam::{account_id}:policy/{policy_name}")
-            logger.info(f"IAM policy {policy_name} already exists")
+            logger.info("IAM policy %s already exists", policy_name)
         except iam.exceptions.NoSuchEntityException:
             # Create the policy
             response = iam.create_policy(
@@ -226,11 +228,11 @@ def create_iam_policy(secrets: list, region: str) -> None:
                     {"Key": "Purpose", "Value": "SecretsAccess"},
                 ],
             )
-            logger.info(f"✅ Created IAM policy: {policy_name}")
-            logger.info(f"Policy ARN: {response['Policy']['Arn']}")
+            logger.info("✅ Created IAM policy: %s", policy_name)
+            logger.info("Policy ARN: %s", response["Policy"]["Arn"])
 
     except Exception as e:
-        logger.error(f"Failed to create IAM policy: {e}")
+        logger.error("Failed to create IAM policy: %s", e)
 
 
 def delete_all_secrets(region: str = "us-east-1") -> None:
@@ -250,12 +252,12 @@ def delete_all_secrets(region: str = "us-east-1") -> None:
                     SecretId=secret_name,
                     ForceDeleteWithoutRecovery=True,
                 )
-                logger.info(f"🗑️ Deleted secret: {secret_name}")
+                logger.info("🗑️ Deleted secret: %s", secret_name)
             except Exception as e:
-                logger.error(f"Failed to delete {secret_name}: {e}")
+                logger.error("Failed to delete %s: %s", secret_name, e)
 
     except Exception as e:
-        logger.error(f"Failed to delete secrets: {e}")
+        logger.error("Failed to delete secrets: %s", e)
 
 
 if __name__ == "__main__":

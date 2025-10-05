@@ -1,0 +1,190 @@
+# ===== PAKE SYSTEM - EDITORCONFIG =====
+# Enterprise-Grade Editor Configuration for Consistent Development Environment
+# Implements Phase 1.2 of the Engineering Plan for Systematic Codebase Stabilization
+#
+# This file ensures consistent editor behavior across all IDEs and editors,
+# preventing the most common sources of IndentationError and syntax issues.
+
+# ===== ROOT CONFIGURATION =====
+root = true
+
+# ===== UNIVERSAL SETTINGS =====
+[*]
+# Character encoding
+charset = utf-8
+
+# Line ending style
+end_of_line = lf
+
+# File trimming
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# ===== PYTHON CONFIGURATION (CRITICAL) =====
+[*.py]
+# Enforce spaces over tabs - PEP 8 compliance
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# Line length limit (PEP 8)
+max_line_length = 88
+
+# Python-specific file handling
+charset = utf-8
+end_of_line = lf
+
+# ===== PYTHON TYPE STUBS =====
+[*.pyi]
+indent_style = space
+indent_size = 4
+tab_width = 4
+max_line_length = 88
+
+# ===== PYTHON CONFIGURATION FILES =====
+[pyproject.toml]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[poetry.lock]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[requirements*.txt]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[setup.cfg]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[tox.ini]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# ===== JAVASCRIPT/TYPESCRIPT CONFIGURATION =====
+[*.{js,ts,jsx,tsx}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+max_line_length = 100
+
+# ===== JSON CONFIGURATION =====
+[*.json]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# ===== YAML CONFIGURATION =====
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# ===== MARKDOWN CONFIGURATION =====
+[*.md]
+indent_style = space
+indent_size = 2
+tab_width = 2
+trim_trailing_whitespace = false
+
+# ===== HTML/CSS CONFIGURATION =====
+[*.{html,css,scss,sass}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# ===== SHELL SCRIPTS =====
+[*.{sh,bash,zsh}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# ===== DOCKER FILES =====
+[Dockerfile*]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# ===== SQL FILES =====
+[*.sql]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# ===== CONFIGURATION FILES =====
+[*.{ini,cfg,conf}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# ===== MAKEFILE CONFIGURATION =====
+[Makefile*]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# ===== GIT CONFIGURATION =====
+[.gitignore]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+[.gitattributes]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# ===== DOCUMENTATION FILES =====
+[*.{rst,txt}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+trim_trailing_whitespace = false
+
+# ===== LOG FILES =====
+[*.log]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+# ===== BINARY FILES =====
+[*.{png,jpg,jpeg,gif,ico,svg,pdf,zip,tar,gz}]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+# ===== PAKE SYSTEM SPECIFIC =====
+# Service configuration files
+[src/services/**/*.py]
+indent_style = space
+indent_size = 4
+tab_width = 4
+max_line_length = 88
+
+# Test files
+[tests/**/*.py]
+indent_style = space
+indent_size = 4
+tab_width = 4
+max_line_length = 88
+
+# Script files
+[scripts/**/*.py]
+indent_style = space
+indent_size = 4
+tab_width = 4
+max_line_length = 88
+
+# ===== ENTERPRISE SECURITY =====
+# Sensitive configuration files
+[**/secrets/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+[**/security/**]
+trim_trailing_whitespace = false
+insert_final_newline = false

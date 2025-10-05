@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class GitHistoryCleaner:
     """Clean Git history to remove hardcoded secrets."""
 
-    def __init__(self, repo_path: str = "."):
+    def __init__(self, repo_path: str) -> None:
         """
         Initialize Git history cleaner.
 
@@ -187,7 +187,7 @@ class GitHistoryCleaner:
                 return False
             logger.info("✅ Working directory is clean")
         except subprocess.CalledProcessError as e:
-            logger.error(f"❌ Error checking Git status: {e}")
+            logger.error("❌ Error checking Git status: %s", e)
             return False
 
         # Check if we're on main/master branch
@@ -200,12 +200,12 @@ class GitHistoryCleaner:
             )
             current_branch = result.stdout.strip()
             if current_branch not in ["main", "master"]:
-                logger.warning(f"⚠️  Not on main branch (current: {current_branch})")
+                logger.warning("⚠️  Not on main branch (current: %s)", current_branch)
                 logger.warning(
                     "   Consider switching to main branch before cleaning history"
                 )
         except subprocess.CalledProcessError as e:
-            logger.error(f"❌ Error checking current branch: {e}")
+            logger.error("❌ Error checking current branch: %s", e)
             return False
 
         logger.info("✅ All prerequisites met")
@@ -229,10 +229,10 @@ class GitHistoryCleaner:
             shutil.copytree(
                 self.repo_path, backup_path, ignore=shutil.ignore_patterns(".git")
             )
-            logger.info(f"✅ Backup created at: {backup_path}")
+            logger.info("✅ Backup created at: %s", backup_path)
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to create backup: {e}")
+            logger.error("❌ Failed to create backup: %s", e)
             return False
 
     def clean_git_history(self) -> bool:
@@ -250,7 +250,7 @@ class GitHistoryCleaner:
 
         try:
             for secret in self.secrets_to_remove:
-                logger.info(f"Removing: {secret['description']}")
+                logger.info("Removing: %s", secret["description"])
 
                 # Use git-filter-repo to replace the secret
                 cmd = [
@@ -263,17 +263,19 @@ class GitHistoryCleaner:
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode != 0:
                     logger.error(
-                        f"❌ Failed to remove {secret['description']}: {result.stderr}"
+                        "❌ Failed to remove %s: %s",
+                        secret["description"],
+                        result.stderr,
                     )
                     return False
 
-                logger.info(f"✅ Removed: {secret['description']}")
+                logger.info("✅ Removed: %s", secret["description"])
 
             logger.info("✅ Git history cleanup completed successfully")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error during Git history cleanup: {e}")
+            logger.error("❌ Error during Git history cleanup: %s", e)
             return False
         finally:
             os.chdir(original_cwd)
@@ -305,7 +307,7 @@ class GitHistoryCleaner:
 
             if remaining_secrets:
                 logger.warning(
-                    f"⚠️  Some secrets may still remain: {remaining_secrets}"
+                    "⚠️  Some secrets may still remain: %s", remaining_secrets
                 )
                 return False
 
@@ -313,7 +315,7 @@ class GitHistoryCleaner:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Error during verification: {e}")
+            logger.error("❌ Error during verification: %s", e)
             return False
         finally:
             os.chdir(original_cwd)
@@ -365,12 +367,9 @@ class GitHistoryCleaner:
         return True
 
 
-def main():
+def main(self) -> None:
     """Main entry point for Git history cleanup."""
-    if len(sys.argv) > 1:
-        repo_path = sys.argv[1]
-    else:
-        repo_path = "."
+    repo_path = sys.argv[1] if len(sys.argv) > 1 else "."
 
     cleaner = GitHistoryCleaner(repo_path)
 

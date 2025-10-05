@@ -10,8 +10,8 @@ This example shows:
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,14 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 class PAKESystemService:
-    """Example PAKE System service using Repository Pattern"""
+    """Example PAKE System service using Repository Pattern."""
 
-    def __init__(
-        self,
-        repository_container: Optional[RepositoryContainer] = None,
-        session: Optional[AsyncSession] = None,
-    ):
-        """Initialize service with repository container or session"""
+    def __init__(self) -> None:
+        """Initialize service with repository container or session."""
         if repository_container:
             # Use provided repository container
             self.repository_container = repository_container
@@ -37,7 +33,8 @@ class PAKESystemService:
             # Create repository container from session
             self.repository_container = RepositoryFactory.create_container(session)
         else:
-            raise ValueError("Either repository_container or session must be provided")
+            msg = "Either repository_container or session must be provided"
+            raise ValueError(msg)
 
         # Initialize services with injected repositories
         self.user_service = UserService(self.repository_container.get_user_repository())
@@ -52,9 +49,9 @@ class PAKESystemService:
         username: str,
         email: str,
         password_hash: str,
-        full_name: Optional[str] = None,
-    ) -> dict[str, Any]:
-        """Create user account with comprehensive business logic"""
+        full_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Create user account with comprehensive business logic."""
         try:
             # Use user service with repository pattern
             user = await self.user_service.create_user(
@@ -67,7 +64,7 @@ class PAKESystemService:
             # Additional business logic
             user_stats = await self.user_service.get_user_statistics()
 
-            logger.info(f"Created user account: {user.id}")
+            logger.info("Created user account: %s", user.id)
 
             return {
                 "success": True,
@@ -80,14 +77,14 @@ class PAKESystemService:
             }
 
         except ValueError as e:
-            logger.warning(f"User creation failed: {e}")
+            logger.warning("User creation failed: %s", e)
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": "validation_error",
             }
         except Exception as e:
-            logger.error(f"Unexpected error creating user: {e}")
+            logger.error("Unexpected error creating user: %s", e)
             return {
                 "success": False,
                 "error": "Internal server error",
@@ -98,8 +95,8 @@ class PAKESystemService:
         self,
         email: str,
         password_hash: str,
-    ) -> dict[str, Any]:
-        """Authenticate user with comprehensive business logic"""
+    ) -> Dict[str, Any]:
+        """Authenticate user with comprehensive business logic."""
         try:
             # Use user service with repository pattern
             user = await self.user_service.authenticate_user(email, password_hash)
@@ -114,7 +111,7 @@ class PAKESystemService:
             # Additional business logic
             user_stats = await self.user_service.get_user_statistics()
 
-            logger.info(f"User authenticated: {user.id}")
+            logger.info("User authenticated: %s", user.id)
 
             return {
                 "success": True,
@@ -127,15 +124,15 @@ class PAKESystemService:
             }
 
         except Exception as e:
-            logger.error(f"Authentication error: {e}")
+            logger.error("Authentication error: %s", e)
             return {
                 "success": False,
                 "error": "Authentication failed",
                 "error_type": "server_error",
             }
 
-    async def get_user_profile(self, user_id: str) -> dict[str, Any]:
-        """Get user profile with business logic"""
+    async def get_user_profile(self, user_id: str) -> Dict[str, Any]:
+        """Get user profile with business logic."""
         try:
             user = await self.user_service.get_user_by_id(user_id)
 
@@ -160,7 +157,7 @@ class PAKESystemService:
             }
 
         except Exception as e:
-            logger.error(f"Error getting user profile: {e}")
+            logger.error("Error getting user profile: %s", e)
             return {
                 "success": False,
                 "error": "Failed to retrieve user profile",
@@ -170,9 +167,9 @@ class PAKESystemService:
     async def update_user_preferences(
         self,
         user_id: str,
-        preferences: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Update user preferences with business logic"""
+        preferences: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Update user preferences with business logic."""
         try:
             updated_user = await self.user_service.update_user_profile(
                 user_id=user_id, preferences=preferences
@@ -185,7 +182,7 @@ class PAKESystemService:
                     "error_type": "not_found",
                 }
 
-            logger.info(f"Updated preferences for user: {user_id}")
+            logger.info("Updated preferences for user: %s", user_id)
 
             return {
                 "success": True,
@@ -195,14 +192,14 @@ class PAKESystemService:
             }
 
         except ValueError as e:
-            logger.warning(f"Preference update failed: {e}")
+            logger.warning("Preference update failed: %s", e)
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": "validation_error",
             }
         except Exception as e:
-            logger.error(f"Error updating preferences: {e}")
+            logger.error("Error updating preferences: %s", e)
             return {
                 "success": False,
                 "error": "Failed to update preferences",
@@ -213,8 +210,8 @@ class PAKESystemService:
         self,
         user_id: str,
         deactivated_by: str,
-    ) -> dict[str, Any]:
-        """Deactivate user account with business logic"""
+    ) -> Dict[str, Any]:
+        """Deactivate user account with business logic."""
         try:
             success = await self.user_service.deactivate_user(user_id, deactivated_by)
 
@@ -229,7 +226,7 @@ class PAKESystemService:
             user = await self.user_service.get_user_by_id(user_id)
             user_stats = await self.user_service.get_user_statistics()
 
-            logger.info(f"User account deactivated: {user_id} by {deactivated_by}")
+            logger.info("User account deactivated: %s by %s", user_id, deactivated_by)
 
             return {
                 "success": True,
@@ -240,14 +237,14 @@ class PAKESystemService:
             }
 
         except ValueError as e:
-            logger.warning(f"User deactivation failed: {e}")
+            logger.warning("User deactivation failed: %s", e)
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": "validation_error",
             }
         except Exception as e:
-            logger.error(f"Error deactivating user: {e}")
+            logger.error("Error deactivating user: %s", e)
             return {
                 "success": False,
                 "error": "Failed to deactivate user",
@@ -259,8 +256,8 @@ class PAKESystemService:
         query: str,
         limit: int = 100,
         offset: int = 0,
-    ) -> dict[str, Any]:
-        """Search users with business logic"""
+    ) -> Dict[str, Any]:
+        """Search users with business logic."""
         try:
             users = await self.user_service.search_users(
                 query=query, limit=limit, offset=offset
@@ -291,22 +288,22 @@ class PAKESystemService:
             }
 
         except ValueError as e:
-            logger.warning(f"User search failed: {e}")
+            logger.warning("User search failed: %s", e)
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": "validation_error",
             }
         except Exception as e:
-            logger.error(f"Error searching users: {e}")
+            logger.error("Error searching users: %s", e)
             return {
                 "success": False,
                 "error": "Search failed",
                 "error_type": "server_error",
             }
 
-    async def get_system_statistics(self) -> dict[str, Any]:
-        """Get comprehensive system statistics"""
+    async def get_system_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive system statistics."""
         try:
             user_stats = await self.user_service.get_user_statistics()
 
@@ -321,19 +318,19 @@ class PAKESystemService:
                     # "searches": search_stats,
                     # "system": system_stats,
                 },
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Error getting system statistics: {e}")
+            logger.error("Error getting system statistics: %s", e)
             return {
                 "success": False,
                 "error": "Failed to retrieve statistics",
                 "error_type": "server_error",
             }
 
-    async def health_check(self) -> dict[str, Any]:
-        """Comprehensive health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Comprehensive health check."""
         try:
             # Check repository container health
             repo_health = await self.repository_container.health_check()
@@ -353,15 +350,15 @@ class PAKESystemService:
                     "repository_container": repo_health,
                     "user_service": user_service_health,
                 },
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.error("Health check failed: %s", e)
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
 
@@ -369,19 +366,19 @@ class PAKESystemService:
 async def create_service_with_database_session(
     session: AsyncSession,
 ) -> PAKESystemService:
-    """Create PAKE System service with database session"""
+    """Create PAKE System service with database session."""
     return PAKESystemService(session=session)
 
 
 async def create_service_with_repository_container(
     container: RepositoryContainer,
 ) -> PAKESystemService:
-    """Create PAKE System service with repository container"""
+    """Create PAKE System service with repository container."""
     return PAKESystemService(repository_container=container)
 
 
 async def create_service_for_testing() -> PAKESystemService:
-    """Create PAKE System service with fake repositories for testing"""
+    """Create PAKE System service with fake repositories for testing."""
     from ..repositories.repository_container import FakeRepositoryContainer
 
     fake_container = FakeRepositoryContainer()
@@ -390,26 +387,25 @@ async def create_service_for_testing() -> PAKESystemService:
 
 # Example integration with FastAPI
 def create_fastapi_dependency(session: AsyncSession) -> PAKESystemService:
-    """Create PAKE System service as FastAPI dependency"""
+    """Create PAKE System service as FastAPI dependency."""
     return PAKESystemService(session=session)
 
 
 # Example usage in existing code
-async def migrate_existing_service_to_repository_pattern():
-    """Example of how to migrate existing service to repository pattern"""
+async def migrate_existing_service_to_repository_pattern(self) -> None:
+    """Example of how to migrate existing service to repository pattern."""
     # Before: Direct SQLAlchemy usage
-    # async def old_create_user(session: AsyncSession, username: str, email: str):
+    # async def old_create_user(self) -> None:
     #     user_orm = UserORM(username=username, email=email)
     #     session.add(user_orm)
     #     await session.commit()
     #     return user_orm
 
     # After: Repository pattern usage
-    async def new_create_user(service: PAKESystemService, username: str, email: str):
-        result = await service.create_user_account(
+    async def new_create_user(self) -> None:
+        return await service.create_user_account(
             username=username, email=email, password_hash="hashed_password"
         )
-        return result
 
     logger.info("Migration example completed")
 
@@ -418,7 +414,7 @@ if __name__ == "__main__":
     # Example usage
     import asyncio
 
-    async def main():
+    async def main(self) -> None:
         # Create service for testing
         service = await create_service_for_testing()
 

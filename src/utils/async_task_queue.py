@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE+ Async Task Queue System
-High-performance async task processing with Celery, Redis, and foundation integration
+High-performance async task processing with Celery, Redis, and foundation integration.
 """
 
 import asyncio
@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -17,6 +17,7 @@ import redis.asyncio as redis
 from celery import Celery
 from celery.result import AsyncResult
 from kombu import Exchange, Queue
+
 from utils.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
@@ -37,7 +38,7 @@ metrics = MetricsStore(service_name="pake-async-tasks")
 
 
 class TaskStatus(Enum):
-    """Task execution status"""
+    """Task execution status."""
 
     PENDING = "PENDING"
     STARTED = "STARTED"
@@ -48,7 +49,7 @@ class TaskStatus(Enum):
 
 
 class TaskPriority(Enum):
-    """Task priority levels"""
+    """Task priority levels."""
 
     LOW = 0
     NORMAL = 1
@@ -58,7 +59,7 @@ class TaskPriority(Enum):
 
 @dataclass
 class TaskConfig:
-    """Task configuration with retry and timeout settings"""
+    """Task configuration with retry and timeout settings."""
 
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -73,7 +74,7 @@ class TaskConfig:
 
 @dataclass
 class TaskResult:
-    """Task execution result with metadata"""
+    """Task execution result with metadata."""
 
     task_id: str
     status: TaskStatus
@@ -83,28 +84,22 @@ class TaskResult:
     completed_at: datetime | None = None
     duration: float | None = None
     retries: int = 0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class TaskQueueError(PAKEException):
-    """Task queue-related errors"""
+    """Task queue-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
 
 
 class AsyncTaskQueue:
     """High-performance async task queue with Redis backend and Celery integration
-    Includes circuit breaker protection, retry mechanisms, and comprehensive monitoring
+    Includes circuit breaker protection, retry mechanisms, and comprehensive monitoring.
     """
 
-    def __init__(
-        self,
-        redis_url: str = "redis://localhost:6379/0",
-        broker_url: str | None = None,
-        result_backend: str | None = None,
-        app_name: str = "pake_tasks",
-    ):
+    def __init__(self) -> None:
         self.redis_url = redis_url
         self.broker_url = broker_url or redis_url
         self.result_backend = result_backend or redis_url
@@ -149,7 +144,7 @@ class AsyncTaskQueue:
         self.cache = DistributedCache(cache_config)
 
     def _create_celery_app(self) -> Celery:
-        """Create and configure Celery application"""
+        """Create and configure Celery application."""
         app = Celery(self.app_name)
 
         app.conf.update(
@@ -204,7 +199,7 @@ class AsyncTaskQueue:
 
     @with_circuit_breaker("redis_connection")
     async def connect(self) -> None:
-        """Initialize Redis connection and cache"""
+        """Initialize Redis connection and cache."""
         try:
             self.redis_client = redis.from_url(self.redis_url)
             await self.redis_client.ping()
@@ -221,13 +216,14 @@ class AsyncTaskQueue:
                 "task_queue_connections",
                 labels={"status": "error"},
             )
+            msg = f"Failed to connect to Redis: {str(e)}"
             raise TaskQueueError(
-                f"Failed to connect to Redis: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     async def disconnect(self) -> None:
-        """Close Redis connections"""
+        """Close Redis connections."""
         try:
             if self.redis_client:
                 await self.redis_client.close()
@@ -236,8 +232,8 @@ class AsyncTaskQueue:
         except Exception as e:
             self.logger.error("Error disconnecting from task queue", error=e)
 
-    def task(self, config: TaskConfig | None = None, name: str | None = None):
-        """Decorator to register async functions as Celery tasks"""
+    def task(self) -> None:
+        """Decorator to register async functions as Celery tasks."""
 
         def decorator(func: Callable) -> Callable:
             task_config = config or TaskConfig()
@@ -263,11 +259,11 @@ class AsyncTaskQueue:
         return decorator
 
     def _create_task_wrapper(self, func: Callable, config: TaskConfig) -> Callable:
-        """Create a wrapper for async functions to work with Celery"""
+        """Create a wrapper for async functions to work with Celery."""
 
         @functools.wraps(func)
         @with_error_handling(f"task_{func.__name__}")
-        async def async_wrapper(celery_self, *args, **kwargs):
+        async def async_wrapper(self) -> None:
             task_id = celery_self.request.id
             start_time = time.time()
 
@@ -293,7 +289,9 @@ class AsyncTaskQueue:
                 await self._cache_task_result(task_id, result, duration)
 
                 self.logger.info(
-                    f"Task {task_id} completed successfully in {duration:.2f}s",
+                    "Task %s completed successfully in %ss",
+                    task_id,
+                    duration,
                 )
                 return result
 
@@ -306,13 +304,15 @@ class AsyncTaskQueue:
                 )
 
                 self.logger.error(
-                    f"Task {task_id} failed after {duration:.2f}s",
+                    "Task %s failed after %ss",
+                    task_id,
+                    duration,
                     error=e,
                 )
                 raise
 
-        def sync_wrapper(celery_self, *args, **kwargs):
-            """Sync wrapper that runs async function in event loop"""
+        def sync_wrapper(self) -> None:
+            """Sync wrapper that runs async function in event loop."""
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -334,10 +334,11 @@ class AsyncTaskQueue:
         countdown: int | None = None,
         **kwargs,
     ) -> str:
-        """Submit a task for execution"""
+        """Submit a task for execution."""
         try:
             if task_name not in self.task_registry:
-                raise TaskQueueError(f"Task '{task_name}' not registered")
+                msg = f"Task '{task_name}' not registered"
+                raise TaskQueueError(msg)
 
             task = self.task_registry[task_name]
 
@@ -360,7 +361,10 @@ class AsyncTaskQueue:
             await self._track_task_submission(task_id, task_name, priority)
 
             self.logger.info(
-                f"Submitted task {task_id} ({task_name}) to queue {queue_name}",
+                "Submitted task %s (%s) to queue %s",
+                task_id,
+                task_name,
+                queue_name,
             )
             self.metrics.increment_counter(
                 "tasks_submitted",
@@ -378,13 +382,14 @@ class AsyncTaskQueue:
                 "task_submission_errors",
                 labels={"task_name": task_name},
             )
+            msg = f"Failed to submit task: {str(e)}"
             raise TaskQueueError(
-                f"Failed to submit task: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     async def get_task_result(self, task_id: str, timeout: float = 10.0) -> TaskResult:
-        """Get task result with caching"""
+        """Get task result with caching."""
         try:
             # Try cache first
             cached_result = await self.cache.get(f"task_result:{task_id}")
@@ -414,17 +419,18 @@ class AsyncTaskQueue:
             return task_result
 
         except Exception as e:
+            msg = f"Failed to get task result: {str(e)}"
             raise TaskQueueError(
-                f"Failed to get task result: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     async def cancel_task(self, task_id: str, terminate: bool = False) -> bool:
-        """Cancel a running task"""
+        """Cancel a running task."""
         try:
             self.celery_app.control.revoke(task_id, terminate=terminate)
 
-            self.logger.info(f"Cancelled task {task_id} (terminate={terminate})")
+            self.logger.info("Cancelled task %s (terminate=%s)", task_id, terminate)
             self.metrics.increment_counter(
                 "tasks_cancelled",
                 labels={"terminate": str(terminate)},
@@ -433,11 +439,11 @@ class AsyncTaskQueue:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to cancel task {task_id}", error=e)
+            self.logger.error("Failed to cancel task %s", task_id, error=e)
             return False
 
-    async def get_queue_stats(self) -> dict[str, Any]:
-        """Get comprehensive queue statistics"""
+    async def get_queue_stats(self) -> Dict[str, Any]:
+        """Get comprehensive queue statistics."""
         try:
             active_tasks = self.celery_app.control.inspect().active()
             scheduled_tasks = self.celery_app.control.inspect().scheduled()
@@ -465,7 +471,7 @@ class AsyncTaskQueue:
             return {"error": str(e)}
 
     def _get_queue_for_priority(self, priority: TaskPriority) -> str:
-        """Map priority to queue name"""
+        """Map priority to queue name."""
         priority_queues = {
             TaskPriority.LOW: "low_priority",
             TaskPriority.NORMAL: "default",
@@ -480,12 +486,12 @@ class AsyncTaskQueue:
         task_name: str,
         priority: TaskPriority,
     ) -> None:
-        """Track task submission in cache for monitoring"""
+        """Track task submission in cache for monitoring."""
         submission_data = {
             "task_id": task_id,
             "task_name": task_name,
             "priority": priority.name,
-            "submitted_at": datetime.utcnow().isoformat(),
+            "submitted_at": datetime.now(UTC).isoformat(),
             "status": "submitted",
         }
 
@@ -498,13 +504,13 @@ class AsyncTaskQueue:
         result: Any,
         duration: float,
     ) -> None:
-        """Cache task result with metadata"""
+        """Cache task result with metadata."""
         result_data = {
             "task_id": task_id,
             "status": "success",
             "result": result,
             "duration": duration,
-            "completed_at": datetime.utcnow().isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
         }
 
         await self.cache.set(f"task_result:{task_id}", result_data, ttl=3600)
@@ -515,7 +521,7 @@ task_queue: AsyncTaskQueue | None = None
 
 
 def get_task_queue() -> AsyncTaskQueue:
-    """Get global task queue instance"""
+    """Get global task queue instance."""
     global task_queue
     if task_queue is None:
         task_queue = AsyncTaskQueue()
@@ -523,15 +529,15 @@ def get_task_queue() -> AsyncTaskQueue:
 
 
 # Convenience decorators
-def async_task(config: TaskConfig | None = None, name: str | None = None):
-    """Convenience decorator for registering async tasks"""
+def async_task(self) -> None:
+    """Convenience decorator for registering async tasks."""
     queue = get_task_queue()
     return queue.task(config=config, name=name)
 
 
 @asynccontextmanager
-async def task_queue_context():
-    """Context manager for task queue operations"""
+async def task_queue_context(self) -> None:
+    """Context manager for task queue operations."""
     queue = get_task_queue()
     try:
         await queue.connect()
@@ -552,10 +558,10 @@ async def task_queue_context():
 )
 async def process_document_task(
     document_id: str,
-    options: dict[str, Any] = None,
-) -> dict[str, Any]:
-    """Example AI processing task"""
-    logger.info(f"Processing document {document_id} with options {options}")
+    options: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Example AI processing task."""
+    logger.info("Processing document %s with options %s", document_id, options)
 
     # Simulate AI processing
     await asyncio.sleep(2)
@@ -580,10 +586,10 @@ async def process_document_task(
 )
 async def sync_knowledge_vault_task(
     vault_path: str,
-    sync_options: dict[str, Any] = None,
-) -> dict[str, Any]:
-    """Example data synchronization task"""
-    logger.info(f"Syncing knowledge vault at {vault_path}")
+    sync_options: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Example data synchronization task."""
+    logger.info("Syncing knowledge vault at %s", vault_path)
 
     # Simulate sync operation
     await asyncio.sleep(5)
@@ -599,8 +605,8 @@ async def sync_knowledge_vault_task(
 # Testing function
 if __name__ == "__main__":
 
-    async def test_task_queue():
-        """Test the async task queue system"""
+    async def test_task_queue(self) -> None:
+        """Test the async task queue system."""
         async with task_queue_context() as queue:
             print("Testing async task queue...")
 

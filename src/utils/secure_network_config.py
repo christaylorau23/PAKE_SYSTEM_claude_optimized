@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Secure Network Configuration for PAKE System
-Replaces insecure 0.0.0.0 bindings with secure alternatives
+Replaces insecure 0.0.0.0 bindings with secure alternatives.
 """
 
 import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class Environment(Enum):
-    """Environment types for network configuration"""
+    """Environment types for network configuration."""
 
     DEVELOPMENT = "development"
     STAGING = "staging"
@@ -22,15 +22,15 @@ class Environment(Enum):
 
 @dataclass
 class NetworkSecurityConfig:
-    """Secure network configuration"""
+    """Secure network configuration."""
 
     environment: Environment
-    allowed_hosts: list[str]
+    allowed_hosts: List[str]
     bind_address: str
     port: int
     enable_ssl: bool = True
     enable_cors: bool = True
-    cors_origins: Optional[list[str]] = None
+    cors_origins: List[str] | None = None
     enable_rate_limiting: bool = True
     max_connections: int = 1000
     timeout_seconds: int = 30
@@ -38,15 +38,15 @@ class NetworkSecurityConfig:
 
 class SecureNetworkConfig:
     """Secure network configuration manager
-    Provides environment-appropriate network settings
+    Provides environment-appropriate network settings.
     """
 
-    def __init__(self, environment: Environment | None = None):
+    def __init__(self) -> None:
         self.environment = environment or self._detect_environment()
         self.config = self._get_secure_config()
 
     def _detect_environment(self) -> Environment:
-        """Detect environment from environment variables"""
+        """Detect environment from environment variables."""
         env_str = os.getenv("PAKE_ENVIRONMENT", "development").lower()
 
         if env_str in ["prod", "production"]:
@@ -56,7 +56,7 @@ class SecureNetworkConfig:
         return Environment.DEVELOPMENT
 
     def _get_secure_config(self) -> NetworkSecurityConfig:
-        """Get secure network configuration based on environment"""
+        """Get secure network configuration based on environment."""
         if self.environment == Environment.PRODUCTION:
             return NetworkSecurityConfig(
                 environment=self.environment,
@@ -99,8 +99,8 @@ class SecureNetworkConfig:
             timeout_seconds=60,
         )
 
-    def _get_production_hosts(self) -> list[str]:
-        """Get production allowed hosts"""
+    def _get_production_hosts(self) -> List[str]:
+        """Get production allowed hosts."""
         hosts_str = os.getenv("PAKE_ALLOWED_HOSTS", "")
         if hosts_str:
             return [host.strip() for host in hosts_str.split(",") if host.strip()]
@@ -108,8 +108,8 @@ class SecureNetworkConfig:
         # Default production hosts - should be configured via environment
         return ["api.pake.example.com", "pake.example.com", "*.pake.example.com"]
 
-    def _get_staging_hosts(self) -> list[str]:
-        """Get staging allowed hosts"""
+    def _get_staging_hosts(self) -> List[str]:
+        """Get staging allowed hosts."""
         hosts_str = os.getenv("PAKE_STAGING_HOSTS", "")
         if hosts_str:
             return [host.strip() for host in hosts_str.split(",") if host.strip()]
@@ -117,7 +117,7 @@ class SecureNetworkConfig:
         return ["staging-api.pake.example.com", "staging.pake.example.com"]
 
     def _get_production_bind_address(self) -> str:
-        """Get production bind address"""
+        """Get production bind address."""
         bind_addr = os.getenv("PAKE_BIND_ADDRESS")
         if bind_addr:
             return bind_addr
@@ -128,23 +128,23 @@ class SecureNetworkConfig:
         return "127.0.0.1"
 
     def _get_staging_bind_address(self) -> str:
-        """Get staging bind address"""
+        """Get staging bind address."""
         bind_addr = os.getenv("PAKE_STAGING_BIND_ADDRESS")
         if bind_addr:
             return bind_addr
 
         return "127.0.0.1"
 
-    def _get_production_cors_origins(self) -> list[str]:
-        """Get production CORS origins"""
+    def _get_production_cors_origins(self) -> List[str]:
+        """Get production CORS origins."""
         cors_str = os.getenv("PAKE_CORS_ORIGINS", "")
         if cors_str:
             return [origin.strip() for origin in cors_str.split(",") if origin.strip()]
 
         return ["https://pake.example.com", "https://app.pake.example.com"]
 
-    def _get_staging_cors_origins(self) -> list[str]:
-        """Get staging CORS origins"""
+    def _get_staging_cors_origins(self) -> List[str]:
+        """Get staging CORS origins."""
         cors_str = os.getenv("PAKE_STAGING_CORS_ORIGINS", "")
         if cors_str:
             return [origin.strip() for origin in cors_str.split(",") if origin.strip()]
@@ -154,8 +154,8 @@ class SecureNetworkConfig:
             "https://staging-app.pake.example.com",
         ]
 
-    def get_uvicorn_config(self) -> dict[str, Any]:
-        """Get secure uvicorn configuration"""
+    def get_uvicorn_config(self) -> Dict[str, Any]:
+        """Get secure uvicorn configuration."""
         config = {
             "host": self.config.bind_address,
             "port": self.config.port,
@@ -179,8 +179,8 @@ class SecureNetworkConfig:
 
         return config
 
-    def get_fastapi_config(self) -> dict[str, Any]:
-        """Get secure FastAPI configuration"""
+    def get_fastapi_config(self) -> Dict[str, Any]:
+        """Get secure FastAPI configuration."""
         return {
             "title": "PAKE System API",
             "version": "1.0.0",
@@ -193,8 +193,8 @@ class SecureNetworkConfig:
             ),
         }
 
-    def get_cors_config(self) -> dict[str, Any]:
-        """Get secure CORS configuration"""
+    def get_cors_config(self) -> Dict[str, Any]:
+        """Get secure CORS configuration."""
         if not self.config.enable_cors:
             return {}
 
@@ -206,8 +206,8 @@ class SecureNetworkConfig:
             "max_age": 3600,
         }
 
-    def validate_configuration(self) -> list[str]:
-        """Validate network configuration and return warnings"""
+    def validate_configuration(self) -> List[str]:
+        """Validate network configuration and return warnings."""
         warnings = []
 
         if self.environment == Environment.PRODUCTION:
@@ -233,7 +233,7 @@ _network_config: SecureNetworkConfig | None = None
 
 
 def get_network_config() -> SecureNetworkConfig:
-    """Get global network configuration instance"""
+    """Get global network configuration instance."""
     global _network_config
     if _network_config is None:
         _network_config = SecureNetworkConfig()
@@ -241,24 +241,24 @@ def get_network_config() -> SecureNetworkConfig:
 
 
 def get_secure_host() -> str:
-    """Get secure host binding address"""
+    """Get secure host binding address."""
     return get_network_config().config.bind_address
 
 
 def get_secure_port() -> int:
-    """Get secure port"""
+    """Get secure port."""
     return get_network_config().config.port
 
 
 def validate_network_security() -> bool:
-    """Validate network security configuration"""
+    """Validate network security configuration."""
     config = get_network_config()
     warnings = config.validate_configuration()
 
     if warnings:
         logger.warning("Network security warnings:")
         for warning in warnings:
-            logger.warning(f"  - {warning}")
+            logger.warning("  - %s", warning)
 
         # Return False if there are critical warnings
         critical_warnings = [w for w in warnings if "CRITICAL" in w]
@@ -269,7 +269,7 @@ def validate_network_security() -> bool:
 
 # Migration utilities for replacing 0.0.0.0 bindings
 def migrate_bind_address(old_address: str) -> str:
-    """Migrate insecure bind address to secure alternative"""
+    """Migrate insecure bind address to secure alternative."""
     if old_address == "0.0.0.0":
         config = get_network_config()
         return config.config.bind_address
@@ -277,8 +277,8 @@ def migrate_bind_address(old_address: str) -> str:
     return old_address
 
 
-def get_secure_server_config() -> dict[str, Any]:
-    """Get complete secure server configuration"""
+def get_secure_server_config() -> Dict[str, Any]:
+    """Get complete secure server configuration."""
     config = get_network_config()
 
     return {

@@ -20,8 +20,6 @@ from enum import Enum
 from typing import Any
 
 from ..messaging.message_bus import (
-    Message,
-    MessageBus,
     MessagePriority,
     create_response_message,
     create_system_event,
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkerStatus(Enum):
-    """Worker agent status"""
+    """Worker agent status."""
 
     INITIALIZING = "initializing"
     IDLE = "idle"
@@ -43,13 +41,13 @@ class WorkerStatus(Enum):
 
 @dataclass
 class WorkerCapability:
-    """Capability definition for worker agent"""
+    """Capability definition for worker agent."""
 
     name: str
     description: str
-    input_types: list[str]
-    output_types: list[str]
-    performance_metrics: dict[str, Any]
+    input_types: List[str]
+    output_types: List[str]
+    performance_metrics: Dict[str, Any]
 
 
 class BaseWorkerAgent(ABC):
@@ -62,14 +60,8 @@ class BaseWorkerAgent(ABC):
     - Performance tracking
     """
 
-    def __init__(
-        self,
-        worker_type: str,
-        message_bus: MessageBus,
-        capabilities: list[WorkerCapability] = None,
-        worker_id: str = None,
-    ):
-        """Initialize base worker agent"""
+    def __init__(self) -> None:
+        """Initialize base worker agent."""
         self.worker_id = worker_id or f"{worker_type}_{uuid.uuid4().hex[:8]}"
         self.worker_type = worker_type
         self.message_bus = message_bus
@@ -99,17 +91,17 @@ class BaseWorkerAgent(ABC):
         self._running = False
         self._heartbeat_task: asyncio.Task | None = None
 
-        logger.info(f"BaseWorkerAgent {self.worker_id} ({worker_type}) initialized")
+        logger.info("BaseWorkerAgent %s (%s) initialized", self.worker_id, worker_type)
 
-    async def start(self):
-        """Start worker agent"""
+    async def start(self) -> None:
+        """Start worker agent."""
         if self._running:
             return
 
         self._running = True
         self.status = WorkerStatus.IDLE
 
-        logger.info(f"Starting worker {self.worker_id}...")
+        logger.info("Starting worker %s...", self.worker_id)
 
         # Subscribe to task messages
         await self.message_bus.subscribe(
@@ -134,17 +126,17 @@ class BaseWorkerAgent(ABC):
         # Call subclass initialization
         await self._on_start()
 
-        logger.info(f"Worker {self.worker_id} started successfully")
+        logger.info("Worker %s started successfully", self.worker_id)
 
-    async def stop(self):
-        """Stop worker agent"""
+    async def stop(self) -> None:
+        """Stop worker agent."""
         if not self._running:
             return
 
         self._running = False
         self.status = WorkerStatus.SHUTTING_DOWN
 
-        logger.info(f"Stopping worker {self.worker_id}...")
+        logger.info("Stopping worker %s...", self.worker_id)
 
         # Stop heartbeat
         if self._heartbeat_task:
@@ -170,10 +162,10 @@ class BaseWorkerAgent(ABC):
         # Call subclass cleanup
         await self._on_stop()
 
-        logger.info(f"Worker {self.worker_id} stopped")
+        logger.info("Worker %s stopped", self.worker_id)
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get worker health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get worker health status."""
         return {
             "worker_id": self.worker_id,
             "worker_type": self.worker_type,
@@ -188,7 +180,7 @@ class BaseWorkerAgent(ABC):
         }
 
     @abstractmethod
-    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process task data and return result.
 
         Must be implemented by subclasses to handle specific task types.
@@ -204,14 +196,14 @@ class BaseWorkerAgent(ABC):
                 - metrics: Dict (performance metrics)
         """
 
-    async def _on_start(self):
-        """Override in subclasses for custom startup logic"""
+    async def _on_start(self) -> None:
+        """Override in subclasses for custom startup logic."""
 
-    async def _on_stop(self):
-        """Override in subclasses for custom shutdown logic"""
+    async def _on_stop(self) -> None:
+        """Override in subclasses for custom shutdown logic."""
 
-    async def _handle_task_message(self, message: Message):
-        """Handle task message from supervisor"""
+    async def _handle_task_message(self) -> None:
+        """Handle task message from supervisor."""
         if message.target != self.worker_id:
             return  # Not for this worker
 
@@ -232,8 +224,8 @@ class BaseWorkerAgent(ABC):
         # Process task
         await self._execute_task(message)
 
-    async def _execute_task(self, message: Message):
-        """Execute task with error handling and metrics"""
+    async def _execute_task(self) -> None:
+        """Execute task with error handling and metrics."""
         task_id = message.correlation_id
         self.current_task_id = task_id
         self.status = WorkerStatus.BUSY
@@ -241,7 +233,7 @@ class BaseWorkerAgent(ABC):
         start_time = time.time()
 
         try:
-            logger.info(f"Worker {self.worker_id} executing task {task_id}")
+            logger.info("Worker %s executing task %s", self.worker_id, task_id)
 
             # Process task through subclass implementation
             result = await asyncio.wait_for(
@@ -266,8 +258,10 @@ class BaseWorkerAgent(ABC):
             self._update_success_metrics(execution_time)
 
             logger.info(
-                f"Worker {self.worker_id} completed task {task_id} in {
-                    execution_time:.2f}s",
+                "Worker %.2f completed task %s in %ss",
+                self.worker_id,
+                task_id,
+                execution_time,
             )
 
         except TimeoutError:
@@ -290,7 +284,7 @@ class BaseWorkerAgent(ABC):
         except Exception as e:
             # Task execution error
             error_msg = f"Task execution failed: {str(e)}"
-            logger.error(f"Worker {self.worker_id} task {task_id} failed: {e}")
+            logger.error("Worker %s task %s failed: %s", self.worker_id, task_id, e)
 
             response = create_response_message(
                 source=self.worker_id,
@@ -309,8 +303,8 @@ class BaseWorkerAgent(ABC):
             self.current_task_id = None
             self.status = WorkerStatus.IDLE
 
-    async def _handle_system_event(self, message: Message):
-        """Handle system events"""
+    async def _handle_system_event(self) -> None:
+        """Handle system events."""
         event_data = message.data
         event_type = event_data.get("event_type")
 
@@ -319,8 +313,8 @@ class BaseWorkerAgent(ABC):
         elif event_type == "shutdown_request":
             await self.stop()
 
-    async def _handle_health_check_request(self, message: Message):
-        """Handle health check request"""
+    async def _handle_health_check_request(self) -> None:
+        """Handle health check request."""
         health_status = await self.get_health_status()
 
         response = create_response_message(
@@ -332,8 +326,8 @@ class BaseWorkerAgent(ABC):
 
         await self.message_bus.publish("health:checks:responses", response)
 
-    async def _send_registration(self):
-        """Send worker registration event"""
+    async def _send_registration(self) -> None:
+        """Send worker registration event."""
         registration_event = create_system_event(
             source=self.worker_id,
             event_type="worker_registration",
@@ -351,9 +345,9 @@ class BaseWorkerAgent(ABC):
 
         await self.message_bus.publish("system:events", registration_event)
 
-    async def _heartbeat_loop(self):
-        """Send periodic heartbeat messages"""
-        logger.info(f"Worker {self.worker_id} heartbeat started")
+    async def _heartbeat_loop(self) -> None:
+        """Send periodic heartbeat messages."""
+        logger.info("Worker %s heartbeat started", self.worker_id)
 
         while self._running:
             try:
@@ -377,13 +371,13 @@ class BaseWorkerAgent(ABC):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Heartbeat error for worker {self.worker_id}: {e}")
+                logger.error("Heartbeat error for worker %s: %s", self.worker_id, e)
                 await asyncio.sleep(5)
 
-        logger.info(f"Worker {self.worker_id} heartbeat stopped")
+        logger.info("Worker %s heartbeat stopped", self.worker_id)
 
-    def _update_success_metrics(self, execution_time: float):
-        """Update metrics for successful task"""
+    def _update_success_metrics(self) -> None:
+        """Update metrics for successful task."""
         self.metrics["tasks_processed"] += 1
         self.metrics["tasks_successful"] += 1
         self.metrics["total_processing_time"] += execution_time
@@ -398,8 +392,8 @@ class BaseWorkerAgent(ABC):
             self.metrics["tasks_failed"] / self.metrics["tasks_processed"]
         )
 
-    def _update_failure_metrics(self, execution_time: float, failure_type: str):
-        """Update metrics for failed task"""
+    def _update_failure_metrics(self) -> None:
+        """Update metrics for failed task."""
         self.metrics["tasks_processed"] += 1
         self.metrics["tasks_failed"] += 1
         self.metrics["total_processing_time"] += execution_time
@@ -425,37 +419,37 @@ class BaseWorkerAgent(ABC):
 
 
 class WorkerCapabilityBuilder:
-    """Builder for creating worker capabilities"""
+    """Builder for creating worker capabilities."""
 
-    def __init__(self, name: str):
+    def __init__(self) -> None:
         self.name = name
         self.description = ""
         self.input_types = []
         self.output_types = []
         self.performance_metrics = {}
 
-    def with_description(self, description: str):
-        """Add capability description"""
+    def with_description(self) -> None:
+        """Add capability description."""
         self.description = description
         return self
 
-    def with_input_types(self, *input_types: str):
-        """Add input types"""
+    def with_input_types(self) -> None:
+        """Add input types."""
         self.input_types.extend(input_types)
         return self
 
-    def with_output_types(self, *output_types: str):
-        """Add output types"""
+    def with_output_types(self) -> None:
+        """Add output types."""
         self.output_types.extend(output_types)
         return self
 
-    def with_performance_metrics(self, **metrics):
-        """Add performance metrics"""
+    def with_performance_metrics(self) -> None:
+        """Add performance metrics."""
         self.performance_metrics.update(metrics)
         return self
 
     def build(self) -> WorkerCapability:
-        """Build capability"""
+        """Build capability."""
         return WorkerCapability(
             name=self.name,
             description=self.description,

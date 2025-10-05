@@ -98,7 +98,7 @@ import asyncio
 async def monitor_performance():
     health_monitor = HealthMonitoringSystem()
     metrics = await health_monitor.collect_system_metrics()
-    
+
     for metric in metrics:
         print(f'{metric.metric_name}: {metric.value} {metric.unit} ({metric.status.value})')
 
@@ -160,7 +160,7 @@ import asyncio
 async def analyze_logs():
     logging_framework = LoggingFramework()
     report = await logging_framework.generate_log_report(days=7)
-    
+
     print(f'Total Events: {report[\"summary\"][\"total_audit_events\"]}')
     print(f'Unique Users: {report[\"summary\"][\"unique_users\"]}')
     print(f'Top Events: {report[\"event_breakdown\"]}')
@@ -240,14 +240,14 @@ from services.database.connection_manager import DatabaseConnectionManager
 async def optimize_database():
     db_manager = DatabaseConnectionManager()
     await db_manager.connect()
-    
+
     # Run VACUUM ANALYZE
     await db_manager.execute_query('VACUUM ANALYZE;')
-    
+
     # Check database size
     result = await db_manager.fetch_one('SELECT pg_size_pretty(pg_database_size(current_database()));')
     print(f'Database size: {result[0]}')
-    
+
     await db_manager.disconnect()
 
 asyncio.run(optimize_database())
@@ -265,11 +265,11 @@ from services.caching.redis_cache_strategy import RedisCacheStrategy
 async def clear_cache():
     cache = RedisCacheStrategy('redis://localhost:6379')
     await cache.start()
-    
+
     # Clear all cache
     await cache.clear_all()
     print('Cache cleared')
-    
+
     await cache.stop()
 
 asyncio.run(clear_cache())
@@ -302,7 +302,7 @@ import asyncio
 async def check_memory():
     health_monitor = HealthMonitoringSystem()
     metrics = await health_monitor.collect_system_metrics()
-    
+
     memory_metric = next((m for m in metrics if m.metric_name == 'memory_usage_percent'), None)
     if memory_metric:
         print(f'Memory status: {memory_metric.status.value}')
@@ -333,23 +333,23 @@ from services.database.connection_manager import DatabaseConnectionManager
 async def check_db_performance():
     db_manager = DatabaseConnectionManager()
     await db_manager.connect()
-    
+
     # Check active connections
     result = await db_manager.fetch_one('SELECT count(*) FROM pg_stat_activity;')
     print(f'Active connections: {result[0]}')
-    
+
     # Check slow queries
     result = await db_manager.fetch_all('''
-        SELECT query, mean_time, calls 
-        FROM pg_stat_statements 
-        ORDER BY mean_time DESC 
+        SELECT query, mean_time, calls
+        FROM pg_stat_statements
+        ORDER BY mean_time DESC
         LIMIT 5;
     ''')
-    
+
     print('Slowest queries:')
     for row in result:
         print(f'  {row[0][:50]}... - {row[1]:.2f}ms avg, {row[2]} calls')
-    
+
     await db_manager.disconnect()
 
 asyncio.run(check_db_performance())
@@ -379,7 +379,7 @@ import time
 
 async def check_api_performance():
     start_time = time.time()
-    
+
     async with aiohttp.ClientSession() as session:
         async with session.get('http://localhost:8000/health') as response:
             duration = (time.time() - start_time) * 1000
@@ -408,20 +408,20 @@ import asyncio
 
 async def analyze_errors():
     logging_framework = LoggingFramework()
-    
+
     # Get recent errors
     audit_logs = await logging_framework.get_audit_logs(
         start_date=datetime.now(UTC) - timedelta(hours=24)
     )
-    
+
     error_logs = [log for log in audit_logs if log.result == 'failure']
     print(f'Errors in last 24h: {len(error_logs)}')
-    
+
     # Group by error type
     error_types = {}
     for log in error_logs:
         error_types[log.event_type] = error_types.get(log.event_type, 0) + 1
-    
+
     print('Error breakdown:')
     for error_type, count in error_types.items():
         print(f'  {error_type}: {count}')
@@ -440,14 +440,14 @@ import asyncio
 
 async def check_security():
     security_monitor = SecurityMonitoringSystem()
-    
+
     # Get open incidents
     open_incidents = await security_monitor.get_open_incidents()
     print(f'Open security incidents: {len(open_incidents)}')
-    
+
     for incident in open_incidents:
         print(f'  {incident.incident_id}: {incident.title} ({incident.threat_level.value})')
-    
+
     # Get incident metrics
     metrics = await security_monitor.get_incident_metrics(days=7)
     print(f'Incidents in last 7 days: {metrics[\"summary\"][\"total_incidents\"]}')
@@ -473,7 +473,7 @@ def profile_ingestion():
     orchestrator = IngestionOrchestrator()
     # Profile ingestion process
     cProfile.run('orchestrator.execute_plan(test_plan)', 'profile_output.prof')
-    
+
     # Analyze results
     p = pstats.Stats('profile_output.prof')
     p.sort_stats('cumulative').print_stats(10)
@@ -493,32 +493,32 @@ from services.database.connection_manager import DatabaseConnectionManager
 async def analyze_db_performance():
     db_manager = DatabaseConnectionManager()
     await db_manager.connect()
-    
+
     # Check table sizes
     result = await db_manager.fetch_all('''
-        SELECT schemaname, tablename, 
+        SELECT schemaname, tablename,
                pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-        FROM pg_tables 
+        FROM pg_tables
         WHERE schemaname = 'public'
         ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
     ''')
-    
+
     print('Table sizes:')
     for row in result:
         print(f'  {row[1]}: {row[2]}')
-    
+
     # Check index usage
     result = await db_manager.fetch_all('''
         SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
-        FROM pg_stat_user_indexes 
-        ORDER BY idx_scan DESC 
+        FROM pg_stat_user_indexes
+        ORDER BY idx_scan DESC
         LIMIT 10;
     ''')
-    
+
     print('Index usage:')
     for row in result:
         print(f'  {row[2]}: {row[3]} scans')
-    
+
     await db_manager.disconnect()
 
 asyncio.run(analyze_db_performance())
@@ -538,17 +538,17 @@ import asyncio
 async def check_resources():
     health_monitor = HealthMonitoringSystem()
     metrics = await health_monitor.collect_system_metrics()
-    
+
     # Check CPU usage
     cpu_metric = next((m for m in metrics if m.metric_name == 'cpu_usage_percent'), None)
     if cpu_metric and cpu_metric.value > 80:
         print('CPU usage is high - consider scaling up')
-    
+
     # Check memory usage
     memory_metric = next((m for m in metrics if m.metric_name == 'memory_usage_percent'), None)
     if memory_metric and memory_metric.value > 80:
         print('Memory usage is high - consider scaling up')
-    
+
     # Check disk usage
     disk_metric = next((m for m in metrics if m.metric_name == 'disk_usage_percent'), None)
     if disk_metric and disk_metric.value > 80:
@@ -573,7 +573,7 @@ import asyncio
 async def run_backup():
     health_monitor = HealthMonitoringSystem()
     success = await health_monitor.run_maintenance_task('database_backup')
-    
+
     if success:
         print('Backup completed successfully')
     else:
@@ -623,14 +623,14 @@ import asyncio
 
 async def check_security():
     security_monitor = SecurityMonitoringSystem()
-    
+
     # Generate security report
     report = await security_monitor.generate_security_report(days=7)
-    
+
     print(f'Security Events: {report[\"summary\"][\"total_security_events\"]}')
     print(f'Critical Events: {report[\"summary\"][\"critical_events\"]}')
     print(f'Open Incidents: {report[\"summary\"][\"open_incidents\"]}')
-    
+
     if report['recommendations']:
         print('Recommendations:')
         for rec in report['recommendations']:
@@ -651,7 +651,7 @@ import asyncio
 async def scan_vulnerabilities():
     security_framework = SecurityHardeningFramework()
     scan_results = await security_framework.scan_dependencies()
-    
+
     print(f'Total Vulnerabilities: {scan_results[\"summary\"][\"total_vulnerabilities\"]}')
     print(f'Critical: {scan_results[\"summary\"][\"critical\"]}')
     print(f'High: {scan_results[\"summary\"][\"high\"]}')
@@ -674,10 +674,10 @@ import asyncio
 async def analyze_capacity():
     health_monitor = HealthMonitoringSystem()
     trends = await health_monitor.get_health_trends(days=30)
-    
+
     print(f'Health Score Trend: {trends[\"trends\"][\"trend\"]}')
     print(f'Average Uptime: {trends[\"summary\"][\"average_uptime_hours\"]:.1f} hours')
-    
+
     # Check for capacity issues
     if trends['trends']['trend'] == 'declining':
         print('System health is declining - consider capacity planning')
@@ -719,7 +719,7 @@ import asyncio
 async def check_incidents():
     security_monitor = SecurityMonitoringSystem()
     open_incidents = await security_monitor.get_open_incidents()
-    
+
     if open_incidents:
         print('Active incidents:')
         for incident in open_incidents:
@@ -742,15 +742,15 @@ import asyncio
 async def investigate():
     health_monitor = HealthMonitoringSystem()
     report = await health_monitor.generate_health_report()
-    
+
     print(f'System Status: {report.overall_status.value}')
     print(f'Active Alerts: {len(report.alerts)}')
-    
+
     if report.alerts:
         print('Alerts:')
         for alert in report.alerts:
             print(f'  - {alert}')
-    
+
     if report.recommendations:
         print('Recommendations:')
         for rec in report.recommendations:
@@ -770,14 +770,14 @@ import asyncio
 
 async def resolve_incident():
     security_monitor = SecurityMonitoringSystem()
-    
+
     # Update incident status (example)
     # success = await security_monitor.update_incident_status(
     #     incident_id='inc_1234567890_abcd',
     #     status=IncidentStatus.RESOLVED,
     #     notes='Issue resolved by restarting service'
     # )
-    
+
     print('Incident resolution procedures completed')
 
 asyncio.run(resolve_incident())
@@ -821,10 +821,10 @@ asyncio.run(resolve_incident())
    ```bash
    # Check system status
    curl http://localhost:8000/health
-   
+
    # Check service status
    systemctl status pake-system
-   
+
    # Check logs
    tail -f logs/errors.log
    ```
@@ -833,10 +833,10 @@ asyncio.run(resolve_incident())
    ```bash
    # Restart services
    systemctl restart pake-system
-   
+
    # Check database connectivity
    python -c "from services.database.connection_manager import DatabaseConnectionManager; print('DB OK')"
-   
+
    # Verify system health
    python -c "from monitoring.health_monitoring import HealthMonitoringSystem; print('Health OK')"
    ```
@@ -847,7 +847,7 @@ asyncio.run(resolve_incident())
    ```bash
    # Check security incidents
    python -c "from security.security_monitoring import SecurityMonitoringSystem; print('Security OK')"
-   
+
    # Review security logs
    tail -f logs/security/security.log
    ```

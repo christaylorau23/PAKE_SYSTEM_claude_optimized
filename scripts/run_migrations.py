@@ -24,10 +24,10 @@ DATABASE_CONFIG = {
 }
 
 
-async def run_migration_file(connection, migration_file: Path):
+async def run_migration_file(self) -> None:
     """Run a single migration file"""
     try:
-        logger.info(f"Running migration: {migration_file.name}")
+        logger.info("Running migration: %s", migration_file.name)
 
         with open(migration_file) as f:
             sql_content = f.read()
@@ -39,15 +39,15 @@ async def run_migration_file(connection, migration_file: Path):
             if statement:
                 await connection.execute(statement)
 
-        logger.info(f"✅ Migration {migration_file.name} completed successfully")
+        logger.info("✅ Migration %s completed successfully", migration_file.name)
         return True
 
     except Exception as e:
-        logger.error(f"❌ Error running migration {migration_file.name}: {str(e)}")
+        logger.error("❌ Error running migration %s: %s", migration_file.name, str(e))
         return False
 
 
-async def run_all_migrations():
+async def run_all_migrations(self) -> None:
     """Run all migration files in order"""
     try:
         # Connect to database
@@ -57,16 +57,16 @@ async def run_all_migrations():
         # Get migration files
         migrations_dir = Path(__file__).parent / "migrations"
         if not migrations_dir.exists():
-            logger.error(f"Migrations directory not found: {migrations_dir}")
+            logger.error("Migrations directory not found: %s", migrations_dir)
             return False
 
-        migration_files = sorted([f for f in migrations_dir.glob("*.sql")])
+        migration_files = sorted(migrations_dir.glob("*.sql"))
 
         if not migration_files:
             logger.warning("No migration files found")
             return True
 
-        logger.info(f"Found {len(migration_files)} migration files")
+        logger.info("Found %s migration files", len(migration_files))
 
         # Run migrations in order
         success_count = 0
@@ -75,23 +75,25 @@ async def run_all_migrations():
             if success:
                 success_count += 1
             else:
-                logger.error(f"Migration failed: {migration_file.name}")
+                logger.error("Migration failed: %s", migration_file.name)
                 break
 
         await connection.close()
 
         logger.info(
-            f"Migrations completed: {success_count}/{len(migration_files)} successful",
+            "Migrations completed: %s/%s successful",
+            success_count,
+            len(migration_files),
         )
         return success_count == len(migration_files)
 
     except Exception as e:
-        logger.error(f"Database connection error: {str(e)}")
+        logger.error("Database connection error: %s", str(e))
         logger.info("Note: This is expected if PostgreSQL is not running locally")
         return False
 
 
-async def verify_schema():
+async def verify_schema(self) -> None:
     """Verify that the schema was created correctly"""
     try:
         connection = await asyncpg.connect(**DATABASE_CONFIG)
@@ -119,21 +121,21 @@ async def verify_schema():
         await connection.close()
 
         logger.info(
-            f"✅ Schema verification: {len(existing_tables)}/{
-                len(tables_to_check)
-            } tables exist",
+            "✅ Schema verification: %s/%s tables exist",
+            len(existing_tables),
+            len(tables_to_check),
         )
         for table in existing_tables:
-            logger.info(f"  ✓ {table}")
+            logger.info("  ✓ %s", table)
 
         return len(existing_tables) == len(tables_to_check)
 
     except Exception as e:
-        logger.error(f"Schema verification error: {str(e)}")
+        logger.error("Schema verification error: %s", str(e))
         return False
 
 
-def main():
+def main(self) -> None:
     """Main migration runner"""
     print("🗄️  DATABASE MIGRATION RUNNER")
     print("=" * 40)

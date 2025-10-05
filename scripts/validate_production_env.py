@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def validate_REDACTED_SECRET_strength(
     REDACTED_SECRET: str, min_length: int = 12
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Validate REDACTED_SECRET meets security requirements"""
     issues = []
 
@@ -42,7 +42,7 @@ def validate_REDACTED_SECRET_strength(
     }
 
 
-def validate_api_key(api_key: str, service: str) -> dict[str, Any]:
+def validate_api_key(api_key: str, service: str) -> Dict[str, Any]:
     """Validate API key format"""
     patterns = {
         "openai": r"^sk-[A-Za-z0-9]{48}$",
@@ -65,7 +65,7 @@ def validate_production_environment() -> bool:
     # Check NODE_ENV
     node_env = os.getenv("NODE_ENV", "").lower()
     if node_env != "production":
-        logger.warning(f"NODE_ENV is '{node_env}', expected 'production'")
+        logger.warning("NODE_ENV is '%s', expected 'production'", node_env)
 
     # Required environment variables
     required_vars = {
@@ -112,7 +112,7 @@ def validate_production_environment() -> bool:
         value = os.getenv(var_name, config["default"])
 
         if not value:
-            logger.error(f"❌ {var_name}: Missing (required)")
+            logger.error("❌ %s: Missing (required)", var_name)
             all_valid = False
             continue
 
@@ -121,10 +121,12 @@ def validate_production_environment() -> bool:
                 # Detailed REDACTED_SECRET validation
                 result = validate_REDACTED_SECRET_strength(value)
                 logger.error(
-                    f"❌ {var_name}: Weak REDACTED_SECRET - {', '.join(result['issues'])}",
+                    "❌ %s: Weak REDACTED_SECRET - %s",
+                    var_name,
+                    ", ".join(result["issues"]),
                 )
             else:
-                logger.error(f"❌ {var_name}: Invalid format")
+                logger.error("❌ %s: Invalid format", var_name)
             all_valid = False
         else:
             # Mask sensitive values
@@ -134,7 +136,7 @@ def validate_production_environment() -> bool:
                 )
             else:
                 display_value = value
-            logger.info(f"✅ {var_name}: {display_value}")
+            logger.info("✅ %s: %s", var_name, display_value)
 
     # Validate optional variables
     logger.info("\n🔑 Optional API Keys:")
@@ -142,14 +144,14 @@ def validate_production_environment() -> bool:
         value = os.getenv(var_name)
 
         if not value:
-            logger.info(f"⚠️  {var_name}: Not set (optional)")
+            logger.info("⚠️  %s: Not set (optional)", var_name)
             continue
 
         if config["validator"] and not config["validator"](value):
             result = validate_api_key(value, var_name.lower().replace("_api_key", ""))
-            logger.warning(f"⚠️  {var_name}: {result['message']}")
+            logger.warning("⚠️  %s: %s", var_name, result["message"])
         else:
-            logger.info(f"✅ {var_name}: Valid format")
+            logger.info("✅ %s: Valid format", var_name)
 
     # Final result
     if all_valid:

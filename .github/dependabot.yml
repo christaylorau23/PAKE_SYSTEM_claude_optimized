@@ -1,0 +1,158 @@
+# Dependabot configuration for PAKE System
+# Automated dependency updates for security and maintenance
+
+version: 2
+updates:
+  # Python dependencies (Poetry)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "chris"
+    assignees:
+      - "chris"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    ignore:
+      # Ignore major version updates that might break compatibility
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group security updates together
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      # Group FastAPI ecosystem updates
+      fastapi-ecosystem:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "starlette"
+          - "pydantic"
+      # Group database-related updates
+      database-ecosystem:
+        patterns:
+          - "sqlalchemy"
+          - "asyncpg"
+          - "alembic"
+          - "psycopg2-binary"
+      # Group testing framework updates
+      testing-ecosystem:
+        patterns:
+          - "pytest*"
+          - "coverage"
+          - "factory-boy"
+          - "faker"
+
+  # Node.js dependencies (Yarn)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "chris"
+    assignees:
+      - "chris"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "typescript"
+    ignore:
+      # Ignore major version updates that might break compatibility
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group security updates together
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      # Group ESLint ecosystem updates
+      eslint-ecosystem:
+        patterns:
+          - "eslint*"
+          - "@typescript-eslint/*"
+      # Group React ecosystem updates
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      # Group testing framework updates
+      testing-ecosystem:
+        patterns:
+          - "jest*"
+          - "@testing-library/*"
+          - "supertest"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "chris"
+    assignees:
+      - "chris"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      # Group security updates together
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "chris"
+    assignees:
+      - "chris"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+    groups:
+      # Group security updates together
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"

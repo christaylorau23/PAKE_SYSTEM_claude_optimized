@@ -7,7 +7,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -33,11 +33,11 @@ class WorkflowRequest:
     """Represents a workflow execution request."""
 
     workflow_type: str
-    payload: dict[str, Any]
+    payload: Dict[str, Any]
     priority: str = "normal"
     timeout: int = 300  # 5 minutes default
     callback_url: str | None = None
-    metadata: dict[str, Any] | None = None
+    metadata: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -47,7 +47,7 @@ class WorkflowResult:
     request_id: str
     workflow_type: str
     status: WorkflowStatus
-    result: dict[str, Any] | None = None
+    result: Dict[str, Any] | None = None
     error: str | None = None
     execution_time: float | None = None
     created_at: datetime = None
@@ -59,7 +59,7 @@ class N8nWorkflowManager:
     Provides high-level interface for triggering automation workflows.
     """
 
-    def __init__(self, n8n_base_url: str = None, auth_credentials: tuple = None):
+    def __init__(self) -> None:
         """Initialize the workflow manager.
 
         Args:
@@ -75,11 +75,12 @@ class N8nWorkflowManager:
         n8n_REDACTED_SECRET = os.getenv("N8N_PASSWORD")
 
         if not n8n_user or not n8n_REDACTED_SECRET:
-            raise ValueError(
+            msg = (
                 "The N8N_USER and N8N_PASSWORD environment variables are not set. "
                 "Please configure them before running the application. "
                 "This is a security requirement."
             )
+            raise ValueError(msg)
 
         self.auth = auth_credentials or (n8n_user, n8n_REDACTED_SECRET)
 
@@ -100,7 +101,7 @@ class N8nWorkflowManager:
         content_type: str = "blog_post",
         target_audience: str = "general",
         tone: str = "professional",
-        keywords: list[str] = None,
+        keywords: List[str] = None,
         callback_url: str = None,
     ) -> WorkflowResult:
         """Trigger content generation workflow.
@@ -137,7 +138,7 @@ class N8nWorkflowManager:
         self,
         content_id: str,
         content: str,
-        platforms: list[str] = None,
+        platforms: List[str] = None,
         content_type: str = "social_media",
         auto_publish: bool = True,
         scheduled_time: str = None,
@@ -175,7 +176,7 @@ class N8nWorkflowManager:
         self,
         processing_type: str,
         input_data: str,
-        options: dict[str, Any] = None,
+        options: Dict[str, Any] = None,
         priority: str = "normal",
         callback_url: str = None,
     ) -> WorkflowResult:
@@ -213,7 +214,7 @@ class N8nWorkflowManager:
         self,
         document_type: str,
         source: str,
-        metadata: dict[str, Any] = None,
+        metadata: Dict[str, Any] = None,
         auto_index: bool = True,
         confidence_threshold: float = 0.7,
     ) -> WorkflowResult:
@@ -250,16 +251,14 @@ class N8nWorkflowManager:
         Returns:
             WorkflowResult object
         """
-        request_id = (
-            f"{request.workflow_type}_{int(datetime.now().timestamp())}_{id(request)}"
-        )
+        request_id = f"{request.workflow_type}_{int(datetime.now(UTC).timestamp())}_{id(request)}"
 
         # Create workflow result tracking
         workflow_result = WorkflowResult(
             request_id=request_id,
             workflow_type=request.workflow_type,
             status=WorkflowStatus.PENDING,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
 
         self.active_workflows[request_id] = workflow_result
@@ -268,7 +267,8 @@ class N8nWorkflowManager:
             # Get workflow endpoint
             endpoint = self.workflow_endpoints.get(request.workflow_type)
             if not endpoint:
-                raise ValueError(f"Unknown workflow type: {request.workflow_type}")
+                msg = f"Unknown workflow type: {request.workflow_type}"
+                raise ValueError(msg)
 
             url = f"{self.base_url}{endpoint}"
 
@@ -277,12 +277,12 @@ class N8nWorkflowManager:
                 auth=aiohttp.BasicAuth(self.auth[0], self.auth[1]),
             ) as session:
                 workflow_result.status = WorkflowStatus.RUNNING
-                start_time = datetime.now()
+                start_time = datetime.now(UTC)
 
                 logger.info(
-                    f"Triggering workflow {request.workflow_type} with request ID {
-                        request_id
-                    }",
+                    "Triggering workflow %s with request ID %s",
+                    request.workflow_type,
+                    request_id,
                 )
 
                 async with session.post(
@@ -290,7 +290,7 @@ class N8nWorkflowManager:
                     json=request.payload,
                     timeout=aiohttp.ClientTimeout(total=request.timeout),
                 ) as response:
-                    end_time = datetime.now()
+                    end_time = datetime.now(UTC)
                     execution_time = (end_time - start_time).total_seconds()
 
                     workflow_result.execution_time = execution_time
@@ -302,9 +302,9 @@ class N8nWorkflowManager:
                         workflow_result.result = result_data
 
                         logger.info(
-                            f"Workflow {
-                                request.workflow_type
-                            } completed successfully in {execution_time:.2f}s",
+                            "Workflow %s completed successfully in %ss",
+                            request.workflow_type,
+                            execution_time,
                         )
                     else:
                         error_text = await response.text()
@@ -312,9 +312,9 @@ class N8nWorkflowManager:
                         workflow_result.error = f"HTTP {response.status}: {error_text}"
 
                         logger.error(
-                            f"Workflow {request.workflow_type} failed: {
-                                workflow_result.error
-                            }",
+                            "Workflow %s failed: %s",
+                            request.workflow_type,
+                            workflow_result.error,
                         )
 
         except TimeoutError:
@@ -322,16 +322,18 @@ class N8nWorkflowManager:
             workflow_result.error = (
                 f"Workflow timed out after {request.timeout} seconds"
             )
-            workflow_result.completed_at = datetime.now()
+            workflow_result.completed_at = datetime.now(UTC)
 
-            logger.error(f"Workflow {request.workflow_type} timed out")
+            logger.error("Workflow %s timed out", request.workflow_type)
 
         except Exception as e:
             workflow_result.status = WorkflowStatus.FAILED
             workflow_result.error = str(e)
-            workflow_result.completed_at = datetime.now()
+            workflow_result.completed_at = datetime.now(UTC)
 
-            logger.error(f"Workflow {request.workflow_type} failed with exception: {e}")
+            logger.error(
+                "Workflow %s failed with exception: %s", request.workflow_type, e
+            )
 
         return workflow_result
 
@@ -376,22 +378,22 @@ class N8nWorkflowManager:
             # database
             workflow.status = WorkflowStatus.FAILED
             workflow.error = "Workflow cancelled by user"
-            workflow.completed_at = datetime.now()
+            workflow.completed_at = datetime.now(UTC)
 
-            logger.info(f"Workflow {request_id} marked as cancelled")
+            logger.info("Workflow %s marked as cancelled", request_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to cancel workflow {request_id}: {e}")
+            logger.error("Failed to cancel workflow %s: %s", request_id, e)
             return False
 
-    def cleanup_completed_workflows(self, max_age_hours: int = 24):
+    def cleanup_completed_workflows(self) -> None:
         """Clean up completed workflow tracking data.
 
         Args:
             max_age_hours: Maximum age in hours for completed workflows to keep
         """
-        cutoff_time = datetime.now().timestamp() - (max_age_hours * 3600)
+        cutoff_time = datetime.now(UTC).timestamp() - (max_age_hours * 3600)
 
         to_remove = []
         for request_id, workflow in self.active_workflows.items():
@@ -410,11 +412,11 @@ class N8nWorkflowManager:
         for request_id in to_remove:
             del self.active_workflows[request_id]
 
-        logger.info(f"Cleaned up {len(to_remove)} completed workflows")
+        logger.info("Cleaned up %s completed workflows", len(to_remove))
 
 
 # Example usage and testing functions
-async def example_content_generation():
+async def example_content_generation(self) -> None:
     """Example of using the content generation workflow."""
     manager = N8nWorkflowManager()
 
@@ -439,7 +441,7 @@ async def example_content_generation():
     return result
 
 
-async def example_ai_processing():
+async def example_ai_processing(self) -> None:
     """Example of using the AI processing workflow."""
     manager = N8nWorkflowManager()
 
@@ -456,7 +458,7 @@ async def example_ai_processing():
     return result
 
 
-async def example_knowledge_processing():
+async def example_knowledge_processing(self) -> None:
     """Example of using the knowledge processing workflow."""
     manager = N8nWorkflowManager()
 
@@ -487,7 +489,7 @@ if __name__ == "__main__":
     Run example workflow executions for testing.
     """
 
-    async def run_examples():
+    async def run_examples(self) -> None:
         print("🚀 PAKE System - n8n Workflow Manager Examples")
         print("=" * 50)
 

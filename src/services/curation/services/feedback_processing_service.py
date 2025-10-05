@@ -1,4 +1,4 @@
-"""FeedbackProcessingService
+"""FeedbackProcessingService.
 
 Advanced feedback processing system that handles both explicit and implicit user feedback,
 processes it for machine learning, and provides insights for system improvement.
@@ -9,7 +9,7 @@ import asyncio
 import logging
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackQuality(str, Enum):
-    """Quality assessment for feedback"""
+    """Quality assessment for feedback."""
 
     HIGH = "high"  # Reliable, consistent feedback
     MEDIUM = "medium"  # Generally reliable
@@ -35,18 +35,18 @@ class FeedbackQuality(str, Enum):
 
 @dataclass(frozen=True)
 class FeedbackPattern:
-    """Pattern detected in user feedback"""
+    """Pattern detected in user feedback."""
 
     user_id: str
     pattern_type: str  # e.g., "consistent_rater", "harsh_critic", "easy_pleaser"
     confidence: float  # 0.0 to 1.0
-    evidence: dict[str, Any]  # Supporting evidence for the pattern
+    evidence: Dict[str, Any]  # Supporting evidence for the pattern
     detected_at: datetime = field(default_factory=datetime.now)
 
 
 @dataclass(frozen=True)
 class FeedbackInsight:
-    """Insights derived from feedback analysis"""
+    """Insights derived from feedback analysis."""
 
     content_id: str
     avg_rating: float
@@ -55,12 +55,12 @@ class FeedbackInsight:
     quality_indicators: dict[str, float]
     user_sentiment: str  # "positive", "negative", "mixed", "neutral"
     confidence: float
-    recommendations: list[str]  # Actionable recommendations
+    recommendations: List[str]  # Actionable recommendations
 
 
 @dataclass(frozen=True)
 class SystemFeedbackMetrics:
-    """System-wide feedback metrics"""
+    """System-wide feedback metrics."""
 
     total_feedback_count: int
     avg_rating: float
@@ -79,12 +79,7 @@ class FeedbackProcessingService:
     provides quality assessment, and generates actionable insights.
     """
 
-    def __init__(
-        self,
-        feedback_quality_threshold: float = 0.5,
-        batch_processing_size: int = 100,
-        anomaly_detection_enabled: bool = True,
-    ):
+    def __init__(self) -> None:
         """Initialize feedback processing service.
 
         Args:
@@ -163,12 +158,14 @@ class FeedbackProcessingService:
                     )
 
             logger.debug(
-                f"Processed feedback {feedback.id} with quality {quality_score:.2f}",
+                "Processed feedback %s with quality %s",
+                feedback.id,
+                quality_score,
             )
             return learning_signal
 
         except Exception as e:
-            logger.error(f"Error processing feedback {feedback.id}: {str(e)}")
+            logger.error("Error processing feedback %s: %s", feedback.id, str(e))
             # Return neutral learning signal
             return LearningSignal(
                 user_id=feedback.user_id,
@@ -183,7 +180,7 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> LearningSignal:
         """Process implicit feedback from user interactions.
 
@@ -233,12 +230,13 @@ class FeedbackProcessingService:
             )
 
             logger.debug(
-                f"Generated implicit learning signal from {interaction.interaction_type.value}",
+                "Generated implicit learning signal from %s",
+                interaction.interaction_type.value,
             )
             return learning_signal
 
         except Exception as e:
-            logger.error(f"Error processing implicit feedback: {str(e)}")
+            logger.error("Error processing implicit feedback: %s", str(e))
             return LearningSignal(
                 user_id=interaction.user_id,
                 content_id=interaction.content_id,
@@ -287,15 +285,15 @@ class FeedbackProcessingService:
                 # Handle any exceptions
                 for signal in batch_signals:
                     if isinstance(signal, Exception):
-                        logger.error(f"Error in batch processing: {str(signal)}")
+                        logger.error("Error in batch processing: %s", str(signal))
                     else:
                         all_signals.append(signal)
 
-            logger.info(f"Batch processed {len(feedback_batch)} feedback items")
+            logger.info("Batch processed %s feedback items", len(feedback_batch))
             return all_signals
 
         except Exception as e:
-            logger.error(f"Error in batch feedback processing: {str(e)}")
+            logger.error("Error in batch feedback processing: %s", str(e))
             return []
 
     async def analyze_user_feedback_patterns(
@@ -316,7 +314,7 @@ class FeedbackProcessingService:
         """
         try:
             # Filter recent feedback
-            cutoff_date = datetime.now() - timedelta(days=lookback_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=lookback_days)
             recent_feedback = [
                 fb for fb in user_feedback_history if fb.timestamp >= cutoff_date
             ]
@@ -358,13 +356,17 @@ class FeedbackProcessingService:
                 patterns.append(engagement_pattern)
 
             logger.debug(
-                f"Detected {len(patterns)} feedback patterns for user {user_id}",
+                "Detected %s feedback patterns for user %s",
+                len(patterns),
+                user_id,
             )
             return patterns
 
         except Exception as e:
             logger.error(
-                f"Error analyzing feedback patterns for user {user_id}: {str(e)}",
+                "Error analyzing feedback patterns for user %s: %s",
+                user_id,
+                str(e),
             )
             return []
 
@@ -430,12 +432,14 @@ class FeedbackProcessingService:
                 recommendations=recommendations,
             )
 
-            logger.debug(f"Generated insights for content {content_id}")
+            logger.debug("Generated insights for content %s", content_id)
             return insight
 
         except Exception as e:
             logger.error(
-                f"Error generating insights for content {content_id}: {str(e)}",
+                "Error generating insights for content %s: %s",
+                content_id,
+                str(e),
             )
             return self._create_empty_insight(content_id)
 
@@ -507,7 +511,7 @@ class FeedbackProcessingService:
             recent_feedback = [
                 fb
                 for fb in all_feedback
-                if fb.timestamp >= datetime.now() - timedelta(days=7)
+                if fb.timestamp >= datetime.now(UTC) - timedelta(days=7)
             ]
             trending_sentiment = await self._analyze_trending_sentiment(recent_feedback)
 
@@ -523,19 +527,20 @@ class FeedbackProcessingService:
             )
 
             logger.info(
-                f"Generated system feedback metrics: {total_feedback} feedback items",
+                "Generated system feedback metrics: %s feedback items",
+                total_feedback,
             )
             return metrics
 
         except Exception as e:
-            logger.error(f"Error generating system feedback metrics: {str(e)}")
+            logger.error("Error generating system feedback metrics: %s", str(e))
             return self._create_empty_system_metrics()
 
     async def detect_feedback_anomalies(
         self,
         recent_feedback: list[UserFeedback],
         historical_baseline: SystemFeedbackMetrics | None = None,
-    ) -> list[str]:
+    ) -> List[str]:
         """Detect anomalies in feedback patterns that might indicate issues.
 
         Args:
@@ -597,11 +602,11 @@ class FeedbackProcessingService:
                 if len(set(int(gap) for gap in time_gaps)) == 1:
                     anomalies.append("Suspiciously regular feedback timing pattern")
 
-            logger.debug(f"Detected {len(anomalies)} feedback anomalies")
+            logger.debug("Detected %s feedback anomalies", len(anomalies))
             return anomalies
 
         except Exception as e:
-            logger.error(f"Error detecting feedback anomalies: {str(e)}")
+            logger.error("Error detecting feedback anomalies: %s", str(e))
             return []
 
     # Helper methods
@@ -612,7 +617,7 @@ class FeedbackProcessingService:
         content_item: ContentItem,
         user_profile: UserProfile | None,
     ) -> float:
-        """Assess the quality/reliability of feedback"""
+        """Assess the quality/reliability of feedback."""
         quality_score = 0.5  # Base score
 
         # Explicit feedback generally higher quality than implicit
@@ -653,7 +658,7 @@ class FeedbackProcessingService:
         content_item: ContentItem,
         quality_score: float,
     ) -> LearningSignal:
-        """Convert feedback to learning signal"""
+        """Convert feedback to learning signal."""
         # Convert feedback value to signal strength
         if feedback.feedback_type == FeedbackType.RATING:
             # Convert 1-5 rating to -1 to 1 signal
@@ -694,9 +699,9 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> float:
-        """Calculate signal strength from implicit interaction"""
+        """Calculate signal strength from implicit interaction."""
         base_strength = {
             InteractionType.VIEW: 0.1,
             InteractionType.CLICK: 0.2,
@@ -728,9 +733,9 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> str:
-        """Determine signal type from implicit interaction"""
+        """Determine signal type from implicit interaction."""
         positive_interactions = {
             InteractionType.LIKE,
             InteractionType.SAVE,
@@ -753,9 +758,9 @@ class FeedbackProcessingService:
     async def _calculate_implicit_confidence(
         self,
         interaction: UserInteraction,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> float:
-        """Calculate confidence for implicit feedback signal"""
+        """Calculate confidence for implicit feedback signal."""
         base_confidence = {
             InteractionType.VIEW: 0.2,
             InteractionType.CLICK: 0.3,
@@ -785,7 +790,7 @@ class FeedbackProcessingService:
         feedback: UserFeedback,
         user_profile: UserProfile,
     ) -> bool:
-        """Detect if feedback appears anomalous/suspicious"""
+        """Detect if feedback appears anomalous/suspicious."""
         # Simple heuristics for anomaly detection
 
         # Too fast response time
@@ -808,7 +813,7 @@ class FeedbackProcessingService:
         user_id: str,
         feedback_history: list[UserFeedback],
     ) -> FeedbackPattern | None:
-        """Detect if user has consistent rating patterns"""
+        """Detect if user has consistent rating patterns."""
         ratings = [
             fb.feedback_value
             for fb in feedback_history
@@ -842,7 +847,7 @@ class FeedbackProcessingService:
         user_id: str,
         feedback_history: list[UserFeedback],
     ) -> list[FeedbackPattern]:
-        """Detect rating bias patterns (harsh critic, easy pleaser)"""
+        """Detect rating bias patterns (harsh critic, easy pleaser)."""
         patterns = []
         ratings = [
             fb.feedback_value
@@ -894,7 +899,7 @@ class FeedbackProcessingService:
         user_id: str,
         feedback_history: list[UserFeedback],
     ) -> FeedbackPattern | None:
-        """Detect unusual timing patterns in feedback"""
+        """Detect unusual timing patterns in feedback."""
         if len(feedback_history) < 5:
             return None
 
@@ -930,7 +935,7 @@ class FeedbackProcessingService:
         user_id: str,
         feedback_history: list[UserFeedback],
     ) -> FeedbackPattern | None:
-        """Detect user engagement patterns"""
+        """Detect user engagement patterns."""
         detailed_feedback = [
             fb for fb in feedback_history if fb.metadata and fb.metadata.get("comment")
         ]
@@ -959,7 +964,7 @@ class FeedbackProcessingService:
         feedback_list: list[UserFeedback],
         content_item: ContentItem,
     ) -> dict[str, float]:
-        """Analyze quality indicators from feedback"""
+        """Analyze quality indicators from feedback."""
         indicators = {}
 
         # Rating-based indicators
@@ -1000,7 +1005,7 @@ class FeedbackProcessingService:
         self,
         feedback_list: list[UserFeedback],
     ) -> str:
-        """Determine overall sentiment from feedback"""
+        """Determine overall sentiment from feedback."""
         if not feedback_list:
             return "neutral"
 
@@ -1029,7 +1034,7 @@ class FeedbackProcessingService:
         feedback_list: list[UserFeedback],
         rating_variance: float,
     ) -> float:
-        """Calculate confidence in content insights"""
+        """Calculate confidence in content insights."""
         sample_size_factor = min(
             1.0,
             len(feedback_list) / 10,
@@ -1045,8 +1050,8 @@ class FeedbackProcessingService:
         feedback_list: list[UserFeedback],
         content_item: ContentItem,
         quality_indicators: dict[str, float],
-    ) -> list[str]:
-        """Generate actionable recommendations for content"""
+    ) -> List[str]:
+        """Generate actionable recommendations for content."""
         recommendations = []
 
         avg_rating = quality_indicators.get("avg_rating", 3.0)
@@ -1072,7 +1077,7 @@ class FeedbackProcessingService:
         self,
         recent_feedback: list[UserFeedback],
     ) -> str:
-        """Analyze trending sentiment from recent feedback"""
+        """Analyze trending sentiment from recent feedback."""
         if not recent_feedback:
             return "neutral"
 
@@ -1094,7 +1099,7 @@ class FeedbackProcessingService:
         return "neutral"
 
     def _create_empty_insight(self, content_id: str) -> FeedbackInsight:
-        """Create empty insight for content with no feedback"""
+        """Create empty insight for content with no feedback."""
         return FeedbackInsight(
             content_id=content_id,
             avg_rating=0.0,
@@ -1107,7 +1112,7 @@ class FeedbackProcessingService:
         )
 
     def _create_empty_system_metrics(self) -> SystemFeedbackMetrics:
-        """Create empty system metrics"""
+        """Create empty system metrics."""
         return SystemFeedbackMetrics(
             total_feedback_count=0,
             avg_rating=0.0,

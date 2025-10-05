@@ -12,14 +12,14 @@ import yaml
 class TestSecurityComplianceTDD:
     """Test-Driven Development for security components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.github_dir = self.project_root / ".github" / "workflows"
         self.service_template_dir = self.project_root / "pkgs" / "service-template"
         self.k8s_dir = self.project_root / "k8s"
 
-    def test_security_scan_workflow_structure(self):
+    def test_security_scan_workflow_structure(self) -> None:
         """TDD: Test security scan workflow has proper structure"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -46,7 +46,7 @@ class TestSecurityComplianceTDD:
         for job in required_jobs:
             assert job in workflow_data["jobs"], f"Should have {job} job"
 
-    def test_security_scan_triggers(self):
+    def test_security_scan_triggers(self) -> None:
         """TDD: Test security scan workflow triggers"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -68,7 +68,7 @@ class TestSecurityComplianceTDD:
         assert len(schedule) > 0, "Should have scheduled runs"
         assert "cron:" in str(schedule), "Should use cron schedule"
 
-    def test_dependency_scan_job(self):
+    def test_dependency_scan_job(self) -> None:
         """TDD: Test dependency scan job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -93,7 +93,7 @@ class TestSecurityComplianceTDD:
         safety_steps = [step for step in steps if "Safety" in step.get("name", "")]
         assert len(safety_steps) > 0, "Should run Safety check"
 
-    def test_code_scan_job(self):
+    def test_code_scan_job(self) -> None:
         """TDD: Test code scan job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -115,7 +115,7 @@ class TestSecurityComplianceTDD:
             tool_steps = [step for step in steps if tool in step.get("name", "")]
             assert len(tool_steps) > 0, f"Should run {tool} scanner"
 
-    def test_container_scan_job(self):
+    def test_container_scan_job(self) -> None:
         """TDD: Test container scan job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -138,7 +138,7 @@ class TestSecurityComplianceTDD:
         trivy_steps = [step for step in steps if "Trivy" in step.get("name", "")]
         assert len(trivy_steps) > 0, "Should run Trivy scanner"
 
-    def test_secrets_scan_job(self):
+    def test_secrets_scan_job(self) -> None:
         """TDD: Test secrets scan job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -160,7 +160,7 @@ class TestSecurityComplianceTDD:
             tool_steps = [step for step in steps if tool in step.get("name", "")]
             assert len(tool_steps) > 0, f"Should run {tool} scanner"
 
-    def test_license_scan_job(self):
+    def test_license_scan_job(self) -> None:
         """TDD: Test license scan job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -181,7 +181,7 @@ class TestSecurityComplianceTDD:
         ]
         assert len(license_steps) > 0, "Should run license scan"
 
-    def test_security_summary_job(self):
+    def test_security_summary_job(self) -> None:
         """TDD: Test security summary job configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -197,7 +197,7 @@ class TestSecurityComplianceTDD:
         assert "needs" in summary_job, "Should depend on other security jobs"
         assert "if: always()" in str(summary_job), "Should run even if other jobs fail"
 
-    def test_precommit_security_hooks(self):
+    def test_precommit_security_hooks(self) -> None:
         """TDD: Test pre-commit security hooks"""
         # Arrange
         precommit_path = self.service_template_dir / ".pre-commit-config.yaml"
@@ -212,7 +212,7 @@ class TestSecurityComplianceTDD:
         for hook in security_hooks:
             assert hook in content, f"Should configure {hook} security hook"
 
-    def test_dockerfile_security_features(self):
+    def test_dockerfile_security_features(self) -> None:
         """TDD: Test Dockerfile security features"""
         # Arrange
         dockerfile_path = self.service_template_dir / "Dockerfile"
@@ -234,7 +234,7 @@ class TestSecurityComplianceTDD:
                 feature in content
             ), f"Dockerfile should have {feature} security feature"
 
-    def test_kubernetes_security_context(self):
+    def test_kubernetes_security_context(self) -> None:
         """TDD: Test Kubernetes security context"""
         # Arrange
         production_values_path = (
@@ -252,18 +252,18 @@ class TestSecurityComplianceTDD:
         ), "Should have container security context"
 
         pod_security = values_data["podSecurityContext"]
-        assert pod_security["runAsNonRoot"] == True, "Should run as non-root"
+        assert pod_security["runAsNonRoot"] is True, "Should run as non-root"
         assert pod_security["runAsUser"] == 1000, "Should run as user 1000"
 
         security_context = values_data["securityContext"]
         assert (
-            security_context["allowPrivilegeEscalation"] == False
+            security_context["allowPrivilegeEscalation"] is False
         ), "Should not allow privilege escalation"
         assert (
-            security_context["readOnlyRootFilesystem"] == True
+            security_context["readOnlyRootFilesystem"] is True
         ), "Should have read-only root filesystem"
 
-    def test_kubernetes_network_policies(self):
+    def test_kubernetes_network_policies(self) -> None:
         """TDD: Test Kubernetes network policies"""
         # Arrange
         production_values_path = (
@@ -278,10 +278,10 @@ class TestSecurityComplianceTDD:
         assert "networkPolicy" in values_data, "Should have network policies"
 
         network_policy = values_data["networkPolicy"]
-        assert network_policy["enabled"] == True, "Should enable network policies"
+        assert network_policy["enabled"] is True, "Should enable network policies"
         assert "ingress" in network_policy, "Should have ingress rules"
 
-    def test_security_workflow_permissions(self):
+    def test_security_workflow_permissions(self) -> None:
         """TDD: Test security workflow permissions"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -299,7 +299,7 @@ class TestSecurityComplianceTDD:
             permissions["security-events"] == "write"
         ), "Should have write access to security events"
 
-    def test_security_artifact_handling(self):
+    def test_security_artifact_handling(self) -> None:
         """TDD: Test security artifact handling"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -318,7 +318,7 @@ class TestSecurityComplianceTDD:
                 ]
                 assert len(upload_steps) > 0, f"{job_name} should upload artifacts"
 
-    def test_security_scan_comprehensive_coverage(self):
+    def test_security_scan_comprehensive_coverage(self) -> None:
         """TDD: Test security scan comprehensive coverage"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -340,7 +340,7 @@ class TestSecurityComplianceTDD:
         for area in security_areas:
             assert area in content, f"Should cover {area} security area"
 
-    def test_security_compliance_standards(self):
+    def test_security_compliance_standards(self) -> None:
         """TDD: Test security compliance standards"""
         # Arrange
         security_files = [
@@ -370,7 +370,7 @@ class TestSecurityComplianceTDD:
             elif "values-production" in str(security_file):
                 assert "securityContext" in content, "Should have security context"
 
-    def test_security_monitoring_integration(self):
+    def test_security_monitoring_integration(self) -> None:
         """TDD: Test security monitoring integration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"

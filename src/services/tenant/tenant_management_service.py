@@ -7,7 +7,7 @@ import logging
 import secrets
 import string
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TenantCreationRequest:
-    """Tenant creation request model"""
+    """Tenant creation request model."""
 
     name: str
     display_name: str
@@ -37,25 +37,25 @@ class TenantCreationRequest:
     admin_email: str = ""
     admin_username: str = "admin"
     admin_full_name: str | None = None
-    settings: dict[str, Any] | None = None
-    limits: dict[str, Any] | None = None
+    settings: Dict[str, Any] | None = None
+    limits: Dict[str, Any] | None = None
 
 
 @dataclass
 class TenantUpdateRequest:
-    """Tenant update request model"""
+    """Tenant update request model."""
 
     display_name: str | None = None
     domain: str | None = None
     plan: str | None = None
     status: str | None = None
-    settings: dict[str, Any] | None = None
-    limits: dict[str, Any] | None = None
+    settings: Dict[str, Any] | None = None
+    limits: Dict[str, Any] | None = None
 
 
 @dataclass
 class UserCreationRequest:
-    """User creation request model"""
+    """User creation request model."""
 
     username: str
     email: str
@@ -67,7 +67,7 @@ class UserCreationRequest:
 
 @dataclass
 class TenantStats:
-    """Tenant statistics model"""
+    """Tenant statistics model."""
 
     tenant_id: str
     user_count: int
@@ -79,7 +79,7 @@ class TenantStats:
 
 
 class TenantPlanLimits:
-    """Predefined tenant plan limits"""
+    """Predefined tenant plan limits."""
 
     PLANS = {
         "basic": {
@@ -116,13 +116,13 @@ class TenantPlanLimits:
     }
 
     @classmethod
-    def get_plan_limits(cls, plan: str) -> dict[str, Any]:
-        """Get limits for a specific plan"""
+    def get_plan_limits(cls, plan: str) -> Dict[str, Any]:
+        """Get limits for a specific plan."""
         return cls.PLANS.get(plan, cls.PLANS["basic"])
 
     @classmethod
     def validate_plan(cls, plan: str) -> bool:
-        """Validate if plan exists"""
+        """Validate if plan exists."""
         return plan in cls.PLANS
 
 
@@ -138,7 +138,7 @@ class TenantManagementService:
     - Integration with Kubernetes provisioning
     """
 
-    def __init__(self, db_service: MultiTenantPostgreSQLService):
+    def __init__(self) -> None:
         self.db_service = db_service
         self.dal = TenantAwareDataAccessLayer(db_service)
 
@@ -148,7 +148,7 @@ class TenantManagementService:
 
         logger.info("Tenant Management Service initialized")
 
-    async def create_tenant(self, request: TenantCreationRequest) -> dict[str, Any]:
+    async def create_tenant(self, request: TenantCreationRequest) -> Dict[str, Any]:
         """Create new tenant with admin user.
 
         Process:
@@ -162,12 +162,14 @@ class TenantManagementService:
         try:
             # Validate plan
             if not TenantPlanLimits.validate_plan(request.plan):
-                raise ValueError(f"Invalid plan: {request.plan}")
+                msg = f"Invalid plan: {request.plan}"
+                raise ValueError(msg)
 
             # Check tenant name uniqueness
             existing_tenant = await self.db_service.get_tenant_by_name(request.name)
             if existing_tenant:
-                raise ValueError(f"Tenant name already exists: {request.name}")
+                msg = f"Tenant name already exists: {request.name}"
+                raise ValueError(msg)
 
             # Check domain uniqueness if provided
             if request.domain:
@@ -175,7 +177,8 @@ class TenantManagementService:
                     request.domain,
                 )
                 if existing_domain:
-                    raise ValueError(f"Domain already exists: {request.domain}")
+                    msg = f"Domain already exists: {request.domain}"
+                    raise ValueError(msg)
 
             # Get plan limits
             plan_limits = TenantPlanLimits.get_plan_limits(request.plan)
@@ -185,7 +188,7 @@ class TenantManagementService:
 
             # Default settings
             default_settings = {
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "created_by": "system",
                 "plan_features": plan_limits["features"],
                 "support_level": plan_limits["support_level"],
@@ -254,7 +257,7 @@ class TenantManagementService:
                 expires_hours=24,
             )
 
-            logger.info(f"✅ Created tenant: {request.name} ({tenant['id']})")
+            logger.info("✅ Created tenant: %s (%s)", request.name, tenant["id"])
 
             return {
                 "status": "success",
@@ -279,11 +282,11 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to create tenant: {e}")
+            logger.error("Failed to create tenant: %s", e)
             raise
 
-    async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
-        """Get tenant by ID with comprehensive information"""
+    async def get_tenant(self, tenant_id: str) -> Dict[str, Any] | None:
+        """Get tenant by ID with comprehensive information."""
         try:
             tenant = await self.db_service.get_tenant_by_id(tenant_id)
             if not tenant:
@@ -305,24 +308,26 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get tenant {tenant_id}: {e}")
+            logger.error("Failed to get tenant %s: %s", tenant_id, e)
             raise
 
     async def update_tenant(
         self,
         tenant_id: str,
         request: TenantUpdateRequest,
-    ) -> dict[str, Any]:
-        """Update tenant configuration"""
+    ) -> Dict[str, Any]:
+        """Update tenant configuration."""
         try:
             # Get current tenant
             current_tenant = await self.db_service.get_tenant_by_id(tenant_id)
             if not current_tenant:
-                raise ValueError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise ValueError(msg)
 
             # Validate plan if being changed
             if request.plan and not TenantPlanLimits.validate_plan(request.plan):
-                raise ValueError(f"Invalid plan: {request.plan}")
+                msg = f"Invalid plan: {request.plan}"
+                raise ValueError(msg)
 
             # Check domain uniqueness if being changed
             if request.domain and request.domain != current_tenant.get("domain"):
@@ -330,7 +335,8 @@ class TenantManagementService:
                     request.domain,
                 )
                 if existing_domain and existing_domain["id"] != tenant_id:
-                    raise ValueError(f"Domain already exists: {request.domain}")
+                    msg = f"Domain already exists: {request.domain}"
+                    raise ValueError(msg)
 
             # Prepare update data
             update_data = {}
@@ -372,25 +378,26 @@ class TenantManagementService:
                 },
             )
 
-            logger.info(f"✅ Updated tenant: {tenant_id}")
+            logger.info("✅ Updated tenant: %s", tenant_id)
 
             return {"status": "success", "tenant": updated_tenant}
 
         except Exception as e:
-            logger.error(f"Failed to update tenant {tenant_id}: {e}")
+            logger.error("Failed to update tenant %s: %s", tenant_id, e)
             raise
 
     async def delete_tenant(
         self,
         tenant_id: str,
         force: bool = False,
-    ) -> dict[str, Any]:
-        """Delete tenant and all associated data"""
+    ) -> Dict[str, Any]:
+        """Delete tenant and all associated data."""
         try:
             # Get tenant info for logging
             tenant = await self.db_service.get_tenant_by_id(tenant_id)
             if not tenant:
-                raise ValueError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise ValueError(msg)
 
             # Check if tenant can be deleted
             if not force and tenant["status"] == "active":
@@ -417,7 +424,7 @@ class TenantManagementService:
             # Mark tenant as deleted
             await self.db_service.update_tenant_status(tenant_id, "deleted")
 
-            logger.info(f"✅ Deleted tenant: {tenant_id} ({tenant['name']})")
+            logger.info("✅ Deleted tenant: %s (%s)", tenant_id, tenant["name"])
 
             return {
                 "status": "success",
@@ -425,7 +432,7 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to delete tenant {tenant_id}: {e}")
+            logger.error("Failed to delete tenant %s: %s", tenant_id, e)
             raise
 
     async def list_tenants(
@@ -434,8 +441,8 @@ class TenantManagementService:
         plan: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> dict[str, Any]:
-        """List tenants with filtering and pagination"""
+    ) -> Dict[str, Any]:
+        """List tenants with filtering and pagination."""
         try:
             tenants = await self.db_service.get_all_tenants(status, plan)
 
@@ -460,29 +467,32 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to list tenants: {e}")
+            logger.error("Failed to list tenants: %s", e)
             raise
 
     async def create_user(
         self,
         tenant_id: str,
         request: UserCreationRequest,
-    ) -> dict[str, Any]:
-        """Create new user within tenant"""
+    ) -> Dict[str, Any]:
+        """Create new user within tenant."""
         try:
             # Validate tenant exists and is active
             tenant = await self.db_service.get_tenant_by_id(tenant_id)
             if not tenant:
-                raise ValueError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise ValueError(msg)
             if tenant["status"] != "active":
-                raise ValueError(f"Tenant is not active: {tenant['status']}")
+                msg = f"Tenant is not active: {tenant['status']}"
+                raise ValueError(msg)
 
             # Check user limits
             current_user_count = await self._get_user_count(tenant_id)
             plan_limits = TenantPlanLimits.get_plan_limits(tenant["plan"])
             if current_user_count >= plan_limits["max_users"]:
+                msg = f"User limit reached for {tenant['plan']} plan: {plan_limits['max_users']}"
                 raise ValueError(
-                    f"User limit reached for {tenant['plan']} plan: {plan_limits['max_users']}",
+                    msg,
                 )
 
             # Check username uniqueness within tenant
@@ -491,8 +501,9 @@ class TenantManagementService:
                 request.username,
             )
             if existing_user:
+                msg = f"Username already exists in tenant: {request.username}"
                 raise ValueError(
-                    f"Username already exists in tenant: {request.username}",
+                    msg,
                 )
 
             # Hash REDACTED_SECRET
@@ -524,7 +535,7 @@ class TenantManagementService:
                 },
             )
 
-            logger.info(f"✅ Created user: {request.username} in tenant {tenant_id}")
+            logger.info("✅ Created user: %s in tenant %s", request.username, tenant_id)
 
             return {
                 "status": "success",
@@ -538,7 +549,7 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to create user in tenant {tenant_id}: {e}")
+            logger.error("Failed to create user in tenant %s: %s", tenant_id, e)
             raise
 
     async def get_tenant_users(
@@ -546,23 +557,23 @@ class TenantManagementService:
         tenant_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> dict[str, Any]:
-        """Get users within tenant"""
+    ) -> Dict[str, Any]:
+        """Get users within tenant."""
         try:
             users = await self.db_service.get_tenant_users(tenant_id, limit, offset)
 
             return {"users": users, "pagination": {"limit": limit, "offset": offset}}
 
         except Exception as e:
-            logger.error(f"Failed to get users for tenant {tenant_id}: {e}")
+            logger.error("Failed to get users for tenant %s: %s", tenant_id, e)
             raise
 
     async def get_tenant_analytics(
         self,
         tenant_id: str,
         days: int = 30,
-    ) -> dict[str, Any]:
-        """Get comprehensive tenant analytics"""
+    ) -> Dict[str, Any]:
+        """Get comprehensive tenant analytics."""
         try:
             # Get search analytics
             search_analytics = await self.db_service.get_tenant_search_analytics(
@@ -601,19 +612,18 @@ class TenantManagementService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get analytics for tenant {tenant_id}: {e}")
+            logger.error("Failed to get analytics for tenant %s: %s", tenant_id, e)
             raise
 
     # Helper methods
 
     def _generate_REDACTED_SECRET(self, length: int = 12) -> str:
-        """Generate secure random REDACTED_SECRET"""
+        """Generate secure random REDACTED_SECRET."""
         alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        REDACTED_SECRET = "".join(secrets.choice(alphabet) for _ in range(length))
-        return REDACTED_SECRET
+        return "".join(secrets.choice(alphabet) for _ in range(length))
 
     async def _get_tenant_stats(self, tenant_id: str) -> TenantStats:
-        """Get tenant statistics"""
+        """Get tenant statistics."""
         try:
             # Get user count
             user_count = await self._get_user_count(tenant_id)
@@ -628,7 +638,7 @@ class TenantManagementService:
             # Mock additional stats (would be replaced with real monitoring)
             storage_usage_mb = 125.6
             api_calls_today = 234
-            last_activity = datetime.utcnow() - timedelta(minutes=15)
+            last_activity = datetime.now(UTC) - timedelta(minutes=15)
             resource_utilization = {
                 "cpu_percent": 45.2,
                 "memory_percent": 62.1,
@@ -646,7 +656,7 @@ class TenantManagementService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get stats for tenant {tenant_id}: {e}")
+            logger.error("Failed to get stats for tenant %s: %s", tenant_id, e)
             # Return empty stats on error
             return TenantStats(
                 tenant_id=tenant_id,
@@ -659,19 +669,19 @@ class TenantManagementService:
             )
 
     async def _get_user_count(self, tenant_id: str) -> int:
-        """Get user count for tenant"""
+        """Get user count for tenant."""
         users = await self.db_service.get_tenant_users(tenant_id, limit=1000)
         return len(users)
 
     async def _get_active_user_count(self, tenant_id: str, days: int) -> int:
-        """Get active user count for tenant in last N days"""
+        """Get active user count for tenant in last N days."""
         # This would query actual activity data
         # For now, return mock data
         total_users = await self._get_user_count(tenant_id)
         return max(1, int(total_users * 0.7))  # Assume 70% activity rate
 
-    async def health_check(self) -> dict[str, Any]:
-        """Health check for tenant management service"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Health check for tenant management service."""
         try:
             # Test database connectivity
             db_health = await self.db_service.health_check()
@@ -681,7 +691,7 @@ class TenantManagementService:
 
             return {
                 "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "database_health": db_health,
                 "tenant_count": test_tenant_count,
                 "service": "tenant_management",
@@ -691,7 +701,7 @@ class TenantManagementService:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "service": "tenant_management",
             }
 
@@ -702,7 +712,7 @@ class TenantManagementService:
 async def create_tenant_management_service(
     db_service: MultiTenantPostgreSQLService,
 ) -> TenantManagementService:
-    """Create tenant management service"""
+    """Create tenant management service."""
     return TenantManagementService(db_service)
 
 

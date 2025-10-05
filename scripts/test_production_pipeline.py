@@ -12,7 +12,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-def safe_print(message):
+def safe_print(self) -> None:
     """Print without Unicode issues on Windows"""
     try:
         print(message)
@@ -22,7 +22,7 @@ def safe_print(message):
         print(safe_message)
 
 
-async def test_production_pipeline():
+async def test_production_pipeline(self) -> None:
     """Test the production omni-source pipeline"""
 
     # Add project root to Python path
@@ -118,7 +118,7 @@ async def test_production_pipeline():
         return False
 
 
-async def main():
+async def main(self) -> None:
     """Main test function"""
     load_dotenv()
 

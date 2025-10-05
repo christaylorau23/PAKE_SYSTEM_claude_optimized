@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+
 from services.caching.multi_tier_cache import (
     CacheConfig,
     CacheEntry,
@@ -34,15 +35,15 @@ class TestMultiTierCacheManager:
     Tests memory, disk, and distributed caching with intelligent management.
     """
 
-    @pytest.fixture()
-    def temp_cache_dir(self):
+    @pytest.fixture
+    def temp_cache_dir(self) -> None:
         """Create temporary directory for cache testing"""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    @pytest.fixture()
-    def cache_config(self, temp_cache_dir):
+    @pytest.fixture
+    def cache_config(self) -> None:
         """Standard cache configuration"""
         return CacheConfig(
             memory_max_size=1024 * 1024,  # 1MB
@@ -57,8 +58,8 @@ class TestMultiTierCacheManager:
             stats_enabled=True,
         )
 
-    @pytest.fixture()
-    def redis_config(self, temp_cache_dir):
+    @pytest.fixture
+    def redis_config(self) -> None:
         """Redis-enabled cache configuration"""
         return CacheConfig(
             memory_max_size=1024 * 1024,
@@ -69,21 +70,21 @@ class TestMultiTierCacheManager:
         )
 
     @pytest_asyncio.fixture
-    async def cache_manager(self, cache_config):
+    async def cache_manager(self) -> None:
         """Create cache manager instance"""
         manager = MultiTierCacheManager(cache_config)
         yield manager
         await manager.close()
 
     @pytest_asyncio.fixture
-    async def redis_cache_manager(self, redis_config):
+    async def redis_cache_manager(self) -> None:
         """Create Redis-enabled cache manager instance"""
         manager = MultiTierCacheManager(redis_config)
         yield manager
         await manager.close()
 
-    @pytest.fixture()
-    def sample_cache_key(self):
+    @pytest.fixture
+    def sample_cache_key(self) -> None:
         """Sample cache key for testing"""
         return CacheKey(
             namespace="test",
@@ -92,8 +93,8 @@ class TestMultiTierCacheManager:
             tags=["unit_test", "sample"],
         )
 
-    @pytest.fixture()
-    def sample_data(self):
+    @pytest.fixture
+    def sample_data(self) -> None:
         """Sample data for caching"""
         return {
             "id": 12345,
@@ -111,13 +112,8 @@ class TestMultiTierCacheManager:
     # BASIC CACHE OPERATIONS TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_set_and_get_cache_entries_successfully(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_set_and_get_cache_entries_successfully(self) -> None:
         """
         Test: Should set and retrieve cache entries with proper
         data integrity and metadata preservation.
@@ -135,8 +131,8 @@ class TestMultiTierCacheManager:
         assert retrieved_data["name"] == "Test Data"
         assert retrieved_data["metadata"]["type"] == "test_data"
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_cache_miss_gracefully(self, cache_manager):
+    @pytest.mark.asyncio
+    async def test_should_handle_cache_miss_gracefully(self) -> None:
         """
         Test: Should handle cache misses gracefully by returning None
         without raising exceptions.
@@ -151,13 +147,8 @@ class TestMultiTierCacheManager:
         result = await cache_manager.get(nonexistent_key)
         assert result is None
 
-    @pytest.mark.asyncio()
-    async def test_should_delete_cache_entries_from_all_tiers(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_delete_cache_entries_from_all_tiers(self) -> None:
         """
         Test: Should delete cache entries from all tiers
         and confirm successful removal.
@@ -177,13 +168,8 @@ class TestMultiTierCacheManager:
         result = await cache_manager.get(sample_cache_key)
         assert result is None
 
-    @pytest.mark.asyncio()
-    async def test_should_support_ttl_expiration(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_support_ttl_expiration(self) -> None:
         """
         Test: Should respect TTL (Time To Live) settings and automatically
         expire cache entries after specified duration.
@@ -206,13 +192,8 @@ class TestMultiTierCacheManager:
     # MULTI-TIER FUNCTIONALITY TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_promote_frequently_accessed_items_to_memory(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_promote_frequently_accessed_items_to_memory(self) -> None:
         """
         Test: Should promote frequently accessed items from disk to memory
         tier for improved performance.
@@ -229,8 +210,8 @@ class TestMultiTierCacheManager:
         stats = await cache_manager.get_stats()
         assert stats.hits[CacheTier.MEMORY] > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_search_tiers_in_correct_order(self, cache_manager):
+    @pytest.mark.asyncio
+    async def test_should_search_tiers_in_correct_order(self) -> None:
         """
         Test: Should search cache tiers in correct order (memory -> disk -> distributed)
         and return first match found.
@@ -257,8 +238,8 @@ class TestMultiTierCacheManager:
         stats = await cache_manager.get_stats()
         assert stats.hits[CacheTier.MEMORY] > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_large_data_sets_efficiently(self, cache_manager):
+    @pytest.mark.asyncio
+    async def test_should_handle_large_data_sets_efficiently(self) -> None:
         """
         Test: Should handle large data sets efficiently with proper
         memory management and disk overflow.
@@ -291,8 +272,8 @@ class TestMultiTierCacheManager:
     # MEMORY TIER SPECIFIC TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_memory_tier_should_respect_size_limits(self, cache_config):
+    @pytest.mark.asyncio
+    async def test_memory_tier_should_respect_size_limits(self) -> None:
         """
         Test: Memory tier should respect size limits and evict entries
         when capacity is exceeded.
@@ -323,8 +304,8 @@ class TestMultiTierCacheManager:
         result = await memory_tier.get(first_key)
         assert result is None
 
-    @pytest.mark.asyncio()
-    async def test_memory_tier_should_implement_lru_eviction(self, cache_config):
+    @pytest.mark.asyncio
+    async def test_memory_tier_should_implement_lru_eviction(self) -> None:
         """
         Test: Memory tier should implement LRU (Least Recently Used) eviction
         policy correctly.
@@ -372,8 +353,8 @@ class TestMultiTierCacheManager:
     # DISK TIER SPECIFIC TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_disk_tier_should_persist_data_across_restarts(self, temp_cache_dir):
+    @pytest.mark.asyncio
+    async def test_disk_tier_should_persist_data_across_restarts(self) -> None:
         """
         Test: Disk tier should persist data across service restarts
         and maintain data integrity.
@@ -405,11 +386,8 @@ class TestMultiTierCacheManager:
         assert retrieved_entry.value == test_data
         assert retrieved_entry.value["message"] == "This should persist"
 
-    @pytest.mark.asyncio()
-    async def test_disk_tier_should_handle_file_corruption_gracefully(
-        self,
-        temp_cache_dir,
-    ):
+    @pytest.mark.asyncio
+    async def test_disk_tier_should_handle_file_corruption_gracefully(self) -> None:
         """
         Test: Disk tier should handle file corruption gracefully
         without crashing the application.
@@ -438,13 +416,8 @@ class TestMultiTierCacheManager:
     # CACHE STATISTICS TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_track_comprehensive_cache_statistics(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_track_comprehensive_cache_statistics(self) -> None:
         """
         Test: Should track comprehensive cache statistics including
         hits, misses, hit rates, and performance metrics.
@@ -474,12 +447,8 @@ class TestMultiTierCacheManager:
         total_misses = sum(stats.misses.values())
         assert total_hits > 0 or total_misses > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_calculate_hit_rate_accurately(
-        self,
-        cache_manager,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_calculate_hit_rate_accurately(self) -> None:
         """
         Test: Should calculate cache hit rate accurately based on
         hits and misses across all tiers.
@@ -519,12 +488,8 @@ class TestMultiTierCacheManager:
     # TAG-BASED INVALIDATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_support_tag_based_invalidation(
-        self,
-        cache_manager,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_support_tag_based_invalidation(self) -> None:
         """
         Test: Should support tag-based cache invalidation for
         efficient bulk cache clearing.
@@ -562,8 +527,8 @@ class TestMultiTierCacheManager:
     # NAMESPACE SUPPORT TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_support_namespace_isolation(self, cache_manager, sample_data):
+    @pytest.mark.asyncio
+    async def test_should_support_namespace_isolation(self) -> None:
         """
         Test: Should support namespace isolation to prevent
         key collisions between different application areas.
@@ -592,18 +557,14 @@ class TestMultiTierCacheManager:
     # PERFORMANCE AND SCALABILITY TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_access_safely(
-        self,
-        cache_manager,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_access_safely(self) -> None:
         """
         Test: Should handle concurrent cache access safely without
         data corruption or race conditions.
         """
 
-        async def concurrent_cache_operations(base_id: int):
+        async def concurrent_cache_operations(self) -> None:
             for i in range(5):
                 key = CacheKey(namespace="concurrent", key=f"item_{base_id}_{i}")
                 await cache_manager.set(key, {**sample_data, "id": f"{base_id}_{i}"})
@@ -620,8 +581,8 @@ class TestMultiTierCacheManager:
         assert sum(stats.hits.values()) > 0
         assert sum(stats.sets.values()) > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_maintain_performance_under_load(self, cache_manager):
+    @pytest.mark.asyncio
+    async def test_should_maintain_performance_under_load(self) -> None:
         """
         Test: Should maintain reasonable performance under high load
         with many cache operations.
@@ -653,13 +614,8 @@ class TestMultiTierCacheManager:
     # HEALTH CHECK TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_comprehensive_health_status(
-        self,
-        cache_manager,
-        sample_cache_key,
-        sample_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_provide_comprehensive_health_status(self) -> None:
         """
         Test: Should provide comprehensive health check information
         including tier status, statistics, and configuration.
@@ -695,8 +651,8 @@ class TestMultiTierCacheManager:
     # RESOURCE CLEANUP TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_cleanup_resources_properly(self, cache_config, sample_data):
+    @pytest.mark.asyncio
+    async def test_should_cleanup_resources_properly(self) -> None:
         """
         Test: Should properly clean up resources when cache manager
         is closed.
@@ -727,7 +683,7 @@ class TestMultiTierCacheManager:
 class TestCacheDataStructures:
     """Test cache-specific data structures"""
 
-    def test_cache_key_should_generate_consistent_strings(self):
+    def test_cache_key_should_generate_consistent_strings(self) -> None:
         """
         Test: CacheKey should generate consistent string representations
         for the same input parameters.
@@ -749,7 +705,7 @@ class TestCacheDataStructures:
         # Should generate same string (tags are sorted)
         assert key1.to_string() == key2.to_string()
 
-    def test_cache_entry_should_be_immutable(self):
+    def test_cache_entry_should_be_immutable(self) -> None:
         """
         Test: CacheEntry instances should be immutable to ensure
         data integrity throughout caching pipeline.
@@ -765,7 +721,7 @@ class TestCacheDataStructures:
         with pytest.raises(AttributeError):
             entry.value = "modified_data"
 
-    def test_cache_stats_should_calculate_hit_rate_correctly(self):
+    def test_cache_stats_should_calculate_hit_rate_correctly(self) -> None:
         """
         Test: CacheStats should calculate hit rate correctly
         based on successful requests vs total requests.
@@ -783,7 +739,7 @@ class TestCacheDataStructures:
         expected_rate = 11 / 20
         assert abs(hit_rate - expected_rate) < 0.01
 
-    def test_cache_config_should_have_sensible_defaults(self):
+    def test_cache_config_should_have_sensible_defaults(self) -> None:
         """
         Test: CacheConfig should provide reasonable default values
         for all configuration parameters.
@@ -800,5 +756,5 @@ class TestCacheDataStructures:
         assert config.redis_url is None
         assert config.default_policy == CachePolicy.LRU
         assert config.compression_enabled
-        assert config.encryption_enabled == False
+        assert config.encryption_enabled is False
         assert config.stats_enabled

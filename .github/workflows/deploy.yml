@@ -163,7 +163,7 @@ jobs:
           poetry run pytest tests/e2e/ \
             --base-url=https://staging.pake-system.com \
             --junitxml=staging-e2e-results.xml \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload staging test results
         uses: actions/upload-artifact@v4

@@ -17,7 +17,7 @@ import httpx
 class SecurityTestSuite:
     """Comprehensive security test suite for PAKE System"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url.rstrip("/")
         self.results = {
             "timestamp": time.time(),
@@ -26,7 +26,7 @@ class SecurityTestSuite:
             "summary": {"total": 0, "passed": 0, "failed": 0, "critical_failures": 0},
         }
 
-    async def run_test(self, test_name: str, test_func) -> dict[str, Any]:
+    async def run_test(self, test_name: str, test_func) -> Dict[str, Any]:
         """Run a single security test"""
         print(f"🔒 Running security test: {test_name}")
 
@@ -66,7 +66,7 @@ class SecurityTestSuite:
         self.results["summary"]["total"] += 1
         return {"status": "completed"}
 
-    async def test_authentication_bypass(self) -> dict[str, Any]:
+    async def test_authentication_bypass(self) -> Dict[str, Any]:
         """Test for authentication bypass vulnerabilities"""
         async with httpx.AsyncClient() as client:
             # Test protected endpoints without authentication
@@ -92,7 +92,7 @@ class SecurityTestSuite:
                 "details": f"Authentication bypass attempts: {bypass_attempts}/{len(protected_endpoints)}",
             }
 
-    async def test_sql_injection(self) -> dict[str, Any]:
+    async def test_sql_injection(self) -> Dict[str, Any]:
         """Test for SQL injection vulnerabilities"""
         async with httpx.AsyncClient() as client:
             sql_payloads = [
@@ -130,7 +130,7 @@ class SecurityTestSuite:
                 "details": f"SQL injection vulnerabilities found: {vulnerable_endpoints}",
             }
 
-    async def test_xss_vulnerabilities(self) -> dict[str, Any]:
+    async def test_xss_vulnerabilities(self) -> Dict[str, Any]:
         """Test for Cross-Site Scripting vulnerabilities"""
         async with httpx.AsyncClient() as client:
             xss_payloads = [
@@ -157,7 +157,7 @@ class SecurityTestSuite:
                 "details": f"XSS vulnerabilities found: {vulnerable_endpoints}",
             }
 
-    async def test_csrf_protection(self) -> dict[str, Any]:
+    async def test_csrf_protection(self) -> Dict[str, Any]:
         """Test for CSRF protection"""
         async with httpx.AsyncClient() as client:
             # Test if CSRF tokens are required for state-changing operations
@@ -182,14 +182,14 @@ class SecurityTestSuite:
                     "details": "Could not test CSRF protection",
                 }
 
-    async def test_rate_limiting(self) -> dict[str, Any]:
+    async def test_rate_limiting(self) -> Dict[str, Any]:
         """Test for rate limiting implementation"""
         async with httpx.AsyncClient() as client:
             # Send multiple requests rapidly
             requests_sent = 0
             rate_limited = False
 
-            for i in range(100):  # Send 100 requests rapidly
+            for _i in range(100):  # Send 100 requests rapidly
                 try:
                     response = await client.get(f"{self.base_url}/api/data")
                     requests_sent += 1
@@ -205,7 +205,7 @@ class SecurityTestSuite:
                 "details": f"Rate limiting {'enabled' if rate_limited else 'disabled'} after {requests_sent} requests",
             }
 
-    async def test_headers_security(self) -> dict[str, Any]:
+    async def test_headers_security(self) -> Dict[str, Any]:
         """Test for security headers"""
         async with httpx.AsyncClient() as client:
             try:
@@ -221,7 +221,7 @@ class SecurityTestSuite:
                 }
 
                 missing_headers = []
-                for header, expected_value in security_headers.items():
+                for header, _expected_value in security_headers.items():
                     if header not in headers:
                         missing_headers.append(header)
 
@@ -237,7 +237,7 @@ class SecurityTestSuite:
                     "details": "Could not test security headers",
                 }
 
-    async def test_input_validation(self) -> dict[str, Any]:
+    async def test_input_validation(self) -> Dict[str, Any]:
         """Test for input validation vulnerabilities"""
         async with httpx.AsyncClient() as client:
             malicious_inputs = [
@@ -267,7 +267,7 @@ class SecurityTestSuite:
                 "details": f"Input validation vulnerabilities: {vulnerable_inputs}",
             }
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run all security tests"""
         print("🛡️ Starting PAKE System Security Test Suite")
         print(f"Target URL: {self.base_url}")
@@ -297,21 +297,20 @@ class SecurityTestSuite:
         if self.results["summary"]["critical_failures"] > 0:
             print("❌ CRITICAL SECURITY ISSUES FOUND!")
             return False
-        elif self.results["summary"]["failed"] > 0:
+        if self.results["summary"]["failed"] > 0:
             print("⚠️ Some security issues found, but none critical")
             return True
-        else:
-            print("✅ All security tests passed!")
-            return True
+        print("✅ All security tests passed!")
+        return True
 
-    def save_report(self, filename: str = "security_test_report.json"):
+    def save_report(self) -> None:
         """Save test results to file"""
         with open(filename, "w") as f:
             json.dump(self.results, f, indent=2)
         print(f"📄 Security test report saved to {filename}")
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Security Test Suite")
     parser.add_argument(

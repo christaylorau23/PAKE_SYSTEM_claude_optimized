@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class PAKEDeployer:
     """PAKE+ system deployment manager"""
 
-    def __init__(self, base_dir: str = None):
+    def __init__(self) -> None:
         self.base_dir = Path(base_dir or os.getcwd())
         self.docker_dir = self.base_dir / "docker"
         self.scripts_dir = self.base_dir / "scripts"
@@ -53,7 +53,7 @@ class PAKEDeployer:
         missing = [name for name, available in prerequisites.items() if not available]
 
         if missing:
-            logger.error(f"Missing prerequisites: {', '.join(missing)}")
+            logger.error("Missing prerequisites: %s", ", ".join(missing))
             logger.info("Please install missing components before deployment")
             return False
 
@@ -69,7 +69,7 @@ class PAKEDeployer:
                 text=True,
                 check=True,
             )
-            logger.info(f"Docker found: {result.stdout.strip()}")
+            logger.info("Docker found: %s", result.stdout.strip())
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.warning("Docker not found or not running")
@@ -84,7 +84,7 @@ class PAKEDeployer:
                 text=True,
                 check=True,
             )
-            logger.info(f"Docker Compose found: {result.stdout.strip()}")
+            logger.info("Docker Compose found: %s", result.stdout.strip())
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Try newer docker compose command
@@ -95,7 +95,7 @@ class PAKEDeployer:
                     text=True,
                     check=True,
                 )
-                logger.info(f"Docker Compose found: {result.stdout.strip()}")
+                logger.info("Docker Compose found: %s", result.stdout.strip())
                 return True
             except (subprocess.CalledProcessError, FileNotFoundError):
                 logger.warning("Docker Compose not found")
@@ -110,7 +110,7 @@ class PAKEDeployer:
                 text=True,
                 check=True,
             )
-            logger.info(f"Python found: {result.stdout.strip()}")
+            logger.info("Python found: %s", result.stdout.strip())
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.warning("Python not found")
@@ -125,7 +125,7 @@ class PAKEDeployer:
                 text=True,
                 check=True,
             )
-            logger.info(f"Node.js found: {result.stdout.strip()}")
+            logger.info("Node.js found: %s", result.stdout.strip())
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.warning("Node.js not found")
@@ -140,7 +140,7 @@ class PAKEDeployer:
                 text=True,
                 check=True,
             )
-            logger.info(f"Git found: {result.stdout.strip()}")
+            logger.info("Git found: %s", result.stdout.strip())
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.warning("Git not found")
@@ -175,7 +175,7 @@ class PAKEDeployer:
             return False
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Infrastructure deployment failed: {e}")
+            logger.error("Infrastructure deployment failed: %s", e)
             return False
         finally:
             os.chdir(self.base_dir)
@@ -194,9 +194,9 @@ class PAKEDeployer:
         for service_name, (host, port) in services.items():
             if self._check_port(host, port):
                 healthy_services.append(service_name)
-                logger.info(f"{service_name} is healthy ✓")
+                logger.info("%s is healthy ✓", service_name)
             else:
-                logger.warning(f"{service_name} is not responding")
+                logger.warning("%s is not responding", service_name)
 
         return len(healthy_services) >= 3  # At least 3 core services should be up
 
@@ -245,7 +245,7 @@ class PAKEDeployer:
                 return False
 
         except Exception as e:
-            logger.error(f"Database initialization failed: {e}")
+            logger.error("Database initialization failed: %s", e)
             return False
 
     def install_python_dependencies(self) -> bool:
@@ -287,7 +287,7 @@ class PAKEDeployer:
             return True
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Python dependency installation failed: {e}")
+            logger.error("Python dependency installation failed: %s", e)
             return False
 
     def install_node_dependencies(self) -> bool:
@@ -306,7 +306,7 @@ class PAKEDeployer:
             return True
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Node.js dependency installation failed: {e}")
+            logger.error("Node.js dependency installation failed: %s", e)
             return False
 
     def start_api_bridge(self) -> bool:
@@ -335,7 +335,7 @@ class PAKEDeployer:
             return True
 
         except Exception as e:
-            logger.error(f"API bridge startup failed: {e}")
+            logger.error("API bridge startup failed: %s", e)
             return False
         finally:
             os.chdir(self.base_dir)
@@ -385,7 +385,7 @@ class PAKEDeployer:
             return True
 
         except Exception as e:
-            logger.error(f"Ingestion setup failed: {e}")
+            logger.error("Ingestion setup failed: %s", e)
             return False
 
     def install_git_hooks(self) -> bool:
@@ -403,7 +403,7 @@ class PAKEDeployer:
             return False
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Git hook installation failed: {e}")
+            logger.error("Git hook installation failed: %s", e)
             return False
 
     def create_sample_content(self) -> bool:
@@ -496,7 +496,7 @@ Congratulations! Your PAKE+ system has been successfully deployed and configured
             return True
 
         except Exception as e:
-            logger.error(f"Sample content creation failed: {e}")
+            logger.error("Sample content creation failed: %s", e)
             return False
 
     def generate_deployment_report(self) -> str:
@@ -578,15 +578,15 @@ Generated: {time.strftime("%Y-%m-%d %H:%M:%S")}
         failed_steps = []
 
         for step_name, step_function in deployment_steps:
-            logger.info(f"Executing: {step_name}...")
+            logger.info("Executing: %s...", step_name)
             try:
                 if step_function():
-                    logger.info(f"✅ {step_name} completed successfully")
+                    logger.info("✅ %s completed successfully", step_name)
                 else:
-                    logger.error(f"❌ {step_name} failed")
+                    logger.error("❌ %s failed", step_name)
                     failed_steps.append(step_name)
             except Exception as e:
-                logger.error(f"❌ {step_name} failed with exception: {e}")
+                logger.error("❌ %s failed with exception: %s", step_name, e)
                 failed_steps.append(step_name)
 
             logger.info("-" * 30)
@@ -602,17 +602,18 @@ Generated: {time.strftime("%Y-%m-%d %H:%M:%S")}
 
         if not failed_steps:
             logger.info("🎉 PAKE+ deployment completed successfully!")
-            logger.info(f"📄 Full report saved to: {report_file}")
+            logger.info("📄 Full report saved to: %s", report_file)
             return True
         logger.error(
-            f"❌ Deployment completed with errors in: {', '.join(failed_steps)}",
+            "❌ Deployment completed with errors in: %s",
+            ", ".join(failed_steps),
         )
         logger.info("Please check the logs and retry failed components")
-        logger.info(f"📄 Full report saved to: {report_file}")
+        logger.info("📄 Full report saved to: %s", report_file)
         return False
 
 
-def main():
+def main(self) -> None:
     """Main deployment function"""
     import argparse
 
@@ -647,7 +648,7 @@ def main():
             success = component_map[args.component]()
             sys.exit(0 if success else 1)
         else:
-            logger.error(f"Unknown component: {args.component}")
+            logger.error("Unknown component: %s", args.component)
             sys.exit(1)
 
     # Full deployment

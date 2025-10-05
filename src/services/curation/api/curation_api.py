@@ -5,7 +5,7 @@ Provides HTTP endpoints for content discovery, recommendations, and user feedbac
 
 import logging
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import uvicorn
@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class CurationRequestModel(BaseModel):
     user_id: str = Field(..., description="User ID for personalization")
     query: str | None = Field(None, description="Search query")
-    interests: list[str] = Field(default_factory=list, description="User interests")
-    content_types: list[str] = Field(
+    interests: List[str] = Field(default_factory=list, description="User interests")
+    content_types: List[str] = Field(
         default_factory=list,
         description="Preferred content types",
     )
@@ -58,7 +58,7 @@ class FeedbackRequestModel(BaseModel):
         ...,
         description="Type of feedback (like, dislike, share, save, etc.)",
     )
-    feedback_data: dict[str, Any] = Field(
+    feedback_data: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional feedback data",
     )
@@ -88,7 +88,7 @@ class CurationResponseModel(BaseModel):
 class SystemHealthModel(BaseModel):
     services_healthy: dict[str, bool]
     models_loaded: dict[str, bool]
-    cache_status: dict[str, Any]
+    cache_status: Dict[str, Any]
     performance_metrics: dict[str, float]
     last_updated: datetime
 
@@ -98,7 +98,7 @@ orchestrator: CurationOrchestrator | None = None
 
 
 def get_orchestrator() -> CurationOrchestrator:
-    """Dependency to get orchestrator instance"""
+    """Dependency to get orchestrator instance."""
     global orchestrator
     if orchestrator is None:
         orchestrator = CurationOrchestrator()
@@ -125,8 +125,8 @@ app.add_middleware(
 
 
 @app.on_event("startup")
-async def startup_event():
-    """Initialize the curation system on startup"""
+async def startup_event(self) -> None:
+    """Initialize the curation system on startup."""
     global orchestrator
     logger.info("Starting PAKE Curation API")
 
@@ -135,14 +135,15 @@ async def startup_event():
 
     if not success:
         logger.error("Failed to initialize curation system")
-        raise Exception("Curation system initialization failed")
+        msg = "Curation system initialization failed"
+        raise Exception(msg)
 
     logger.info("PAKE Curation API started successfully")
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
-    """Shutdown the curation system"""
+async def shutdown_event(self) -> None:
+    """Shutdown the curation system."""
     global orchestrator
     if orchestrator:
         await orchestrator.shutdown()
@@ -151,12 +152,12 @@ async def shutdown_event():
 
 @app.get("/health", response_model=SystemHealthModel)
 async def health_check(orch: CurationOrchestrator = Depends(get_orchestrator)):
-    """Get system health status"""
+    """Get system health status."""
     try:
         health = await orch.get_system_health()
         return SystemHealthModel(**asdict(health))
     except Exception as e:
-        logger.error(f"Error getting system health: {e}")
+        logger.error("Error getting system health: %s", e)
         raise HTTPException(status_code=500, detail="Health check failed")
 
 
@@ -165,7 +166,7 @@ async def curate_content(
     request: CurationRequestModel,
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Get personalized content recommendations"""
+    """Get personalized content recommendations."""
     try:
         # Convert Pydantic model to dataclass
         curation_request = CurationRequest(
@@ -208,7 +209,7 @@ async def curate_content(
         )
 
     except Exception as e:
-        logger.error(f"Error processing curation request: {e}")
+        logger.error("Error processing curation request: %s", e)
         raise HTTPException(status_code=500, detail=f"Curation failed: {str(e)}")
 
 
@@ -217,7 +218,7 @@ async def submit_feedback(
     feedback: FeedbackRequestModel,
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Submit user feedback for learning"""
+    """Submit user feedback for learning."""
     try:
         success = await orch.process_user_feedback(
             user_id=feedback.user_id,
@@ -231,7 +232,7 @@ async def submit_feedback(
         raise HTTPException(status_code=400, detail="Failed to process feedback")
 
     except Exception as e:
-        logger.error(f"Error processing feedback: {e}")
+        logger.error("Error processing feedback: %s", e)
         raise HTTPException(
             status_code=500,
             detail=f"Feedback processing failed: {str(e)}",
@@ -242,14 +243,13 @@ async def submit_feedback(
 async def get_user_recommendations(
     user_id: str,
     limit: int = Query(20, ge=1, le=100),
-    content_types: str
-    | None = Query(
+    content_types: str | None = Query(
         None,
         description="Comma-separated content types",
     ),
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Get recommendations for a specific user"""
+    """Get recommendations for a specific user."""
     try:
         # Parse content types
         content_types_list = []
@@ -282,7 +282,7 @@ async def get_user_recommendations(
         }
 
     except Exception as e:
-        logger.error(f"Error getting recommendations for user {user_id}: {e}")
+        logger.error("Error getting recommendations for user %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get recommendations: {str(e)}",
@@ -297,7 +297,7 @@ async def retrain_models(
     ),
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Retrain ML models with latest data"""
+    """Retrain ML models with latest data."""
     try:
         results = await orch.retrain_models(force_retrain=force)
 
@@ -314,7 +314,7 @@ async def retrain_models(
         }
 
     except Exception as e:
-        logger.error(f"Error retraining models: {e}")
+        logger.error("Error retraining models: %s", e)
         raise HTTPException(
             status_code=500,
             detail=f"Model retraining failed: {str(e)}",
@@ -323,7 +323,7 @@ async def retrain_models(
 
 @app.get("/stats")
 async def get_system_stats(orch: CurationOrchestrator = Depends(get_orchestrator)):
-    """Get system performance statistics"""
+    """Get system performance statistics."""
     try:
         health = await orch.get_system_health()
 
@@ -338,7 +338,7 @@ async def get_system_stats(orch: CurationOrchestrator = Depends(get_orchestrator
         }
 
     except Exception as e:
-        logger.error(f"Error getting system stats: {e}")
+        logger.error("Error getting system stats: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
 
@@ -347,7 +347,7 @@ async def get_content_quality(
     content_id: str,
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Get quality score for specific content"""
+    """Get quality score for specific content."""
     try:
         # This would typically fetch content from database
         # For now, return a placeholder response
@@ -358,7 +358,7 @@ async def get_content_quality(
         }
 
     except Exception as e:
-        logger.error(f"Error getting content quality for {content_id}: {e}")
+        logger.error("Error getting content quality for %s: %s", content_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get content quality: {str(e)}",
@@ -370,7 +370,7 @@ async def get_user_profile(
     user_id: str,
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Get user profile and preferences"""
+    """Get user profile and preferences."""
     try:
         # Get user profile from orchestrator
         user_profile = await orch._get_user_profile(user_id)
@@ -386,7 +386,7 @@ async def get_user_profile(
         }
 
     except Exception as e:
-        logger.error(f"Error getting user profile for {user_id}: {e}")
+        logger.error("Error getting user profile for %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get user profile: {str(e)}",
@@ -396,11 +396,11 @@ async def get_user_profile(
 @app.put("/user/{user_id}/profile")
 async def update_user_profile(
     user_id: str,
-    interests: list[str] | None = Body(None),
+    interests: List[str] | None = Body(None),
     preference_weights: dict[str, float] | None = Body(None),
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):
-    """Update user profile and preferences"""
+    """Update user profile and preferences."""
     try:
         # Get current profile
         current_profile = await orch._get_user_profile(user_id)
@@ -423,7 +423,7 @@ async def update_user_profile(
             learning_rate=current_profile.learning_rate,
             exploration_factor=current_profile.exploration_factor,
             created_at=current_profile.created_at,
-            updated_at=datetime.now(),
+            updated_at=datetime.now(UTC),
         )
 
         # Update in user preference service
@@ -441,7 +441,7 @@ async def update_user_profile(
         }
 
     except Exception as e:
-        logger.error(f"Error updating user profile for {user_id}: {e}")
+        logger.error("Error updating user profile for %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update user profile: {str(e)}",
@@ -449,8 +449,8 @@ async def update_user_profile(
 
 
 @app.get("/")
-async def root():
-    """Root endpoint with API information"""
+async def root(self) -> None:
+    """Root endpoint with API information."""
     return {
         "service": "PAKE Intelligent Content Curation API",
         "version": "1.0.0",

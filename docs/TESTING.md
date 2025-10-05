@@ -20,9 +20,9 @@
 ```
     /\
    /  \     E2E Tests (5%)
-  /____\    
+  /____\
  /      \   Integration Tests (15%)
-/________\  
+/________\
             Unit Tests (80%)
 ```
 
@@ -204,16 +204,16 @@ python -m pytest tests/e2e/performance/test_memory_usage.py --profile
 async def test_search_performance():
     """Test search performance under load."""
     start_time = time.time()
-    
+
     # Execute concurrent searches
     tasks = [
-        search_service.search("test query") 
+        search_service.search("test query")
         for _ in range(10)
     ]
     results = await asyncio.gather(*tasks)
-    
+
     execution_time = time.time() - start_time
-    
+
     assert execution_time < 2.0  # Should complete in under 2 seconds
     assert len(results) == 10     # All searches should succeed
     assert all(r.success for r in results)
@@ -267,7 +267,7 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -278,7 +278,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       redis:
         image: redis:7
         options: >-
@@ -289,21 +289,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    
+
     - name: Install dependencies
       run: |
         pip install -r requirements-phase7.txt
         pip install -r requirements-test.txt
-    
+
     - name: Run tests
       run: |
         python -m pytest tests/ -v --cov=src --cov-report=xml
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
@@ -336,7 +336,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      
+
       - id: coverage
         name: coverage
         entry: python -m pytest tests/ --cov=src --cov-fail-under=80
@@ -444,7 +444,7 @@ python -m pytest tests/ --cache-clear
 
 <div align="center">
 
-**PAKE System Testing Guide** 🧪  
+**PAKE System Testing Guide** 🧪
 **Version 10.1.0** | **Last Updated**: 2025-09-14
 
 </div>

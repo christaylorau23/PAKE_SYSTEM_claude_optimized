@@ -13,8 +13,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from scripts.ingestion_pipeline import ContentItem
-
 from ..ingestion.firecrawl_service import FirecrawlService, ScrapingOptions
 from ..messaging.message_bus import MessageBus
 from .base_worker import BaseWorkerAgent, WorkerCapabilityBuilder
@@ -30,13 +28,8 @@ class WebScraperWorker(BaseWorkerAgent):
     for JavaScript-heavy content extraction.
     """
 
-    def __init__(
-        self,
-        message_bus: MessageBus,
-        firecrawl_api_key: str = "test-key",
-        worker_id: str = None,
-    ):
-        """Initialize web scraper worker"""
+    def __init__(self) -> None:
+        """Initialize web scraper worker."""
         # Define worker capabilities
         capabilities = [
             WorkerCapabilityBuilder("web_scraping")
@@ -83,9 +76,9 @@ class WebScraperWorker(BaseWorkerAgent):
         self.max_task_timeout = 120.0  # 2 minutes for web scraping
         self.default_wait_time = 3000  # 3 seconds for JavaScript rendering
 
-        logger.info(f"WebScraperWorker {self.worker_id} initialized")
+        logger.info("WebScraperWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process web scraping task.
 
         Handles 'web_ingestion' tasks from the supervisor with source configurations.
@@ -135,7 +128,7 @@ class WebScraperWorker(BaseWorkerAgent):
 
                         content_items.append(content_item.__dict__)
 
-                        logger.debug(f"Successfully scraped {url}")
+                        logger.debug("Successfully scraped %s", url)
 
                     else:
                         error_msg = f"Scraping failed for {url}: {result.error}"
@@ -166,7 +159,7 @@ class WebScraperWorker(BaseWorkerAgent):
             }
 
         except Exception as e:
-            logger.error(f"Web scraper task processing error: {e}")
+            logger.error("Web scraper task processing error: %s", e)
             return {
                 "success": False,
                 "error": f"Task processing failed: {str(e)}",
@@ -175,9 +168,9 @@ class WebScraperWorker(BaseWorkerAgent):
 
     def _create_scraping_options(
         self,
-        scraping_opts: dict[str, Any],
+        scraping_opts: Dict[str, Any],
     ) -> ScrapingOptions:
-        """Create ScrapingOptions from configuration"""
+        """Create ScrapingOptions from configuration."""
         return ScrapingOptions(
             wait_time=scraping_opts.get("wait_time", self.default_wait_time),
             extract_metadata=scraping_opts.get("extract_metadata", True),
@@ -194,13 +187,8 @@ class WebScraperWorker(BaseWorkerAgent):
             ),
         )
 
-    def _enhance_content_metadata(
-        self,
-        content_item: ContentItem,
-        plan_context: dict[str, Any],
-        source_data: dict[str, Any],
-    ):
-        """Enhance content item with additional metadata"""
+    def _enhance_content_metadata(self) -> None:
+        """Enhance content item with additional metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
 
@@ -238,8 +226,8 @@ class WebScraperWorker(BaseWorkerAgent):
                 },
             )
 
-    async def _on_start(self):
-        """Web scraper specific startup logic"""
+    async def _on_start(self) -> None:
+        """Web scraper specific startup logic."""
         # Test Firecrawl service connection
         try:
             test_result = await self.firecrawl_service.scrape_url(
@@ -249,27 +237,30 @@ class WebScraperWorker(BaseWorkerAgent):
 
             if test_result.success:
                 logger.info(
-                    f"WebScraperWorker {self.worker_id} Firecrawl service test successful",
+                    "WebScraperWorker %s Firecrawl service test successful",
+                    self.worker_id,
                 )
             else:
                 logger.warning(
-                    f"WebScraperWorker {
-                        self.worker_id
-                    } Firecrawl service test warning: {test_result.error}",
+                    "WebScraperWorker %s Firecrawl service test warning: %s",
+                    self.worker_id,
+                    test_result.error,
                 )
 
         except Exception as e:
             logger.error(
-                f"WebScraperWorker {self.worker_id} Firecrawl service test failed: {e}",
+                "WebScraperWorker %s Firecrawl service test failed: %s",
+                self.worker_id,
+                e,
             )
 
-    async def _on_stop(self):
-        """Web scraper specific cleanup logic"""
+    async def _on_stop(self) -> None:
+        """Web scraper specific cleanup logic."""
         # No specific cleanup needed for stateless worker
-        logger.info(f"WebScraperWorker {self.worker_id} cleanup completed")
+        logger.info("WebScraperWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get web scraper specific health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get web scraper specific health status."""
         base_health = await super().get_health_status()
 
         # Add web scraper specific health information
@@ -336,7 +327,7 @@ async def create_web_scraper_worker(
 
 # Task type handlers for different web scraping scenarios
 class WebScrapingTaskTypes:
-    """Web scraping task type definitions"""
+    """Web scraping task type definitions."""
 
     BASIC_SCRAPING = "web_scraping_basic"
     JAVASCRIPT_HEAVY = "web_scraping_javascript"
@@ -346,12 +337,12 @@ class WebScrapingTaskTypes:
 
 
 def create_web_scraping_task_data(
-    urls: list[str],
+    urls: List[str],
     task_type: str = WebScrapingTaskTypes.BASIC_SCRAPING,
     wait_time: int = 3000,
     extract_metadata: bool = True,
     **kwargs,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Create task data for web scraping operations.
 
     Args:

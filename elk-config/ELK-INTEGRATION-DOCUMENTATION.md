@@ -24,8 +24,8 @@ Application Logs → Filebeat → Logstash → Elasticsearch → Kibana/AI Monit
 
 ### 1. Elasticsearch Configuration (`elasticsearch.yml`)
 
-**File Location**: `/elk-config/elasticsearch.yml`  
-**Size**: 701 bytes  
+**File Location**: `/elk-config/elasticsearch.yml`
+**Size**: 701 bytes
 **Purpose**: Elasticsearch cluster and node configuration
 
 #### Configuration Details
@@ -72,8 +72,8 @@ cluster.routing.allocation.disk.watermark.high: 90%
 
 ### 2. Kibana Configuration (`kibana.yml`)
 
-**File Location**: `/elk-config/kibana.yml`  
-**Size**: 932 bytes  
+**File Location**: `/elk-config/kibana.yml`
+**Size**: 932 bytes
 **Purpose**: Kibana web interface and dashboard configuration
 
 #### Configuration Details
@@ -127,8 +127,8 @@ savedObjects.maxImportPayloadBytes: 26214400
 
 ### 3. Logstash Pipeline Configuration (`logstash.conf`)
 
-**File Location**: `/elk-config/logstash.conf`  
-**Size**: 4,018 bytes  
+**File Location**: `/elk-config/logstash.conf`
+**Size**: 4,018 bytes
 **Purpose**: Log processing pipeline with real-time security pattern detection
 
 #### Input Configuration
@@ -142,20 +142,20 @@ input {
     codec => "json"
     tags => ["application_log"]
   }
-  
+
   # Beats input for Filebeat
   beats {
     port => 5044
     tags => ["beats"]
   }
-  
+
   # HTTP input for direct log shipping
   http {
     port => 8080
     codec => "json"
     tags => ["http_input"]
   }
-  
+
   # Syslog input for system logs
   syslog {
     port => 514
@@ -231,7 +231,7 @@ if [message] =~ /(?i)slow.*query|execution.*time.*\d{3,}|timeout.*exceeded/ {
   grok {
     match => { "message" => "(?<execution_time>\d+\.?\d*)\s*(?:ms|seconds?|s)" }
   }
-  
+
   if [execution_time] {
     mutate {
       convert => { "execution_time" => "float" }
@@ -269,14 +269,14 @@ output {
   elasticsearch {
     hosts => ["elasticsearch:9200"]
     index => "logs-%{+YYYY.MM.dd}"
-    
+
     # Template configuration
     template_name => "security_logs"
     template_pattern => ["logs-*", "security-*"]
     template => "/usr/share/logstash/templates/security-template.json"
     template_overwrite => true
   }
-  
+
   # Security events to dedicated index
   if [security_event] {
     elasticsearch {
@@ -284,7 +284,7 @@ output {
       index => "security-events-%{+YYYY.MM.dd}"
     }
   }
-  
+
   # Debug output (optional)
   if [@metadata][debug] {
     stdout {
@@ -333,7 +333,7 @@ output {
 
 ### Retention Policies
 - **Security Events**: 30 days retention
-- **General Logs**: 7 days retention  
+- **General Logs**: 7 days retention
 - **System Logs**: 14 days retention
 - **Automatic Cleanup**: Via curator or ILM policies
 

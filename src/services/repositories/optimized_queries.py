@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Optimized Database Queries with Eager Loading
-Phase 5: Performance Under Pressure - N+1 Query Elimination
+Phase 5: Performance Under Pressure - N+1 Query Elimination.
 
 This module provides optimized query methods that use SQLAlchemy's eager loading
 to eliminate N+1 queries. It implements:
@@ -18,7 +18,6 @@ Use eager loading to fetch all data in 1-2 queries instead of N+1.
 """
 
 import logging
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -43,7 +42,7 @@ class OptimizedServiceQueries:
     @staticmethod
     def get_service_with_health_checks(
         session: Session, service_id: UUID
-    ) -> Optional[ServiceRegistry]:
+    ) -> ServiceRegistry | None:
         """Get a service with all its health checks in a single query.
 
         Without eager loading (N+1 problem):
@@ -71,8 +70,9 @@ class OptimizedServiceQueries:
 
         if service:
             logger.debug(
-                f"Loaded service {service.service_name} with "
-                f"{len(service.health_checks)} health checks in 1 query"
+                "Loaded service %s with %d health checks in 1 query",
+                service.service_name,
+                len(service.health_checks),
             )
 
         return service
@@ -80,7 +80,7 @@ class OptimizedServiceQueries:
     @staticmethod
     def get_service_with_metrics(
         session: Session, service_id: UUID
-    ) -> Optional[ServiceRegistry]:
+    ) -> ServiceRegistry | None:
         """Get a service with all its metrics in a single query.
 
         Uses joinedload() for optimal performance with many-to-one relationship.
@@ -103,8 +103,9 @@ class OptimizedServiceQueries:
 
         if service:
             logger.debug(
-                f"Loaded service {service.service_name} with "
-                f"{len(service.metrics)} metrics in 1 query"
+                "Loaded service %s with %s",
+                service.service_name,
+                f"{len(service.metrics)} metrics in 1 query",
             )
 
         return service
@@ -112,7 +113,7 @@ class OptimizedServiceQueries:
     @staticmethod
     def get_service_with_all_relationships(
         session: Session, service_id: UUID
-    ) -> Optional[ServiceRegistry]:
+    ) -> ServiceRegistry | None:
         """Get a service with all its relationships in optimized queries.
 
         Without eager loading (N+1 problem):
@@ -148,9 +149,10 @@ class OptimizedServiceQueries:
 
         if service:
             logger.debug(
-                f"Loaded service {service.service_name} with all relationships: "
+                "Loaded service %s with all relationships: %s",
+                service.service_name,
                 f"{len(service.health_checks)} health checks, "
-                f"{len(service.metrics)} metrics in 3 queries total"
+                f"{len(service.metrics)} metrics in 3 queries total",
             )
 
         return service
@@ -190,8 +192,9 @@ class OptimizedServiceQueries:
         services = result.scalars().all()
 
         logger.debug(
-            f"Loaded {len(services)} services with health checks in 2 queries "
-            f"(instead of {len(services) + 1} with N+1 problem)"
+            "Loaded %s services with health checks in 2 queries %s",
+            len(services),
+            f"(instead of {len(services) + 1} with N+1 problem)",
         )
 
         return list(services)
@@ -239,9 +242,10 @@ class OptimizedServiceQueries:
         total_metrics = sum(len(s.metrics) for s in services)
 
         logger.debug(
-            f"Loaded {len(services)} services with all relationships in 3 queries: "
+            "Loaded %s services with all relationships in 3 queries: %s",
+            len(services),
             f"{total_health_checks} health checks, {total_metrics} metrics "
-            f"(instead of {1 + 2 * len(services)} with N+1 problem)"
+            f"(instead of {1 + 2 * len(services)} with N+1 problem)",
         )
 
         return list(services)
@@ -249,7 +253,7 @@ class OptimizedServiceQueries:
     @staticmethod
     def get_health_check_with_service(
         session: Session, health_check_id: UUID
-    ) -> Optional[ServiceHealthCheck]:
+    ) -> ServiceHealthCheck | None:
         """Get a health check with its parent service using joinedload.
 
         For many-to-one relationships, use joinedload() which generates
@@ -282,8 +286,9 @@ class OptimizedServiceQueries:
 
         if health_check:
             logger.debug(
-                f"Loaded health check with service {health_check.service.service_name} "
-                f"in 1 query (50% reduction from 2 queries)"
+                "Loaded health check with service %s %s",
+                health_check.service.service_name,
+                "in 1 query (50% reduction from 2 queries)",
             )
 
         return health_check
@@ -291,7 +296,7 @@ class OptimizedServiceQueries:
     @staticmethod
     def get_metric_with_service(
         session: Session, metric_id: UUID
-    ) -> Optional[ServiceMetrics]:
+    ) -> ServiceMetrics | None:
         """Get a metric with its parent service using joinedload.
 
         Args:
@@ -312,8 +317,9 @@ class OptimizedServiceQueries:
 
         if metric:
             logger.debug(
-                f"Loaded metric with service {metric.service.service_name} "
-                f"in 1 query (50% reduction from 2 queries)"
+                "Loaded metric with service %s %s",
+                metric.service.service_name,
+                "in 1 query (50% reduction from 2 queries)",
             )
 
         return metric
@@ -323,7 +329,7 @@ class OptimizedServiceQueries:
         session: Session,
         limit: int = 100,
         offset: int = 0,
-        service_filter: Optional[str] = None,
+        service_filter: str | None = None,
     ) -> list[ServiceHealthCheck]:
         """List health checks with their parent services using optimized loading.
 
@@ -364,15 +370,16 @@ class OptimizedServiceQueries:
         health_checks = result.scalars().unique().all()
 
         logger.debug(
-            f"Loaded {len(health_checks)} health checks with services in 1 query "
-            f"(instead of {len(health_checks) + 1} with N+1 problem)"
+            "Loaded %s health checks with services in 1 query %s",
+            len(health_checks),
+            f"(instead of {len(health_checks) + 1} with N+1 problem)",
         )
 
         return list(health_checks)
 
 
 # Performance comparison example
-def demonstrate_n1_vs_eager_loading():
+def demonstrate_n1_vs_eager_loading(self) -> None:
     """Demonstration function showing the difference between N+1 and eager loading.
 
     This is for educational purposes and testing.

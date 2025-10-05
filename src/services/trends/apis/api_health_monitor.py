@@ -1,4 +1,4 @@
-"""APIHealthMonitor - Monitors API health and performance
+"""APIHealthMonitor - Monitors API health and performance.
 
 Tracks response times, error rates, and availability for all external APIs.
 """
@@ -8,13 +8,13 @@ import statistics
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 
 class HealthStatus(Enum):
-    """API health status levels"""
+    """API health status levels."""
 
     HEALTHY = "healthy"
     DEGRADED = "degraded"
@@ -24,7 +24,7 @@ class HealthStatus(Enum):
 
 @dataclass
 class HealthMetric:
-    """Individual health metric data point"""
+    """Individual health metric data point."""
 
     timestamp: float
     response_time_ms: float
@@ -35,7 +35,7 @@ class HealthMetric:
 
 @dataclass
 class APIHealthSummary:
-    """Summary of API health metrics"""
+    """Summary of API health metrics."""
 
     api_name: str
     status: HealthStatus
@@ -51,7 +51,7 @@ class APIHealthSummary:
 
 
 class APIHealthMonitor:
-    """Comprehensive API health monitoring system
+    """Comprehensive API health monitoring system.
 
     Features:
     - Real-time health tracking
@@ -61,7 +61,7 @@ class APIHealthMonitor:
     - Health score calculation
     """
 
-    def __init__(self, max_history_hours: int = 24):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.max_history_hours = max_history_hours
         self.max_history_seconds = max_history_hours * 3600
@@ -80,7 +80,7 @@ class APIHealthMonitor:
         }
 
         # Circuit breaker states
-        self.circuit_breakers: dict[str, dict[str, Any]] = defaultdict(
+        self.circuit_breakers: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "state": "closed",  # closed, open, half_open
                 "failure_count": 0,
@@ -100,7 +100,7 @@ class APIHealthMonitor:
         error_message: str | None = None,
         status_code: int | None = None,
     ) -> None:
-        """Record a request result for health monitoring"""
+        """Record a request result for health monitoring."""
         metric = HealthMetric(
             timestamp=time.time(),
             response_time_ms=response_time_ms,
@@ -118,11 +118,11 @@ class APIHealthMonitor:
         await self._clean_old_metrics(api_name)
 
         self.logger.debug(
-            f"Recorded {api_name} request: {response_time_ms:.1f}ms, success={success}",
+            # TODO: Fix unexpected colon - "Recorded %s request: %sms, success=%s", api_name, response_time_ms:.1f, success,
         )
 
     async def _update_circuit_breaker(self, api_name: str, success: bool) -> None:
-        """Update circuit breaker state based on request result"""
+        """Update circuit breaker state based on request result."""
         breaker = self.circuit_breakers[api_name]
 
         if success:
@@ -131,7 +131,8 @@ class APIHealthMonitor:
                 breaker["state"] = "closed"
                 breaker["failure_count"] = 0
                 self.logger.info(
-                    f"Circuit breaker for {api_name} closed after successful recovery",
+                    "Circuit breaker for %s closed after successful recovery",
+                    api_name,
                 )
             elif breaker["state"] == "closed":
                 # Reset failure count on success
@@ -145,18 +146,21 @@ class APIHealthMonitor:
                 # Open circuit after 5 consecutive failures
                 breaker["state"] = "open"
                 self.logger.warning(
-                    f"Circuit breaker for {api_name} opened after {breaker['failure_count']} failures",
+                    "Circuit breaker for %s opened after %s failures",
+                    api_name,
+                    breaker["failure_count"],
                 )
 
             elif breaker["state"] == "half_open":
                 # Failure in half-open state - back to open
                 breaker["state"] = "open"
                 self.logger.warning(
-                    f"Circuit breaker for {api_name} back to open state",
+                    "Circuit breaker for %s back to open state",
+                    api_name,
                 )
 
     async def _clean_old_metrics(self, api_name: str) -> None:
-        """Remove metrics older than max_history_hours"""
+        """Remove metrics older than max_history_hours."""
         cutoff_time = time.time() - self.max_history_seconds
         metrics = self.metrics[api_name]
 
@@ -164,7 +168,7 @@ class APIHealthMonitor:
             metrics.popleft()
 
     async def get_health_summary(self, api_name: str) -> APIHealthSummary:
-        """Get comprehensive health summary for an API"""
+        """Get comprehensive health summary for an API."""
         metrics = self.metrics[api_name]
 
         if not metrics:
@@ -218,9 +222,9 @@ class APIHealthMonitor:
 
         for metric in reversed(metrics):
             if metric.success and last_success is None:
-                last_success = datetime.fromtimestamp(metric.timestamp)
+                last_success = datetime.fromtimestamp(metric.timestamp, tz=UTC)
             if not metric.success and last_failure is None:
-                last_failure = datetime.fromtimestamp(metric.timestamp)
+                last_failure = datetime.fromtimestamp(metric.timestamp, tz=UTC)
 
             if last_success and last_failure:
                 break
@@ -262,7 +266,7 @@ class APIHealthMonitor:
         error_count: int,
         total_requests: int,
     ) -> tuple[HealthStatus, float]:
-        """Calculate health status and score"""
+        """Calculate health status and score."""
         # Calculate component scores (0.0 to 1.0)
         success_score = success_rate
         response_time_score = max(
@@ -299,14 +303,14 @@ class APIHealthMonitor:
         return status, health_score
 
     async def get_all_health_summaries(self) -> dict[str, APIHealthSummary]:
-        """Get health summaries for all monitored APIs"""
+        """Get health summaries for all monitored APIs."""
         summaries = {}
         for api_name in self.apis:
             summaries[api_name] = await self.get_health_summary(api_name)
         return summaries
 
     async def check_circuit_breaker(self, api_name: str) -> bool:
-        """Check if API is available (circuit breaker closed)"""
+        """Check if API is available (circuit breaker closed)."""
         breaker = self.circuit_breakers[api_name]
 
         if breaker["state"] == "closed":
@@ -319,7 +323,8 @@ class APIHealthMonitor:
             ]:
                 breaker["state"] = "half_open"
                 self.logger.info(
-                    f"Circuit breaker for {api_name} moved to half-open state",
+                    "Circuit breaker for %s moved to half-open state",
+                    api_name,
                 )
                 return True
             return False
@@ -329,8 +334,8 @@ class APIHealthMonitor:
 
         return False
 
-    async def get_circuit_breaker_status(self) -> dict[str, dict[str, Any]]:
-        """Get status of all circuit breakers"""
+    async def get_circuit_breaker_status(self) -> dict[str, Dict[str, Any]]:
+        """Get status of all circuit breakers."""
         status = {}
         for api_name in self.apis:
             breaker = self.circuit_breakers[api_name]
@@ -338,7 +343,7 @@ class APIHealthMonitor:
                 "state": breaker["state"],
                 "failure_count": breaker["failure_count"],
                 "last_failure_time": (
-                    datetime.fromtimestamp(breaker["last_failure_time"])
+                    datetime.fromtimestamp(breaker["last_failure_time"], tz=UTC)
                     if breaker["last_failure_time"]
                     else None
                 ),
@@ -350,8 +355,8 @@ class APIHealthMonitor:
         self,
         api_name: str,
         hours: int = 1,
-    ) -> dict[str, Any]:
-        """Get detailed performance metrics for an API"""
+    ) -> Dict[str, Any]:
+        """Get detailed performance metrics for an API."""
         metrics = self.metrics[api_name]
         cutoff_time = time.time() - (hours * 3600)
         filtered_metrics = [m for m in metrics if m.timestamp > cutoff_time]
@@ -414,7 +419,7 @@ class APIHealthMonitor:
         }
 
     async def generate_health_report(self) -> str:
-        """Generate comprehensive health report"""
+        """Generate comprehensive health report."""
         summaries = await self.get_all_health_summaries()
         circuit_status = await self.get_circuit_breaker_status()
 
@@ -444,7 +449,7 @@ class APIHealthMonitor:
             report += f"  Circuit Breaker: {breaker['state']}\n"
 
             if summary.last_failure:
-                time_since_failure = datetime.now() - summary.last_failure
+                time_since_failure = datetime.now(UTC) - summary.last_failure
                 report += f"  Last Failure: {time_since_failure} ago\n"
 
             report += "\n"
@@ -456,14 +461,14 @@ class APIHealthMonitor:
         return report
 
     async def set_thresholds(self, **kwargs) -> None:
-        """Update health monitoring thresholds"""
+        """Update health monitoring thresholds."""
         for key, value in kwargs.items():
             if key in self.thresholds:
                 self.thresholds[key] = value
-                self.logger.info(f"Updated threshold {key} to {value}")
+                self.logger.info("Updated threshold %s to %s", key, value)
 
     async def reset_circuit_breaker(self, api_name: str) -> bool:
-        """Manually reset circuit breaker for an API"""
+        """Manually reset circuit breaker for an API."""
         if api_name in self.circuit_breakers:
             self.circuit_breakers[api_name] = {
                 "state": "closed",
@@ -471,6 +476,6 @@ class APIHealthMonitor:
                 "last_failure_time": None,
                 "recovery_timeout": 60,
             }
-            self.logger.info(f"Circuit breaker for {api_name} manually reset")
+            self.logger.info("Circuit breaker for %s manually reset", api_name)
             return True
         return False

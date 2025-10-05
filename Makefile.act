@@ -1,0 +1,278 @@
+# PAKE System - Phase 2: act Makefile
+# Convenient commands for local GitHub Actions simulation
+
+.PHONY: help setup-act validate-act list-jobs test-lint test-static test-security test-unit test-integration test-e2e test-all clean-act debug-local debug-compare
+
+# Default target
+help:
+	@echo "PAKE System - Phase 2: Environmental Parity Commands"
+	@echo "=================================================="
+	@echo ""
+	@echo "Setup Commands:"
+	@echo "  setup-act      Install and configure act"
+	@echo "  validate-act   Validate act setup and configuration"
+	@echo ""
+	@echo "Workflow Commands:"
+	@echo "  list-jobs      List all available GitHub Actions jobs"
+	@echo "  test-lint      Run lint and formatting checks"
+	@echo "  test-static    Run static analysis and type checking"
+	@echo "  test-security  Run security scanning"
+	@echo "  test-unit      Run unit tests"
+	@echo "  test-integration Run integration tests"
+	@echo "  test-e2e       Run end-to-end tests"
+	@echo "  test-all       Run all quality gate jobs"
+	@echo ""
+	@echo "Utility Commands:"
+	@echo "  clean-act      Clean up act artifacts and containers"
+	@echo "  pull-images    Pull required Docker images"
+	@echo "  start-services Start test services (PostgreSQL, Redis)"
+	@echo "  stop-services  Stop test services"
+	@echo ""
+	@echo "Debug Commands:"
+	@echo "  debug-job      Run a specific job with verbose output"
+	@echo "  debug-local    🔬 INTEGRATED: Run job + capture + analyze"
+	@echo "  debug-compare  🔬 INTEGRATED: Compare local vs CI run"
+	@echo "  dry-run        Show what would be executed without running"
+	@echo ""
+	@echo "Phase 3 Commands (Service Networking):"
+	@echo "  validate-services           Validate all workflows"
+	@echo "  validate-workflow-services  Validate specific workflow"
+	@echo ""
+
+# Setup commands
+setup-act:
+	@echo "Setting up act for local GitHub Actions simulation..."
+	@./scripts/setup-phase2-act.sh
+
+validate-act:
+	@echo "Validating act setup..."
+	@./scripts/validate-phase2-act.sh
+
+# Workflow commands
+list-jobs:
+	@echo "Available GitHub Actions jobs:"
+	@act -l
+
+test-lint:
+	@echo "Running lint and formatting checks..."
+	@act -j lint-and-format
+
+test-static:
+	@echo "Running static analysis and type checking..."
+	@act -j static-analysis
+
+test-security:
+	@echo "Running security scanning..."
+	@act -j security-scan
+
+test-unit:
+	@echo "Running unit tests..."
+	@act -j unit-tests
+
+test-integration:
+	@echo "Running integration tests..."
+	@act -j integration-tests
+
+test-e2e:
+	@echo "Running end-to-end tests..."
+	@act -j e2e-tests
+
+test-all:
+	@echo "Running all quality gate jobs..."
+	@act -j lint-and-format -j static-analysis -j security-scan -j unit-tests
+
+# Utility commands
+clean-act:
+	@echo "Cleaning up act artifacts and containers..."
+	@docker system prune -f
+	@docker volume prune -f
+	@rm -rf /tmp/act-artifacts
+	@echo "Cleanup completed"
+
+pull-images:
+	@echo "Pulling required Docker images..."
+	@docker pull catthehacker/ubuntu:full-22.04
+	@docker pull catthehacker/ubuntu:full-20.04
+	@docker pull postgres:16-alpine
+	@docker pull redis:7-alpine
+	@echo "Images pulled successfully"
+
+start-services:
+	@echo "Starting test services..."
+	@docker run -d --name postgres-test \
+		-e POSTGRES_USER=test_user \
+		-e POSTGRES_PASSWORD=test_password \
+		-e POSTGRES_DB=pake_test \
+		-p 5432:5432 \
+		postgres:16-alpine || echo "PostgreSQL already running"
+	@docker run -d --name redis-test \
+		-p 6379:6379 \
+		redis:7-alpine || echo "Redis already running"
+	@echo "Services started"
+
+stop-services:
+	@echo "Stopping test services..."
+	@docker stop postgres-test redis-test 2>/dev/null || true
+	@docker rm postgres-test redis-test 2>/dev/null || true
+	@echo "Services stopped"
+
+# Debug commands
+debug-job:
+	@echo "Usage: make debug-job JOB=<job-name>"
+	@echo "Example: make debug-job JOB=lint-and-format"
+	@if [ -z "$(JOB)" ]; then \
+		echo "Error: JOB variable not set"; \
+		exit 1; \
+	fi
+	@echo "Running job '$(JOB)' with debug output..."
+	@act -j $(JOB) --verbose --debug
+
+dry-run:
+	@echo "Showing what would be executed (dry run)..."
+	@act --dry-run --verbose
+
+# CI simulation commands
+simulate-push:
+	@echo "Simulating push event..."
+	@act push
+
+simulate-pr:
+	@echo "Simulating pull request event..."
+	@act pull_request
+
+simulate-dispatch:
+	@echo "Simulating workflow dispatch event..."
+	@act workflow_dispatch
+
+# Performance testing
+test-performance:
+	@echo "Running performance tests..."
+	@act -j performance-tests
+
+# Full CI simulation
+simulate-ci:
+	@echo "Simulating full CI pipeline..."
+	@act -W .github/workflows/ci.yml
+
+simulate-cicd:
+	@echo "Simulating full CI/CD pipeline..."
+	@act -W .github/workflows/comprehensive-cicd.yml
+
+# Quick smoke test
+smoke-test:
+	@echo "Running smoke test (quick validation)..."
+	@act -j lint-and-format --dry-run
+	@echo "Smoke test completed successfully"
+
+# Development workflow
+dev-test:
+	@echo "Running development test suite..."
+	@make test-lint
+	@make test-static
+	@make test-unit
+
+# Pre-commit validation
+pre-commit:
+	@echo "Running pre-commit validation..."
+	@make test-lint
+	@make test-static
+	@make smoke-test
+
+# Troubleshooting
+troubleshoot:
+	@echo "Running troubleshooting checks..."
+	@echo "1. Checking Docker status..."
+	@docker info > /dev/null 2>&1 && echo "✓ Docker is running" || echo "✗ Docker is not running"
+	@echo "2. Checking act installation..."
+	@act --version > /dev/null 2>&1 && echo "✓ act is installed" || echo "✗ act is not installed"
+	@echo "3. Checking configuration files..."
+	@test -f .actrc && echo "✓ .actrc exists" || echo "✗ .actrc missing"
+	@test -f .secrets && echo "✓ .secrets exists" || echo "✗ .secrets missing"
+	@test -f .vars && echo "✓ .vars exists" || echo "✗ .vars missing"
+	@echo "4. Checking workflow files..."
+	@test -d .github/workflows && echo "✓ Workflows directory exists" || echo "✗ Workflows directory missing"
+	@echo "Troubleshooting completed"
+
+# Help for specific commands
+help-setup:
+	@echo "Setup Commands Help:"
+	@echo "==================="
+	@echo "make setup-act     - Install act and create configuration files"
+	@echo "make validate-act  - Run comprehensive validation tests"
+	@echo "make pull-images   - Download required Docker images"
+	@echo "make start-services- Start PostgreSQL and Redis for testing"
+
+help-testing:
+	@echo "Testing Commands Help:"
+	@echo "====================="
+	@echo "make test-lint      - Run code quality checks"
+	@echo "make test-static    - Run static analysis"
+	@echo "make test-security   - Run security scans"
+	@echo "make test-unit       - Run unit tests"
+	@echo "make test-integration- Run integration tests"
+	@echo "make test-e2e        - Run end-to-end tests"
+	@echo "make test-all        - Run all quality gates"
+	@echo "make smoke-test      - Quick validation test"
+
+help-debug:
+	@echo "Debug Commands Help:"
+	@echo "==================="
+	@echo "make debug-job JOB=<name>       - Run specific job with debug output"
+	@echo "make debug-local JOB=<name>     - 🔬 Integrated: Run + Capture + Analyze"
+	@echo "make debug-compare RUN_ID=<id> - 🔬 Integrated: Compare local vs CI"
+	@echo "make dry-run                   - Show what would be executed"
+	@echo "make troubleshoot              - Run troubleshooting checks"
+	@echo "make list-jobs                 - List all available jobs"
+
+# ============================================================================
+# INTEGRATED DEBUGGING COMMANDS (Phase 1 + Phase 2 + Phase 3)
+# ============================================================================
+
+# Phase 3: Service Networking Validation
+validate-services:
+	@echo "🔍 Validating service container networking..."
+	@python3 scripts/validate_service_networking.py
+
+validate-workflow-services:
+	@if [ -z "$(WORKFLOW)" ]; then \
+		echo "Usage: make validate-workflow-services WORKFLOW=<workflow-file>"; \
+		echo "Example: make validate-workflow-services WORKFLOW=ci.yml"; \
+		exit 1; \
+	fi
+	@python3 scripts/validate_service_networking.py --workflow .github/workflows/$(WORKFLOW)
+
+# ============================================================================
+# INTEGRATED DEBUGGING COMMANDS (Phase 1 + Phase 2)
+# ============================================================================
+
+debug-local:
+	@if [ -z "$(JOB)" ]; then \
+		echo "Usage: make debug-local JOB=<job-name>"; \
+		echo "Example: make debug-local JOB=lint-and-format"; \
+		echo ""; \
+		echo "This runs the job locally with act, captures artifacts,"; \
+		echo "and runs forensic analysis automatically."; \
+		exit 1; \
+	fi
+	@echo "🔬 Running integrated local debug for job: $(JOB)"
+	@./scripts/debug_workflow_local.sh $(JOB)
+
+debug-compare:
+	@if [ -z "$(RUN_ID)" ]; then \
+		echo "Usage: make debug-compare RUN_ID=<github-run-id>"; \
+		echo "Example: make debug-compare RUN_ID=12345678"; \
+		echo ""; \
+		echo "This compares a local workflow run with a CI run."; \
+		exit 1; \
+	fi
+	@echo "🔬 Comparing local vs CI run: $(RUN_ID)"
+	@./scripts/debug_workflow_local.sh --compare $(RUN_ID)
+
+debug-workflow:
+	@if [ -z "$(WORKFLOW)" ]; then \
+		echo "Usage: make debug-workflow WORKFLOW=<workflow-file>"; \
+		echo "Example: make debug-workflow WORKFLOW=ci.yml"; \
+		exit 1; \
+	fi
+	@echo "🔬 Running integrated debug for workflow: $(WORKFLOW)"
+	@./scripts/debug_workflow_local.sh --workflow $(WORKFLOW)

@@ -10,7 +10,7 @@ This document outlines the comprehensive fixes implemented to resolve all failin
 
 **Problem**: The CI runner did not have `pnpm` installed by default, causing the `test` job to fail.
 
-**Solution**: 
+**Solution**:
 - Replaced manual `npm install -g pnpm` with the official `pnpm/action-setup@v4` action
 - Updated Node.js dependency installation to use `pnpm install --frozen-lockfile`
 - Updated Node.js test execution to use `pnpm test`
@@ -28,7 +28,7 @@ This document outlines the comprehensive fixes implemented to resolve all failin
 
 ### 2. ✅ TruffleHog Configuration Fix
 
-**Problem**: 
+**Problem**:
 - Shallow Git checkout broke differential secret scanning
 - False positives from placeholder secrets in `.env.example`
 
@@ -84,7 +84,7 @@ extra_args: --no-verification --exclude-paths .trufflehog-ignore
 
 ### 4. ✅ Security Scan Script Improvements
 
-**Problem**: 
+**Problem**:
 - JSON parsing errors in dependency vulnerability checks
 - Potential dependency vulnerabilities
 
@@ -149,10 +149,10 @@ To verify the fixes:
    # Test pnpm installation
    pnpm install --frozen-lockfile
    pnpm test
-   
+
    # Test security scan
    python scripts/security_test_comprehensive.py
-   
+
    # Test TruffleHog locally
    trufflehog filesystem . --exclude-paths .trufflehog-ignore
    ```

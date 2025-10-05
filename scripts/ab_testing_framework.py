@@ -10,8 +10,9 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -101,7 +102,7 @@ class StatisticalAnalysis:
 class ABTestingFramework:
     """Advanced A/B testing and experimentation framework"""
 
-    def __init__(self, db_path: str = "ab_testing.db"):
+    def __init__(self, db_path: str = "ab_tests.db") -> None:
         self.db_path = db_path
         self.logger = self._setup_logging()
 
@@ -122,7 +123,7 @@ class ABTestingFramework:
         )
         return logging.getLogger(__name__)
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize A/B testing database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -231,7 +232,8 @@ class ABTestingFramework:
 
         # Validate inputs
         if not self._validate_test_config(variants, traffic_allocation):
-            raise ValueError("Invalid test configuration")
+            msg = "Invalid test configuration"
+            raise ValueError(msg)
 
         # Generate test ID
         test_id = str(uuid.uuid4())
@@ -254,21 +256,21 @@ class ABTestingFramework:
             hypothesis=hypothesis,
             variants=variants,
             traffic_allocation=traffic_allocation,
-            start_date=datetime.now(),
-            end_date=datetime.now() + timedelta(days=duration_days),
+            start_date=datetime.now(UTC),
+            end_date=datetime.now(UTC) + timedelta(days=duration_days),
             status=TestStatus.DRAFT,
             sample_size_target=sample_size,
             significance_level=significance_level,
             power=power,
             minimum_detectable_effect=minimum_detectable_effect,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             created_by=created_by,
         )
 
         # Store in database
         await self._store_ab_test(ab_test)
 
-        self.logger.info(f"Created A/B test: {name} (ID: {test_id})")
+        self.logger.info("Created A/B test: %s (ID: %s)", name, test_id)
         return test_id
 
     def _validate_test_config(self, variants: dict, traffic_allocation: dict) -> bool:
@@ -345,10 +347,10 @@ class ABTestingFramework:
             return sample_size_per_variant * 2  # Assuming 2 variants
 
         except Exception as e:
-            self.logger.error(f"Sample size calculation failed: {e}")
+            self.logger.error("Sample size calculation failed: %s", e)
             return 1000  # Default fallback
 
-    async def _store_ab_test(self, ab_test: ABTest):
+    async def _store_ab_test(self, ab_test: ABTest) -> None:
         """Store A/B test in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -400,7 +402,7 @@ class ABTestingFramework:
             """,
                 (
                     TestStatus.RUNNING.value,
-                    datetime.now(),
+                    datetime.now(UTC),
                     test_id,
                     TestStatus.DRAFT.value,
                 ),
@@ -412,12 +414,12 @@ class ABTestingFramework:
 
             if success:
                 await self._log_experiment_event(test_id, "test_started", {})
-                self.logger.info(f"Started A/B test: {test_id}")
+                self.logger.info("Started A/B test: %s", test_id)
 
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to start test {test_id}: {e}")
+            self.logger.error("Failed to start test %s: %s", test_id, e)
             return False
 
     async def record_test_result(
@@ -458,7 +460,7 @@ class ABTestingFramework:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to record test result: {e}")
+            self.logger.error("Failed to record test result: %s", e)
             return False
 
     async def analyze_test_results(self, test_id: str) -> StatisticalAnalysis | None:
@@ -489,7 +491,7 @@ class ABTestingFramework:
             return analysis
 
         except Exception as e:
-            self.logger.error(f"Failed to analyze test {test_id}: {e}")
+            self.logger.error("Failed to analyze test %s: %s", test_id, e)
             return None
 
     async def _load_ab_test(self, test_id: str) -> ABTest | None:
@@ -644,7 +646,7 @@ class ABTestingFramework:
             practical_significance=practical_significance,
             power_achieved=float(power_achieved),
             recommendation=recommendation,
-            analysis_date=datetime.now(),
+            analysis_date=datetime.now(UTC),
         )
 
     async def _analyze_continuous_test(
@@ -758,7 +760,7 @@ class ABTestingFramework:
             practical_significance=practical_significance,
             power_achieved=float(power_achieved),
             recommendation=recommendation,
-            analysis_date=datetime.now(),
+            analysis_date=datetime.now(UTC),
         )
 
     async def _analyze_count_test(
@@ -821,7 +823,7 @@ class ABTestingFramework:
             return "Continue test - insufficient sample size for reliable results"
         return "No significant difference detected - consider alternative approaches"
 
-    async def _store_statistical_analysis(self, analysis: StatisticalAnalysis):
+    async def _store_statistical_analysis(self, analysis: StatisticalAnalysis) -> None:
         """Store statistical analysis in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -852,11 +854,8 @@ class ABTestingFramework:
         conn.close()
 
     async def _log_experiment_event(
-        self,
-        test_id: str,
-        event_type: str,
-        event_data: dict,
-    ):
+        self, test_id: str, event_type: str, event_data: dict
+    ) -> None:
         """Log experiment event"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -950,7 +949,7 @@ class ABTestingFramework:
                 1.0,
                 sum(sample_sizes.values()) / ab_test.sample_size_target,
             ),
-            "days_running": (datetime.now() - ab_test.start_date).days,
+            "days_running": (datetime.now(UTC) - ab_test.start_date).days,
             "analysis": None,
         }
 
@@ -980,7 +979,7 @@ class ABTestingFramework:
             """,
                 (
                     TestStatus.COMPLETED.value,
-                    datetime.now(),
+                    datetime.now(UTC),
                     test_id,
                     TestStatus.RUNNING.value,
                 ),
@@ -996,12 +995,12 @@ class ABTestingFramework:
                     "test_stopped",
                     {"reason": reason},
                 )
-                self.logger.info(f"Stopped A/B test: {test_id}")
+                self.logger.info("Stopped A/B test: %s", test_id)
 
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to stop test {test_id}: {e}")
+            self.logger.error("Failed to stop test %s: %s", test_id, e)
             return False
 
 
@@ -1055,7 +1054,7 @@ class ContentABTesting(ABTestingFramework):
         variants = {}
         traffic_allocation = {}
 
-        for i, time in enumerate(times):
+        for _i, time in enumerate(times):
             variant_id = f"time_{time.replace(':', '')}"
             variants[variant_id] = {"posting_time": time}
             traffic_allocation[variant_id] = 1.0 / len(times)
@@ -1107,7 +1106,7 @@ class ContentABTesting(ABTestingFramework):
 # Usage and testing
 
 
-async def main():
+async def main(self) -> None:
     """Main function for testing A/B framework"""
 
     # Initialize A/B testing framework

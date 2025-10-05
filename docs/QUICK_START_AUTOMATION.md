@@ -13,11 +13,11 @@ cd "D:\Projects\PAKE_SYSTEM"
 
 ---
 
-## 2. **Auto-Start on Windows Boot** 
+## 2. **Auto-Start on Windows Boot**
 
 ### Option A: Windows Startup Folder (User Login)
 1. Press `Win + R`
-2. Type: `shell:startup` 
+2. Type: `shell:startup`
 3. Press Enter
 4. Copy `start_pake_automation.bat` into this folder
 5. Rename to `PAKE_Auto_Start.bat`
@@ -26,7 +26,7 @@ cd "D:\Projects\PAKE_SYSTEM"
 
 ### Option B: Windows Service (Always Running)
 1. Right-click `install_windows_service.bat`
-2. Select "Run as administrator" 
+2. Select "Run as administrator"
 3. Follow prompts
 
 ✅ **DONE!** PAKE runs as Windows service, starts before login.
@@ -49,7 +49,7 @@ start_pake_automation.bat
 # PowerShell
 .\stop_pake_automation.ps1
 
-# Batch file  
+# Batch file
 stop_pake_automation.bat
 ```
 
@@ -74,7 +74,7 @@ After starting automation:
 
 This note should be automatically processed with:
 - PAKE ID
-- Confidence score  
+- Confidence score
 - AI summary
 - Processing timestamp
 ```
@@ -188,7 +188,7 @@ Start-Sleep -Seconds 10  # 10 second delay
 
 ## 📊 Expected Performance
 - ⚡ **Processing**: < 0.1 seconds per note
-- 🧠 **Memory**: 50-100MB total usage  
+- 🧠 **Memory**: 50-100MB total usage
 - 🔋 **CPU**: Minimal (~1-2% when processing)
 - 📈 **Accuracy**: 75%+ confidence scores
 - 🔄 **Reliability**: 99%+ uptime with service option

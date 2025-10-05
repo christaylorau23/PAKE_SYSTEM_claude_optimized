@@ -19,50 +19,46 @@ import pytest
 class MockTestClient:
     """Mock test client - replace with actual FastAPI test client"""
 
-    def post(
-        self,
-        url: str,
-        headers: dict[str, str] = None,
-        json: dict[str, Any] = None,
-    ):
+    def post(self) -> None:
         # This will fail initially - no implementation exists yet
+        msg = "POST /curation/content/{content_id}/analyze endpoint not implemented"
         raise NotImplementedError(
-            "POST /curation/content/{content_id}/analyze endpoint not implemented",
+            msg,
         )
 
 
-@pytest.fixture()
-def test_client():
+@pytest.fixture
+def test_client(self) -> None:
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture()
-def auth_headers():
+@pytest.fixture
+def auth_headers(self) -> None:
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture()
-def sample_content_id():
+@pytest.fixture
+def sample_content_id(self) -> None:
     """Provide sample content ID for testing"""
     return str(uuid.uuid4())
 
 
-@pytest.fixture()
-def valid_content_id():
+@pytest.fixture
+def valid_content_id(self) -> None:
     """Provide a valid content ID that exists in the system"""
     return str(uuid.uuid4())
 
 
-@pytest.fixture()
-def invalid_content_id():
+@pytest.fixture
+def invalid_content_id(self) -> None:
     """Provide an invalid content ID format"""
     return "invalid-uuid-format"
 
 
-@pytest.fixture()
-def nonexistent_content_id():
+@pytest.fixture
+def nonexistent_content_id(self) -> None:
     """Provide a valid UUID that doesn't exist in the system"""
     return str(uuid.uuid4())
 
@@ -70,12 +66,7 @@ def nonexistent_content_id():
 class TestContentAnalyzeContract:
     """Contract tests for POST /curation/content/{content_id}/analyze endpoint"""
 
-    def test_analyze_content_success_schema(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_success_schema(self) -> None:
         """Test successful content analysis response schema"""
 
         # This test MUST fail initially
@@ -110,12 +101,7 @@ class TestContentAnalyzeContract:
         # assert isinstance(data["topic_tags"], list)
         # assert isinstance(data["domain"], str)
 
-    def test_analyze_content_completed_status(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_completed_status(self) -> None:
         """Test content analysis with completed status"""
 
         # This test MUST fail initially
@@ -134,12 +120,7 @@ class TestContentAnalyzeContract:
         # assert len(data["topic_tags"]) > 0
         # assert data["domain"] is not None
 
-    def test_analyze_content_in_progress_status(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_in_progress_status(self) -> None:
         """Test content analysis with in_progress status"""
 
         # This test MUST fail initially
@@ -156,12 +137,7 @@ class TestContentAnalyzeContract:
         #     assert "quality_score" not in data or data["quality_score"] is None
         #     assert "authority_score" not in data or data["authority_score"] is None
 
-    def test_analyze_content_failed_status(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_failed_status(self) -> None:
         """Test content analysis with failed status"""
 
         # This test MUST fail initially
@@ -180,12 +156,7 @@ class TestContentAnalyzeContract:
         #     assert data["quality_score"] is None
         #     assert data["authority_score"] is None
 
-    def test_analyze_content_not_found(
-        self,
-        test_client,
-        auth_headers,
-        nonexistent_content_id,
-    ):
+    def test_analyze_content_not_found(self) -> None:
         """Test content analysis for non-existent content returns 404"""
 
         # This test MUST fail initially
@@ -200,12 +171,7 @@ class TestContentAnalyzeContract:
         # data = response.json()
         # assert data["error"] == "Resource not found"
 
-    def test_analyze_content_invalid_uuid(
-        self,
-        test_client,
-        auth_headers,
-        invalid_content_id,
-    ):
+    def test_analyze_content_invalid_uuid(self) -> None:
         """Test content analysis with invalid UUID format returns 400"""
 
         # This test MUST fail initially
@@ -221,7 +187,7 @@ class TestContentAnalyzeContract:
         # assert "error" in data
         # assert "invalid" in data["error"].lower()
 
-    def test_analyze_content_unauthorized(self, test_client, valid_content_id):
+    def test_analyze_content_unauthorized(self) -> None:
         """Test unauthorized access returns 401"""
 
         # This test MUST fail initially
@@ -235,12 +201,7 @@ class TestContentAnalyzeContract:
         # data = response.json()
         # assert data["error"] == "Authentication required"
 
-    def test_analyze_content_server_error(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_server_error(self) -> None:
         """Test server error handling returns 500"""
 
         # This test MUST fail initially - no error handling implemented
@@ -257,12 +218,7 @@ class TestContentAnalyzeContract:
         # assert "error" in data
         # assert "request_id" in data
 
-    def test_analyze_content_response_time(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_response_time(self) -> None:
         """Test content analysis meets performance requirements (<1s)"""
 
         import time
@@ -281,12 +237,7 @@ class TestContentAnalyzeContract:
         # assert response_time < 1.0  # Less than 1 second
         # assert response.status_code == 200
 
-    def test_analyze_content_idempotency(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_idempotency(self) -> None:
         """Test that analyzing the same content multiple times is idempotent"""
 
         # This test MUST fail initially
@@ -313,12 +264,7 @@ class TestContentAnalyzeContract:
         # # Quality scores should be consistent (within small variance)
         # assert abs(data1["quality_score"] - data2["quality_score"]) < 0.01
 
-    def test_analyze_content_confidence_metrics(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_confidence_metrics(self) -> None:
         """Test that confidence metrics are properly included"""
 
         # This test MUST fail initially
@@ -339,12 +285,7 @@ class TestContentAnalyzeContract:
         # for confidence in metrics.values():
         #     assert 0.0 <= confidence <= 1.0
 
-    def test_analyze_content_topic_extraction(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_topic_extraction(self) -> None:
         """Test that topic tags are properly extracted"""
 
         # This test MUST fail initially
@@ -365,12 +306,7 @@ class TestContentAnalyzeContract:
         #     assert isinstance(tag, str)
         #     assert len(tag.strip()) > 0
 
-    def test_analyze_content_domain_classification(
-        self,
-        test_client,
-        auth_headers,
-        valid_content_id,
-    ):
+    def test_analyze_content_domain_classification(self) -> None:
         """Test that domain is properly classified"""
 
         # This test MUST fail initially
@@ -397,8 +333,8 @@ class TestContentAnalyzeContract:
 # Test fixtures for data validation
 
 
-@pytest.fixture()
-def sample_analysis_response():
+@pytest.fixture
+def sample_analysis_response(self) -> None:
     """Sample content analysis response for validation testing"""
     return {
         "content_id": str(uuid.uuid4()),
@@ -420,8 +356,8 @@ def sample_analysis_response():
     }
 
 
-@pytest.fixture()
-def sample_in_progress_response():
+@pytest.fixture
+def sample_in_progress_response(self) -> None:
     """Sample in-progress analysis response"""
     return {
         "content_id": str(uuid.uuid4()),
@@ -434,8 +370,8 @@ def sample_in_progress_response():
     }
 
 
-@pytest.fixture()
-def sample_failed_response():
+@pytest.fixture
+def sample_failed_response(self) -> None:
     """Sample failed analysis response"""
     return {
         "content_id": str(uuid.uuid4()),

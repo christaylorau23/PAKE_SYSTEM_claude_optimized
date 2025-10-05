@@ -13,8 +13,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from scripts.ingestion_pipeline import ContentItem
-
 from ..ingestion.arxiv_enhanced_service import ArxivEnhancedService, ArxivSearchQuery
 from ..messaging.message_bus import MessageBus
 from .base_worker import BaseWorkerAgent, WorkerCapabilityBuilder
@@ -30,8 +28,8 @@ class ArXivWorker(BaseWorkerAgent):
     for comprehensive academic content retrieval with cognitive assessment.
     """
 
-    def __init__(self, message_bus: MessageBus, worker_id: str = None):
-        """Initialize ArXiv worker"""
+    def __init__(self) -> None:
+        """Initialize ArXiv worker."""
         # Define worker capabilities
         capabilities = [
             WorkerCapabilityBuilder("academic_paper_search")
@@ -111,9 +109,9 @@ class ArXivWorker(BaseWorkerAgent):
             "physics.comp-ph",  # Physics
         ]
 
-        logger.info(f"ArXivWorker {self.worker_id} initialized")
+        logger.info("ArXivWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process ArXiv search task.
 
         Handles 'arxiv_ingestion' tasks from the supervisor with academic search parameters.
@@ -184,7 +182,8 @@ class ArXivWorker(BaseWorkerAgent):
             serializable_items = [item.__dict__ for item in content_items]
 
             logger.info(
-                f"ArXiv search completed: {len(content_items)} papers retrieved",
+                "ArXiv search completed: %s papers retrieved",
+                len(content_items),
             )
 
             return {
@@ -200,21 +199,21 @@ class ArXivWorker(BaseWorkerAgent):
                         len(item.content or "") for item in content_items
                     ),
                     "unique_authors": len(
-                        set(item.author for item in content_items if item.author),
+                        {item.author for item in content_items if item.author},
                     ),
                 },
             }
 
         except Exception as e:
-            logger.error(f"ArXiv worker task processing error: {e}")
+            logger.error("ArXiv worker task processing error: %s", e)
             return {
                 "success": False,
                 "error": f"Task processing failed: {str(e)}",
                 "result": None,
             }
 
-    def _validate_categories(self, categories: list[str]) -> list[str]:
-        """Validate and filter ArXiv categories"""
+    def _validate_categories(self, categories: List[str]) -> List[str]:
+        """Validate and filter ArXiv categories."""
         if not categories:
             return ["cs.AI", "cs.LG"]  # Default to AI/ML categories
 
@@ -224,19 +223,13 @@ class ArXivWorker(BaseWorkerAgent):
         ]
 
         if not valid_categories:
-            logger.warning(f"No valid categories from {categories}, using defaults")
+            logger.warning("No valid categories from %s, using defaults", categories)
             return ["cs.AI", "cs.LG"]
 
         return valid_categories
 
-    def _enhance_content_metadata(
-        self,
-        content_item: ContentItem,
-        plan_context: dict[str, Any],
-        source_data: dict[str, Any],
-        cognitive_applied: bool,
-    ):
-        """Enhance content item with ArXiv-specific metadata"""
+    def _enhance_content_metadata(self) -> None:
+        """Enhance content item with ArXiv-specific metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
 
@@ -286,8 +279,8 @@ class ArXivWorker(BaseWorkerAgent):
                 content_item.metadata["peer_reviewed"] = False
                 content_item.metadata["open_access"] = True
 
-    async def _on_start(self):
-        """ArXiv worker specific startup logic"""
+    async def _on_start(self) -> None:
+        """ArXiv worker specific startup logic."""
         # Test ArXiv service connection
         try:
             test_query = ArxivSearchQuery(
@@ -299,22 +292,24 @@ class ArXivWorker(BaseWorkerAgent):
             test_result = await self.arxiv_service.search_papers(test_query)
 
             if test_result.success:
-                logger.info(f"ArXivWorker {self.worker_id} service test successful")
+                logger.info("ArXivWorker %s service test successful", self.worker_id)
             else:
                 logger.warning(
-                    f"ArXivWorker {self.worker_id} service test warning: {test_result.error}",
+                    "ArXivWorker %s service test warning: %s",
+                    self.worker_id,
+                    test_result.error,
                 )
 
         except Exception as e:
-            logger.error(f"ArXivWorker {self.worker_id} service test failed: {e}")
+            logger.error("ArXivWorker %s service test failed: %s", self.worker_id, e)
 
-    async def _on_stop(self):
-        """ArXiv worker specific cleanup logic"""
+    async def _on_stop(self) -> None:
+        """ArXiv worker specific cleanup logic."""
         # No specific cleanup needed for stateless worker
-        logger.info(f"ArXivWorker {self.worker_id} cleanup completed")
+        logger.info("ArXivWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get ArXiv worker specific health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get ArXiv worker specific health status."""
         base_health = await super().get_health_status()
 
         # Add ArXiv-specific health information
@@ -370,7 +365,7 @@ async def create_arxiv_worker(
 
 # Task type handlers for different ArXiv search scenarios
 class ArXivTaskTypes:
-    """ArXiv task type definitions"""
+    """ArXiv task type definitions."""
 
     BASIC_SEARCH = "arxiv_search_basic"
     CATEGORY_SPECIFIC = "arxiv_search_category"
@@ -380,12 +375,12 @@ class ArXivTaskTypes:
 
 
 def create_arxiv_task_data(
-    terms: list[str],
-    categories: list[str] = None,
+    terms: List[str],
+    categories: List[str] = None,
     max_results: int = 10,
     task_type: str = ArXivTaskTypes.BASIC_SEARCH,
     **kwargs,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Create task data for ArXiv search operations.
 
     Args:
@@ -449,6 +444,6 @@ ARXIV_DOMAIN_CATEGORIES = {
 }
 
 
-def get_categories_for_domain(domain: str) -> list[str]:
-    """Get ArXiv categories for a research domain"""
+def get_categories_for_domain(domain: str) -> List[str]:
+    """Get ArXiv categories for a research domain."""
     return ARXIV_DOMAIN_CATEGORIES.get(domain.lower(), ["cs.AI", "cs.LG"])

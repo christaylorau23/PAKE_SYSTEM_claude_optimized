@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AuthConfig:
-    """Authentication configuration"""
+    """Authentication configuration."""
 
     secret_key: str | None = None  # Will be auto-generated if not provided
     algorithm: str = "HS256"
@@ -34,7 +34,7 @@ class AuthConfig:
 
 @dataclass
 class TokenPair:
-    """JWT token pair"""
+    """JWT token pair."""
 
     access_token: str
     refresh_token: str
@@ -44,7 +44,7 @@ class TokenPair:
 
 @dataclass
 class UserRegistration:
-    """User registration data"""
+    """User registration data."""
 
     username: str
     email: str
@@ -54,7 +54,7 @@ class UserRegistration:
 
 @dataclass
 class UserLogin:
-    """User login credentials"""
+    """User login credentials."""
 
     username_or_email: str
     REDACTED_SECRET: str
@@ -73,7 +73,7 @@ class JWTAuthenticationService:
     - Account activation/deactivation
     """
 
-    def __init__(self, config: AuthConfig, database_service: PostgreSQLService):
+    def __init__(self) -> None:
         self.config = config
         self.database_service = database_service
 
@@ -101,19 +101,19 @@ class JWTAuthenticationService:
     # Password Management
 
     def hash_REDACTED_SECRET(self, REDACTED_SECRET: str) -> str:
-        """Hash REDACTED_SECRET using Argon2"""
+        """Hash REDACTED_SECRET using Argon2."""
         return self.pwd_context.hash(REDACTED_SECRET)
 
     def verify_REDACTED_SECRET(
         self, plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str
     ) -> bool:
-        """Verify REDACTED_SECRET against hash"""
+        """Verify REDACTED_SECRET against hash."""
         return self.pwd_context.verify(plain_REDACTED_SECRET, hashed_REDACTED_SECRET)
 
     def validate_REDACTED_SECRET_complexity(
         self, REDACTED_SECRET: str
-    ) -> tuple[bool, list[str]]:
-        """Validate REDACTED_SECRET complexity"""
+    ) -> tuple[bool, List[str]]:
+        """Validate REDACTED_SECRET complexity."""
         errors = []
 
         if len(REDACTED_SECRET) < self.config.REDACTED_SECRET_min_length:
@@ -139,9 +139,9 @@ class JWTAuthenticationService:
         self,
         user_id: str,
         username: str,
-        additional_claims: dict[str, Any] | None = None,
+        additional_claims: Dict[str, Any] | None = None,
     ) -> str:
-        """Create JWT access token"""
+        """Create JWT access token."""
         now = datetime.now(UTC)
         expire = now + timedelta(minutes=self.config.access_token_expire_minutes)
 
@@ -163,7 +163,7 @@ class JWTAuthenticationService:
         )
 
     def create_refresh_token(self, user_id: str) -> str:
-        """Create JWT refresh token"""
+        """Create JWT refresh token."""
         now = datetime.now(UTC)
         expire = now + timedelta(days=self.config.refresh_token_expire_days)
 
@@ -185,8 +185,8 @@ class JWTAuthenticationService:
         self,
         token: str,
         token_type: str = "access",
-    ) -> dict[str, Any] | None:
-        """Verify and decode JWT token"""
+    ) -> Dict[str, Any] | None:
+        """Verify and decode JWT token."""
         try:
             payload = jwt.decode(
                 token,
@@ -197,7 +197,9 @@ class JWTAuthenticationService:
             # Verify token type
             if payload.get("type") != token_type:
                 logger.warning(
-                    f"Invalid token type. Expected: {token_type}, Got: {payload.get('type')}",
+                    "Invalid token type. Expected: %s, Got: %s",
+                    token_type,
+                    payload.get("type"),
                 )
                 return None
 
@@ -207,13 +209,13 @@ class JWTAuthenticationService:
             logger.debug("Token has expired")
             return None
         except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid token: {e}")
+            logger.warning("Invalid token: %s", e)
             return None
 
     # Rate Limiting
 
     def is_account_locked(self, identifier: str) -> bool:
-        """Check if account is locked due to failed attempts"""
+        """Check if account is locked due to failed attempts."""
         if identifier not in self.failed_attempts:
             return False
 
@@ -230,7 +232,7 @@ class JWTAuthenticationService:
         return len(self.failed_attempts[identifier]) >= self.config.max_login_attempts
 
     def record_failed_attempt(self, identifier: str) -> None:
-        """Record failed login attempt"""
+        """Record failed login attempt."""
         now = datetime.now(UTC)
 
         if identifier not in self.failed_attempts:
@@ -241,11 +243,13 @@ class JWTAuthenticationService:
         attempts_count = len(self.failed_attempts[identifier])
         if attempts_count >= self.config.max_login_attempts:
             logger.warning(
-                f"🚨 Account locked: {identifier} after {attempts_count} failed attempts",
+                "🚨 Account locked: %s after %s failed attempts",
+                identifier,
+                attempts_count,
             )
 
     def clear_failed_attempts(self, identifier: str) -> None:
-        """Clear failed login attempts after successful login"""
+        """Clear failed login attempts after successful login."""
         if identifier in self.failed_attempts:
             del self.failed_attempts[identifier]
 
@@ -254,8 +258,8 @@ class JWTAuthenticationService:
     async def register_user(
         self,
         registration: UserRegistration,
-    ) -> tuple[bool, str | dict[str, Any]]:
-        """Register new user"""
+    ) -> tuple[bool, str | Dict[str, Any]]:
+        """Register new user."""
         try:
             # Validate REDACTED_SECRET
             is_valid, REDACTED_SECRET_errors = self.validate_REDACTED_SECRET_complexity(
@@ -291,7 +295,9 @@ class JWTAuthenticationService:
             )
 
             if user_id:
-                logger.info(f"✅ User registered successfully: {registration.username}")
+                logger.info(
+                    "✅ User registered successfully: %s", registration.username
+                )
                 return True, {
                     "user_id": user_id,
                     "username": registration.username,
@@ -301,14 +307,14 @@ class JWTAuthenticationService:
             return False, {"errors": ["Failed to create user"]}
 
         except Exception as e:
-            logger.error(f"Registration failed: {e}")
+            logger.error("Registration failed: %s", e)
             return False, {"errors": ["Registration failed"]}
 
     async def authenticate_user(
         self,
         login: UserLogin,
-    ) -> tuple[bool, str | dict[str, Any]]:
-        """Authenticate user and return user data"""
+    ) -> tuple[bool, str | Dict[str, Any]]:
+        """Authenticate user and return user data."""
         try:
             identifier = login.username_or_email
 
@@ -351,19 +357,19 @@ class JWTAuthenticationService:
 
             # Return user data (without REDACTED_SECRET hash)
             user_data = {k: v for k, v in user.items() if k != "REDACTED_SECRET_hash"}
-            logger.info(f"✅ User authenticated successfully: {user['username']}")
+            logger.info("✅ User authenticated successfully: %s", user["username"])
 
             return True, user_data
 
         except Exception as e:
-            logger.error(f"Authentication failed: {e}")
+            logger.error("Authentication failed: %s", e)
             return False, {"errors": ["Authentication failed"]}
 
     async def login_user(
         self,
         login: UserLogin,
-    ) -> tuple[bool, TokenPair | dict[str, Any]]:
-        """Login user and return JWT tokens"""
+    ) -> tuple[bool, TokenPair | Dict[str, Any]]:
+        """Login user and return JWT tokens."""
         success, result = await self.authenticate_user(login)
 
         if not success:
@@ -394,8 +400,8 @@ class JWTAuthenticationService:
     async def refresh_tokens(
         self,
         refresh_token: str,
-    ) -> tuple[bool, TokenPair | dict[str, Any]]:
-        """Refresh access token using refresh token"""
+    ) -> tuple[bool, TokenPair | Dict[str, Any]]:
+        """Refresh access token using refresh token."""
         try:
             # Verify refresh token
             payload = self.verify_token(refresh_token, "refresh")
@@ -430,11 +436,11 @@ class JWTAuthenticationService:
             return True, token_pair
 
         except Exception as e:
-            logger.error(f"Token refresh failed: {e}")
+            logger.error("Token refresh failed: %s", e)
             return False, {"errors": ["Token refresh failed"]}
 
-    async def get_current_user(self, access_token: str) -> dict[str, Any] | None:
-        """Get current user from access token"""
+    async def get_current_user(self, access_token: str) -> Dict[str, Any] | None:
+        """Get current user from access token."""
         try:
             payload = self.verify_token(access_token, "access")
             if not payload:
@@ -450,7 +456,7 @@ class JWTAuthenticationService:
             return None
 
         except Exception as e:
-            logger.error(f"Failed to get current user: {e}")
+            logger.error("Failed to get current user: %s", e)
             return None
 
     # Security Utilities
@@ -460,8 +466,8 @@ class JWTAuthenticationService:
         user_id: str,
         old_REDACTED_SECRET: str,
         new_REDACTED_SECRET: str,
-    ) -> tuple[bool, dict[str, Any]]:
-        """Change user REDACTED_SECRET"""
+    ) -> tuple[bool, Dict[str, Any]]:
+        """Change user REDACTED_SECRET."""
         try:
             # Get user
             user = await self.database_service.get_user_by_id(user_id)
@@ -491,16 +497,16 @@ class JWTAuthenticationService:
             )
 
             if success:
-                logger.info(f"✅ Password changed for user: {user['username']}")
+                logger.info("✅ Password changed for user: %s", user["username"])
                 return True, {"message": "Password changed successfully"}
             return False, {"errors": ["Failed to update REDACTED_SECRET"]}
 
         except Exception as e:
-            logger.error(f"Password change failed: {e}")
+            logger.error("Password change failed: %s", e)
             return False, {"errors": ["Password change failed"]}
 
-    def get_auth_statistics(self) -> dict[str, Any]:
-        """Get authentication statistics"""
+    def get_auth_statistics(self) -> Dict[str, Any]:
+        """Get authentication statistics."""
         total_locked_accounts = len(
             [
                 identifier
@@ -542,7 +548,7 @@ async def create_auth_service(
     database_service: PostgreSQLService | None = None,
     **config_kwargs,
 ) -> JWTAuthenticationService:
-    """Create and initialize JWT authentication service"""
+    """Create and initialize JWT authentication service."""
     if database_service is None:
         database_service = await get_database()
 
@@ -552,7 +558,7 @@ async def create_auth_service(
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         from ..database.postgresql_service import (
             DatabaseConfig,
             create_database_service,

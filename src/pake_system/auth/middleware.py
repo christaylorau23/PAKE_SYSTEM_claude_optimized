@@ -1,12 +1,11 @@
 """Authentication middleware for enhanced security
-Implements rate limiting, security headers, and request validation
+Implements rate limiting, security headers, and request validation.
 """
 
 import time
 from collections import defaultdict, deque
 
 from fastapi import HTTPException, Request, status
-from fastapi.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -17,14 +16,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     for different endpoint types.
     """
 
-    def __init__(self, app, requests_per_minute: int = 60, burst_limit: int = 10):
+    def __init__(self) -> None:
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.burst_limit = burst_limit
         self.requests: dict[str, deque] = defaultdict(deque)
         self.burst_requests: dict[str, deque] = defaultdict(deque)
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self) -> None:
         client_ip = self._get_client_ip(request)
         current_time = time.time()
 
@@ -51,8 +50,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.requests[client_ip].append(current_time)
         self.burst_requests[client_ip].append(current_time)
 
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP address from request headers."""
@@ -68,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Fallback to direct connection IP
         return request.client.host if request.client else "unknown"
 
-    def _clean_old_requests(self, client_ip: str, current_time: float):
+    def _clean_old_requests(self) -> None:
         """Remove requests older than 1 minute."""
         minute_ago = current_time - 60
         while self.requests[client_ip] and self.requests[client_ip][0] < minute_ago:
@@ -97,7 +95,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Adds essential security headers to all responses.
     """
 
-    def __init__(self, app):
+    def __init__(self) -> None:
         super().__init__(app)
         self.security_headers = {
             # Prevent clickjacking
@@ -135,7 +133,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Server": "PAKE-System",
         }
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self) -> None:
         response = await call_next(request)
 
         # Add security headers to response
@@ -151,12 +149,12 @@ class AuthenticationAuditMiddleware(BaseHTTPMiddleware):
     Logs authentication attempts and security events for monitoring.
     """
 
-    def __init__(self, app):
+    def __init__(self) -> None:
         super().__init__(app)
         self.failed_attempts: dict[str, int] = defaultdict(int)
         self.locked_ips: dict[str, float] = {}
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self) -> None:
         client_ip = self._get_client_ip(request)
         current_time = time.time()
 
@@ -172,10 +170,9 @@ class AuthenticationAuditMiddleware(BaseHTTPMiddleware):
                         )
                     },
                 )
-            else:
-                # Lock expired, remove it
-                del self.locked_ips[client_ip]
-                self.failed_attempts[client_ip] = 0
+            # Lock expired, remove it
+            del self.locked_ips[client_ip]
+            self.failed_attempts[client_ip] = 0
 
         response = await call_next(request)
 
@@ -197,7 +194,7 @@ class AuthenticationAuditMiddleware(BaseHTTPMiddleware):
 
         return request.client.host if request.client else "unknown"
 
-    def _audit_auth_request(self, request: Request, response: Response, client_ip: str):
+    def _audit_auth_request(self) -> None:
         """Audit authentication requests for security monitoring."""
         current_time = time.time()
 
@@ -218,7 +215,7 @@ class AuthenticationAuditMiddleware(BaseHTTPMiddleware):
             # TODO: Log failed authentication attempt to security monitoring system
 
 
-def setup_security_middleware(app):
+def setup_security_middleware(self) -> None:
     """Setup all security middleware for the FastAPI application.
 
     Args:

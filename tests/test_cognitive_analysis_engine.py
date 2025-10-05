@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
+
 from services.ai.cognitive_analysis_engine import (
     CognitiveAnalysisEngine,
     CognitiveAnalysisResult,
@@ -38,8 +39,8 @@ class TestCognitiveAnalysisEngine:
     Tests ML-powered content understanding, quality assessment, and intelligence features.
     """
 
-    @pytest.fixture()
-    def cognitive_config(self):
+    @pytest.fixture
+    def cognitive_config(self) -> None:
         """Standard cognitive analysis configuration for testing"""
         return CognitiveConfig(
             enable_sentiment_analysis=True,
@@ -60,14 +61,14 @@ class TestCognitiveAnalysisEngine:
         )
 
     @pytest_asyncio.fixture
-    async def cognitive_engine(self, cognitive_config):
+    async def cognitive_engine(self) -> None:
         """Create cognitive analysis engine instance for testing"""
         engine = CognitiveAnalysisEngine(cognitive_config)
         yield engine
         await engine.clear_cache()
 
-    @pytest.fixture()
-    def sample_research_content(self):
+    @pytest.fixture
+    def sample_research_content(self) -> None:
         """High-quality research content for testing"""
         return {
             "content": """
@@ -88,8 +89,8 @@ class TestCognitiveAnalysisEngine:
             },
         }
 
-    @pytest.fixture()
-    def sample_social_content(self):
+    @pytest.fixture
+    def sample_social_content(self) -> None:
         """Social media content for testing"""
         return {
             "content": "Just amazing results from our latest #machinelearning experiment! 🎉 So excited to share this breakthrough with the community. Can't wait to see what comes next! #AI #research",
@@ -101,8 +102,8 @@ class TestCognitiveAnalysisEngine:
             },
         }
 
-    @pytest.fixture()
-    def sample_news_content(self):
+    @pytest.fixture
+    def sample_news_content(self) -> None:
         """News article content for testing"""
         return {
             "content": """
@@ -123,11 +124,8 @@ class TestCognitiveAnalysisEngine:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_initialize_cognitive_engine_with_configuration(
-        self,
-        cognitive_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_initialize_cognitive_engine_with_configuration(self) -> None:
         """
         Test: Should initialize cognitive analysis engine with proper configuration
         and component setup.
@@ -148,12 +146,8 @@ class TestCognitiveAnalysisEngine:
         assert engine.stats["total_analyzed"] == 0
         assert engine.stats["cache_hits"] == 0
 
-    @pytest.mark.asyncio()
-    async def test_should_perform_comprehensive_content_analysis(
-        self,
-        cognitive_engine,
-        sample_research_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_perform_comprehensive_content_analysis(self) -> None:
         """
         Test: Should perform comprehensive content analysis including sentiment,
         topics, quality, and categorization.
@@ -181,33 +175,27 @@ class TestCognitiveAnalysisEngine:
 
         # Check quality metrics
         assert 0.0 <= result.quality_metrics.overall_score <= 1.0
-        assert result.quality_metrics.quality_level in [level for level in QualityLevel]
+        assert result.quality_metrics.quality_level in list(QualityLevel)
         assert (
             result.quality_metrics.technical_depth > 0.0
         )  # Should detect technical content
 
         # Check sentiment analysis
-        assert result.sentiment_analysis.polarity in [
-            polarity for polarity in SentimentPolarity
-        ]
+        assert result.sentiment_analysis.polarity in list(SentimentPolarity)
         assert 0.0 <= result.sentiment_analysis.confidence <= 1.0
 
         # Check topic extraction
         assert len(result.topic_extractions) > 0
         for topic in result.topic_extractions:
             assert isinstance(topic, TopicExtraction)
-            assert topic.confidence in [conf for conf in TopicConfidence]
+            assert topic.confidence in list(TopicConfidence)
             assert 0.0 <= topic.relevance_score <= 1.0
 
         # Check confidence score
         assert 0.0 <= result.confidence_score <= 1.0
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_high_quality_academic_content(
-        self,
-        cognitive_engine,
-        sample_research_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_detect_high_quality_academic_content(self) -> None:
         """
         Test: Should correctly identify and assess high-quality academic content
         with appropriate quality metrics.
@@ -245,12 +233,8 @@ class TestCognitiveAnalysisEngine:
             for topic in topic_names
         )
 
-    @pytest.mark.asyncio()
-    async def test_should_analyze_social_media_sentiment_correctly(
-        self,
-        cognitive_engine,
-        sample_social_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_analyze_social_media_sentiment_correctly(self) -> None:
         """
         Test: Should correctly analyze sentiment in social media content
         with emoji and informal language detection.
@@ -277,12 +261,8 @@ class TestCognitiveAnalysisEngine:
         # Should have emotion scores
         assert len(result.sentiment_analysis.emotion_scores) > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_negative_sentiment_in_news_content(
-        self,
-        cognitive_engine,
-        sample_news_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_detect_negative_sentiment_in_news_content(self) -> None:
         """
         Test: Should detect negative sentiment in news content with
         negative business indicators.
@@ -302,12 +282,8 @@ class TestCognitiveAnalysisEngine:
             SentimentPolarity.MIXED,
         ]
 
-    @pytest.mark.asyncio()
-    async def test_should_extract_relevant_topics_from_content(
-        self,
-        cognitive_engine,
-        sample_research_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_extract_relevant_topics_from_content(self) -> None:
         """
         Test: Should extract relevant topics from content using
         keyword matching and relevance scoring.
@@ -329,12 +305,8 @@ class TestCognitiveAnalysisEngine:
         topic_names = [topic.topic for topic in result.topic_extractions]
         assert "machine_learning" in topic_names or "technology" in topic_names
 
-    @pytest.mark.asyncio()
-    async def test_should_generate_content_summary_and_entities(
-        self,
-        cognitive_engine,
-        sample_research_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_generate_content_summary_and_entities(self) -> None:
         """
         Test: Should generate meaningful content summary and extract
         key entities from content.
@@ -370,8 +342,8 @@ class TestCognitiveAnalysisEngine:
     # Batch Processing and Performance Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_process_batch_content_efficiently(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_process_batch_content_efficiently(self) -> None:
         """
         Test: Should efficiently process multiple content items in batch
         with proper concurrency control and performance.
@@ -426,8 +398,8 @@ class TestCognitiveAnalysisEngine:
         stats = cognitive_engine.get_analysis_statistics()
         assert stats["total_analyzed"] >= 5
 
-    @pytest.mark.asyncio()
-    async def test_should_utilize_caching_for_repeated_content(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_utilize_caching_for_repeated_content(self) -> None:
         """
         Test: Should cache analysis results and utilize cache for
         repeated content analysis.
@@ -455,8 +427,8 @@ class TestCognitiveAnalysisEngine:
             assert stats["cache_hits"] > 0
             assert stats["cache_hit_rate"] > 0.0
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_large_volume_content_analysis(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_handle_large_volume_content_analysis(self) -> None:
         """
         Test: Should handle large volume of content analysis
         with proper memory management and performance.
@@ -488,8 +460,8 @@ class TestCognitiveAnalysisEngine:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_empty_and_invalid_content(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_handle_empty_and_invalid_content(self) -> None:
         """
         Test: Should gracefully handle empty content, None values,
         and content below minimum length threshold.
@@ -514,8 +486,8 @@ class TestCognitiveAnalysisEngine:
             # It's acceptable to throw an exception for None content
             pass
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_malformed_metadata_gracefully(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_handle_malformed_metadata_gracefully(self) -> None:
         """
         Test: Should handle malformed or invalid metadata
         without crashing the analysis process.
@@ -539,11 +511,8 @@ class TestCognitiveAnalysisEngine:
         assert isinstance(result, CognitiveAnalysisResult)
         assert result.content_id == "malformed_test"
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_very_long_content_appropriately(
-        self,
-        cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_very_long_content_appropriately(self) -> None:
         """
         Test: Should handle content exceeding maximum length
         by truncating appropriately.
@@ -557,8 +526,8 @@ class TestCognitiveAnalysisEngine:
         assert isinstance(result, CognitiveAnalysisResult)
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_analysis_safely(self, cognitive_engine):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_analysis_safely(self) -> None:
         """
         Test: Should handle concurrent analysis requests
         without race conditions or data corruption.
@@ -591,12 +560,12 @@ class TestIndividualAnalyzers:
     Test suite for individual analyzer components.
     """
 
-    @pytest.fixture()
-    def test_config(self):
+    @pytest.fixture
+    def test_config(self) -> None:
         """Test configuration for analyzers"""
         return CognitiveConfig()
 
-    def test_sentiment_analyzer_should_detect_positive_sentiment(self, test_config):
+    def test_sentiment_analyzer_should_detect_positive_sentiment(self) -> None:
         """
         Test: SentimentAnalyzer should correctly identify positive sentiment
         in content with positive indicators.
@@ -607,7 +576,7 @@ class TestIndividualAnalyzers:
             "This is excellent, amazing, and wonderful research with great results!"
         )
 
-        async def analyze():
+        async def analyze(self) -> None:
             return await analyzer.analyze_content(positive_content)
 
         result = asyncio.run(analyze())
@@ -616,7 +585,7 @@ class TestIndividualAnalyzers:
         assert result["polarity"] in ["positive", "very_positive"]
         assert result["confidence"] > 0.0
 
-    def test_sentiment_analyzer_should_detect_negative_sentiment(self, test_config):
+    def test_sentiment_analyzer_should_detect_negative_sentiment(self) -> None:
         """
         Test: SentimentAnalyzer should correctly identify negative sentiment
         in content with negative indicators.
@@ -627,7 +596,7 @@ class TestIndividualAnalyzers:
             "This is terrible, awful, and disappointing work with horrible results."
         )
 
-        async def analyze():
+        async def analyze(self) -> None:
             return await analyzer.analyze_content(negative_content)
 
         result = asyncio.run(analyze())
@@ -636,7 +605,7 @@ class TestIndividualAnalyzers:
         assert result["polarity"] in ["negative", "very_negative"]
         assert result["confidence"] > 0.0
 
-    def test_topic_extractor_should_identify_relevant_topics(self, test_config):
+    def test_topic_extractor_should_identify_relevant_topics(self) -> None:
         """
         Test: TopicExtractor should identify relevant topics based on
         keyword matching and relevance scoring.
@@ -645,7 +614,7 @@ class TestIndividualAnalyzers:
 
         ml_content = "This research focuses on machine learning algorithms, neural networks, and deep learning models for artificial intelligence applications."
 
-        async def extract():
+        async def extract(self) -> None:
             return await extractor.analyze_content(ml_content)
 
         result = asyncio.run(extract())
@@ -657,7 +626,7 @@ class TestIndividualAnalyzers:
         topic_names = [topic["topic"] for topic in topics]
         assert "machine_learning" in topic_names
 
-    def test_quality_assessor_should_evaluate_content_quality(self, test_config):
+    def test_quality_assessor_should_evaluate_content_quality(self) -> None:
         """
         Test: QualityAssessor should evaluate content quality based on
         multiple quality indicators and metrics.
@@ -674,10 +643,10 @@ class TestIndividualAnalyzers:
             "This is spam promotional content with clickbait headlines and fake claims."
         )
 
-        async def assess_high():
+        async def assess_high(self) -> None:
             return await assessor.analyze_content(high_quality_content)
 
-        async def assess_low():
+        async def assess_low(self) -> None:
             return await assessor.analyze_content(low_quality_content)
 
         high_result = asyncio.run(assess_high())
@@ -687,7 +656,7 @@ class TestIndividualAnalyzers:
         assert high_result["overall_score"] > low_result["overall_score"]
         assert high_result["technical_depth"] > low_result["technical_depth"]
 
-    def test_content_categorizer_should_classify_content_types(self, test_config):
+    def test_content_categorizer_should_classify_content_types(self) -> None:
         """
         Test: ContentCategorizer should classify content into appropriate
         categories based on content patterns and metadata.
@@ -697,10 +666,10 @@ class TestIndividualAnalyzers:
         research_content = "This academic study presents methodology, results, and analysis of experimental data."
         news_content = "Breaking news: Latest developments reported by journalists according to reliable sources."
 
-        async def categorize_research():
+        async def categorize_research(self) -> None:
             return await categorizer.analyze_content(research_content)
 
-        async def categorize_news():
+        async def categorize_news(self) -> None:
             return await categorizer.analyze_content(news_content)
 
         research_result = asyncio.run(categorize_research())
@@ -716,8 +685,8 @@ class TestCognitiveConfigurationFactory:
     Test suite for cognitive analysis configuration factory.
     """
 
-    @pytest.mark.asyncio()
-    async def test_should_create_production_cognitive_engine(self):
+    @pytest.mark.asyncio
+    async def test_should_create_production_cognitive_engine(self) -> None:
         """
         Test: Should create production-ready cognitive analysis engine
         with optimized configuration settings.
@@ -751,7 +720,7 @@ class TestDataStructures:
     Test suite for cognitive analysis data structures.
     """
 
-    def test_topic_extraction_should_serialize_correctly(self):
+    def test_topic_extraction_should_serialize_correctly(self) -> None:
         """
         Test: TopicExtraction should properly serialize to dictionary
         for JSON export and API responses.
@@ -771,7 +740,7 @@ class TestDataStructures:
         assert topic_dict["relevance_score"] == 0.85
         assert topic_dict["keywords"] == ["algorithm", "neural", "training"]
 
-    def test_cognitive_analysis_result_should_serialize_completely(self):
+    def test_cognitive_analysis_result_should_serialize_completely(self) -> None:
         """
         Test: CognitiveAnalysisResult should serialize all components
         correctly for comprehensive data export.

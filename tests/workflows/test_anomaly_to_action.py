@@ -6,7 +6,7 @@ with actionable task management.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -41,17 +41,9 @@ except ImportError:
 class MockSecurityAlert:
     """Mock of SecurityAlert from ai-security-monitor.py"""
 
-    def __init__(
-        self,
-        id: str,
-        severity: str,
-        pattern_type: str,
-        message: str,
-        ai_confidence: float = 0.85,
-        source_ip: str = "192.168.1.100",
-    ):
+    def __init__(self) -> None:
         self.id = id
-        self.timestamp = datetime.now()
+        self.timestamp = datetime.now(UTC)
         self.severity = severity
         self.pattern_type = pattern_type
         self.message = message
@@ -64,14 +56,14 @@ class MockSecurityAlert:
         self.context = {"attempts": 5, "timeframe": "1 minute"}
 
 
-@pytest.fixture()
-def mock_task_manager():
+@pytest.fixture
+def mock_task_manager(self) -> None:
     """Mock task management system"""
     return MagicMock(spec=TaskManager)
 
 
-@pytest.fixture()
-def sample_security_alerts():
+@pytest.fixture
+def sample_security_alerts(self) -> None:
     """Sample security alerts for testing"""
     return [
         MockSecurityAlert(
@@ -104,24 +96,20 @@ def sample_security_alerts():
 class TestAnomalyToActionEngine:
     """Test the main anomaly-to-action workflow engine"""
 
-    @pytest.fixture()
-    def engine(self, mock_task_manager):
+    @pytest.fixture
+    def engine(self) -> None:
         """Create AnomalyToActionEngine instance for testing"""
         # This will fail initially because AnomalyToActionEngine doesn't exist yet
         return AnomalyToActionEngine(task_manager=mock_task_manager)
 
-    def test_engine_initialization(self, engine):
+    def test_engine_initialization(self) -> None:
         """Test that the engine initializes correctly"""
         assert engine.task_manager is not None
         assert engine.workflow_rules is not None
         assert engine.incident_counter >= 0
         assert engine.active_incidents is not None
 
-    def test_process_security_alert_creates_incident_task(
-        self,
-        engine,
-        sample_security_alerts,
-    ):
+    def test_process_security_alert_creates_incident_task(self) -> None:
         """Test that security alerts automatically create incident tasks"""
         alert = sample_security_alerts[0]  # HIGH severity failed login
 
@@ -134,11 +122,7 @@ class TestAnomalyToActionEngine:
         assert result.assignee is not None
         assert result.priority == IncidentPriority.HIGH
 
-    def test_critical_alert_creates_immediate_task(
-        self,
-        engine,
-        sample_security_alerts,
-    ):
+    def test_critical_alert_creates_immediate_task(self) -> None:
         """Test that CRITICAL alerts create immediate high-priority tasks"""
         alert = sample_security_alerts[1]  # CRITICAL SQL injection
 
@@ -150,11 +134,7 @@ class TestAnomalyToActionEngine:
         assert result.escalated is True
         assert "SQL Injection" in result.task_title
 
-    def test_low_severity_alerts_may_not_create_tasks(
-        self,
-        engine,
-        sample_security_alerts,
-    ):
+    def test_low_severity_alerts_may_not_create_tasks(self) -> None:
         """Test that LOW severity alerts may be filtered or batched"""
         alert = sample_security_alerts[3]  # LOW severity rate limiting
 
@@ -167,11 +147,7 @@ class TestAnomalyToActionEngine:
             assert result.batched is True
             assert result.batch_id is not None
 
-    def test_incident_task_includes_comprehensive_context(
-        self,
-        engine,
-        sample_security_alerts,
-    ):
+    def test_incident_task_includes_comprehensive_context(self) -> None:
         """Test that created tasks include all relevant context and data"""
         alert = sample_security_alerts[0]
 
@@ -186,7 +162,7 @@ class TestAnomalyToActionEngine:
         assert task_details.network_context is not None
         assert len(task_details.investigation_checklist) > 0
 
-    def test_duplicate_alert_handling(self, engine, sample_security_alerts):
+    def test_duplicate_alert_handling(self) -> None:
         """Test handling of duplicate or similar alerts"""
         alert = sample_security_alerts[0]
 
@@ -200,7 +176,7 @@ class TestAnomalyToActionEngine:
         assert result2.merged_with_incident == result1.incident_id
         assert result2.duplicate_detected is True
 
-    def test_alert_correlation_and_clustering(self, engine, sample_security_alerts):
+    def test_alert_correlation_and_clustering(self) -> None:
         """Test that related alerts are correlated into single incidents"""
         # Multiple failed login attempts from same IP should be correlated
         alerts = [
@@ -231,8 +207,8 @@ class TestAnomalyToActionEngine:
 class TestWorkflowRules:
     """Test the workflow rule engine that determines how alerts are processed"""
 
-    @pytest.fixture()
-    def workflow_rules(self):
+    @pytest.fixture
+    def workflow_rules(self) -> None:
         """Create WorkflowRule instances for testing"""
         # This will fail initially because WorkflowRule doesn't exist yet
         return [
@@ -263,7 +239,7 @@ class TestWorkflowRules:
             ),
         ]
 
-    def test_rule_matching(self, workflow_rules, sample_security_alerts):
+    def test_rule_matching(self) -> None:
         """Test that rules correctly match security alerts"""
         critical_alert = sample_security_alerts[1]  # CRITICAL SQL injection
 
@@ -277,7 +253,7 @@ class TestWorkflowRules:
         assert matching_rule.name == "critical_immediate_response"
         assert matching_rule.priority == IncidentPriority.CRITICAL
 
-    def test_rule_execution_creates_correct_task_properties(self, workflow_rules):
+    def test_rule_execution_creates_correct_task_properties(self) -> None:
         """Test that rule execution sets correct task properties"""
         rule = workflow_rules[0]  # critical_immediate_response
         alert = MockSecurityAlert(
@@ -298,7 +274,7 @@ class TestWorkflowRules:
 class TestIncidentTaskCreation:
     """Test the automated incident task creation process"""
 
-    def test_task_creation_with_security_context(self):
+    def test_task_creation_with_security_context(self) -> None:
         """Test that tasks are created with comprehensive security context"""
         alert = MockSecurityAlert(
             id="test-alert",
@@ -318,7 +294,7 @@ class TestIncidentTaskCreation:
         assert len(task.investigation_checklist) > 0
         assert len(task.recommended_actions) > 0
 
-    def test_task_includes_automated_data_collection(self):
+    def test_task_includes_automated_data_collection(self) -> None:
         """Test that tasks include automatically collected contextual data"""
         alert = MockSecurityAlert(
             id="test-alert",
@@ -340,13 +316,13 @@ class TestIncidentTaskCreation:
 class TestIncidentResponseWorkflow:
     """Test the incident response workflow orchestration"""
 
-    @pytest.fixture()
-    def workflow(self):
+    @pytest.fixture
+    def workflow(self) -> None:
         """Create IncidentResponseWorkflow for testing"""
         # This will fail initially because IncidentResponseWorkflow doesn't exist yet
         return IncidentResponseWorkflow()
 
-    def test_workflow_initiates_incident_response(self, workflow):
+    def test_workflow_initiates_incident_response(self) -> None:
         """Test that workflow can initiate incident response procedures"""
         alert = MockSecurityAlert(
             id="workflow-test",
@@ -363,7 +339,7 @@ class TestIncidentResponseWorkflow:
         assert response.investigation_started is True
         assert len(response.immediate_actions_taken) > 0
 
-    def test_workflow_escalation_based_on_severity(self, workflow):
+    def test_workflow_escalation_based_on_severity(self) -> None:
         """Test that workflows escalate appropriately based on alert severity"""
         critical_alert = MockSecurityAlert(
             "test",
@@ -393,12 +369,12 @@ class TestIncidentResponseWorkflow:
 class TestTaskManagementIntegration:
     """Test integration with task management systems"""
 
-    @pytest.fixture()
-    def task_manager(self):
+    @pytest.fixture
+    def task_manager(self) -> None:
         """Mock task management system"""
         return MagicMock(spec=TaskManagementSystem)
 
-    def test_task_creation_in_management_system(self, task_manager):
+    def test_task_creation_in_management_system(self) -> None:
         """Test that tasks are properly created in the task management system"""
         alert = MockSecurityAlert("test", "HIGH", "failed_login", "Test alert")
 
@@ -415,7 +391,7 @@ class TestTaskManagementIntegration:
         assert created_task.priority is not None
         assert created_task.assignment is not None
 
-    def test_task_assignment_logic(self, task_manager):
+    def test_task_assignment_logic(self) -> None:
         """Test that tasks are assigned to appropriate team members"""
         alerts = [
             MockSecurityAlert("test1", "CRITICAL", "sql_injection", "SQL injection"),
@@ -474,7 +450,7 @@ class TestTaskManagementIntegration:
 class TestEndToEndWorkflow:
     """Test the complete end-to-end anomaly-to-action workflow"""
 
-    def test_complete_workflow_from_alert_to_task(self):
+    def test_complete_workflow_from_alert_to_task(self) -> None:
         """Test the complete workflow from security alert detection to task creation"""
         # Simulate security alert from AI Security Monitor
         alert = MockSecurityAlert(
@@ -506,7 +482,7 @@ class TestEndToEndWorkflow:
         assert result.incident_status == "open"
         assert result.response_initiated is True
 
-    def test_workflow_handles_multiple_concurrent_alerts(self):
+    def test_workflow_handles_multiple_concurrent_alerts(self) -> None:
         """Test that workflow can handle multiple concurrent security alerts"""
         alerts = [
             MockSecurityAlert(f"concurrent-{i}", "HIGH", "failed_login", f"Alert {i}")
@@ -517,7 +493,7 @@ class TestEndToEndWorkflow:
         engine = AnomalyToActionEngine(task_manager=task_manager)
 
         # Process alerts concurrently
-        async def process_all_alerts():
+        async def process_all_alerts(self) -> None:
             tasks = [engine.process_security_alert(alert) for alert in alerts]
             return await asyncio.gather(*tasks)
 
@@ -530,7 +506,7 @@ class TestEndToEndWorkflow:
         created_tasks = sum(1 for result in results if result.task_created)
         assert created_tasks >= 1
 
-    def test_workflow_performance_under_load(self):
+    def test_workflow_performance_under_load(self) -> None:
         """Test workflow performance with high alert volume"""
         # Generate many alerts
         alerts = [
@@ -546,7 +522,7 @@ class TestEndToEndWorkflow:
         task_manager = MagicMock(spec=TaskManagementSystem)
         engine = AnomalyToActionEngine(task_manager=task_manager)
 
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         # Process all alerts
         results = []
@@ -554,7 +530,7 @@ class TestEndToEndWorkflow:
             result = asyncio.run(engine.process_security_alert(alert))
             results.append(result)
 
-        processing_time = (datetime.now() - start_time).total_seconds()
+        processing_time = (datetime.now(UTC) - start_time).total_seconds()
 
         # Should complete within reasonable time (adjust threshold as needed)
         assert processing_time < 10.0  # 10 seconds for 100 alerts
@@ -565,18 +541,18 @@ class TestEndToEndWorkflow:
 class TestIntegrationWithExistingMonitor:
     """Test integration with the existing ai-security-monitor.py system"""
 
-    def test_integration_with_security_monitor_alerts(self):
+    def test_integration_with_security_monitor_alerts(self) -> None:
         """Test that the system integrates with existing security monitor"""
         # This test would verify integration with the actual SecurityAlert class
         # from ai-security-monitor.py
         # Implementation depends on how we integrate with existing system
 
-    def test_real_time_alert_processing(self):
+    def test_real_time_alert_processing(self) -> None:
         """Test real-time processing of alerts from the security monitor"""
         # This would test the real-time event handling
         # Implementation depends on event system architecture
 
-    def test_backwards_compatibility(self):
+    def test_backwards_compatibility(self) -> None:
         """Test that existing security monitor functionality is preserved"""
         # Ensure we don't break existing security monitoring
         # Implementation depends on integration approach

@@ -10,6 +10,7 @@ Implements high-performance message bus using Redis Streams for:
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import uuid
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class MessageType(Enum):
-    """Message types for event-driven communication"""
+    """Message types for event-driven communication."""
 
     TASK_REQUEST = "task_request"
     TASK_RESPONSE = "task_response"
@@ -41,7 +42,7 @@ class MessageType(Enum):
 
 
 class MessagePriority(Enum):
-    """Message priority levels"""
+    """Message priority levels."""
 
     LOW = 1
     NORMAL = 2
@@ -51,7 +52,7 @@ class MessagePriority(Enum):
 
 @dataclass(frozen=True)
 class Message:
-    """Immutable message structure for event-driven communication"""
+    """Immutable message structure for event-driven communication."""
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: MessageType = MessageType.TASK_REQUEST
@@ -59,7 +60,7 @@ class Message:
     source: str = "unknown"
     target: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    data: dict[str, Any] = field(default_factory=dict)
+    data: Dict[str, Any] = field(default_factory=dict)
     correlation_id: str | None = None
     reply_to: str | None = None
     ttl: int | None = None  # Time to live in seconds
@@ -69,7 +70,7 @@ class Message:
 
 @dataclass
 class StreamConfig:
-    """Configuration for Redis Streams"""
+    """Configuration for Redis Streams."""
 
     max_len: int = 10000  # Maximum stream length
     approximate_max_len: bool = True  # Use ~ for approximate trimming
@@ -90,13 +91,8 @@ class MessageBus:
     - System components
     """
 
-    def __init__(
-        self,
-        redis_url: str = "redis://localhost:6379",
-        stream_config: StreamConfig = None,
-        max_connections: int = 20,
-    ):
-        """Initialize message bus with Redis connection pool"""
+    def __init__(self) -> None:
+        """Initialize message bus with Redis connection pool."""
         self.redis_url = redis_url
         self.config = stream_config or StreamConfig()
         self.max_connections = max_connections
@@ -125,11 +121,12 @@ class MessageBus:
         }
 
         logger.info(
-            f"MessageBus initialized with Redis pool (max_connections={max_connections})",
+            "MessageBus initialized with Redis pool (max_connections=%s)",
+            max_connections,
         )
 
-    async def start(self):
-        """Start message bus and initialize streams"""
+    async def start(self) -> None:
+        """Start message bus and initialize streams."""
         if self._running:
             return
 
@@ -146,8 +143,8 @@ class MessageBus:
 
         logger.info("Message bus started successfully")
 
-    async def stop(self):
-        """Stop message bus and cleanup resources"""
+    async def stop(self) -> None:
+        """Stop message bus and cleanup resources."""
         if not self._running:
             return
 
@@ -210,15 +207,16 @@ class MessageBus:
 
                 self._metrics["messages_sent"] += 1
                 logger.debug(
-                    f"Published message {message.id} to stream {stream} with ID {
-                        message_id
-                    }",
+                    "Published message %s to stream %s with ID %s",
+                    message.id,
+                    stream,
+                    message_id,
                 )
                 return message_id
 
         except Exception as e:
             self._metrics["messages_failed"] += 1
-            logger.error(f"Failed to publish message to stream {stream}: {e}")
+            logger.error("Failed to publish message to stream %s: %s", stream, e)
             raise
 
     async def subscribe(
@@ -252,22 +250,23 @@ class MessageBus:
         self._subscribers[subscription_id] = consumer_task
 
         logger.info(
-            f"Subscribed to stream {stream} with group {group}, consumer {consumer}",
+            "Subscribed to stream %s with group %s, consumer %s",
+            stream,
+            group,
+            consumer,
         )
         return subscription_id
 
-    async def unsubscribe(self, subscription_id: str):
-        """Unsubscribe from stream"""
+    async def unsubscribe(self) -> None:
+        """Unsubscribe from stream."""
         if subscription_id in self._subscribers:
             task = self._subscribers.pop(subscription_id)
             task.cancel()
 
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
-            logger.info(f"Unsubscribed from {subscription_id}")
+            logger.info("Unsubscribed from %s", subscription_id)
 
     async def request_response(
         self,
@@ -288,7 +287,7 @@ class MessageBus:
         response_future = asyncio.Future()
 
         # Subscribe to response stream temporarily
-        async def response_handler(message: Message):
+        async def response_handler(self) -> None:
             if message.correlation_id == correlation_id:
                 response_future.set_result(message)
 
@@ -299,32 +298,24 @@ class MessageBus:
             await self.publish(stream, request)
 
             # Wait for response with timeout
-            response = await asyncio.wait_for(response_future, timeout=timeout)
-
-            return response
+            return await asyncio.wait_for(response_future, timeout=timeout)
 
         finally:
             # Cleanup response subscription
             await self.unsubscribe(response_sub_id)
 
-    async def send_response(
-        self,
-        response_stream: str,
-        response: Message,
-        original_message: Message,
-    ):
-        """Send response to request with proper correlation"""
+    async def send_response(self) -> None:
+        """Send response to request with proper correlation."""
         response.correlation_id = original_message.correlation_id
         response.target = original_message.source
 
         await self.publish(response_stream, response)
 
-    async def get_stream_info(self, stream: str) -> dict[str, Any]:
-        """Get information about stream"""
+    async def get_stream_info(self, stream: str) -> Dict[str, Any]:
+        """Get information about stream."""
         try:
             async with redis.Redis(connection_pool=self.redis_pool) as r:
-                info = await r.xinfo_stream(stream)
-                return info
+                return await r.xinfo_stream(stream)
         except redis.ResponseError:
             return {}
 
@@ -332,8 +323,8 @@ class MessageBus:
         self,
         stream: str,
         group: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """Get consumer group information"""
+    ) -> list[Dict[str, Any]]:
+        """Get consumer group information."""
         group = group or self.config.consumer_group
 
         try:
@@ -343,21 +334,21 @@ class MessageBus:
         except redis.ResponseError:
             return []
 
-    async def acknowledge_message(self, stream: str, group: str, message_id: str):
-        """Acknowledge message processing"""
+    async def acknowledge_message(self) -> None:
+        """Acknowledge message processing."""
         try:
             async with redis.Redis(connection_pool=self.redis_pool) as r:
                 await r.xack(stream, group, message_id)
         except redis.ResponseError as e:
-            logger.warning(f"Failed to ack message {message_id}: {e}")
+            logger.warning("Failed to ack message %s: %s", message_id, e)
 
-    async def get_metrics(self) -> dict[str, Any]:
-        """Get message bus performance metrics"""
+    async def get_metrics(self) -> Dict[str, Any]:
+        """Get message bus performance metrics."""
         metrics = self._metrics.copy()
         metrics.update(
             {
                 "active_streams": len(
-                    set(sub.split(":")[0] for sub in self._subscribers.keys()),
+                    {sub.split(":")[0] for sub in self._subscribers},
                 ),
                 "active_consumers": len(self._subscribers),
                 "redis_pool_created_connections": self.redis_pool.created_connections,
@@ -369,8 +360,8 @@ class MessageBus:
 
         return metrics
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform health check on message bus"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on message bus."""
         health = {
             "status": "healthy",
             "redis_connected": False,
@@ -386,7 +377,7 @@ class MessageBus:
 
                 # Check stream existence
                 active_streams = set()
-                for sub_id in self._subscribers.keys():
+                for sub_id in self._subscribers:
                     stream = sub_id.split(":")[0]
                     try:
                         await r.xinfo_stream(stream)
@@ -402,8 +393,8 @@ class MessageBus:
 
         return health
 
-    async def _initialize_streams(self):
-        """Initialize core message streams"""
+    async def _initialize_streams(self) -> None:
+        """Initialize core message streams."""
         core_streams = [
             "supervisor:tasks",  # Supervisor -> Workers
             "supervisor:responses",  # Workers -> Supervisor
@@ -421,22 +412,16 @@ class MessageBus:
                     # Remove init message
                     await r.xtrim(stream, maxlen=0, approximate=True)
 
-                    logger.debug(f"Initialized stream: {stream}")
+                    logger.debug("Initialized stream: %s", stream)
 
                 except Exception as e:
-                    logger.warning(f"Failed to initialize stream {stream}: {e}")
+                    logger.warning("Failed to initialize stream %s: %s", stream, e)
 
         self._metrics["active_streams"] = len(core_streams)
 
-    async def _consumer_loop(
-        self,
-        stream: str,
-        group: str,
-        consumer: str,
-        handler: Callable[[Message], None],
-    ):
-        """Main consumer loop for processing messages"""
-        logger.info(f"Starting consumer loop for {stream}:{group}:{consumer}")
+    async def _consumer_loop(self) -> None:
+        """Main consumer loop for processing messages."""
+        logger.info("Starting consumer loop for %s:%s:%s", stream, group, consumer)
 
         async with redis.Redis(connection_pool=self.redis_pool) as r:
             while self._running:
@@ -476,20 +461,22 @@ class MessageBus:
 
                             except Exception as e:
                                 logger.error(
-                                    f"Error processing message {message_id}: {e}",
+                                    "Error processing message %s: %s",
+                                    message_id,
+                                    e,
                                 )
                                 self._metrics["messages_failed"] += 1
 
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    logger.error(f"Consumer loop error: {e}")
+                    logger.error("Consumer loop error: %s", e)
                     await asyncio.sleep(1)  # Brief pause before retry
 
-        logger.info(f"Consumer loop stopped for {stream}:{group}:{consumer}")
+        logger.info("Consumer loop stopped for %s:%s:%s", stream, group, consumer)
 
     def _parse_message(self, fields: dict[bytes, bytes]) -> Message:
-        """Parse Redis stream message into Message object"""
+        """Parse Redis stream message into Message object."""
         # Decode bytes to strings
         decoded_fields = {k.decode(): v.decode() for k, v in fields.items()}
 
@@ -515,7 +502,7 @@ class MessageBus:
 
 
 async def create_message_bus(redis_url: str = None) -> MessageBus:
-    """Create and start message bus instance"""
+    """Create and start message bus instance."""
     if redis_url is None:
         # Use environment variable or default
         import os
@@ -531,10 +518,10 @@ def create_task_message(
     source: str,
     target: str,
     task_type: str,
-    task_data: dict[str, Any],
+    task_data: Dict[str, Any],
     priority: MessagePriority = MessagePriority.NORMAL,
 ) -> Message:
-    """Create task request message"""
+    """Create task request message."""
     return Message(
         type=MessageType.TASK_REQUEST,
         priority=priority,
@@ -555,7 +542,7 @@ def create_response_message(
     success: bool = True,
     error: str = None,
 ) -> Message:
-    """Create task response message"""
+    """Create task response message."""
     return Message(
         type=MessageType.TASK_RESPONSE,
         source=source,
@@ -572,10 +559,10 @@ def create_response_message(
 def create_system_event(
     source: str,
     event_type: str,
-    event_data: dict[str, Any],
+    event_data: Dict[str, Any],
     priority: MessagePriority = MessagePriority.NORMAL,
 ) -> Message:
-    """Create system event message"""
+    """Create system event message."""
     return Message(
         type=MessageType.SYSTEM_EVENT,
         priority=priority,

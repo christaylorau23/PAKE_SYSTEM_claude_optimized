@@ -1,8 +1,6 @@
 """User database operations
-Handles user storage and retrieval
+Handles user storage and retrieval.
 """
-
-from typing import Optional
 
 from .models import User, UserInDB
 
@@ -27,7 +25,7 @@ fake_users_db = {
 }
 
 
-async def get_user(username: str) -> Optional[User]:
+async def get_user(username: str) -> User | None:
     """Retrieve a user from the database by username.
 
     Args:
@@ -48,7 +46,7 @@ async def get_user(username: str) -> Optional[User]:
 
 
 async def create_user(
-    username: str, email: str, hashed_password: str, full_name: Optional[str] = None
+    username: str, email: str, hashed_password: str, full_name: str | None = None
 ) -> User:
     """Create a new user in the database.
 
@@ -77,7 +75,7 @@ async def create_user(
     return User(**user_dict)
 
 
-async def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
+async def authenticate_user(username: str, password: str) -> UserInDB | None:
     """Authenticate a user with username and password.
 
     This is a convenience function that combines user lookup and password verification.

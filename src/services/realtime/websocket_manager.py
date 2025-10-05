@@ -4,15 +4,15 @@ Enterprise-grade WebSocket service for real-time notifications and live updates.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import uuid
 import weakref
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
 import websockets
@@ -23,11 +23,14 @@ from ..authentication.jwt_auth_service import JWTAuthenticationService
 from ..caching.redis_cache_service import RedisCacheService
 from ..database.postgresql_service import PostgreSQLService
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 logger = logging.getLogger(__name__)
 
 
 class MessageType(Enum):
-    """WebSocket message types"""
+    """WebSocket message types."""
 
     # Authentication
     AUTH = "auth"
@@ -69,23 +72,23 @@ class MessageType(Enum):
 
 @dataclass
 class WebSocketMessage:
-    """Structured WebSocket message"""
+    """Structured WebSocket message."""
 
     message_type: MessageType
-    data: dict[str, Any]
+    data: Dict[str, Any]
     timestamp: datetime
     user_id: str | None = None
     session_id: str | None = None
     message_id: str = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.message_id is None:
             self.message_id = str(uuid.uuid4())
 
 
 @dataclass
 class ConnectedUser:
-    """Connected user information"""
+    """Connected user information."""
 
     user_id: str
     username: str
@@ -96,14 +99,14 @@ class ConnectedUser:
     is_admin: bool = False
     subscriptions: set[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.subscriptions is None:
             self.subscriptions = set()
 
 
 @dataclass
 class WebSocketConfig:
-    """WebSocket server configuration"""
+    """WebSocket server configuration."""
 
     host: str = "localhost"
     port: int = 8001
@@ -128,13 +131,7 @@ class WebSocketManager:
     - Performance metrics
     """
 
-    def __init__(
-        self,
-        config: WebSocketConfig,
-        auth_service: JWTAuthenticationService,
-        database_service: PostgreSQLService,
-        cache_service: RedisCacheService | None = None,
-    ):
+    def __init__(self) -> None:
         self.config = config
         self.auth_service = auth_service
         self.database_service = database_service
@@ -152,7 +149,7 @@ class WebSocketManager:
         # Performance tracking
         self.connection_count = 0
         self.total_messages_sent = 0
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(UTC)
 
         # Event handlers
         self.message_handlers: dict[MessageType, Callable] = {}
@@ -161,7 +158,7 @@ class WebSocketManager:
         logger.info("🔗 WebSocket Manager initialized")
 
     async def start_server(self) -> None:
-        """Start the WebSocket server"""
+        """Start the WebSocket server."""
         try:
             self.server = await websockets.serve(
                 self._handle_connection,
@@ -181,15 +178,17 @@ class WebSocketManager:
             asyncio.create_task(self._metrics_task())
 
             logger.info(
-                f"🚀 WebSocket server started on {self.config.host}:{self.config.port}",
+                "🚀 WebSocket server started on %s:%s",
+                self.config.host,
+                self.config.port,
             )
 
         except Exception as e:
-            logger.error(f"Failed to start WebSocket server: {e}")
+            logger.error("Failed to start WebSocket server: %s", e)
             raise
 
     async def stop_server(self) -> None:
-        """Stop the WebSocket server"""
+        """Stop the WebSocket server."""
         try:
             if hasattr(self, "server"):
                 self.server.close()
@@ -200,7 +199,7 @@ class WebSocketManager:
                 {
                     "type": MessageType.MAINTENANCE_MODE.value,
                     "data": {"message": "Server shutting down"},
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -211,18 +210,18 @@ class WebSocketManager:
             logger.info("🛑 WebSocket server stopped")
 
         except Exception as e:
-            logger.error(f"Error stopping WebSocket server: {e}")
+            logger.error("Error stopping WebSocket server: %s", e)
 
     async def _handle_connection(
         self,
         websocket: WebSocketServerProtocol,
         path: str,
     ) -> None:
-        """Handle new WebSocket connection"""
+        """Handle new WebSocket connection."""
         session_id = str(uuid.uuid4())
 
         try:
-            logger.info(f"🔌 New WebSocket connection: {websocket.remote_address}")
+            logger.info("🔌 New WebSocket connection: %s", websocket.remote_address)
 
             # Connection limit check
             if len(self.connected_users) >= self.config.max_connections:
@@ -249,13 +248,13 @@ class WebSocketManager:
                 try:
                     await self._handle_message(websocket, message)
                 except Exception as e:
-                    logger.error(f"Error handling message: {e}")
+                    logger.error("Error handling message: %s", e)
                     await self._send_error(websocket, str(e))
 
         except ConnectionClosed:
-            logger.info(f"Connection closed: {websocket.remote_address}")
+            logger.info("Connection closed: %s", websocket.remote_address)
         except Exception as e:
-            logger.error(f"Connection error: {e}")
+            logger.error("Connection error: %s", e)
         finally:
             await self._unregister_connection(websocket, session_id)
 
@@ -263,8 +262,8 @@ class WebSocketManager:
         self,
         websocket: WebSocketServerProtocol,
         session_id: str,
-    ) -> dict[str, Any] | None:
-        """Authenticate WebSocket connection"""
+    ) -> Dict[str, Any] | None:
+        """Authenticate WebSocket connection."""
         try:
             # Wait for auth message
             auth_timeout = 30  # 30 seconds to authenticate
@@ -307,12 +306,14 @@ class WebSocketManager:
 
                 user_id = payload.get("sub")
                 if not user_id:
-                    raise jwt.InvalidTokenError("Invalid user ID")
+                    msg = "Invalid user ID"
+                    raise jwt.InvalidTokenError(msg)
 
                 # Get user data
                 user_data = await self.database_service.get_user_by_id(user_id)
                 if not user_data or not user_data.get("is_active"):
-                    raise jwt.InvalidTokenError("User not found or inactive")
+                    msg = "User not found or inactive"
+                    raise jwt.InvalidTokenError(msg)
 
                 # Send success message
                 await self._send_message(
@@ -349,16 +350,16 @@ class WebSocketManager:
             )
             return None
         except Exception as e:
-            logger.error(f"Authentication error: {e}")
+            logger.error("Authentication error: %s", e)
             return None
 
     async def _register_connection(
         self,
         websocket: WebSocketServerProtocol,
         session_id: str,
-        user_data: dict[str, Any] | None,
+        user_data: Dict[str, Any] | None,
     ) -> None:
-        """Register a new connection"""
+        """Register a new connection."""
         try:
             if user_data:
                 user_id = user_data["id"]
@@ -371,8 +372,8 @@ class WebSocketManager:
                     username=username,
                     websocket=websocket,
                     session_id=session_id,
-                    connected_at=datetime.utcnow(),
-                    last_activity=datetime.utcnow(),
+                    connected_at=datetime.now(UTC),
+                    last_activity=datetime.now(UTC),
                     is_admin=is_admin,
                     subscriptions={"user_activity", "search_updates"},
                 )
@@ -396,32 +397,32 @@ class WebSocketManager:
                         "data": {
                             "user_id": user_id,
                             "username": username,
-                            "joined_at": datetime.utcnow().isoformat(),
+                            "joined_at": datetime.now(UTC).isoformat(),
                         },
                     },
                 )
 
-                logger.info(f"👤 User {username} connected via WebSocket")
+                logger.info("👤 User %s connected via WebSocket", username)
 
             else:
                 # Anonymous connection
                 self.websocket_to_user[websocket] = {
                     "session_id": session_id,
-                    "connected_at": datetime.utcnow(),
+                    "connected_at": datetime.now(UTC),
                     "is_anonymous": True,
                 }
 
             self.connection_count += 1
 
         except Exception as e:
-            logger.error(f"Failed to register connection: {e}")
+            logger.error("Failed to register connection: %s", e)
 
     async def _unregister_connection(
         self,
         websocket: WebSocketServerProtocol,
         session_id: str,
     ) -> None:
-        """Unregister a connection"""
+        """Unregister a connection."""
         try:
             # Find user by websocket
             user_info = self.websocket_to_user.get(websocket)
@@ -445,12 +446,12 @@ class WebSocketManager:
                         "data": {
                             "user_id": user_id,
                             "username": username,
-                            "left_at": datetime.utcnow().isoformat(),
+                            "left_at": datetime.now(UTC).isoformat(),
                         },
                     },
                 )
 
-                logger.info(f"👤 User {username} disconnected from WebSocket")
+                logger.info("👤 User %s disconnected from WebSocket", username)
 
             # Remove from websocket tracking
             if websocket in self.websocket_to_user:
@@ -459,14 +460,14 @@ class WebSocketManager:
             self.connection_count = max(0, self.connection_count - 1)
 
         except Exception as e:
-            logger.error(f"Failed to unregister connection: {e}")
+            logger.error("Failed to unregister connection: %s", e)
 
     async def _handle_message(
         self,
         websocket: WebSocketServerProtocol,
         raw_message: str,
     ) -> None:
-        """Handle incoming WebSocket message"""
+        """Handle incoming WebSocket message."""
         try:
             message_data = json.loads(raw_message)
             message_type = MessageType(message_data.get("type"))
@@ -474,18 +475,18 @@ class WebSocketManager:
             # Update last activity
             user_info = self.websocket_to_user.get(websocket)
             if user_info and hasattr(user_info, "last_activity"):
-                user_info.last_activity = datetime.utcnow()
+                user_info.last_activity = datetime.now(UTC)
 
             # Handle message based on type
             if message_type in self.message_handlers:
                 await self.message_handlers[message_type](websocket, message_data)
             else:
-                logger.warning(f"Unhandled message type: {message_type}")
+                logger.warning("Unhandled message type: %s", message_type)
 
         except ValueError as e:
             await self._send_error(websocket, f"Invalid message format: {e}")
         except Exception as e:
-            logger.error(f"Message handling error: {e}")
+            logger.error("Message handling error: %s", e)
             await self._send_error(websocket, "Internal server error")
 
     async def _send_message(
@@ -493,7 +494,7 @@ class WebSocketManager:
         websocket: WebSocketServerProtocol,
         message: WebSocketMessage,
     ) -> bool:
-        """Send message to specific websocket"""
+        """Send message to specific websocket."""
         try:
             message_dict = {
                 "type": message.message_type.value,
@@ -510,24 +511,24 @@ class WebSocketManager:
             logger.debug("Connection closed while sending message")
             return False
         except Exception as e:
-            logger.error(f"Failed to send message: {e}")
+            logger.error("Failed to send message: %s", e)
             return False
 
     async def _send_error(self, websocket: WebSocketServerProtocol, error: str) -> None:
-        """Send error message"""
+        """Send error message."""
         await self._send_message(
             websocket,
             WebSocketMessage(
                 message_type=MessageType.ERROR,
                 data={"error": error},
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             ),
         )
 
     # Public API Methods
 
     async def send_to_user(self, user_id: str, message: WebSocketMessage) -> bool:
-        """Send message to specific user"""
+        """Send message to specific user."""
         try:
             if user_id in self.connected_users:
                 user = self.connected_users[user_id]
@@ -542,26 +543,26 @@ class WebSocketManager:
             if len(self.message_queues[user_id]) > self.config.message_queue_size:
                 self.message_queues[user_id].pop(0)
 
-            logger.info(f"📬 Queued message for offline user {user_id}")
+            logger.info("📬 Queued message for offline user %s", user_id)
             return False
 
         except Exception as e:
-            logger.error(f"Failed to send to user {user_id}: {e}")
+            logger.error("Failed to send to user %s: %s", user_id, e)
             return False
 
     async def broadcast_to_all(self, message: WebSocketMessage) -> int:
-        """Broadcast message to all connected users"""
+        """Broadcast message to all connected users."""
         sent_count = 0
 
         for user in list(self.connected_users.values()):
             if await self._send_message(user.websocket, message):
                 sent_count += 1
 
-        logger.info(f"📢 Broadcasted message to {sent_count} users")
+        logger.info("📢 Broadcasted message to %s users", sent_count)
         return sent_count
 
     async def broadcast_to_admins(self, message: WebSocketMessage) -> int:
-        """Broadcast message to admin users only"""
+        """Broadcast message to admin users only."""
         sent_count = 0
 
         for user_id in self.admin_connections:
@@ -570,21 +571,21 @@ class WebSocketManager:
                 if await self._send_message(user.websocket, message):
                     sent_count += 1
 
-        logger.info(f"👨‍💼 Broadcasted admin message to {sent_count} admins")
+        logger.info("👨‍💼 Broadcasted admin message to %s admins", sent_count)
         return sent_count
 
     async def _broadcast_to_subscribed(
         self,
         subscription: str,
-        message_data: dict[str, Any],
+        message_data: Dict[str, Any],
     ) -> int:
-        """Broadcast to users subscribed to a specific topic"""
+        """Broadcast to users subscribed to a specific topic."""
         sent_count = 0
 
         message = WebSocketMessage(
             message_type=MessageType(message_data["type"]),
             data=message_data["data"],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         for user in list(self.connected_users.values()):
@@ -595,7 +596,7 @@ class WebSocketManager:
         return sent_count
 
     async def _send_queued_messages(self, user_id: str) -> None:
-        """Send queued messages to user who just connected"""
+        """Send queued messages to user who just connected."""
         if user_id in self.message_queues:
             messages = self.message_queues[user_id]
             sent_count = 0
@@ -607,34 +608,34 @@ class WebSocketManager:
             # Clear the queue
             del self.message_queues[user_id]
 
-            logger.info(f"📬 Sent {sent_count} queued messages to user {user_id}")
+            logger.info("📬 Sent %s queued messages to user %s", sent_count, user_id)
 
     # Background Tasks
 
     async def _heartbeat_task(self) -> None:
-        """Send periodic heartbeat to maintain connections"""
+        """Send periodic heartbeat to maintain connections."""
         while True:
             try:
                 await asyncio.sleep(self.config.heartbeat_interval)
 
                 heartbeat_message = WebSocketMessage(
                     message_type=MessageType.HEARTBEAT,
-                    data={"timestamp": datetime.utcnow().isoformat()},
-                    timestamp=datetime.utcnow(),
+                    data={"timestamp": datetime.now(UTC).isoformat()},
+                    timestamp=datetime.now(UTC),
                 )
 
                 await self.broadcast_to_all(heartbeat_message)
 
             except Exception as e:
-                logger.error(f"Heartbeat task error: {e}")
+                logger.error("Heartbeat task error: %s", e)
 
     async def _cleanup_task(self) -> None:
-        """Clean up stale connections and old message queues"""
+        """Clean up stale connections and old message queues."""
         while True:
             try:
                 await asyncio.sleep(60)  # Run every minute
 
-                now = datetime.utcnow()
+                now = datetime.now(UTC)
                 timeout_threshold = now - timedelta(
                     seconds=self.config.connection_timeout,
                 )
@@ -647,12 +648,10 @@ class WebSocketManager:
 
                 for user_id in stale_users:
                     user = self.connected_users[user_id]
-                    try:
+                    with contextlib.suppress(BaseException):
                         await user.websocket.close()
-                    except BaseException:
-                        pass
                     await self._unregister_connection(user.websocket, user.session_id)
-                    logger.info(f"🧹 Cleaned up stale connection for user {user_id}")
+                    logger.info("🧹 Cleaned up stale connection for user %s", user_id)
 
                 # Clean old message queues (older than 24 hours)
                 old_threshold = now - timedelta(hours=24)
@@ -664,18 +663,18 @@ class WebSocketManager:
 
                 for user_id in old_queues:
                     del self.message_queues[user_id]
-                    logger.info(f"🧹 Cleaned up old message queue for user {user_id}")
+                    logger.info("🧹 Cleaned up old message queue for user %s", user_id)
 
             except Exception as e:
-                logger.error(f"Cleanup task error: {e}")
+                logger.error("Cleanup task error: %s", e)
 
     async def _metrics_task(self) -> None:
-        """Collect and broadcast performance metrics"""
+        """Collect and broadcast performance metrics."""
         while True:
             try:
                 await asyncio.sleep(300)  # Every 5 minutes
 
-                uptime = datetime.utcnow() - self.start_time
+                uptime = datetime.now(UTC) - self.start_time
 
                 metrics = {
                     "connected_users": len(self.connected_users),
@@ -685,14 +684,14 @@ class WebSocketManager:
                         len(q) for q in self.message_queues.values()
                     ),
                     "uptime_seconds": uptime.total_seconds(),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
 
                 # Send to admins
                 metrics_message = WebSocketMessage(
                     message_type=MessageType.SYSTEM_METRICS,
                     data={"metrics": metrics},
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(UTC),
                 )
 
                 await self.broadcast_to_admins(metrics_message)
@@ -706,20 +705,20 @@ class WebSocketManager:
                     )
 
             except Exception as e:
-                logger.error(f"Metrics task error: {e}")
+                logger.error("Metrics task error: %s", e)
 
     def _setup_default_handlers(self) -> None:
-        """Setup default message handlers"""
+        """Setup default message handlers."""
 
-        async def handle_ping(websocket, message_data):
+        async def handle_ping(self) -> None:
             pong_message = WebSocketMessage(
                 message_type=MessageType.PONG,
-                data={"timestamp": datetime.utcnow().isoformat()},
-                timestamp=datetime.utcnow(),
+                data={"timestamp": datetime.now(UTC).isoformat()},
+                timestamp=datetime.now(UTC),
             )
             await self._send_message(websocket, pong_message)
 
-        async def handle_subscribe(websocket, message_data):
+        async def handle_subscribe(self) -> None:
             user_info = self.websocket_to_user.get(websocket)
             if user_info and hasattr(user_info, "subscriptions"):
                 subscriptions = message_data.get("data", {}).get("subscriptions", [])
@@ -730,7 +729,7 @@ class WebSocketManager:
                     WebSocketMessage(
                         message_type=MessageType.AUTH_SUCCESS,
                         data={"subscribed": list(user_info.subscriptions)},
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(UTC),
                     ),
                 )
 
@@ -741,13 +740,13 @@ class WebSocketManager:
     async def notify_search_started(
         self,
         user_id: str,
-        search_data: dict[str, Any],
+        search_data: Dict[str, Any],
     ) -> None:
-        """Notify user that search has started"""
+        """Notify user that search has started."""
         message = WebSocketMessage(
             message_type=MessageType.SEARCH_STARTED,
             data=search_data,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             user_id=user_id,
         )
         await self.send_to_user(user_id, message)
@@ -755,13 +754,13 @@ class WebSocketManager:
     async def notify_search_progress(
         self,
         user_id: str,
-        progress_data: dict[str, Any],
+        progress_data: Dict[str, Any],
     ) -> None:
-        """Notify user of search progress"""
+        """Notify user of search progress."""
         message = WebSocketMessage(
             message_type=MessageType.SEARCH_PROGRESS,
             data=progress_data,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             user_id=user_id,
         )
         await self.send_to_user(user_id, message)
@@ -769,27 +768,27 @@ class WebSocketManager:
     async def notify_search_completed(
         self,
         user_id: str,
-        results_data: dict[str, Any],
+        results_data: Dict[str, Any],
     ) -> None:
-        """Notify user that search is completed"""
+        """Notify user that search is completed."""
         message = WebSocketMessage(
             message_type=MessageType.SEARCH_COMPLETED,
             data=results_data,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             user_id=user_id,
         )
         await self.send_to_user(user_id, message)
 
     async def notify_system_alert(
         self,
-        alert_data: dict[str, Any],
+        alert_data: Dict[str, Any],
         admin_only: bool = False,
     ) -> None:
-        """Send system alert notification"""
+        """Send system alert notification."""
         message = WebSocketMessage(
             message_type=MessageType.SYSTEM_ALERT,
             data=alert_data,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         if admin_only:
@@ -797,15 +796,15 @@ class WebSocketManager:
         else:
             await self.broadcast_to_all(message)
 
-    def get_connection_stats(self) -> dict[str, Any]:
-        """Get current connection statistics"""
+    def get_connection_stats(self) -> Dict[str, Any]:
+        """Get current connection statistics."""
         return {
             "connected_users": len(self.connected_users),
             "admin_connections": len(self.admin_connections),
             "total_connections": self.connection_count,
             "total_messages_sent": self.total_messages_sent,
             "queued_messages": sum(len(q) for q in self.message_queues.values()),
-            "uptime_seconds": (datetime.utcnow() - self.start_time).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
         }
 
 
@@ -818,7 +817,7 @@ async def create_websocket_manager(
     database_service: PostgreSQLService,
     cache_service: RedisCacheService | None = None,
 ) -> WebSocketManager:
-    """Create and initialize WebSocket manager"""
+    """Create and initialize WebSocket manager."""
     manager = WebSocketManager(config, auth_service, database_service, cache_service)
     logger.info("✅ WebSocket Manager created successfully")
     return manager

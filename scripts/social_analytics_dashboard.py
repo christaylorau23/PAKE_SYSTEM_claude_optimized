@@ -8,7 +8,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Data visualization and analytics
@@ -43,8 +43,8 @@ class SocialMetrics:
     clicks: int = 0
     views: int = 0  # for video content
     completion_rate: float = 0.0  # video completion rate
-    hashtags: list[str] = None
-    mentions: list[str] = None
+    hashtags: List[str] = None
+    mentions: List[str] = None
     sentiment_score: float = 0.0
     optimal_time_posted: bool = False
 
@@ -56,9 +56,9 @@ class PlatformInsights:
     platform: str
     total_posts: int
     avg_engagement_rate: float
-    best_posting_times: list[str]
-    top_content_types: list[str]
-    trending_hashtags: list[str]
+    best_posting_times: List[str]
+    top_content_types: List[str]
+    trending_hashtags: List[str]
     audience_demographics: dict
     growth_rate: float
     roi_metrics: dict
@@ -67,7 +67,7 @@ class PlatformInsights:
 class SocialAnalyticsDashboard:
     """Comprehensive social media analytics dashboard"""
 
-    def __init__(self, db_path: str = "social_analytics.db"):
+    def __init__(self) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
         self._init_database()
@@ -81,7 +81,7 @@ class SocialAnalyticsDashboard:
             "linkedin": None,
         }
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize SQLite database for analytics storage"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -171,7 +171,9 @@ class SocialAnalyticsDashboard:
 
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to collect metrics for {platform_name}: {e}",
+                        "Failed to collect metrics for %s: %s",
+                        platform_name,
+                        e,
                     )
                     all_metrics[platform_name] = {"error": str(e)}
 
@@ -231,7 +233,7 @@ class SocialAnalyticsDashboard:
                 )
 
         except Exception as e:
-            self.logger.error(f"Twitter metrics collection failed: {e}")
+            self.logger.error("Twitter metrics collection failed: %s", e)
 
         return metrics
 
@@ -245,7 +247,7 @@ class SocialAnalyticsDashboard:
             pass
 
         except Exception as e:
-            self.logger.error(f"Instagram metrics collection failed: {e}")
+            self.logger.error("Instagram metrics collection failed: %s", e)
 
         return metrics
 
@@ -270,7 +272,7 @@ class SocialAnalyticsDashboard:
                                 platform="tiktok",
                                 post_id=video["id"],
                                 timestamp=datetime.fromtimestamp(
-                                    video.get("create_time", 0),
+                                    video.get("create_time", 0), tz=UTC
                                 ),
                                 content_type="video",
                                 views=analytics_data.get("views", 0),
@@ -288,7 +290,7 @@ class SocialAnalyticsDashboard:
                         )
 
         except Exception as e:
-            self.logger.error(f"TikTok metrics collection failed: {e}")
+            self.logger.error("TikTok metrics collection failed: %s", e)
 
         return metrics
 
@@ -303,7 +305,9 @@ class SocialAnalyticsDashboard:
                     SocialMetrics(
                         platform="reddit",
                         post_id=submission.id,
-                        timestamp=datetime.fromtimestamp(submission.created_utc),
+                        timestamp=datetime.fromtimestamp(
+                            submission.created_utc, tz=UTC
+                        ),
                         content_type="text" if submission.is_self else "link",
                         likes=submission.score,
                         comments=submission.num_comments,
@@ -315,7 +319,7 @@ class SocialAnalyticsDashboard:
                 )
 
         except Exception as e:
-            self.logger.error(f"Reddit metrics collection failed: {e}")
+            self.logger.error("Reddit metrics collection failed: %s", e)
 
         return metrics
 
@@ -328,7 +332,7 @@ class SocialAnalyticsDashboard:
             pass
 
         except Exception as e:
-            self.logger.error(f"LinkedIn metrics collection failed: {e}")
+            self.logger.error("LinkedIn metrics collection failed: %s", e)
 
         return metrics
 
@@ -342,7 +346,7 @@ class SocialAnalyticsDashboard:
             return 0.0
         return (total_engagement / impressions) * 100
 
-    async def _store_metrics(self, metrics: list[SocialMetrics]):
+    async def _store_metrics(self) -> None:
         """Store metrics in database"""
         if not metrics:
             return
@@ -391,7 +395,7 @@ class SocialAnalyticsDashboard:
         conn = sqlite3.connect(self.db_path)
 
         # Date range
-        end_date = datetime.now()
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
 
         query = """
@@ -407,7 +411,7 @@ class SocialAnalyticsDashboard:
             return {"error": "No data available for the specified period"}
 
         # Generate insights
-        report = {
+        return {
             "summary": self._generate_summary(df),
             "platform_comparison": self._compare_platforms(df),
             "content_analysis": self._analyze_content_performance(df),
@@ -415,8 +419,6 @@ class SocialAnalyticsDashboard:
             "optimal_posting_times": self._find_optimal_posting_times(df),
             "recommendations": self._generate_recommendations(df),
         }
-
-        return report
 
     def _generate_summary(self, df: pd.DataFrame) -> dict:
         """Generate summary statistics"""
@@ -536,7 +538,7 @@ class SocialAnalyticsDashboard:
             return "decreasing"
         return "stable"
 
-    def _generate_recommendations(self, df: pd.DataFrame) -> list[str]:
+    def _generate_recommendations(self, df: pd.DataFrame) -> List[str]:
         """Generate actionable recommendations"""
         recommendations = []
 
@@ -615,7 +617,7 @@ class SocialAnalyticsDashboard:
                 viz_paths["content_performance"] = str(path)
 
         except Exception as e:
-            self.logger.error(f"Visualization creation failed: {e}")
+            self.logger.error("Visualization creation failed: %s", e)
             viz_paths["error"] = str(e)
 
         return viz_paths
@@ -675,7 +677,7 @@ class SocialAnalyticsDashboard:
                 y=values,
                 mode="lines+markers",
                 name="Engagement Rate",
-                line=dict(color="#1f77b4", width=2),
+                line={"color": "#1f77b4", "width": 2},
             ),
         )
 
@@ -728,17 +730,18 @@ class SocialAnalyticsDashboard:
         export_dir = Path("../data/reports")
         export_dir.mkdir(exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
         if format_type == "json":
             filename = f"social_analytics_report_{timestamp}.json"
             filepath = export_dir / filename
 
             # Convert datetime objects to strings for JSON serialization
-            def serialize_datetime(obj):
+            def serialize_datetime(self) -> None:
                 if isinstance(obj, datetime):
                     return obj.isoformat()
-                raise TypeError(f"Object {obj} is not JSON serializable")
+                msg = f"Object {obj} is not JSON serializable"
+                raise TypeError(msg)
 
             with open(filepath, "w") as f:
                 json.dump(report, f, indent=2, default=serialize_datetime)
@@ -759,7 +762,7 @@ class SocialAnalyticsDashboard:
         return str(filepath)
 
 
-def main():
+def main(self) -> None:
     """Main function for testing analytics dashboard"""
     dashboard = SocialAnalyticsDashboard()
 

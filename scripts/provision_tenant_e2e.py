@@ -15,7 +15,7 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +46,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            f"tenant_provisioning_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            f"tenant_provisioning_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.log",
         ),
     ],
 )
@@ -65,13 +65,13 @@ class TenantProvisioningWorkflow:
     - Infrastructure provisioning
     """
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url
         self.api_prefix = "/api/v1"
 
         # Workflow state
-        self.provisioned_tenants: list[dict[str, Any]] = []
-        self.tenant_users: dict[str, list[dict[str, Any]]] = {}
+        self.provisioned_tenants: list[Dict[str, Any]] = []
+        self.tenant_users: dict[str, list[Dict[str, Any]]] = {}
         self.auth_tokens: dict[str, str] = {}
 
         # Service instances
@@ -80,7 +80,7 @@ class TenantProvisioningWorkflow:
         self.auth_service: MultiTenantAuthService | None = None
         self.security_enforcer: TenantIsolationEnforcer | None = None
 
-    async def initialize_services(self):
+    async def initialize_services(self) -> None:
         """Initialize all required services"""
         logger.info("🔧 Initializing services for tenant provisioning...")
 
@@ -104,13 +104,13 @@ class TenantProvisioningWorkflow:
             logger.info("✅ Services initialized successfully")
 
         except Exception as e:
-            logger.error(f"❌ Failed to initialize services: {e}")
+            logger.error("❌ Failed to initialize services: %s", e)
             raise
 
-    async def run_complete_provisioning_workflow(self) -> dict[str, Any]:
+    async def run_complete_provisioning_workflow(self) -> Dict[str, Any]:
         """Execute the complete end-to-end tenant provisioning workflow"""
 
-        workflow_start = datetime.utcnow()
+        workflow_start = datetime.now(UTC)
         logger.info("🚀 Starting Complete Tenant Provisioning Workflow")
         logger.info("=" * 80)
 
@@ -165,7 +165,7 @@ class TenantProvisioningWorkflow:
             workflow_results["phases"]["end_to_end_validation"] = e2e_result
 
             # Generate final report
-            workflow_end = datetime.utcnow()
+            workflow_end = datetime.now(UTC)
             workflow_results["workflow_end"] = workflow_end.isoformat()
             workflow_results["total_duration"] = (
                 workflow_end - workflow_start
@@ -177,10 +177,10 @@ class TenantProvisioningWorkflow:
             return workflow_results
 
         except Exception as e:
-            logger.error(f"❌ Workflow failed: {e}")
+            logger.error("❌ Workflow failed: %s", e)
             return {
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "status": "FAILED",
             }
 
@@ -188,12 +188,12 @@ class TenantProvisioningWorkflow:
             # Cleanup
             await self._cleanup_provisioned_resources()
 
-    async def _phase1_infrastructure_setup(self) -> dict[str, Any]:
+    async def _phase1_infrastructure_setup(self) -> Dict[str, Any]:
         """Phase 1: Validate infrastructure and service availability"""
 
         phase_results = {
             "phase": "infrastructure_setup",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -217,22 +217,22 @@ class TenantProvisioningWorkflow:
         cache_test = await self._test_cache_infrastructure()
         phase_results["tests"].append(cache_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 1 Infrastructure Setup: {status}")
+        logger.info("Phase 1 Infrastructure Setup: %s", status)
 
         return phase_results
 
-    async def _phase2_tenant_provisioning(self) -> dict[str, Any]:
+    async def _phase2_tenant_provisioning(self) -> Dict[str, Any]:
         """Phase 2: Create and provision multiple tenants"""
 
         phase_results = {
             "phase": "tenant_provisioning",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tenants_created": [],
             "tests": [],
         }
@@ -269,7 +269,7 @@ class TenantProvisioningWorkflow:
         ]
 
         for config in tenant_configs:
-            logger.info(f"🏢 Creating tenant: {config['display_name']}")
+            logger.info("🏢 Creating tenant: %s", config["display_name"])
 
             # Create tenant
             creation_result = await self._create_tenant_with_validation(config)
@@ -286,26 +286,26 @@ class TenantProvisioningWorkflow:
                 )
                 phase_results["tests"].append(validation_result)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
         logger.info(
-            f"Phase 2 Tenant Provisioning: {status} ({
-                len(phase_results['tenants_created'])
-            } tenants)",
+            "Phase 2 Tenant Provisioning: %s (%s tenants)",
+            status,
+            len(phase_results["tenants_created"]),
         )
 
         return phase_results
 
-    async def _phase3_authentication_setup(self) -> dict[str, Any]:
+    async def _phase3_authentication_setup(self) -> Dict[str, Any]:
         """Phase 3: Set up users and authentication for all tenants"""
 
         phase_results = {
             "phase": "authentication_setup",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -313,7 +313,7 @@ class TenantProvisioningWorkflow:
             tenant_id = tenant_data["tenant"]["id"]
             tenant_name = tenant_data["tenant"]["name"]
 
-            logger.info(f"👥 Setting up authentication for tenant: {tenant_name}")
+            logger.info("👥 Setting up authentication for tenant: %s", tenant_name)
 
             # Create additional users with different roles
             user_configs = [
@@ -342,7 +342,7 @@ class TenantProvisioningWorkflow:
 
             tenant_users = []
             for user_config in user_configs:
-                logger.info(f"  👤 Creating user: {user_config['username']}")
+                logger.info("  👤 Creating user: %s", user_config["username"])
 
                 user_creation = await self._create_user_with_validation(
                     tenant_id,
@@ -359,22 +359,22 @@ class TenantProvisioningWorkflow:
             auth_test = await self._test_tenant_authentication(tenant_id, tenant_users)
             phase_results["tests"].append(auth_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 3 Authentication Setup: {status}")
+        logger.info("Phase 3 Authentication Setup: %s", status)
 
         return phase_results
 
-    async def _phase4_service_integration(self) -> dict[str, Any]:
+    async def _phase4_service_integration(self) -> Dict[str, Any]:
         """Phase 4: Validate integration between all services"""
 
         phase_results = {
             "phase": "service_integration",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -382,7 +382,7 @@ class TenantProvisioningWorkflow:
             tenant_id = tenant_data["tenant"]["id"]
             tenant_name = tenant_data["tenant"]["name"]
 
-            logger.info(f"🔗 Testing service integration for: {tenant_name}")
+            logger.info("🔗 Testing service integration for: %s", tenant_name)
 
             # Test 1: Search functionality with tenant isolation
             search_test = await self._test_tenant_search_integration(tenant_id)
@@ -400,22 +400,22 @@ class TenantProvisioningWorkflow:
             db_isolation_test = await self._test_tenant_database_isolation(tenant_id)
             phase_results["tests"].append(db_isolation_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 4 Service Integration: {status}")
+        logger.info("Phase 4 Service Integration: %s", status)
 
         return phase_results
 
-    async def _phase5_security_validation(self) -> dict[str, Any]:
+    async def _phase5_security_validation(self) -> Dict[str, Any]:
         """Phase 5: Comprehensive security and isolation testing"""
 
         phase_results = {
             "phase": "security_validation",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -444,22 +444,22 @@ class TenantProvisioningWorkflow:
         encryption_test = await self._test_data_encryption()
         phase_results["tests"].append(encryption_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 5 Security Validation: {status}")
+        logger.info("Phase 5 Security Validation: %s", status)
 
         return phase_results
 
-    async def _phase6_performance_testing(self) -> dict[str, Any]:
+    async def _phase6_performance_testing(self) -> Dict[str, Any]:
         """Phase 6: Performance and scalability testing"""
 
         phase_results = {
             "phase": "performance_testing",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -488,22 +488,22 @@ class TenantProvisioningWorkflow:
         resource_test = await self._test_resource_usage()
         phase_results["tests"].append(resource_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 6 Performance Testing: {status}")
+        logger.info("Phase 6 Performance Testing: %s", status)
 
         return phase_results
 
-    async def _phase7_end_to_end_validation(self) -> dict[str, Any]:
+    async def _phase7_end_to_end_validation(self) -> Dict[str, Any]:
         """Phase 7: Complete end-to-end system validation"""
 
         phase_results = {
             "phase": "end_to_end_validation",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(UTC).isoformat(),
             "tests": [],
         }
 
@@ -532,19 +532,19 @@ class TenantProvisioningWorkflow:
         production_test = await self._test_production_readiness()
         phase_results["tests"].append(production_test)
 
-        phase_results["end_time"] = datetime.utcnow().isoformat()
+        phase_results["end_time"] = datetime.now(UTC).isoformat()
         phase_results["success"] = all(
             test["success"] for test in phase_results["tests"]
         )
 
         status = "✅ PASS" if phase_results["success"] else "❌ FAIL"
-        logger.info(f"Phase 7 End-to-End Validation: {status}")
+        logger.info("Phase 7 End-to-End Validation: %s", status)
 
         return phase_results
 
     # Helper Methods - Infrastructure Testing
 
-    async def _test_database_connectivity(self) -> dict[str, Any]:
+    async def _test_database_connectivity(self) -> Dict[str, Any]:
         """Test database connectivity and basic operations"""
         try:
             if not self.db_service:
@@ -565,7 +565,7 @@ class TenantProvisioningWorkflow:
         except Exception as e:
             return {"test": "database_connectivity", "success": False, "error": str(e)}
 
-    async def _test_api_server_health(self) -> dict[str, Any]:
+    async def _test_api_server_health(self) -> Dict[str, Any]:
         """Test API server health and responsiveness"""
         try:
             async with httpx.AsyncClient() as client:
@@ -585,7 +585,7 @@ class TenantProvisioningWorkflow:
         except Exception as e:
             return {"test": "api_server_health", "success": False, "error": str(e)}
 
-    async def _test_service_dependencies(self) -> dict[str, Any]:
+    async def _test_service_dependencies(self) -> Dict[str, Any]:
         """Test all service dependencies are available"""
         try:
             dependencies = {
@@ -606,7 +606,7 @@ class TenantProvisioningWorkflow:
         except Exception as e:
             return {"test": "service_dependencies", "success": False, "error": str(e)}
 
-    async def _test_cache_infrastructure(self) -> dict[str, Any]:
+    async def _test_cache_infrastructure(self) -> Dict[str, Any]:
         """Test cache infrastructure availability"""
         try:
             # Test cache endpoint if available
@@ -633,8 +633,8 @@ class TenantProvisioningWorkflow:
 
     async def _create_tenant_with_validation(
         self,
-        config: dict[str, Any],
-    ) -> dict[str, Any]:
+        config: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Create tenant and validate the creation"""
         try:
             if not self.tenant_service:
@@ -670,14 +670,14 @@ class TenantProvisioningWorkflow:
             }
 
         except Exception as e:
-            logger.error(f"Failed to create tenant {config['name']}: {e}")
+            logger.error("Failed to create tenant %s: %s", config["name"], e)
             return {
                 "test": f"create_tenant_{config['name']}",
                 "success": False,
                 "error": str(e),
             }
 
-    async def _validate_tenant_provisioning(self, tenant_id: str) -> dict[str, Any]:
+    async def _validate_tenant_provisioning(self, tenant_id: str) -> Dict[str, Any]:
         """Validate that tenant was properly provisioned"""
         try:
             if not self.tenant_service:
@@ -734,8 +734,8 @@ class TenantProvisioningWorkflow:
     async def _create_user_with_validation(
         self,
         tenant_id: str,
-        user_config: dict[str, Any],
-    ) -> dict[str, Any]:
+        user_config: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Create user and validate creation"""
         # Placeholder implementation
         return {
@@ -752,8 +752,8 @@ class TenantProvisioningWorkflow:
     async def _test_tenant_authentication(
         self,
         tenant_id: str,
-        users: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+        users: list[Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """Test authentication for tenant users"""
         return {
             "test": f"tenant_auth_{tenant_id}",
@@ -761,86 +761,86 @@ class TenantProvisioningWorkflow:
             "users_tested": len(users),
         }
 
-    async def _test_tenant_search_integration(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_tenant_search_integration(self, tenant_id: str) -> Dict[str, Any]:
         """Test search functionality integration"""
         return {"test": f"search_integration_{tenant_id}", "success": True}
 
     async def _test_tenant_analytics_integration(
         self,
         tenant_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test analytics integration"""
         return {"test": f"analytics_integration_{tenant_id}", "success": True}
 
-    async def _test_tenant_cache_integration(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_tenant_cache_integration(self, tenant_id: str) -> Dict[str, Any]:
         """Test cache integration"""
         return {"test": f"cache_integration_{tenant_id}", "success": True}
 
-    async def _test_tenant_database_isolation(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_tenant_database_isolation(self, tenant_id: str) -> Dict[str, Any]:
         """Test database isolation"""
         return {"test": f"db_isolation_{tenant_id}", "success": True}
 
-    async def _test_cross_tenant_access_prevention(self) -> dict[str, Any]:
+    async def _test_cross_tenant_access_prevention(self) -> Dict[str, Any]:
         """Test cross-tenant access prevention"""
         return {"test": "cross_tenant_access_prevention", "success": True}
 
-    async def _test_jwt_security(self) -> dict[str, Any]:
+    async def _test_jwt_security(self) -> Dict[str, Any]:
         """Test JWT security"""
         return {"test": "jwt_security", "success": True}
 
-    async def _test_input_validation_security(self) -> dict[str, Any]:
+    async def _test_input_validation_security(self) -> Dict[str, Any]:
         """Test input validation security"""
         return {"test": "input_validation_security", "success": True}
 
-    async def _test_rate_limiting_security(self) -> dict[str, Any]:
+    async def _test_rate_limiting_security(self) -> Dict[str, Any]:
         """Test rate limiting security"""
         return {"test": "rate_limiting_security", "success": True}
 
-    async def _test_data_encryption(self) -> dict[str, Any]:
+    async def _test_data_encryption(self) -> Dict[str, Any]:
         """Test data encryption"""
         return {"test": "data_encryption", "success": True}
 
-    async def _test_single_tenant_performance(self) -> dict[str, Any]:
+    async def _test_single_tenant_performance(self) -> Dict[str, Any]:
         """Test single tenant performance"""
         return {"test": "single_tenant_performance", "success": True}
 
-    async def _test_multi_tenant_concurrency(self) -> dict[str, Any]:
+    async def _test_multi_tenant_concurrency(self) -> Dict[str, Any]:
         """Test multi-tenant concurrency"""
         return {"test": "multi_tenant_concurrency", "success": True}
 
-    async def _test_database_performance(self) -> dict[str, Any]:
+    async def _test_database_performance(self) -> Dict[str, Any]:
         """Test database performance"""
         return {"test": "database_performance", "success": True}
 
-    async def _test_cache_performance(self) -> dict[str, Any]:
+    async def _test_cache_performance(self) -> Dict[str, Any]:
         """Test cache performance"""
         return {"test": "cache_performance", "success": True}
 
-    async def _test_resource_usage(self) -> dict[str, Any]:
+    async def _test_resource_usage(self) -> Dict[str, Any]:
         """Test resource usage"""
         return {"test": "resource_usage", "success": True}
 
-    async def _test_complete_user_journeys(self) -> dict[str, Any]:
+    async def _test_complete_user_journeys(self) -> Dict[str, Any]:
         """Test complete user journeys"""
         return {"test": "complete_user_journeys", "success": True}
 
-    async def _test_workflow_orchestration(self) -> dict[str, Any]:
+    async def _test_workflow_orchestration(self) -> Dict[str, Any]:
         """Test workflow orchestration"""
         return {"test": "workflow_orchestration", "success": True}
 
-    async def _test_system_resilience(self) -> dict[str, Any]:
+    async def _test_system_resilience(self) -> Dict[str, Any]:
         """Test system resilience"""
         return {"test": "system_resilience", "success": True}
 
-    async def _test_compliance_features(self) -> dict[str, Any]:
+    async def _test_compliance_features(self) -> Dict[str, Any]:
         """Test compliance features"""
         return {"test": "compliance_features", "success": True}
 
-    async def _test_production_readiness(self) -> dict[str, Any]:
+    async def _test_production_readiness(self) -> Dict[str, Any]:
         """Test production readiness"""
         return {"test": "production_readiness", "success": True}
 
-    async def _cleanup_provisioned_resources(self):
+    async def _cleanup_provisioned_resources(self) -> None:
         """Clean up all provisioned resources"""
         logger.info("🧹 Cleaning up provisioned resources...")
 
@@ -851,9 +851,11 @@ class TenantProvisioningWorkflow:
                     tenant_id = tenant_data["tenant"]["id"]
                     try:
                         await self.tenant_service.delete_tenant(tenant_id, force=True)
-                        logger.info(f"  🗑️ Deleted tenant: {tenant_id}")
+                        logger.info("  🗑️ Deleted tenant: %s", tenant_id)
                     except Exception as e:
-                        logger.warning(f"  ⚠️ Failed to delete tenant {tenant_id}: {e}")
+                        logger.warning(
+                            "  ⚠️ Failed to delete tenant %s: %s", tenant_id, e
+                        )
 
             # Close service connections
             if self.db_service:
@@ -862,9 +864,9 @@ class TenantProvisioningWorkflow:
             logger.info("✅ Cleanup completed")
 
         except Exception as e:
-            logger.error(f"❌ Cleanup error: {e}")
+            logger.error("❌ Cleanup error: %s", e)
 
-    def _generate_workflow_summary(self, results: dict[str, Any]) -> dict[str, Any]:
+    def _generate_workflow_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate comprehensive workflow summary"""
 
         total_phases = len(results["phases"])
@@ -895,11 +897,11 @@ class TenantProvisioningWorkflow:
                 len(users) for users in self.tenant_users.values()
             ),
             "duration_seconds": results.get("total_duration", 0),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 
-async def main():
+async def main(self) -> None:
     """Main execution function"""
 
     print("🚀 PAKE System - Phase 17 Tenant Provisioning Workflow")
@@ -951,7 +953,7 @@ async def main():
 
         # Save detailed results
         results_file = f"tenant_provisioning_results_{
-            datetime.now().strftime('%Y%m%d_%H%M%S')
+            datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
         }.json"
         with open(results_file, "w") as f:
             json.dump(results, f, indent=2, default=str)
@@ -969,7 +971,7 @@ async def main():
         print("\n🛑 Workflow interrupted by user")
         return 130
     except Exception as e:
-        logger.error(f"❌ Workflow execution failed: {e}")
+        logger.error("❌ Workflow execution failed: %s", e)
         print(f"\n💥 FATAL ERROR: {e}")
         return 1
 

@@ -1,4 +1,4 @@
-"""Vector Database Service
+"""Vector Database Service.
 
 Provides vector storage and similarity search capabilities using PostgreSQL with pgvector.
 This service is designed for future integration when pgvector extension is available.
@@ -20,7 +20,7 @@ class VectorMatch:
     id: str
     vector: np.ndarray
     similarity: float
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
 
 
 class VectorService:
@@ -30,7 +30,7 @@ class VectorService:
     extended when PostgreSQL with pgvector is available.
     """
 
-    def __init__(self, dimension: int = 384):
+    def __init__(self) -> None:
         """Initialize vector service.
 
         Args:
@@ -44,7 +44,7 @@ class VectorService:
         self,
         id: str,
         vector: np.ndarray,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> bool:
         """Store a vector with associated metadata.
 
@@ -58,23 +58,24 @@ class VectorService:
         """
         try:
             if len(vector) != self.dimension:
+                msg = f"Vector dimension {len(vector)} doesn't match expected {
+                    self.dimension
+                }"
                 raise ValueError(
-                    f"Vector dimension {len(vector)} doesn't match expected {
-                        self.dimension
-                    }",
+                    msg,
                 )
 
             self.vectors[id] = vector.copy()
             self.metadata[id] = metadata or {}
 
-            logger.debug(f"Stored vector {id} with dimension {len(vector)}")
+            logger.debug("Stored vector %s with dimension %s", id, len(vector))
             return True
 
         except Exception as e:
-            logger.error(f"Error storing vector {id}: {e}")
+            logger.error("Error storing vector %s: %s", id, e)
             return False
 
-    async def get_vector(self, id: str) -> tuple[np.ndarray, dict[str, Any]] | None:
+    async def get_vector(self, id: str) -> tuple[np.ndarray, Dict[str, Any]] | None:
         """Retrieve a vector and its metadata by ID.
 
         Args:
@@ -105,10 +106,11 @@ class VectorService:
         """
         try:
             if len(query_vector) != self.dimension:
+                msg = f"Query vector dimension {
+                    len(query_vector)
+                } doesn't match expected {self.dimension}"
                 raise ValueError(
-                    f"Query vector dimension {
-                        len(query_vector)
-                    } doesn't match expected {self.dimension}",
+                    msg,
                 )
 
             if not self.vectors:
@@ -144,7 +146,7 @@ class VectorService:
             return matches
 
         except Exception as e:
-            logger.error(f"Error in similarity search: {e}")
+            logger.error("Error in similarity search: %s", e)
             return []
 
     async def delete_vector(self, id: str) -> bool:
@@ -160,11 +162,11 @@ class VectorService:
             del self.vectors[id]
             if id in self.metadata:
                 del self.metadata[id]
-            logger.debug(f"Deleted vector {id}")
+            logger.debug("Deleted vector %s", id)
             return True
         return False
 
-    async def get_statistics(self) -> dict[str, Any]:
+    async def get_statistics(self) -> Dict[str, Any]:
         """Get vector database statistics.
 
         Returns:
@@ -187,7 +189,7 @@ class VectorService:
         total_bytes = len(self.vectors) * vector_size
         return total_bytes / (1024 * 1024)  # Convert to MB
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check vector service health."""
         return {
             "status": "healthy",

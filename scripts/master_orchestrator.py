@@ -13,7 +13,7 @@ import signal
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 
@@ -31,7 +31,7 @@ class ServiceConfig:
     name: str
     port: int
     host: str = "localhost"
-    dependencies: list[str] = None
+    dependencies: List[str] = None
     start_command: str = None
     health_endpoint: str = None
     required: bool = True
@@ -42,7 +42,7 @@ class ServiceConfig:
 class PAKEMasterOrchestrator:
     """Unified PAKE+ system orchestrator"""
 
-    def __init__(self, base_dir: str = None):
+    def __init__(self) -> None:
         self.base_dir = Path(base_dir or os.getcwd())
         self.docker_dir = self.base_dir / "docker"
         self.scripts_dir = self.base_dir / "scripts"
@@ -69,11 +69,11 @@ class PAKEMasterOrchestrator:
         signal.signal(signal.SIGINT, self.handle_shutdown)
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """Setup comprehensive logging system"""
         log_file = (
             self.logs_dir
-            / f"master_orchestrator_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            / f"master_orchestrator_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.log"
         )
 
         # Create formatter
@@ -95,7 +95,9 @@ class PAKEMasterOrchestrator:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
-        self.logger.info(f"PAKE Master Orchestrator initialized - Log file: {log_file}")
+        self.logger.info(
+            "PAKE Master Orchestrator initialized - Log file: %s", log_file
+        )
 
     def load_service_configs(self) -> dict[str, ServiceConfig]:
         """Load service configurations"""
@@ -176,7 +178,7 @@ class PAKEMasterOrchestrator:
         missing = [name for name, available in prerequisites.items() if not available]
 
         if missing:
-            self.logger.error(f"❌ Missing prerequisites: {', '.join(missing)}")
+            self.logger.error("❌ Missing prerequisites: %s", ", ".join(missing))
             self.logger.info("Please install missing components:")
             for prereq in missing:
                 self._show_installation_instructions(prereq)
@@ -190,7 +192,7 @@ class PAKEMasterOrchestrator:
 
         for file_path in required_files:
             if not file_path.exists():
-                self.logger.error(f"❌ Required file missing: {file_path}")
+                self.logger.error("❌ Required file missing: %s", file_path)
                 return False
 
         self.logger.info("✅ All prerequisites satisfied")
@@ -206,7 +208,7 @@ class PAKEMasterOrchestrator:
                 timeout=10,
             )
             if result.returncode == 0:
-                self.logger.info(f"✅ Docker: {result.stdout.strip()}")
+                self.logger.info("✅ Docker: %s", result.stdout.strip())
                 return True
         except (
             subprocess.CalledProcessError,
@@ -225,7 +227,7 @@ class PAKEMasterOrchestrator:
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
                 if result.returncode == 0:
-                    self.logger.info(f"✅ Docker Compose: {result.stdout.strip()}")
+                    self.logger.info("✅ Docker Compose: %s", result.stdout.strip())
                     return True
             except (
                 subprocess.CalledProcessError,
@@ -247,7 +249,7 @@ class PAKEMasterOrchestrator:
                 timeout=10,
             )
             if result.returncode == 0:
-                self.logger.info(f"✅ Python: {result.stdout.strip()}")
+                self.logger.info("✅ Python: %s", result.stdout.strip())
                 return True
         except (
             subprocess.CalledProcessError,
@@ -269,7 +271,7 @@ class PAKEMasterOrchestrator:
                 timeout=10,
             )
             if result.returncode == 0:
-                self.logger.info(f"✅ Node.js: {result.stdout.strip()}")
+                self.logger.info("✅ Node.js: %s", result.stdout.strip())
                 return True
         except (
             subprocess.CalledProcessError,
@@ -291,7 +293,7 @@ class PAKEMasterOrchestrator:
                 timeout=10,
             )
             if result.returncode == 0:
-                self.logger.info(f"✅ npm: {result.stdout.strip()}")
+                self.logger.info("✅ npm: %s", result.stdout.strip())
                 return True
         except (
             subprocess.CalledProcessError,
@@ -313,7 +315,7 @@ class PAKEMasterOrchestrator:
                 timeout=10,
             )
             if result.returncode == 0:
-                self.logger.info(f"✅ Git: {result.stdout.strip()}")
+                self.logger.info("✅ Git: %s", result.stdout.strip())
                 return True
         except (
             subprocess.CalledProcessError,
@@ -325,7 +327,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ Git not found")
         return False
 
-    def _show_installation_instructions(self, prerequisite: str):
+    def _show_installation_instructions(self) -> None:
         """Show installation instructions for missing prerequisites"""
         instructions = {
             "docker": "Install Docker Desktop: https://docs.docker.com/get-docker/",
@@ -337,7 +339,7 @@ class PAKEMasterOrchestrator:
         }
 
         if prerequisite in instructions:
-            self.logger.info(f"  → {instructions[prerequisite]}")
+            self.logger.info("  → %s", instructions[prerequisite])
 
     async def setup_environment(self) -> bool:
         """Setup and validate environment"""
@@ -373,7 +375,7 @@ class PAKEMasterOrchestrator:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ Environment setup failed: {e}")
+            self.logger.error("❌ Environment setup failed: %s", e)
             return False
 
     async def install_dependencies(self) -> bool:
@@ -449,7 +451,7 @@ class PAKEMasterOrchestrator:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ Python dependency installation failed: {e}")
+            self.logger.error("❌ Python dependency installation failed: %s", e)
             return False
 
     async def _install_node_dependencies(self) -> bool:
@@ -472,12 +474,12 @@ class PAKEMasterOrchestrator:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ Node.js dependency installation failed: {e}")
+            self.logger.error("❌ Node.js dependency installation failed: %s", e)
             return False
 
     async def _run_command_async(
         self,
-        command: list[str],
+        command: List[str],
         cwd: Path = None,
         timeout: int = 300,
     ) -> subprocess.CompletedProcess:
@@ -555,7 +557,7 @@ class PAKEMasterOrchestrator:
                 os.chdir(original_dir)
 
         except Exception as e:
-            self.logger.error(f"❌ Infrastructure deployment failed: {e}")
+            self.logger.error("❌ Infrastructure deployment failed: %s", e)
             return False
 
     async def _ensure_docker_running(self) -> bool:
@@ -579,9 +581,9 @@ class PAKEMasterOrchestrator:
                 config = self.services[service]
                 if await self._check_service_health(service, config):
                     healthy_services += 1
-                    self.logger.info(f"✅ {config.name} is healthy")
+                    self.logger.info("✅ %s is healthy", config.name)
                 else:
-                    self.logger.warning(f"❌ {config.name} health check failed")
+                    self.logger.warning("❌ %s health check failed", config.name)
 
         return healthy_services >= len(docker_services) - 1  # Allow one service to fail
 
@@ -599,7 +601,7 @@ class PAKEMasterOrchestrator:
             return await self._check_tcp_health(config.host, config.port)
 
         except Exception as e:
-            self.logger.debug(f"Health check failed for {service_name}: {e}")
+            self.logger.debug("Health check failed for %s: %s", service_name, e)
             return False
 
     async def _check_tcp_health(self, host: str, port: int) -> bool:
@@ -657,7 +659,8 @@ class PAKEMasterOrchestrator:
                 success = await self._start_individual_service(service_name, config)
                 if not success and config.required:
                     self.logger.error(
-                        f"❌ Required service {config.name} failed to start",
+                        "❌ Required service %s failed to start",
+                        config.name,
                     )
                     return False
 
@@ -666,7 +669,7 @@ class PAKEMasterOrchestrator:
         self.logger.info("✅ All services started successfully")
         return True
 
-    def _calculate_startup_order(self) -> list[str]:
+    def _calculate_startup_order(self) -> List[str]:
         """Calculate service startup order based on dependencies"""
         ordered = []
         remaining = set(self.services.keys())
@@ -697,7 +700,7 @@ class PAKEMasterOrchestrator:
         config: ServiceConfig,
     ) -> bool:
         """Start an individual service"""
-        self.logger.info(f"Starting {config.name}...")
+        self.logger.info("Starting %s...", config.name)
 
         try:
             # Set up environment
@@ -732,39 +735,39 @@ class PAKEMasterOrchestrator:
             self.service_processes[service_name] = process
 
             # Wait for service to become healthy
-            for attempt in range(config.timeout // 5):
+            for _attempt in range(config.timeout // 5):
                 if await self._check_service_health(service_name, config):
-                    self.logger.info(f"✅ {config.name} started successfully")
+                    self.logger.info("✅ %s started successfully", config.name)
                     return True
 
                 await asyncio.sleep(5)
 
-            self.logger.error(f"❌ {config.name} failed to become healthy")
+            self.logger.error("❌ %s failed to become healthy", config.name)
             return False
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to start {config.name}: {e}")
+            self.logger.error("❌ Failed to start %s: %s", config.name, e)
             return False
 
-    def handle_shutdown(self, signum, frame):
+    def handle_shutdown(self) -> None:
         """Handle graceful shutdown"""
         self.logger.info("🛑 Shutdown signal received, stopping services...")
 
         asyncio.create_task(self.stop_all_services())
 
-    async def stop_all_services(self):
+    async def stop_all_services(self) -> None:
         """Stop all services gracefully"""
         # Stop managed processes
         for service_name, process in self.service_processes.items():
             try:
                 process.terminate()
                 await asyncio.wait_for(process.wait(), timeout=10)
-                self.logger.info(f"✅ Stopped {service_name}")
+                self.logger.info("✅ Stopped %s", service_name)
             except TimeoutError:
                 process.kill()
-                self.logger.info(f"🔥 Force killed {service_name}")
+                self.logger.info("🔥 Force killed %s", service_name)
             except Exception as e:
-                self.logger.error(f"❌ Error stopping {service_name}: {e}")
+                self.logger.error("❌ Error stopping %s: %s", service_name, e)
 
         # Stop Docker services
         try:
@@ -777,7 +780,7 @@ class PAKEMasterOrchestrator:
             os.chdir(original_dir)
 
         except Exception as e:
-            self.logger.error(f"❌ Error stopping Docker services: {e}")
+            self.logger.error("❌ Error stopping Docker services: %s", e)
 
     async def full_deployment(self) -> bool:
         """Execute full PAKE+ deployment"""
@@ -795,19 +798,19 @@ class PAKEMasterOrchestrator:
         failed_steps = []
 
         for step_name, step_function in deployment_steps:
-            self.logger.info(f"📋 {step_name}...")
+            self.logger.info("📋 %s...", step_name)
 
             try:
                 success = await step_function()
 
                 if success:
-                    self.logger.info(f"✅ {step_name} completed")
+                    self.logger.info("✅ %s completed", step_name)
                 else:
-                    self.logger.error(f"❌ {step_name} failed")
+                    self.logger.error("❌ %s failed", step_name)
                     failed_steps.append(step_name)
 
             except Exception as e:
-                self.logger.error(f"❌ {step_name} failed with exception: {e}")
+                self.logger.error("❌ %s failed with exception: %s", step_name, e)
                 failed_steps.append(step_name)
 
             self.logger.info("-" * 40)
@@ -818,13 +821,13 @@ class PAKEMasterOrchestrator:
         if not failed_steps:
             self.logger.info("🎉 PAKE+ deployment completed successfully!")
             return True
-        self.logger.error(f"❌ Deployment failed at: {', '.join(failed_steps)}")
+        self.logger.error("❌ Deployment failed at: %s", ", ".join(failed_steps))
         return False
 
-    async def _generate_deployment_report(self, failed_steps: list[str]):
+    async def _generate_deployment_report(self) -> None:
         """Generate comprehensive deployment report"""
         report_content = f"""# PAKE+ Deployment Report
-Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
 ## Status Summary
 {"✅ SUCCESS" if not failed_steps else "❌ PARTIAL FAILURE"}
@@ -877,10 +880,10 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         report_file = self.base_dir / "DEPLOYMENT_REPORT.md"
         report_file.write_text(report_content, encoding="utf-8")
 
-        self.logger.info(f"📊 Deployment report saved: {report_file}")
+        self.logger.info("📊 Deployment report saved: %s", report_file)
 
 
-async def main():
+async def main(self) -> None:
     """Main orchestrator entry point"""
     import argparse
 
@@ -912,7 +915,7 @@ async def main():
                 )
                 sys.exit(0 if success else 1)
             else:
-                orchestrator.logger.error(f"Unknown service: {args.service}")
+                orchestrator.logger.error("Unknown service: %s", args.service)
                 sys.exit(1)
         else:
             # Start all services

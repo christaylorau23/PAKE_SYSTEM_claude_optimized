@@ -28,7 +28,7 @@ pre-commit run --all-files
 ### 2. GitHub Actions Workflows (Repository Level)
 
 #### Security Scan Workflow (`.github/workflows/security-scan.yml`)
-**Triggers**: 
+**Triggers**:
 - `push` to main/develop branches
 - `pull_request` to main branch
 
@@ -40,7 +40,7 @@ pre-commit run --all-files
 - **Custom checks**: Hardcoded secret validation
 
 #### CI/CD Pipeline (`.github/workflows/ci-cd.yml`)
-**Triggers**: 
+**Triggers**:
 - `push` to any branch
 - `pull_request` to main/develop
 
@@ -56,7 +56,7 @@ pre-commit run --all-files
 ```yaml
 # .pre-commit-config.yaml
 - id: detect-secrets
-- id: gitleaks  
+- id: gitleaks
 - id: check-hardcoded-secrets
 - id: validate-env-vars
 ```
@@ -106,7 +106,7 @@ grep -r "REDACTED_SECRET" src/ security/  # Should not exist
 ### GitHub Actions Summary
 Each security scan generates a comprehensive summary including:
 - ✅ TruffleHog secret scan results
-- ✅ GitLeaks secret scan results  
+- ✅ GitLeaks secret scan results
 - ✅ Semgrep security analysis
 - ✅ Bandit security linter results
 - ✅ Hardcoded secret validation

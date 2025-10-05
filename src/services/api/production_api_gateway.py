@@ -9,19 +9,21 @@ import logging
 import secrets
 import time
 from collections import defaultdict, deque
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
 class APIEndpointType(Enum):
-    """Types of API endpoints"""
+    """Types of API endpoints."""
 
     INGESTION = "ingestion"
     ANALYSIS = "analysis"
@@ -33,7 +35,7 @@ class APIEndpointType(Enum):
 
 
 class AuthenticationMethod(Enum):
-    """API authentication methods"""
+    """API authentication methods."""
 
     API_KEY = "api_key"
     JWT_TOKEN = "jwt_token"
@@ -42,7 +44,7 @@ class AuthenticationMethod(Enum):
 
 
 class RateLimitStrategy(Enum):
-    """Rate limiting strategies"""
+    """Rate limiting strategies."""
 
     SLIDING_WINDOW = "sliding_window"
     TOKEN_BUCKET = "token_bucket"
@@ -51,7 +53,7 @@ class RateLimitStrategy(Enum):
 
 
 class APIStatus(Enum):
-    """API operation status"""
+    """API operation status."""
 
     SUCCESS = "success"
     PARTIAL_SUCCESS = "partial_success"
@@ -63,7 +65,7 @@ class APIStatus(Enum):
 
 @dataclass(frozen=True)
 class APIEndpoint:
-    """Immutable API endpoint definition"""
+    """Immutable API endpoint definition."""
 
     endpoint_id: str
     path: str
@@ -78,12 +80,12 @@ class APIEndpoint:
     timeout_seconds: int = 30
     max_payload_size_mb: int = 10
     is_active: bool = True
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class APIRequest:
-    """Immutable API request representation"""
+    """Immutable API request representation."""
 
     request_id: str
     endpoint_id: str
@@ -92,7 +94,7 @@ class APIRequest:
     path: str
     headers: dict[str, str] = field(default_factory=dict)
     query_params: dict[str, str] = field(default_factory=dict)
-    payload: dict[str, Any] | None = None
+    payload: Dict[str, Any] | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     ip_address: str | None = None
     user_agent: str | None = None
@@ -100,12 +102,12 @@ class APIRequest:
 
 @dataclass(frozen=True)
 class APIResponse:
-    """Immutable API response representation"""
+    """Immutable API response representation."""
 
     request_id: str
     status: APIStatus
     status_code: int
-    data: dict[str, Any] | None = None
+    data: Dict[str, Any] | None = None
     error_message: str | None = None
     processing_time_ms: float = 0.0
     cached: bool = False
@@ -118,7 +120,7 @@ class APIResponse:
 
 @dataclass(frozen=True)
 class ExternalAPIConfig:
-    """Configuration for external API integrations"""
+    """Configuration for external API integrations."""
 
     api_name: str
     base_url: str
@@ -130,18 +132,18 @@ class ExternalAPIConfig:
     retry_backoff_seconds: float = 1.0
     is_active: bool = True
     health_check_interval_minutes: int = 5
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ProductionAPIConfig:
-    """Configuration for production API gateway"""
+    """Configuration for production API gateway."""
 
     host: str = "127.0.0.1"
     port: int = 8000
     max_concurrent_requests: int = 1000
     enable_cors: bool = True
-    cors_origins: list[str] = field(default_factory=lambda: ["*"])
+    cors_origins: List[str] = field(default_factory=lambda: ["*"])
     enable_rate_limiting: bool = True
     global_rate_limit_per_minute: int = 10000
     enable_request_logging: bool = True
@@ -159,12 +161,12 @@ class ProductionAPIConfig:
 
 
 class RateLimiter:
-    """Advanced rate limiting with multiple strategies"""
+    """Advanced rate limiting with multiple strategies."""
 
-    def __init__(self, config: ProductionAPIConfig):
+    def __init__(self) -> None:
         self.config = config
         self.client_windows: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self.client_tokens: dict[str, dict[str, Any]] = defaultdict(
+        self.client_tokens: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {"tokens": 60, "last_refill": time.time(), "capacity": 60},
         )
 
@@ -173,7 +175,7 @@ class RateLimiter:
         client_id: str,
         endpoint: APIEndpoint,
     ) -> tuple[bool, int, datetime | None]:
-        """Check if request is within rate limits"""
+        """Check if request is within rate limits."""
         if not self.config.enable_rate_limiting:
             return True, endpoint.rate_limit_per_minute, None
 
@@ -191,7 +193,7 @@ class RateLimiter:
         client_id: str,
         endpoint: APIEndpoint,
     ) -> tuple[bool, int, datetime | None]:
-        """Sliding window rate limiting"""
+        """Sliding window rate limiting."""
         now = time.time()
         window_start = now - 60  # 1-minute window
 
@@ -202,7 +204,7 @@ class RateLimiter:
 
         # Check limit
         if len(window) >= endpoint.rate_limit_per_minute:
-            reset_time = datetime.fromtimestamp(window[0] + 60, UTC)
+            reset_time = datetime.fromtimestamp(window[0] + 60, UTC, tz=UTC)
             return False, 0, reset_time
 
         # Add current request
@@ -215,7 +217,7 @@ class RateLimiter:
         client_id: str,
         endpoint: APIEndpoint,
     ) -> tuple[bool, int, datetime | None]:
-        """Token bucket rate limiting"""
+        """Token bucket rate limiting."""
         bucket_key = f"{client_id}:{endpoint.endpoint_id}"
         bucket = self.client_tokens[bucket_key]
 
@@ -234,7 +236,7 @@ class RateLimiter:
         if bucket["tokens"] >= 1:
             bucket["tokens"] -= 1
             return True, bucket["tokens"], None
-        reset_time = datetime.fromtimestamp(now + (1 / refill_rate), UTC)
+        reset_time = datetime.fromtimestamp(now + (1 / refill_rate), UTC, tz=UTC)
         return False, 0, reset_time
 
     def _fixed_window_check(
@@ -242,7 +244,7 @@ class RateLimiter:
         client_id: str,
         endpoint: APIEndpoint,
     ) -> tuple[bool, int, datetime | None]:
-        """Fixed window rate limiting"""
+        """Fixed window rate limiting."""
         now = time.time()
         window_start = int(now // 60) * 60  # Start of current minute
 
@@ -253,7 +255,7 @@ class RateLimiter:
         window_data = self.client_tokens[window_key]
 
         if window_data["count"] >= endpoint.rate_limit_per_minute:
-            reset_time = datetime.fromtimestamp(window_start + 60, UTC)
+            reset_time = datetime.fromtimestamp(window_start + 60, UTC, tz=UTC)
             return False, 0, reset_time
 
         window_data["count"] += 1
@@ -265,7 +267,7 @@ class RateLimiter:
         client_id: str,
         endpoint: APIEndpoint,
     ) -> tuple[bool, int, datetime | None]:
-        """Adaptive rate limiting based on system load"""
+        """Adaptive rate limiting based on system load."""
         # Simple adaptive logic - can be enhanced with ML
         system_load = self._get_system_load()
 
@@ -285,18 +287,18 @@ class RateLimiter:
         return self._sliding_window_check(client_id, temp_endpoint)
 
     def _get_system_load(self) -> float:
-        """Get current system load (0.0 to 1.0)"""
+        """Get current system load (0.0 to 1.0)."""
         # Simplified system load calculation
         # In production, this would integrate with system metrics
         return min(1.0, len(self.client_windows) / 1000.0)
 
 
 class CircuitBreaker:
-    """Circuit breaker pattern for external API resilience"""
+    """Circuit breaker pattern for external API resilience."""
 
-    def __init__(self, config: ProductionAPIConfig):
+    def __init__(self) -> None:
         self.config = config
-        self.circuit_state: dict[str, dict[str, Any]] = defaultdict(
+        self.circuit_state: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "state": "closed",  # closed, open, half_open
                 "failure_count": 0,
@@ -306,7 +308,7 @@ class CircuitBreaker:
         )
 
     def can_execute(self, service_name: str) -> bool:
-        """Check if service call should be executed"""
+        """Check if service call should be executed."""
         if not self.config.enable_circuit_breaker:
             return True
 
@@ -323,14 +325,14 @@ class CircuitBreaker:
         # half_open
         return True
 
-    def record_success(self, service_name: str):
-        """Record successful service call"""
+    def record_success(self) -> None:
+        """Record successful service call."""
         circuit = self.circuit_state[service_name]
         circuit["failure_count"] = 0
         circuit["state"] = "closed"
 
-    def record_failure(self, service_name: str):
-        """Record failed service call"""
+    def record_failure(self) -> None:
+        """Record failed service call."""
         circuit = self.circuit_state[service_name]
         circuit["failure_count"] += 1
         circuit["last_failure_time"] = time.time()
@@ -343,15 +345,15 @@ class CircuitBreaker:
 
 
 class ResponseCache:
-    """Intelligent response caching system"""
+    """Intelligent response caching system."""
 
-    def __init__(self, config: ProductionAPIConfig):
+    def __init__(self) -> None:
         self.config = config
-        self.cache: dict[str, tuple[dict[str, Any], datetime]] = {}
+        self.cache: dict[str, tuple[Dict[str, Any], datetime]] = {}
         self.access_times: dict[str, datetime] = {}
 
-    def get(self, cache_key: str) -> dict[str, Any] | None:
-        """Get cached response if valid"""
+    def get(self, cache_key: str) -> Dict[str, Any] | None:
+        """Get cached response if valid."""
         if not self.config.enable_response_caching:
             return None
 
@@ -369,8 +371,8 @@ class ResponseCache:
 
         return None
 
-    def set(self, cache_key: str, data: dict[str, Any]):
-        """Cache response data"""
+    def set(self) -> None:
+        """Cache response data."""
         if not self.config.enable_response_caching:
             return
 
@@ -382,8 +384,8 @@ class ResponseCache:
         if len(self.cache) > 10000:  # Max 10k cached responses
             self._evict_old_entries()
 
-    def _evict_old_entries(self):
-        """Evict oldest cache entries"""
+    def _evict_old_entries(self) -> None:
+        """Evict oldest cache entries."""
         # Sort by access time and remove oldest 20%
         sorted_keys = sorted(
             self.access_times.keys(),
@@ -399,16 +401,16 @@ class ResponseCache:
 
 
 class ExternalAPIManager:
-    """Manages integrations with external APIs"""
+    """Manages integrations with external APIs."""
 
-    def __init__(self, config: ProductionAPIConfig):
+    def __init__(self) -> None:
         self.config = config
         self.external_apis: dict[str, ExternalAPIConfig] = {}
         self.circuit_breaker = CircuitBreaker(config)
         self.session: aiohttp.ClientSession | None = None
 
         # Health status tracking
-        self.health_status: dict[str, dict[str, Any]] = defaultdict(
+        self.health_status: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "is_healthy": True,
                 "last_check": datetime.now(UTC),
@@ -417,8 +419,8 @@ class ExternalAPIManager:
             },
         )
 
-    def add_external_api(self, api_config: ExternalAPIConfig):
-        """Add external API configuration"""
+    def add_external_api(self) -> None:
+        """Add external API configuration."""
         self.external_apis[api_config.api_name] = api_config
         # Initialize health status for new API
         if api_config.api_name not in self.health_status:
@@ -429,8 +431,8 @@ class ExternalAPIManager:
                 "response_time_ms": 0.0,
             }
 
-    async def initialize(self):
-        """Initialize HTTP session and start health checks"""
+    async def initialize(self) -> None:
+        """Initialize HTTP session and start health checks."""
         timeout = aiohttp.ClientTimeout(total=self.config.request_timeout_seconds)
         self.session = aiohttp.ClientSession(timeout=timeout)
 
@@ -438,8 +440,8 @@ class ExternalAPIManager:
         if self.config.enable_health_checks:
             asyncio.create_task(self._health_check_loop())
 
-    async def shutdown(self):
-        """Cleanup resources"""
+    async def shutdown(self) -> None:
+        """Cleanup resources."""
         if self.session:
             await self.session.close()
 
@@ -450,16 +452,18 @@ class ExternalAPIManager:
         method: str = "GET",
         data: dict | None = None,
         params: dict | None = None,
-    ) -> dict[str, Any]:
-        """Call external API with resilience patterns"""
+    ) -> Dict[str, Any]:
+        """Call external API with resilience patterns."""
         if api_name not in self.external_apis:
-            raise ValueError(f"Unknown external API: {api_name}")
+            msg = f"Unknown external API: {api_name}"
+            raise ValueError(msg)
 
         api_config = self.external_apis[api_name]
 
         # Check circuit breaker
         if not self.circuit_breaker.can_execute(api_name):
-            raise Exception(f"Circuit breaker open for {api_name}")
+            msg = f"Circuit breaker open for {api_name}"
+            raise Exception(msg)
 
         # Prepare request
         url = f"{api_config.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
@@ -497,7 +501,8 @@ class ExternalAPIManager:
                         )
 
                         return result
-                    raise aiohttp.ClientError(f"HTTP {response.status}")
+                    msg = f"HTTP {response.status}"
+                    raise aiohttp.ClientError(msg)
 
             except Exception as e:
                 last_exception = e
@@ -518,9 +523,10 @@ class ExternalAPIManager:
                     },
                 )
                 raise last_exception
+        return None
 
-    async def _health_check_loop(self):
-        """Background health check for external APIs"""
+    async def _health_check_loop(self) -> None:
+        """Background health check for external APIs."""
         while True:
             try:
                 for api_name, api_config in self.external_apis.items():
@@ -530,11 +536,11 @@ class ExternalAPIManager:
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
             except Exception as e:
-                logger.error(f"Health check error: {e}")
+                logger.error("Health check error: %s", e)
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
-    async def _check_api_health(self, api_name: str, api_config: ExternalAPIConfig):
-        """Check health of specific external API"""
+    async def _check_api_health(self) -> None:
+        """Check health of specific external API."""
         try:
             start_time = time.time()
 
@@ -575,7 +581,7 @@ class ProductionAPIGateway:
     Handles authentication, rate limiting, caching, monitoring, and external integrations.
     """
 
-    def __init__(self, config: ProductionAPIConfig = None):
+    def __init__(self) -> None:
         self.config = config or ProductionAPIConfig()
         self.endpoints: dict[str, APIEndpoint] = {}
         self.rate_limiter = RateLimiter(self.config)
@@ -601,8 +607,8 @@ class ProductionAPIGateway:
             "uptime_start": datetime.now(UTC),
         }
 
-    def _setup_default_endpoints(self):
-        """Setup default API endpoints"""
+    def _setup_default_endpoints(self) -> None:
+        """Setup default API endpoints."""
         endpoints = [
             APIEndpoint(
                 endpoint_id="content_ingestion",
@@ -660,8 +666,8 @@ class ProductionAPIGateway:
         for endpoint in endpoints:
             self.endpoints[endpoint.endpoint_id] = endpoint
 
-    def _setup_external_integrations(self):
-        """Setup external API integrations"""
+    def _setup_external_integrations(self) -> None:
+        """Setup external API integrations."""
         # ArXiv API
         arxiv_config = ExternalAPIConfig(
             api_name="arxiv",
@@ -705,22 +711,22 @@ class ProductionAPIGateway:
         )
         self.external_api_manager.add_external_api(news_config)
 
-    async def initialize(self):
-        """Initialize the API gateway"""
+    async def initialize(self) -> None:
+        """Initialize the API gateway."""
         await self.external_api_manager.initialize()
         logger.info("Production API Gateway initialized successfully")
 
-    async def shutdown(self):
-        """Shutdown the API gateway"""
+    async def shutdown(self) -> None:
+        """Shutdown the API gateway."""
         await self.external_api_manager.shutdown()
         logger.info("Production API Gateway shutdown completed")
 
-    def register_handler(self, endpoint_id: str, handler: Callable):
-        """Register request handler for endpoint"""
+    def register_handler(self) -> None:
+        """Register request handler for endpoint."""
         self.request_handlers[endpoint_id] = handler
 
     async def handle_request(self, request: APIRequest) -> APIResponse:
-        """Handle incoming API request with full production capabilities"""
+        """Handle incoming API request with full production capabilities."""
         start_time = time.time()
 
         try:
@@ -832,7 +838,7 @@ class ProductionAPIGateway:
             self.metrics["failed_requests"] += 1
             processing_time = max((time.time() - start_time) * 1000, 0.1)
 
-            logger.error(f"Request processing failed: {e}")
+            logger.error("Request processing failed: %s", e)
             return APIResponse(
                 request_id=request.request_id,
                 status=APIStatus.FAILED,
@@ -847,14 +853,14 @@ class ProductionAPIGateway:
             )
 
     def _find_endpoint(self, path: str, method: str) -> APIEndpoint | None:
-        """Find matching endpoint for request path and method"""
+        """Find matching endpoint for request path and method."""
         for endpoint in self.endpoints.values():
             if endpoint.path == path and endpoint.method.upper() == method.upper():
                 return endpoint
         return None
 
     def _authenticate_request(self, request: APIRequest, endpoint: APIEndpoint) -> bool:
-        """Authenticate API request"""
+        """Authenticate API request."""
         if AuthenticationMethod.API_KEY in endpoint.auth_methods:
             api_key = request.headers.get(self.config.api_key_header)
             if api_key:
@@ -866,7 +872,7 @@ class ProductionAPIGateway:
         return False
 
     def _generate_cache_key(self, request: APIRequest) -> str:
-        """Generate cache key for request"""
+        """Generate cache key for request."""
         key_data = f"{request.path}_{request.method}_{
             json.dumps(request.query_params, sort_keys=True)
         }"
@@ -878,8 +884,8 @@ class ProductionAPIGateway:
         self,
         endpoint: APIEndpoint,
         request: APIRequest,
-    ) -> dict[str, Any]:
-        """Generate mock response for endpoints without handlers"""
+    ) -> Dict[str, Any]:
+        """Generate mock response for endpoints without handlers."""
         base_response = {
             "success": True,
             "endpoint_id": endpoint.endpoint_id,
@@ -938,8 +944,8 @@ class ProductionAPIGateway:
 
         return base_response
 
-    def _update_average_response_time(self, response_time_ms: float):
-        """Update average response time metric"""
+    def _update_average_response_time(self) -> None:
+        """Update average response time metric."""
         current_avg = self.metrics["average_response_time_ms"]
         total_requests = self.metrics["total_requests"]
 
@@ -952,8 +958,8 @@ class ProductionAPIGateway:
             ) / total_requests
             self.metrics["average_response_time_ms"] = new_avg
 
-    def get_health_status(self) -> dict[str, Any]:
-        """Get comprehensive health status"""
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get comprehensive health status."""
         uptime = datetime.now(UTC) - self.metrics["uptime_start"]
 
         return {
@@ -963,10 +969,7 @@ class ProductionAPIGateway:
             "active_endpoints": len(
                 [e for e in self.endpoints.values() if e.is_active],
             ),
-            "external_apis": {
-                api_name: status
-                for api_name, status in self.external_api_manager.health_status.items()
-            },
+            "external_apis": dict(self.external_api_manager.health_status.items()),
             "metrics": self.metrics,
             "system_info": {
                 "version": "1.0.0",
@@ -980,8 +983,8 @@ class ProductionAPIGateway:
             },
         }
 
-    def get_metrics(self) -> dict[str, Any]:
-        """Get comprehensive metrics"""
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive metrics."""
         success_rate = 0.0
         if self.metrics["total_requests"] > 0:
             success_rate = (
@@ -1007,7 +1010,7 @@ class ProductionAPIGateway:
 
 
 def create_production_api_gateway() -> ProductionAPIGateway:
-    """Factory function to create production-ready API gateway"""
+    """Factory function to create production-ready API gateway."""
     config = ProductionAPIConfig(
         host="127.0.0.1",
         port=8000,

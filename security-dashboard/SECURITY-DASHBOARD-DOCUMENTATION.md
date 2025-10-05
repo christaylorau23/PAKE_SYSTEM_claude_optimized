@@ -34,7 +34,7 @@ This document provides comprehensive documentation for the Security Dashboard we
 <div class="header">
     <h1>🤖 AI Security Monitor</h1>
     <p>Real-time security monitoring with artificial intelligence</p>
-    
+
     <div class="nav-links">
         <a href="#" onclick="refreshDashboard()">🔄 Refresh</a>
         <a href="http://localhost:5601" target="_blank">📊 Kibana</a>
@@ -63,7 +63,7 @@ This document provides comprehensive documentation for the Security Dashboard we
 
 **Monitored Components**:
 - **AI Monitor Service**: Core security analysis engine
-- **Elasticsearch**: Log storage and search engine  
+- **Elasticsearch**: Log storage and search engine
 - **MCP Integration**: PAKE system integration status
 - **Last Scan Time**: Timestamp of most recent analysis
 
@@ -86,7 +86,7 @@ This document provides comprehensive documentation for the Security Dashboard we
 
 **Alert Severity Levels**:
 - **Critical**: SQL Injection, Path Traversal, Command Injection
-- **High**: XSS Attempts, CSRF Attacks, Rate Limiting Violations  
+- **High**: XSS Attempts, CSRF Attacks, Rate Limiting Violations
 - **Medium**: Failed Login Attempts, Suspicious Access Patterns
 - **Low**: Slow Queries, Resource Exhaustion, Unknown User Agents
 
@@ -240,16 +240,16 @@ async function loadSystemStatus() {
     try {
         const response = await fetch(`${API_BASE_URL}/health`);
         const health = await response.json();
-        
+
         // Update UI elements
-        document.getElementById('ai-status').textContent = 
+        document.getElementById('ai-status').textContent =
             health.status === 'healthy' ? 'Active' : 'Error';
-        document.getElementById('es-status').textContent = 
+        document.getElementById('es-status').textContent =
             health.components.elasticsearch === 'active' ? 'Active' : 'Inactive';
-        
+
         // Update status indicators
         updateStatusIndicator('ai-status', health.status === 'healthy');
-        
+
     } catch (error) {
         console.error('Error loading system status:', error);
         showError('Failed to load system status');
@@ -263,17 +263,17 @@ async function loadDashboardData() {
     try {
         const response = await fetch(`${API_BASE_URL}/dashboard`);
         const dashboard = await response.json();
-        
+
         // Update alert counts by severity
-        document.getElementById('critical-count').textContent = 
+        document.getElementById('critical-count').textContent =
             dashboard.alerts_by_severity.CRITICAL || 0;
-        document.getElementById('high-count').textContent = 
+        document.getElementById('high-count').textContent =
             dashboard.alerts_by_severity.HIGH || 0;
-        
+
         // Update threat pattern counts
-        document.getElementById('sql-injection-count').textContent = 
+        document.getElementById('sql-injection-count').textContent =
             dashboard.alerts_by_pattern.sql_injection || 0;
-        
+
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         showError('Failed to load dashboard data');
@@ -285,12 +285,12 @@ async function loadDashboardData() {
 ```javascript
 function renderAlerts(alerts) {
     const alertList = document.getElementById('alert-list');
-    
+
     if (alerts.length === 0) {
         alertList.innerHTML = '<div class="loading">No security alerts found. System is secure! 🛡️</div>';
         return;
     }
-    
+
     const alertsHtml = alerts.map(alert => `
         <div class="alert-item ${alert.severity.toLowerCase()}">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -313,12 +313,12 @@ function renderAlerts(alerts) {
                 </div>
             </div>
             <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
-                Confidence: ${Math.round(alert.ai_confidence * 100)}% | 
+                Confidence: ${Math.round(alert.ai_confidence * 100)}% |
                 Risk Score: ${alert.risk_score}/100
             </div>
         </div>
     `).join('');
-    
+
     alertList.innerHTML = alertsHtml;
 }
 ```
@@ -346,7 +346,7 @@ function startAutoRefresh() {
   "status": "healthy",
   "components": {
     "ai_analyzer": "active",
-    "elasticsearch": "active", 
+    "elasticsearch": "active",
     "mcp_integration": "active"
   },
   "metrics": {
@@ -426,7 +426,7 @@ function startAutoRefresh() {
 
 ### Client-Side Security
 - **Input Validation**: XSS prevention in dynamic content
-- **CSRF Protection**: Safe API request handling  
+- **CSRF Protection**: Safe API request handling
 - **Content Security Policy**: Strict CSP headers
 - **Secure Communication**: HTTPS enforcement (production)
 
@@ -472,11 +472,11 @@ if (!window.Promise) {
   --warning-color: #f39c12;
   --danger-color: #e74c3c;
   --info-color: #3498db;
-  
+
   --card-bg: rgba(255, 255, 255, 0.95);
   --text-primary: #333;
   --text-secondary: #666;
-  
+
   --border-radius: 15px;
   --blur-strength: 10px;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -505,13 +505,13 @@ EXPOSE 80
 server {
     listen 80;
     server_name localhost;
-    
+
     location / {
         root /usr/share/nginx/html;
         index index.html;
         try_files $uri $uri/ /index.html;
     }
-    
+
     # API proxy (optional)
     location /api/ {
         proxy_pass http://ai-security-monitor:8080/;

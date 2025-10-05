@@ -11,7 +11,7 @@ import pytest
 class TestSRPValidation:
     """Test Single Responsibility Principle compliance"""
 
-    def test_plan_builder_srp_compliance(self):
+    def test_plan_builder_srp_compliance(self) -> None:
         """Test IngestionPlanBuilder follows SRP"""
         # Import only the class we need
         from src.services.ingestion.managers.IngestionPlanBuilder import (
@@ -31,7 +31,7 @@ class TestSRPValidation:
         assert not hasattr(builder, "handle_error")
         assert not hasattr(builder, "monitor_performance")
 
-    def test_source_executor_srp_compliance(self):
+    def test_source_executor_srp_compliance(self) -> None:
         """Test SourceExecutor follows SRP"""
         from src.services.ingestion.managers.SourceExecutor import SourceExecutor
 
@@ -50,7 +50,7 @@ class TestSRPValidation:
         assert not hasattr(executor, "handle_errors")
         assert not hasattr(executor, "collect_metrics")
 
-    def test_orchestrator_srp_compliance(self):
+    def test_orchestrator_srp_compliance(self) -> None:
         """Test IngestionOrchestratorRefactored follows SRP"""
         from src.services.ingestion.IngestionOrchestratorRefactored import (
             IngestionOrchestratorRefactored,
@@ -74,7 +74,7 @@ class TestSRPValidation:
         assert not hasattr(orchestrator, "_execute_arxiv_source")
         assert not hasattr(orchestrator, "_execute_pubmed_source")
 
-    def test_dependency_injection_pattern(self):
+    def test_dependency_injection_pattern(self) -> None:
         """Test that services use dependency injection"""
         from src.services.ingestion.IngestionOrchestratorRefactored import (
             IngestionOrchestratorRefactored,
@@ -89,7 +89,7 @@ class TestSRPValidation:
         # Dependencies should be separate instances
         assert orchestrator.plan_builder != orchestrator.source_executor
 
-    def test_single_responsibility_principle(self):
+    def test_single_responsibility_principle(self) -> None:
         """Test that each class has exactly one reason to change"""
 
         # PlanBuilder: Changes when plan building logic changes
@@ -138,7 +138,7 @@ class TestSRPValidation:
 class TestArchitecturalBenefits:
     """Test architectural benefits of SRP refactoring"""
 
-    def test_separation_of_concerns(self):
+    def test_separation_of_concerns(self) -> None:
         """Test that concerns are properly separated"""
 
         # Plan building is separate from execution
@@ -155,7 +155,7 @@ class TestArchitecturalBenefits:
         assert not hasattr(plan_builder, "source_executor")
         assert not hasattr(source_executor, "plan_builder")
 
-    def test_testability_improvement(self):
+    def test_testability_improvement(self) -> None:
         """Test that refactored services are more testable"""
 
         # Each service can be tested in isolation
@@ -174,7 +174,7 @@ class TestArchitecturalBenefits:
         builder.config = mock_config
         assert builder.config == mock_config
 
-    def test_maintainability_improvement(self):
+    def test_maintainability_improvement(self) -> None:
         """Test that refactored services are more maintainable"""
 
         # Changes to plan building don't affect execution

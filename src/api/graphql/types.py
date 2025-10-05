@@ -1,4 +1,4 @@
-"""GraphQL Types
+"""GraphQL Types.
 
 Defines the GraphQL schema types for the PAKE System including entities,
 relationships, search results, and analytics data.
@@ -167,8 +167,8 @@ class InsightRecommendation:
     confidence: float
     category: str
     priority: str  # "high", "medium", "low"
-    supporting_data: list[str]
-    action_suggestions: list[str]
+    supporting_data: List[str]
+    action_suggestions: List[str]
     created_at: datetime
 
 
@@ -179,7 +179,7 @@ class GraphVisualization:
     nodes: list[Entity]
     edges: list[Relationship]
     layout_data: str | None = None  # JSON string
-    filters_applied: list[str] | None = None
+    filters_applied: List[str] | None = None
     node_count: int
     edge_count: int
 
@@ -193,7 +193,7 @@ class SystemHealth:
     timestamp: datetime
     components: str | None = None  # JSON string
     performance_metrics: list[AnalyticsMetric]
-    capabilities: list[str]
+    capabilities: List[str]
 
 
 @strawberry.input
@@ -233,7 +233,7 @@ class SearchInput:
 class AnalyticsInput:
     """Input type for analytics operations."""
 
-    metrics: list[str]
+    metrics: List[str]
     start_date: datetime | None = None
     end_date: datetime | None = None
     aggregation: str | None = "daily"  # "hourly", "daily", "weekly", "monthly"

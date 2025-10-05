@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE+ Security Guards - Prompt Injection Detection and LLM Security
-Advanced security measures for protecting LLM interactions and system integrity
+Advanced security measures for protecting LLM interactions and system integrity.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ metrics = MetricsStore(service_name="pake-security-guards")
 
 
 class ThreatLevel(Enum):
-    """Security threat levels"""
+    """Security threat levels."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -35,7 +35,7 @@ class ThreatLevel(Enum):
 
 
 class AttackType(Enum):
-    """Types of security attacks"""
+    """Types of security attacks."""
 
     PROMPT_INJECTION = "prompt_injection"
     JAILBREAK = "jailbreak"
@@ -51,7 +51,7 @@ class AttackType(Enum):
 
 @dataclass
 class SecurityThreat:
-    """Represents a detected security threat"""
+    """Represents a detected security threat."""
 
     threat_id: str
     attack_type: AttackType
@@ -59,17 +59,17 @@ class SecurityThreat:
     confidence: float
     description: str
     input_text: str
-    detected_patterns: list[str]
+    detected_patterns: List[str]
     timestamp: datetime = field(default_factory=datetime.utcnow)
     source_ip: str | None = None
     user_id: str | None = None
     session_id: str | None = None
-    additional_context: dict[str, Any] = field(default_factory=dict)
+    additional_context: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SecurityConfig:
-    """Configuration for security guards"""
+    """Configuration for security guards."""
 
     # Detection thresholds
     prompt_injection_threshold: float = 0.7
@@ -100,15 +100,15 @@ class SecurityConfig:
 
 
 class SecurityGuardError(PAKEException):
-    """Security guard specific errors"""
+    """Security guard specific errors."""
 
-    def __init__(self, message: str, threat: SecurityThreat | None = None, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.AUTHORIZATION, **kwargs)
         self.threat = threat
 
 
 class PromptInjectionDetector:
-    """Advanced prompt injection detection using multiple techniques"""
+    """Advanced prompt injection detection using multiple techniques."""
 
     # Prompt injection patterns
     INJECTION_PATTERNS = [
@@ -167,16 +167,16 @@ class PromptInjectionDetector:
         "\u00a0",  # Non-breaking space
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.compiled_patterns = [
             re.compile(pattern, re.IGNORECASE | re.MULTILINE)
             for pattern in self.INJECTION_PATTERNS
         ]
         self.logger = get_logger(service_name="prompt-injection-detector")
 
-    def detect(self, text: str) -> tuple[bool, list[str], float]:
+    def detect(self, text: str) -> tuple[bool, List[str], float]:
         """Detect prompt injection attempts
-        Returns: (is_injection, detected_patterns, confidence_score)
+        Returns: (is_injection, detected_patterns, confidence_score).
         """
         if not text:
             return False, [], 0.0
@@ -233,7 +233,7 @@ class PromptInjectionDetector:
         return is_injection, detected_patterns, confidence
 
     def _get_pattern_weight(self, pattern: str) -> float:
-        """Get severity weight for different patterns"""
+        """Get severity weight for different patterns."""
         high_severity_keywords = [
             "ignore",
             "disregard",
@@ -263,7 +263,7 @@ class PromptInjectionDetector:
         return 0.4  # Default weight
 
     def _detect_repetition(self, text: str) -> float:
-        """Detect repetitive patterns that might indicate obfuscation"""
+        """Detect repetitive patterns that might indicate obfuscation."""
         # Simple repetition detection
         words = text.lower().split()
         if len(words) < 10:
@@ -279,7 +279,7 @@ class PromptInjectionDetector:
         return min(repetition_ratio * 2, 1.0)  # Scale to 0-1
 
     def _detect_encoding_obfuscation(self, text: str) -> float:
-        """Detect potential encoding-based obfuscation"""
+        """Detect potential encoding-based obfuscation."""
         # More specific Base64 detection (must be longer and have proper padding)
         base64_pattern = re.compile(r"[A-Za-z0-9+/]{20,}={0,2}", re.MULTILINE)
         base64_matches = base64_pattern.findall(text)
@@ -306,23 +306,23 @@ class PromptInjectionDetector:
 
 
 class ContentSanitizer:
-    """Sanitize and clean potentially malicious content"""
+    """Sanitize and clean potentially malicious content."""
 
-    def __init__(self, config: SecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.logger = get_logger(service_name="content-sanitizer")
 
     def sanitize_input(self, text: str) -> str:
-        """Sanitize input text to remove potential threats"""
+        """Sanitize input text to remove potential threats."""
         if not text:
             return text
 
         # Length limiting
         if len(text) > self.config.max_input_length:
             self.logger.warning(
-                f"Input truncated from {len(text)} to {
-                    self.config.max_input_length
-                } characters",
+                "Input truncated from %s to %s characters",
+                len(text),
+                self.config.max_input_length,
             )
             text = text[: self.config.max_input_length]
 
@@ -342,21 +342,19 @@ class ContentSanitizer:
 
         # Remove excessive whitespace
         text = re.sub(r"\s+", " ", text)
-        text = text.strip()
-
-        return text
+        return text.strip()
 
     def sanitize_output(self, text: str) -> str:
-        """Sanitize output text to prevent information leakage"""
+        """Sanitize output text to prevent information leakage."""
         if not text:
             return text
 
         # Length limiting
         if len(text) > self.config.max_output_length:
             self.logger.warning(
-                f"Output truncated from {len(text)} to {
-                    self.config.max_output_length
-                } characters",
+                "Output truncated from %s to %s characters",
+                len(text),
+                self.config.max_output_length,
             )
             text = text[: self.config.max_output_length]
 
@@ -377,9 +375,9 @@ class ContentSanitizer:
 
 
 class ThreatDetector:
-    """Main threat detection engine"""
+    """Main threat detection engine."""
 
-    def __init__(self, config: SecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.prompt_detector = PromptInjectionDetector()
         self.sanitizer = ContentSanitizer(config)
@@ -390,8 +388,8 @@ class ThreatDetector:
         self.threat_counts = {"minute": {}, "hour": {}}
         self.last_cleanup = time.time()
 
-    def _cleanup_threat_counts(self):
-        """Clean up old threat count entries"""
+    def _cleanup_threat_counts(self) -> None:
+        """Clean up old threat count entries."""
         current_time = time.time()
         if current_time - self.last_cleanup > 300:  # Clean every 5 minutes
             minute_ago = current_time - 60
@@ -414,7 +412,7 @@ class ThreatDetector:
             self.last_cleanup = current_time
 
     def _check_rate_limit(self, user_id: str = None) -> bool:
-        """Check if user has exceeded threat rate limits"""
+        """Check if user has exceeded threat rate limits."""
         self._cleanup_threat_counts()
         current_time = time.time()
 
@@ -428,20 +426,22 @@ class ThreatDetector:
 
         if minute_count >= self.config.max_threats_per_minute:
             self.logger.warning(
-                f"Rate limit exceeded: {minute_count} threats in current minute",
+                "Rate limit exceeded: %s threats in current minute",
+                minute_count,
             )
             return False
 
         if hour_count >= self.config.max_threats_per_hour:
             self.logger.warning(
-                f"Rate limit exceeded: {hour_count} threats in current hour",
+                "Rate limit exceeded: %s threats in current hour",
+                hour_count,
             )
             return False
 
         return True
 
-    def _record_threat(self, user_id: str = None):
-        """Record a threat for rate limiting"""
+    def _record_threat(self) -> None:
+        """Record a threat for rate limiting."""
         current_time = time.time()
 
         minute_key = int(current_time / 60)
@@ -461,7 +461,7 @@ class ThreatDetector:
         session_id: str = None,
         source_ip: str = None,
     ) -> list[SecurityThreat]:
-        """Detect all types of security threats in input text"""
+        """Detect all types of security threats in input text."""
         threats = []
 
         if not text:
@@ -528,8 +528,8 @@ class ThreatDetector:
 
         return threats
 
-    def _log_threat(self, threat: SecurityThreat):
-        """Log detected threat"""
+    def _log_threat(self) -> None:
+        """Log detected threat."""
         log_data = {
             "threat_id": threat.threat_id,
             "attack_type": threat.attack_type.value,
@@ -550,9 +550,9 @@ class ThreatDetector:
 
 
 class SecurityGuard:
-    """Main security guard class for comprehensive protection"""
+    """Main security guard class for comprehensive protection."""
 
-    def __init__(self, config: SecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.threat_detector = ThreatDetector(config)
         self.logger = get_logger(service_name="security-guard")
@@ -565,7 +565,7 @@ class SecurityGuard:
         source_ip: str = None,
     ) -> tuple[bool, str, list[SecurityThreat]]:
         """Validate input text and return sanitized version
-        Returns: (is_safe, sanitized_text, threats)
+        Returns: (is_safe, sanitized_text, threats).
         """
         threats = self.threat_detector.detect_threats(
             text,
@@ -596,24 +596,20 @@ class SecurityGuard:
         return True, sanitized_text, threats
 
     async def validate_output(self, text: str) -> str:
-        """Validate and sanitize output text"""
+        """Validate and sanitize output text."""
         return self.threat_detector.sanitizer.sanitize_output(text)
 
 
 # Decorator for automatic security validation
-def secure_endpoint(
-    config: SecurityConfig | None = None,
-    input_param: str = "text",
-    user_id_param: str = "user_id",
-):
-    """Decorator to add security validation to endpoints"""
+def secure_endpoint(self) -> None:
+    """Decorator to add security validation to endpoints."""
 
     def decorator(func: Callable) -> Callable:
         security_config = config or SecurityConfig()
         guard = SecurityGuard(security_config)
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(self) -> None:
             # Extract input text and user info
             input_text = kwargs.get(input_param, "")
             user_id = kwargs.get(user_id_param)
@@ -630,8 +626,9 @@ def secure_endpoint(
                     for t in threats
                     if t.threat_level in [ThreatLevel.HIGH, ThreatLevel.CRITICAL]
                 ]
+                msg = f"Security threat detected: {high_threats[0].description}"
                 raise SecurityGuardError(
-                    f"Security threat detected: {high_threats[0].description}",
+                    msg,
                     threat=high_threats[0],
                 )
 
@@ -648,7 +645,7 @@ def secure_endpoint(
             return result
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             return asyncio.run(async_wrapper(*args, **kwargs))
 
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
@@ -659,8 +656,8 @@ def secure_endpoint(
 # Example usage and testing
 if __name__ == "__main__":
 
-    async def test_security_guards():
-        """Test the security guard implementation"""
+    async def test_security_guards(self) -> None:
+        """Test the security guard implementation."""
         config = SecurityConfig(
             prompt_injection_threshold=0.7,
             block_high_threats=True,

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetricType(Enum):
-    """Types of metrics collected"""
+    """Types of metrics collected."""
 
     COUNTER = "counter"
     GAUGE = "gauge"
@@ -26,7 +26,7 @@ class MetricType(Enum):
 
 
 class AlertSeverity(Enum):
-    """Alert severity levels"""
+    """Alert severity levels."""
 
     INFO = "info"
     WARNING = "warning"
@@ -35,7 +35,7 @@ class AlertSeverity(Enum):
 
 
 class SystemComponent(Enum):
-    """System components being monitored"""
+    """System components being monitored."""
 
     API_GATEWAY = "api_gateway"
     COGNITIVE_ENGINE = "cognitive_engine"
@@ -50,7 +50,7 @@ class SystemComponent(Enum):
 
 
 class AnalyticsTimeframe(Enum):
-    """Analytics time frames"""
+    """Analytics time frames."""
 
     REAL_TIME = "real_time"
     LAST_HOUR = "last_hour"
@@ -62,7 +62,7 @@ class AnalyticsTimeframe(Enum):
 
 @dataclass(frozen=True)
 class MetricPoint:
-    """Immutable metric data point"""
+    """Immutable metric data point."""
 
     metric_name: str
     metric_type: MetricType
@@ -70,12 +70,12 @@ class MetricPoint:
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     labels: dict[str, str] = field(default_factory=dict)
     component: SystemComponent = SystemComponent.API_GATEWAY
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class AlertRule:
-    """Immutable alert rule definition"""
+    """Immutable alert rule definition."""
 
     rule_id: str
     name: str
@@ -86,7 +86,7 @@ class AlertRule:
     severity: AlertSeverity
     cooldown_minutes: int = 5
     is_active: bool = True
-    notification_channels: list[str] = field(default_factory=list)
+    notification_channels: List[str] = field(default_factory=list)
     description: str = ""
     created_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
@@ -95,7 +95,7 @@ class AlertRule:
 
 @dataclass(frozen=True)
 class Alert:
-    """Immutable alert instance"""
+    """Immutable alert instance."""
 
     alert_id: str
     rule_id: str
@@ -109,22 +109,22 @@ class Alert:
     )
     resolved_timestamp: datetime | None = None
     is_resolved: bool = False
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class PerformanceReport:
-    """Immutable performance analytics report"""
+    """Immutable performance analytics report."""
 
     report_id: str
     component: SystemComponent
     timeframe: AnalyticsTimeframe
     start_time: datetime
     end_time: datetime
-    metrics_summary: dict[str, Any] = field(default_factory=dict)
-    performance_insights: list[str] = field(default_factory=list)
-    recommendations: list[str] = field(default_factory=list)
-    trends: dict[str, Any] = field(default_factory=dict)
+    metrics_summary: Dict[str, Any] = field(default_factory=dict)
+    performance_insights: List[str] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
+    trends: Dict[str, Any] = field(default_factory=dict)
     generated_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -132,7 +132,7 @@ class PerformanceReport:
 
 @dataclass(frozen=True)
 class SystemHealthStatus:
-    """Immutable system health status"""
+    """Immutable system health status."""
 
     overall_status: str  # healthy, degraded, critical, down
     component_statuses: dict[SystemComponent, str] = field(default_factory=dict)
@@ -143,12 +143,12 @@ class SystemHealthStatus:
     health_check_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metrics_summary: dict[str, Any] = field(default_factory=dict)
+    metrics_summary: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AnalyticsPlatformConfig:
-    """Configuration for analytics platform"""
+    """Configuration for analytics platform."""
 
     enable_real_time_monitoring: bool = True
     enable_alerting: bool = True
@@ -164,15 +164,15 @@ class AnalyticsPlatformConfig:
     aggregation_window_minutes: int = 1
     enable_anomaly_detection: bool = True
     anomaly_sensitivity: float = 0.8
-    notification_channels: list[str] = field(default_factory=lambda: ["email", "slack"])
+    notification_channels: List[str] = field(default_factory=lambda: ["email", "slack"])
     enable_dashboard: bool = True
     dashboard_refresh_seconds: int = 10
 
 
 class MetricsCollector:
-    """High-performance metrics collection and storage"""
+    """High-performance metrics collection and storage."""
 
-    def __init__(self, config: AnalyticsPlatformConfig):
+    def __init__(self) -> None:
         self.config = config
         self.metrics_buffer: deque = deque(maxlen=100000)  # High-performance buffer
         self.aggregated_metrics: dict[str, dict] = defaultdict(dict)
@@ -190,7 +190,7 @@ class MetricsCollector:
         self.daily_metrics: dict[str, list] = defaultdict(list)  # Last month
 
     async def collect_metric(self, metric: MetricPoint) -> bool:
-        """Collect a single metric point"""
+        """Collect a single metric point."""
         try:
             # Add to high-performance buffer
             self.metrics_buffer.append(metric)
@@ -214,11 +214,11 @@ class MetricsCollector:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to collect metric {metric.metric_name}: {e}")
+            logger.error("Failed to collect metric %s: %s", metric.metric_name, e)
             return False
 
     async def collect_batch_metrics(self, metrics: list[MetricPoint]) -> int:
-        """Collect multiple metrics efficiently"""
+        """Collect multiple metrics efficiently."""
         successful_count = 0
 
         for metric in metrics:
@@ -236,8 +236,8 @@ class MetricsCollector:
 
         return successful_count
 
-    async def _aggregate_metric(self, metric: MetricPoint):
-        """Aggregate metric for efficient storage and querying"""
+    async def _aggregate_metric(self) -> None:
+        """Aggregate metric for efficient storage and querying."""
         window_key = self._get_aggregation_window_key(metric.timestamp)
         metric_key = f"{metric.component.value}_{metric.metric_name}"
 
@@ -262,7 +262,7 @@ class MetricsCollector:
             agg["values"] = agg["values"][-1000:]
 
     def _get_aggregation_window_key(self, timestamp: datetime) -> str:
-        """Get aggregation window key for timestamp"""
+        """Get aggregation window key for timestamp."""
         window_minutes = self.config.aggregation_window_minutes
         window_start = timestamp.replace(second=0, microsecond=0)
         window_start = window_start.replace(
@@ -276,7 +276,7 @@ class MetricsCollector:
         metric_name: str,
         timeframe: AnalyticsTimeframe,
     ) -> list[MetricPoint]:
-        """Get metrics for specific component and timeframe"""
+        """Get metrics for specific component and timeframe."""
         end_time = datetime.now(UTC)
 
         if timeframe == AnalyticsTimeframe.REAL_TIME:
@@ -304,12 +304,12 @@ class MetricsCollector:
 
         return sorted(filtered_metrics, key=lambda m: m.timestamp)
 
-    def get_aggregated_metrics(self, window_key: str) -> dict[str, Any]:
-        """Get aggregated metrics for specific window"""
+    def get_aggregated_metrics(self, window_key: str) -> Dict[str, Any]:
+        """Get aggregated metrics for specific window."""
         return self.aggregated_metrics.get(window_key, {})
 
-    def get_collection_stats(self) -> dict[str, Any]:
-        """Get metrics collection statistics"""
+    def get_collection_stats(self) -> Dict[str, Any]:
+        """Get metrics collection statistics."""
         return {
             **self.collection_stats,
             "buffer_size": len(self.metrics_buffer),
@@ -321,9 +321,9 @@ class MetricsCollector:
 
 
 class AlertManager:
-    """Intelligent alerting and notification management"""
+    """Intelligent alerting and notification management."""
 
-    def __init__(self, config: AnalyticsPlatformConfig):
+    def __init__(self) -> None:
         self.config = config
         self.alert_rules: dict[str, AlertRule] = {}
         self.active_alerts: dict[str, Alert] = {}
@@ -342,8 +342,8 @@ class AlertManager:
 
         self._setup_default_alert_rules()
 
-    def _setup_default_alert_rules(self):
-        """Setup default alert rules for system monitoring"""
+    def _setup_default_alert_rules(self) -> None:
+        """Setup default alert rules for system monitoring."""
         default_rules = [
             AlertRule(
                 rule_id="high_error_rate",
@@ -405,21 +405,21 @@ class AlertManager:
         for rule in default_rules:
             self.add_alert_rule(rule)
 
-    def add_alert_rule(self, rule: AlertRule):
-        """Add new alert rule"""
+    def add_alert_rule(self) -> None:
+        """Add new alert rule."""
         self.alert_rules[rule.rule_id] = rule
-        logger.info(f"Added alert rule: {rule.name} ({rule.rule_id})")
+        logger.info("Added alert rule: %s (%s)", rule.name, rule.rule_id)
 
     def remove_alert_rule(self, rule_id: str) -> bool:
-        """Remove alert rule"""
+        """Remove alert rule."""
         if rule_id in self.alert_rules:
             del self.alert_rules[rule_id]
-            logger.info(f"Removed alert rule: {rule_id}")
+            logger.info("Removed alert rule: %s", rule_id)
             return True
         return False
 
     async def evaluate_metrics(self, metrics: list[MetricPoint]) -> list[Alert]:
-        """Evaluate metrics against alert rules"""
+        """Evaluate metrics against alert rules."""
         triggered_alerts = []
 
         if not self.config.enable_alerting:
@@ -445,7 +445,7 @@ class AlertManager:
         rule: AlertRule,
         metric: MetricPoint,
     ) -> Alert | None:
-        """Evaluate single rule against metric"""
+        """Evaluate single rule against metric."""
         # Check cooldown
         if rule.rule_id in self.alert_cooldowns:
             cooldown_end = self.alert_cooldowns[rule.rule_id] + timedelta(
@@ -491,7 +491,7 @@ class AlertManager:
             # Queue for notification
             self.notification_queue.append(alert)
 
-            logger.warning(f"Alert triggered: {alert.message}")
+            logger.warning("Alert triggered: %s", alert.message)
             return alert
 
         return None
@@ -502,7 +502,7 @@ class AlertManager:
         threshold: float,
         value: float,
     ) -> bool:
-        """Evaluate alert condition"""
+        """Evaluate alert condition."""
         try:
             if condition.startswith(">"):
                 return value > threshold
@@ -518,11 +518,11 @@ class AlertManager:
                 return value <= threshold
             return False
         except Exception as e:
-            logger.error(f"Error evaluating condition '{condition}': {e}")
+            logger.error("Error evaluating condition '%s': %s", condition, e)
             return False
 
     async def resolve_alert(self, alert_id: str) -> bool:
-        """Manually resolve an alert"""
+        """Manually resolve an alert."""
         if alert_id in self.active_alerts:
             alert = self.active_alerts[alert_id]
             resolved_alert = Alert(
@@ -554,7 +554,7 @@ class AlertManager:
                 (current_avg * (total_resolved - 1)) + resolution_time
             ) / total_resolved
 
-            logger.info(f"Alert resolved: {alert_id}")
+            logger.info("Alert resolved: %s", alert_id)
             return True
 
         return False
@@ -563,7 +563,7 @@ class AlertManager:
         self,
         severity: AlertSeverity | None = None,
     ) -> list[Alert]:
-        """Get active alerts, optionally filtered by severity"""
+        """Get active alerts, optionally filtered by severity."""
         alerts = list(self.active_alerts.values())
 
         if severity:
@@ -571,8 +571,8 @@ class AlertManager:
 
         return sorted(alerts, key=lambda a: a.triggered_timestamp, reverse=True)
 
-    def get_alert_stats(self) -> dict[str, Any]:
-        """Get alerting statistics"""
+    def get_alert_stats(self) -> Dict[str, Any]:
+        """Get alerting statistics."""
         return {
             **self.alert_stats,
             "active_alerts_count": len(self.active_alerts),
@@ -583,9 +583,9 @@ class AlertManager:
 
 
 class PerformanceAnalyzer:
-    """Advanced performance analytics and insights generation"""
+    """Advanced performance analytics and insights generation."""
 
-    def __init__(self, config: AnalyticsPlatformConfig):
+    def __init__(self) -> None:
         self.config = config
         self.analysis_cache: dict[str, tuple[Any, datetime]] = {}
         self.trend_detectors: dict[str, deque] = defaultdict(
@@ -613,7 +613,7 @@ class PerformanceAnalyzer:
         timeframe: AnalyticsTimeframe,
         metrics_collector: MetricsCollector,
     ) -> PerformanceReport:
-        """Generate comprehensive performance report"""
+        """Generate comprehensive performance report."""
         report_id = (
             f"perf_report_{component.value}_{timeframe.value}_{int(time.time())}"
         )
@@ -670,9 +670,9 @@ class PerformanceAnalyzer:
     async def _generate_performance_insights(
         self,
         component: SystemComponent,
-        metrics_data: dict[str, Any],
-    ) -> list[str]:
-        """Generate performance insights from metrics data"""
+        metrics_data: Dict[str, Any],
+    ) -> List[str]:
+        """Generate performance insights from metrics data."""
         insights = []
         baselines = self.performance_baselines.get(component, {})
 
@@ -711,9 +711,9 @@ class PerformanceAnalyzer:
     async def _generate_recommendations(
         self,
         component: SystemComponent,
-        metrics_data: dict[str, Any],
-    ) -> list[str]:
-        """Generate actionable recommendations"""
+        metrics_data: Dict[str, Any],
+    ) -> List[str]:
+        """Generate actionable recommendations."""
         recommendations = []
 
         # Response time recommendations
@@ -768,10 +768,10 @@ class PerformanceAnalyzer:
     async def _analyze_trends(
         self,
         component: SystemComponent,
-        metrics_data: dict[str, Any],
+        metrics_data: Dict[str, Any],
         timeframe: AnalyticsTimeframe,
-    ) -> dict[str, Any]:
-        """Analyze performance trends"""
+    ) -> Dict[str, Any]:
+        """Analyze performance trends."""
         trends = {}
 
         for metric_name, data in metrics_data.items():
@@ -805,9 +805,9 @@ class PerformanceAnalyzer:
     async def _detect_anomalies(
         self,
         component: SystemComponent,
-        metrics_data: dict[str, Any],
-    ) -> list[str]:
-        """Detect performance anomalies using statistical methods"""
+        metrics_data: Dict[str, Any],
+    ) -> List[str]:
+        """Detect performance anomalies using statistical methods."""
         anomalies = []
 
         if not self.config.enable_anomaly_detection:
@@ -840,7 +840,7 @@ class PerformanceAnalyzer:
         return anomalies
 
     def _calculate_percentile(self, values: list[float], percentile: int) -> float:
-        """Calculate percentile value"""
+        """Calculate percentile value."""
         if not values:
             return 0.0
 
@@ -859,8 +859,8 @@ class PerformanceAnalyzer:
             + sorted_values[upper_index] * weight
         )
 
-    def clear_analysis_cache(self):
-        """Clear analysis cache to free memory"""
+    def clear_analysis_cache(self) -> None:
+        """Clear analysis cache to free memory."""
         self.analysis_cache.clear()
         logger.info("Performance analysis cache cleared")
 
@@ -870,7 +870,7 @@ class ComprehensiveAnalyticsPlatform:
     Provides enterprise-grade observability and insights.
     """
 
-    def __init__(self, config: AnalyticsPlatformConfig = None):
+    def __init__(self) -> None:
         self.config = config or AnalyticsPlatformConfig()
         self.metrics_collector = MetricsCollector(self.config)
         self.alert_manager = AlertManager(self.config)
@@ -882,16 +882,16 @@ class ComprehensiveAnalyticsPlatform:
         self.system_start_time = datetime.now(UTC)
 
         # Dashboard and reporting
-        self.dashboard_data: dict[str, Any] = {}
+        self.dashboard_data: Dict[str, Any] = {}
         self.scheduled_reports: dict[str, dict] = {}
 
         # Integration points
-        self.system_components: dict[SystemComponent, dict[str, Any]] = {}
+        self.system_components: dict[SystemComponent, Dict[str, Any]] = {}
 
         logger.info("Comprehensive Analytics Platform initialized")
 
-    async def start(self):
-        """Start the analytics platform"""
+    async def start(self) -> None:
+        """Start the analytics platform."""
         if self.is_running:
             logger.warning("Analytics platform is already running")
             return
@@ -921,8 +921,8 @@ class ComprehensiveAnalyticsPlatform:
 
         logger.info("Analytics platform started successfully")
 
-    async def stop(self):
-        """Stop the analytics platform"""
+    async def stop(self) -> None:
+        """Stop the analytics platform."""
         if not self.is_running:
             return
 
@@ -941,15 +941,15 @@ class ComprehensiveAnalyticsPlatform:
         logger.info("Analytics platform stopped")
 
     async def record_metric(self, metric: MetricPoint) -> bool:
-        """Record a single metric"""
+        """Record a single metric."""
         return await self.metrics_collector.collect_metric(metric)
 
     async def record_metrics_batch(self, metrics: list[MetricPoint]) -> int:
-        """Record multiple metrics efficiently"""
+        """Record multiple metrics efficiently."""
         return await self.metrics_collector.collect_batch_metrics(metrics)
 
     async def get_system_health(self) -> SystemHealthStatus:
-        """Get comprehensive system health status"""
+        """Get comprehensive system health status."""
         # Collect component statuses
         component_statuses = {}
         active_alerts = self.alert_manager.get_active_alerts()
@@ -1004,15 +1004,15 @@ class ComprehensiveAnalyticsPlatform:
         component: SystemComponent,
         timeframe: AnalyticsTimeframe = AnalyticsTimeframe.LAST_HOUR,
     ) -> PerformanceReport:
-        """Generate performance report for component"""
+        """Generate performance report for component."""
         return await self.performance_analyzer.generate_performance_report(
             component,
             timeframe,
             self.metrics_collector,
         )
 
-    async def _real_time_monitoring_loop(self):
-        """Background loop for real-time monitoring"""
+    async def _real_time_monitoring_loop(self) -> None:
+        """Background loop for real-time monitoring."""
         while self.is_running:
             try:
                 # Process any pending metrics evaluations
@@ -1026,18 +1026,18 @@ class ComprehensiveAnalyticsPlatform:
 
                     # Log any new alerts
                     for alert in alerts:
-                        logger.warning(f"Real-time alert: {alert.message}")
+                        logger.warning("Real-time alert: %s", alert.message)
 
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in real-time monitoring loop: {e}")
+                logger.error("Error in real-time monitoring loop: %s", e)
                 await asyncio.sleep(30)  # Back off on error
 
-    async def _alert_processing_loop(self):
-        """Background loop for alert processing and notifications"""
+    async def _alert_processing_loop(self) -> None:
+        """Background loop for alert processing and notifications."""
         while self.is_running:
             try:
                 # Process notification queue
@@ -1054,11 +1054,11 @@ class ComprehensiveAnalyticsPlatform:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in alert processing loop: {e}")
+                logger.error("Error in alert processing loop: %s", e)
                 await asyncio.sleep(30)
 
-    async def _analytics_computation_loop(self):
-        """Background loop for analytics computation"""
+    async def _analytics_computation_loop(self) -> None:
+        """Background loop for analytics computation."""
         while self.is_running:
             try:
                 # Generate performance insights for key components
@@ -1091,11 +1091,11 @@ class ComprehensiveAnalyticsPlatform:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in analytics computation loop: {e}")
+                logger.error("Error in analytics computation loop: %s", e)
                 await asyncio.sleep(300)  # 5 minute back off
 
-    async def _dashboard_update_loop(self):
-        """Background loop for dashboard data updates"""
+    async def _dashboard_update_loop(self) -> None:
+        """Background loop for dashboard data updates."""
         while self.is_running:
             try:
                 # Update dashboard with latest system health
@@ -1120,25 +1120,27 @@ class ComprehensiveAnalyticsPlatform:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in dashboard update loop: {e}")
+                logger.error("Error in dashboard update loop: %s", e)
                 await asyncio.sleep(60)
 
-    async def _send_notification(self, alert: Alert):
-        """Send alert notification (mock implementation)"""
+    async def _send_notification(self) -> None:
+        """Send alert notification (mock implementation)."""
         # In production, this would integrate with actual notification systems
-        logger.info(f"NOTIFICATION: {alert.severity.value.upper()} - {alert.message}")
+        logger.info(
+            "NOTIFICATION: %s - %s", alert.severity.value.upper(), alert.message
+        )
 
         # Mock different notification channels
         for channel in self.config.notification_channels:
             if channel == "email":
-                logger.info(f"Email notification sent for alert: {alert.alert_id}")
+                logger.info("Email notification sent for alert: %s", alert.alert_id)
             elif channel == "slack":
-                logger.info(f"Slack notification sent for alert: {alert.alert_id}")
+                logger.info("Slack notification sent for alert: %s", alert.alert_id)
             elif channel == "webhook":
-                logger.info(f"Webhook notification sent for alert: {alert.alert_id}")
+                logger.info("Webhook notification sent for alert: %s", alert.alert_id)
 
-    async def _check_stale_alerts(self):
-        """Check for stale alerts that should be auto-resolved"""
+    async def _check_stale_alerts(self) -> None:
+        """Check for stale alerts that should be auto-resolved."""
         now = datetime.now(UTC)
         stale_threshold = timedelta(hours=1)  # Auto-resolve alerts older than 1 hour
 
@@ -1150,23 +1152,19 @@ class ComprehensiveAnalyticsPlatform:
 
         for alert_id in stale_alerts:
             await self.alert_manager.resolve_alert(alert_id)
-            logger.info(f"Auto-resolved stale alert: {alert_id}")
+            logger.info("Auto-resolved stale alert: %s", alert_id)
 
-    def register_system_component(
-        self,
-        component: SystemComponent,
-        metadata: dict[str, Any],
-    ):
-        """Register a system component for monitoring"""
+    def register_system_component(self) -> None:
+        """Register a system component for monitoring."""
         self.system_components[component] = {
             "registered_at": datetime.now(UTC),
             "metadata": metadata,
             "health_status": "unknown",
         }
-        logger.info(f"Registered system component: {component.value}")
+        logger.info("Registered system component: %s", component.value)
 
-    def get_dashboard_data(self) -> dict[str, Any]:
-        """Get current dashboard data"""
+    def get_dashboard_data(self) -> Dict[str, Any]:
+        """Get current dashboard data."""
         return {
             "platform_status": {
                 "is_running": self.is_running,
@@ -1179,8 +1177,8 @@ class ComprehensiveAnalyticsPlatform:
             **self.dashboard_data,
         }
 
-    def get_comprehensive_metrics(self) -> dict[str, Any]:
-        """Get comprehensive platform metrics"""
+    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive platform metrics."""
         return {
             "metrics_collection": self.metrics_collector.get_collection_stats(),
             "alerting": self.alert_manager.get_alert_stats(),
@@ -1194,7 +1192,7 @@ class ComprehensiveAnalyticsPlatform:
 
 
 def create_production_analytics_platform() -> ComprehensiveAnalyticsPlatform:
-    """Factory function to create production-ready analytics platform"""
+    """Factory function to create production-ready analytics platform."""
     config = AnalyticsPlatformConfig(
         enable_real_time_monitoring=True,
         enable_alerting=True,

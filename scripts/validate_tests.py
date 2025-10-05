@@ -15,21 +15,21 @@ from typing import Any
 class TestValidator:
     """Test validation runner"""
 
-    def __init__(self, verbose: bool = False, parallel: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.project_root = Path(__file__).parent.parent
-        self.results: list[tuple[str, bool, str, dict[str, Any]]] = []
+        self.results: list[tuple[str, bool, str, Dict[str, Any]]] = []
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
             print(f"[{timestamp}] [{level}] {message}")
 
     def run_command(
-        self, name: str, command: list[str], description: str
-    ) -> tuple[str, bool, str, dict[str, Any]]:
+        self, name: str, command: List[str], description: str
+    ) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run a command and return results"""
         self.log(f"Running {name}: {description}")
         start_time = time.time()
@@ -51,11 +51,10 @@ class TestValidator:
             if result.returncode == 0:
                 self.log(f"✅ {name} passed ({duration:.2f}s)", "INFO")
                 return name, True, result.stdout, test_info
-            else:
-                self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
-                if self.verbose:
-                    self.log(f"Error: {result.stderr}", "ERROR")
-                return name, False, result.stderr, test_info
+            self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
+            if self.verbose:
+                self.log(f"Error: {result.stderr}", "ERROR")
+            return name, False, result.stderr, test_info
 
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
@@ -68,7 +67,7 @@ class TestValidator:
 
     def _parse_test_output(
         self, test_type: str, stdout: str, stderr: str
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Parse test output for structured information"""
         info = {"test_type": test_type, "summary": {}}
 
@@ -131,7 +130,7 @@ class TestValidator:
 
         return info
 
-    def run_unit_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_unit_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run unit tests"""
         command = [
             "poetry",
@@ -152,7 +151,7 @@ class TestValidator:
         description = "Run unit tests with 85% coverage requirement"
         return self.run_command("unit-tests", command, description)
 
-    def run_integration_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_integration_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run integration tests"""
         command = [
             "poetry",
@@ -173,7 +172,7 @@ class TestValidator:
         description = "Run integration tests with 80% coverage requirement"
         return self.run_command("integration-tests", command, description)
 
-    def run_e2e_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_e2e_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run end-to-end tests"""
         command = [
             "poetry",
@@ -194,7 +193,7 @@ class TestValidator:
         description = "Run E2E tests with 75% coverage requirement"
         return self.run_command("e2e-tests", command, description)
 
-    def run_performance_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_performance_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run performance tests"""
         command = [
             "poetry",
@@ -211,7 +210,7 @@ class TestValidator:
         description = "Run performance tests"
         return self.run_command("performance-tests", command, description)
 
-    def run_security_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
+    def run_security_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
         """Run security tests"""
         command = ["poetry", "run", "python", "scripts/security_test_suite.py"]
         description = "Run comprehensive security test suite"
@@ -239,7 +238,7 @@ class TestValidator:
         # Return success if all tests passed
         return all(result[1] for result in tests)
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print validation summary"""
         print("\n" + "=" * 60)
         print("🧪 TEST VALIDATION SUMMARY")
@@ -251,7 +250,7 @@ class TestValidator:
         print(f"📊 Total Test Suites: {total}")
         print(f"✅ Passed: {passed}")
         print(f"❌ Failed: {total - passed}")
-        print(f"📈 Success Rate: {(passed/total*100):.1f}%")
+        print(f"📈 Success Rate: {(passed / total * 100):.1f}%")
 
         print("\n📋 Results by Test Suite:")
         for name, success, output, info in self.results:
@@ -288,7 +287,7 @@ class TestValidator:
             print("   - Update test data and fixtures")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Test Validation")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")

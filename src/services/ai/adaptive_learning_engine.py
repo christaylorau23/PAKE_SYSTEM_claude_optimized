@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class LearningStrategy(Enum):
-    """Learning strategies for user behavior adaptation"""
+    """Learning strategies for user behavior adaptation."""
 
     COLLABORATIVE_FILTERING = "collaborative_filtering"
     CONTENT_BASED = "content_based"
@@ -24,7 +24,7 @@ class LearningStrategy(Enum):
 
 
 class UserBehaviorType(Enum):
-    """Types of user behavior to learn from"""
+    """Types of user behavior to learn from."""
 
     CONTENT_VIEW = "content_view"
     CONTENT_LIKE = "content_like"
@@ -36,7 +36,7 @@ class UserBehaviorType(Enum):
 
 
 class LearningConfidence(Enum):
-    """Confidence levels for learned preferences"""
+    """Confidence levels for learned preferences."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -46,22 +46,22 @@ class LearningConfidence(Enum):
 
 @dataclass(frozen=True)
 class UserInteraction:
-    """Immutable record of user interaction"""
+    """Immutable record of user interaction."""
 
     user_id: str
     interaction_type: UserBehaviorType
     content_id: str | None = None
     content_category: str | None = None
-    content_topics: list[str] = field(default_factory=list)
+    content_topics: List[str] = field(default_factory=list)
     interaction_score: float = 1.0  # Positive/negative weight
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    context_metadata: dict[str, Any] = field(default_factory=dict)
+    context_metadata: Dict[str, Any] = field(default_factory=dict)
     session_id: str | None = None
 
 
 @dataclass(frozen=True)
 class UserProfile:
-    """Immutable user preference profile"""
+    """Immutable user preference profile."""
 
     user_id: str
     topic_preferences: dict[str, float] = field(default_factory=dict)
@@ -70,7 +70,7 @@ class UserProfile:
     time_preferences: dict[str, float] = field(
         default_factory=dict,
     )  # Hour of day patterns
-    interaction_patterns: dict[str, Any] = field(default_factory=dict)
+    interaction_patterns: Dict[str, Any] = field(default_factory=dict)
     learning_confidence: LearningConfidence = LearningConfidence.LOW
     last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
     total_interactions: int = 0
@@ -78,11 +78,11 @@ class UserProfile:
 
 @dataclass(frozen=True)
 class RecommendationRequest:
-    """Request for personalized recommendations"""
+    """Request for personalized recommendations."""
 
     user_id: str
     context: str | None = None
-    content_types: list[str] = field(default_factory=list)
+    content_types: List[str] = field(default_factory=list)
     max_recommendations: int = 10
     diversity_factor: float = 0.3  # Balance between relevance and diversity
     exclude_seen: bool = True
@@ -93,19 +93,19 @@ class RecommendationRequest:
 
 @dataclass(frozen=True)
 class Recommendation:
-    """Individual recommendation result"""
+    """Individual recommendation result."""
 
     content_id: str
     relevance_score: float
     confidence: LearningConfidence
-    reasoning: list[str] = field(default_factory=list)
+    reasoning: List[str] = field(default_factory=list)
     recommendation_type: str = "personalized"
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class RecommendationResult:
-    """Complete recommendation response"""
+    """Complete recommendation response."""
 
     user_id: str
     recommendations: list[Recommendation] = field(default_factory=list)
@@ -120,7 +120,7 @@ class RecommendationResult:
 
 @dataclass
 class AdaptiveLearningConfig:
-    """Configuration for adaptive learning system"""
+    """Configuration for adaptive learning system."""
 
     learning_rate: float = 0.1
     min_interactions_for_confidence: int = 10
@@ -136,15 +136,15 @@ class AdaptiveLearningConfig:
 
 
 class CollaborativeFilter:
-    """Collaborative filtering for user similarity and recommendations"""
+    """Collaborative filtering for user similarity and recommendations."""
 
-    def __init__(self, config: AdaptiveLearningConfig):
+    def __init__(self) -> None:
         self.config = config
         self.user_similarities: dict[str, dict[str, float]] = {}
         self.content_user_matrix: dict[str, set[str]] = defaultdict(set)
 
-    def update_user_interactions(self, interactions: list[UserInteraction]):
-        """Update the collaborative filtering model with new interactions"""
+    def update_user_interactions(self) -> None:
+        """Update the collaborative filtering model with new interactions."""
         for interaction in interactions:
             if interaction.content_id:
                 self.content_user_matrix[interaction.content_id].add(
@@ -152,7 +152,7 @@ class CollaborativeFilter:
                 )
 
     def calculate_user_similarity(self, user1: str, user2: str) -> float:
-        """Calculate similarity between two users based on content interactions"""
+        """Calculate similarity between two users based on content interactions."""
         if user1 not in self.user_similarities:
             self.user_similarities[user1] = {}
 
@@ -191,7 +191,7 @@ class CollaborativeFilter:
         user_id: str,
         min_similarity: float = 0.3,
     ) -> list[tuple[str, float]]:
-        """Find users similar to the given user"""
+        """Find users similar to the given user."""
         similarities = []
 
         for other_user in self.content_user_matrix:
@@ -204,9 +204,9 @@ class CollaborativeFilter:
 
 
 class ContentBasedFilter:
-    """Content-based filtering using content features and user preferences"""
+    """Content-based filtering using content features and user preferences."""
 
-    def __init__(self, config: AdaptiveLearningConfig):
+    def __init__(self) -> None:
         self.config = config
         self.content_features: dict[str, dict[str, float]] = {}
         self.feature_weights: dict[str, float] = {
@@ -216,8 +216,8 @@ class ContentBasedFilter:
             "quality_score": 0.2,
         }
 
-    def update_content_features(self, content_id: str, features: dict[str, Any]):
-        """Update content feature representation"""
+    def update_content_features(self) -> None:
+        """Update content feature representation."""
         self.content_features[content_id] = {}
 
         # Extract and normalize features
@@ -239,7 +239,7 @@ class ContentBasedFilter:
         profile: UserProfile,
         content_id: str,
     ) -> float:
-        """Calculate how well content matches user profile"""
+        """Calculate how well content matches user profile."""
         if content_id not in self.content_features:
             return 0.0
 
@@ -279,7 +279,7 @@ class AdaptiveLearningEngine:
     Combines collaborative filtering, content-based filtering, and reinforcement learning.
     """
 
-    def __init__(self, config: AdaptiveLearningConfig = None):
+    def __init__(self) -> None:
         self.config = config or AdaptiveLearningConfig()
         self.user_profiles: dict[str, UserProfile] = {}
         self.user_interactions: dict[str, deque] = defaultdict(
@@ -301,7 +301,7 @@ class AdaptiveLearningEngine:
         }
 
     async def record_interaction(self, interaction: UserInteraction) -> bool:
-        """Record user interaction and trigger learning update"""
+        """Record user interaction and trigger learning update."""
         try:
             async with self.learning_semaphore:
                 # Store interaction
@@ -316,18 +316,18 @@ class AdaptiveLearningEngine:
                     await self._update_user_profile(interaction.user_id)
 
                 logger.debug(
-                    f"Recorded interaction for user {interaction.user_id}: {
-                        interaction.interaction_type
-                    }",
+                    "Recorded interaction for user %s: %s",
+                    interaction.user_id,
+                    interaction.interaction_type,
                 )
                 return True
 
         except Exception as e:
-            logger.error(f"Failed to record interaction: {e}")
+            logger.error("Failed to record interaction: %s", e)
             return False
 
-    async def _update_user_profile(self, user_id: str):
-        """Update user profile based on recent interactions"""
+    async def _update_user_profile(self) -> None:
+        """Update user profile based on recent interactions."""
         interactions = list(self.user_interactions[user_id])
         if not interactions:
             return
@@ -398,7 +398,7 @@ class AdaptiveLearningEngine:
         self,
         request: RecommendationRequest,
     ) -> RecommendationResult:
-        """Generate personalized recommendations for user"""
+        """Generate personalized recommendations for user."""
         start_time = time.time()
 
         try:
@@ -478,7 +478,7 @@ class AdaptiveLearningEngine:
             return result
 
         except Exception as e:
-            logger.error(f"Failed to generate recommendations: {e}")
+            logger.error("Failed to generate recommendations: %s", e)
             processing_time = max((time.time() - start_time) * 1000, 0.1)
             return RecommendationResult(
                 user_id=request.user_id,
@@ -492,7 +492,7 @@ class AdaptiveLearningEngine:
         request: RecommendationRequest,
         strategy: LearningStrategy,
     ) -> list[Recommendation]:
-        """Generate recommendations using specified strategy"""
+        """Generate recommendations using specified strategy."""
         recommendations = []
 
         if strategy == LearningStrategy.CONTENT_BASED:
@@ -539,7 +539,7 @@ class AdaptiveLearningEngine:
         profile: UserProfile,
         request: RecommendationRequest,
     ) -> list[Recommendation]:
-        """Generate content-based recommendations"""
+        """Generate content-based recommendations."""
         recommendations = []
 
         # Mock content database - in production, this would query real content
@@ -586,7 +586,7 @@ class AdaptiveLearningEngine:
         profile: UserProfile,
         request: RecommendationRequest,
     ) -> list[Recommendation]:
-        """Generate collaborative filtering recommendations"""
+        """Generate collaborative filtering recommendations."""
         recommendations = []
 
         # Find similar users
@@ -621,7 +621,7 @@ class AdaptiveLearningEngine:
         self,
         request: RecommendationRequest,
     ) -> list[Recommendation]:
-        """Generate fallback recommendations for users without sufficient data"""
+        """Generate fallback recommendations for users without sufficient data."""
         fallback_recs = []
 
         # Popular/trending content
@@ -643,7 +643,7 @@ class AdaptiveLearningEngine:
         recommendations: list[Recommendation],
         diversity_factor: float,
     ) -> list[Recommendation]:
-        """Apply diversity filtering to avoid too similar recommendations"""
+        """Apply diversity filtering to avoid too similar recommendations."""
         if not recommendations or diversity_factor <= 0:
             return recommendations
 
@@ -668,11 +668,11 @@ class AdaptiveLearningEngine:
         return diverse_recs
 
     def get_user_profile(self, user_id: str) -> UserProfile | None:
-        """Get current user profile"""
+        """Get current user profile."""
         return self.user_profiles.get(user_id)
 
-    def get_metrics(self) -> dict[str, Any]:
-        """Get learning engine metrics"""
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get learning engine metrics."""
         return {
             **self.metrics,
             "total_users": len(self.user_profiles),
@@ -684,7 +684,7 @@ class AdaptiveLearningEngine:
         }
 
     def _calculate_average_confidence(self) -> str:
-        """Calculate average user confidence level"""
+        """Calculate average user confidence level."""
         if not self.user_profiles:
             return LearningConfidence.LOW.value
 
@@ -711,7 +711,7 @@ class AdaptiveLearningEngine:
 
 
 def create_production_adaptive_learning_engine() -> AdaptiveLearningEngine:
-    """Factory function to create production-optimized adaptive learning engine"""
+    """Factory function to create production-optimized adaptive learning engine."""
     config = AdaptiveLearningConfig(
         learning_rate=0.05,  # Conservative learning rate
         min_interactions_for_confidence=25,  # Higher threshold for production

@@ -21,10 +21,11 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+
 # Mock the services that don't exist yet to prevent import errors
 # These will be replaced with actual imports when the services are implemented
 class MockPerformanceAnalyzer:
-    async def calculate_metrics_summary(self, data):
+    async def calculate_metrics_summary(self) -> None:
         import statistics
 
         result = {}
@@ -38,11 +39,7 @@ class MockPerformanceAnalyzer:
             min_val = min(values)
             max_val = max(values)
 
-            metric_stats = {
-                "avg": avg,
-                "min": min_val,
-                "max": max_val
-            }
+            metric_stats = {"avg": avg, "min": min_val, "max": max_val}
 
             # Calculate percentiles if we have enough data
             if len(values) >= 10:
@@ -56,30 +53,38 @@ class MockPerformanceAnalyzer:
 
         return result
 
+
 class MockRedisCacheStrategy:
-    def __init__(self, url):
+    def __init__(self) -> None:
         self.url = url
-    
-    async def set(self, namespace, key, data, ttl=None):
+
+    async def set(self) -> None:
         return True
-    
-    async def get(self, namespace, key):
-        return {"user_id": "user_456", "session_data": {"last_login": "2024-01-15T10:30:00Z"}, "preferences": {"theme": "dark", "language": "en"}}
+
+    async def get(self) -> None:
+        return {
+            "user_id": "user_456",
+            "session_data": {"last_login": "2024-01-15T10:30:00Z"},
+            "preferences": {"theme": "dark", "language": "en"},
+        }
+
 
 class MockArxivResult:
-    def __init__(self, success=True, papers=None, total_results=0, error_message=None):
+    def __init__(self) -> None:
         self.success = success
         self.papers = papers or []
         self.total_results = total_results
         self.error_message = error_message
         self.api_response_time = None
 
+
 class MockArxivService:
-    async def search_papers(self, query, max_results=10, categories=None):
+    async def search_papers(self) -> None:
         return MockArxivResult()
 
+
 class MockFirecrawlResult:
-    def __init__(self, success=True, content="", url="", metadata=None, error_message=None):
+    def __init__(self) -> None:
         self.success = success
         self.content = content
         self.url = url
@@ -87,21 +92,24 @@ class MockFirecrawlResult:
         self.error_message = error_message
         self.extraction_method = "firecrawl"
 
+
 class MockFirecrawlService:
-    def __init__(self, api_key):
+    def __init__(self) -> None:
         self.api_key = api_key
-    
-    async def extract_content(self, url):
+
+    async def extract_content(self) -> None:
         return MockFirecrawlResult()
 
+
 class MockIngestionConfig:
-    def __init__(self, max_concurrent_sources=3, enable_cognitive_processing=True, timeout_seconds=30):
+    def __init__(self) -> None:
         self.max_concurrent_sources = max_concurrent_sources
         self.enable_cognitive_processing = enable_cognitive_processing
         self.timeout_seconds = timeout_seconds
 
+
 class MockIngestionResult:
-    def __init__(self, success=True, total_sources_processed=0, total_content_items=0, content_items=None, execution_time=0, errors=None):
+    def __init__(self) -> None:
         self.success = success
         self.total_sources_processed = total_sources_processed
         self.total_content_items = total_content_items
@@ -109,13 +117,14 @@ class MockIngestionResult:
         self.execution_time = execution_time
         self.errors = errors or []
 
+
 class MockIngestionOrchestrator:
-    def __init__(self, config):
+    def __init__(self) -> None:
         self.config = config
         self.firecrawl_service = MockFirecrawlService("test_key")
         self.arxiv_service = MockArxivService()
 
-    async def execute_plan(self, plan):
+    async def execute_plan(self) -> None:
         sources = plan.get("sources", [])
         total_sources = len(sources)
         content_items = []
@@ -124,27 +133,32 @@ class MockIngestionOrchestrator:
         for source in sources:
             try:
                 if source.get("type") == "web":
-                    result = await self.firecrawl_service.extract_content(source.get("url"))
+                    result = await self.firecrawl_service.extract_content(
+                        source.get("url")
+                    )
                     if result.success:
-                        content_items.append({
-                            "content": result.content,
-                            "url": result.url,
-                            "type": "web"
-                        })
+                        content_items.append(
+                            {
+                                "content": result.content,
+                                "url": result.url,
+                                "type": "web",
+                            }
+                        )
                     else:
                         errors.append(result.error_message or "Unknown error")
                 elif source.get("type") == "arxiv":
                     result = await self.arxiv_service.search_papers(
-                        source.get("query"),
-                        categories=source.get("categories")
+                        source.get("query"), categories=source.get("categories")
                     )
                     if result.success:
                         for paper in result.papers:
-                            content_items.append({
-                                "content": paper.get("abstract", ""),
-                                "title": paper.get("title", ""),
-                                "type": "arxiv"
-                            })
+                            content_items.append(
+                                {
+                                    "content": paper.get("abstract", ""),
+                                    "title": paper.get("title", ""),
+                                    "type": "arxiv",
+                                }
+                            )
                     else:
                         errors.append(result.error_message or "Unknown error")
             except Exception as e:
@@ -156,25 +170,30 @@ class MockIngestionOrchestrator:
             total_content_items=len(content_items),
             content_items=content_items,
             execution_time=0.1,
-            errors=errors
+            errors=errors,
         )
 
+
 class MockAuthenticationService:
-    def __init__(self, secret_key):
+    def __init__(self) -> None:
         self.secret_key = secret_key
         self.token_metadata = {}  # Track token expiration
 
-    def generate_token(self, user_data, expires_in=3600):
+    def generate_token(self) -> None:
         import time
+
         token = f"mock.jwt.token.{len(self.token_metadata)}"
         self.token_metadata[token] = {
             "user_data": user_data,
-            "expires_at": time.time() + expires_in if expires_in > 0 else time.time() - 1
+            "expires_at": time.time() + expires_in
+            if expires_in > 0
+            else time.time() - 1,
         }
         return token
 
-    def validate_token(self, token):
+    def validate_token(self) -> None:
         import time
+
         if not token:
             return MockValidationResult(False, "Token is empty")
         if token == "invalid.jwt.token":
@@ -184,22 +203,32 @@ class MockAuthenticationService:
             if time.time() > metadata["expires_at"]:
                 return MockValidationResult(False, "Token has expired")
             return MockValidationResult(True, user_data=metadata["user_data"])
-        return MockValidationResult(True, user_data={"user_id": "user_123", "email": "test@example.com", "role": "admin"})
+        return MockValidationResult(
+            True,
+            user_data={
+                "user_id": "user_123",
+                "email": "test@example.com",
+                "role": "admin",
+            },
+        )
+
 
 class MockValidationResult:
-    def __init__(self, success=True, error_message=None, user_data=None):
+    def __init__(self) -> None:
         self.success = success
         self.error_message = error_message
         self.user_data = user_data or {}
 
+
 class MockTimeSeriesAnalyzer:
-    def get_current_timestamp(self):
+    def get_current_timestamp(self) -> None:
         # This will be mocked in the test
         return datetime.now(UTC)
-    
-    async def process_with_delay(self, data):
+
+    async def process_with_delay(self) -> None:
         await asyncio.sleep(0.1)
         return f"Processed: {data}"
+
 
 # Use the mock classes
 PerformanceAnalyzer = MockPerformanceAnalyzer
@@ -226,7 +255,7 @@ class TestAAAUnitTestingPatterns:
     # Basic AAA Pattern Examples
     # ========================================================================
 
-    def test_firecrawl_service_should_extract_content_successfully(self):
+    def test_firecrawl_service_should_extract_content_successfully(self) -> None:
         """
         Test: FirecrawlService should extract content successfully from valid URL
 
@@ -275,7 +304,7 @@ class TestAAAUnitTestingPatterns:
             assert result.url == test_url
             assert result.extraction_method == "firecrawl"
 
-    def test_arxiv_service_should_handle_api_errors_gracefully(self):
+    def test_arxiv_service_should_handle_api_errors_gracefully(self) -> None:
         """
         Test: ArxivService should handle API errors gracefully without crashing
 
@@ -293,7 +322,9 @@ class TestAAAUnitTestingPatterns:
         mock_response.status_code = 429
         mock_response.json.return_value = {"error": error_message}
 
-        with patch("src.services.ingestion.arxiv_service.httpx.AsyncClient") as mock_client:
+        with patch(
+            "src.services.ingestion.arxiv_service.httpx.AsyncClient"
+        ) as mock_client:
             mock_client_instance = AsyncMock()
             mock_client_instance.get.return_value = mock_response
             mock_client.return_value.__aenter__.return_value = mock_client_instance
@@ -310,7 +341,7 @@ class TestAAAUnitTestingPatterns:
             assert result.total_results == 0
             assert result.api_response_time is None
 
-    def test_cache_strategy_should_store_and_retrieve_data_correctly(self):
+    def test_cache_strategy_should_store_and_retrieve_data_correctly(self) -> None:
         """
         Test: RedisCacheStrategy should store and retrieve data correctly
 
@@ -361,7 +392,9 @@ class TestAAAUnitTestingPatterns:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_orchestrator_should_coordinate_multiple_sources_successfully(self):
+    async def test_orchestrator_should_coordinate_multiple_sources_successfully(
+        self,
+    ) -> None:
         """
         Test: IngestionOrchestrator should coordinate multiple sources successfully
 
@@ -397,11 +430,12 @@ class TestAAAUnitTestingPatterns:
         orchestrator = IngestionOrchestrator(config)
 
         # Mock the service dependencies
-        with patch.object(
-            orchestrator.firecrawl_service, "extract_content"
-        ) as mock_firecrawl, patch.object(
-            orchestrator.arxiv_service, "search_papers"
-        ) as mock_arxiv:
+        with (
+            patch.object(
+                orchestrator.firecrawl_service, "extract_content"
+            ) as mock_firecrawl,
+            patch.object(orchestrator.arxiv_service, "search_papers") as mock_arxiv,
+        ):
             mock_firecrawl.return_value = mock_firecrawl_result
             mock_arxiv.return_value = mock_arxiv_result
 
@@ -439,7 +473,9 @@ class TestAAAUnitTestingPatterns:
             mock_arxiv.assert_called_once_with("machine learning", categories=["cs.LG"])
 
     @pytest.mark.asyncio
-    async def test_performance_analyzer_should_calculate_metrics_correctly(self):
+    async def test_performance_analyzer_should_calculate_metrics_correctly(
+        self,
+    ) -> None:
         """
         Test: PerformanceAnalyzer should calculate performance metrics correctly
 
@@ -488,7 +524,7 @@ class TestAAAUnitTestingPatterns:
         assert error_metrics["max"] == max(error_rates)
         assert error_metrics["min"] == min(error_rates)
 
-    def test_authentication_service_should_validate_jwt_tokens_correctly(self):
+    def test_authentication_service_should_validate_jwt_tokens_correctly(self) -> None:
         """
         Test: AuthenticationService should validate JWT tokens correctly
 
@@ -545,7 +581,7 @@ class TestAAAUnitTestingPatterns:
     # Edge Cases and Error Handling Examples
     # ========================================================================
 
-    def test_cache_strategy_should_handle_redis_connection_failure(self):
+    def test_cache_strategy_should_handle_redis_connection_failure(self) -> None:
         """
         Test: RedisCacheStrategy should handle Redis connection failures gracefully
 
@@ -573,7 +609,7 @@ class TestAAAUnitTestingPatterns:
             # Should not raise exceptions, should handle gracefully
 
     @pytest.mark.asyncio
-    async def test_orchestrator_should_handle_partial_source_failures(self):
+    async def test_orchestrator_should_handle_partial_source_failures(self) -> None:
         """
         Test: IngestionOrchestrator should handle partial source failures gracefully
 
@@ -602,11 +638,10 @@ class TestAAAUnitTestingPatterns:
             orchestrator.firecrawl_service, "extract_content"
         ) as mock_firecrawl:
             # Configure mock to return different results based on URL
-            def mock_extract_side_effect(url):
+            def mock_extract_side_effect(self) -> None:
                 if "working-site.com" in url:
                     return mock_success_result
-                else:
-                    return mock_failure_result
+                return mock_failure_result
 
             mock_firecrawl.side_effect = mock_extract_side_effect
 
@@ -642,7 +677,7 @@ class TestAAAUnitTestingPatterns:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_cache_strategy_should_handle_concurrent_access_safely(self):
+    async def test_cache_strategy_should_handle_concurrent_access_safely(self) -> None:
         """
         Test: RedisCacheStrategy should handle concurrent access safely
 
@@ -664,7 +699,7 @@ class TestAAAUnitTestingPatterns:
             cache = RedisCacheStrategy("redis://localhost:6379")
 
             # ACT: Perform concurrent operations
-            async def concurrent_operation(operation_id):
+            async def concurrent_operation(self) -> None:
                 key = f"concurrent_key_{operation_id}"
                 data = {"concurrent": "data", "operation_id": operation_id}
 
@@ -687,7 +722,9 @@ class TestAAAUnitTestingPatterns:
                 assert retrieved_data is not None
                 assert retrieved_data["concurrent"] == "data"
 
-    def test_performance_analyzer_should_handle_large_datasets_efficiently(self):
+    def test_performance_analyzer_should_handle_large_datasets_efficiently(
+        self,
+    ) -> None:
         """
         Test: PerformanceAnalyzer should handle large datasets efficiently
 
@@ -743,7 +780,7 @@ class TestMockingBestPractices:
     isolating units under test from their dependencies.
     """
 
-    def test_should_mock_external_api_calls_properly(self):
+    def test_should_mock_external_api_calls_properly(self) -> None:
         """
         Test: Should mock external API calls properly to avoid network dependencies
 
@@ -784,7 +821,7 @@ class TestMockingBestPractices:
             call_args = mock_client.get.call_args
             assert "https://example.com" in str(call_args)
 
-    def test_should_mock_database_operations_safely(self):
+    def test_should_mock_database_operations_safely(self) -> None:
         """
         Test: Should mock database operations safely without actual DB connections
 
@@ -812,13 +849,25 @@ class TestMockingBestPractices:
 
             # Mock database service for testing
             class MockUserService:
-                async def get_user_by_id(self, user_id):
-                    return {"user_id": "user_123", "email": "test@example.com", "role": "admin"}
-                
-                async def get_all_users(self):
+                async def get_user_by_id(self) -> None:
+                    return {
+                        "user_id": "user_123",
+                        "email": "test@example.com",
+                        "role": "admin",
+                    }
+
+                async def get_all_users(self) -> None:
                     return [
-                        {"user_id": "user_123", "email": "test@example.com", "role": "admin"},
-                        {"user_id": "user_456", "email": "user@example.com", "role": "user"}
+                        {
+                            "user_id": "user_123",
+                            "email": "test@example.com",
+                            "role": "admin",
+                        },
+                        {
+                            "user_id": "user_456",
+                            "email": "user@example.com",
+                            "role": "user",
+                        },
                     ]
 
             user_service = MockUserService()
@@ -835,7 +884,7 @@ class TestMockingBestPractices:
             # Verify SQL queries were executed
             assert mock_cursor.execute.call_count >= 2
 
-    def test_should_mock_file_system_operations(self):
+    def test_should_mock_file_system_operations(self) -> None:
         """
         Test: Should mock file system operations to avoid actual file I/O
 
@@ -847,9 +896,11 @@ class TestMockingBestPractices:
         # ARRANGE: Set up file system mocks
         mock_file_content = "Mocked file content for testing"
 
-        with patch("builtins.open", create=True) as mock_open, patch(
-            "pathlib.Path.exists"
-        ) as mock_exists, patch("pathlib.Path.mkdir") as mock_mkdir:
+        with (
+            patch("builtins.open", create=True) as mock_open,
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+        ):
             # Configure mocks
             mock_exists.return_value = True
             mock_file = MagicMock()
@@ -859,12 +910,12 @@ class TestMockingBestPractices:
 
             # Real file service that uses builtin open
             class RealFileService:
-                def read_file(self, path):
-                    with open(path, 'r') as f:
+                def read_file(self) -> None:
+                    with open(path) as f:
                         return f.read()
 
-                def write_file(self, path, content):
-                    with open(path, 'w') as f:
+                def write_file(self) -> None:
+                    with open(path, "w") as f:
                         f.write(content)
                     return True
 
@@ -883,7 +934,7 @@ class TestMockingBestPractices:
             mock_exists.assert_called()
 
     @pytest.mark.asyncio
-    async def test_should_mock_time_dependent_operations(self):
+    async def test_should_mock_time_dependent_operations(self) -> None:
         """
         Test: Should mock time-dependent operations for predictable testing
 
@@ -895,9 +946,10 @@ class TestMockingBestPractices:
         # ARRANGE: Set up time mocks
         fixed_time = datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC)
 
-        with patch("datetime.datetime") as mock_datetime, patch(
-            "asyncio.sleep"
-        ) as mock_sleep:
+        with (
+            patch("datetime.datetime") as mock_datetime,
+            patch("asyncio.sleep") as mock_sleep,
+        ):
             # Configure datetime mock
             mock_datetime.now.return_value = fixed_time
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)

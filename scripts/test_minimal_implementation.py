@@ -17,17 +17,17 @@ from urllib.request import Request, urlopen
 class SimpleTestRunner:
     """Simple test runner without external dependencies"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tests_passed = 0
         self.tests_failed = 0
         self.services_started = []
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Simple logging"""
         timestamp = time.strftime("%H:%M:%S")
         print(f"[{timestamp}] {level}: {message}")
 
-    def assert_equal(self, actual, expected, message: str):
+    def assert_equal(self) -> None:
         """Simple assertion"""
         if actual == expected:
             self.tests_passed += 1
@@ -36,7 +36,7 @@ class SimpleTestRunner:
             self.tests_failed += 1
             self.log(f"✗ {message}: expected {expected}, got {actual}", "ERROR")
 
-    def assert_in(self, item, container, message: str):
+    def assert_in(self) -> None:
         """Assert item is in container"""
         if item in container:
             self.tests_passed += 1
@@ -45,7 +45,7 @@ class SimpleTestRunner:
             self.tests_failed += 1
             self.log(f"✗ {message}: {item} not found", "ERROR")
 
-    def assert_status_code(self, url: str, expected_status: int, message: str):
+    def assert_status_code(self) -> None:
         """Check HTTP status code"""
         try:
             response = urlopen(url, timeout=5)
@@ -61,7 +61,7 @@ class SimpleTestRunner:
             self.log(f"✗ {message}: Connection failed - {e}", "ERROR")
             return None
 
-    def start_service(self, script_path: str, port: int, service_name: str):
+    def start_service(self) -> None:
         """Start a service in background"""
         try:
             self.log(f"Starting {service_name} on port {port}...")
@@ -89,7 +89,7 @@ class SimpleTestRunner:
             self.log(f"✗ Failed to start {service_name}: {e}", "ERROR")
             return None
 
-    def test_api_gateway_health(self):
+    def test_api_gateway_health(self) -> None:
         """Test API Gateway health endpoint (Contract Test T007)"""
         self.log("Testing API Gateway health endpoint...")
 
@@ -138,7 +138,7 @@ class SimpleTestRunner:
                 self.tests_failed += 1
                 self.log("✗ Health response is not valid JSON", "ERROR")
 
-    def test_api_gateway_routing(self):
+    def test_api_gateway_routing(self) -> None:
         """Test API Gateway routing (Contract Test T008)"""
         self.log("Testing API Gateway routing...")
 
@@ -191,7 +191,7 @@ class SimpleTestRunner:
                 self.tests_failed += 1
                 self.log("✗ Cache stats response is not valid JSON", "ERROR")
 
-    def test_service_registry(self):
+    def test_service_registry(self) -> None:
         """Test Service Registry (Integration Test T013)"""
         self.log("Testing Service Registry...")
 
@@ -266,7 +266,7 @@ class SimpleTestRunner:
             self.tests_failed += 1
             self.log(f"✗ Service registry test failed: {e}", "ERROR")
 
-    def test_monitoring_metrics(self):
+    def test_monitoring_metrics(self) -> None:
         """Test Monitoring metrics (Contract Test T010)"""
         self.log("Testing Monitoring metrics...")
 
@@ -314,7 +314,7 @@ class SimpleTestRunner:
                 self.tests_failed += 1
                 self.log("✗ Custom metrics response is not valid JSON", "ERROR")
 
-    def cleanup_services(self):
+    def cleanup_services(self) -> None:
         """Stop all started services"""
         self.log("Cleaning up services...")
         for process, name in self.services_started:
@@ -329,7 +329,7 @@ class SimpleTestRunner:
                 except:
                     self.log(f"✗ Failed to stop {name}", "ERROR")
 
-    def run_all_tests(self):
+    def run_all_tests(self) -> None:
         """Run all TDD validation tests"""
         self.log("=== TDD Green Phase Validation ===")
         self.log("Testing minimal implementation to verify contracts pass...")
@@ -377,9 +377,8 @@ class SimpleTestRunner:
         if self.tests_failed == 0:
             self.log("🟢 ALL TESTS PASSED - TDD Green Phase Complete!", "SUCCESS")
             return True
-        else:
-            self.log(f"🔴 {self.tests_failed} tests failed - needs fixes", "ERROR")
-            return False
+        self.log(f"🔴 {self.tests_failed} tests failed - needs fixes", "ERROR")
+        return False
 
 
 if __name__ == "__main__":

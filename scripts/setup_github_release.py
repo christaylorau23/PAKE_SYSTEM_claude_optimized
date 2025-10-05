@@ -7,10 +7,10 @@ Creates a comprehensive GitHub release for Phase 9B completion
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 
-def run_command(command, check=True):
+def run_command(self) -> None:
     """Run a shell command and return the output."""
     try:
         result = subprocess.run(
@@ -27,7 +27,7 @@ def run_command(command, check=True):
         return None, e.stderr
 
 
-def get_git_info():
+def get_git_info(self) -> None:
     """Get git repository information."""
     # Get current commit hash
     commit_hash, _ = run_command("git rev-parse HEAD")
@@ -49,15 +49,15 @@ def get_git_info():
     }
 
 
-def create_release_notes():
+def create_release_notes(self) -> None:
     """Create comprehensive release notes."""
     git_info = get_git_info()
 
-    release_notes = f"""# 🚀 PAKE System v9.1.0 - Phase 9B Complete
+    return f"""# 🚀 PAKE System v9.1.0 - Phase 9B Complete
 
 ## 🎉 Major Milestone: Advanced AI/ML Pipeline Integration
 
-**Release Date**: {datetime.now().strftime("%Y-%m-%d")}
+**Release Date**: {datetime.now(UTC).strftime("%Y-%m-%d")}
 **Version**: v9.1.0
 **Commit**: {git_info["commit_hash"][:8]}
 **Status**: Production Ready ✅
@@ -211,10 +211,8 @@ The PAKE System is now a production-ready, enterprise-grade AI-powered knowledge
 **Ready to revolutionize knowledge management?** 🚀
 """
 
-    return release_notes
 
-
-def create_github_release():
+def create_github_release(self) -> None:
     """Create a GitHub release using the GitHub CLI."""
     # Check if GitHub CLI is installed
     gh_version, _ = run_command("gh --version", check=False)
@@ -265,7 +263,7 @@ def create_github_release():
     return True
 
 
-def main():
+def main(self) -> None:
     """Main function."""
     print("🚀 PAKE System GitHub Release Setup")
     print("=" * 50)

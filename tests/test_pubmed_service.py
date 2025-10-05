@@ -19,6 +19,7 @@ import pytest
 
 # These imports will fail initially (RED phase) - that's expected
 try:
+    from scripts.ingestion_pipeline import ContentItem
     from services.ingestion.pubmed_service import (
         PubMedAuthor,
         PubMedError,
@@ -28,8 +29,6 @@ try:
         PubMedSearchQuery,
         PubMedService,
     )
-
-    from scripts.ingestion_pipeline import ContentItem
 except ImportError:
     # Expected during RED phase - services don't exist yet
     pass
@@ -50,8 +49,8 @@ class TestPubMedService:
     Tests focus on WHAT the service does, not HOW it does it.
     """
 
-    @pytest.fixture()
-    def pubmed_service(self):
+    @pytest.fixture
+    def pubmed_service(self) -> None:
         """Fixture providing a PubMedService instance for testing"""
         return PubMedService(
             base_url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
@@ -60,8 +59,8 @@ class TestPubMedService:
             max_results=100,
         )
 
-    @pytest.fixture()
-    def sample_search_query(self):
+    @pytest.fixture
+    def sample_search_query(self) -> None:
         """Fixture providing a sample PubMed search query"""
         return PubMedSearchQuery(
             terms=["machine learning", "artificial intelligence"],
@@ -74,8 +73,8 @@ class TestPubMedService:
             max_results=50,
         )
 
-    @pytest.fixture()
-    def sample_pubmed_xml(self):
+    @pytest.fixture
+    def sample_pubmed_xml(self) -> None:
         """Fixture providing sample PubMed XML response"""
         return """<?xml version="1.0" encoding="UTF-8"?>
         <PubmedArticleSet>
@@ -135,12 +134,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Core PubMed E-utilities Functionality
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_search_pubmed_with_advanced_query_parameters(
-        self,
-        pubmed_service,
-        sample_search_query,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_search_pubmed_with_advanced_query_parameters(self) -> None:
         """
         RED TEST: Service should support advanced PubMed search beyond basic queries.
 
@@ -159,12 +154,8 @@ class TestPubMedService:
         ]
         assert "Nature" in result.query_used.journal
 
-    @pytest.mark.asyncio()
-    async def test_should_parse_pubmed_xml_response_correctly(
-        self,
-        pubmed_service,
-        sample_pubmed_xml,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_parse_pubmed_xml_response_correctly(self) -> None:
         """
         RED TEST: Service should correctly parse PubMed XML responses.
 
@@ -184,8 +175,8 @@ class TestPubMedService:
         assert len(paper.mesh_terms) > 0
         assert "Algorithms" in paper.mesh_terms
 
-    @pytest.mark.asyncio()
-    async def test_should_support_mesh_term_searches(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_support_mesh_term_searches(self) -> None:
         """
         RED TEST: Service should support MeSH (Medical Subject Headings) term searches.
 
@@ -207,8 +198,8 @@ class TestPubMedService:
                 for mesh in paper.mesh_terms
             )
 
-    @pytest.mark.asyncio()
-    async def test_should_support_publication_type_filtering(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_support_publication_type_filtering(self) -> None:
         """
         RED TEST: Service should filter by publication types (Review, Clinical Trial, etc).
 
@@ -227,8 +218,8 @@ class TestPubMedService:
         for paper in result.papers:
             assert any("Review" in pub_type for pub_type in paper.publication_types)
 
-    @pytest.mark.asyncio()
-    async def test_should_support_journal_specific_searches(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_support_journal_specific_searches(self) -> None:
         """
         RED TEST: Service should support searching within specific journals.
 
@@ -250,8 +241,8 @@ class TestPubMedService:
             journal in ["Nature", "Science", "Cell"] for journal in found_journals
         )
 
-    @pytest.mark.asyncio()
-    async def test_should_support_author_affiliation_searches(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_support_author_affiliation_searches(self) -> None:
         """
         RED TEST: Service should support author and affiliation-based searches.
 
@@ -288,8 +279,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - E-utilities API Integration
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_use_esearch_and_efetch_apis_correctly(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_use_esearch_and_efetch_apis_correctly(self) -> None:
         """
         RED TEST: Service should use NCBI E-utilities ESearch and EFetch APIs correctly.
 
@@ -312,8 +303,8 @@ class TestPubMedService:
             mock_esearch.assert_called_once()
             mock_efetch.assert_called_once()
 
-    @pytest.mark.asyncio()
-    async def test_should_respect_ncbi_api_rate_limits(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_respect_ncbi_api_rate_limits(self) -> None:
         """
         RED TEST: Service should respect NCBI API rate limits.
 
@@ -337,11 +328,8 @@ class TestPubMedService:
             assert "rate limit" in result.error.message.lower()
             assert result.error.retry_after is not None
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_large_result_sets_with_pagination(
-        self,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_large_result_sets_with_pagination(self) -> None:
         """
         RED TEST: Service should handle large result sets using pagination.
 
@@ -367,11 +355,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Integration with Existing Pipeline
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_with_existing_content_pipeline(
-        self,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_integrate_with_existing_content_pipeline(self) -> None:
         """
         RED TEST: Service should integrate with existing ContentItem pipeline.
 
@@ -392,12 +377,10 @@ class TestPubMedService:
             assert "pmid" in item.metadata
             assert "mesh_terms" in item.metadata
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_provide_enhanced_metadata_for_cognitive_analysis(
         self,
-        pubmed_service,
-        sample_search_query,
-    ):
+    ) -> None:
         """
         RED TEST: Service should provide rich metadata for cognitive analysis.
 
@@ -420,8 +403,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Error Handling and Resilience
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_invalid_pmids_gracefully(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_invalid_pmids_gracefully(self) -> None:
         """
         RED TEST: Service should handle invalid PMIDs without crashing.
         """
@@ -433,11 +416,8 @@ class TestPubMedService:
         assert result.papers == []  # No papers found for invalid search
         assert result.error is None
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_malformed_xml_responses_gracefully(
-        self,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_malformed_xml_responses_gracefully(self) -> None:
         """
         RED TEST: Service should handle malformed XML from NCBI APIs.
 
@@ -452,8 +432,8 @@ class TestPubMedService:
         assert "xml" in result.error.message.lower()
         assert result.papers == []
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_ncbi_service_outages_gracefully(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_ncbi_service_outages_gracefully(self) -> None:
         """
         RED TEST: Service should handle NCBI service outages and timeouts.
         """
@@ -476,8 +456,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Performance and Caching
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_cache_recent_searches_for_performance(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_cache_recent_searches_for_performance(self) -> None:
         """
         RED TEST: Service should cache recent searches to reduce API calls.
 
@@ -496,11 +476,8 @@ class TestPubMedService:
         assert result2.from_cache is True
         assert len(result1.papers) == len(result2.papers)
 
-    @pytest.mark.asyncio()
-    async def test_should_complete_searches_within_reasonable_time(
-        self,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_complete_searches_within_reasonable_time(self) -> None:
         """
         RED TEST: PubMed searches should complete within reasonable time limits.
 
@@ -521,11 +498,8 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Integration with Cognitive System
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_with_autonomous_cognitive_assessment(
-        self,
-        pubmed_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_integrate_with_autonomous_cognitive_assessment(self) -> None:
         """
         RED TEST: Service should integrate with cognitive system for paper quality assessment.
 
@@ -549,8 +523,8 @@ class TestPubMedService:
 
         mock_cognitive_engine.assess_research_quality.assert_called()
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_with_n8n_biomedical_workflows(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_integrate_with_n8n_biomedical_workflows(self) -> None:
         """
         RED TEST: Service should integrate with n8n biomedical research workflows.
 
@@ -579,7 +553,7 @@ class TestPubMedService:
     # BEHAVIOR TESTS - Data Structures and Immutability
     # ========================================================================
 
-    def test_pubmed_paper_should_be_immutable(self):
+    def test_pubmed_paper_should_be_immutable(self) -> None:
         """
         RED TEST: PubMedPaper data structure should be immutable (frozen dataclass).
 
@@ -600,7 +574,7 @@ class TestPubMedService:
         with pytest.raises(Exception):  # FrozenInstanceError expected
             paper.title = "Modified Title"
 
-    def test_pubmed_search_query_should_have_sensible_defaults(self):
+    def test_pubmed_search_query_should_have_sensible_defaults(self) -> None:
         """
         RED TEST: PubMedSearchQuery should provide sensible default values.
         """
@@ -623,7 +597,7 @@ class TestPubMedErrorHandling:
     Test suite for PubMedError classes and exception handling behaviors.
     """
 
-    def test_pubmed_error_should_provide_structured_error_information(self):
+    def test_pubmed_error_should_provide_structured_error_information(self) -> None:
         """
         RED TEST: PubMedError should provide structured error information.
         """
@@ -639,7 +613,7 @@ class TestPubMedErrorHandling:
         assert error.retry_after == 300
         assert error.is_retryable is True
 
-    def test_should_categorize_pubmed_errors_appropriately(self):
+    def test_should_categorize_pubmed_errors_appropriately(self) -> None:
         """
         RED TEST: Error system should categorize PubMed-specific errors.
         """
@@ -669,13 +643,13 @@ class TestPubMedServicePerformance:
     Performance-focused behavior tests for PubMed service.
     """
 
-    @pytest.fixture()
-    def pubmed_service(self):
+    @pytest.fixture
+    def pubmed_service(self) -> None:
         """Fixture providing PubMedService for performance testing"""
         return PubMedService(max_results=50, email="test@example.com")
 
-    @pytest.mark.asyncio()
-    async def test_should_maintain_quality_scores_above_threshold(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_should_maintain_quality_scores_above_threshold(self) -> None:
         """
         RED TEST: Biomedical research papers should maintain quality scores >85% as per Phase 2A metrics.
         """

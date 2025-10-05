@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Phase 2B RSS/Atom Feed Service Implementation
-GREEN phase: Minimal implementation to pass TDD tests
+GREEN phase: Minimal implementation to pass TDD tests.
 
 Following TDD methodology for RSS/Atom feed ingestion with cognitive integration.
 """
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RSSError:
-    """Immutable error class for RSS service errors"""
+    """Immutable error class for RSS service errors."""
 
     message: str
     error_code: str = "UNKNOWN_ERROR"
@@ -34,14 +34,14 @@ class RSSError:
 
     @property
     def is_retryable(self) -> bool:
-        """Determine if error is retryable based on error code"""
+        """Determine if error is retryable based on error code."""
         retryable_codes = ["NETWORK_ERROR", "TIMEOUT", "SERVER_ERROR", "RATE_LIMIT"]
         return self.error_code in retryable_codes
 
 
 @dataclass(frozen=True)
 class RSSFeedItem:
-    """Immutable RSS/Atom feed item"""
+    """Immutable RSS/Atom feed item."""
 
     title: str
     link: str
@@ -49,28 +49,28 @@ class RSSFeedItem:
     published: datetime
     guid: str
     author: str | None = None
-    categories: list[str] = field(default_factory=list)
+    categories: List[str] = field(default_factory=list)
     full_content: str | None = None
-    cognitive_metadata: dict[str, Any] | None = None
+    cognitive_metadata: Dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
 class RSSFeedQuery:
-    """Query configuration for RSS feed fetching"""
+    """Query configuration for RSS feed fetching."""
 
-    feed_urls: list[str]
+    feed_urls: List[str]
     max_items_per_feed: int = 10
     fetch_full_content: bool = False
     date_from: datetime | None = None
     date_to: datetime | None = None
-    keywords: list[str] = field(default_factory=list)
+    keywords: List[str] = field(default_factory=list)
     keyword_match_mode: str = "any"  # "any" or "all"
     enable_cognitive_assessment: bool = False
 
 
 @dataclass
 class RSSFeedResult:
-    """Result from RSS feed fetching operation"""
+    """Result from RSS feed fetching operation."""
 
     success: bool
     feed_url: str
@@ -85,16 +85,16 @@ class RSSFeedResult:
 
 
 class RSSFeedService:
-    """Phase 2B RSS/Atom Feed Service
+    """Phase 2B RSS/Atom Feed Service.
 
     Provides comprehensive RSS and Atom feed ingestion with cognitive processing,
     caching, filtering, and integration with the PAKE orchestrator.
     """
 
-    def __init__(self):
-        """Initialize RSS feed service"""
+    def __init__(self) -> None:
+        """Initialize RSS feed service."""
         self.session: aiohttp.ClientSession | None = None
-        self.cache: dict[str, dict[str, Any]] = {}
+        self.cache: dict[str, Dict[str, Any]] = {}
         self.cache_ttl = timedelta(minutes=30)  # 30 minute cache TTL
 
         # Rate limiting
@@ -103,21 +103,21 @@ class RSSFeedService:
 
         logger.info("RSSFeedService initialized")
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),
             headers={"User-Agent": "PAKE-RSS-Bot/1.0 (+https://example.com/bot)"},
         )
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         if self.session:
             await self.session.close()
 
-    def _get_session(self):
-        """Get or create HTTP session"""
+    def _get_session(self) -> None:
+        """Get or create HTTP session."""
         if self.session is None:
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=30),
@@ -132,8 +132,8 @@ class RSSFeedService:
         enable_caching: bool = True,
         rate_limit_delay: float | None = None,
     ) -> RSSFeedResult:
-        """Fetch and parse RSS/Atom feed from URL"""
-        logger.info(f"Fetching RSS feed: {feed_url}")
+        """Fetch and parse RSS/Atom feed from URL."""
+        logger.info("Fetching RSS feed: %s", feed_url)
 
         # Check cache first
         if enable_caching:
@@ -198,7 +198,8 @@ class RSSFeedService:
                         retry_after = int(response.headers.get("Retry-After", 60))
                         if attempt < max_retries:
                             logger.warning(
-                                f"Rate limited, waiting {retry_after}s before retry",
+                                "Rate limited, waiting %ss before retry",
+                                retry_after,
                             )
                             await asyncio.sleep(retry_after)
                             continue
@@ -221,7 +222,7 @@ class RSSFeedService:
                     )
 
             except Exception as e:
-                logger.warning(f"Attempt {attempt + 1} failed for {feed_url}: {e}")
+                logger.warning("Attempt %s failed for %s: %s", attempt + 1, feed_url, e)
 
                 if attempt < max_retries:
                     # Exponential backoff
@@ -261,7 +262,7 @@ class RSSFeedService:
         xml_content: str,
         feed_url: str,
     ) -> RSSFeedResult:
-        """Parse RSS/Atom XML content into structured format"""
+        """Parse RSS/Atom XML content into structured format."""
         try:
             # Use feedparser for robust RSS/Atom parsing
             parsed = feedparser.parse(xml_content)
@@ -325,7 +326,9 @@ class RSSFeedService:
                     items.append(item)
 
                 except Exception as item_error:
-                    logger.warning(f"Failed to parse item in {feed_url}: {item_error}")
+                    logger.warning(
+                        "Failed to parse item in %s: %s", feed_url, item_error
+                    )
                     continue
 
             return RSSFeedResult(
@@ -336,7 +339,7 @@ class RSSFeedService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to parse feed {feed_url}: {e}")
+            logger.error("Failed to parse feed %s: %s", feed_url, e)
             return RSSFeedResult(
                 success=False,
                 feed_url=feed_url,
@@ -348,8 +351,8 @@ class RSSFeedService:
             )
 
     async def fetch_multiple_feeds(self, query: RSSFeedQuery) -> RSSFeedResult:
-        """Fetch multiple RSS feeds concurrently"""
-        logger.info(f"Fetching {len(query.feed_urls)} feeds concurrently")
+        """Fetch multiple RSS feeds concurrently."""
+        logger.info("Fetching %s feeds concurrently", len(query.feed_urls))
 
         # Create concurrent tasks
         tasks = []
@@ -368,7 +371,7 @@ class RSSFeedService:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 feeds_failed += 1
-                logger.error(f"Failed to fetch {query.feed_urls[i]}: {result}")
+                logger.error("Failed to fetch %s: %s", query.feed_urls[i], result)
                 continue
 
             if result.success:
@@ -396,7 +399,7 @@ class RSSFeedService:
         )
 
     async def fetch_with_query(self, query: RSSFeedQuery) -> RSSFeedResult:
-        """Fetch RSS feeds with advanced query filtering"""
+        """Fetch RSS feeds with advanced query filtering."""
         # First fetch the feeds
         result = await self.fetch_multiple_feeds(query)
 
@@ -445,7 +448,7 @@ class RSSFeedService:
         items: list[RSSFeedItem],
         query: RSSFeedQuery,
     ) -> list[RSSFeedItem]:
-        """Apply filtering to RSS feed items based on query parameters"""
+        """Apply filtering to RSS feed items based on query parameters."""
         filtered_items = items
 
         # Date range filtering
@@ -491,7 +494,7 @@ class RSSFeedService:
         return filtered_items
 
     async def fetch_article_content(self, article_url: str) -> str | None:
-        """Fetch full article content from URL (basic implementation)"""
+        """Fetch full article content from URL (basic implementation)."""
         try:
             session = self._get_session()
             async with session.get(article_url) as response:
@@ -501,7 +504,9 @@ class RSSFeedService:
                     # For now, return raw HTML
                     return html_content[:5000]  # Truncate for safety
         except Exception as e:
-            logger.warning(f"Failed to fetch article content from {article_url}: {e}")
+            logger.warning(
+                "Failed to fetch article content from %s: %s", article_url, e
+            )
 
         return None
 
@@ -510,7 +515,7 @@ class RSSFeedService:
         query: RSSFeedQuery,
         cognitive_engine,
     ) -> RSSFeedResult:
-        """Fetch RSS feeds with cognitive assessment applied"""
+        """Fetch RSS feeds with cognitive assessment applied."""
         # First fetch the feeds normally
         result = await self.fetch_with_query(query)
 
@@ -556,13 +561,15 @@ class RSSFeedService:
 
             except Exception as e:
                 logger.warning(
-                    f"Cognitive assessment failed for item {item.title}: {e}",
+                    "Cognitive assessment failed for item %s: %s",
+                    item.title,
+                    e,
                 )
                 # Keep original item if assessment fails
                 assessed_items.append(item)
 
         # Return result with cognitive assessment applied
-        enhanced_result = RSSFeedResult(
+        return RSSFeedResult(
             success=result.success,
             feed_url=result.feed_url,
             feed_title=result.feed_title,
@@ -575,14 +582,12 @@ class RSSFeedService:
             fetch_time=result.fetch_time,
         )
 
-        return enhanced_result
-
     async def to_content_items(
         self,
         rss_result: RSSFeedResult,
         source_name: str,
     ) -> list[ContentItem]:
-        """Convert RSS feed items to standardized ContentItem format"""
+        """Convert RSS feed items to standardized ContentItem format."""
         content_items = []
 
         for item in rss_result.items:
@@ -619,10 +624,10 @@ class RSSFeedService:
                 content_items.append(content_item)
 
             except Exception as e:
-                logger.warning(f"Failed to convert RSS item to ContentItem: {e}")
+                logger.warning("Failed to convert RSS item to ContentItem: %s", e)
                 continue
 
-        logger.info(f"Converted {len(content_items)} RSS items to ContentItems")
+        logger.info("Converted %s RSS items to ContentItems", len(content_items))
         return content_items
 
     async def execute_ingestion_query(
@@ -630,19 +635,19 @@ class RSSFeedService:
         query: RSSFeedQuery,
         source_name: str,
     ) -> list[ContentItem]:
-        """Execute RSS ingestion query and return ContentItem list (orchestrator compatible)"""
+        """Execute RSS ingestion query and return ContentItem list (orchestrator compatible)."""
         # Fetch feeds with query
         result = await self.fetch_with_query(query)
 
         if not result.success:
-            logger.error(f"RSS ingestion failed: {result.error}")
+            logger.error("RSS ingestion failed: %s", result.error)
             return []
 
         # Convert to ContentItems
         return await self.to_content_items(result, source_name)
 
     def _is_valid_url(self, url: str) -> bool:
-        """Validate URL format"""
+        """Validate URL format."""
         try:
             parsed = urlparse(url)
             return bool(parsed.scheme and parsed.netloc)
@@ -650,7 +655,7 @@ class RSSFeedService:
             return False
 
     def _get_cached_result(self, feed_url: str) -> RSSFeedResult | None:
-        """Get cached result if valid"""
+        """Get cached result if valid."""
         cache_key = hashlib.sha256(feed_url.encode()).hexdigest()
 
         if cache_key in self.cache:
@@ -667,8 +672,8 @@ class RSSFeedService:
 
         return None
 
-    def _cache_result(self, feed_url: str, result: RSSFeedResult):
-        """Cache successful result"""
+    def _cache_result(self) -> None:
+        """Cache successful result."""
         cache_key = hashlib.sha256(feed_url.encode()).hexdigest()
 
         self.cache[cache_key] = {
@@ -687,8 +692,8 @@ class RSSFeedService:
             for key in oldest_keys:
                 del self.cache[key]
 
-    async def _apply_rate_limit(self, delay: float):
-        """Apply rate limiting delay"""
+    async def _apply_rate_limit(self) -> None:
+        """Apply rate limiting delay."""
         current_time = asyncio.get_event_loop().time()
         elapsed = current_time - self.last_request_time
 
@@ -698,13 +703,13 @@ class RSSFeedService:
 
         self.last_request_time = asyncio.get_event_loop().time()
 
-    async def clear_cache(self):
-        """Clear RSS feed cache"""
+    async def clear_cache(self) -> None:
+        """Clear RSS feed cache."""
         self.cache.clear()
         logger.info("RSS feed cache cleared")
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform RSS service health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform RSS service health check."""
         return {
             "status": "healthy",
             "cache_entries": len(self.cache),

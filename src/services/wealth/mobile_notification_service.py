@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """📱 Mobile Notification Service for Instant Wealth Alerts
-Personal Wealth Generation Platform - World-Class Engineering
+Personal Wealth Generation Platform - World-Class Engineering.
 
 This module implements a comprehensive mobile notification system that delivers
 instant alerts for critical trading opportunities directly to mobile devices
@@ -27,7 +27,7 @@ import hmac
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationType(Enum):
-    """Types of mobile notifications"""
+    """Types of mobile notifications."""
 
     PUSH_NOTIFICATION = "push_notification"
     SMS = "sms"
@@ -54,7 +54,7 @@ class NotificationType(Enum):
 
 
 class DevicePlatform(Enum):
-    """Mobile device platforms"""
+    """Mobile device platforms."""
 
     IOS = "ios"
     ANDROID = "android"
@@ -64,7 +64,7 @@ class DevicePlatform(Enum):
 
 
 class NotificationPriority(Enum):
-    """Notification priority levels"""
+    """Notification priority levels."""
 
     LOW = 1
     MEDIUM = 2
@@ -74,7 +74,7 @@ class NotificationPriority(Enum):
 
 
 class DeliveryStatus(Enum):
-    """Notification delivery status"""
+    """Notification delivery status."""
 
     PENDING = "pending"
     SENT = "sent"
@@ -86,7 +86,7 @@ class DeliveryStatus(Enum):
 
 @dataclass
 class MobileDevice:
-    """Mobile device registration data"""
+    """Mobile device registration data."""
 
     device_id: str
     platform: DevicePlatform
@@ -95,18 +95,18 @@ class MobileDevice:
     app_version: str
     device_model: str
     timezone: str
-    location: dict[str, Any] | None = None
-    preferences: dict[str, Any] = None
+    location: Dict[str, Any] | None = None
+    preferences: Dict[str, Any] = None
     last_seen: datetime = None
     active: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.last_seen is None:
-            self.last_seen = datetime.now()
+            self.last_seen = datetime.now(UTC)
         if self.preferences is None:
             self.preferences = {}
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "device_id": self.device_id,
             "platform": self.platform.value,
@@ -124,7 +124,7 @@ class MobileDevice:
 
 @dataclass
 class NotificationMessage:
-    """Mobile notification message structure"""
+    """Mobile notification message structure."""
 
     notification_id: str
     recipient_id: str
@@ -132,7 +132,7 @@ class NotificationMessage:
     body: str
     notification_type: NotificationType
     priority: NotificationPriority
-    data: dict[str, Any] = None
+    data: Dict[str, Any] = None
     sound: str | None = None
     badge_count: int | None = None
     category: str | None = None
@@ -144,15 +144,15 @@ class NotificationMessage:
     created_at: datetime = None
     delivery_status: DeliveryStatus = DeliveryStatus.PENDING
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.created_at is None:
-            self.created_at = datetime.now()
+            self.created_at = datetime.now(UTC)
         if self.data is None:
             self.data = {}
         if self.expires_at is None:
             self.expires_at = self.created_at + timedelta(hours=24)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "notification_id": self.notification_id,
             "recipient_id": self.recipient_id,
@@ -178,17 +178,17 @@ class NotificationMessage:
 
 @dataclass
 class DeliveryResult:
-    """Notification delivery result"""
+    """Notification delivery result."""
 
     notification_id: str
     device_id: str
     status: DeliveryStatus
     delivery_time: datetime
     error_message: str | None = None
-    provider_response: dict[str, Any] | None = None
+    provider_response: Dict[str, Any] | None = None
     retry_after: datetime | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "notification_id": self.notification_id,
             "device_id": self.device_id,
@@ -201,9 +201,9 @@ class DeliveryResult:
 
 
 class APNSProvider:
-    """Apple Push Notification Service provider"""
+    """Apple Push Notification Service provider."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.team_id = config.get("team_id")
         self.key_id = config.get("key_id")
@@ -220,8 +220,8 @@ class APNSProvider:
         # Load private key
         self._load_private_key()
 
-    def _load_private_key(self):
-        """Load the private key for APNS authentication"""
+    def _load_private_key(self) -> None:
+        """Load the private key for APNS authentication."""
         try:
             if self.private_key_path and Path(self.private_key_path).exists():
                 with open(self.private_key_path, "rb") as f:
@@ -235,11 +235,11 @@ class APNSProvider:
                 )
                 self.private_key = None
         except Exception as e:
-            logger.error(f"Error loading APNS private key: {e}")
+            logger.error("Error loading APNS private key: %s", e)
             self.private_key = None
 
     def _generate_jwt_token(self) -> str | None:
-        """Generate JWT token for APNS authentication"""
+        """Generate JWT token for APNS authentication."""
         try:
             if not self.private_key:
                 return None
@@ -249,18 +249,17 @@ class APNSProvider:
                 "kid": self.key_id,
             }
 
-            payload = {"iss": self.team_id, "iat": int(datetime.now().timestamp())}
+            payload = {"iss": self.team_id, "iat": int(datetime.now(UTC).timestamp())}
 
-            token = jwt.encode(
+            return jwt.encode(
                 payload,
                 self.private_key,
                 algorithm="ES256",
                 headers=headers,
             )
-            return token
 
         except Exception as e:
-            logger.error(f"Error generating APNS JWT token: {e}")
+            logger.error("Error generating APNS JWT token: %s", e)
             return None
 
     async def send_notification(
@@ -268,14 +267,14 @@ class APNSProvider:
         device: MobileDevice,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send push notification via APNS"""
+        """Send push notification via APNS."""
         try:
             if not self.private_key:
                 return DeliveryResult(
                     notification_id=message.notification_id,
                     device_id=device.device_id,
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message="APNS not configured",
                 )
 
@@ -286,7 +285,7 @@ class APNSProvider:
                     notification_id=message.notification_id,
                     device_id=device.device_id,
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message="Failed to generate JWT token",
                 )
 
@@ -343,7 +342,7 @@ class APNSProvider:
                         notification_id=message.notification_id,
                         device_id=device.device_id,
                         status=DeliveryStatus.SENT,
-                        delivery_time=datetime.now(),
+                        delivery_time=datetime.now(UTC),
                         provider_response={
                             "status": response.status,
                             "response": response_data,
@@ -353,7 +352,7 @@ class APNSProvider:
                     notification_id=message.notification_id,
                     device_id=device.device_id,
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message=f"APNS error: {response.status}",
                     provider_response={
                         "status": response.status,
@@ -362,20 +361,20 @@ class APNSProvider:
                 )
 
         except Exception as e:
-            logger.error(f"Error sending APNS notification: {e}")
+            logger.error("Error sending APNS notification: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
                 device_id=device.device_id,
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=str(e),
             )
 
 
 class FCMProvider:
-    """Firebase Cloud Messaging provider for Android"""
+    """Firebase Cloud Messaging provider for Android."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.server_key = config.get("server_key")
         self.project_id = config.get("project_id")
@@ -386,14 +385,14 @@ class FCMProvider:
         device: MobileDevice,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send push notification via FCM"""
+        """Send push notification via FCM."""
         try:
             if not self.server_key:
                 return DeliveryResult(
                     notification_id=message.notification_id,
                     device_id=device.device_id,
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message="FCM not configured",
                 )
 
@@ -418,7 +417,7 @@ class FCMProvider:
                         else "normal"
                     ),
                     "ttl": str(
-                        int((message.expires_at - datetime.now()).total_seconds()),
+                        int((message.expires_at - datetime.now(UTC)).total_seconds()),
                     )
                     + "s",
                 },
@@ -455,7 +454,7 @@ class FCMProvider:
                         notification_id=message.notification_id,
                         device_id=device.device_id,
                         status=DeliveryStatus.SENT,
-                        delivery_time=datetime.now(),
+                        delivery_time=datetime.now(UTC),
                         provider_response=response_data,
                     )
                 error_msg = response_data.get("results", [{}])[0].get(
@@ -466,26 +465,26 @@ class FCMProvider:
                     notification_id=message.notification_id,
                     device_id=device.device_id,
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message=f"FCM error: {error_msg}",
                     provider_response=response_data,
                 )
 
         except Exception as e:
-            logger.error(f"Error sending FCM notification: {e}")
+            logger.error("Error sending FCM notification: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
                 device_id=device.device_id,
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=str(e),
             )
 
 
 class TwilioSMSProvider:
-    """Twilio SMS provider"""
+    """Twilio SMS provider."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.account_sid = config.get("account_sid")
         self.auth_token = config.get("auth_token")
@@ -497,14 +496,14 @@ class TwilioSMSProvider:
         phone_number: str,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send SMS via Twilio"""
+        """Send SMS via Twilio."""
         try:
             if not all([self.account_sid, self.auth_token, self.from_number]):
                 return DeliveryResult(
                     notification_id=message.notification_id,
                     device_id="sms",
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message="Twilio SMS not configured",
                 )
 
@@ -543,7 +542,7 @@ class TwilioSMSProvider:
                         notification_id=message.notification_id,
                         device_id="sms",
                         status=DeliveryStatus.SENT,
-                        delivery_time=datetime.now(),
+                        delivery_time=datetime.now(UTC),
                         provider_response=response_data,
                     )
                 error_msg = response_data.get("message", "Unknown Twilio error")
@@ -551,26 +550,26 @@ class TwilioSMSProvider:
                     notification_id=message.notification_id,
                     device_id="sms",
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message=f"Twilio error: {error_msg}",
                     provider_response=response_data,
                 )
 
         except Exception as e:
-            logger.error(f"Error sending SMS: {e}")
+            logger.error("Error sending SMS: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
                 device_id="sms",
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=str(e),
             )
 
 
 class WebhookProvider:
-    """Generic webhook provider"""
+    """Generic webhook provider."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.webhooks = config.get("webhooks", [])
 
@@ -580,7 +579,7 @@ class WebhookProvider:
         message: NotificationMessage,
         secret: str | None = None,
     ) -> DeliveryResult:
-        """Send webhook notification"""
+        """Send webhook notification."""
         try:
             payload = {
                 "notification_id": message.notification_id,
@@ -622,7 +621,7 @@ class WebhookProvider:
                         notification_id=message.notification_id,
                         device_id="webhook",
                         status=DeliveryStatus.SENT,
-                        delivery_time=datetime.now(),
+                        delivery_time=datetime.now(UTC),
                         provider_response={
                             "status": response.status,
                             "response": response_text,
@@ -632,7 +631,7 @@ class WebhookProvider:
                     notification_id=message.notification_id,
                     device_id="webhook",
                     status=DeliveryStatus.FAILED,
-                    delivery_time=datetime.now(),
+                    delivery_time=datetime.now(UTC),
                     error_message=f"Webhook error: {response.status}",
                     provider_response={
                         "status": response.status,
@@ -641,20 +640,20 @@ class WebhookProvider:
                 )
 
         except Exception as e:
-            logger.error(f"Error sending webhook: {e}")
+            logger.error("Error sending webhook: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
                 device_id="webhook",
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=str(e),
             )
 
 
 class MobileNotificationService:
-    """Main mobile notification service"""
+    """Main mobile notification service."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
 
         # Initialize providers
@@ -680,8 +679,8 @@ class MobileNotificationService:
 
         logger.info("Mobile Notification Service initialized")
 
-    async def _init_database(self):
-        """Initialize SQLite database for notifications"""
+    async def _init_database(self) -> None:
+        """Initialize SQLite database for notifications."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 # Create devices table
@@ -766,10 +765,10 @@ class MobileNotificationService:
             logger.info("Mobile notifications database initialized")
 
         except Exception as e:
-            logger.error(f"Error initializing database: {e}")
+            logger.error("Error initializing database: %s", e)
 
     async def register_device(self, device: MobileDevice) -> bool:
-        """Register a mobile device for notifications"""
+        """Register a mobile device for notifications."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -796,19 +795,21 @@ class MobileNotificationService:
                 await db.commit()
 
             logger.info(
-                f"Device registered: {device.device_id} ({device.platform.value})",
+                "Device registered: %s (%s)",
+                device.device_id,
+                device.platform.value,
             )
             return True
 
         except Exception as e:
-            logger.error(f"Error registering device {device.device_id}: {e}")
+            logger.error("Error registering device %s: %s", device.device_id, e)
             return False
 
     async def send_notification(
         self,
         message: NotificationMessage,
     ) -> list[DeliveryResult]:
-        """Send notification to all registered devices for the recipient"""
+        """Send notification to all registered devices for the recipient."""
         try:
             # Store notification in database
             await self._store_notification(message)
@@ -817,7 +818,9 @@ class MobileNotificationService:
             devices = await self._get_recipient_devices(message.recipient_id)
 
             if not devices:
-                logger.warning(f"No devices found for recipient {message.recipient_id}")
+                logger.warning(
+                    "No devices found for recipient %s", message.recipient_id
+                )
                 return []
 
             # Send to all devices concurrently
@@ -849,7 +852,7 @@ class MobileNotificationService:
                     delivery_results.append(result)
                     await self._store_delivery_result(result)
                 elif isinstance(result, Exception):
-                    logger.error(f"Error in notification delivery: {result}")
+                    logger.error("Error in notification delivery: %s", result)
 
             # Update notification status
             overall_status = self._determine_overall_status(delivery_results)
@@ -859,14 +862,16 @@ class MobileNotificationService:
             )
 
             logger.info(
-                f"Notification {message.notification_id} sent to {
-                    len(delivery_results)
-                } targets",
+                "Notification %s sent to %s targets",
+                message.notification_id,
+                len(delivery_results),
             )
             return delivery_results
 
         except Exception as e:
-            logger.error(f"Error sending notification {message.notification_id}: {e}")
+            logger.error(
+                "Error sending notification %s: %s", message.notification_id, e
+            )
             return []
 
     async def _send_to_device(
@@ -874,7 +879,7 @@ class MobileNotificationService:
         device: MobileDevice,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send notification to a specific device"""
+        """Send notification to a specific device."""
         try:
             if device.platform == DevicePlatform.IOS:
                 return await self.apns_provider.send_notification(device, message)
@@ -884,17 +889,17 @@ class MobileNotificationService:
                 notification_id=message.notification_id,
                 device_id=device.device_id,
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=f"Unsupported platform: {device.platform.value}",
             )
 
         except Exception as e:
-            logger.error(f"Error sending to device {device.device_id}: {e}")
+            logger.error("Error sending to device %s: %s", device.device_id, e)
             return DeliveryResult(
                 notification_id=message.notification_id,
                 device_id=device.device_id,
                 status=DeliveryStatus.FAILED,
-                delivery_time=datetime.now(),
+                delivery_time=datetime.now(UTC),
                 error_message=str(e),
             )
 
@@ -903,7 +908,7 @@ class MobileNotificationService:
         phone_number: str,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send SMS notification"""
+        """Send SMS notification."""
         return await self.sms_provider.send_sms(phone_number, message)
 
     async def _send_webhook_notification(
@@ -911,12 +916,12 @@ class MobileNotificationService:
         webhook_url: str,
         message: NotificationMessage,
     ) -> DeliveryResult:
-        """Send webhook notification"""
+        """Send webhook notification."""
         secret = self.config.get("webhook", {}).get("secret")
         return await self.webhook_provider.send_webhook(webhook_url, message, secret)
 
     async def _get_recipient_devices(self, recipient_id: str) -> list[MobileDevice]:
-        """Get all active devices for a recipient"""
+        """Get all active devices for a recipient."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
@@ -944,7 +949,9 @@ class MobileNotificationService:
                         location=json.loads(row[7]) if row[7] else None,
                         preferences=json.loads(row[8]) if row[8] else {},
                         last_seen=(
-                            datetime.fromisoformat(row[9]) if row[9] else datetime.now()
+                            datetime.fromisoformat(row[9])
+                            if row[9]
+                            else datetime.now(UTC)
                         ),
                         active=bool(row[10]),
                     )
@@ -953,23 +960,23 @@ class MobileNotificationService:
                 return devices
 
         except Exception as e:
-            logger.error(f"Error getting devices for recipient {recipient_id}: {e}")
+            logger.error("Error getting devices for recipient %s: %s", recipient_id, e)
             return []
 
     async def _get_recipient_phone(self, recipient_id: str) -> str | None:
-        """Get phone number for SMS notifications (placeholder)"""
+        """Get phone number for SMS notifications (placeholder)."""
         # In a real implementation, this would query a user database
         # For demo purposes, return None
         return None
 
-    async def _get_recipient_webhooks(self, recipient_id: str) -> list[str]:
-        """Get webhook URLs for recipient (placeholder)"""
+    async def _get_recipient_webhooks(self, recipient_id: str) -> List[str]:
+        """Get webhook URLs for recipient (placeholder)."""
         # In a real implementation, this would query webhook registrations
         # For demo purposes, return configured webhooks
         return self.webhook_provider.webhooks
 
-    async def _store_notification(self, message: NotificationMessage):
-        """Store notification in database"""
+    async def _store_notification(self) -> None:
+        """Store notification in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -1006,10 +1013,12 @@ class MobileNotificationService:
                 await db.commit()
 
         except Exception as e:
-            logger.error(f"Error storing notification {message.notification_id}: {e}")
+            logger.error(
+                "Error storing notification %s: %s", message.notification_id, e
+            )
 
-    async def _store_delivery_result(self, result: DeliveryResult):
-        """Store delivery result in database"""
+    async def _store_delivery_result(self) -> None:
+        """Store delivery result in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -1036,13 +1045,13 @@ class MobileNotificationService:
                 await db.commit()
 
         except Exception as e:
-            logger.error(f"Error storing delivery result: {e}")
+            logger.error("Error storing delivery result: %s", e)
 
     def _determine_overall_status(
         self,
         results: list[DeliveryResult],
     ) -> DeliveryStatus:
-        """Determine overall delivery status from individual results"""
+        """Determine overall delivery status from individual results."""
         if not results:
             return DeliveryStatus.FAILED
 
@@ -1055,12 +1064,8 @@ class MobileNotificationService:
             return DeliveryStatus.SENT  # Partial success still counts as sent
         return DeliveryStatus.FAILED
 
-    async def _update_notification_status(
-        self,
-        notification_id: str,
-        status: DeliveryStatus,
-    ):
-        """Update notification status in database"""
+    async def _update_notification_status(self) -> None:
+        """Update notification status in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -1074,13 +1079,13 @@ class MobileNotificationService:
                 await db.commit()
 
         except Exception as e:
-            logger.error(f"Error updating notification status: {e}")
+            logger.error("Error updating notification status: %s", e)
 
     async def get_notification_status(
         self,
         notification_id: str,
-    ) -> dict[str, Any] | None:
-        """Get detailed status of a notification"""
+    ) -> Dict[str, Any] | None:
+        """Get detailed status of a notification."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 # Get notification details
@@ -1124,13 +1129,13 @@ class MobileNotificationService:
                 }
 
         except Exception as e:
-            logger.error(f"Error getting notification status: {e}")
+            logger.error("Error getting notification status: %s", e)
             return None
 
 
 # Demo and testing functions
-async def demo_mobile_notifications():
-    """Demonstrate mobile notification capabilities"""
+async def demo_mobile_notifications(self) -> None:
+    """Demonstrate mobile notification capabilities."""
     print("📱 Mobile Notification Service Demo - Personal Wealth Generation")
     print("=" * 80)
 
@@ -1194,7 +1199,7 @@ async def demo_mobile_notifications():
 
     # Create critical trading alert
     critical_alert = NotificationMessage(
-        notification_id=f"alert_{int(datetime.now().timestamp())}",
+        notification_id=f"alert_{int(datetime.now(UTC).timestamp())}",
         recipient_id="wealth_user_001",
         title="🚨 CRITICAL: TSLA Breakout Signal",
         body="Strong buy signal detected! TSLA breaking above $250 resistance with 89% confidence. Expected return: +12%",

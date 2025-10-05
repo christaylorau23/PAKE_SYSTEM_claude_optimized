@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def check_hardcoded_secrets():
+def check_hardcoded_secrets(self) -> None:
     """Check for hardcoded secrets in staged files"""
 
     # Patterns that indicate hardcoded secrets
@@ -106,7 +106,7 @@ def check_hardcoded_secrets():
     return True
 
 
-def get_staged_files():
+def get_staged_files(self) -> None:
     """Get list of staged files"""
     import subprocess
 

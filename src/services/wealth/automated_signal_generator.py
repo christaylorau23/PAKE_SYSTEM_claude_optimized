@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """🚨 Automated Signal Generation and Alerting System
-Personal Wealth Generation Platform - World-Class Engineering
+Personal Wealth Generation Platform - World-Class Engineering.
 
 This module implements a sophisticated automated trading signal generation and alerting
 system that combines multiple data sources, AI analysis, and vector intelligence to
@@ -24,7 +24,7 @@ import json
 import logging
 import smtplib
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from email.mime.multipart import MimeMultipart
 from email.mime.text import MimeText
 from enum import Enum
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class SignalType(Enum):
-    """Types of trading signals"""
+    """Types of trading signals."""
 
     BUY = "buy"
     SELL = "sell"
@@ -49,7 +49,7 @@ class SignalType(Enum):
 
 
 class SignalStrength(Enum):
-    """Signal strength levels"""
+    """Signal strength levels."""
 
     WEAK = "weak"
     MODERATE = "moderate"
@@ -59,7 +59,7 @@ class SignalStrength(Enum):
 
 
 class AlertPriority(Enum):
-    """Alert priority levels"""
+    """Alert priority levels."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -69,7 +69,7 @@ class AlertPriority(Enum):
 
 
 class NotificationChannel(Enum):
-    """Available notification channels"""
+    """Available notification channels."""
 
     EMAIL = "email"
     SMS = "sms"
@@ -81,7 +81,7 @@ class NotificationChannel(Enum):
 
 @dataclass
 class TradingSignal:
-    """Core trading signal data structure"""
+    """Core trading signal data structure."""
 
     signal_id: str
     symbol: str
@@ -96,19 +96,19 @@ class TradingSignal:
     stop_loss: float | None = None
     position_size_pct: float | None = None
     timestamp: datetime = None
-    sources: list[str] = None
-    metadata: dict[str, Any] = None
+    sources: List[str] = None
+    metadata: Dict[str, Any] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
-            self.timestamp = datetime.now()
+            self.timestamp = datetime.now(UTC)
         if self.sources is None:
             self.sources = []
         if self.metadata is None:
             self.metadata = {}
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
         return {
             "signal_id": self.signal_id,
             "symbol": self.symbol,
@@ -130,7 +130,7 @@ class TradingSignal:
 
 @dataclass
 class AlertMessage:
-    """Alert message data structure"""
+    """Alert message data structure."""
 
     alert_id: str
     signal: TradingSignal
@@ -142,11 +142,11 @@ class AlertMessage:
     delivered: bool = False
     delivery_attempts: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
-            self.timestamp = datetime.now()
+            self.timestamp = datetime.now(UTC)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "alert_id": self.alert_id,
             "signal_id": self.signal.signal_id,
@@ -161,17 +161,17 @@ class AlertMessage:
 
 
 class TechnicalAnalysisEngine:
-    """Advanced technical analysis for signal generation"""
+    """Advanced technical analysis for signal generation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.indicators_cache = {}
 
     async def analyze_technical_signals(
         self,
         symbol: str,
-        price_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Generate technical analysis signals"""
+        price_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Generate technical analysis signals."""
         try:
             signals = {
                 "rsi_signal": self._analyze_rsi(price_data),
@@ -194,11 +194,11 @@ class TechnicalAnalysisEngine:
             }
 
         except Exception as e:
-            logger.error(f"Error in technical analysis for {symbol}: {e}")
+            logger.error("Error in technical analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
-    def _analyze_rsi(self, price_data: dict[str, Any]) -> float:
-        """Analyze RSI for oversold/overbought conditions"""
+    def _analyze_rsi(self, price_data: Dict[str, Any]) -> float:
+        """Analyze RSI for oversold/overbought conditions."""
         rsi = price_data.get("technical_indicators", {}).get("rsi", 50)
 
         if rsi <= 30:
@@ -211,8 +211,8 @@ class TechnicalAnalysisEngine:
             return -0.5  # Moderate sell signal
         return 0.0  # Neutral
 
-    def _analyze_macd(self, price_data: dict[str, Any]) -> float:
-        """Analyze MACD for momentum signals"""
+    def _analyze_macd(self, price_data: Dict[str, Any]) -> float:
+        """Analyze MACD for momentum signals."""
         indicators = price_data.get("technical_indicators", {})
         macd = indicators.get("macd", 0)
         macd_signal = indicators.get("macd_signal", 0)
@@ -240,8 +240,8 @@ class TechnicalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_bollinger_bands(self, price_data: dict[str, Any]) -> float:
-        """Analyze Bollinger Bands for volatility signals"""
+    def _analyze_bollinger_bands(self, price_data: Dict[str, Any]) -> float:
+        """Analyze Bollinger Bands for volatility signals."""
         price = price_data.get("price_data", {}).get("close", 0)
         indicators = price_data.get("technical_indicators", {})
         bb_upper = indicators.get("bb_upper", price * 1.02)
@@ -258,8 +258,8 @@ class TechnicalAnalysisEngine:
             return -0.2  # Mild bearish
         return 0.0  # Neutral
 
-    def _analyze_moving_averages(self, price_data: dict[str, Any]) -> float:
-        """Analyze moving average crossovers and trends"""
+    def _analyze_moving_averages(self, price_data: Dict[str, Any]) -> float:
+        """Analyze moving average crossovers and trends."""
         price = price_data.get("price_data", {}).get("close", 0)
         indicators = price_data.get("technical_indicators", {})
         sma_20 = indicators.get("sma_20", price)
@@ -283,8 +283,8 @@ class TechnicalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_volume(self, price_data: dict[str, Any]) -> float:
-        """Analyze volume for confirmation signals"""
+    def _analyze_volume(self, price_data: Dict[str, Any]) -> float:
+        """Analyze volume for confirmation signals."""
         volume = price_data.get("price_data", {}).get("volume", 0)
         avg_volume = price_data.get("historical_data", {}).get("avg_volume_20", volume)
         price_change = price_data.get("price_data", {}).get("price_change_pct", 0)
@@ -300,8 +300,8 @@ class TechnicalAnalysisEngine:
         # Normal volume
         return 0.2 if price_change > 0 else -0.2
 
-    def _analyze_momentum(self, price_data: dict[str, Any]) -> float:
-        """Analyze momentum indicators"""
+    def _analyze_momentum(self, price_data: Dict[str, Any]) -> float:
+        """Analyze momentum indicators."""
         price_change = price_data.get("price_data", {}).get("price_change_pct", 0)
         volatility = price_data.get("price_data", {}).get("volatility", 0)
 
@@ -312,8 +312,8 @@ class TechnicalAnalysisEngine:
             return 0.4 if price_change > 0 else -0.4
         return 0.0
 
-    def _analyze_support_resistance(self, price_data: dict[str, Any]) -> float:
-        """Analyze support and resistance levels"""
+    def _analyze_support_resistance(self, price_data: Dict[str, Any]) -> float:
+        """Analyze support and resistance levels."""
         price = price_data.get("price_data", {}).get("close", 0)
         high = price_data.get("price_data", {}).get("high", price)
         low = price_data.get("price_data", {}).get("low", price)
@@ -329,7 +329,7 @@ class TechnicalAnalysisEngine:
         return 0.0
 
     def _combine_technical_signals(self, signals: dict[str, float]) -> float:
-        """Combine individual technical signals into overall score"""
+        """Combine individual technical signals into overall score."""
         weights = {
             "rsi_signal": 0.15,
             "macd_signal": 0.20,
@@ -351,7 +351,7 @@ class TechnicalAnalysisEngine:
         self,
         signals: dict[str, float],
     ) -> SignalStrength:
-        """Calculate technical signal strength"""
+        """Calculate technical signal strength."""
         overall_score = abs(self._combine_technical_signals(signals))
 
         if overall_score >= 0.8:
@@ -365,7 +365,7 @@ class TechnicalAnalysisEngine:
         return SignalStrength.WEAK
 
     def _calculate_technical_confidence(self, signals: dict[str, float]) -> float:
-        """Calculate confidence in technical signals"""
+        """Calculate confidence in technical signals."""
         # Count signals pointing in same direction
         positive_signals = sum(1 for score in signals.values() if score > 0.3)
         negative_signals = sum(1 for score in signals.values() if score < -0.3)
@@ -379,14 +379,14 @@ class TechnicalAnalysisEngine:
 
 
 class FundamentalAnalysisEngine:
-    """Fundamental analysis for signal generation"""
+    """Fundamental analysis for signal generation."""
 
     async def analyze_fundamental_signals(
         self,
         symbol: str,
-        fundamental_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Generate fundamental analysis signals"""
+        fundamental_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Generate fundamental analysis signals."""
         try:
             signals = {
                 "valuation_signal": self._analyze_valuation(fundamental_data),
@@ -409,11 +409,11 @@ class FundamentalAnalysisEngine:
             }
 
         except Exception as e:
-            logger.error(f"Error in fundamental analysis for {symbol}: {e}")
+            logger.error("Error in fundamental analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
-    def _analyze_valuation(self, data: dict[str, Any]) -> float:
-        """Analyze valuation metrics"""
+    def _analyze_valuation(self, data: Dict[str, Any]) -> float:
+        """Analyze valuation metrics."""
         pe_ratio = data.get("pe_ratio", 20)
         pb_ratio = data.get("pb_ratio", 2)
         ps_ratio = data.get("ps_ratio", 3)
@@ -440,8 +440,8 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_growth(self, data: dict[str, Any]) -> float:
-        """Analyze growth metrics"""
+    def _analyze_growth(self, data: Dict[str, Any]) -> float:
+        """Analyze growth metrics."""
         revenue_growth = data.get("revenue_growth_yoy", 0)
         earnings_growth = data.get("earnings_growth_yoy", 0)
         eps_growth = data.get("eps_growth_yoy", 0)
@@ -468,8 +468,8 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_profitability(self, data: dict[str, Any]) -> float:
-        """Analyze profitability metrics"""
+    def _analyze_profitability(self, data: Dict[str, Any]) -> float:
+        """Analyze profitability metrics."""
         profit_margin = data.get("profit_margin", 0)
         roe = data.get("return_on_equity", 0)
         roa = data.get("return_on_assets", 0)
@@ -496,8 +496,8 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_financial_health(self, data: dict[str, Any]) -> float:
-        """Analyze financial health metrics"""
+    def _analyze_financial_health(self, data: Dict[str, Any]) -> float:
+        """Analyze financial health metrics."""
         debt_to_equity = data.get("debt_to_equity", 0)
         current_ratio = data.get("current_ratio", 1)
         free_cash_flow = data.get("free_cash_flow", 0)
@@ -524,8 +524,8 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_dividend(self, data: dict[str, Any]) -> float:
-        """Analyze dividend metrics"""
+    def _analyze_dividend(self, data: Dict[str, Any]) -> float:
+        """Analyze dividend metrics."""
         dividend_yield = data.get("dividend_yield", 0)
         dividend_growth = data.get("dividend_growth_5yr", 0)
         payout_ratio = data.get("payout_ratio", 0)
@@ -551,7 +551,7 @@ class FundamentalAnalysisEngine:
         return max(-1.0, min(1.0, signal_score))
 
     def _combine_fundamental_signals(self, signals: dict[str, float]) -> float:
-        """Combine fundamental signals"""
+        """Combine fundamental signals."""
         weights = {
             "valuation_signal": 0.25,
             "growth_signal": 0.30,
@@ -571,7 +571,7 @@ class FundamentalAnalysisEngine:
         self,
         signals: dict[str, float],
     ) -> SignalStrength:
-        """Calculate fundamental signal strength"""
+        """Calculate fundamental signal strength."""
         overall_score = abs(self._combine_fundamental_signals(signals))
 
         if overall_score >= 0.75:
@@ -585,7 +585,7 @@ class FundamentalAnalysisEngine:
         return SignalStrength.WEAK
 
     def _calculate_fundamental_confidence(self, signals: dict[str, float]) -> float:
-        """Calculate confidence in fundamental signals"""
+        """Calculate confidence in fundamental signals."""
         # Confidence based on signal consistency
         positive_signals = sum(1 for score in signals.values() if score > 0.2)
         negative_signals = sum(1 for score in signals.values() if score < -0.2)
@@ -598,9 +598,9 @@ class FundamentalAnalysisEngine:
 
 
 class AutomatedSignalGenerator:
-    """Main automated signal generation system"""
+    """Main automated signal generation system."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.technical_engine = TechnicalAnalysisEngine()
         self.fundamental_engine = FundamentalAnalysisEngine()
@@ -627,11 +627,11 @@ class AutomatedSignalGenerator:
     async def generate_signal(
         self,
         symbol: str,
-        market_data: dict[str, Any],
+        market_data: Dict[str, Any],
     ) -> TradingSignal | None:
-        """Generate a comprehensive trading signal for a symbol"""
+        """Generate a comprehensive trading signal for a symbol."""
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
 
             # Check cooldown period
             if not await self._check_signal_cooldown(symbol):
@@ -677,12 +677,13 @@ class AutomatedSignalGenerator:
                 await self._generate_alert(signal)
 
                 # Performance logging
-                duration = (datetime.now() - start_time).total_seconds() * 1000
+                duration = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 logger.info(
-                    f"Generated signal for {symbol} in {duration:.1f}ms: {
-                        signal.signal_type.value
-                    } "
-                    f"(confidence: {signal.confidence_score:.3f})",
+                    "Generated signal for %.1f in %.3fms: %s %s",
+                    symbol,
+                    duration,
+                    signal.signal_type.value,
+                    f"(confidence: {signal.confidence_score})",
                 )
 
                 return signal
@@ -690,11 +691,11 @@ class AutomatedSignalGenerator:
             return None
 
         except Exception as e:
-            logger.error(f"Error generating signal for {symbol}: {e}")
+            logger.error("Error generating signal for %s: %s", symbol, e)
             return None
 
     async def _check_signal_cooldown(self, symbol: str) -> bool:
-        """Check if enough time has passed since last signal for this symbol"""
+        """Check if enough time has passed since last signal for this symbol."""
         try:
             # Find last signal for this symbol
             recent_signals = [
@@ -702,21 +703,21 @@ class AutomatedSignalGenerator:
                 for signal in self.generated_signals.values()
                 if signal.symbol == symbol
                 and signal.timestamp
-                > datetime.now() - timedelta(minutes=self.signal_cooldown)
+                > datetime.now(UTC) - timedelta(minutes=self.signal_cooldown)
             ]
 
             return len(recent_signals) == 0
 
         except Exception as e:
-            logger.error(f"Error checking signal cooldown for {symbol}: {e}")
+            logger.error("Error checking signal cooldown for %s: %s", symbol, e)
             return True
 
     async def _analyze_sentiment(
         self,
         symbol: str,
-        market_data: dict[str, Any],
+        market_data: Dict[str, Any],
     ) -> float:
-        """Analyze sentiment from various sources"""
+        """Analyze sentiment from various sources."""
         try:
             sentiment_score = 0.0
 
@@ -741,15 +742,15 @@ class AutomatedSignalGenerator:
             return max(-1.0, min(1.0, sentiment_score))
 
         except Exception as e:
-            logger.error(f"Error analyzing sentiment for {symbol}: {e}")
+            logger.error("Error analyzing sentiment for %s: %s", symbol, e)
             return 0.0
 
     async def _get_vector_intelligence(
         self,
         symbol: str,
-        market_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Get pattern intelligence from vector database"""
+        market_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Get pattern intelligence from vector database."""
         try:
             # Generate embedding for current market state
             market_embedding = (
@@ -809,19 +810,19 @@ class AutomatedSignalGenerator:
             }
 
         except Exception as e:
-            logger.error(f"Error getting vector intelligence for {symbol}: {e}")
+            logger.error("Error getting vector intelligence for %s: %s", symbol, e)
             return {"signal": 0.0, "confidence": 0.0, "matches": 0}
 
     async def _combine_all_signals(
         self,
         symbol: str,
-        market_data: dict[str, Any],
-        technical: dict[str, Any],
-        fundamental: dict[str, Any],
+        market_data: Dict[str, Any],
+        technical: Dict[str, Any],
+        fundamental: Dict[str, Any],
         sentiment: float,
-        vector_intel: dict[str, Any],
+        vector_intel: Dict[str, Any],
     ) -> TradingSignal | None:
-        """Combine all signal sources into final trading signal"""
+        """Combine all signal sources into final trading signal."""
         try:
             # Signal weights (can be adjusted based on market conditions)
             weights = {
@@ -897,7 +898,7 @@ class AutomatedSignalGenerator:
             position_size = self._calculate_position_size(final_confidence, risk_level)
 
             # Create trading signal
-            signal_id = f"{symbol}_{int(datetime.now().timestamp())}"
+            signal_id = f"{symbol}_{int(datetime.now(UTC).timestamp())}"
 
             current_price = market_data.get("price_data", {}).get("close", 0)
             target_price = (
@@ -943,7 +944,7 @@ class AutomatedSignalGenerator:
             return signal
 
         except Exception as e:
-            logger.error(f"Error combining signals for {symbol}: {e}")
+            logger.error("Error combining signals for %s: %s", symbol, e)
             return None
 
     def _classify_signal(
@@ -951,7 +952,7 @@ class AutomatedSignalGenerator:
         signal_value: float,
         confidence: float,
     ) -> tuple[SignalType, SignalStrength]:
-        """Classify the combined signal into type and strength"""
+        """Classify the combined signal into type and strength."""
         abs_signal = abs(signal_value)
 
         # Determine strength
@@ -983,11 +984,11 @@ class AutomatedSignalGenerator:
     def _calculate_risk_return(
         self,
         signal_value: float,
-        market_data: dict[str, Any],
-        technical: dict[str, Any],
-        fundamental: dict[str, Any],
+        market_data: Dict[str, Any],
+        technical: Dict[str, Any],
+        fundamental: Dict[str, Any],
     ) -> tuple[str, float]:
-        """Calculate risk level and expected return"""
+        """Calculate risk level and expected return."""
         # Base expected return from signal strength
         base_return = abs(signal_value) * 15  # Scale to reasonable return expectation
 
@@ -1013,7 +1014,7 @@ class AutomatedSignalGenerator:
         return risk_level, round(expected_return, 2)
 
     def _calculate_position_size(self, confidence: float, risk_level: str) -> float:
-        """Calculate recommended position size as percentage of portfolio"""
+        """Calculate recommended position size as percentage of portfolio."""
         base_position = 0.10  # 10% base position
 
         # Adjust for confidence
@@ -1030,10 +1031,10 @@ class AutomatedSignalGenerator:
 
     def _determine_time_horizon(
         self,
-        technical: dict[str, Any],
-        vector_intel: dict[str, Any],
+        technical: Dict[str, Any],
+        vector_intel: Dict[str, Any],
     ) -> str:
-        """Determine appropriate time horizon for the signal"""
+        """Determine appropriate time horizon for the signal."""
         # Based on technical indicators
         tech_signals = technical.get("individual_signals", {})
 
@@ -1054,8 +1055,8 @@ class AutomatedSignalGenerator:
             return "days"
         return "weeks"
 
-    async def _generate_alert(self, signal: TradingSignal):
-        """Generate and send alert for the trading signal"""
+    async def _generate_alert(self) -> None:
+        """Generate and send alert for the trading signal."""
         try:
             # Determine alert priority
             priority = self._determine_alert_priority(signal)
@@ -1100,10 +1101,12 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
             await self.notification_system.send_alert(alert)
 
         except Exception as e:
-            logger.error(f"Error generating alert for signal {signal.signal_id}: {e}")
+            logger.error(
+                "Error generating alert for signal %s: %s", signal.signal_id, e
+            )
 
     def _determine_alert_priority(self, signal: TradingSignal) -> AlertPriority:
-        """Determine alert priority based on signal characteristics"""
+        """Determine alert priority based on signal characteristics."""
         if (
             signal.strength == SignalStrength.EXTREME
             and signal.confidence_score >= 0.9
@@ -1130,7 +1133,7 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
         priority: AlertPriority,
         signal: TradingSignal,
     ) -> list[NotificationChannel]:
-        """Determine which notification channels to use based on priority"""
+        """Determine which notification channels to use based on priority."""
         channels = [NotificationChannel.WEBSOCKET, NotificationChannel.DESKTOP]
 
         if priority in [AlertPriority.EMERGENCY, AlertPriority.CRITICAL]:
@@ -1152,9 +1155,9 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
 
 
 class NotificationSystem:
-    """Multi-channel notification system for instant alerts"""
+    """Multi-channel notification system for instant alerts."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.email_config = config.get("email", {})
         self.sms_config = config.get("sms", {})
@@ -1171,7 +1174,7 @@ class NotificationSystem:
         logger.info("Notification system initialized")
 
     async def send_alert(self, alert: AlertMessage) -> bool:
-        """Send alert through all specified channels"""
+        """Send alert through all specified channels."""
         try:
             delivery_tasks = []
 
@@ -1198,19 +1201,20 @@ class NotificationSystem:
             alert.delivered = successful_deliveries > 0
 
             logger.info(
-                f"Alert {alert.alert_id} delivered via {successful_deliveries}/{
-                    len(delivery_tasks)
-                } channels",
+                "Alert %s delivered via %s/%s channels",
+                alert.alert_id,
+                successful_deliveries,
+                len(delivery_tasks),
             )
 
             return alert.delivered
 
         except Exception as e:
-            logger.error(f"Error sending alert {alert.alert_id}: {e}")
+            logger.error("Error sending alert %s: %s", alert.alert_id, e)
             return False
 
     async def _send_email(self, alert: AlertMessage) -> bool:
-        """Send email notification"""
+        """Send email notification."""
         try:
             if not self.email_config.get("enabled", False):
                 return False
@@ -1248,25 +1252,25 @@ class NotificationSystem:
             return True
 
         except Exception as e:
-            logger.error(f"Error sending email alert: {e}")
+            logger.error("Error sending email alert: %s", e)
             return False
 
     async def _send_sms(self, alert: AlertMessage) -> bool:
-        """Send SMS notification (placeholder - integrate with SMS service)"""
+        """Send SMS notification (placeholder - integrate with SMS service)."""
         try:
             if not self.sms_config.get("enabled", False):
                 return False
 
             # Placeholder for SMS integration (Twilio, AWS SNS, etc.)
-            logger.info(f"SMS notification would be sent: {alert.title}")
+            logger.info("SMS notification would be sent: %s", alert.title)
             return True
 
         except Exception as e:
-            logger.error(f"Error sending SMS alert: {e}")
+            logger.error("Error sending SMS alert: %s", e)
             return False
 
     async def _send_webhook(self, alert: AlertMessage) -> bool:
-        """Send webhook notification"""
+        """Send webhook notification."""
         try:
             if not self.webhook_config.get("enabled", False):
                 return False
@@ -1298,11 +1302,11 @@ class NotificationSystem:
                 return response.status == 200
 
         except Exception as e:
-            logger.error(f"Error sending webhook alert: {e}")
+            logger.error("Error sending webhook alert: %s", e)
             return False
 
     async def _send_websocket(self, alert: AlertMessage) -> bool:
-        """Send WebSocket notification to connected clients"""
+        """Send WebSocket notification to connected clients."""
         try:
             if not self.websocket_clients:
                 return False
@@ -1329,22 +1333,22 @@ class NotificationSystem:
             return len(self.websocket_clients) > len(disconnected_clients)
 
         except Exception as e:
-            logger.error(f"Error sending WebSocket alert: {e}")
+            logger.error("Error sending WebSocket alert: %s", e)
             return False
 
     async def _send_mobile_push(self, alert: AlertMessage) -> bool:
-        """Send mobile push notification (placeholder)"""
+        """Send mobile push notification (placeholder)."""
         try:
             # Placeholder for mobile push integration (Firebase, APNs, etc.)
-            logger.info(f"Mobile push notification would be sent: {alert.title}")
+            logger.info("Mobile push notification would be sent: %s", alert.title)
             return True
 
         except Exception as e:
-            logger.error(f"Error sending mobile push alert: {e}")
+            logger.error("Error sending mobile push alert: %s", e)
             return False
 
     async def _send_desktop_notification(self, alert: AlertMessage) -> bool:
-        """Send desktop notification"""
+        """Send desktop notification."""
         try:
             if self.redis_client:
                 # Publish to Redis channel for desktop app to receive
@@ -1353,17 +1357,17 @@ class NotificationSystem:
                     json.dumps(alert.to_dict()),
                 )
 
-            logger.info(f"Desktop notification sent: {alert.title}")
+            logger.info("Desktop notification sent: %s", alert.title)
             return True
 
         except Exception as e:
-            logger.error(f"Error sending desktop alert: {e}")
+            logger.error("Error sending desktop alert: %s", e)
             return False
 
 
 # Demo usage and testing
-async def demo_signal_generator():
-    """Demonstrate the automated signal generation system"""
+async def demo_signal_generator(self) -> None:
+    """Demonstrate the automated signal generation system."""
     print("🚨 Automated Signal Generator Demo - Personal Wealth Generation")
     print("=" * 80)
 

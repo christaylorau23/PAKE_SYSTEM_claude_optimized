@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Knowledge Graph Service
-Phase 10A: ML Intelligence Dashboard
+Phase 10A: ML Intelligence Dashboard.
 
 Generates interactive knowledge graph visualizations from search patterns
 and research sessions to show relationships between topics and concepts.
@@ -20,39 +20,39 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GraphNode:
-    """A node in the knowledge graph"""
+    """A node in the knowledge graph."""
 
     id: str
     label: str
     type: str  # 'topic', 'query', 'source', 'session'
     weight: float = 1.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     color: str = "#3498db"
     size: int = 10
 
 
 @dataclass
 class GraphEdge:
-    """An edge connecting two nodes in the knowledge graph"""
+    """An edge connecting two nodes in the knowledge graph."""
 
     source_id: str
     target_id: str
     weight: float = 1.0
     edge_type: str = "related"  # 'related', 'contains', 'searched_together'
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class KnowledgeGraph:
-    """Complete knowledge graph structure"""
+    """Complete knowledge graph structure."""
 
     nodes: list[GraphNode] = field(default_factory=list)
     edges: list[GraphEdge] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "nodes": [
                 {
@@ -88,7 +88,7 @@ class KnowledgeGraphService:
     and knowledge connections to help users understand their research landscape.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Node type colors
         self.node_colors = {
             "topic": "#3498db",  # Blue
@@ -106,9 +106,9 @@ class KnowledgeGraphService:
 
     async def generate_knowledge_graph(
         self,
-        search_history: list[dict[str, Any]],
-        research_sessions: dict[str, Any],
-        knowledge_insights: list[dict[str, Any]],
+        search_history: list[Dict[str, Any]],
+        research_sessions: Dict[str, Any],
+        knowledge_insights: list[Dict[str, Any]],
         max_nodes: int = 50,
     ) -> KnowledgeGraph:
         """Generate comprehensive knowledge graph from research data.
@@ -166,7 +166,7 @@ class KnowledgeGraphService:
         # Limit nodes to max_nodes by weight/importance
         if len(nodes) > max_nodes:
             nodes.sort(key=lambda n: n.weight, reverse=True)
-            kept_node_ids = set(node.id for node in nodes[:max_nodes])
+            kept_node_ids = {node.id for node in nodes[:max_nodes]}
             nodes = nodes[:max_nodes]
 
             # Filter edges to only include connections between kept nodes
@@ -194,9 +194,9 @@ class KnowledgeGraphService:
 
     async def _generate_topic_nodes(
         self,
-        search_history: list[dict[str, Any]],
+        search_history: list[Dict[str, Any]],
     ) -> tuple[list[GraphNode], dict[str, int]]:
-        """Generate nodes for topics based on search frequency"""
+        """Generate nodes for topics based on search frequency."""
         topic_frequencies = Counter()
         topic_semantic_scores = defaultdict(list)
 
@@ -247,9 +247,9 @@ class KnowledgeGraphService:
 
     async def _generate_query_nodes(
         self,
-        recent_searches: list[dict[str, Any]],
+        recent_searches: list[Dict[str, Any]],
     ) -> list[GraphNode]:
-        """Generate nodes for recent queries"""
+        """Generate nodes for recent queries."""
         query_nodes = []
 
         for i, event in enumerate(recent_searches):
@@ -283,9 +283,9 @@ class KnowledgeGraphService:
 
     async def _generate_session_nodes(
         self,
-        research_sessions: dict[str, Any],
+        research_sessions: Dict[str, Any],
     ) -> list[GraphNode]:
-        """Generate nodes for research sessions"""
+        """Generate nodes for research sessions."""
         session_nodes = []
 
         for session_id, session_data in research_sessions.items():
@@ -322,9 +322,9 @@ class KnowledgeGraphService:
 
     async def _generate_insight_nodes(
         self,
-        knowledge_insights: list[dict[str, Any]],
+        knowledge_insights: list[Dict[str, Any]],
     ) -> list[GraphNode]:
-        """Generate nodes for knowledge insights"""
+        """Generate nodes for knowledge insights."""
         insight_nodes = []
 
         for i, insight in enumerate(knowledge_insights):
@@ -373,10 +373,10 @@ class KnowledgeGraphService:
 
     async def _generate_topic_edges(
         self,
-        search_history: list[dict[str, Any]],
+        search_history: list[Dict[str, Any]],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
-        """Generate edges between topics that appear together in searches"""
+        """Generate edges between topics that appear together in searches."""
         topic_cooccurrence = defaultdict(Counter)
 
         # Track topic co-occurrence within individual searches
@@ -429,10 +429,10 @@ class KnowledgeGraphService:
 
     async def _generate_query_topic_edges(
         self,
-        search_history: list[dict[str, Any]],
+        search_history: list[Dict[str, Any]],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
-        """Generate edges from queries to their related topics"""
+        """Generate edges from queries to their related topics."""
         edges = []
 
         for event in search_history[-10:]:  # Recent searches only
@@ -474,10 +474,10 @@ class KnowledgeGraphService:
 
     async def _generate_session_edges(
         self,
-        research_sessions: dict[str, Any],
+        research_sessions: Dict[str, Any],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
-        """Generate edges from sessions to their dominant topics"""
+        """Generate edges from sessions to their dominant topics."""
         edges = []
 
         for session_id, session_data in research_sessions.items():
@@ -511,8 +511,8 @@ class KnowledgeGraphService:
 
         return edges
 
-    def get_graph_statistics(self, graph: KnowledgeGraph) -> dict[str, Any]:
-        """Calculate detailed graph statistics"""
+    def get_graph_statistics(self, graph: KnowledgeGraph) -> Dict[str, Any]:
+        """Calculate detailed graph statistics."""
         if not graph.nodes:
             return {"message": "Empty graph"}
 
@@ -578,15 +578,15 @@ _knowledge_graph_service = None
 
 
 def get_knowledge_graph_service() -> KnowledgeGraphService:
-    """Get or create global knowledge graph service instance"""
+    """Get or create global knowledge graph service instance."""
     global _knowledge_graph_service
     if _knowledge_graph_service is None:
         _knowledge_graph_service = KnowledgeGraphService()
     return _knowledge_graph_service
 
 
-async def main():
-    """Demo of knowledge graph service"""
+async def main(self) -> None:
+    """Demo of knowledge graph service."""
     service = get_knowledge_graph_service()
 
     # Simulate search history

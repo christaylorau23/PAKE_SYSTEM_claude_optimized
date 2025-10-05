@@ -45,7 +45,7 @@ Transform disparate pieces of information into cohesive, actionable insights tha
    - **Complementarity**: How do they fill each other's gaps?
    - **Evolution**: How has thinking changed over time?
 
-### Step 3: Pattern Recognition Phase  
+### Step 3: Pattern Recognition Phase
 **Purpose**: Identify emergent themes and meta-patterns
 
 **Look for**:
@@ -66,7 +66,7 @@ Transform disparate pieces of information into cohesive, actionable insights tha
 {
   "title": "Overarching Principles of [Topic]: A Cross-Source Synthesis",
   "content": "Structured synthesis content - see format below",
-  "type": "InsightNote", 
+  "type": "InsightNote",
   "source_uri": "synthesis:[comma-separated PAKE IDs of all source notes]",
   "confidence_score": 0.3-0.8, // Conservative, see scoring below
   "status": "Raw", // Start as Raw for human review
@@ -94,7 +94,7 @@ Transform disparate pieces of information into cohesive, actionable insights tha
 ### 1. Foundational Principles
 [What fundamental principles emerge across sources?]
 
-### 2. Convergent Themes  
+### 2. Convergent Themes
 [Where do sources strongly agree?]
 
 ### 3. Productive Tensions
@@ -112,7 +112,7 @@ Transform disparate pieces of information into cohesive, actionable insights tha
 [Strengths and limitations of source methodologies]
 
 ### Evidence Quality Assessment
-[Overall reliability and confidence considerations]  
+[Overall reliability and confidence considerations]
 
 ### Scope and Applicability
 [Where these insights apply and where they don't]
@@ -125,7 +125,7 @@ Transform disparate pieces of information into cohesive, actionable insights tha
 ### For Practice
 [How should this change behavior/approaches?]
 
-### For Further Research  
+### For Further Research
 [What investigations does this suggest?]
 
 ### For Theory Development
@@ -213,7 +213,7 @@ Reading full content of each source...
 
 [Analyzes each source for claims, evidence, assumptions, limitations]
 
-**Step 3: Pattern Recognition**  
+**Step 3: Pattern Recognition**
 Identifying cross-source themes...
 - **Convergent Theme 1**: Human-AI collaboration patterns
 - **Convergent Theme 2**: Quality assurance approaches
@@ -234,7 +234,7 @@ Verifying traceability, novelty, and evidence support...
 
 ### Intellectual Standards:
 - **Accuracy**: Claims supported by evidence
-- **Precision**: Clear, specific insights  
+- **Precision**: Clear, specific insights
 - **Relevance**: Focused on meaningful patterns
 - **Breadth**: Considers multiple perspectives
 - **Depth**: Goes beyond surface observations
@@ -244,7 +244,7 @@ Verifying traceability, novelty, and evidence support...
 ### Practical Standards:
 - **Traceability**: Full source attribution
 - **Actionability**: Provides useful guidance
-- **Humility**: Acknowledges limitations  
+- **Humility**: Acknowledges limitations
 - **Novelty**: Adds value beyond existing knowledge
 - **Clarity**: Accessible to future readers
 

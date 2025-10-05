@@ -38,28 +38,28 @@ class QueryCounter:
         print(f"Executed {counter.count} queries")
     """
 
-    def __init__(self, session):
+    def __init__(self) -> None:
         self.session = session
         self.count = 0
         self.queries = []
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         """Register query counter when entering context"""
         event.listen(self.session.bind, "after_cursor_execute", self._count_query)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self) -> None:
         """Unregister query counter when exiting context"""
         event.remove(self.session.bind, "after_cursor_execute", self._count_query)
 
-    def _count_query(self, conn, cursor, statement, parameters, context, executemany):
+    def _count_query(self) -> None:
         """Callback to count each query"""
         self.count += 1
         self.queries.append(statement)
 
 
-@pytest.fixture()
-def test_db_session():
+@pytest.fixture
+def test_db_session(self) -> None:
     """Create a test database session with in-memory SQLite"""
     from src.services.base.database import Base
 
@@ -74,8 +74,8 @@ def test_db_session():
     session.close()
 
 
-@pytest.fixture()
-def sample_services(test_db_session):
+@pytest.fixture
+def sample_services(self) -> None:
     """Create sample services with health checks and metrics"""
     services = []
 
@@ -117,9 +117,9 @@ def sample_services(test_db_session):
     return services
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_n1_problem_lazy_loading(test_db_session, sample_services):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_n1_problem_lazy_loading(self) -> None:
     """
     Test demonstrating N+1 query problem with lazy loading.
 
@@ -143,14 +143,14 @@ def test_n1_problem_lazy_loading(test_db_session, sample_services):
             _ = service.health_checks  # Triggers lazy loading query
 
     # Should be N + 1 queries (5 + 1 = 6)
-    assert counter.count == 6, (
-        f"Expected 6 queries with lazy loading (N+1 problem), " f"got {counter.count}"
-    )
+    assert (
+        counter.count == 6
+    ), f"Expected 6 queries with lazy loading (N+1 problem), got {counter.count}"
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_eager_loading_eliminates_n1(test_db_session, sample_services):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_eager_loading_eliminates_n1(self) -> None:
     """
     Test that eager loading eliminates N+1 queries.
 
@@ -175,9 +175,9 @@ def test_eager_loading_eliminates_n1(test_db_session, sample_services):
     )
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_eager_loading_all_relationships(test_db_session, sample_services):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_eager_loading_all_relationships(self) -> None:
     """
     Test eager loading multiple relationships simultaneously.
 
@@ -203,9 +203,9 @@ def test_eager_loading_all_relationships(test_db_session, sample_services):
     ), f"Expected 3 queries with eager loading, got {counter.count}"
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_joinedload_many_to_one(test_db_session, sample_services):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_joinedload_many_to_one(self) -> None:
     """
     Test joinedload for many-to-one relationships.
 
@@ -229,9 +229,9 @@ def test_joinedload_many_to_one(test_db_session, sample_services):
     assert counter.count == 1, f"Expected 1 query with joinedload, got {counter.count}"
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_query_count_independent_of_result_size(test_db_session):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_query_count_independent_of_result_size(self) -> None:
     """
     Test that query count is independent of result size with eager loading.
 
@@ -252,7 +252,7 @@ def test_query_count_independent_of_result_size(test_db_session):
         test_db_session.add(service)
 
         # Each service has 5 health checks
-        for j in range(5):
+        for _j in range(5):
             health_check = ServiceHealthCheck(
                 health_check_id=uuid4(),
                 service_id=service.service_id,
@@ -287,9 +287,9 @@ def test_query_count_independent_of_result_size(test_db_session):
     )
 
 
-@pytest.mark.unit()
-@pytest.mark.unit_performance()
-def test_performance_improvement_metrics(test_db_session, sample_services):
+@pytest.mark.unit
+@pytest.mark.unit_performance
+def test_performance_improvement_metrics(self) -> None:
     """
     Test and document the performance improvement from eager loading.
 
@@ -333,9 +333,9 @@ def test_performance_improvement_metrics(test_db_session, sample_services):
     print(f"Improvement: {improvement_percent:.1f}%")
 
 
-@pytest.mark.integration()
-@pytest.mark.integration_database()
-def test_eager_loading_with_filters(test_db_session, sample_services):
+@pytest.mark.integration
+@pytest.mark.integration_database
+def test_eager_loading_with_filters(self) -> None:
     """
     Test that eager loading works correctly with query filters.
 

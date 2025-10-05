@@ -1,9 +1,9 @@
 """Enterprise caching system for PAKE System
-Multi-level caching with optional Redis integration
+Multi-level caching with optional Redis integration.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from src.utils.secure_serialization import deserialize, serialize
 
@@ -21,11 +21,11 @@ except ImportError:
 class CacheService:
     """Enterprise caching service with optional Redis backend."""
 
-    def __init__(self, redis_url: Optional[str] = None, default_ttl: int = 3600):
+    def __init__(self) -> None:
         self.redis_url = redis_url
         self.default_ttl = default_ttl
-        self._redis: Optional[Any] = None
-        self._local_cache: dict[str, Any] = {}
+        self._redis: Any | None = None
+        self._local_cache: Dict[str, Any] = {}
 
     async def connect(self) -> None:
         """Connect to Redis if available."""
@@ -43,7 +43,7 @@ class CacheService:
             await self._redis.close()
             self._redis = None
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from cache."""
         try:
             # Try local cache first
@@ -65,7 +65,7 @@ class CacheService:
         except Exception:
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set value in cache."""
         try:
             ttl = ttl or self.default_ttl
@@ -131,7 +131,7 @@ class CacheService:
         except Exception:
             return False
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         try:
             stats = {
@@ -157,7 +157,7 @@ class CacheService:
 
 
 # Global cache instance
-_cache_service: Optional[CacheService] = None
+_cache_service: CacheService | None = None
 
 
 async def get_cache_service() -> CacheService:
@@ -172,11 +172,11 @@ async def get_cache_service() -> CacheService:
     return _cache_service
 
 
-async def cache_key(key: str, ttl: Optional[int] = None):
+async def cache_key(self) -> None:
     """Decorator for caching function results."""
 
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
+    def decorator(self) -> None:
+        async def wrapper(self) -> None:
             cache = await get_cache_service()
 
             # Create cache key from function name and arguments

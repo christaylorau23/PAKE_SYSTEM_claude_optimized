@@ -23,7 +23,7 @@ except ImportError:
     from sqlalchemy.ext.asyncio import create_async_engine
 
 
-async def setup_test_database():
+async def setup_test_database(self) -> None:
     """Setup test database for CI/CD pipeline"""
     database_url = os.getenv(
         "DATABASE_URL",
@@ -99,7 +99,7 @@ async def setup_test_database():
         return False
 
 
-def setup_environment_variables():
+def setup_environment_variables(self) -> None:
     """Set up required environment variables for testing"""
     env_vars = {
         "TESTING": "true",

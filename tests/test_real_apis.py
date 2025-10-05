@@ -21,7 +21,7 @@ from services.ingestion.social_media_service import (
 )
 
 
-async def test_firecrawl_real_api():
+async def test_firecrawl_real_api(self) -> None:
     """Test real Firecrawl API integration"""
     print("Testing Firecrawl Real API Integration...")
 
@@ -80,7 +80,7 @@ async def test_firecrawl_real_api():
         print("\nFirecrawl API test completed")
 
 
-async def test_api_error_handling():
+async def test_api_error_handling(self) -> None:
     """Test API error handling scenarios"""
     print("\nTesting API Error Handling...")
 
@@ -102,7 +102,7 @@ async def test_api_error_handling():
         await service.close()
 
 
-async def test_email_real_api():
+async def test_email_real_api(self) -> None:
     """Test real IMAP/Exchange email integration"""
     print("\nTesting Email Real API Integration...")
 
@@ -155,7 +155,7 @@ async def test_email_real_api():
         print("Email API test completed")
 
 
-async def test_email_error_handling():
+async def test_email_error_handling(self) -> None:
     """Test email API error handling scenarios"""
     print("\nTesting Email API Error Handling...")
 
@@ -187,7 +187,7 @@ async def test_email_error_handling():
         await service.close()
 
 
-async def test_social_media_real_api():
+async def test_social_media_real_api(self) -> None:
     """Test real Twitter/LinkedIn API integration"""
     print("\nTesting Social Media Real API Integration...")
 
@@ -291,7 +291,7 @@ async def test_social_media_real_api():
         print("Social Media API test completed")
 
 
-async def test_social_media_error_handling():
+async def test_social_media_error_handling(self) -> None:
     """Test social media API error handling scenarios"""
     print("\nTesting Social Media API Error Handling...")
 
@@ -333,7 +333,7 @@ async def test_social_media_error_handling():
         await service.close()
 
 
-async def main():
+async def main(self) -> None:
     """Run all API integration tests"""
     print("PAKE System - Real API Integration Tests")
     print("=" * 50)

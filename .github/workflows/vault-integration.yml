@@ -1,0 +1,117 @@
+# HashiCorp Vault Integration Step for GitHub Actions
+# PAKE System - Phase 4 Implementation
+
+name: Vault Integration Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+
+env:
+  VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+  VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+  VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+
+jobs:
+  vault-integration-test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '1.8.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-root
+
+      - name: Test Vault Integration
+        run: |
+          poetry run python src/services/secrets_manager/vault_client.py
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+          VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+
+      - name: Export Secrets for Testing
+        run: |
+          # Export secrets from Vault for testing
+          poetry run python -c "
+          import asyncio
+          import os
+          from src.services.secrets_manager.vault_client import PAKESecretsManager, create_vault_config_from_env
+
+          async def export_secrets():
+              config = create_vault_config_from_env()
+              async with PAKESecretsManager(config) as secrets_manager:
+                  secrets = await secrets_manager.export_all_secrets()
+                  for key, value in secrets.items():
+                      print(f'export {key}=\"{value}\"')
+
+          asyncio.run(export_secrets())
+          " > vault_secrets.sh
+
+          # Source the secrets for testing
+          source vault_secrets.sh
+
+          # Verify secrets are available
+          echo "Testing secret availability..."
+          if [ -n "\$SECRET_KEY" ]; then
+              echo "✅ SECRET_KEY is available"
+          else
+              echo "❌ SECRET_KEY is not available"
+              exit 1
+          fi
+
+          if [ -n "\$DATABASE_URL" ]; then
+              echo "✅ DATABASE_URL is available"
+          else
+              echo "❌ DATABASE_URL is not available"
+              exit 1
+          fi
+
+          if [ -n "\$API_KEY" ]; then
+              echo "✅ API_KEY is available"
+          else
+              echo "❌ API_KEY is not available"
+              exit 1
+          fi
+
+          echo "✅ All required secrets are available"
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+          VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+
+      - name: Run Tests with Vault Secrets
+        run: |
+          # Run tests with secrets from Vault
+          source vault_secrets.sh
+          poetry run pytest tests/unit/test_secrets_manager.py -v
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_ROLE_ID: ${{ secrets.VAULT_SECRET_ID }}
+          VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+
+      - name: Cleanup Secrets
+        if: always()
+        run: |
+          # Clean up exported secrets
+          rm -f vault_secrets.sh
+          echo "Secrets cleaned up"

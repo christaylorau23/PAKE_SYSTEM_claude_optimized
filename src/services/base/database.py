@@ -1,5 +1,5 @@
 """Enterprise Database Configuration
-Task T025-T034 - Phase 18 Production System Integration
+Task T025-T034 - Phase 18 Production System Integration.
 
 Production-grade database configuration with async SQLAlchemy,
 connection pooling, and enterprise patterns.
@@ -41,7 +41,7 @@ AsyncSessionLocal = async_sessionmaker(
 
 # Base class for all models
 class Base(DeclarativeBase):
-    """Base class for all database models"""
+    """Base class for all database models."""
 
     metadata = MetaData(
         naming_convention={
@@ -56,27 +56,27 @@ class Base(DeclarativeBase):
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting database session
-    Used in FastAPI dependency injection
+    Used in FastAPI dependency injection.
     """
     async with AsyncSessionLocal() as session:
         try:
             yield session
         except Exception as e:
-            logger.error(f"Database session error: {e}")
+            logger.error("Database session error: %s", e)
             await session.rollback()
             raise
         finally:
             await session.close()
 
 
-async def init_db():
-    """Initialize database tables"""
+async def init_db(self) -> None:
+    """Initialize database tables."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables initialized")
 
 
-async def close_db():
-    """Close database connections"""
+async def close_db(self) -> None:
+    """Close database connections."""
     await engine.dispose()
     logger.info("Database connections closed")

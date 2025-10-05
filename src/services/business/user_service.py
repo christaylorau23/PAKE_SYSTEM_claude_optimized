@@ -5,20 +5,19 @@ of business logic and data access concerns.
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from ..domain.models import User
-from ..repositories.abstract_repositories import AbstractUserRepository
 
 logger = logging.getLogger(__name__)
 
 
 class UserService:
-    """User service with business logic separated from data access"""
+    """User service with business logic separated from data access."""
 
-    def __init__(self, user_repository: AbstractUserRepository):
-        """Initialize user service with injected repository"""
+    def __init__(self) -> None:
+        """Initialize user service with injected repository."""
         self.user_repository = user_repository
 
     async def create_user(
@@ -26,28 +25,33 @@ class UserService:
         username: str,
         email: str,
         password_hash: str,
-        full_name: Optional[str] = None,
+        full_name: str | None = None,
         is_admin: bool = False,
     ) -> User:
-        """Create a new user with business logic validation"""
+        """Create a new user with business logic validation."""
         # Business logic: Validate input
         if not username or len(username) < 3:
-            raise ValueError("Username must be at least 3 characters long")
+            msg = "Username must be at least 3 characters long"
+            raise ValueError(msg)
 
         if not email or "@" not in email:
-            raise ValueError("Invalid email address")
+            msg = "Invalid email address"
+            raise ValueError(msg)
 
         if not password_hash:
-            raise ValueError("Password hash is required")
+            msg = "Password hash is required"
+            raise ValueError(msg)
 
         # Business logic: Check for existing users
         existing_user = await self.user_repository.get_by_email(email)
         if existing_user:
-            raise ValueError(f"User with email {email} already exists")
+            msg = f"User with email {email} already exists"
+            raise ValueError(msg)
 
         existing_user = await self.user_repository.get_by_username(username)
         if existing_user:
-            raise ValueError(f"User with username {username} already exists")
+            msg = f"User with username {username} already exists"
+            raise ValueError(msg)
 
         # Create domain model
         user = User(
@@ -62,57 +66,59 @@ class UserService:
         # Persist through repository
         created_user = await self.user_repository.create(user)
 
-        logger.info(f"Created user: {created_user.id} ({created_user.username})")
+        logger.info("Created user: %s (%s)", created_user.id, created_user.username)
         return created_user
 
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
+    async def get_user_by_id(self, user_id: str) -> User | None:
+        """Get user by ID."""
         return await self.user_repository.get_by_id(user_id)
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email"""
+    async def get_user_by_email(self, email: str) -> User | None:
+        """Get user by email."""
         return await self.user_repository.get_by_email(email)
 
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
+    async def get_user_by_username(self, username: str) -> User | None:
+        """Get user by username."""
         return await self.user_repository.get_by_username(username)
 
-    async def authenticate_user(self, email: str, password_hash: str) -> Optional[User]:
-        """Authenticate user with business logic"""
+    async def authenticate_user(self, email: str, password_hash: str) -> User | None:
+        """Authenticate user with business logic."""
         user = await self.user_repository.get_by_email(email)
         if not user:
-            logger.warning(f"Authentication failed: User not found for email {email}")
+            logger.warning("Authentication failed: User not found for email %s", email)
             return None
 
         if not user.is_active:
-            logger.warning(f"Authentication failed: User {user.id} is inactive")
+            logger.warning("Authentication failed: User %s is inactive", user.id)
             return None
 
         if user.password_hash != password_hash:
             logger.warning(
-                f"Authentication failed: Invalid password for user {user.id}"
+                "Authentication failed: Invalid password for user %s", user.id
             )
             return None
 
         # Update last login
-        await self.user_repository.update_last_login(user.id, datetime.utcnow())
+        await self.user_repository.update_last_login(user.id, datetime.now(UTC))
 
-        logger.info(f"User {user.id} authenticated successfully")
+        logger.info("User %s authenticated successfully", user.id)
         return user
 
     async def update_user_profile(
         self,
         user_id: str,
-        full_name: Optional[str] = None,
-        preferences: Optional[dict[str, Any]] = None,
-    ) -> Optional[User]:
-        """Update user profile with business logic"""
+        full_name: str | None = None,
+        preferences: Dict[str, Any] | None = None,
+    ) -> User | None:
+        """Update user profile with business logic."""
         user = await self.user_repository.get_by_id(user_id)
         if not user:
-            raise ValueError(f"User {user_id} not found")
+            msg = f"User {user_id} not found"
+            raise ValueError(msg)
 
         if not user.is_active:
-            raise ValueError(f"Cannot update inactive user {user_id}")
+            msg = f"Cannot update inactive user {user_id}"
+            raise ValueError(msg)
 
         # Prepare update data
         update_data = {}
@@ -132,46 +138,49 @@ class UserService:
         # Update through repository
         updated_user = await self.user_repository.update(user_id, **update_data)
 
-        logger.info(f"Updated user profile: {user_id}")
+        logger.info("Updated user profile: %s", user_id)
         return updated_user
 
     async def deactivate_user(self, user_id: str, deactivated_by: str) -> bool:
-        """Deactivate user with business logic"""
+        """Deactivate user with business logic."""
         user = await self.user_repository.get_by_id(user_id)
         if not user:
-            raise ValueError(f"User {user_id} not found")
+            msg = f"User {user_id} not found"
+            raise ValueError(msg)
 
         if not user.is_active:
-            logger.warning(f"User {user_id} is already inactive")
+            logger.warning("User %s is already inactive", user_id)
             return False
 
         # Business logic: Prevent deactivating admin users
         if user.is_admin:
-            raise ValueError("Cannot deactivate admin users")
+            msg = "Cannot deactivate admin users"
+            raise ValueError(msg)
 
         # Deactivate through repository
         success = await self.user_repository.deactivate_user(user_id)
 
         if success:
-            logger.info(f"User {user_id} deactivated by {deactivated_by}")
+            logger.info("User %s deactivated by %s", user_id, deactivated_by)
 
         return success
 
     async def activate_user(self, user_id: str, activated_by: str) -> bool:
-        """Activate user with business logic"""
+        """Activate user with business logic."""
         user = await self.user_repository.get_by_id(user_id)
         if not user:
-            raise ValueError(f"User {user_id} not found")
+            msg = f"User {user_id} not found"
+            raise ValueError(msg)
 
         if user.is_active:
-            logger.warning(f"User {user_id} is already active")
+            logger.warning("User %s is already active", user_id)
             return False
 
         # Activate through repository
         success = await self.user_repository.activate_user(user_id)
 
         if success:
-            logger.info(f"User {user_id} activated by {activated_by}")
+            logger.info("User %s activated by %s", user_id, activated_by)
 
         return success
 
@@ -180,15 +189,15 @@ class UserService:
         limit: int = 100,
         offset: int = 0,
     ) -> list[User]:
-        """Get all active users"""
+        """Get all active users."""
         return await self.user_repository.get_active_users(limit=limit, offset=offset)
 
     async def get_user_count(self) -> int:
-        """Get total user count"""
+        """Get total user count."""
         return await self.user_repository.count()
 
     async def get_active_user_count(self) -> int:
-        """Get active user count"""
+        """Get active user count."""
         return await self.user_repository.count(filters={"is_active": True})
 
     async def search_users(
@@ -197,9 +206,10 @@ class UserService:
         limit: int = 100,
         offset: int = 0,
     ) -> list[User]:
-        """Search users by username or email"""
+        """Search users by username or email."""
         if not query or len(query) < 2:
-            raise ValueError("Search query must be at least 2 characters long")
+            msg = "Search query must be at least 2 characters long"
+            raise ValueError(msg)
 
         # Get all users and filter in memory (for demo purposes)
         # In a real implementation, you might want to add search methods to the repository
@@ -218,8 +228,8 @@ class UserService:
 
         return matching_users[offset : offset + limit]
 
-    async def get_user_statistics(self) -> dict[str, Any]:
-        """Get user statistics with business logic"""
+    async def get_user_statistics(self) -> Dict[str, Any]:
+        """Get user statistics with business logic."""
         total_users = await self.user_repository.count()
         active_users = await self.user_repository.count(filters={"is_active": True})
         admin_users = await self.user_repository.count(filters={"is_admin": True})
@@ -235,8 +245,8 @@ class UserService:
             else 0,
         }
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform health check on user service"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on user service."""
         try:
             # Test repository connectivity
             user_count = await self.user_repository.count()

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def check_vulnerabilities_removed():
+def check_vulnerabilities_removed(self) -> None:
     """Check that hardcoded REDACTED_SECRET vulnerabilities have been removed"""
     print("🔍 Checking for remaining security vulnerabilities...")
 
@@ -71,7 +71,7 @@ def check_vulnerabilities_removed():
     return True
 
 
-def check_security_files_created():
+def check_security_files_created(self) -> None:
     """Check that security files have been created"""
     print("\n🔍 Checking security implementation files...")
 
@@ -98,7 +98,7 @@ def check_security_files_created():
     return True
 
 
-def check_backup_files():
+def check_backup_files(self) -> None:
     """Check that backup files were created"""
     print("\n🔍 Checking backup files...")
 
@@ -112,7 +112,7 @@ def check_backup_files():
     return True
 
 
-def test_secrets_validator():
+def test_secrets_validator(self) -> None:
     """Test the secrets validator functionality"""
     print("\n🔍 Testing secrets validator...")
 
@@ -157,7 +157,7 @@ def test_secrets_validator():
     return True
 
 
-def test_input_validation():
+def test_input_validation(self) -> None:
     """Test the input validation functionality"""
     print("\n🔍 Testing input validation...")
 
@@ -185,7 +185,7 @@ def test_input_validation():
     return True
 
 
-def main():
+def main(self) -> None:
     """Main verification function"""
     print("🛡️  PAKE System Security Fixes Verification")
     print("=" * 50)

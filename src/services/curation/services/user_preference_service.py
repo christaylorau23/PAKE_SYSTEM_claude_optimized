@@ -1,4 +1,4 @@
-"""UserPreferenceService
+"""UserPreferenceService.
 
 Advanced user preference management and learning service that tracks user interests,
 learns from interactions, and maintains personalized preference profiles with
@@ -9,7 +9,7 @@ import logging
 import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import numpy as np
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class PreferenceUpdate:
-    """Represents a preference update operation"""
+    """Represents a preference update operation."""
 
     user_id: str
     content_id: str
@@ -42,7 +42,7 @@ class PreferenceUpdate:
 
 @dataclass(frozen=True)
 class InterestEvolution:
-    """Tracks how user interests evolve over time"""
+    """Tracks how user interests evolve over time."""
 
     user_id: str
     interest_name: str
@@ -54,14 +54,14 @@ class InterestEvolution:
 
 @dataclass(frozen=True)
 class PersonalizationInsight:
-    """Insights about user personalization patterns"""
+    """Insights about user personalization patterns."""
 
     user_id: str
-    primary_interests: list[str]
-    emerging_interests: list[str]
-    declining_interests: list[str]
+    primary_interests: List[str]
+    emerging_interests: List[str]
+    declining_interests: List[str]
     preference_diversity: float  # How diverse user's interests are
-    engagement_patterns: dict[str, Any]
+    engagement_patterns: Dict[str, Any]
     learning_velocity: float  # How quickly preferences change
     discovery_propensity: float  # Likelihood to explore new content
 
@@ -73,12 +73,7 @@ class UserPreferenceService:
     and provides sophisticated personalization capabilities.
     """
 
-    def __init__(
-        self,
-        learning_rate: float = 0.1,
-        interest_decay_rate: float = 0.02,
-        min_interactions_for_learning: int = 3,
-    ):
+    def __init__(self) -> None:
         """Initialize user preference service.
 
         Args:
@@ -169,18 +164,18 @@ class UserPreferenceService:
                 learning_rate=user_profile.learning_rate,
                 exploration_factor=user_profile.exploration_factor,
                 created_at=user_profile.created_at,
-                updated_at=datetime.now(),
+                updated_at=datetime.now(UTC),
             )
 
             logger.debug(
-                f"Updated preferences for user {user_profile.user_id} from interaction {
-                    interaction.id
-                }",
+                "Updated preferences for user %s from interaction %s",
+                user_profile.user_id,
+                interaction.id,
             )
             return updated_profile
 
         except Exception as e:
-            logger.error(f"Error learning from interaction: {str(e)}")
+            logger.error("Error learning from interaction: %s", str(e))
             return user_profile
 
     async def learn_from_feedback(
@@ -253,18 +248,18 @@ class UserPreferenceService:
                 learning_rate=user_profile.learning_rate,
                 exploration_factor=user_profile.exploration_factor,
                 created_at=user_profile.created_at,
-                updated_at=datetime.now(),
+                updated_at=datetime.now(UTC),
             )
 
             logger.debug(
-                f"Updated preferences for user {user_profile.user_id} from feedback {
-                    feedback.id
-                }",
+                "Updated preferences for user %s from feedback %s",
+                user_profile.user_id,
+                feedback.id,
             )
             return updated_profile
 
         except Exception as e:
-            logger.error(f"Error learning from feedback: {str(e)}")
+            logger.error("Error learning from feedback: %s", str(e))
             return user_profile
 
     async def batch_learn_from_interactions(
@@ -302,14 +297,14 @@ class UserPreferenceService:
                 updated_profile = await self._normalize_preferences(updated_profile)
 
             logger.info(
-                f"Batch learned from {len(interactions)} interactions for user {
-                    user_profile.user_id
-                }",
+                "Batch learned from %s interactions for user %s",
+                len(interactions),
+                user_profile.user_id,
             )
             return updated_profile
 
         except Exception as e:
-            logger.error(f"Error in batch learning: {str(e)}")
+            logger.error("Error in batch learning: %s", str(e))
             return user_profile
 
     async def analyze_interest_evolution(
@@ -330,7 +325,7 @@ class UserPreferenceService:
         """
         try:
             # Group interactions by time periods
-            cutoff_date = datetime.now() - timedelta(days=analysis_window_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=analysis_window_days)
             recent_interactions = [
                 (interaction, content)
                 for interaction, content in historical_interactions
@@ -397,14 +392,14 @@ class UserPreferenceService:
             evolutions.sort(key=lambda x: x.trend_strength, reverse=True)
 
             logger.debug(
-                f"Analyzed {len(evolutions)} interest evolutions for user {
-                    user_profile.user_id
-                }",
+                "Analyzed %s interest evolutions for user %s",
+                len(evolutions),
+                user_profile.user_id,
             )
             return evolutions
 
         except Exception as e:
-            logger.error(f"Error analyzing interest evolution: {str(e)}")
+            logger.error("Error analyzing interest evolution: %s", str(e))
             return []
 
     async def generate_personalization_insights(
@@ -481,12 +476,13 @@ class UserPreferenceService:
             )
 
             logger.debug(
-                f"Generated personalization insights for user {user_profile.user_id}",
+                "Generated personalization insights for user %s",
+                user_profile.user_id,
             )
             return insight
 
         except Exception as e:
-            logger.error(f"Error generating personalization insights: {str(e)}")
+            logger.error("Error generating personalization insights: %s", str(e))
             return PersonalizationInsight(
                 user_id=str(user_profile.user_id),
                 primary_interests=[],
@@ -550,14 +546,14 @@ class UserPreferenceService:
             ]
 
             logger.debug(
-                f"Suggested {
-                    len(suggested_categories)
-                } exploration categories for user {user_profile.user_id}",
+                "Suggested %s exploration categories for user %s",
+                len(suggested_categories),
+                user_profile.user_id,
             )
             return suggested_categories
 
         except Exception as e:
-            logger.error(f"Error suggesting exploration content: {str(e)}")
+            logger.error("Error suggesting exploration content: %s", str(e))
             return []
 
     async def optimize_learning_rate(
@@ -605,24 +601,26 @@ class UserPreferenceService:
             new_rate = user_profile.learning_rate * 0.7 + optimal_rate * 0.3
 
             logger.debug(
-                f"Optimized learning rate for user {user_profile.user_id}: {
-                    user_profile.learning_rate:.3f} -> {new_rate:.3f}",
+                "Optimized learning rate for user %s: %s -> %s",
+                user_profile.user_id,
+                f"{user_profile.learning_rate:.3f}",
+                f"{new_rate:.3f}",
             )
             return new_rate
 
         except Exception as e:
-            logger.error(f"Error optimizing learning rate: {str(e)}")
+            logger.error("Error optimizing learning rate: %s", str(e))
             return user_profile.learning_rate
 
     # Helper methods
 
     def _calculate_interaction_weight(self, interaction: UserInteraction) -> float:
-        """Calculate weight for an interaction considering type and recency"""
+        """Calculate weight for an interaction considering type and recency."""
         # Base weight from interaction type
         base_weight = self.interaction_weights.get(interaction.interaction_type, 1.0)
 
         # Apply temporal decay
-        days_old = (datetime.now() - interaction.timestamp).days
+        days_old = (datetime.now(UTC) - interaction.timestamp).days
         decay_factor = math.exp(-days_old / self.temporal_decay_halflife_days)
 
         return base_weight * decay_factor
@@ -631,7 +629,7 @@ class UserPreferenceService:
         self,
         content_item: ContentItem,
     ) -> dict[str, float]:
-        """Extract features from content for preference learning"""
+        """Extract features from content for preference learning."""
         features = {}
 
         # Topic tags as features
@@ -661,7 +659,7 @@ class UserPreferenceService:
         content_features: dict[str, float],
         interaction_weight: float,
     ) -> list[InterestCategory]:
-        """Update user interest categories based on interaction"""
+        """Update user interest categories based on interaction."""
         # Convert current interests to dict for easier manipulation
         interests_dict = {interest.name: interest for interest in current_interests}
 
@@ -682,7 +680,7 @@ class UserPreferenceService:
                         name=topic_name,
                         weight=new_weight,
                         confidence=min(1.0, current_interest.confidence + 0.1),
-                        last_updated=datetime.now(),
+                        last_updated=datetime.now(UTC),
                     )
                 else:
                     # Add new interest
@@ -693,12 +691,12 @@ class UserPreferenceService:
                             * feature_value
                             * self.learning_rate,
                             confidence=0.3,  # Low initial confidence
-                            last_updated=datetime.now(),
+                            last_updated=datetime.now(UTC),
                         )
 
         # Apply decay to all interests
         for name, interest in interests_dict.items():
-            days_since_update = (datetime.now() - interest.last_updated).days
+            days_since_update = (datetime.now(UTC) - interest.last_updated).days
             decay = math.exp(-days_since_update * self.interest_decay_rate)
             interests_dict[name] = InterestCategory(
                 name=interest.name,
@@ -722,7 +720,7 @@ class UserPreferenceService:
         content_item: ContentItem,
         interaction_weight: float,
     ) -> ContentEmbedding | None:
-        """Update user preference vector based on content interaction"""
+        """Update user preference vector based on content interaction."""
         if not content_item.content_embedding:
             return current_vector
 
@@ -763,7 +761,7 @@ class UserPreferenceService:
         interaction: UserInteraction,
         interaction_weight: float,
     ) -> list[PreferencePattern]:
-        """Update user preference patterns based on interaction"""
+        """Update user preference patterns based on interaction."""
         patterns_dict = {pattern.pattern_type: pattern for pattern in current_patterns}
 
         # Time-based patterns
@@ -788,14 +786,14 @@ class UserPreferenceService:
                 pattern_type=time_key,
                 strength=min(1.0, new_strength),
                 confidence=min(1.0, current_pattern.confidence + 0.05),
-                last_updated=datetime.now(),
+                last_updated=datetime.now(UTC),
             )
         else:
             patterns_dict[time_key] = PreferencePattern(
                 pattern_type=time_key,
                 strength=interaction_weight * self.learning_rate,
                 confidence=0.2,
-                last_updated=datetime.now(),
+                last_updated=datetime.now(UTC),
             )
 
         # Content type patterns
@@ -809,20 +807,20 @@ class UserPreferenceService:
                 pattern_type=content_type_key,
                 strength=min(1.0, new_strength),
                 confidence=min(1.0, current_pattern.confidence + 0.05),
-                last_updated=datetime.now(),
+                last_updated=datetime.now(UTC),
             )
         else:
             patterns_dict[content_type_key] = PreferencePattern(
                 pattern_type=content_type_key,
                 strength=interaction_weight * self.learning_rate,
                 confidence=0.2,
-                last_updated=datetime.now(),
+                last_updated=datetime.now(UTC),
             )
 
         return list(patterns_dict.values())
 
     async def _convert_feedback_to_weight(self, feedback: UserFeedback) -> float:
-        """Convert user feedback to learning weight"""
+        """Convert user feedback to learning weight."""
         if feedback.feedback_type == FeedbackType.RATING:
             # Convert 1-5 rating to -1 to 1 weight
             normalized_rating = (feedback.feedback_value - 3.0) / 2.0
@@ -838,7 +836,7 @@ class UserPreferenceService:
         return 0.0
 
     async def _normalize_preferences(self, user_profile: UserProfile) -> UserProfile:
-        """Normalize preferences to prevent excessive drift"""
+        """Normalize preferences to prevent excessive drift."""
         # Normalize interest weights
         total_weight = sum(interest.weight for interest in user_profile.interests)
         if total_weight > 10.0:  # If total weight is too high, normalize
@@ -876,7 +874,7 @@ class UserPreferenceService:
             learning_rate=user_profile.learning_rate,
             exploration_factor=user_profile.exploration_factor,
             created_at=user_profile.created_at,
-            updated_at=datetime.now(),
+            updated_at=datetime.now(UTC),
         )
 
     async def _calculate_interest_trend(
@@ -885,7 +883,7 @@ class UserPreferenceService:
         scores: list[float],
         period_days: int,
     ) -> InterestEvolution | None:
-        """Calculate trend for a specific interest"""
+        """Calculate trend for a specific interest."""
         if len(scores) < 2:
             return None
 
@@ -931,7 +929,7 @@ class UserPreferenceService:
         )
 
     async def _calculate_preference_diversity(self, user_profile: UserProfile) -> float:
-        """Calculate how diverse user's preferences are"""
+        """Calculate how diverse user's preferences are."""
         if not user_profile.interests:
             return 0.0
 
@@ -957,8 +955,8 @@ class UserPreferenceService:
     async def _analyze_engagement_patterns(
         self,
         interactions: list[tuple[UserInteraction, ContentItem]],
-    ) -> dict[str, Any]:
-        """Analyze user engagement patterns"""
+    ) -> Dict[str, Any]:
+        """Analyze user engagement patterns."""
         if not interactions:
             return {}
 
@@ -1011,7 +1009,7 @@ class UserPreferenceService:
         user_profile: UserProfile,
         recent_interactions: list[tuple[UserInteraction, ContentItem]],
     ) -> float:
-        """Calculate how quickly user preferences change"""
+        """Calculate how quickly user preferences change."""
         if len(recent_interactions) < 5:
             return 0.5  # Default medium velocity
 
@@ -1020,7 +1018,7 @@ class UserPreferenceService:
         velocity_scores = []
 
         for window in time_windows:
-            cutoff = datetime.now() - timedelta(days=window)
+            cutoff = datetime.now(UTC) - timedelta(days=window)
             window_interactions = [
                 (interaction, content)
                 for interaction, content in recent_interactions
@@ -1058,7 +1056,7 @@ class UserPreferenceService:
         self,
         recent_interactions: list[tuple[UserInteraction, ContentItem]],
     ) -> float:
-        """Calculate user's propensity to discover new content"""
+        """Calculate user's propensity to discover new content."""
         if not recent_interactions:
             return 0.5
 
@@ -1090,7 +1088,7 @@ class UserPreferenceService:
         category: TopicCategory,
         exploration_factor: float,
     ) -> float:
-        """Calculate exploration score for a category"""
+        """Calculate exploration score for a category."""
         # Base score from category popularity
         popularity_score = (
             category.metrics.popularity_score if category.metrics else 0.3
@@ -1122,7 +1120,7 @@ class UserPreferenceService:
         self,
         interactions: list[tuple[UserInteraction, ContentItem]],
     ) -> float:
-        """Calculate consistency of user interactions"""
+        """Calculate consistency of user interactions."""
         if len(interactions) < 3:
             return 0.5
 
@@ -1150,7 +1148,7 @@ class UserPreferenceService:
         user_profile: UserProfile,
         recent_interactions: list[tuple[UserInteraction, ContentItem]],
     ) -> float:
-        """Calculate stability of user preferences"""
+        """Calculate stability of user preferences."""
         if not recent_interactions:
             return 0.5
 

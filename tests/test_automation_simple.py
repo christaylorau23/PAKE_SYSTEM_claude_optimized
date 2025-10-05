@@ -9,7 +9,7 @@ import json
 import sys
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import frontmatter
@@ -27,7 +27,7 @@ from automated_vault_watcher import (
 class SimpleAutomationTester:
     """Simple automation test suite for PAKE system"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.vault_path = Path("vault")
         self.test_results = {}
 
@@ -38,7 +38,7 @@ class SimpleAutomationTester:
         print("PAKE System Automation Test Suite")
         print("=" * 50)
 
-    async def test_components(self):
+    async def test_components(self) -> None:
         """Test individual PAKE components"""
         print("\nTesting Component Functionality...")
 
@@ -57,7 +57,7 @@ class SimpleAutomationTester:
 
             ## Code Example:
             ```python
-            def calculate_score(content, metadata):
+            def calculate_score(self) -> None:
                 return confidence_engine.analyze(content)
             ```
 
@@ -98,7 +98,7 @@ class SimpleAutomationTester:
             self.test_results["component_tests"] = {"error": str(e)}
             return False
 
-    async def test_note_creation(self):
+    async def test_note_creation(self) -> None:
         """Test creating and processing a new note"""
         print("\nTesting Note Creation and Processing...")
 
@@ -111,7 +111,7 @@ This is an automated test note to verify PAKE system processing.
 
 ## Test Parameters:
 - Test ID: {test_id}
-- Created: {datetime.now().isoformat()}
+- Created: {datetime.now(UTC).isoformat()}
 - Expected processing: Automatic detection and analysis
 
 ## Content Analysis Factors:
@@ -122,7 +122,7 @@ This is an automated test note to verify PAKE system processing.
 
 ### Code Example:
 ```python
-def test_automation():
+def test_automation(self) -> None:
     return "system_working"
 ```
 
@@ -144,7 +144,7 @@ This note should trigger the automation system to:
             inbox_path = self.vault_path / "00-Inbox"
             inbox_path.mkdir(exist_ok=True, parents=True)
 
-            timestamp = datetime.now().strftime("%Y-%m-%d")
+            timestamp = datetime.now(UTC).strftime("%Y-%m-%d")
             filename = f"{timestamp}-test-{test_id}.md"
             note_path = inbox_path / filename
 
@@ -202,7 +202,7 @@ This note should trigger the automation system to:
             self.test_results["note_creation"] = {"error": str(e)}
             return None
 
-    async def test_manual_processing(self, note_path):
+    async def test_manual_processing(self) -> None:
         """Test manual processing using PAKE components"""
         print("\nTesting Manual Processing...")
 
@@ -249,7 +249,7 @@ This note should trigger the automation system to:
             print(f"  ERROR: Manual processing test failed: {e}")
             self.test_results["manual_processing"] = {"error": str(e)}
 
-    def check_data_files(self):
+    def check_data_files(self) -> None:
         """Check if data files are being created"""
         print("\nChecking Data Persistence...")
 
@@ -291,7 +291,7 @@ This note should trigger the automation system to:
             print(f"  ERROR: Data persistence check failed: {e}")
             self.test_results["data_persistence"] = {"error": str(e)}
 
-    def check_automation_status(self):
+    def check_automation_status(self) -> None:
         """Check automation system status"""
         print("\nChecking Automation System Status...")
 
@@ -323,7 +323,7 @@ This note should trigger the automation system to:
             print("  INFO: Automation system may not have been started")
             self.test_results["automation_status"] = {"log_exists": False}
 
-    def generate_report(self):
+    def generate_report(self) -> None:
         """Generate test summary report"""
         print("\n" + "=" * 60)
         print("PAKE SYSTEM TEST REPORT")
@@ -399,7 +399,7 @@ This note should trigger the automation system to:
 
         return self.test_results
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run complete test suite"""
         print("Starting PAKE System Test Suite...")
 
@@ -422,7 +422,7 @@ This note should trigger the automation system to:
         return self.generate_report()
 
 
-async def main():
+async def main(self) -> None:
     """Main test execution"""
     tester = SimpleAutomationTester()
     results = await tester.run_all_tests()

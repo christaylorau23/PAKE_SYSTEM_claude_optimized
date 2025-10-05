@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AI-Assisted Security Monitoring System
+"""AI-Assisted Security Monitoring System.
 =====================================
 
 This service integrates with ELK stack to consume JSON logs and uses AI/LLM
@@ -19,14 +19,14 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 import uvicorn
 
 # FastAPI and async dependencies
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 # Elasticsearch integration
@@ -41,9 +41,8 @@ except ImportError:
     )
 
 # MCP integration (using existing system)
-import sys
 
-sys.path.append("/d/Projects/PAKE_SYSTEM/mcp-servers")
+# sys.path.append("/d/Projects/PAKE_SYSTEM/mcp-servers")  # Removed hardcoded path for CI compatibility
 try:
     from pake_mcp_server import SecurityLogger, VaultManager
 
@@ -80,7 +79,7 @@ class SecurityPatternType(Enum):
 
 @dataclass
 class SecurityAlert:
-    """Security alert data structure"""
+    """Security alert data structure."""
 
     id: str
     timestamp: datetime
@@ -91,17 +90,17 @@ class SecurityAlert:
     endpoint: str | None
     message: str
     ai_confidence: float
-    raw_logs: list[dict[str, Any]]
-    recommended_actions: list[str]
+    raw_logs: list[Dict[str, Any]]
+    recommended_actions: List[str]
     risk_score: int  # 1-100
 
 
 class MockLLMAnalyzer:
     """Mock LLM system for analyzing security patterns
-    In production, this would connect to OpenAI API, Claude, or local LLM
+    In production, this would connect to OpenAI API, Claude, or local LLM.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.security_patterns = {
             "failed_login": [
                 r"failed.*login",
@@ -144,10 +143,10 @@ class MockLLMAnalyzer:
 
     async def analyze_log_batch(
         self,
-        logs: list[dict[str, Any]],
+        logs: list[Dict[str, Any]],
     ) -> list[SecurityAlert]:
         """Analyze a batch of logs for security patterns
-        Mock implementation using pattern matching and heuristics
+        Mock implementation using pattern matching and heuristics.
         """
         alerts = []
 
@@ -182,20 +181,18 @@ class MockLLMAnalyzer:
                 alerts.extend(behavioral_alerts)
 
             except Exception as e:
-                logger.error(f"Error analyzing log entry: {e}")
+                logger.error("Error analyzing log entry: %s", e)
                 continue
 
         # Post-process alerts for correlation
-        correlated_alerts = self._correlate_alerts(alerts)
-
-        return correlated_alerts
+        return self._correlate_alerts(alerts)
 
     def _detect_security_patterns(
         self,
         message: str,
-        log_entry: dict[str, Any],
+        log_entry: Dict[str, Any],
     ) -> list[tuple[SecurityPatternType, float]]:
-        """Detect security patterns in log messages"""
+        """Detect security patterns in log messages."""
         detected = []
 
         message_lower = message.lower()
@@ -253,9 +250,9 @@ class MockLLMAnalyzer:
 
     async def _analyze_user_behavior(
         self,
-        log_entry: dict[str, Any],
+        log_entry: Dict[str, Any],
     ) -> list[SecurityAlert]:
-        """Analyze user behavior patterns for anomalies"""
+        """Analyze user behavior patterns for anomalies."""
         alerts = []
 
         source_ip = log_entry.get("source_ip", log_entry.get("client_ip", ""))
@@ -284,7 +281,7 @@ class MockLLMAnalyzer:
         if len(baseline["request_times"]) > 100:  # >100 requests in 5 minutes
             alert = SecurityAlert(
                 id=self._generate_alert_id(),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 severity="HIGH",
                 pattern_type=SecurityPatternType.RATE_LIMITING,
                 source_ip=source_ip,
@@ -313,9 +310,9 @@ class MockLLMAnalyzer:
         user_agent: str,
         endpoint: str,
         message: str,
-        raw_log: dict[str, Any],
+        raw_log: Dict[str, Any],
     ) -> SecurityAlert:
-        """Create a security alert from detected pattern"""
+        """Create a security alert from detected pattern."""
         # Determine severity based on pattern type and confidence
         severity = self._calculate_severity(pattern_type, confidence)
         risk_score = self._calculate_risk_score(pattern_type, confidence, raw_log)
@@ -323,7 +320,7 @@ class MockLLMAnalyzer:
         # Generate recommended actions
         recommended_actions = self._get_recommended_actions(pattern_type, raw_log)
 
-        alert = SecurityAlert(
+        return SecurityAlert(
             id=self._generate_alert_id(),
             timestamp=timestamp,
             severity=severity,
@@ -338,14 +335,12 @@ class MockLLMAnalyzer:
             risk_score=risk_score,
         )
 
-        return alert
-
     def _calculate_severity(
         self,
         pattern_type: SecurityPatternType,
         confidence: float,
     ) -> str:
-        """Calculate alert severity"""
+        """Calculate alert severity."""
         base_severity = {
             SecurityPatternType.SQL_INJECTION: "CRITICAL",
             SecurityPatternType.PATH_TRAVERSAL: "CRITICAL",
@@ -375,9 +370,9 @@ class MockLLMAnalyzer:
         self,
         pattern_type: SecurityPatternType,
         confidence: float,
-        raw_log: dict[str, Any],
+        raw_log: Dict[str, Any],
     ) -> int:
-        """Calculate risk score (1-100)"""
+        """Calculate risk score (1-100)."""
         base_scores = {
             SecurityPatternType.SQL_INJECTION: 95,
             SecurityPatternType.PATH_TRAVERSAL: 90,
@@ -409,9 +404,9 @@ class MockLLMAnalyzer:
     def _get_recommended_actions(
         self,
         pattern_type: SecurityPatternType,
-        raw_log: dict[str, Any],
-    ) -> list[str]:
-        """Generate recommended actions for each pattern type"""
+        raw_log: Dict[str, Any],
+    ) -> List[str]:
+        """Generate recommended actions for each pattern type."""
         actions_map = {
             SecurityPatternType.SQL_INJECTION: [
                 "Block source IP immediately",
@@ -471,9 +466,9 @@ class MockLLMAnalyzer:
         self,
         pattern_type: SecurityPatternType,
         original_message: str,
-        raw_log: dict[str, Any],
+        raw_log: Dict[str, Any],
     ) -> str:
-        """Generate human-readable alert message"""
+        """Generate human-readable alert message."""
         source_ip = raw_log.get("source_ip", raw_log.get("client_ip", "Unknown"))
         endpoint = raw_log.get("endpoint", raw_log.get("path", "Unknown"))
 
@@ -493,7 +488,7 @@ class MockLLMAnalyzer:
         )
 
     def _correlate_alerts(self, alerts: list[SecurityAlert]) -> list[SecurityAlert]:
-        """Correlate related alerts to reduce noise"""
+        """Correlate related alerts to reduce noise."""
         if len(alerts) <= 1:
             return alerts
 
@@ -518,7 +513,7 @@ class MockLLMAnalyzer:
         return correlated_alerts
 
     def _merge_alerts(self, alerts: list[SecurityAlert]) -> SecurityAlert:
-        """Merge multiple related alerts into one"""
+        """Merge multiple related alerts into one."""
         if not alerts:
             return None
 
@@ -556,9 +551,9 @@ class MockLLMAnalyzer:
         )
 
     def _parse_timestamp(self, timestamp_str: str) -> datetime:
-        """Parse timestamp from various formats"""
+        """Parse timestamp from various formats."""
         if not timestamp_str:
-            return datetime.now()
+            return datetime.now(UTC)
 
         # Common timestamp formats
         formats = [
@@ -575,11 +570,11 @@ class MockLLMAnalyzer:
                 continue
 
         # If all parsing fails, return current time
-        logger.warning(f"Could not parse timestamp: {timestamp_str}")
-        return datetime.now()
+        logger.warning("Could not parse timestamp: %s", timestamp_str)
+        return datetime.now(UTC)
 
     def _generate_alert_id(self) -> str:
-        """Generate unique alert ID"""
+        """Generate unique alert ID."""
         timestamp = str(int(time.time() * 1000000))
         random_data = os.urandom(8).hex()
         return f"ai-sec-{timestamp}-{random_data[:8]}"
@@ -591,17 +586,13 @@ class MockLLMAnalyzer:
 
 
 class ElasticsearchLogConsumer:
-    """Consumes logs from Elasticsearch for analysis"""
+    """Consumes logs from Elasticsearch for analysis."""
 
-    def __init__(
-        self,
-        elasticsearch_host: str = "localhost",
-        elasticsearch_port: int = 9200,
-    ):
+    def __init__(self) -> None:
         self.host = elasticsearch_host
         self.port = elasticsearch_port
         self.client = None
-        self.last_query_time = datetime.now() - timedelta(minutes=5)
+        self.last_query_time = datetime.now(UTC) - timedelta(minutes=5)
 
         if ELASTICSEARCH_AVAILABLE:
             try:
@@ -609,10 +600,12 @@ class ElasticsearchLogConsumer:
                     [f"http://{elasticsearch_host}:{elasticsearch_port}"],
                 )
                 logger.info(
-                    f"Connected to Elasticsearch at {elasticsearch_host}:{elasticsearch_port}",
+                    "Connected to Elasticsearch at %s:%s",
+                    elasticsearch_host,
+                    elasticsearch_port,
                 )
             except Exception as e:
-                logger.error(f"Failed to connect to Elasticsearch: {e}")
+                logger.error("Failed to connect to Elasticsearch: %s", e)
                 self.client = None
         else:
             logger.warning("Elasticsearch client not available")
@@ -621,8 +614,8 @@ class ElasticsearchLogConsumer:
         self,
         index_pattern: str = "logs-*",
         limit: int = 1000,
-    ) -> list[dict[str, Any]]:
-        """Fetch recent logs from Elasticsearch"""
+    ) -> list[Dict[str, Any]]:
+        """Fetch recent logs from Elasticsearch."""
         if not self.client:
             return self._generate_mock_logs(limit)
 
@@ -633,7 +626,7 @@ class ElasticsearchLogConsumer:
                     "range": {
                         "@timestamp": {
                             "gte": self.last_query_time.isoformat(),
-                            "lte": datetime.now().isoformat(),
+                            "lte": datetime.now(UTC).isoformat(),
                         },
                     },
                 },
@@ -650,23 +643,23 @@ class ElasticsearchLogConsumer:
                 log_entry["_index"] = hit["_index"]
                 logs.append(log_entry)
 
-            self.last_query_time = datetime.now()
-            logger.info(f"Fetched {len(logs)} logs from Elasticsearch")
+            self.last_query_time = datetime.now(UTC)
+            logger.info("Fetched %s logs from Elasticsearch", len(logs))
             return logs
 
         except Exception as e:
-            logger.error(f"Error fetching logs from Elasticsearch: {e}")
+            logger.error("Error fetching logs from Elasticsearch: %s", e)
             return self._generate_mock_logs(limit)
 
-    def _generate_mock_logs(self, count: int = 10) -> list[dict[str, Any]]:
-        """Generate mock logs for testing when Elasticsearch is not available"""
+    def _generate_mock_logs(self, count: int = 10) -> list[Dict[str, Any]]:
+        """Generate mock logs for testing when Elasticsearch is not available."""
         mock_logs = []
 
         # Mock log patterns
         patterns = [
             # Normal logs
             {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": "User logged in successfully",
                 "source_ip": "192.168.1.100",
                 "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -677,7 +670,7 @@ class ElasticsearchLogConsumer:
             },
             # Failed login
             {
-                "timestamp": datetime.now().isostring(),
+                "timestamp": datetime.now(UTC).isostring(),
                 "message": "Authentication failed for user admin",
                 "source_ip": "203.0.113.45",
                 "user_agent": "Python/3.9 requests/2.25.1",
@@ -688,7 +681,7 @@ class ElasticsearchLogConsumer:
             },
             # SQL injection attempt
             {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": "Database query: SELECT * FROM users WHERE id = 1 OR 1=1--",
                 "source_ip": "198.51.100.42",
                 "user_agent": "curl/7.68.0",
@@ -699,7 +692,7 @@ class ElasticsearchLogConsumer:
             },
             # Slow query
             {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": "Slow query detected: execution time 3.5 seconds",
                 "source_ip": "192.168.1.50",
                 "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
@@ -710,7 +703,7 @@ class ElasticsearchLogConsumer:
             },
             # XSS attempt
             {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": "Suspicious input detected: <script>alert('XSS')</script>",
                 "source_ip": "203.0.113.100",
                 "user_agent": "Mozilla/5.0 (X11; Linux x86_64)",
@@ -723,19 +716,19 @@ class ElasticsearchLogConsumer:
 
         import random
 
-        for i in range(min(count, len(patterns) * 3)):
+        for _i in range(min(count, len(patterns) * 3)):
             pattern = random.choice(patterns)
             mock_log = pattern.copy()
             # Vary timestamp slightly
-            base_time = datetime.now() - timedelta(minutes=random.randint(0, 30))
+            base_time = datetime.now(UTC) - timedelta(minutes=random.randint(0, 30))
             mock_log["timestamp"] = base_time.isoformat()
             mock_logs.append(mock_log)
 
-        logger.info(f"Generated {len(mock_logs)} mock logs for testing")
+        logger.info("Generated %s mock logs for testing", len(mock_logs))
         return mock_logs
 
-    async def close(self):
-        """Close Elasticsearch connection"""
+    async def close(self) -> None:
+        """Close Elasticsearch connection."""
         if self.client:
             await self.client.close()
 
@@ -746,9 +739,9 @@ class ElasticsearchLogConsumer:
 
 
 class MCPSecurityIntegration:
-    """Integration with existing MCP system for enhanced analysis"""
+    """Integration with existing MCP system for enhanced analysis."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.vault_manager = None
         self.security_logger = None
 
@@ -758,12 +751,12 @@ class MCPSecurityIntegration:
                 self.security_logger = SecurityLogger()
                 logger.info("MCP integration initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize MCP integration: {e}")
+                logger.error("Failed to initialize MCP integration: %s", e)
         else:
             logger.warning("MCP system not available")
 
     async def enrich_alert_context(self, alert: SecurityAlert) -> SecurityAlert:
-        """Enrich security alert with additional context from MCP system"""
+        """Enrich security alert with additional context from MCP system."""
         if not self.vault_manager:
             return alert
 
@@ -795,12 +788,12 @@ class MCPSecurityIntegration:
                 )
 
         except Exception as e:
-            logger.error(f"Error enriching alert context: {e}")
+            logger.error("Error enriching alert context: %s", e)
 
         return alert
 
     async def _get_ip_context(self, ip_address: str) -> str | None:
-        """Get additional context for IP address"""
+        """Get additional context for IP address."""
         # Mock implementation - in reality this would query threat intelligence
         suspicious_ips = ["203.0.113.45", "198.51.100.42", "203.0.113.100"]
 
@@ -813,8 +806,8 @@ class MCPSecurityIntegration:
     async def _get_similar_historical_alerts(
         self,
         alert: SecurityAlert,
-    ) -> list[dict[str, Any]]:
-        """Get similar alerts from historical data"""
+    ) -> list[Dict[str, Any]]:
+        """Get similar alerts from historical data."""
         # Mock implementation - in reality this would query the MCP vault
         return []
 
@@ -855,7 +848,7 @@ class SecurityAlertResponse(BaseModel):
     message: str
     ai_confidence: float
     risk_score: int
-    recommended_actions: list[str]
+    recommended_actions: List[str]
 
 
 class SecurityDashboard(BaseModel):
@@ -873,8 +866,8 @@ class SecurityDashboard(BaseModel):
 
 
 @app.get("/")
-async def root():
-    """Root endpoint with system information"""
+async def root(self) -> None:
+    """Root endpoint with system information."""
     return {
         "service": "AI Security Monitor",
         "version": "1.0.0",
@@ -894,13 +887,8 @@ async def root():
 
 
 @app.get("/alerts", response_model=list[SecurityAlertResponse])
-async def get_security_alerts(
-    severity: str | None = None,
-    pattern_type: str | None = None,
-    limit: int = 100,
-    offset: int = 0,
-):
-    """Get security alerts with optional filtering"""
+async def get_security_alerts(self) -> None:
+    """Get security alerts with optional filtering."""
     global security_alerts
 
     # Filter alerts
@@ -945,8 +933,8 @@ async def get_security_alerts(
 
 
 @app.get("/dashboard", response_model=SecurityDashboard)
-async def get_security_dashboard():
-    """Get security monitoring dashboard"""
+async def get_security_dashboard(self) -> None:
+    """Get security monitoring dashboard."""
     global security_alerts
 
     # Calculate statistics
@@ -991,23 +979,23 @@ async def get_security_dashboard():
         alerts_by_pattern=alerts_by_pattern,
         recent_alerts=recent_alerts,
         system_status="active",
-        last_analysis_time=datetime.now().isoformat(),
+        last_analysis_time=datetime.now(UTC).isoformat(),
     )
 
 
 @app.post("/analyze")
-async def trigger_log_analysis(background_tasks: BackgroundTasks):
-    """Manually trigger log analysis"""
+async def trigger_log_analysis(self) -> None:
+    """Manually trigger log analysis."""
     background_tasks.add_task(analyze_logs_task)
     return {"message": "Log analysis triggered", "status": "processing"}
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
+async def health_check(self) -> None:
+    """Health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "components": {
             "ai_analyzer": "active",
             "elasticsearch": (
@@ -1029,8 +1017,8 @@ async def health_check():
 # ============================================================================
 
 
-async def analyze_logs_task():
-    """Background task to analyze logs from ELK stack"""
+async def analyze_logs_task(self) -> None:
+    """Background task to analyze logs from ELK stack."""
     global security_alerts
 
     try:
@@ -1057,7 +1045,7 @@ async def analyze_logs_task():
             security_alerts.extend(enriched_alerts)
 
             # Keep only recent alerts (last 7 days)
-            cutoff_time = datetime.now() - timedelta(days=7)
+            cutoff_time = datetime.now(UTC) - timedelta(days=7)
             security_alerts = [a for a in security_alerts if a.timestamp > cutoff_time]
 
             # Log summary
@@ -1068,14 +1056,16 @@ async def analyze_logs_task():
                 )
 
             logger.info(
-                f"Generated {len(enriched_alerts)} new alerts: {severity_counts}",
+                "Generated %s new alerts: %s",
+                len(enriched_alerts),
+                severity_counts,
             )
 
         else:
             logger.info("No security alerts generated from recent logs")
 
     except Exception as e:
-        logger.error(f"Error in log analysis task: {e}")
+        logger.error("Error in log analysis task: %s", e)
 
 
 # ============================================================================
@@ -1084,8 +1074,8 @@ async def analyze_logs_task():
 
 
 @app.on_event("startup")
-async def startup_event():
-    """Initialize the application"""
+async def startup_event(self) -> None:
+    """Initialize the application."""
     logger.info("🤖 AI Security Monitor starting up...")
 
     # Start background analysis task
@@ -1095,8 +1085,8 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up on shutdown"""
+async def shutdown_event(self) -> None:
+    """Clean up on shutdown."""
     logger.info("🔄 AI Security Monitor shutting down...")
 
     # Close Elasticsearch connection
@@ -1106,15 +1096,15 @@ async def shutdown_event():
     logger.info("✅ AI Security Monitor shutdown complete")
 
 
-async def periodic_analysis():
-    """Periodic task to analyze logs"""
+async def periodic_analysis(self) -> None:
+    """Periodic task to analyze logs."""
     while True:
         try:
             await analyze_logs_task()
             # Run analysis every 5 minutes
             await asyncio.sleep(300)
         except Exception as e:
-            logger.error(f"Error in periodic analysis: {e}")
+            logger.error("Error in periodic analysis: %s", e)
             # Wait 1 minute before retrying on error
             await asyncio.sleep(60)
 
@@ -1141,9 +1131,9 @@ if __name__ == "__main__":
     # Initialize ELK consumer with custom host/port
     elk_consumer = ElasticsearchLogConsumer(args.elk_host, args.elk_port)
 
-    logger.info(f"🚀 Starting AI Security Monitor on {args.host}:{args.port}")
-    logger.info(f"📊 Elasticsearch: {args.elk_host}:{args.elk_port}")
-    logger.info(f"🔍 MCP Integration: {'Enabled' if MCP_AVAILABLE else 'Disabled'}")
+    logger.info("🚀 Starting AI Security Monitor on %s:%s", args.host, args.port)
+    logger.info("📊 Elasticsearch: %s:%s", args.elk_host, args.elk_port)
+    logger.info("🔍 MCP Integration: %s", "Enabled" if MCP_AVAILABLE else "Disabled")
 
     # Run the FastAPI application
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level.lower())

@@ -1,19 +1,15 @@
-"""
-PAKE System Service Template
-FastAPI-based microservice with enterprise features
+"""PAKE System Service Template
+FastAPI-based microservice with enterprise features.
 """
 
-import logging
-import os
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any
 
 import structlog
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
@@ -39,7 +35,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(self) -> None:
     """Application lifespan manager."""
     # Startup
     logger.info("Starting PAKE service", service=app.title)
@@ -91,7 +87,7 @@ def create_app() -> FastAPI:
 
     # Health check endpoint
     @app.get("/health")
-    async def health_check() -> Dict[str, Any]:
+    async def health_check() -> dict[str, Any]:
         """Health check endpoint."""
         return {
             "status": "healthy",

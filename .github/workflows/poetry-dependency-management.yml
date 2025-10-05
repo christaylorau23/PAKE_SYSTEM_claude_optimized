@@ -1,0 +1,172 @@
+# PAKE System - Poetry Dependency Management Workflow
+# Reusable workflow for deterministic dependency management with Poetry
+# Enforces poetry.lock as single source of truth with robust caching
+
+name: Poetry Dependency Management
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.12'
+      poetry-version:
+        description: 'Poetry version to use'
+        required: false
+        type: string
+        default: '1.8.3'
+      install-groups:
+        description: 'Poetry dependency groups to install'
+        required: false
+        type: string
+        default: 'dev'
+      cache-key-suffix:
+        description: 'Additional suffix for cache key'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      poetry-cache-hit:
+        description: 'Whether Poetry cache was hit'
+        value: ${{ steps.cache-poetry.outputs.cache-hit }}
+      poetry-version:
+        description: 'Installed Poetry version'
+        value: ${{ steps.install-poetry.outputs.poetry-version }}
+
+jobs:
+  setup-poetry-environment:
+    name: Setup Poetry Environment
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-poetry.outputs.cache-hit }}
+      poetry-version: ${{ steps.install-poetry.outputs.poetry-version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Validate poetry.lock file exists
+        run: |
+          if [ ! -f "poetry.lock" ]; then
+            echo "❌ ERROR: poetry.lock file is missing!"
+            echo "The poetry.lock file must be committed to version control as the single source of truth for dependencies."
+            echo "Run 'poetry lock' locally and commit the generated poetry.lock file."
+            exit 1
+          fi
+          echo "✅ poetry.lock file found"
+
+      - name: Validate poetry.lock file integrity
+        run: |
+          # Check if poetry.lock is properly formatted and not corrupted
+          if ! poetry check --lock; then
+            echo "❌ ERROR: poetry.lock file is corrupted or invalid!"
+            echo "Run 'poetry lock' locally to regenerate the lock file."
+            exit 1
+          fi
+          echo "✅ poetry.lock file integrity validated"
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        id: install-poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ inputs.poetry-version }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Generate Poetry cache key
+        id: cache-key
+        run: |
+          # Create deterministic cache key based on poetry.lock hash
+          POETRY_LOCK_HASH=$(sha256sum poetry.lock | cut -d' ' -f1)
+          PYTHON_VERSION="${{ inputs.python-version }}"
+          POETRY_VERSION="${{ inputs.poetry-version }}"
+          CACHE_SUFFIX="${{ inputs.cache-key-suffix }}"
+
+          # Create composite cache key
+          CACHE_KEY="poetry-venv-${PYTHON_VERSION}-${POETRY_VERSION}-${POETRY_LOCK_HASH}"
+          if [ -n "${CACHE_SUFFIX}" ]; then
+            CACHE_KEY="${CACHE_KEY}-${CACHE_SUFFIX}"
+          fi
+
+          echo "cache-key=${CACHE_KEY}" >> $GITHUB_OUTPUT
+          echo "poetry-lock-hash=${POETRY_LOCK_HASH}" >> $GITHUB_OUTPUT
+          echo "Generated cache key: ${CACHE_KEY}"
+
+      - name: Cache Poetry virtual environment
+        id: cache-poetry
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ steps.cache-key.outputs.cache-key }}
+          restore-keys: |
+            poetry-venv-${{ inputs.python-version }}-${{ inputs.poetry-version }}-
+            poetry-venv-${{ inputs.python-version }}-
+            poetry-venv-
+
+      - name: Install dependencies with Poetry
+        run: |
+          # Always use poetry install (never poetry update) to respect lock file
+          echo "Installing dependencies using poetry.lock..."
+          poetry install --no-interaction --no-root --with ${{ inputs.install-groups }}
+
+          # Verify installation
+          echo "Verifying dependency installation..."
+          poetry check
+
+          # Show dependency tree for debugging
+          echo "Dependency tree:"
+          poetry show --tree
+
+      - name: Validate dependency consistency
+        run: |
+          # Ensure all dependencies from lock file are installed
+          echo "Validating dependency consistency..."
+
+          # Check for any missing dependencies
+          if ! poetry check; then
+            echo "❌ ERROR: Dependency validation failed!"
+            echo "Some dependencies from poetry.lock are not properly installed."
+            exit 1
+          fi
+
+          # Verify no unexpected dependencies
+          INSTALLED_COUNT=$(poetry show --only=main | wc -l)
+          echo "✅ Installed ${INSTALLED_COUNT} main dependencies"
+
+          echo "✅ All dependencies validated successfully"
+
+      - name: Capture dependency snapshot
+        run: |
+          mkdir -p reports
+          echo "--- Poetry Environment Snapshot ---" > reports/poetry-environment.log
+          echo "Python Version: $(python --version)" >> reports/poetry-environment.log
+          echo "Poetry Version: $(poetry --version)" >> reports/poetry-environment.log
+          echo "Poetry Lock Hash: ${{ steps.cache-key.outputs.poetry-lock-hash }}" >> reports/poetry-environment.log
+          echo "Cache Hit: ${{ steps.cache-poetry.outputs.cache-hit }}" >> reports/poetry-environment.log
+          echo "" >> reports/poetry-environment.log
+          echo "--- Installed Dependencies ---" >> reports/poetry-environment.log
+          poetry show --tree >> reports/poetry-environment.log
+          echo "" >> reports/poetry-environment.log
+          echo "--- Dependency Groups ---" >> reports/poetry-environment.log
+          poetry show --only=main >> reports/poetry-environment.log
+          echo "" >> reports/poetry-environment.log
+          echo "--- Development Dependencies ---" >> reports/poetry-environment.log
+          poetry show --only=dev >> reports/poetry-environment.log
+
+      - name: Upload Poetry environment artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: poetry-environment-${{ github.run_id }}
+          path: reports/poetry-environment.log
+          retention-days: 7

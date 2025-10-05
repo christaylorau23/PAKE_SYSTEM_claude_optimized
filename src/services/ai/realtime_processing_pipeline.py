@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Real-time AI Content Processing Pipeline
-Phase 3 Sprint 6: Real-time streaming AI analysis with edge computing
+Phase 3 Sprint 6: Real-time streaming AI analysis with edge computing.
 
 Provides high-performance streaming content processing, real-time AI analysis,
 edge computing capabilities, and intelligent content flow management.
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessingStage(Enum):
-    """Content processing pipeline stages"""
+    """Content processing pipeline stages."""
 
     INGESTION = "ingestion"
     PREPROCESSING = "preprocessing"
@@ -38,7 +38,7 @@ class ProcessingStage(Enum):
 
 
 class ProcessingPriority(Enum):
-    """Content processing priorities"""
+    """Content processing priorities."""
 
     CRITICAL = "critical"  # Real-time, <100ms
     HIGH = "high"  # Near real-time, <500ms
@@ -48,7 +48,7 @@ class ProcessingPriority(Enum):
 
 
 class ProcessingStatus(Enum):
-    """Processing pipeline status"""
+    """Processing pipeline status."""
 
     PENDING = "pending"
     PROCESSING = "processing"
@@ -59,7 +59,7 @@ class ProcessingStatus(Enum):
 
 
 class EdgeLocation(Enum):
-    """Edge computing locations"""
+    """Edge computing locations."""
 
     LOCAL = "local"
     REGIONAL = "regional"
@@ -69,13 +69,13 @@ class EdgeLocation(Enum):
 
 @dataclass(frozen=True)
 class ContentItem:
-    """Immutable content item for processing"""
+    """Immutable content item for processing."""
 
     content_id: str
     content: str
     content_type: str = "text"
     source: str = ""
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     priority: ProcessingPriority = ProcessingPriority.NORMAL
 
     # Processing context
@@ -85,8 +85,8 @@ class ContentItem:
     processing_deadline: datetime | None = None
     edge_location: EdgeLocation = EdgeLocation.LOCAL
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
             "content": self.content,
@@ -106,7 +106,7 @@ class ContentItem:
 
 @dataclass(frozen=True)
 class ProcessingResult:
-    """Immutable processing pipeline result"""
+    """Immutable processing pipeline result."""
 
     content_id: str
     status: ProcessingStatus
@@ -129,8 +129,8 @@ class ProcessingResult:
     error_details: str | None = None
     retry_count: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
             "status": self.status.value,
@@ -155,7 +155,7 @@ class ProcessingResult:
 
 @dataclass(frozen=True)
 class PipelineMetrics:
-    """Immutable pipeline performance metrics"""
+    """Immutable pipeline performance metrics."""
 
     total_processed: int
     successful_processed: int
@@ -170,8 +170,8 @@ class PipelineMetrics:
     # Edge computing metrics
     edge_utilization: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "total_processed": self.total_processed,
             "successful_processed": self.successful_processed,
@@ -186,7 +186,7 @@ class PipelineMetrics:
 
 @dataclass
 class PipelineConfig:
-    """Configuration for real-time processing pipeline"""
+    """Configuration for real-time processing pipeline."""
 
     # Core processing settings
     max_concurrent_processing: int = 50
@@ -234,26 +234,26 @@ class PipelineConfig:
 
 
 class ProcessingStageHandler(ABC):
-    """Abstract base for processing stage implementations"""
+    """Abstract base for processing stage implementations."""
 
     @abstractmethod
     async def process(
         self,
         content: ContentItem,
-        context: dict[str, Any] = None,
-    ) -> dict[str, Any]:
-        """Process content through this stage"""
+        context: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Process content through this stage."""
 
     @property
     @abstractmethod
     def stage(self) -> ProcessingStage:
-        """Get the processing stage this handler represents"""
+        """Get the processing stage this handler represents."""
 
 
 class CognitiveAnalysisStage(ProcessingStageHandler):
-    """Cognitive analysis processing stage"""
+    """Cognitive analysis processing stage."""
 
-    def __init__(self, cognitive_engine: CognitiveAnalysisEngine):
+    def __init__(self) -> None:
         self.cognitive_engine = cognitive_engine
         self._stage = ProcessingStage.COGNITIVE_ANALYSIS
 
@@ -264,9 +264,9 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: dict[str, Any] = None,
-    ) -> dict[str, Any]:
-        """Perform cognitive analysis on content"""
+        context: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Perform cognitive analysis on content."""
         try:
             cognitive_result = await self.cognitive_engine.analyze_content(
                 content.content_id,
@@ -281,7 +281,7 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
             }
 
         except Exception as e:
-            logger.error(f"Cognitive analysis failed for {content.content_id}: {e}")
+            logger.error("Cognitive analysis failed for %s: %s", content.content_id, e)
             return {
                 "cognitive_result": None,
                 "quality_score": 0.0,
@@ -291,9 +291,9 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
 
 
 class SemanticIndexingStage(ProcessingStageHandler):
-    """Semantic indexing processing stage"""
+    """Semantic indexing processing stage."""
 
-    def __init__(self, semantic_engine: SemanticSearchEngine):
+    def __init__(self) -> None:
         self.semantic_engine = semantic_engine
         self._stage = ProcessingStage.SEMANTIC_INDEXING
 
@@ -304,9 +304,9 @@ class SemanticIndexingStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: dict[str, Any] = None,
-    ) -> dict[str, Any]:
-        """Index content for semantic search"""
+        context: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Index content for semantic search."""
         try:
             embedding = await self.semantic_engine.index_content(
                 content.content_id,
@@ -324,7 +324,7 @@ class SemanticIndexingStage(ProcessingStageHandler):
             }
 
         except Exception as e:
-            logger.error(f"Semantic indexing failed for {content.content_id}: {e}")
+            logger.error("Semantic indexing failed for %s: %s", content.content_id, e)
             return {
                 "embedding_generated": False,
                 "semantic_indexed": False,
@@ -334,9 +334,9 @@ class SemanticIndexingStage(ProcessingStageHandler):
 
 
 class QualityFilteringStage(ProcessingStageHandler):
-    """Quality filtering processing stage"""
+    """Quality filtering processing stage."""
 
-    def __init__(self, config: PipelineConfig):
+    def __init__(self) -> None:
         self.config = config
         self._stage = ProcessingStage.QUALITY_FILTERING
 
@@ -347,9 +347,9 @@ class QualityFilteringStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: dict[str, Any] = None,
-    ) -> dict[str, Any]:
-        """Filter content based on quality metrics"""
+        context: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Filter content based on quality metrics."""
         try:
             # Get quality score from context (from cognitive analysis)
             quality_score = context.get("quality_score", 0.0) if context else 0.0
@@ -372,7 +372,7 @@ class QualityFilteringStage(ProcessingStageHandler):
             }
 
         except Exception as e:
-            logger.error(f"Quality filtering failed for {content.content_id}: {e}")
+            logger.error("Quality filtering failed for %s: %s", content.content_id, e)
             return {
                 "quality_score": 0.0,
                 "passes_quality_filter": False,
@@ -382,9 +382,9 @@ class QualityFilteringStage(ProcessingStageHandler):
 
 
 class EdgeProcessor:
-    """Edge computing processor for high-speed local processing"""
+    """Edge computing processor for high-speed local processing."""
 
-    def __init__(self, location: EdgeLocation = EdgeLocation.LOCAL):
+    def __init__(self) -> None:
         self.location = location
         self.stats = {
             "items_processed": 0,
@@ -392,8 +392,8 @@ class EdgeProcessor:
             "average_processing_time": 0.0,
         }
 
-    async def process_item(self, content: ContentItem) -> dict[str, Any]:
-        """Process content item using edge computing optimizations"""
+    async def process_item(self, content: ContentItem) -> Dict[str, Any]:
+        """Process content item using edge computing optimizations."""
         start_time = time.time()
 
         try:
@@ -424,11 +424,11 @@ class EdgeProcessor:
             return result
 
         except Exception as e:
-            logger.error(f"Edge processing failed for {content.content_id}: {e}")
+            logger.error("Edge processing failed for %s: %s", content.content_id, e)
             return {"edge_processed": False, "error": str(e)}
 
-    def get_stats(self) -> dict[str, Any]:
-        """Get edge processor statistics"""
+    def get_stats(self) -> Dict[str, Any]:
+        """Get edge processor statistics."""
         return self.stats.copy()
 
 
@@ -437,7 +437,7 @@ class RealTimeProcessingPipeline:
     Integrates cognitive analysis, semantic search, and edge computing.
     """
 
-    def __init__(self, config: PipelineConfig = None):
+    def __init__(self) -> None:
         self.config = config or PipelineConfig()
 
         # Initialize AI engines
@@ -493,8 +493,8 @@ class RealTimeProcessingPipeline:
 
         logger.info("Initialized Real-time Processing Pipeline")
 
-    async def start_pipeline(self):
-        """Start the real-time processing pipeline"""
+    async def start_pipeline(self) -> None:
+        """Start the real-time processing pipeline."""
         if self._running:
             logger.warning("Pipeline is already running")
             return
@@ -503,8 +503,8 @@ class RealTimeProcessingPipeline:
         self._pipeline_task = asyncio.create_task(self._pipeline_worker())
         logger.info("Real-time processing pipeline started")
 
-    async def stop_pipeline(self):
-        """Stop the real-time processing pipeline"""
+    async def stop_pipeline(self) -> None:
+        """Stop the real-time processing pipeline."""
         if not self._running:
             return
 
@@ -532,23 +532,25 @@ class RealTimeProcessingPipeline:
         logger.info("Real-time processing pipeline stopped")
 
     async def submit_content(self, content: ContentItem) -> str:
-        """Submit content for processing"""
+        """Submit content for processing."""
         if not self._running:
-            raise RuntimeError("Pipeline is not running")
+            msg = "Pipeline is not running"
+            raise RuntimeError(msg)
 
         # Check queue capacity
         total_queued = sum(len(queue) for queue in self.processing_queues.values())
         if total_queued >= self.config.max_queue_size:
-            raise RuntimeError(f"Pipeline queue is full ({total_queued} items)")
+            msg = f"Pipeline queue is full ({total_queued} items)"
+            raise RuntimeError(msg)
 
         # Add to appropriate priority queue
         self.processing_queues[content.priority].append(content)
         self.metrics["queue_sizes"][content.priority] += 1
 
         logger.debug(
-            f"Content {content.content_id} queued with priority {
+            "Content %s queued with priority %s", content.content_id,
                 content.priority.value
-            }",
+            ,
         )
         return content.content_id
 
@@ -557,7 +559,7 @@ class RealTimeProcessingPipeline:
         content_id: str,
         timeout: float = None,
     ) -> ProcessingResult | None:
-        """Get processing result for content"""
+        """Get processing result for content."""
         if content_id in self.processing_results:
             return self.processing_results[content_id]
 
@@ -573,8 +575,8 @@ class RealTimeProcessingPipeline:
 
         return None
 
-    async def _pipeline_worker(self):
-        """Main pipeline worker loop"""
+    async def _pipeline_worker(self) -> None:
+        """Main pipeline worker loop."""
         try:
             while self._running:
                 # Process items from priority queues
@@ -592,11 +594,11 @@ class RealTimeProcessingPipeline:
             logger.info("Pipeline worker cancelled")
             raise
         except Exception as e:
-            logger.error(f"Pipeline worker error: {e}")
+            logger.error("Pipeline worker error: %s", e)
             raise
 
     async def _process_queued_items(self) -> bool:
-        """Process items from priority queues"""
+        """Process items from priority queues."""
         processed_any = False
 
         # Process in priority order
@@ -621,7 +623,7 @@ class RealTimeProcessingPipeline:
                 self.active_processing[content.content_id] = task
 
                 # Set up task completion callback
-                def task_done_callback(task_ref, content_id=content.content_id):
+                def task_done_callback(self) -> None:
                     if content_id in self.active_processing:
                         del self.active_processing[content_id]
 
@@ -634,7 +636,7 @@ class RealTimeProcessingPipeline:
         return processed_any
 
     async def _process_content(self, content: ContentItem) -> ProcessingResult:
-        """Process a single content item through the pipeline"""
+        """Process a single content item through the pipeline."""
         start_time = time.time()
         processing_context = {}
         completed_stages = []
@@ -752,8 +754,8 @@ class RealTimeProcessingPipeline:
                 self.metrics["processing_times"].append(processing_time)
 
                 logger.debug(
-                    f"Content {content.content_id} processed successfully in {
-                        processing_time:.1f}ms",
+                    "Content %s processed successfully in %sms", content.content_id,
+                    processing_time,
                 )
                 return result
 
@@ -774,8 +776,8 @@ class RealTimeProcessingPipeline:
             self.metrics["failed_processed"] += 1
 
             logger.warning(
-                f"Content {content.content_id} processing timed out after {
-                    processing_time:.1f}ms",
+                "Content %s processing timed out after %sms", content.content_id,
+                processing_time,
             )
             return result
 
@@ -795,12 +797,13 @@ class RealTimeProcessingPipeline:
             self.metrics["total_processed"] += 1
             self.metrics["failed_processed"] += 1
 
-            logger.error(f"Content {content.content_id} processing failed: {e}")
+            logger.error("Content %s processing failed: %s", content.content_id, e)
             return result
 
-    async def _collect_metrics(self):
-        """Collect and update pipeline metrics"""
+    async def _collect_metrics(self) -> None:
+        """Collect and update pipeline metrics."""
         try:
+                pass
             # Update processing metrics every few seconds
             if not hasattr(self, "_last_metrics_update"):
                 self._last_metrics_update = time.time()
@@ -825,10 +828,10 @@ class RealTimeProcessingPipeline:
                 self._last_metrics_update = current_time
 
         except Exception as e:
-            logger.error(f"Metrics collection error: {e}")
+            logger.error("Metrics collection error: %s", e)
 
     def get_pipeline_metrics(self) -> PipelineMetrics:
-        """Get comprehensive pipeline metrics"""
+        """Get comprehensive pipeline metrics."""
         # Calculate average processing time
         if self.metrics["processing_times"]:
             avg_processing_time = sum(self.metrics["processing_times"]) / len(
@@ -873,20 +876,20 @@ class RealTimeProcessingPipeline:
         )
 
     def get_queue_status(self) -> dict[str, int]:
-        """Get current queue sizes by priority"""
+        """Get current queue sizes by priority."""
         return {
             priority.value: len(queue)
             for priority, queue in self.processing_queues.items()
         }
 
     def get_active_processing_count(self) -> int:
-        """Get number of actively processing items"""
+        """Get number of actively processing items."""
         return len(self.active_processing)
 
 
 # Production-ready factory functions
 async def create_production_realtime_pipeline() -> RealTimeProcessingPipeline:
-    """Create production-ready real-time processing pipeline"""
+    """Create production-ready real-time processing pipeline."""
     config = PipelineConfig(
         max_concurrent_processing=100,
         max_queue_size=50000,
@@ -909,13 +912,14 @@ async def create_production_realtime_pipeline() -> RealTimeProcessingPipeline:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         pipeline = RealTimeProcessingPipeline()
 
         # Start the pipeline
         await pipeline.start_pipeline()
 
         try:
+                pass
             # Submit test content
             test_items = [
                 ContentItem(

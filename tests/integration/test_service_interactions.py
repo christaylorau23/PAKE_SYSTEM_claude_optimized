@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+
 from src.services.analytics.performance_analyzer import PerformanceAnalyzer
 from src.services.caching.redis_cache_strategy import RedisCacheStrategy
 from src.services.database.connection_manager import DatabaseConnectionManager
@@ -42,8 +43,8 @@ class TestServiceIntegration:
     and handle real-world scenarios with actual dependencies.
     """
 
-    @pytest.fixture()
-    async def test_database(self):
+    @pytest.fixture
+    async def test_database(self) -> None:
         """Set up test database connection"""
         db_manager = DatabaseConnectionManager(
             host="localhost",
@@ -57,24 +58,24 @@ class TestServiceIntegration:
         yield db_manager
         await db_manager.disconnect()
 
-    @pytest.fixture()
-    async def test_cache(self):
+    @pytest.fixture
+    async def test_cache(self) -> None:
         """Set up test Redis cache"""
         cache = RedisCacheStrategy("redis://localhost:6379/15")  # Use test database
         await cache.start()
         yield cache
         await cache.stop()
 
-    @pytest.fixture()
-    async def test_message_bus(self):
+    @pytest.fixture
+    async def test_message_bus(self) -> None:
         """Set up test message bus"""
         bus = MessageBus("redis://localhost:6379/16")  # Use separate test database
         await bus.start()
         yield bus
         await bus.stop()
 
-    @pytest.fixture()
-    def test_services(self):
+    @pytest.fixture
+    def test_services(self) -> None:
         """Set up test services with real configurations"""
         return {
             "firecrawl": FirecrawlService(api_key="test_key"),
@@ -87,8 +88,8 @@ class TestServiceIntegration:
     # Database Integration Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_database_cache_integration(self, test_database, test_cache):
+    @pytest.mark.asyncio
+    async def test_database_cache_integration(self) -> None:
         """
         Test: Database and cache should work together seamlessly
 
@@ -156,8 +157,8 @@ class TestServiceIntegration:
         assert fresh_data is not None
         assert json.loads(fresh_data["profile_data"])["preferences"]["theme"] == "light"
 
-    @pytest.mark.asyncio()
-    async def test_ingestion_database_integration(self, test_database, test_services):
+    @pytest.mark.asyncio
+    async def test_ingestion_database_integration(self) -> None:
         """
         Test: Ingestion services should store results in database correctly
 
@@ -231,8 +232,8 @@ class TestServiceIntegration:
     # Cache Integration Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_cache_performance_integration(self, test_cache, test_services):
+    @pytest.mark.asyncio
+    async def test_cache_performance_integration(self) -> None:
         """
         Test: Cache should improve performance for repeated operations
 
@@ -274,8 +275,8 @@ class TestServiceIntegration:
         cache_stats = await test_cache.get_stats()
         assert cache_stats["hits"] > 0
 
-    @pytest.mark.asyncio()
-    async def test_cache_invalidation_integration(self, test_cache, test_database):
+    @pytest.mark.asyncio
+    async def test_cache_invalidation_integration(self) -> None:
         """
         Test: Cache invalidation should maintain data consistency
 
@@ -341,8 +342,8 @@ class TestServiceIntegration:
     # Message Queue Integration Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_message_bus_integration(self, test_message_bus, test_services):
+    @pytest.mark.asyncio
+    async def test_message_bus_integration(self) -> None:
         """
         Test: Message bus should enable reliable service communication
 
@@ -355,7 +356,7 @@ class TestServiceIntegration:
         # Set up message handlers
         received_messages = []
 
-        async def message_handler(message):
+        async def message_handler(self) -> None:
             received_messages.append(message)
             return {"status": "processed", "message_id": message.message_id}
 
@@ -364,8 +365,16 @@ class TestServiceIntegration:
             "test:integration", message_handler
         )
 
-        # Wait for subscription to be ready
-        await asyncio.sleep(0.1)
+        # Wait for subscription to be ready using robust polling
+        from src.utils.test_polling import poll_until_true
+
+        async def subscription_ready(self) -> None:
+            # Check if subscription is active
+            return subscription_id is not None
+
+        await poll_until_true(
+            subscription_ready, timeout=5.0, operation_name="message_bus_subscription"
+        )
 
         # Publish test messages
         test_messages = [
@@ -386,8 +395,18 @@ class TestServiceIntegration:
         for msg_data in test_messages:
             await test_message_bus.publish("test:integration", msg_data)
 
-        # Wait for message processing
-        await asyncio.sleep(0.5)
+        # Wait for message processing using robust polling
+        from src.utils.test_polling import RobustPoller
+
+        poller = RobustPoller()
+        result = await poller.poll_message_received(
+            test_message_bus,
+            expected_count=2,
+            received_messages=received_messages,
+            operation_name="message_processing",
+        )
+
+        assert result.success, f"Expected 2 messages, got {len(received_messages)} after {result.total_time:.2f}s"
 
         # Verify messages were received and processed
         assert len(received_messages) == 2
@@ -397,10 +416,8 @@ class TestServiceIntegration:
         # Cleanup
         await test_message_bus.unsubscribe(subscription_id)
 
-    @pytest.mark.asyncio()
-    async def test_service_coordination_integration(
-        self, test_message_bus, test_services
-    ):
+    @pytest.mark.asyncio
+    async def test_service_coordination_integration(self) -> None:
         """
         Test: Services should coordinate through message bus for complex workflows
 
@@ -413,15 +430,15 @@ class TestServiceIntegration:
         # Set up workflow coordination
         workflow_state = {"steps_completed": 0, "errors": []}
 
-        async def step1_handler(message):
+        async def step1_handler(self) -> None:
             workflow_state["steps_completed"] += 1
             return {"status": "step1_complete", "next_step": "step2"}
 
-        async def step2_handler(message):
+        async def step2_handler(self) -> None:
             workflow_state["steps_completed"] += 1
             return {"status": "step2_complete", "workflow_complete": True}
 
-        async def error_handler(message):
+        async def error_handler(self) -> None:
             workflow_state["errors"].append(message.get("error", "Unknown error"))
             return {"status": "error_handled"}
 
@@ -430,8 +447,16 @@ class TestServiceIntegration:
         await test_message_bus.subscribe("workflow:step2", step2_handler)
         await test_message_bus.subscribe("workflow:error", error_handler)
 
-        # Wait for subscriptions
-        await asyncio.sleep(0.1)
+        # Wait for subscriptions using robust polling
+        from src.utils.test_polling import poll_until_true
+
+        async def subscriptions_ready(self) -> None:
+            # Check if all subscriptions are active
+            return len(await test_message_bus.list_subscriptions()) >= 3
+
+        await poll_until_true(
+            subscriptions_ready, timeout=5.0, operation_name="workflow_subscriptions"
+        )
 
         # Execute workflow
         await test_message_bus.publish(
@@ -442,7 +467,15 @@ class TestServiceIntegration:
             },
         )
 
-        await asyncio.sleep(0.1)
+        # Wait for step1 completion using robust polling
+        from src.utils.test_polling import RobustPoller
+
+        poller = RobustPoller()
+
+        async def step1_completed(self) -> None:
+            return workflow_state["steps_completed"] >= 1
+
+        await poller.poll_condition(step1_completed, operation_name="workflow_step1")
 
         await test_message_bus.publish(
             "workflow:step2",
@@ -452,8 +485,14 @@ class TestServiceIntegration:
             },
         )
 
-        # Wait for workflow completion
-        await asyncio.sleep(0.5)
+        # Wait for workflow completion using robust polling
+        async def workflow_completed(self) -> None:
+            return workflow_state["steps_completed"] >= 2
+
+        result = await poller.poll_condition(
+            workflow_completed, operation_name="workflow_completion"
+        )
+        assert result.success, f"Workflow did not complete in time: {workflow_state}"
 
         # Verify workflow completion
         assert workflow_state["steps_completed"] == 2
@@ -463,10 +502,8 @@ class TestServiceIntegration:
     # Authentication Integration Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_authentication_database_integration(
-        self, test_database, test_services
-    ):
+    @pytest.mark.asyncio
+    async def test_authentication_database_integration(self) -> None:
         """
         Test: Authentication service should integrate with database for user management
 
@@ -533,10 +570,8 @@ class TestServiceIntegration:
     # End-to-End Integration Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_complete_ingestion_workflow_integration(
-        self, test_database, test_cache, test_message_bus, test_services
-    ):
+    @pytest.mark.asyncio
+    async def test_complete_ingestion_workflow_integration(self) -> None:
         """
         Test: Complete ingestion workflow should work end-to-end
 
@@ -565,7 +600,7 @@ class TestServiceIntegration:
         # Set up message handlers for workflow coordination
         workflow_messages = []
 
-        async def workflow_handler(message):
+        async def workflow_handler(self) -> None:
             workflow_messages.append(message)
             return {"status": "workflow_step_completed"}
 
@@ -598,11 +633,12 @@ class TestServiceIntegration:
         }
 
         # Mock successful service responses
-        with patch.object(
-            test_services["firecrawl"], "extract_content"
-        ) as mock_firecrawl, patch.object(
-            test_services["arxiv"], "search_papers"
-        ) as mock_arxiv:
+        with (
+            patch.object(
+                test_services["firecrawl"], "extract_content"
+            ) as mock_firecrawl,
+            patch.object(test_services["arxiv"], "search_papers") as mock_arxiv,
+        ):
             # Configure mock responses
             mock_firecrawl.return_value = {
                 "success": True,
@@ -667,8 +703,8 @@ class TestErrorPropagationIntegration:
     when services interact with each other.
     """
 
-    @pytest.mark.asyncio()
-    async def test_database_error_propagation(self, test_services):
+    @pytest.mark.asyncio
+    async def test_database_error_propagation(self) -> None:
         """
         Test: Database errors should propagate correctly to calling services
 
@@ -684,7 +720,9 @@ class TestErrorPropagationIntegration:
             mock_connect.side_effect = Exception("Database connection failed")
 
             # Attempt to use service that depends on database
-            from src.services.analytics.user_analytics_service import UserAnalyticsService
+            from src.services.analytics.user_analytics_service import (
+                UserAnalyticsService,
+            )
 
             analytics_service = UserAnalyticsService()
 
@@ -695,8 +733,8 @@ class TestErrorPropagationIntegration:
             assert result.success is False
             assert "Database connection failed" in result.error_message
 
-    @pytest.mark.asyncio()
-    async def test_cache_error_propagation(self, test_database):
+    @pytest.mark.asyncio
+    async def test_cache_error_propagation(self) -> None:
         """
         Test: Cache errors should not break core functionality
 
@@ -726,8 +764,8 @@ class TestErrorPropagationIntegration:
             assert result.success is True
             assert result.processed_content is not None
 
-    @pytest.mark.asyncio()
-    async def test_message_bus_error_propagation(self, test_services):
+    @pytest.mark.asyncio
+    async def test_message_bus_error_propagation(self) -> None:
         """
         Test: Message bus errors should be handled gracefully
 
@@ -737,7 +775,9 @@ class TestErrorPropagationIntegration:
         - Test service degradation
         """
         # Set up service with failing message bus
-        with patch("src.services.messaging.message_bus.MessageBus.publish") as mock_publish:
+        with patch(
+            "src.services.messaging.message_bus.MessageBus.publish"
+        ) as mock_publish:
             mock_publish.side_effect = Exception("Message bus unavailable")
 
             # Service should handle message bus failures gracefully

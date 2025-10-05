@@ -39,8 +39,8 @@ class TestIngestionOrchestrator:
     Tests comprehensive multi-source orchestration capabilities.
     """
 
-    @pytest.fixture()
-    def mock_cognitive_engine(self):
+    @pytest.fixture
+    def mock_cognitive_engine(self) -> None:
         """Mock cognitive engine for testing"""
         engine = Mock()
         engine.assess_research_quality = AsyncMock(return_value=0.89)
@@ -55,16 +55,16 @@ class TestIngestionOrchestrator:
         )
         return engine
 
-    @pytest.fixture()
-    def mock_n8n_manager(self):
+    @pytest.fixture
+    def mock_n8n_manager(self) -> None:
         """Mock n8n workflow manager"""
         manager = Mock()
         manager.trigger_workflow = AsyncMock(return_value={"workflow_id": "orch_001"})
         manager.monitor_workflow = AsyncMock(return_value={"status": "completed"})
         return manager
 
-    @pytest.fixture()
-    def orchestrator_config(self):
+    @pytest.fixture
+    def orchestrator_config(self) -> None:
         """Orchestrator configuration for testing"""
         return {
             "max_concurrent_sources": 5,
@@ -78,13 +78,8 @@ class TestIngestionOrchestrator:
             "caching_enabled": True,
         }
 
-    @pytest.fixture()
-    def ingestion_orchestrator(
-        self,
-        orchestrator_config,
-        mock_cognitive_engine,
-        mock_n8n_manager,
-    ):
+    @pytest.fixture
+    def ingestion_orchestrator(self) -> None:
         """Create ingestion orchestrator instance"""
         if IngestionOrchestrator is None:
             pytest.skip("IngestionOrchestrator not implemented yet (RED phase)")
@@ -99,11 +94,10 @@ class TestIngestionOrchestrator:
     # CORE ORCHESTRATOR FUNCTIONALITY TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_create_comprehensive_ingestion_plan_from_research_topic(
         self,
-        ingestion_orchestrator,
-    ):
+    ) -> None:
         """
         Test: Should generate comprehensive ingestion plan for complex research topic
         covering web scraping, academic papers, and biomedical research.
@@ -145,11 +139,10 @@ class TestIngestionOrchestrator:
             assert source.estimated_results > 0
             assert source.query_parameters is not None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_execute_comprehensive_multi_source_ingestion_plan(
         self,
-        ingestion_orchestrator,
-    ):
+    ) -> None:
         """
         Test: Should execute ingestion plan across all sources with proper orchestration,
         error handling, and result aggregation.
@@ -224,12 +217,10 @@ class TestIngestionOrchestrator:
 
         assert len(source_types_retrieved) >= 2  # Multiple source types
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_handle_parallel_source_execution_with_proper_concurrency_control(
         self,
-        ingestion_orchestrator,
-        orchestrator_config,
-    ):
+    ) -> None:
         """
         Test: Should execute multiple sources in parallel while respecting
         concurrency limits and timeout constraints.
@@ -277,12 +268,10 @@ class TestIngestionOrchestrator:
     # COGNITIVE INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_apply_cognitive_assessment_across_all_ingested_content(
         self,
-        ingestion_orchestrator,
-        mock_cognitive_engine,
-    ):
+    ) -> None:
         """
         Test: Should apply unified cognitive assessment to all content
         from all sources with quality filtering and insights extraction.
@@ -325,12 +314,8 @@ class TestIngestionOrchestrator:
         ]
         assert len(high_quality_content) > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_optimize_queries_based_on_cognitive_feedback(
-        self,
-        ingestion_orchestrator,
-        mock_cognitive_engine,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_optimize_queries_based_on_cognitive_feedback(self) -> None:
         """
         Test: Should use cognitive engine to optimize search queries
         and improve result quality through iterative refinement.
@@ -367,12 +352,10 @@ class TestIngestionOrchestrator:
     # WORKFLOW AUTOMATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_trigger_appropriate_n8n_workflows_based_on_content_type(
         self,
-        ingestion_orchestrator,
-        mock_n8n_manager,
-    ):
+    ) -> None:
         """
         Test: Should trigger different n8n workflows based on the type
         of content ingested and research domain.
@@ -411,12 +394,8 @@ class TestIngestionOrchestrator:
         ]
         assert any("biomedical" in wtype.lower() for wtype in workflow_types)
 
-    @pytest.mark.asyncio()
-    async def test_should_coordinate_cross_source_workflow_dependencies(
-        self,
-        ingestion_orchestrator,
-        mock_n8n_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_coordinate_cross_source_workflow_dependencies(self) -> None:
         """
         Test: Should coordinate workflows that depend on content from
         multiple sources (e.g., cross-reference validation).
@@ -467,11 +446,8 @@ class TestIngestionOrchestrator:
     # ERROR HANDLING AND RESILIENCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_partial_source_failures_gracefully(
-        self,
-        ingestion_orchestrator,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_partial_source_failures_gracefully(self) -> None:
         """
         Test: Should continue execution when some sources fail,
         providing partial results and detailed error reporting.
@@ -511,12 +487,8 @@ class TestIngestionOrchestrator:
         # Should still have some content
         assert len(result.content_items) > 0
 
-    @pytest.mark.asyncio()
-    async def test_should_implement_retry_logic_for_failed_sources(
-        self,
-        ingestion_orchestrator,
-        orchestrator_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_implement_retry_logic_for_failed_sources(self) -> None:
         """
         Test: Should retry failed sources according to retry configuration
         with exponential backoff and failure classification.
@@ -524,11 +496,12 @@ class TestIngestionOrchestrator:
         # Mock a source that fails twice then succeeds
         retry_count = 0
 
-        async def mock_failing_source(*args, **kwargs):
+        async def mock_failing_source(self) -> None:
             nonlocal retry_count
             retry_count += 1
             if retry_count <= orchestrator_config["max_retries"]:
-                raise Exception(f"Temporary failure {retry_count}")
+                msg = f"Temporary failure {retry_count}"
+                raise Exception(msg)
             # Return list of ContentItem objects as expected by _execute_test_source
             return [
                 ContentItem(
@@ -576,11 +549,8 @@ class TestIngestionOrchestrator:
     # PERFORMANCE AND OPTIMIZATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_implement_content_deduplication_across_sources(
-        self,
-        ingestion_orchestrator,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_implement_content_deduplication_across_sources(self) -> None:
         """
         Test: Should identify and deduplicate similar content from
         different sources while preserving unique information.
@@ -621,16 +591,15 @@ class TestIngestionOrchestrator:
         assert result.duplicates_removed >= 0
 
         # Check content diversity
-        unique_titles = set(item.title.lower() for item in result.content_items)
+        unique_titles = {item.title.lower() for item in result.content_items}
         total_items = len(result.content_items)
         diversity_ratio = len(unique_titles) / max(total_items, 1)
         assert diversity_ratio >= 0.7  # High diversity indicates good deduplication
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_implement_intelligent_caching_for_repeat_queries(
         self,
-        ingestion_orchestrator,
-    ):
+    ) -> None:
         """
         Test: Should cache results from expensive sources and reuse
         them for similar queries to improve performance.
@@ -677,7 +646,8 @@ class TestIngestionOrchestrator:
         result2 = await ingestion_orchestrator.execute_ingestion_plan(plan2)
 
         # Second execution should be faster due to caching
-        assert result1.success and result2.success
+        assert result1.success
+        assert result2.success
         assert result2.cache_hits > 0  # Should have cache hits
         # Allow for small timing variations - cache should either be faster or
         # very close
@@ -685,11 +655,8 @@ class TestIngestionOrchestrator:
             result2.execution_time <= first_execution_time * 1.1
         )  # Allow 10% variance
 
-    @pytest.mark.asyncio()
-    async def test_should_monitor_and_report_comprehensive_metrics(
-        self,
-        ingestion_orchestrator,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_monitor_and_report_comprehensive_metrics(self) -> None:
         """
         Test: Should collect and report comprehensive metrics about
         ingestion performance, quality, and system health.
@@ -734,13 +701,8 @@ class TestIngestionOrchestrator:
     # CONFIGURATION AND CUSTOMIZATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_support_custom_source_configurations(
-        self,
-        ingestion_orchestrator,
-        mock_cognitive_engine,
-        mock_n8n_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_support_custom_source_configurations(self) -> None:
         """
         Test: Should support custom configurations for each source type
         including specialized parameters and processing options.

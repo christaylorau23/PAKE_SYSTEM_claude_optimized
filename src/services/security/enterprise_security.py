@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityLevel(Enum):
-    """Security classification levels"""
+    """Security classification levels."""
 
     PUBLIC = "public"
     INTERNAL = "internal"
@@ -31,7 +31,7 @@ class SecurityLevel(Enum):
 
 
 class ComplianceFramework(Enum):
-    """Supported compliance frameworks"""
+    """Supported compliance frameworks."""
 
     GDPR = "gdpr"
     HIPAA = "hipaa"
@@ -43,7 +43,7 @@ class ComplianceFramework(Enum):
 
 
 class AuditEventType(Enum):
-    """Types of audit events"""
+    """Types of audit events."""
 
     USER_LOGIN = "user_login"
     USER_LOGOUT = "user_logout"
@@ -58,7 +58,7 @@ class AuditEventType(Enum):
 
 
 class EncryptionAlgorithm(Enum):
-    """Supported encryption algorithms"""
+    """Supported encryption algorithms."""
 
     AES_256_GCM = "aes_256_gcm"
     FERNET = "fernet"
@@ -68,24 +68,24 @@ class EncryptionAlgorithm(Enum):
 
 @dataclass(frozen=True)
 class SecurityPolicy:
-    """Immutable security policy definition"""
+    """Immutable security policy definition."""
 
     policy_id: str
     name: str
     description: str
     security_level: SecurityLevel
     applicable_frameworks: list[ComplianceFramework] = field(default_factory=list)
-    rules: dict[str, Any] = field(default_factory=dict)
+    rules: Dict[str, Any] = field(default_factory=dict)
     mandatory: bool = True
     effective_date: datetime = field(default_factory=lambda: datetime.now(UTC))
     expiry_date: datetime | None = None
     created_by: str = "system"
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class AuditEvent:
-    """Immutable audit event record"""
+    """Immutable audit event record."""
 
     event_id: str
     event_type: AuditEventType
@@ -100,13 +100,13 @@ class AuditEvent:
     risk_score: float = 0.0
     security_level: SecurityLevel = SecurityLevel.INTERNAL
     compliance_frameworks: list[ComplianceFramework] = field(default_factory=list)
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Dict[str, Any] = field(default_factory=dict)
     correlation_id: str | None = None
 
 
 @dataclass(frozen=True)
 class SecurityViolation:
-    """Immutable security violation record"""
+    """Immutable security violation record."""
 
     violation_id: str
     violation_type: str
@@ -119,15 +119,15 @@ class SecurityViolation:
     )
     ip_address: str | None = None
     risk_score: float = 0.0
-    mitigation_actions: list[str] = field(default_factory=list)
+    mitigation_actions: List[str] = field(default_factory=list)
     resolved: bool = False
     resolved_timestamp: datetime | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class ComplianceReport:
-    """Immutable compliance assessment report"""
+    """Immutable compliance assessment report."""
 
     report_id: str
     framework: ComplianceFramework
@@ -137,9 +137,9 @@ class ComplianceReport:
     total_controls: int
     compliant_controls: int
     non_compliant_controls: int
-    findings: list[dict[str, Any]] = field(default_factory=list)
-    recommendations: list[str] = field(default_factory=list)
-    risk_assessment: dict[str, Any] = field(default_factory=dict)
+    findings: list[Dict[str, Any]] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
+    risk_assessment: Dict[str, Any] = field(default_factory=dict)
     generated_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -148,7 +148,7 @@ class ComplianceReport:
 
 @dataclass
 class EnterpriseSecurityConfig:
-    """Configuration for enterprise security framework"""
+    """Configuration for enterprise security framework."""
 
     enable_audit_logging: bool = True
     enable_encryption: bool = True
@@ -179,19 +179,19 @@ class EnterpriseSecurityConfig:
 
 
 class EncryptionManager:
-    """Advanced encryption and key management system"""
+    """Advanced encryption and key management system."""
 
-    def __init__(self, config: EnterpriseSecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.encryption_keys: dict[str, bytes] = {}
-        self.key_metadata: dict[str, dict[str, Any]] = {}
+        self.key_metadata: dict[str, Dict[str, Any]] = {}
         self.key_rotation_schedule: dict[str, datetime] = {}
 
         # Initialize master encryption key
         self._initialize_master_key()
 
-    def _initialize_master_key(self):
-        """Initialize master encryption key"""
+    def _initialize_master_key(self) -> None:
+        """Initialize master encryption key."""
         master_key_id = "master_key"
 
         # Generate or load master key (in production, use HSM or key vault)
@@ -219,9 +219,10 @@ class EncryptionManager:
         logger.info("Master encryption key initialized")
 
     def encrypt_data(self, data: str, key_id: str = "master_key") -> dict[str, str]:
-        """Encrypt sensitive data"""
+        """Encrypt sensitive data."""
         if key_id not in self.encryption_keys:
-            raise ValueError(f"Encryption key {key_id} not found")
+            msg = f"Encryption key {key_id} not found"
+            raise ValueError(msg)
 
         try:
             fernet = Fernet(self.encryption_keys[key_id])
@@ -235,15 +236,16 @@ class EncryptionManager:
             }
 
         except Exception as e:
-            logger.error(f"Encryption failed: {e}")
+            logger.error("Encryption failed: %s", e)
             raise
 
     def decrypt_data(self, encrypted_data_info: dict[str, str]) -> str:
-        """Decrypt sensitive data"""
+        """Decrypt sensitive data."""
         key_id = encrypted_data_info["key_id"]
 
         if key_id not in self.encryption_keys:
-            raise ValueError(f"Encryption key {key_id} not found")
+            msg = f"Encryption key {key_id} not found"
+            raise ValueError(msg)
 
         try:
             fernet = Fernet(self.encryption_keys[key_id])
@@ -255,11 +257,11 @@ class EncryptionManager:
             return decrypted_data.decode()
 
         except Exception as e:
-            logger.error(f"Decryption failed: {e}")
+            logger.error("Decryption failed: %s", e)
             raise
 
     def rotate_key(self, key_id: str) -> bool:
-        """Rotate encryption key"""
+        """Rotate encryption key."""
         if key_id not in self.encryption_keys:
             return False
 
@@ -283,15 +285,15 @@ class EncryptionManager:
                 self.key_metadata[key_id].get("rotation_count", 0) + 1
             )
 
-            logger.info(f"Encryption key {key_id} rotated successfully")
+            logger.info("Encryption key %s rotated successfully", key_id)
             return True
 
         except Exception as e:
-            logger.error(f"Key rotation failed for {key_id}: {e}")
+            logger.error("Key rotation failed for %s: %s", key_id, e)
             return False
 
-    def get_key_status(self) -> dict[str, Any]:
-        """Get encryption key status and health"""
+    def get_key_status(self) -> Dict[str, Any]:
+        """Get encryption key status and health."""
         return {
             "total_keys": len(self.encryption_keys),
             "active_keys": len(
@@ -317,8 +319,8 @@ class EncryptionManager:
             ),
         }
 
-    def _get_keys_due_for_rotation(self) -> list[str]:
-        """Get keys that are due for rotation"""
+    def _get_keys_due_for_rotation(self) -> List[str]:
+        """Get keys that are due for rotation."""
         now = datetime.now(UTC)
         due_keys = []
 
@@ -337,29 +339,29 @@ class EncryptionManager:
         return due_keys
 
     async def encrypt_string(self, data: str) -> str:
-        """Async wrapper for string encryption"""
+        """Async wrapper for string encryption."""
         encrypted_info = self.encrypt_data(data)
         return encrypted_info["encrypted_data"]
 
     async def decrypt_string(self, encrypted_data: str) -> str:
-        """Async wrapper for string decryption"""
+        """Async wrapper for string decryption."""
         encrypted_info = {"encrypted_data": encrypted_data, "key_id": "master_key"}
         return self.decrypt_data(encrypted_info)
 
-    async def encrypt_dict(self, data: dict[str, Any]) -> str:
-        """Async encryption for dictionary data"""
+    async def encrypt_dict(self, data: Dict[str, Any]) -> str:
+        """Async encryption for dictionary data."""
         json_data = json.dumps(data)
         encrypted_info = self.encrypt_data(json_data)
         return encrypted_info["encrypted_data"]
 
-    async def decrypt_dict(self, encrypted_data: str) -> dict[str, Any]:
-        """Async decryption for dictionary data"""
+    async def decrypt_dict(self, encrypted_data: str) -> Dict[str, Any]:
+        """Async decryption for dictionary data."""
         encrypted_info = {"encrypted_data": encrypted_data, "key_id": "master_key"}
         json_data = self.decrypt_data(encrypted_info)
         return json.loads(json_data)
 
-    async def get_key_info(self) -> dict[str, Any]:
-        """Async wrapper for key information"""
+    async def get_key_info(self) -> Dict[str, Any]:
+        """Async wrapper for key information."""
         master_key_meta = self.key_metadata.get("master_key", {})
         return {
             "key_id": "master_key",
@@ -374,7 +376,7 @@ class EncryptionManager:
         }
 
     async def rotate_key(self) -> bool:
-        """Async wrapper for key rotation"""
+        """Async wrapper for key rotation."""
         # Generate new key and update metadata
         new_key = Fernet.generate_key()
         old_created_at = self.key_metadata["master_key"].get("created_at")
@@ -387,9 +389,9 @@ class EncryptionManager:
 
 
 class AuditLogger:
-    """Comprehensive audit logging system for compliance"""
+    """Comprehensive audit logging system for compliance."""
 
-    def __init__(self, config: EnterpriseSecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.audit_events: list[AuditEvent] = []
         self.security_violations: list[SecurityViolation] = []
@@ -407,7 +409,7 @@ class AuditLogger:
         }
 
     async def log_audit_event(self, event: AuditEvent) -> bool:
-        """Log audit event for compliance tracking"""
+        """Log audit event for compliance tracking."""
         if not self.config.enable_audit_logging:
             return False
 
@@ -444,15 +446,15 @@ class AuditLogger:
             if event.risk_score > 0.8 or not event.success:
                 await self._check_security_violation(event)
 
-            logger.debug(f"Audit event logged: {event.event_id}")
+            logger.debug("Audit event logged: %s", event.event_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to log audit event: {e}")
+            logger.error("Failed to log audit event: %s", e)
             return False
 
     def _calculate_risk_score(self, event: AuditEvent) -> float:
-        """Calculate risk score for audit event"""
+        """Calculate risk score for audit event."""
         base_risk = self.risk_weights.get(event.event_type, 0.2)
 
         # Adjust for failure
@@ -475,8 +477,8 @@ class AuditLogger:
 
         return min(1.0, base_risk)
 
-    async def _check_security_violation(self, event: AuditEvent):
-        """Check if audit event represents a security violation"""
+    async def _check_security_violation(self) -> None:
+        """Check if audit event represents a security violation."""
         violations = []
 
         # Failed login attempts
@@ -532,10 +534,10 @@ class AuditLogger:
             )
 
             self.security_violations.append(violation)
-            logger.warning(f"Security violation detected: {violation.violation_id}")
+            logger.warning("Security violation detected: %s", violation.violation_id)
 
     def _count_recent_failed_logins(self, identifier: str) -> int:
-        """Count recent failed login attempts"""
+        """Count recent failed login attempts."""
         if not identifier:
             return 0
 
@@ -554,8 +556,8 @@ class AuditLogger:
 
         return len(failed_logins)
 
-    def _get_mitigation_actions(self, violation_type: str) -> list[str]:
-        """Get recommended mitigation actions for violation type"""
+    def _get_mitigation_actions(self, violation_type: str) -> List[str]:
+        """Get recommended mitigation actions for violation type."""
         mitigation_map = {
             "excessive_failed_logins": [
                 "Temporarily lock account",
@@ -585,7 +587,7 @@ class AuditLogger:
         user_id: str | None = None,
         time_range: tuple[datetime, datetime] | None = None,
     ) -> list[AuditEvent]:
-        """Retrieve audit events with filtering"""
+        """Retrieve audit events with filtering."""
         events = self.audit_events
 
         if event_type:
@@ -605,7 +607,7 @@ class AuditLogger:
         severity: str | None = None,
         resolved: bool | None = None,
     ) -> list[SecurityViolation]:
-        """Retrieve security violations with filtering"""
+        """Retrieve security violations with filtering."""
         violations = self.security_violations
 
         if severity:
@@ -616,16 +618,16 @@ class AuditLogger:
 
         return sorted(violations, key=lambda v: v.detected_timestamp, reverse=True)
 
-    async def initialize(self):
-        """Initialize the audit logger"""
+    async def initialize(self) -> None:
+        """Initialize the audit logger."""
         logger.info("Audit Logger initialized")
 
-    async def shutdown(self):
-        """Shutdown the audit logger"""
+    async def shutdown(self) -> None:
+        """Shutdown the audit logger."""
         logger.info("Audit Logger shutdown complete")
 
     async def log_entry(self, entry: AuditEvent) -> str:
-        """Log an audit entry and return log ID"""
+        """Log an audit entry and return log ID."""
         success = await self.log_audit_event(entry)
         if success:
             return f"audit_{int(time.time() * 1000)}"
@@ -637,7 +639,7 @@ class AuditLogger:
         start_date: datetime = None,
         end_date: datetime = None,
     ) -> list[AuditEvent]:
-        """Query audit logs with filters"""
+        """Query audit logs with filters."""
         time_range = None
         if start_date and end_date:
             time_range = (start_date, end_date)
@@ -654,11 +656,11 @@ class AuditLogger:
         time_window_minutes: int = 60,
         severity_threshold: str = "medium",
     ) -> list[SecurityViolation]:
-        """Detect security violations in recent audit logs"""
+        """Detect security violations in recent audit logs."""
         return self.get_security_violations(severity=severity_threshold)
 
-    async def get_retention_info(self) -> dict[str, Any]:
-        """Get audit log retention information"""
+    async def get_retention_info(self) -> Dict[str, Any]:
+        """Get audit log retention information."""
         return {
             "retention_days": self.config.audit_retention_days,
             "total_entries": len(self.audit_events),
@@ -670,15 +672,15 @@ class AuditLogger:
         }
 
     async def cleanup_old_logs(self) -> int:
-        """Cleanup old audit logs based on retention policy"""
+        """Cleanup old audit logs based on retention policy."""
         # Simplified cleanup - would implement proper retention logic in production
         return 0  # Number of cleaned up logs
 
 
 class ComplianceMonitor:
-    """Comprehensive compliance monitoring and reporting"""
+    """Comprehensive compliance monitoring and reporting."""
 
-    def __init__(self, config: EnterpriseSecurityConfig):
+    def __init__(self) -> None:
         self.config = config
         self.compliance_controls: dict[ComplianceFramework, dict[str, dict]] = {}
         self.compliance_reports: list[ComplianceReport] = []
@@ -686,8 +688,8 @@ class ComplianceMonitor:
         # Initialize compliance controls for supported frameworks
         self._initialize_compliance_controls()
 
-    def _initialize_compliance_controls(self):
-        """Initialize compliance controls for each framework"""
+    def _initialize_compliance_controls(self) -> None:
+        """Initialize compliance controls for each framework."""
         # GDPR Controls
         self.compliance_controls[ComplianceFramework.GDPR] = {
             "data_protection_by_design": {
@@ -818,12 +820,14 @@ class ComplianceMonitor:
         framework: ComplianceFramework,
         assessment_period_days: int = 30,
     ) -> ComplianceReport:
-        """Assess compliance for specific framework"""
+        """Assess compliance for specific framework."""
         if not self.config.enable_compliance_monitoring:
-            raise ValueError("Compliance monitoring is not enabled")
+            msg = "Compliance monitoring is not enabled"
+            raise ValueError(msg)
 
         if framework not in self.compliance_controls:
-            raise ValueError(f"Framework {framework.value} is not supported")
+            msg = f"Framework {framework.value} is not supported"
+            raise ValueError(msg)
 
         end_time = datetime.now(UTC)
         start_time = end_time - timedelta(days=assessment_period_days)
@@ -881,8 +885,8 @@ class ComplianceMonitor:
 
         self.compliance_reports.append(report)
         logger.info(
-            f"Compliance assessment completed for {framework.value}: {
-                compliance_score:.2%} compliant",
+            "Compliance assessment completed for %s: %.2f%% compliant", framework.value,
+                compliance_score * 100,
         )
 
         return report
@@ -891,9 +895,9 @@ class ComplianceMonitor:
         self,
         framework: ComplianceFramework,
         control_id: str,
-        control_info: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Assess individual compliance control"""
+        control_info: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Assess individual compliance control."""
         # Simulate control assessment (in production, this would integrate with
         # actual systems)
         base_compliance = control_info.get("status") == "implemented"
@@ -968,8 +972,8 @@ class ComplianceMonitor:
         self,
         framework: ComplianceFramework,
         findings: list[dict],
-    ) -> list[str]:
-        """Generate recommendations based on compliance findings"""
+    ) -> List[str]:
+        """Generate recommendations based on compliance findings."""
         recommendations = []
 
         high_risk_findings = [f for f in findings if f["risk_level"] == "high"]
@@ -1019,8 +1023,8 @@ class ComplianceMonitor:
 
         return recommendations
 
-    def _perform_risk_assessment(self, findings: list[dict]) -> dict[str, Any]:
-        """Perform overall risk assessment based on findings"""
+    def _perform_risk_assessment(self, findings: list[dict]) -> Dict[str, Any]:
+        """Perform overall risk assessment based on findings."""
         if not findings:
             return {
                 "overall_risk_level": "low",
@@ -1062,8 +1066,8 @@ class ComplianceMonitor:
             "mitigation_priority": mitigation_priority,
         }
 
-    def get_compliance_status_summary(self) -> dict[str, Any]:
-        """Get summary of compliance status across all frameworks"""
+    def get_compliance_status_summary(self) -> Dict[str, Any]:
+        """Get summary of compliance status across all frameworks."""
         if not self.compliance_reports:
             return {"status": "no_assessments_available"}
 
@@ -1099,32 +1103,32 @@ class ComplianceMonitor:
 
         return summary
 
-    async def initialize(self):
-        """Initialize the compliance monitor"""
+    async def initialize(self) -> None:
+        """Initialize the compliance monitor."""
         logger.info("Compliance Monitor initialized")
 
-    async def shutdown(self):
-        """Shutdown the compliance monitor"""
+    async def shutdown(self) -> None:
+        """Shutdown the compliance monitor."""
         logger.info("Compliance Monitor shutdown complete")
 
     async def check_gdpr_compliance(self) -> ComplianceReport:
-        """Check GDPR compliance and return report"""
+        """Check GDPR compliance and return report."""
         return await self.assess_compliance(ComplianceFramework.GDPR)
 
     async def check_soc2_compliance(self) -> ComplianceReport:
-        """Check SOC2 compliance and return report"""
+        """Check SOC2 compliance and return report."""
         return await self.assess_compliance(ComplianceFramework.SOC2)
 
     async def check_iso27001_compliance(self) -> ComplianceReport:
-        """Check ISO27001 compliance and return report"""
+        """Check ISO27001 compliance and return report."""
         return await self.assess_compliance(ComplianceFramework.ISO27001)
 
     async def check_hipaa_compliance(self) -> ComplianceReport:
-        """Check HIPAA compliance and return report"""
+        """Check HIPAA compliance and return report."""
         return await self.assess_compliance(ComplianceFramework.HIPAA)
 
-    async def generate_compliance_report(self) -> dict[str, Any]:
-        """Generate comprehensive compliance report across all frameworks"""
+    async def generate_compliance_report(self) -> Dict[str, Any]:
+        """Generate comprehensive compliance report across all frameworks."""
         frameworks_data = {}
         overall_scores = []
 
@@ -1154,7 +1158,7 @@ class ComplianceMonitor:
         }
 
     async def detect_violations(self) -> list[SecurityViolation]:
-        """Detect compliance violations"""
+        """Detect compliance violations."""
         # Simplified violation detection for testing
         return []  # No violations in test environment
 
@@ -1164,7 +1168,7 @@ class EnterpriseSecurityFramework:
     Integrates encryption, audit logging, compliance monitoring, and threat detection.
     """
 
-    def __init__(self, config: EnterpriseSecurityConfig = None):
+    def __init__(self) -> None:
         self.config = config or EnterpriseSecurityConfig()
         self.encryption_manager = EncryptionManager(self.config)
         self.audit_logger = AuditLogger(self.config)
@@ -1172,7 +1176,7 @@ class EnterpriseSecurityFramework:
 
         # Security policies
         self.security_policies: dict[str, SecurityPolicy] = {}
-        self.active_sessions: dict[str, dict[str, Any]] = {}
+        self.active_sessions: dict[str, Dict[str, Any]] = {}
 
         # Threat detection
         self.threat_indicators: dict[str, list[dict]] = {}
@@ -1183,8 +1187,8 @@ class EnterpriseSecurityFramework:
 
         logger.info("Enterprise Security Framework initialized")
 
-    async def initialize(self):
-        """Initialize the enterprise security framework and all components"""
+    async def initialize(self) -> None:
+        """Initialize the enterprise security framework and all components."""
         # Initialize components that need async setup
         if hasattr(self.audit_logger, "initialize"):
             await self.audit_logger.initialize()
@@ -1192,8 +1196,8 @@ class EnterpriseSecurityFramework:
             await self.compliance_monitor.initialize()
         logger.info("Enterprise Security Framework fully initialized")
 
-    async def shutdown(self):
-        """Shutdown the enterprise security framework and cleanup resources"""
+    async def shutdown(self) -> None:
+        """Shutdown the enterprise security framework and cleanup resources."""
         if hasattr(self.audit_logger, "shutdown"):
             await self.audit_logger.shutdown()
         if hasattr(self.compliance_monitor, "shutdown"):
@@ -1201,24 +1205,24 @@ class EnterpriseSecurityFramework:
         logger.info("Enterprise Security Framework shutdown complete")
 
     async def encrypt_data(self, data: str, key_id: str = "master_key") -> str:
-        """Encrypt data using the encryption manager"""
+        """Encrypt data using the encryption manager."""
         encrypted_info = self.encryption_manager.encrypt_data(data, key_id)
         return encrypted_info["encrypted_data"]
 
     async def decrypt_data(self, encrypted_data: str) -> str:
-        """Decrypt data using the encryption manager"""
+        """Decrypt data using the encryption manager."""
         encrypted_info = {"encrypted_data": encrypted_data, "key_id": "master_key"}
         return self.encryption_manager.decrypt_data(encrypted_info)
 
     async def log_audit_event(self, event: AuditEvent) -> str:
-        """Log an audit event and return log ID"""
+        """Log an audit event and return log ID."""
         success = await self.audit_logger.log_audit_event(event)
         if success:
             return f"log_{int(time.time() * 1000)}"  # Generate simple log ID
         return None
 
     async def validate_policy(self, policy: SecurityPolicy) -> bool:
-        """Validate a security policy"""
+        """Validate a security policy."""
         # Basic validation - policy should have required fields
         rules = policy.rules
         return (
@@ -1233,7 +1237,7 @@ class EnterpriseSecurityFramework:
         self,
         events: list[AuditEvent],
     ) -> list[SecurityViolation]:
-        """Detect security violations from audit events"""
+        """Detect security violations from audit events."""
         violations = []
         for event in events:
             if event.risk_score >= 0.7:  # Use risk score instead of severity
@@ -1255,8 +1259,8 @@ class EnterpriseSecurityFramework:
         self,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict[str, Any]:
-        """Generate comprehensive security report for date range"""
+    ) -> Dict[str, Any]:
+        """Generate comprehensive security report for date range."""
         # Get audit events in date range
         recent_events = []  # Simplified - would query audit logger in real implementation
 
@@ -1286,8 +1290,8 @@ class EnterpriseSecurityFramework:
             "generated_at": datetime.now(UTC).isoformat(),
         }
 
-    def _initialize_security_policies(self):
-        """Initialize default security policies"""
+    def _initialize_security_policies(self) -> None:
+        """Initialize default security policies."""
         policies = [
             SecurityPolicy(
                 policy_id="data_classification",
@@ -1370,12 +1374,13 @@ class EnterpriseSecurityFramework:
         REDACTED_SECRET: str,
         ip_address: str,
         user_agent: str,
-    ) -> dict[str, Any]:
-        """Authenticate user with comprehensive security checks"""
+    ) -> Dict[str, Any]:
+        """Authenticate user with comprehensive security checks."""
         # Log authentication attempt
         event_id = f"auth_{int(time.time())}_{secrets.token_hex(4)}"
 
         try:
+                pass
             # Check if IP is blocked
             if ip_address in self.blocked_ips:
                 await self.audit_logger.log_audit_event(
@@ -1464,7 +1469,7 @@ class EnterpriseSecurityFramework:
             }
 
         except Exception as e:
-            logger.error(f"Authentication error: {e}")
+            logger.error("Authentication error: %s", e)
             return {
                 "success": False,
                 "error": "Authentication system error",
@@ -1472,7 +1477,7 @@ class EnterpriseSecurityFramework:
             }
 
     def _generate_jwt_token(self, username: str, session_id: str) -> str:
-        """Generate JWT token for authenticated user"""
+        """Generate JWT token for authenticated user."""
         payload = {
             "user_id": username,
             "session_id": session_id,
@@ -1485,8 +1490,8 @@ class EnterpriseSecurityFramework:
 
         return jwt.encode(payload, self.config.jwt_secret_key, algorithm="HS256")
 
-    def _get_user_permissions(self, username: str) -> list[str]:
-        """Get user permissions (mock implementation)"""
+    def _get_user_permissions(self, username: str) -> List[str]:
+        """Get user permissions (mock implementation)."""
         # In production, this would integrate with identity/role management system
         default_permissions = ["read_content", "analyze_content", "search_content"]
 
@@ -1504,9 +1509,10 @@ class EnterpriseSecurityFramework:
         resource: str,
         action: str,
         ip_address: str,
-    ) -> dict[str, Any]:
-        """Authorize user action with comprehensive access control"""
+    ) -> Dict[str, Any]:
+        """Authorize user action with comprehensive access control."""
         try:
+                pass
             # Decode and validate JWT token
             payload = jwt.decode(
                 token,
@@ -1568,16 +1574,16 @@ class EnterpriseSecurityFramework:
         except jwt.InvalidTokenError:
             return {"authorized": False, "error": "Invalid token"}
         except Exception as e:
-            logger.error(f"Authorization error: {e}")
+            logger.error("Authorization error: %s", e)
             return {"authorized": False, "error": "Authorization system error"}
 
-    def _is_session_expired(self, session: dict[str, Any]) -> bool:
-        """Check if session has expired"""
+    def _is_session_expired(self, session: Dict[str, Any]) -> bool:
+        """Check if session has expired."""
         timeout = timedelta(minutes=self.config.session_timeout_minutes)
         return datetime.now(UTC) - session["last_activity"] > timeout
 
     def _get_required_permission(self, resource: str, action: str) -> str:
-        """Get required permission for resource and action"""
+        """Get required permission for resource and action."""
         permission_map = {
             ("content", "read"): "read_content",
             ("content", "create"): "create_content",
@@ -1591,7 +1597,7 @@ class EnterpriseSecurityFramework:
         return permission_map.get((resource, action), "unknown_permission")
 
     def _get_resource_security_level(self, resource: str) -> SecurityLevel:
-        """Get security classification level for resource"""
+        """Get security classification level for resource."""
         security_levels = {
             "public_content": SecurityLevel.PUBLIC,
             "content": SecurityLevel.INTERNAL,
@@ -1607,8 +1613,8 @@ class EnterpriseSecurityFramework:
         self,
         data: str,
         security_level: SecurityLevel,
-    ) -> dict[str, Any]:
-        """Encrypt sensitive data based on security classification"""
+    ) -> Dict[str, Any]:
+        """Encrypt sensitive data based on security classification."""
         if not self.config.enable_encryption:
             return {"encrypted": False, "data": data}
 
@@ -1647,18 +1653,18 @@ class EnterpriseSecurityFramework:
             }
 
         except Exception as e:
-            logger.error(f"Encryption failed: {e}")
+            logger.error("Encryption failed: %s", e)
             return {"encrypted": False, "error": str(e)}
 
     async def generate_compliance_report(
         self,
         framework: ComplianceFramework,
     ) -> ComplianceReport:
-        """Generate comprehensive compliance report"""
+        """Generate comprehensive compliance report."""
         return await self.compliance_monitor.assess_compliance(framework)
 
-    async def get_security_dashboard(self) -> dict[str, Any]:
-        """Get comprehensive security dashboard data"""
+    async def get_security_dashboard(self) -> Dict[str, Any]:
+        """Get comprehensive security dashboard data."""
         # Get recent security violations
         recent_violations = self.audit_logger.get_security_violations(resolved=False)
         critical_violations = [v for v in recent_violations if v.severity == "critical"]
@@ -1710,8 +1716,8 @@ class EnterpriseSecurityFramework:
             "last_updated": datetime.now(UTC),
         }
 
-    def get_comprehensive_metrics(self) -> dict[str, Any]:
-        """Get comprehensive security metrics"""
+    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive security metrics."""
         return {
             "authentication": {
                 "active_sessions": len(self.active_sessions),
@@ -1730,7 +1736,7 @@ class EnterpriseSecurityFramework:
 
 
 def create_production_security_framework() -> EnterpriseSecurityFramework:
-    """Factory function to create production-ready security framework"""
+    """Factory function to create production-ready security framework."""
     config = EnterpriseSecurityConfig(
         enable_audit_logging=True,
         enable_encryption=True,

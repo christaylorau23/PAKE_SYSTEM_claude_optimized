@@ -1,19 +1,19 @@
 """Enterprise logging configuration for PAKE System
-Structured logging with correlation IDs and comprehensive monitoring
+Structured logging with correlation IDs and comprehensive monitoring.
 """
 
 import json
 import logging
 import logging.config
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
 class CorrelationFilter(logging.Filter):
     """Add correlation ID to log records."""
 
-    def filter(self, record):
+    def filter(self) -> None:
         # Add correlation ID if not present
         if not hasattr(record, "correlation_id"):
             record.correlation_id = "no-correlation-id"
@@ -23,9 +23,9 @@ class CorrelationFilter(logging.Filter):
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for enterprise logging."""
 
-    def format(self, record):
+    def format(self) -> None:
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -73,7 +73,7 @@ class StructuredFormatter(logging.Formatter):
 def setup_logging(log_level: str = "INFO", enable_json: bool = True) -> None:
     """Setup enterprise logging configuration."""
     # Base configuration
-    config: dict[str, Any] = {
+    config: Dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": False,
         "filters": {

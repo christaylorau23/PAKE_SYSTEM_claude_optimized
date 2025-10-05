@@ -14,7 +14,7 @@ import os
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +31,8 @@ try:
     TEXTRACT_AVAILABLE = True
 except ImportError:
     TEXTRACT_AVAILABLE = False
+import contextlib
+
 import redis
 
 # Configure logging
@@ -54,8 +56,8 @@ class SourceConfig:
     credentials: dict[str, str] | None = None
     interval: int = 3600  # seconds
     enabled: bool = True
-    filters: dict[str, Any] | None = None
-    metadata: dict[str, Any] | None = None
+    filters: Dict[str, Any] | None = None
+    metadata: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -69,26 +71,22 @@ class ContentItem:
     url: str
     published: datetime | None = None
     author: str | None = None
-    tags: list[str] = None
-    metadata: dict[str, Any] = None
+    tags: List[str] = None
+    metadata: Dict[str, Any] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.tags is None:
             self.tags = []
         if self.metadata is None:
             self.metadata = {}
         if self.published is None:
-            self.published = datetime.utcnow()
+            self.published = datetime.now(UTC)
 
 
 class UniversalIngestionPipeline:
     """Main ingestion pipeline coordinator"""
 
-    def __init__(
-        self,
-        config_path: str = None,
-        mcp_server_url: str = "http://localhost:8000",
-    ):
+    def __init__(self) -> None:
         self.config_path = config_path or "configs/ingestion.json"
         self.mcp_server_url = mcp_server_url
         self.sources: list[SourceConfig] = []
@@ -105,7 +103,7 @@ class UniversalIngestionPipeline:
         # Initialize local database for deduplication
         self._init_local_db()
 
-    def _init_local_db(self):
+    def _init_local_db(self) -> None:
         """Initialize SQLite database for tracking ingested content"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -148,7 +146,7 @@ class UniversalIngestionPipeline:
         conn.commit()
         conn.close()
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize async resources"""
         # Initialize Redis connection
         self.redis_client = redis.Redis(
@@ -169,12 +167,12 @@ class UniversalIngestionPipeline:
 
         logger.info("Ingestion pipeline initialized")
 
-    async def close(self):
+    async def close(self) -> None:
         """Clean up async resources"""
         if self.session:
             await self.session.close()
 
-    async def load_configuration(self):
+    async def load_configuration(self) -> None:
         """Load source configurations from file"""
         try:
             if os.path.exists(self.config_path):
@@ -186,16 +184,16 @@ class UniversalIngestionPipeline:
                     for source_config in config_data.get("sources", [])
                 ]
 
-                logger.info(f"Loaded {len(self.sources)} source configurations")
+                logger.info("Loaded %s source configurations", len(self.sources))
             else:
                 # Create default configuration
                 await self._create_default_config()
 
         except Exception as e:
-            logger.error(f"Error loading configuration: {e}")
+            logger.error("Error loading configuration: %s", e)
             await self._create_default_config()
 
-    async def _create_default_config(self):
+    async def _create_default_config(self) -> None:
         """Create default configuration file"""
         default_config = {
             "sources": [
@@ -241,7 +239,7 @@ class UniversalIngestionPipeline:
         with open(self.config_path, "w") as f:
             json.dump(default_config, f, indent=2)
 
-        logger.info(f"Created default configuration at {self.config_path}")
+        logger.info("Created default configuration at %s", self.config_path)
         await self.load_configuration()
 
     async def ingest_rss_feeds(self, source: SourceConfig) -> list[ContentItem]:
@@ -249,12 +247,14 @@ class UniversalIngestionPipeline:
         items = []
 
         try:
-            logger.info(f"Ingesting RSS feed: {source.name}")
+            logger.info("Ingesting RSS feed: %s", source.name)
 
             async with self.session.get(source.url) as response:
                 if response.status != 200:
                     logger.warning(
-                        f"RSS feed {source.name} returned status {response.status}",
+                        "RSS feed %s returned status %s",
+                        source.name,
+                        response.status,
                     )
                     return items
 
@@ -305,10 +305,10 @@ class UniversalIngestionPipeline:
 
                 items.append(item)
 
-            logger.info(f"Extracted {len(items)} items from {source.name}")
+            logger.info("Extracted %s items from %s", len(items), source.name)
 
         except Exception as e:
-            logger.error(f"Error ingesting RSS feed {source.name}: {e}")
+            logger.error("Error ingesting RSS feed %s: %s", source.name, e)
 
         return items
 
@@ -317,11 +317,11 @@ class UniversalIngestionPipeline:
         items = []
 
         if not source.credentials:
-            logger.warning(f"No credentials provided for email source {source.name}")
+            logger.warning("No credentials provided for email source %s", source.name)
             return items
 
         try:
-            logger.info(f"Ingesting email: {source.name}")
+            logger.info("Ingesting email: %s", source.name)
 
             # Connect to IMAP server
             mail = imaplib.IMAP4_SSL(
@@ -371,12 +371,10 @@ class UniversalIngestionPipeline:
                             # Parse date
                             published = None
                             if email_message["Date"]:
-                                try:
+                                with contextlib.suppress(BaseException):
                                     published = email.utils.parsedate_to_datetime(
                                         email_message["Date"],
                                     )
-                                except BaseException:
-                                    pass
 
                             item = ContentItem(
                                 source_name=source.name,
@@ -406,18 +404,18 @@ class UniversalIngestionPipeline:
                                 mail.store(msg_id, "+FLAGS", "\\Seen")
 
                         except Exception as e:
-                            logger.warning(f"Error processing email {msg_id}: {e}")
+                            logger.warning("Error processing email %s: %s", msg_id, e)
 
                 except Exception as e:
-                    logger.warning(f"Error accessing folder {folder}: {e}")
+                    logger.warning("Error accessing folder %s: %s", folder, e)
 
             mail.close()
             mail.logout()
 
-            logger.info(f"Extracted {len(items)} emails from {source.name}")
+            logger.info("Extracted %s emails from %s", len(items), source.name)
 
         except Exception as e:
-            logger.error(f"Error ingesting email {source.name}: {e}")
+            logger.error("Error ingesting email %s: %s", source.name, e)
 
         return items
 
@@ -446,21 +444,21 @@ class UniversalIngestionPipeline:
 
         # Clean up content
         content = re.sub(r"\n\s*\n\s*\n", "\n\n", content)  # Reduce multiple newlines
-        content = content.strip()
-
-        return content
+        return content.strip()
 
     async def ingest_web_content(self, source: SourceConfig) -> list[ContentItem]:
         """Scrape and ingest web content"""
         items = []
 
         try:
-            logger.info(f"Ingesting web content: {source.name}")
+            logger.info("Ingesting web content: %s", source.name)
 
             async with self.session.get(source.url) as response:
                 if response.status != 200:
                     logger.warning(
-                        f"Web source {source.name} returned status {response.status}",
+                        "Web source %s returned status %s",
+                        source.name,
+                        response.status,
                     )
                     return items
 
@@ -482,19 +480,19 @@ class UniversalIngestionPipeline:
                     title=title or "Web Content",
                     content=text_content,
                     url=source.url,
-                    published=datetime.utcnow(),
+                    published=datetime.now(UTC),
                     metadata={
-                        "scraped_at": datetime.utcnow().isoformat(),
+                        "scraped_at": datetime.now(UTC).isoformat(),
                         "content_length": len(text_content),
                     },
                 )
 
                 items.append(item)
 
-            logger.info(f"Extracted {len(items)} items from {source.name}")
+            logger.info("Extracted %s items from %s", len(items), source.name)
 
         except Exception as e:
-            logger.error(f"Error ingesting web content {source.name}: {e}")
+            logger.error("Error ingesting web content %s: %s", source.name, e)
 
         return items
 
@@ -509,16 +507,16 @@ class UniversalIngestionPipeline:
                 files_to_process = [file_path]
             elif file_path.is_dir():
                 # Get files modified in last interval
-                cutoff_time = datetime.now() - timedelta(seconds=source.interval)
+                cutoff_time = datetime.now(UTC) - timedelta(seconds=source.interval)
                 files_to_process = [
                     f
                     for f in file_path.rglob("*")
                     if f.is_file()
                     and f.suffix.lower() in [".txt", ".md", ".pdf", ".docx", ".doc"]
-                    and datetime.fromtimestamp(f.stat().st_mtime) > cutoff_time
+                    and datetime.fromtimestamp(f.stat().st_mtime, tz=UTC) > cutoff_time
                 ]
             else:
-                logger.warning(f"File source path does not exist: {file_path}")
+                logger.warning("File source path does not exist: %s", file_path)
                 return items
 
             for file_path in files_to_process:
@@ -534,7 +532,9 @@ class UniversalIngestionPipeline:
                         )
                     else:
                         logger.warning(
-                            f"Skipping {file_path} - textract not available for format {file_path.suffix}",
+                            "Skipping %s - textract not available for format %s",
+                            file_path,
+                            file_path.suffix,
                         )
                         continue
 
@@ -545,7 +545,9 @@ class UniversalIngestionPipeline:
                             title=file_path.stem,
                             content=content,
                             url=f"file://{file_path}",
-                            published=datetime.fromtimestamp(file_path.stat().st_mtime),
+                            published=datetime.fromtimestamp(
+                                file_path.stat().st_mtime, tz=UTC
+                            ),
                             metadata={
                                 "file_path": str(file_path),
                                 "file_size": file_path.stat().st_size,
@@ -556,12 +558,12 @@ class UniversalIngestionPipeline:
                         items.append(item)
 
                 except Exception as e:
-                    logger.warning(f"Error processing file {file_path}: {e}")
+                    logger.warning("Error processing file %s: %s", file_path, e)
 
-            logger.info(f"Processed {len(items)} files from {source.name}")
+            logger.info("Processed %s files from %s", len(items), source.name)
 
         except Exception as e:
-            logger.error(f"Error processing file source {source.name}: {e}")
+            logger.error("Error processing file source %s: %s", source.name, e)
 
         return items
 
@@ -585,12 +587,7 @@ class UniversalIngestionPipeline:
 
         return result is not None
 
-    def _record_ingested_content(
-        self,
-        item: ContentItem,
-        content_hash: str,
-        pake_id: str,
-    ):
+    def _record_ingested_content(self) -> None:
         """Record content in local database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -640,7 +637,7 @@ class UniversalIngestionPipeline:
                     "source_type": item.source_type,
                     "published": item.published.isoformat() if item.published else None,
                     "author": item.author,
-                    "ingested_at": datetime.utcnow().isoformat(),
+                    "ingested_at": datetime.now(UTC).isoformat(),
                 },
                 "tags": item.tags,
                 "type": "note",
@@ -657,11 +654,13 @@ class UniversalIngestionPipeline:
                     result = await response.json()
                     return result.get("pake_id")
                 logger.warning(
-                    f"MCP server returned status {response.status} for {item.title}",
+                    "MCP server returned status %s for %s",
+                    response.status,
+                    item.title,
                 )
 
         except Exception as e:
-            logger.error(f"Error sending to MCP server: {e}")
+            logger.error("Error sending to MCP server: %s", e)
 
         return None
 
@@ -670,7 +669,7 @@ class UniversalIngestionPipeline:
         if not source.enabled:
             return 0
 
-        logger.info(f"Processing source: {source.name} ({source.type})")
+        logger.info("Processing source: %s (%s)", source.name, source.type)
 
         # Get content based on source type
         items = []
@@ -684,7 +683,7 @@ class UniversalIngestionPipeline:
         elif source.type == "file":
             items = await self.process_file_source(source)
         else:
-            logger.warning(f"Unknown source type: {source.type}")
+            logger.warning("Unknown source type: %s", source.type)
             return 0
 
         # Process and deduplicate items
@@ -697,7 +696,7 @@ class UniversalIngestionPipeline:
 
                 # Skip if already processed
                 if self._is_duplicate_content(content_hash):
-                    logger.debug(f"Skipping duplicate content: {item.title}")
+                    logger.debug("Skipping duplicate content: %s", item.title)
                     continue
 
                 # Apply content filters
@@ -716,7 +715,9 @@ class UniversalIngestionPipeline:
                     processed_count += 1
 
                     logger.info(
-                        f"Successfully ingested: {item.title} (PAKE ID: {pake_id})",
+                        "Successfully ingested: %s (PAKE ID: %s)",
+                        item.title,
+                        pake_id,
                     )
 
                     # Add to processing queue for potential follow-up actions
@@ -726,18 +727,18 @@ class UniversalIngestionPipeline:
                             {
                                 "pake_id": pake_id,
                                 "source_name": source.name,
-                                "ingested_at": datetime.utcnow().isoformat(),
+                                "ingested_at": datetime.now(UTC).isoformat(),
                             },
                         ),
                     )
 
             except Exception as e:
-                logger.error(f"Error processing item {item.title}: {e}")
+                logger.error("Error processing item %s: %s", item.title, e)
 
-        logger.info(f"Processed {processed_count} new items from {source.name}")
+        logger.info("Processed %s new items from %s", processed_count, source.name)
         return processed_count
 
-    async def run_single_cycle(self):
+    async def run_single_cycle(self) -> None:
         """Run one ingestion cycle for all sources"""
         logger.info("Starting ingestion cycle")
 
@@ -748,15 +749,16 @@ class UniversalIngestionPipeline:
                 processed = await self.process_source(source)
                 total_processed += processed
             except Exception as e:
-                logger.error(f"Error processing source {source.name}: {e}")
+                logger.error("Error processing source %s: %s", source.name, e)
 
         logger.info(
-            f"Ingestion cycle completed. Total items processed: {total_processed}",
+            "Ingestion cycle completed. Total items processed: %s",
+            total_processed,
         )
 
         # Update statistics in Redis
         stats = {
-            "last_run": datetime.utcnow().isoformat(),
+            "last_run": datetime.now(UTC).isoformat(),
             "items_processed": total_processed,
             "sources_count": len(self.sources),
             "active_sources": len([s for s in self.sources if s.enabled]),
@@ -766,19 +768,19 @@ class UniversalIngestionPipeline:
 
         return total_processed
 
-    async def run_continuous(self, min_interval: int = 300):
+    async def run_continuous(self) -> None:
         """Run ingestion pipeline continuously"""
         logger.info("Starting continuous ingestion pipeline")
 
         while True:
             try:
-                cycle_start = datetime.utcnow()
+                cycle_start = datetime.now(UTC)
                 await self.run_single_cycle()
-                cycle_duration = (datetime.utcnow() - cycle_start).seconds
+                cycle_duration = (datetime.now(UTC) - cycle_start).seconds
 
                 # Wait for minimum interval
                 sleep_time = max(min_interval - cycle_duration, 60)
-                logger.info(f"Waiting {sleep_time} seconds until next cycle")
+                logger.info("Waiting %s seconds until next cycle", sleep_time)
 
                 await asyncio.sleep(sleep_time)
 
@@ -786,10 +788,10 @@ class UniversalIngestionPipeline:
                 logger.info("Ingestion pipeline stopped by user")
                 break
             except Exception as e:
-                logger.error(f"Error in continuous ingestion: {e}")
+                logger.error("Error in continuous ingestion: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
-    def get_ingestion_statistics(self) -> dict[str, Any]:
+    def get_ingestion_statistics(self) -> Dict[str, Any]:
         """Get ingestion statistics from local database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -842,7 +844,7 @@ class UniversalIngestionPipeline:
         }
 
 
-async def main():
+async def main(self) -> None:
     """Main function for running the ingestion pipeline"""
     import argparse
 

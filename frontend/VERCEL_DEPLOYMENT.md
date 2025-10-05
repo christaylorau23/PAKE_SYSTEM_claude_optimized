@@ -201,5 +201,5 @@ jobs:
 
 ---
 
-**Need Help?** 
+**Need Help?**
 If you encounter deployment issues, check the Vercel dashboard logs and refer to the error codes in their documentation: https://vercel.com/docs/errors

@@ -1,4 +1,4 @@
-"""Semantic Search Services Package
+"""Semantic Search Services Package.
 
 Provides semantic search and vector embedding capabilities for the PAKE System
 using lightweight, production-ready implementations.

@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Context variables for tenant isolation
 tenant_context: ContextVar[str | None] = ContextVar("tenant_context", default=None)
 user_context: ContextVar[str | None] = ContextVar("user_context", default=None)
-request_context: ContextVar[dict[str, Any] | None] = ContextVar(
+request_context: ContextVar[Dict[str, Any] | None] = ContextVar(
     "request_context",
     default=None,
 )
@@ -31,7 +31,7 @@ request_context: ContextVar[dict[str, Any] | None] = ContextVar(
 
 @dataclass
 class TenantContext:
-    """Tenant context data structure"""
+    """Tenant context data structure."""
 
     tenant_id: str
     tenant_name: str
@@ -40,7 +40,7 @@ class TenantContext:
     tenant_plan: str
     user_id: str | None
     user_role: str | None
-    user_permissions: list[str]
+    user_permissions: List[str]
     request_id: str
     timestamp: datetime
     ip_address: str | None
@@ -49,7 +49,7 @@ class TenantContext:
 
 @dataclass
 class TenantConfig:
-    """Tenant middleware configuration"""
+    """Tenant middleware configuration."""
 
     # JWT Configuration
     jwt_secret_key: str = "REDACTED_SECRET"
@@ -65,7 +65,7 @@ class TenantConfig:
     require_tenant_context: bool = True
     allow_anonymous_access: bool = False
     validate_tenant_status: bool = True
-    allowed_tenant_statuses: list[str] = None
+    allowed_tenant_statuses: List[str] = None
 
     # Cross-Tenant Access
     allow_cross_tenant_access: bool = False
@@ -75,13 +75,13 @@ class TenantConfig:
     tenant_cache_ttl: int = 300  # 5 minutes
     enable_tenant_caching: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.allowed_tenant_statuses is None:
             self.allowed_tenant_statuses = ["active", "trial"]
 
 
 class TenantResolutionError(Exception):
-    """Exception raised when tenant resolution fails"""
+    """Exception raised when tenant resolution fails."""
 
 
 class TenantContextMiddleware(BaseHTTPMiddleware):
@@ -96,18 +96,18 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     - Comprehensive audit logging
     """
 
-    def __init__(self, app, config: TenantConfig):
+    def __init__(self, app, config: TenantConfig | None = None) -> None:
         super().__init__(app)
-        self.config = config
+        self.config = config or TenantConfig()
         self.security = HTTPBearer(auto_error=False)
-        self._tenant_cache: dict[str, dict[str, Any]] = {}
+        self._tenant_cache: dict[str, Dict[str, Any]] = {}
         self._cache_timestamps: dict[str, datetime] = {}
 
         logger.info("Tenant context middleware initialized")
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request with tenant context"""
-        start_time = datetime.utcnow()
+        """Process request with tenant context."""
+        start_time = datetime.now(UTC)
         request_id = str(uuid.uuid4())
 
         try:
@@ -142,7 +142,9 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 request.state.tenant_context = tenant_ctx
 
                 logger.debug(
-                    f"Tenant context resolved: {tenant_ctx.tenant_id} for {request.url.path}",
+                    "Tenant context resolved: %s for %s",
+                    tenant_ctx.tenant_id,
+                    request.url.path,
                 )
             else:
                 # Handle anonymous access
@@ -155,7 +157,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                         },
                     )
 
-                logger.debug(f"Anonymous access to {request.url.path}")
+                logger.debug("Anonymous access to %s", request.url.path)
 
             # Process request
             response = await call_next(request)
@@ -166,7 +168,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 response.headers["X-Request-ID"] = request_id
 
             # Log request completion
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now(UTC) - start_time).total_seconds()
             await self._log_request_completion(
                 request,
                 tenant_ctx,
@@ -177,19 +179,19 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             return response
 
         except TenantResolutionError as e:
-            logger.warning(f"Tenant resolution failed: {e}")
+            logger.warning("Tenant resolution failed: %s", e)
             return JSONResponse(
                 status_code=400,
                 content={"error": str(e), "code": "TENANT_RESOLUTION_FAILED"},
             )
         except HTTPException as e:
-            logger.warning(f"Tenant validation failed: {e.detail}")
+            logger.warning("Tenant validation failed: %s", e.detail)
             return JSONResponse(
                 status_code=e.status_code,
                 content={"error": e.detail, "code": "TENANT_VALIDATION_FAILED"},
             )
         except Exception as e:
-            logger.error(f"Tenant middleware error: {e}")
+            logger.error("Tenant middleware error: %s", e)
             return JSONResponse(
                 status_code=500,
                 content={
@@ -202,7 +204,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         self,
         request: Request,
     ) -> TenantContext | None:
-        """Resolve tenant context from request"""
+        """Resolve tenant context from request."""
         try:
             if self.config.tenant_resolution_method == "jwt":
                 return await self._resolve_from_jwt(request)
@@ -212,16 +214,18 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 return await self._resolve_from_subdomain(request)
             if self.config.tenant_resolution_method == "path":
                 return await self._resolve_from_path(request)
+            msg = f"Unknown tenant resolution method: {self.config.tenant_resolution_method}"
             raise TenantResolutionError(
-                f"Unknown tenant resolution method: {self.config.tenant_resolution_method}",
+                msg,
             )
 
         except Exception as e:
-            logger.error(f"Tenant resolution error: {e}")
-            raise TenantResolutionError(f"Failed to resolve tenant context: {e}")
+            logger.error("Tenant resolution error: %s", e)
+            msg = f"Failed to resolve tenant context: {e}"
+            raise TenantResolutionError(msg)
 
     async def _resolve_from_jwt(self, request: Request) -> TenantContext | None:
-        """Resolve tenant context from JWT token"""
+        """Resolve tenant context from JWT token."""
         try:
             # Extract JWT token
             credentials: HTTPAuthorizationCredentials = await self.security(request)
@@ -239,12 +243,14 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             # Extract tenant information
             tenant_id = payload.get("tenant_id")
             if not tenant_id:
-                raise TenantResolutionError("JWT token missing tenant_id claim")
+                msg = "JWT token missing tenant_id claim"
+                raise TenantResolutionError(msg)
 
             # Get tenant details (with caching)
             tenant_data = await self._get_tenant_data(tenant_id)
             if not tenant_data:
-                raise TenantResolutionError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise TenantResolutionError(msg)
 
             # Extract user information
             user_id = payload.get("sub")  # Standard JWT subject claim
@@ -261,20 +267,23 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_role=user_role,
                 user_permissions=user_permissions,
                 request_id=request_context.get()["request_id"],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 ip_address=request_context.get()["ip_address"],
                 user_agent=request_context.get()["user_agent"],
             )
 
         except ExpiredSignatureError:
-            raise TenantResolutionError("JWT token has expired")
+            msg = "JWT token has expired"
+            raise TenantResolutionError(msg)
         except InvalidTokenError:
-            raise TenantResolutionError("Invalid JWT token")
+            msg = "Invalid JWT token"
+            raise TenantResolutionError(msg)
         except Exception as e:
-            raise TenantResolutionError(f"JWT resolution failed: {e}")
+            msg = f"JWT resolution failed: {e}"
+            raise TenantResolutionError(msg)
 
     async def _resolve_from_header(self, request: Request) -> TenantContext | None:
-        """Resolve tenant context from HTTP header"""
+        """Resolve tenant context from HTTP header."""
         try:
             tenant_id = request.headers.get(self.config.tenant_header_name)
             if not tenant_id:
@@ -283,7 +292,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             # Get tenant details
             tenant_data = await self._get_tenant_data(tenant_id)
             if not tenant_data:
-                raise TenantResolutionError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise TenantResolutionError(msg)
 
             return TenantContext(
                 tenant_id=tenant_id,
@@ -295,19 +305,20 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_role=None,
                 user_permissions=[],
                 request_id=request_context.get()["request_id"],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 ip_address=request_context.get()["ip_address"],
                 user_agent=request_context.get()["user_agent"],
             )
 
         except Exception as e:
-            raise TenantResolutionError(f"Header resolution failed: {e}")
+            msg = f"Header resolution failed: {e}"
+            raise TenantResolutionError(msg)
 
     async def _resolve_from_subdomain(
         self,
         request: Request,
     ) -> TenantContext | None:
-        """Resolve tenant context from subdomain"""
+        """Resolve tenant context from subdomain."""
         try:
             host = request.headers.get("host", "")
             if not host:
@@ -325,7 +336,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             # Get tenant by domain
             tenant_data = await self._get_tenant_by_domain(host)
             if not tenant_data:
-                raise TenantResolutionError(f"Tenant not found for domain: {host}")
+                msg = f"Tenant not found for domain: {host}"
+                raise TenantResolutionError(msg)
 
             return TenantContext(
                 tenant_id=tenant_data["id"],
@@ -337,16 +349,17 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_role=None,
                 user_permissions=[],
                 request_id=request_context.get()["request_id"],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 ip_address=request_context.get()["ip_address"],
                 user_agent=request_context.get()["user_agent"],
             )
 
         except Exception as e:
-            raise TenantResolutionError(f"Subdomain resolution failed: {e}")
+            msg = f"Subdomain resolution failed: {e}"
+            raise TenantResolutionError(msg)
 
     async def _resolve_from_path(self, request: Request) -> TenantContext | None:
-        """Resolve tenant context from URL path"""
+        """Resolve tenant context from URL path."""
         try:
             path_parts = request.url.path.strip("/").split("/")
             if len(path_parts) < 2 or path_parts[0] != "api":
@@ -357,7 +370,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             # Get tenant details
             tenant_data = await self._get_tenant_data(tenant_id)
             if not tenant_data:
-                raise TenantResolutionError(f"Tenant not found: {tenant_id}")
+                msg = f"Tenant not found: {tenant_id}"
+                raise TenantResolutionError(msg)
 
             return TenantContext(
                 tenant_id=tenant_id,
@@ -369,23 +383,24 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_role=None,
                 user_permissions=[],
                 request_id=request_context.get()["request_id"],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 ip_address=request_context.get()["ip_address"],
                 user_agent=request_context.get()["user_agent"],
             )
 
         except Exception as e:
-            raise TenantResolutionError(f"Path resolution failed: {e}")
+            msg = f"Path resolution failed: {e}"
+            raise TenantResolutionError(msg)
 
-    async def _get_tenant_data(self, tenant_id: str) -> dict[str, Any] | None:
-        """Get tenant data with caching"""
+    async def _get_tenant_data(self, tenant_id: str) -> Dict[str, Any] | None:
+        """Get tenant data with caching."""
         if self.config.enable_tenant_caching:
             # Check cache
             if tenant_id in self._tenant_cache:
                 cache_time = self._cache_timestamps.get(tenant_id)
                 if (
                     cache_time
-                    and (datetime.utcnow() - cache_time).seconds
+                    and (datetime.now(UTC) - cache_time).seconds
                     < self.config.tenant_cache_ttl
                 ):
                     return self._tenant_cache[tenant_id]
@@ -396,12 +411,12 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         if tenant_data and self.config.enable_tenant_caching:
             # Cache the result
             self._tenant_cache[tenant_id] = tenant_data
-            self._cache_timestamps[tenant_id] = datetime.utcnow()
+            self._cache_timestamps[tenant_id] = datetime.now(UTC)
 
         return tenant_data
 
-    async def _get_tenant_by_domain(self, domain: str) -> dict[str, Any] | None:
-        """Get tenant data by domain with caching"""
+    async def _get_tenant_by_domain(self, domain: str) -> Dict[str, Any] | None:
+        """Get tenant data by domain with caching."""
         cache_key = f"domain:{domain}"
 
         if self.config.enable_tenant_caching:
@@ -409,7 +424,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 cache_time = self._cache_timestamps.get(cache_key)
                 if (
                     cache_time
-                    and (datetime.utcnow() - cache_time).seconds
+                    and (datetime.now(UTC) - cache_time).seconds
                     < self.config.tenant_cache_ttl
                 ):
                     return self._tenant_cache[cache_key]
@@ -419,15 +434,15 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
 
         if tenant_data and self.config.enable_tenant_caching:
             self._tenant_cache[cache_key] = tenant_data
-            self._cache_timestamps[cache_key] = datetime.utcnow()
+            self._cache_timestamps[cache_key] = datetime.now(UTC)
 
         return tenant_data
 
     async def _fetch_tenant_from_database(
         self,
         tenant_id: str,
-    ) -> dict[str, Any] | None:
-        """Fetch tenant data from database"""
+    ) -> Dict[str, Any] | None:
+        """Fetch tenant data from database."""
         # This would be implemented with actual database service
         # For now, return mock data
         return {
@@ -441,8 +456,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     async def _fetch_tenant_by_domain_from_database(
         self,
         domain: str,
-    ) -> dict[str, Any] | None:
-        """Fetch tenant data by domain from database"""
+    ) -> Dict[str, Any] | None:
+        """Fetch tenant data by domain from database."""
         # This would be implemented with actual database service
         # For now, return mock data
         tenant_id = domain.split(".")[0]
@@ -459,7 +474,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         tenant_ctx: TenantContext,
         request: Request,
     ) -> None:
-        """Validate tenant access permissions"""
+        """Validate tenant access permissions."""
         # Check tenant status
         if self.config.validate_tenant_status:
             if tenant_ctx.tenant_status not in self.config.allowed_tenant_statuses:
@@ -486,9 +501,9 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         duration: float,
         status_code: int,
     ) -> None:
-        """Log request completion for audit trail"""
+        """Log request completion for audit trail."""
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "request_id": request_context.get()["request_id"],
             "method": request.method,
             "path": request.url.path,
@@ -508,10 +523,10 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        logger.info(f"Request completed: {log_data}")
+        logger.info("Request completed: %s", log_data)
 
     def _get_client_ip(self, request: Request) -> str | None:
-        """Get client IP address from request"""
+        """Get client IP address from request."""
         # Check for forwarded headers first
         forwarded_for = request.headers.get("X-Forwarded-For")
         if forwarded_for:
@@ -532,12 +547,12 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
 
 
 async def get_tenant_context(request: Request) -> TenantContext | None:
-    """FastAPI dependency to get tenant context"""
+    """FastAPI dependency to get tenant context."""
     return getattr(request.state, "tenant_context", None)
 
 
 async def require_tenant_context(request: Request) -> TenantContext:
-    """FastAPI dependency that requires tenant context"""
+    """FastAPI dependency that requires tenant context."""
     tenant_ctx = getattr(request.state, "tenant_context", None)
     if not tenant_ctx:
         raise HTTPException(status_code=401, detail="Tenant context required")
@@ -545,7 +560,7 @@ async def require_tenant_context(request: Request) -> TenantContext:
 
 
 async def require_admin_access(request: Request) -> TenantContext:
-    """FastAPI dependency that requires admin access"""
+    """FastAPI dependency that requires admin access."""
     tenant_ctx = await require_tenant_context(request)
     if tenant_ctx.user_role not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -556,17 +571,17 @@ async def require_admin_access(request: Request) -> TenantContext:
 
 
 def get_current_tenant_id() -> str | None:
-    """Get current tenant ID from context"""
+    """Get current tenant ID from context."""
     return tenant_context.get()
 
 
 def get_current_user_id() -> str | None:
-    """Get current user ID from context"""
+    """Get current user ID from context."""
     return user_context.get()
 
 
-def get_current_request_context() -> dict[str, Any] | None:
-    """Get current request context"""
+def get_current_request_context() -> Dict[str, Any] | None:
+    """Get current request context."""
     return request_context.get()
 
 
@@ -577,17 +592,17 @@ def create_tenant_jwt(
     tenant_id: str,
     user_id: str,
     user_role: str = "user",
-    permissions: list[str] = None,
+    permissions: List[str] = None,
     expires_hours: int = 24,
 ) -> str:
-    """Create JWT token with tenant context"""
+    """Create JWT token with tenant context."""
     payload = {
         "tenant_id": tenant_id,
         "sub": user_id,
         "role": user_role,
         "permissions": permissions or [],
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(hours=expires_hours),
+        "iat": datetime.now(UTC),
+        "exp": datetime.now(UTC) + timedelta(hours=expires_hours),
     }
 
     return jwt.encode(
@@ -597,15 +612,16 @@ def create_tenant_jwt(
     )
 
 
-def validate_tenant_jwt(token: str, secret_key: str) -> dict[str, Any]:
-    """Validate JWT token and extract tenant context"""
+def validate_tenant_jwt(token: str, secret_key: str) -> Dict[str, Any]:
+    """Validate JWT token and extract tenant context."""
     try:
-        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
-        return payload
+        return jwt.decode(token, secret_key, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
+        msg = "Token has expired"
+        raise ValueError(msg)
     except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
+        msg = "Invalid token"
+        raise ValueError(msg)
 
 
 if __name__ == "__main__":

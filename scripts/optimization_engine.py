@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +55,7 @@ class PredictionModel:
     name: str
     model_type: str
     target_metric: str
-    features: list[str]
+    features: List[str]
     accuracy_score: float
     last_trained: datetime
     model_path: str
@@ -76,7 +76,7 @@ class OptimizationRecommendation:
 class IntelligentOptimizationEngine:
     """Main optimization and prediction engine"""
 
-    def __init__(self, analytics_db_path: str = "analytics_engine.db"):
+    def __init__(self) -> None:
         self.analytics_db = analytics_db_path
         self.db_path = "optimization_engine.db"
         self.models_dir = Path("../models")
@@ -102,7 +102,7 @@ class IntelligentOptimizationEngine:
         )
         return logging.getLogger(__name__)
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize optimization database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -209,7 +209,7 @@ class IntelligentOptimizationEngine:
             conn.close()
 
         except Exception as e:
-            self.logger.error(f"Failed to load optimization rules: {e}")
+            self.logger.error("Failed to load optimization rules: %s", e)
             rules = self._create_default_rules()
 
         return rules
@@ -288,7 +288,7 @@ class IntelligentOptimizationEngine:
         self._store_rules(default_rules)
         return default_rules
 
-    def _store_rules(self, rules: list[OptimizationRule]):
+    def _store_rules(self) -> None:
         """Store rules in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -320,7 +320,7 @@ class IntelligentOptimizationEngine:
         self.logger.info("Starting optimization cycle")
 
         optimization_results = {
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(UTC),
             "triggered_rules": [],
             "actions_taken": [],
             "predictions": {},
@@ -356,7 +356,8 @@ class IntelligentOptimizationEngine:
         optimization_results["impact_analysis"] = impact_analysis
 
         self.logger.info(
-            f"Optimization cycle completed. {len(triggered_rules)} rules triggered.",
+            "Optimization cycle completed. %s rules triggered.",
+            len(triggered_rules),
         )
         return optimization_results
 
@@ -380,10 +381,10 @@ class IntelligentOptimizationEngine:
                     # Update rule trigger count
                     await self._update_rule_trigger_count(rule.id)
 
-                    self.logger.info(f"Rule triggered: {rule.name}")
+                    self.logger.info("Rule triggered: %s", rule.name)
 
             except Exception as e:
-                self.logger.error(f"Error evaluating rule {rule.name}: {e}")
+                self.logger.error("Error evaluating rule %s: %s", rule.name, e)
 
         # Sort by priority
         triggered_rules.sort(key=lambda r: r.priority)
@@ -393,13 +394,13 @@ class IntelligentOptimizationEngine:
         """Flatten nested metrics dictionary"""
         flat = {}
 
-        def flatten_dict(d, parent_key=""):
+        def flatten_dict(self) -> None:
             for k, v in d.items():
                 new_key = f"{parent_key}_{k}" if parent_key else k
 
                 if isinstance(v, dict):
                     flatten_dict(v, new_key)
-                elif isinstance(v, (int, float)):
+                elif isinstance(v, int | float):
                     flat[new_key] = v
 
         flatten_dict(metrics)
@@ -423,14 +424,14 @@ class IntelligentOptimizationEngine:
             allowed_chars = set("0123456789.<>= ()")
             if all(c in allowed_chars or c.isspace() for c in condition):
                 return eval(condition)
-            self.logger.warning(f"Unsafe condition: {condition}")
+            self.logger.warning("Unsafe condition: %s", condition)
             return False
 
         except Exception as e:
-            self.logger.error(f"Error evaluating condition '{condition}': {e}")
+            self.logger.error("Error evaluating condition '%s': %s", condition, e)
             return False
 
-    async def _update_rule_trigger_count(self, rule_id: str):
+    async def _update_rule_trigger_count(self) -> None:
         """Update rule trigger statistics"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -442,7 +443,7 @@ class IntelligentOptimizationEngine:
                 last_triggered = ?
             WHERE id = ?
         """,
-            (datetime.now(), rule_id),
+            (datetime.now(UTC), rule_id),
         )
 
         conn.commit()
@@ -454,7 +455,7 @@ class IntelligentOptimizationEngine:
         metrics: dict,
     ) -> dict:
         """Execute optimization action"""
-        self.logger.info(f"Executing action for rule: {rule.name}")
+        self.logger.info("Executing action for rule: %s", rule.name)
 
         action_result = {
             "rule_id": rule.id,
@@ -506,12 +507,12 @@ class IntelligentOptimizationEngine:
             await self._log_optimization_action(rule.id, action_result, metrics)
 
         except Exception as e:
-            self.logger.error(f"Failed to execute action for rule {rule.name}: {e}")
+            self.logger.error("Failed to execute action for rule %s: %s", rule.name, e)
             action_result["error"] = str(e)
 
         return action_result
 
-    async def _execute_content_boost(self, config: dict, metrics: dict) -> list[str]:
+    async def _execute_content_boost(self, config: dict, metrics: dict) -> List[str]:
         """Execute content boost optimization"""
         actions = []
 
@@ -526,7 +527,7 @@ class IntelligentOptimizationEngine:
 
         return actions
 
-    async def _execute_amplification(self, config: dict, metrics: dict) -> list[str]:
+    async def _execute_amplification(self, config: dict, metrics: dict) -> List[str]:
         """Execute content amplification"""
         actions = []
 
@@ -545,7 +546,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> list[str]:
+    ) -> List[str]:
         """Execute conversion funnel optimization"""
         actions = []
 
@@ -564,7 +565,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> list[str]:
+    ) -> List[str]:
         """Execute platform performance rebalancing"""
         actions = []
 
@@ -583,7 +584,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> list[str]:
+    ) -> List[str]:
         """Execute cost efficiency optimization"""
         actions = []
 
@@ -598,12 +599,7 @@ class IntelligentOptimizationEngine:
 
         return actions
 
-    async def _log_optimization_action(
-        self,
-        rule_id: str,
-        action_result: dict,
-        metrics_before: dict,
-    ):
+    async def _log_optimization_action(self) -> None:
         """Log optimization action to database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -663,11 +659,11 @@ class IntelligentOptimizationEngine:
                         }
 
                 except Exception as e:
-                    self.logger.error(f"Failed to predict {target}: {e}")
+                    self.logger.error("Failed to predict %s: %s", target, e)
                     predictions[target] = {"error": str(e)}
 
         except Exception as e:
-            self.logger.error(f"Prediction generation failed: {e}")
+            self.logger.error("Prediction generation failed: %s", e)
             predictions = {"error": str(e)}
 
         return predictions
@@ -683,7 +679,7 @@ class IntelligentOptimizationEngine:
 
         # Generate 30 days of simulated historical data
         for i in range(30):
-            date = datetime.now() - timedelta(days=i)
+            date = datetime.now(UTC) - timedelta(days=i)
 
             # Simulate realistic social media metrics with trends
             base_engagement = 3.5 + random.gauss(0, 0.5)
@@ -724,21 +720,21 @@ class IntelligentOptimizationEngine:
         if model_path.exists():
             try:
                 model = joblib.load(model_path)
-                self.logger.info(f"Loaded existing model for {target}")
+                self.logger.info("Loaded existing model for %s", target)
                 return model
             except Exception as e:
-                self.logger.warning(f"Failed to load model for {target}: {e}")
+                self.logger.warning("Failed to load model for %s: %s", target, e)
 
         # Train new model
         try:
             model = self._train_prediction_model(target, features_df)
             if model:
                 joblib.dump(model, model_path)
-                self.logger.info(f"Trained and saved new model for {target}")
+                self.logger.info("Trained and saved new model for %s", target)
             return model
 
         except Exception as e:
-            self.logger.error(f"Failed to train model for {target}: {e}")
+            self.logger.error("Failed to train model for %s: %s", target, e)
             return None
 
     def _train_prediction_model(
@@ -802,7 +798,7 @@ class IntelligentOptimizationEngine:
                 # Evaluate
                 y_pred = model.predict(X_test_scaled)
                 accuracy = accuracy_score(y_test, y_pred)
-                self.logger.info(f"Model accuracy for {target}: {accuracy:.3f}")
+                self.logger.info("Model accuracy for %.3f%%: %.3f%%", target, accuracy)
 
             else:
                 # Regression for other targets
@@ -812,7 +808,7 @@ class IntelligentOptimizationEngine:
                 # Evaluate
                 y_pred = model.predict(X_test_scaled)
                 mse = mean_squared_error(y_test, y_pred)
-                self.logger.info(f"Model MSE for {target}: {mse:.3f}")
+                self.logger.info("Model MSE for %.3f%%: %.3f%%", target, mse)
 
             # Create wrapper with scaler
             model_wrapper = {
@@ -824,7 +820,7 @@ class IntelligentOptimizationEngine:
             return model_wrapper
 
         except Exception as e:
-            self.logger.error(f"Model training failed for {target}: {e}")
+            self.logger.error("Model training failed for %s: %s", target, e)
             return None
 
     def _calculate_prediction_confidence(
@@ -1021,7 +1017,7 @@ class IntelligentOptimizationEngine:
             return analysis
 
         except Exception as e:
-            self.logger.error(f"Failed to analyze optimization impact: {e}")
+            self.logger.error("Failed to analyze optimization impact: %s", e)
             return {"error": str(e)}
 
     def _calculate_impact_trend(self, df: pd.DataFrame) -> str:
@@ -1043,7 +1039,7 @@ class IntelligentOptimizationEngine:
             return "declining"
         return "stable"
 
-    def _load_prediction_models(self):
+    def _load_prediction_models(self) -> None:
         """Load existing prediction models"""
         model_files = list(self.models_dir.glob("*_model.joblib"))
 
@@ -1052,10 +1048,10 @@ class IntelligentOptimizationEngine:
                 model_name = model_file.stem.replace("_model", "")
                 model = joblib.load(model_file)
                 self.prediction_models[model_name] = model
-                self.logger.info(f"Loaded prediction model: {model_name}")
+                self.logger.info("Loaded prediction model: %s", model_name)
 
             except Exception as e:
-                self.logger.error(f"Failed to load model {model_file}: {e}")
+                self.logger.error("Failed to load model %s: %s", model_file, e)
 
 
 # A/B Testing Framework
@@ -1064,7 +1060,7 @@ class IntelligentOptimizationEngine:
 class ABTestingFramework:
     """A/B testing framework for optimization validation"""
 
-    def __init__(self, optimization_engine: IntelligentOptimizationEngine):
+    def __init__(self) -> None:
         self.optimization_engine = optimization_engine
         self.logger = optimization_engine.logger
 
@@ -1077,7 +1073,7 @@ class ABTestingFramework:
         duration_days: int = 14,
     ) -> str:
         """Create new A/B test"""
-        test_id = f"ab_{test_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        test_id = f"ab_{test_name}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
         conn = sqlite3.connect(self.optimization_engine.db_path)
         cursor = conn.cursor()
@@ -1095,7 +1091,7 @@ class ABTestingFramework:
         conn.commit()
         conn.close()
 
-        self.logger.info(f"Created A/B test: {test_id}")
+        self.logger.info("Created A/B test: %s", test_id)
         return test_id
 
     async def analyze_ab_test_results(self, test_name: str) -> dict:
@@ -1141,7 +1137,7 @@ class ABTestingFramework:
 # Usage and testing
 
 
-async def main():
+async def main(self) -> None:
     """Main function for testing optimization engine"""
 
     # Initialize optimization engine

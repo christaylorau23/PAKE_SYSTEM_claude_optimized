@@ -38,7 +38,7 @@ async def create_tenant(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(require_admin_access),
 ):
-    """Create new tenant with complete provisioning"""
+    """Create new tenant with complete provisioning."""
     if not tenant_service:
         raise HTTPException(status_code=503, detail="Tenant service not available")
 
@@ -70,7 +70,7 @@ async def create_tenant(
             tenant_id=result["tenant"]["id"],
         ).inc()
 
-        logger.info(f"✅ Tenant created: {request.name}")
+        logger.info("✅ Tenant created: %s", request.name)
 
         return {
             "success": True,
@@ -82,7 +82,7 @@ async def create_tenant(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Tenant creation error: {e}")
+        logger.error("Tenant creation error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant creation service error")
 
 
@@ -95,7 +95,7 @@ async def list_tenants(
     offset: int = 0,
     current_user: dict = Depends(require_admin_access),
 ):
-    """List tenants with filtering and pagination"""
+    """List tenants with filtering and pagination."""
     if not tenant_service:
         raise HTTPException(status_code=503, detail="Tenant service not available")
 
@@ -114,14 +114,14 @@ async def list_tenants(
         }
 
     except Exception as e:
-        logger.error(f"Tenant listing error: {e}")
+        logger.error("Tenant listing error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant listing service error")
 
 
 @tenant_router.get("/{tenant_id}")
 @enforce_tenant_isolation("read", "tenant")
 async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_user)):
-    """Get tenant details with statistics"""
+    """Get tenant details with statistics."""
     # Validate tenant access
     current_tenant = get_current_tenant_id()
     if current_tenant != tenant_id and current_user["role"] not in ["super_admin"]:
@@ -140,7 +140,7 @@ async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_us
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Tenant retrieval error: {e}")
+        logger.error("Tenant retrieval error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant retrieval service error")
 
 
@@ -151,7 +151,7 @@ async def update_tenant(
     request: TenantUpdateRequest,
     current_user: dict = Depends(require_admin_access),
 ):
-    """Update tenant configuration"""
+    """Update tenant configuration."""
     if not tenant_service:
         raise HTTPException(status_code=503, detail="Tenant service not available")
 
@@ -175,7 +175,7 @@ async def update_tenant(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Tenant update error: {e}")
+        logger.error("Tenant update error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant update service error")
 
 
@@ -187,7 +187,7 @@ async def delete_tenant(
     force: bool = False,
     current_user: dict = Depends(require_admin_access),
 ):
-    """Delete tenant and all associated resources"""
+    """Delete tenant and all associated resources."""
     if not tenant_service:
         raise HTTPException(status_code=503, detail="Tenant service not available")
 
@@ -210,7 +210,7 @@ async def delete_tenant(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Tenant deletion error: {e}")
+        logger.error("Tenant deletion error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant deletion service error")
 
 
@@ -221,7 +221,7 @@ async def get_tenant_analytics(
     days: int = 30,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get comprehensive tenant analytics"""
+    """Get comprehensive tenant analytics."""
     # Validate tenant access
     current_tenant = get_current_tenant_id()
     if current_tenant != tenant_id and current_user["role"] not in [
@@ -239,7 +239,7 @@ async def get_tenant_analytics(
         return {"success": True, "analytics": analytics}
 
     except Exception as e:
-        logger.error(f"Tenant analytics error: {e}")
+        logger.error("Tenant analytics error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant analytics service error")
 
 
@@ -253,7 +253,7 @@ async def create_user(
     request: UserCreateRequest,
     current_user: dict = Depends(require_admin_access),
 ):
-    """Create new user within current tenant"""
+    """Create new user within current tenant."""
     tenant_id = get_current_tenant_id()
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Tenant context required")
@@ -286,7 +286,7 @@ async def create_user(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"User creation error: {e}")
+        logger.error("User creation error: %s", e)
         raise HTTPException(status_code=500, detail="User creation service error")
 
 
@@ -297,7 +297,7 @@ async def list_users(
     offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
-    """List users within current tenant"""
+    """List users within current tenant."""
     tenant_id = get_current_tenant_id()
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Tenant context required")
@@ -319,17 +319,17 @@ async def list_users(
         }
 
     except Exception as e:
-        logger.error(f"User listing error: {e}")
+        logger.error("User listing error: %s", e)
         raise HTTPException(status_code=500, detail="User listing service error")
 
 
 # Background task functions
 
 
-async def provision_tenant_resources(tenant_id: str):
-    """Background task to provision tenant resources"""
+async def provision_tenant_resources(self) -> None:
+    """Background task to provision tenant resources."""
     try:
-        logger.info(f"🔄 Provisioning resources for tenant {tenant_id}")
+        logger.info("🔄 Provisioning resources for tenant %s", tenant_id)
 
         # Run tenant provisioning script
         from scripts.provision_tenant import (
@@ -345,7 +345,7 @@ async def provision_tenant_resources(tenant_id: str):
         # Get tenant data
         tenant_data = await tenant_service.get_tenant(tenant_id)
         if not tenant_data:
-            logger.error(f"Tenant not found for provisioning: {tenant_id}")
+            logger.error("Tenant not found for provisioning: %s", tenant_id)
             return
 
         tenant = tenant_data["tenant"]
@@ -357,20 +357,22 @@ async def provision_tenant_resources(tenant_id: str):
         )
 
         if k8s_success:
-            logger.info(f"✅ Successfully provisioned resources for tenant {tenant_id}")
+            logger.info(
+                "✅ Successfully provisioned resources for tenant %s", tenant_id
+            )
         else:
-            logger.warning(f"⚠️ Partial provisioning for tenant {tenant_id}")
+            logger.warning("⚠️ Partial provisioning for tenant %s", tenant_id)
 
         await provisioner.close()
 
     except Exception as e:
-        logger.error(f"❌ Resource provisioning failed for tenant {tenant_id}: {e}")
+        logger.error("❌ Resource provisioning failed for tenant %s: %s", tenant_id, e)
 
 
-async def cleanup_tenant_resources(tenant_id: str):
-    """Background task to cleanup tenant resources"""
+async def cleanup_tenant_resources(self) -> None:
+    """Background task to cleanup tenant resources."""
     try:
-        logger.info(f"🧹 Cleaning up resources for tenant {tenant_id}")
+        logger.info("🧹 Cleaning up resources for tenant %s", tenant_id)
 
         # Cleanup Kubernetes resources
         # Cleanup cached orchestrators
@@ -379,7 +381,7 @@ async def cleanup_tenant_resources(tenant_id: str):
 
         # Additional cleanup tasks would go here
 
-        logger.info(f"✅ Successfully cleaned up resources for tenant {tenant_id}")
+        logger.info("✅ Successfully cleaned up resources for tenant %s", tenant_id)
 
     except Exception as e:
-        logger.error(f"❌ Resource cleanup failed for tenant {tenant_id}: {e}")
+        logger.error("❌ Resource cleanup failed for tenant %s: %s", tenant_id, e)

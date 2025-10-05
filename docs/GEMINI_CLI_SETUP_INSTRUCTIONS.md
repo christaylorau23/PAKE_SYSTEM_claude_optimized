@@ -24,7 +24,7 @@ This will start the interactive Gemini CLI setup process.
 When prompted, you'll see authentication options:
 
 **Option 1: Google OAuth (Recommended)**
-- Select "Login with Google" 
+- Select "Login with Google"
 - This provides **60 requests/min** and **1,000 requests/day** for free
 - Best for personal use with your Google account
 
@@ -119,7 +119,7 @@ gemini --prompt "Create a new SourceNote about [topic] with proper metadata"
 # Research workflow
 gemini --prompt "Act as a PAKE Ingestion Agent and research the topic: [your topic]"
 
-# Synthesis workflow  
+# Synthesis workflow
 gemini --prompt "Act as a PAKE Synthesis Agent and create insights from existing notes about [topic]"
 ```
 

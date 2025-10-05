@@ -1,0 +1,263 @@
+name: PAKE System Quality Checks
+# PAKE System - High-Velocity Linting and Formatting Pipeline with ruff
+# This workflow implements the CI/CD integration specified in Phase 3 of the engineering plan.
+# It creates a quality gate that prevents F821 and DTZ bug classes from being reintroduced.
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Code Quality Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run ruff linting
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check --output-format=github"
+
+      - name: Run Bandit security scanning
+        run: |
+          pip install bandit
+          bandit -r src/ -f json -o bandit-report.json || true
+          bandit -r src/ -f txt
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bandit-security-report
+          path: bandit-report.json
+
+  format:
+    name: Code Formatting Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Check code formatting
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check --diff"
+
+  security:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety pip-audit
+
+      - name: Run Bandit security scan
+        run: |
+          bandit -r src/ -f json -o bandit-report.json
+          bandit -r src/ -f txt
+
+      - name: Run Safety check
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check
+
+      - name: Run pip-audit
+        run: |
+          pip-audit --format=json --output=pip-audit-report.json || true
+          pip-audit
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+            pip-audit-report.json
+
+  structured-logging-validation:
+    name: Structured Logging Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install structlog libcst
+
+      - name: Validate structured logging configuration
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from services.logging.centralized_structlog_config import initialize_logging
+
+          # Test the configuration
+          logger = initialize_logging('test-service')
+          logger.info('Testing structured logging configuration')
+          print('✓ Structured logging configuration validated')
+          "
+
+      - name: Test logging codemod
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from codemods.logging_refactoring_codemod import fix_g004_violations
+
+          # Test code with f-string logging
+          test_code = '''
+          import logging
+          logger = logging.getLogger(__name__)
+          logger.info(f'User {user_id} logged in')
+          '''
+
+          fixed_code, fixes = fix_g004_violations(test_code)
+          print(f'✓ Logging codemod tested: {fixes} fixes applied')
+          "
+
+  datetime-timezone-validation:
+    name: DateTime Timezone Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install libcst
+
+      - name: Validate datetime timezone fixes
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from codemods.datetime_timezone_transformer import transform_datetime_calls
+
+          # Test code with datetime.utcnow()
+          test_code = '''
+          from datetime import datetime
+          now = datetime.utcnow()
+          '''
+
+          fixed_code, transformations = transform_datetime_calls(test_code)
+          print(f'✓ DateTime timezone transformer tested: {len(transformations)} transformations')
+          "
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint, format, security]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --tb=short
+
+      - name: Run structured logging tests
+        run: |
+          pytest tests/test_logging/ -v --tb=short
+
+      - name: Run codemod tests
+        run: |
+          pytest tests/test_codemods/ -v --tb=short
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [lint, format, security, structured-logging-validation, datetime-timezone-validation, integration-tests]
+    if: always()
+
+    steps:
+      - name: Check all quality checks
+        run: |
+          echo "Checking quality gate status..."
+
+          # Check if all required jobs passed
+          if [[ "${{ needs.lint.result }}" == "success" &&
+                "${{ needs.format.result }}" == "success" &&
+                "${{ needs.security.result }}" == "success" &&
+                "${{ needs.structured-logging-validation.result }}" == "success" &&
+                "${{ needs.datetime-timezone-validation.result }}" == "success" &&
+                "${{ needs.integration-tests.result }}" == "success" ]]; then
+            echo "✅ All quality checks passed!"
+            echo "PAKE System quality gate: PASSED"
+            exit 0
+          else
+            echo "❌ One or more quality checks failed!"
+            echo "PAKE System quality gate: FAILED"
+            echo "Failed jobs:"
+            echo "  - Lint: ${{ needs.lint.result }}"
+            echo "  - Format: ${{ needs.format.result }}"
+            echo "  - Security: ${{ needs.security.result }}"
+            echo "  - Structured Logging: ${{ needs.structured-logging-validation.result }}"
+            echo "  - DateTime Timezone: ${{ needs.datetime-timezone-validation.result }}"
+            echo "  - Integration Tests: ${{ needs.integration-tests.result }}"
+            exit 1
+          fi

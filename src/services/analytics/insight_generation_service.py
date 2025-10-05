@@ -1,4 +1,4 @@
-"""Insight Generation Service
+"""Insight Generation Service.
 
 Provides AI-powered insight generation, recommendation systems,
 and intelligent analysis of patterns and trends in the data.
@@ -6,7 +6,7 @@ and intelligent analysis of patterns and trends in the data.
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -58,12 +58,12 @@ class InsightRecommendation:
     priority: InsightPriority
     confidence: InsightConfidence
     confidence_score: float  # 0.0 to 1.0
-    supporting_data: list[str]
-    action_suggestions: list[str]
+    supporting_data: List[str]
+    action_suggestions: List[str]
     impact_assessment: str
     timeframe: str
     created_at: datetime
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
 
 
 @dataclass
@@ -74,8 +74,8 @@ class PatternInsight:
     pattern_description: str
     frequency: int
     confidence: float
-    examples: list[str]
-    implications: list[str]
+    examples: List[str]
+    implications: List[str]
 
 
 @dataclass
@@ -85,7 +85,7 @@ class TrendInsight:
     trend_direction: str
     trend_strength: float
     trend_duration: str
-    key_drivers: list[str]
+    key_drivers: List[str]
     future_projection: str
     confidence: float
 
@@ -96,10 +96,10 @@ class AnomalyInsight:
 
     anomaly_type: str
     severity: str
-    affected_metrics: list[str]
+    affected_metrics: List[str]
     anomaly_description: str
-    potential_causes: list[str]
-    recommended_actions: list[str]
+    potential_causes: List[str]
+    recommended_actions: List[str]
 
 
 class InsightGenerationService:
@@ -107,7 +107,7 @@ class InsightGenerationService:
     pattern recognition, and AI-powered reasoning to generate actionable insights.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the insight generation service."""
         self.insight_templates = self._load_insight_templates()
         self.pattern_library = self._initialize_pattern_library()
@@ -122,7 +122,7 @@ class InsightGenerationService:
             "pattern_min_frequency": 3,
         }
 
-    def _load_insight_templates(self) -> dict[str, dict[str, Any]]:
+    def _load_insight_templates(self) -> dict[str, Dict[str, Any]]:
         """Load insight generation templates."""
         return {
             "trend_up": {
@@ -187,7 +187,7 @@ class InsightGenerationService:
             },
         }
 
-    def _initialize_pattern_library(self) -> dict[str, dict[str, Any]]:
+    def _initialize_pattern_library(self) -> dict[str, Dict[str, Any]]:
         """Initialize pattern recognition library."""
         return {
             "seasonal_patterns": {
@@ -267,7 +267,7 @@ class InsightGenerationService:
             return ranked_insights[:max_insights]
 
         except Exception as e:
-            logger.error(f"Comprehensive insight generation failed: {e}")
+            logger.error("Comprehensive insight generation failed: %s", e)
             return []
 
     async def _generate_trend_insights(
@@ -300,7 +300,7 @@ class InsightGenerationService:
 
                         # Generate insight
                         insight = InsightRecommendation(
-                            id=f"trend_{metric_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                            id=f"trend_{metric_name}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
                             title=template["title_template"].format(metric=metric_name),
                             description=template["description_template"].format(
                                 metric=metric_name,
@@ -323,7 +323,7 @@ class InsightGenerationService:
                             action_suggestions=template["action_suggestions"],
                             impact_assessment=self._assess_trend_impact(trend_analysis),
                             timeframe=f"{len(time_series)} days",
-                            created_at=datetime.now(),
+                            created_at=datetime.now(UTC),
                             metadata={
                                 "trend_direction": trend_analysis["direction"],
                                 "trend_strength": trend_analysis["trend_strength"],
@@ -336,7 +336,7 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Trend insight generation failed: {e}")
+            logger.error("Trend insight generation failed: %s", e)
             return []
 
     async def _generate_correlation_insights(
@@ -363,7 +363,7 @@ class InsightGenerationService:
                     )
 
                     insight = InsightRecommendation(
-                        id=f"correlation_{result.metric_a}_{result.metric_b}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        id=f"correlation_{result.metric_a}_{result.metric_b}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
                         title=template["title_template"].format(
                             metric_a=result.metric_a,
                             metric_b=result.metric_b,
@@ -390,7 +390,7 @@ class InsightGenerationService:
                         action_suggestions=template["action_suggestions"],
                         impact_assessment=self._assess_correlation_impact(result),
                         timeframe="Analysis period",
-                        created_at=datetime.now(),
+                        created_at=datetime.now(UTC),
                         metadata={
                             "correlation_coefficient": result.correlation_coefficient,
                             "p_value": result.p_value,
@@ -404,7 +404,7 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Correlation insight generation failed: {e}")
+            logger.error("Correlation insight generation failed: %s", e)
             return []
 
     async def _generate_anomaly_insights(
@@ -427,7 +427,7 @@ class InsightGenerationService:
                     anomaly_score = result.anomaly_scores[max_score_idx]
 
                     insight = InsightRecommendation(
-                        id=f"anomaly_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        id=f"anomaly_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
                         title=template["title_template"].format(metric="Data"),
                         description=template["description_template"].format(
                             metric="Data",
@@ -450,7 +450,7 @@ class InsightGenerationService:
                         action_suggestions=template["action_suggestions"],
                         impact_assessment=self._assess_anomaly_impact(anomaly_score),
                         timeframe="Recent data",
-                        created_at=datetime.now(),
+                        created_at=datetime.now(UTC),
                         metadata={
                             "anomaly_score": anomaly_score,
                             "anomaly_count": len(result.anomaly_points),
@@ -463,7 +463,7 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Anomaly insight generation failed: {e}")
+            logger.error("Anomaly insight generation failed: %s", e)
             return []
 
     async def _generate_pattern_insights(
@@ -486,7 +486,7 @@ class InsightGenerationService:
                         template = self.insight_templates["pattern_emerging"]
 
                         insight = InsightRecommendation(
-                            id=f"pattern_{metric_name}_{pattern_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                            id=f"pattern_{metric_name}_{pattern_type}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
                             title=f"Pattern Detected in {metric_name}",
                             description=template["description_template"].format(
                                 pattern_description=pattern_data["description"],
@@ -506,7 +506,7 @@ class InsightGenerationService:
                             action_suggestions=template["action_suggestions"],
                             impact_assessment=self._assess_pattern_impact(pattern_data),
                             timeframe=f"{len(time_series)} data points",
-                            created_at=datetime.now(),
+                            created_at=datetime.now(UTC),
                             metadata={
                                 "pattern_type": pattern_type,
                                 "pattern_data": pattern_data,
@@ -519,7 +519,7 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Pattern insight generation failed: {e}")
+            logger.error("Pattern insight generation failed: %s", e)
             return []
 
     async def _generate_optimization_insights(
@@ -543,7 +543,7 @@ class InsightGenerationService:
                     template = self.insight_templates["optimization_opportunity"]
 
                     insight = InsightRecommendation(
-                        id=f"optimization_{metric_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        id=f"optimization_{metric_name}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
                         title=template["title_template"],
                         description=template["description_template"].format(
                             area=metric_name,
@@ -566,7 +566,7 @@ class InsightGenerationService:
                             optimization_analysis,
                         ),
                         timeframe="Ongoing",
-                        created_at=datetime.now(),
+                        created_at=datetime.now(UTC),
                         metadata={
                             "optimization_analysis": optimization_analysis,
                             "metric_name": metric_name,
@@ -578,13 +578,13 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Optimization insight generation failed: {e}")
+            logger.error("Optimization insight generation failed: %s", e)
             return []
 
     async def _analyze_trend(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Analyze trend in time series data."""
         try:
             values = [point[1] for point in time_series]
@@ -598,10 +598,7 @@ class InsightGenerationService:
 
             # Normalize slope by mean value
             mean_value = np.mean(values)
-            if mean_value != 0:
-                relative_slope = slope / mean_value
-            else:
-                relative_slope = 0
+            relative_slope = slope / mean_value if mean_value != 0 else 0
 
             # Determine direction
             if slope > 0.01:
@@ -622,7 +619,7 @@ class InsightGenerationService:
             }
 
         except Exception as e:
-            logger.error(f"Trend analysis failed: {e}")
+            logger.error("Trend analysis failed: %s", e)
             return {"direction": "unknown", "trend_strength": 0.0}
 
     def _calculate_trend_magnitude(self, values: list[float], direction: str) -> str:
@@ -648,7 +645,7 @@ class InsightGenerationService:
             return "dramatic"
 
         except Exception as e:
-            logger.error(f"Trend magnitude calculation failed: {e}")
+            logger.error("Trend magnitude calculation failed: %s", e)
             return "unknown"
 
     def _strength_to_text(self, strength: float) -> str:
@@ -673,7 +670,7 @@ class InsightGenerationService:
 
     def _calculate_trend_confidence(
         self,
-        trend_analysis: dict[str, Any],
+        trend_analysis: Dict[str, Any],
     ) -> InsightConfidence:
         """Calculate confidence level for trend analysis."""
         strength = trend_analysis["trend_strength"]
@@ -741,7 +738,7 @@ class InsightGenerationService:
             return InsightConfidence.LOW
         return InsightConfidence.VERY_LOW
 
-    def _assess_trend_impact(self, trend_analysis: dict[str, Any]) -> str:
+    def _assess_trend_impact(self, trend_analysis: Dict[str, Any]) -> str:
         """Assess the impact of a trend."""
         direction = trend_analysis["direction"]
         strength = trend_analysis["trend_strength"]
@@ -778,7 +775,7 @@ class InsightGenerationService:
             return "Moderate impact - notable deviation worth monitoring"
         return "Low impact - minor deviation"
 
-    def _assess_pattern_impact(self, pattern_data: dict[str, Any]) -> str:
+    def _assess_pattern_impact(self, pattern_data: Dict[str, Any]) -> str:
         """Assess the impact of a pattern."""
         confidence = pattern_data["confidence"]
         frequency = pattern_data["frequency"]
@@ -791,7 +788,7 @@ class InsightGenerationService:
             return "Low impact - emerging pattern"
         return "Minimal impact - weak pattern"
 
-    def _assess_optimization_impact(self, optimization_analysis: dict[str, Any]) -> str:
+    def _assess_optimization_impact(self, optimization_analysis: Dict[str, Any]) -> str:
         """Assess the impact of optimization opportunities."""
         score = optimization_analysis["opportunity_score"]
 
@@ -806,7 +803,7 @@ class InsightGenerationService:
     async def _detect_all_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, dict[str, Any]]:
+    ) -> dict[str, Dict[str, Any]]:
         """Detect all types of patterns in time series."""
         patterns = {}
 
@@ -821,13 +818,13 @@ class InsightGenerationService:
             return patterns
 
         except Exception as e:
-            logger.error(f"Pattern detection failed: {e}")
+            logger.error("Pattern detection failed: %s", e)
             return {}
 
     async def _detect_seasonal_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Detect seasonal patterns."""
         try:
             if len(time_series) < 24:  # Need at least 24 data points
@@ -857,13 +854,13 @@ class InsightGenerationService:
             return None
 
         except Exception as e:
-            logger.error(f"Seasonal pattern detection failed: {e}")
+            logger.error("Seasonal pattern detection failed: %s", e)
             return None
 
     async def _detect_cyclical_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Detect cyclical patterns."""
         try:
             if len(time_series) < 10:
@@ -898,13 +895,13 @@ class InsightGenerationService:
             return None
 
         except Exception as e:
-            logger.error(f"Cyclical pattern detection failed: {e}")
+            logger.error("Cyclical pattern detection failed: %s", e)
             return None
 
     async def _detect_threshold_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Detect patterns around thresholds."""
         try:
             if len(time_series) < 10:
@@ -953,13 +950,13 @@ class InsightGenerationService:
             return None
 
         except Exception as e:
-            logger.error(f"Threshold pattern detection failed: {e}")
+            logger.error("Threshold pattern detection failed: %s", e)
             return None
 
     async def _detect_spike_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Detect spike patterns."""
         try:
             if len(time_series) < 5:
@@ -986,13 +983,13 @@ class InsightGenerationService:
             return None
 
         except Exception as e:
-            logger.error(f"Spike pattern detection failed: {e}")
+            logger.error("Spike pattern detection failed: %s", e)
             return None
 
     async def _detect_trend_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Detect trend patterns."""
         try:
             if len(time_series) < 5:
@@ -1011,13 +1008,13 @@ class InsightGenerationService:
             return None
 
         except Exception as e:
-            logger.error(f"Trend pattern detection failed: {e}")
+            logger.error("Trend pattern detection failed: %s", e)
             return None
 
     async def _analyze_optimization_opportunities(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Analyze optimization opportunities."""
         try:
             if len(time_series) < 5:
@@ -1058,7 +1055,7 @@ class InsightGenerationService:
             }
 
         except Exception as e:
-            logger.error(f"Optimization analysis failed: {e}")
+            logger.error("Optimization analysis failed: %s", e)
             return {
                 "opportunity_score": 0.0,
                 "current_state": "unknown",
@@ -1107,17 +1104,17 @@ class InsightGenerationService:
             return insights
 
         except Exception as e:
-            logger.error(f"Insight ranking failed: {e}")
+            logger.error("Insight ranking failed: %s", e)
             return insights
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check the health of the insight generation service."""
         try:
             # Test basic functionality
             test_data = {
                 "test_metric": [
                     (
-                        datetime.now() - timedelta(days=i),
+                        datetime.now(UTC) - timedelta(days=i),
                         10 + i + np.random.normal(0, 1),
                     )
                     for i in range(20, 0, -1)

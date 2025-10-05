@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Import all analytics components
@@ -27,7 +27,7 @@ except ImportError as e:
 class AnalyticsMasterController:
     """Master controller for analytics, optimization, and experimentation"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = "analytics_master_config.json") -> None:
         """Initialize the master analytics system"""
         self.logger = self._setup_logging()
         self.config = self._load_configuration(config_path)
@@ -103,7 +103,7 @@ class AnalyticsMasterController:
 
         return default_config
 
-    async def start_master_system(self):
+    async def start_master_system(self) -> None:
         """Start the complete analytics master system"""
         self.logger.info("Starting Analytics Master System...")
 
@@ -132,7 +132,7 @@ class AnalyticsMasterController:
 
         self.logger.info("Analytics Master System started with all automation enabled")
 
-    async def stop_master_system(self):
+    async def stop_master_system(self) -> None:
         """Stop the analytics master system"""
         self.logger.info("Stopping Analytics Master System...")
 
@@ -155,7 +155,7 @@ class AnalyticsMasterController:
         self.logger.info("Starting complete analysis cycle...")
 
         cycle_results = {
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(UTC),
             "analytics_report": None,
             "optimization_results": None,
             "ab_test_updates": None,
@@ -208,14 +208,14 @@ class AnalyticsMasterController:
             # Store results for historical tracking
             self.performance_history.append(
                 {
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(UTC),
                     "performance_summary": performance_summary,
                     "key_metrics": self._extract_key_metrics(current_metrics),
                 },
             )
 
             # Keep only last 30 days of history
-            cutoff_date = datetime.now() - timedelta(days=30)
+            cutoff_date = datetime.now(UTC) - timedelta(days=30)
             self.performance_history = [
                 h for h in self.performance_history if h["timestamp"] > cutoff_date
             ]
@@ -223,12 +223,12 @@ class AnalyticsMasterController:
             self.logger.info("Complete analysis cycle finished successfully")
 
         except Exception as e:
-            self.logger.error(f"Analysis cycle failed: {e}")
+            self.logger.error("Analysis cycle failed: %s", e)
             cycle_results["error"] = str(e)
 
         return cycle_results
 
-    async def _run_optimization_loop(self):
+    async def _run_optimization_loop(self) -> None:
         """Background optimization loop"""
         optimization_interval = (
             self.config["optimization"]["run_frequency_hours"] * 3600
@@ -250,7 +250,7 @@ class AnalyticsMasterController:
 
                 # Store optimization history
                 self.optimization_history.append(
-                    {"timestamp": datetime.now(), "results": optimization_results},
+                    {"timestamp": datetime.now(UTC), "results": optimization_results},
                 )
 
                 # Check if we should auto-implement optimizations
@@ -261,10 +261,10 @@ class AnalyticsMasterController:
                 await asyncio.sleep(optimization_interval)
 
             except Exception as e:
-                self.logger.error(f"Optimization loop error: {e}")
+                self.logger.error("Optimization loop error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
-    async def _run_ab_testing_automation(self):
+    async def _run_ab_testing_automation(self) -> None:
         """Background A/B testing automation"""
 
         while self.is_running:
@@ -285,18 +285,18 @@ class AnalyticsMasterController:
                         if (
                             analysis
                             and self.config["ab_testing"]["auto_stop_conclusive_tests"]
+                        ) and (
+                            analysis.statistical_significance
+                            and analysis.practical_significance
                         ):
-                            if (
-                                analysis.statistical_significance
-                                and analysis.practical_significance
-                            ):
-                                await self.ab_testing.stop_test(
-                                    test["id"],
-                                    "Conclusive results achieved",
-                                )
-                                self.logger.info(
-                                    f"Auto-stopped conclusive test: {test['name']}",
-                                )
+                            await self.ab_testing.stop_test(
+                                test["id"],
+                                "Conclusive results achieved",
+                            )
+                            self.logger.info(
+                                "Auto-stopped conclusive test: %s",
+                                test["name"],
+                            )
 
                 # Create new tests based on performance data
                 if self.config["ab_testing"]["auto_create_tests"]:
@@ -306,15 +306,15 @@ class AnalyticsMasterController:
                 await asyncio.sleep(3600)
 
             except Exception as e:
-                self.logger.error(f"A/B testing automation error: {e}")
+                self.logger.error("A/B testing automation error: %s", e)
                 await asyncio.sleep(300)
 
-    async def _run_reporting_schedule(self):
+    async def _run_reporting_schedule(self) -> None:
         """Background reporting scheduler"""
 
         while self.is_running:
             try:
-                current_time = datetime.now().strftime("%H:%M")
+                current_time = datetime.now(UTC).strftime("%H:%M")
 
                 # Executive summary
                 if current_time == self.config["reporting"]["executive_summary_time"]:
@@ -326,7 +326,7 @@ class AnalyticsMasterController:
 
                 # Weekly deep dive (check if it's the right day)
                 elif (
-                    datetime.now().strftime("%A").lower()
+                    datetime.now(UTC).strftime("%A").lower()
                     == self.config["reporting"]["weekly_deep_dive"]
                     and current_time == "09:00"
                 ):
@@ -336,10 +336,10 @@ class AnalyticsMasterController:
                 await asyncio.sleep(60)
 
             except Exception as e:
-                self.logger.error(f"Reporting schedule error: {e}")
+                self.logger.error("Reporting schedule error: %s", e)
                 await asyncio.sleep(60)
 
-    async def _run_real_time_monitoring(self):
+    async def _run_real_time_monitoring(self) -> None:
         """Real-time monitoring and alerting"""
 
         while self.is_running:
@@ -359,7 +359,7 @@ class AnalyticsMasterController:
                 await asyncio.sleep(900)
 
             except Exception as e:
-                self.logger.error(f"Real-time monitoring error: {e}")
+                self.logger.error("Real-time monitoring error: %s", e)
                 await asyncio.sleep(300)
 
     async def _update_ab_tests(self) -> dict:
@@ -403,7 +403,7 @@ class AnalyticsMasterController:
                             )
 
         except Exception as e:
-            self.logger.error(f"A/B test update failed: {e}")
+            self.logger.error("A/B test update failed: %s", e)
             update_results["error"] = str(e)
 
         return update_results
@@ -635,7 +635,7 @@ class AnalyticsMasterController:
             ),
         }
 
-    async def _auto_implement_optimizations(self, optimization_results: dict):
+    async def _auto_implement_optimizations(self, optimization_results: dict) -> None:
         """Auto-implement low-risk optimizations"""
 
         for action in optimization_results.get("actions_taken", []):
@@ -645,11 +645,12 @@ class AnalyticsMasterController:
                 > self.config["optimization"]["min_impact_threshold"]
             ):
                 self.logger.info(
-                    f"Auto-implementing optimization: {action['rule_name']}",
+                    "Auto-implementing optimization: %s",
+                    action["rule_name"],
                 )
                 # Implementation would integrate with content management system
 
-    async def _auto_create_ab_tests(self):
+    async def _auto_create_ab_tests(self) -> None:
         """Automatically create A/B tests based on performance data"""
 
         # Check how many tests are currently running
@@ -661,36 +662,36 @@ class AnalyticsMasterController:
         # Create tests for underperforming areas
         # This would analyze current performance and create relevant tests
 
-    async def _send_executive_summary(self):
+    async def _send_executive_summary(self) -> None:
         """Send executive summary report"""
         try:
             cycle_results = await self.run_complete_analysis_cycle()
             # Format and send summary (integrate with Slack/email)
             self.logger.info("Executive summary sent")
         except Exception as e:
-            self.logger.error(f"Failed to send executive summary: {e}")
+            self.logger.error("Failed to send executive summary: %s", e)
 
-    async def _send_detailed_report(self):
+    async def _send_detailed_report(self) -> None:
         """Send detailed analytics report"""
         try:
             analytics_report = await self.analytics_engine.generate_daily_report()
             # Format and send detailed report
             self.logger.info("Detailed report sent")
         except Exception as e:
-            self.logger.error(f"Failed to send detailed report: {e}")
+            self.logger.error("Failed to send detailed report: %s", e)
 
-    async def _send_weekly_deep_dive(self):
+    async def _send_weekly_deep_dive(self) -> None:
         """Send weekly deep dive analysis"""
         try:
             # Generate comprehensive weekly analysis
             # Include trends, insights, and strategic recommendations
             self.logger.info("Weekly deep dive sent")
         except Exception as e:
-            self.logger.error(f"Failed to send weekly deep dive: {e}")
+            self.logger.error("Failed to send weekly deep dive: %s", e)
 
-    async def _send_immediate_alert(self, alert: dict):
+    async def _send_immediate_alert(self, alert: dict) -> None:
         """Send immediate alert for critical conditions"""
-        self.logger.critical(f"IMMEDIATE ALERT: {alert['message']}")
+        self.logger.critical("IMMEDIATE ALERT: %s", alert["message"])
         # Integrate with alerting systems (Slack, email, SMS, etc.)
 
     async def get_system_health(self) -> dict:
@@ -733,14 +734,14 @@ class AnalyticsMasterController:
             }
 
         except Exception as e:
-            self.logger.error(f"System health check failed: {e}")
+            self.logger.error("System health check failed: %s", e)
             return {"error": str(e), "health_score": 0.0}
 
 
 # CLI Interface
 
 
-async def main():
+async def main(self) -> None:
     """Main CLI interface for analytics master"""
     import argparse
 

@@ -12,12 +12,12 @@ import yaml
 class TestCICDPipelineTDD:
     """Test-Driven Development for CI/CD components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.github_dir = self.project_root / ".github" / "workflows"
 
-    def test_ci_workflow_structure(self):
+    def test_ci_workflow_structure(self) -> None:
         """TDD: Test CI workflow has proper structure"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -36,7 +36,7 @@ class TestCICDPipelineTDD:
         for job in required_jobs:
             assert job in workflow_data["jobs"], f"Should have {job} job"
 
-    def test_ci_workflow_triggers(self):
+    def test_ci_workflow_triggers(self) -> None:
         """TDD: Test CI workflow triggers are properly configured"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -52,7 +52,7 @@ class TestCICDPipelineTDD:
         assert "push" in triggers, "Should trigger on push"
         assert "pull_request" in triggers, "Should trigger on pull request"
 
-    def test_ci_workflow_environment(self):
+    def test_ci_workflow_environment(self) -> None:
         """TDD: Test CI workflow environment variables"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -69,7 +69,7 @@ class TestCICDPipelineTDD:
         assert "NODE_VERSION" in env_vars, "Should define Node version"
         assert env_vars["PYTHON_VERSION"] == "3.12", "Should use Python 3.12"
 
-    def test_ci_workflow_permissions(self):
+    def test_ci_workflow_permissions(self) -> None:
         """TDD: Test CI workflow has proper permissions"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -91,7 +91,7 @@ class TestCICDPipelineTDD:
         for permission in required_permissions:
             assert permission in permissions, f"Should have {permission} permission"
 
-    def test_ci_workflow_test_job(self):
+    def test_ci_workflow_test_job(self) -> None:
         """TDD: Test CI workflow test job configuration"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -115,7 +115,7 @@ class TestCICDPipelineTDD:
         ]
         assert len(poetry_steps) > 0, "Should install Poetry"
 
-    def test_ci_workflow_lint_job(self):
+    def test_ci_workflow_lint_job(self) -> None:
         """TDD: Test CI workflow lint job configuration"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -137,7 +137,7 @@ class TestCICDPipelineTDD:
             tool_steps = [step for step in steps if tool in step.get("name", "")]
             assert len(tool_steps) > 0, f"Should run {tool} linter"
 
-    def test_ci_workflow_security_job(self):
+    def test_ci_workflow_security_job(self) -> None:
         """TDD: Test CI workflow security job configuration"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -159,7 +159,7 @@ class TestCICDPipelineTDD:
             tool_steps = [step for step in steps if tool in step.get("name", "")]
             assert len(tool_steps) > 0, f"Should run {tool} security scanner"
 
-    def test_terraform_workflow(self):
+    def test_terraform_workflow(self) -> None:
         """TDD: Test Terraform workflow configuration"""
         # Arrange
         terraform_workflow_path = self.github_dir / "terraform.yml"
@@ -177,7 +177,7 @@ class TestCICDPipelineTDD:
         for job in required_jobs:
             assert job in workflow_data["jobs"], f"Should have {job} job"
 
-    def test_security_scan_workflow(self):
+    def test_security_scan_workflow(self) -> None:
         """TDD: Test security scan workflow configuration"""
         # Arrange
         security_workflow_path = self.github_dir / "security-scan.yml"
@@ -200,7 +200,7 @@ class TestCICDPipelineTDD:
         for job in required_jobs:
             assert job in workflow_data["jobs"], f"Should have {job} job"
 
-    def test_gitops_workflow(self):
+    def test_gitops_workflow(self) -> None:
         """TDD: Test GitOps workflow configuration"""
         # Arrange
         gitops_workflow_path = self.github_dir / "gitops.yml"
@@ -216,7 +216,7 @@ class TestCICDPipelineTDD:
         for job in required_jobs:
             assert job in workflow_data["jobs"], f"Should have {job} job"
 
-    def test_workflow_dependencies(self):
+    def test_workflow_dependencies(self) -> None:
         """TDD: Test workflow job dependencies"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -234,7 +234,7 @@ class TestCICDPipelineTDD:
         assert "lint" in needs, "Build should depend on lint"
         assert "security" in needs, "Build should depend on security"
 
-    def test_workflow_artifacts(self):
+    def test_workflow_artifacts(self) -> None:
         """TDD: Test workflow artifact handling"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -253,7 +253,7 @@ class TestCICDPipelineTDD:
         ]
         assert len(upload_steps) > 0, "Should have artifact upload steps"
 
-    def test_workflow_environment_specific_deployment(self):
+    def test_workflow_environment_specific_deployment(self) -> None:
         """TDD: Test environment-specific deployment workflows"""
         # Arrange
         ci_workflow_path = self.github_dir / "ci.yml"
@@ -270,7 +270,7 @@ class TestCICDPipelineTDD:
         assert "if" in deploy_staging, "Staging deployment should be conditional"
         assert "if" in deploy_production, "Production deployment should be conditional"
 
-    def test_workflow_error_handling(self):
+    def test_workflow_error_handling(self) -> None:
         """TDD: Test workflow error handling and recovery"""
         # Arrange
         gitops_workflow_path = self.github_dir / "gitops.yml"

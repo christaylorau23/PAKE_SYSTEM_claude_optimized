@@ -3,7 +3,6 @@
 Comprehensive tests for refactored services following Single Responsibility Principle
 """
 
-
 import pytest
 
 from src.services.ingestion.IngestionOrchestratorRefactored import (
@@ -24,14 +23,14 @@ from src.services.ingestion.managers.SourceExecutor import SourceExecutor
 class TestIngestionPlanBuilder:
     """Test IngestionPlanBuilder - Single Responsibility: Plan Building"""
 
-    def test_plan_builder_initialization(self):
+    def test_plan_builder_initialization(self) -> None:
         """Test plan builder initializes correctly"""
         config = PlanBuilderConfig(max_sources_per_plan=5)
         builder = IngestionPlanBuilder(config)
 
         assert builder.config.max_sources_per_plan == 5
 
-    def test_plan_building(self):
+    def test_plan_building(self) -> None:
         """Test plan building functionality"""
         builder = IngestionPlanBuilder()
 
@@ -58,7 +57,7 @@ class TestIngestionPlanBuilder:
         assert plan.estimated_total_results == 25
         assert plan.estimated_duration > 0
 
-    def test_plan_validation(self):
+    def test_plan_validation(self) -> None:
         """Test plan validation"""
         builder = IngestionPlanBuilder()
 
@@ -91,7 +90,7 @@ class TestIngestionPlanBuilder:
 class TestSourceExecutor:
     """Test SourceExecutor - Single Responsibility: Source Execution"""
 
-    def test_source_executor_initialization(self):
+    def test_source_executor_initialization(self) -> None:
         """Test source executor initializes correctly"""
         executor = SourceExecutor()
 
@@ -99,7 +98,7 @@ class TestSourceExecutor:
         assert executor.arxiv_service is not None
         assert executor.pubmed_service is not None
 
-    def test_cache_key_generation(self):
+    def test_cache_key_generation(self) -> None:
         """Test cache key generation"""
         executor = SourceExecutor()
 
@@ -117,7 +116,7 @@ class TestSourceExecutor:
 class TestIngestionOrchestratorRefactored:
     """Test IngestionOrchestratorRefactored - Single Responsibility: Orchestration"""
 
-    def test_orchestrator_initialization(self):
+    def test_orchestrator_initialization(self) -> None:
         """Test orchestrator initializes correctly"""
         config = OrchestratorConfig(max_concurrent_sources=3)
         orchestrator = IngestionOrchestratorRefactored(config)
@@ -126,7 +125,7 @@ class TestIngestionOrchestratorRefactored:
         assert orchestrator.plan_builder is not None
         assert orchestrator.source_executor is not None
 
-    def test_statistics_tracking(self):
+    def test_statistics_tracking(self) -> None:
         """Test statistics are tracked correctly"""
         orchestrator = IngestionOrchestratorRefactored()
 
@@ -135,8 +134,8 @@ class TestIngestionOrchestratorRefactored:
         assert "sources_processed" in stats
         assert "total_items_retrieved" in stats
 
-    @pytest.mark.asyncio()
-    async def test_health_check(self):
+    @pytest.mark.asyncio
+    async def test_health_check(self) -> None:
         """Test health check functionality"""
         orchestrator = IngestionOrchestratorRefactored()
 
@@ -151,7 +150,7 @@ class TestIngestionOrchestratorRefactored:
 class TestSRPCompliance:
     """Test Single Responsibility Principle compliance"""
 
-    def test_ingestion_plan_builder_srp(self):
+    def test_ingestion_plan_builder_srp(self) -> None:
         """Test IngestionPlanBuilder has single responsibility"""
         builder = IngestionPlanBuilder()
 
@@ -167,7 +166,7 @@ class TestSRPCompliance:
         assert not hasattr(builder, "cacheResult")
         assert not hasattr(builder, "handleError")
 
-    def test_source_executor_srp(self):
+    def test_source_executor_srp(self) -> None:
         """Test SourceExecutor has single responsibility"""
         executor = SourceExecutor()
 
@@ -180,7 +179,7 @@ class TestSRPCompliance:
         assert not hasattr(executor, "orchestrate_execution")
         assert not hasattr(executor, "handle_errors")
 
-    def test_orchestrator_srp(self):
+    def test_orchestrator_srp(self) -> None:
         """Test IngestionOrchestratorRefactored has single responsibility"""
         orchestrator = IngestionOrchestratorRefactored()
 

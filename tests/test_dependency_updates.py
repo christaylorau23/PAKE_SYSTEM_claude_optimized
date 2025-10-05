@@ -12,7 +12,7 @@ from pathlib import Path
 class DependencyUpdateTester:
     """Test class for dependency update functionality"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.requirements_files = [
             "requirements.txt",
@@ -156,7 +156,7 @@ class DependencyUpdateTester:
         """Check for security vulnerabilities"""
         try:
             # Simulate security check (in real implementation, use safety or similar)
-            vulnerabilities = [
+            return [
                 {
                     "package": "requests",
                     "version": "2.25.1",
@@ -166,8 +166,6 @@ class DependencyUpdateTester:
                 },
             ]
 
-            return vulnerabilities
-
         except Exception as e:
             print(f"   Error checking security vulnerabilities: {e}")
             return []
@@ -176,7 +174,7 @@ class DependencyUpdateTester:
         """Check for outdated npm packages"""
         try:
             # Simulate npm outdated check
-            outdated = [
+            return [
                 {
                     "package": "express",
                     "current": "4.17.1",
@@ -191,8 +189,6 @@ class DependencyUpdateTester:
                 },
             ]
 
-            return outdated
-
         except Exception as e:
             print(f"   Error checking npm outdated: {e}")
             return []
@@ -201,7 +197,7 @@ class DependencyUpdateTester:
         """Run npm security audit"""
         try:
             # Simulate npm audit results
-            audit_results = {
+            return {
                 "vulnerabilities": {
                     "info": 0,
                     "low": 0,
@@ -214,13 +210,11 @@ class DependencyUpdateTester:
                 "audit_found": True,
             }
 
-            return audit_results
-
         except Exception as e:
             print(f"   Error running npm audit: {e}")
             return {"error": str(e)}
 
-    async def _extract_docker_base_images(self, dockerfile_path: Path) -> list[str]:
+    async def _extract_docker_base_images(self, dockerfile_path: Path) -> List[str]:
         """Extract base images from Dockerfile"""
         try:
             with open(dockerfile_path) as f:
@@ -228,9 +222,7 @@ class DependencyUpdateTester:
 
             # Find FROM statements
             from_pattern = r"FROM\s+([^\s]+)"
-            matches = re.findall(from_pattern, content, re.IGNORECASE)
-
-            return matches
+            return re.findall(from_pattern, content, re.IGNORECASE)
 
         except Exception as e:
             print(f"   Error extracting Docker base images: {e}")
@@ -319,12 +311,12 @@ class DependencyUpdateTester:
         return report
 
 
-def test_dependency_updates():
+def test_dependency_updates(self) -> None:
     """Main test function for dependency updates"""
     return asyncio.run(_test_dependency_updates_async())
 
 
-async def _test_dependency_updates_async():
+async def _test_dependency_updates_async(self) -> None:
     """Async implementation of dependency updates test"""
     print("PAKE System - Dependency Update Tests")
     print("=" * 50)
@@ -381,12 +373,12 @@ async def _test_dependency_updates_async():
         return False
 
 
-def test_package_version_validation():
+def test_package_version_validation(self) -> None:
     """Test package version validation"""
     return asyncio.run(_test_package_version_validation_async())
 
 
-async def _test_package_version_validation_async():
+async def _test_package_version_validation_async(self) -> None:
     """Async implementation of package version validation test"""
     print("\nTesting Package Version Validation...")
 
@@ -400,12 +392,12 @@ async def _test_package_version_validation_async():
     print("   Package version validation completed")
 
 
-def test_dependency_resolution():
+def test_dependency_resolution(self) -> None:
     """Test dependency resolution conflicts"""
     return asyncio.run(_test_dependency_resolution_async())
 
 
-async def _test_dependency_resolution_async():
+async def _test_dependency_resolution_async(self) -> None:
     """Async implementation of dependency resolution test"""
     print("\nTesting Dependency Resolution...")
 
@@ -427,7 +419,7 @@ async def _test_dependency_resolution_async():
     print("   Dependency resolution testing completed")
 
 
-async def main():
+async def main(self) -> None:
     """Run all dependency update tests"""
     print("PAKE System - Comprehensive Dependency Update Testing")
     print("=" * 60)

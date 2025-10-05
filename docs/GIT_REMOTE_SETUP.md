@@ -36,4 +36,3 @@ git status              # Should show 'nothing to commit, working tree clean'
 git log --oneline -5    # Shows professional commit history
 git branch              # Shows current branch (main)
 ```
-

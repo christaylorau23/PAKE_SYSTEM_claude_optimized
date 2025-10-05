@@ -1,5 +1,5 @@
 """Configuration management for PAKE System
-Enterprise-grade configuration with Pydantic validation
+Enterprise-grade configuration with Pydantic validation.
 
 Security Features:
 - Integrates with HashiCorp Vault for secure secrets management
@@ -8,7 +8,6 @@ Security Features:
 """
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
@@ -42,7 +41,7 @@ class Settings(BaseSettings):
 
     # Security settings
     # Note: SECRET_KEY can come from Vault or environment variable
-    SECRET_KEY: Optional[str] = Field(default=None, env="SECRET_KEY")
+    SECRET_KEY: str | None = Field(default=None, env="SECRET_KEY")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
         default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES"
     )
@@ -50,21 +49,21 @@ class Settings(BaseSettings):
     ALGORITHM: str = Field(default="HS256", env="ALGORITHM")
 
     # CORS settings
-    ALLOWED_HOSTS: list[str] = Field(default=["*"], env="ALLOWED_HOSTS")
+    ALLOWED_HOSTS: List[str] = Field(default=["*"], env="ALLOWED_HOSTS")
 
     # Database settings
     # Note: DATABASE_URL can come from Vault or environment variable
-    DATABASE_URL: Optional[str] = Field(default=None, env="DATABASE_URL")
+    DATABASE_URL: str | None = Field(default=None, env="DATABASE_URL")
     DATABASE_POOL_SIZE: int = Field(default=10, env="DATABASE_POOL_SIZE")
     DATABASE_MAX_OVERFLOW: int = Field(default=20, env="DATABASE_MAX_OVERFLOW")
 
     # Redis settings
     # Note: REDIS_URL can come from Vault or environment variable
-    REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
+    REDIS_URL: str | None = Field(default=None, env="REDIS_URL")
     REDIS_POOL_SIZE: int = Field(default=10, env="REDIS_POOL_SIZE")
 
     # External API settings
-    FIRECRAWL_API_KEY: Optional[str] = Field(default=None, env="FIRECRAWL_API_KEY")
+    FIRECRAWL_API_KEY: str | None = Field(default=None, env="FIRECRAWL_API_KEY")
     ARXIV_API_URL: str = Field(
         default="http://export.arxiv.org/api/query", env="ARXIV_API_URL"
     )
@@ -86,8 +85,8 @@ class Settings(BaseSettings):
     CACHE_MAX_SIZE: int = Field(default=1000, env="CACHE_MAX_SIZE")
 
     # Vault settings
-    VAULT_URL: Optional[str] = Field(default=None, env="VAULT_URL")
-    VAULT_TOKEN: Optional[str] = Field(default=None, env="VAULT_TOKEN")
+    VAULT_URL: str | None = Field(default=None, env="VAULT_URL")
+    VAULT_TOKEN: str | None = Field(default=None, env="VAULT_TOKEN")
     VAULT_MOUNT_POINT: str = Field(default="secret", env="VAULT_MOUNT_POINT")
 
     # Performance settings
@@ -111,7 +110,7 @@ class Settings(BaseSettings):
     USE_VAULT: bool = Field(default=True, env="USE_VAULT")
 
     @model_validator(mode="after")
-    def load_secrets_from_vault(self):
+    def load_secrets_from_vault(self) -> None:
         """Load secrets from HashiCorp Vault with fail-fast security.
 
         This validator runs after field validation. It implements fail-fast security:
@@ -128,14 +127,16 @@ class Settings(BaseSettings):
         """
         # Validate environment configuration
         if self.ENVIRONMENT not in ["development", "staging", "production", "test"]:
-            raise ValueError(f"Invalid environment: {self.ENVIRONMENT}")
+            msg = f"Invalid environment: {self.ENVIRONMENT}"
+            raise ValueError(msg)
 
         # For production, Vault is mandatory
         if self.ENVIRONMENT == "production" and not self.USE_VAULT:
-            raise ValueError(
+            msg = (
                 "Vault integration is mandatory for production environment. "
                 "Set USE_VAULT=true and configure VAULT_URL and VAULT_TOKEN."
             )
+            raise ValueError(msg)
 
         # Skip Vault integration if disabled or not available
         if not self.USE_VAULT or not VAULT_AVAILABLE:
@@ -149,19 +150,21 @@ class Settings(BaseSettings):
                 missing_secrets.append("REDIS_URL")
 
             if missing_secrets:
-                raise ValueError(
+                msg = (
                     f"Required secrets missing when Vault is disabled: {', '.join(missing_secrets)}. "
                     f"Set these environment variables or enable Vault integration."
                 )
+                raise ValueError(msg)
             return self
 
         # Validate Vault configuration
         if not self.VAULT_URL or not self.VAULT_TOKEN:
-            raise ValueError(
+            msg = (
                 "Vault integration enabled but configuration incomplete. "
                 "Set VAULT_URL and VAULT_TOKEN environment variables. "
                 "This is a security requirement."
             )
+            raise ValueError(msg)
 
         # Attempt to fetch secrets from Vault with fail-fast security
         try:
@@ -170,7 +173,8 @@ class Settings(BaseSettings):
             # Validate Vault connection and required secrets
             health_check = vault_client.health_check()
             if health_check["status"] == "unhealthy":
-                raise ValueError(f"Vault connection failed: {health_check['message']}")
+                msg = f"Vault connection failed: {health_check['message']}"
+                raise ValueError(msg)
 
             if not health_check["all_secrets_available"]:
                 missing_secrets = [
@@ -178,10 +182,11 @@ class Settings(BaseSettings):
                     for path, available in health_check["secrets_validation"].items()
                     if not available
                 ]
-                raise ValueError(
+                msg = (
                     f"Required secrets missing in Vault: {', '.join(missing_secrets)}. "
                     f"Configure these secrets in Vault or set corresponding environment variables."
                 )
+                raise ValueError(msg)
 
             # Fetch SECRET_KEY from Vault if not already set
             if not self.SECRET_KEY:
@@ -201,16 +206,17 @@ class Settings(BaseSettings):
 
         except VaultClientError as e:
             # Fail-fast: Don't start if secrets can't be loaded
-            raise ValueError(
+            msg = (
                 f"Failed to load secrets from Vault: {e}. "
                 f"This is a security requirement - application cannot start without proper secrets configuration."
             )
+            raise ValueError(msg)
 
         return self
 
     @field_validator("ALLOWED_HOSTS", mode="before")
     @classmethod
-    def parse_allowed_hosts(cls, v):
+    def parse_allowed_hosts(cls) -> None:
         """Parse ALLOWED_HOSTS from string or list."""
         if isinstance(v, str):
             return [host.strip() for host in v.split(",")]
@@ -218,29 +224,32 @@ class Settings(BaseSettings):
 
     @field_validator("ENVIRONMENT")
     @classmethod
-    def validate_environment(cls, v):
+    def validate_environment(cls) -> None:
         """Validate environment setting."""
         allowed_envs = ["development", "staging", "production", "test"]
         if v not in allowed_envs:
-            raise ValueError(f"Environment must be one of: {allowed_envs}")
+            msg = f"Environment must be one of: {allowed_envs}"
+            raise ValueError(msg)
         return v
 
     @field_validator("LOG_LEVEL")
     @classmethod
-    def validate_log_level(cls, v):
+    def validate_log_level(cls) -> None:
         """Validate log level setting."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in allowed_levels:
-            raise ValueError(f"Log level must be one of: {allowed_levels}")
+            msg = f"Log level must be one of: {allowed_levels}"
+            raise ValueError(msg)
         return v.upper()
 
     @field_validator("SQL_LOG_LEVEL")
     @classmethod
-    def validate_sql_log_level(cls, v):
+    def validate_sql_log_level(cls) -> None:
         """Validate SQL log level setting."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in allowed_levels:
-            raise ValueError(f"SQL log level must be one of: {allowed_levels}")
+            msg = f"SQL log level must be one of: {allowed_levels}"
+            raise ValueError(msg)
         return v.upper()
 
     class Config:

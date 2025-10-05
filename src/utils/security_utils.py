@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Security Utilities
-Provides secure credential management and security utilities
+Provides secure credential management and security utilities.
 """
 
 import hashlib
@@ -9,7 +9,7 @@ import os
 import secrets
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from src.utils.exceptions import (
     ConfigurationException,
@@ -18,7 +18,7 @@ from src.utils.exceptions import (
 
 
 class SecurityLevel(Enum):
-    """Security level classification"""
+    """Security level classification."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -28,7 +28,7 @@ class SecurityLevel(Enum):
 
 @dataclass
 class SecretConfig:
-    """Configuration for secret management"""
+    """Configuration for secret management."""
 
     environment: str = "development"
     require_secure_secrets: bool = True
@@ -38,12 +38,12 @@ class SecretConfig:
 
 
 class SecureCredentialManager:
-    """Secure credential management utility
+    """Secure credential management utility.
 
     Provides safe handling of secrets, API keys, and sensitive configuration
     """
 
-    def __init__(self, config: SecretConfig | None = None):
+    def __init__(self) -> None:
         self.config = config or SecretConfig()
         self.logger = logging.getLogger(__name__)
         self._credentials_cache: dict[str, str] = {}
@@ -55,7 +55,7 @@ class SecureCredentialManager:
         required: bool = True,
         min_length: int | None = None,
     ) -> str | None:
-        """Safely retrieve a secret from environment variables
+        """Safely retrieve a secret from environment variables.
 
         Args:
             key: Environment variable name
@@ -77,8 +77,9 @@ class SecureCredentialManager:
         value = os.getenv(key, default)
 
         if value is None and required:
+            msg = f"Required secret '{key}' not found in environment variables"
             raise ConfigurationException(
-                f"Required secret '{key}' not found in environment variables",
+                msg,
                 context={"key": key, "required": required},
             )
 
@@ -90,7 +91,7 @@ class SecureCredentialManager:
             self._credentials_cache[key] = value
 
             if self.config.audit_secret_access:
-                self.logger.info(f"Secret accessed: {key}", extra={"secret_key": key})
+                self.logger.info("Secret accessed: %s", key, extra={"secret_key": key})
 
         return value
 
@@ -100,7 +101,7 @@ class SecureCredentialManager:
         value: str,
         min_length: int | None = None,
     ) -> None:
-        """Validate secret meets security requirements"""
+        """Validate secret meets security requirements."""
         min_len = min_length or self.config.min_secret_length
 
         # Check if it's a placeholder or development key
@@ -120,8 +121,9 @@ class SecureCredentialManager:
         for pattern in dangerous_patterns:
             if pattern in value_lower:
                 if self.config.environment == "production":
+                    msg = f"Insecure secret detected for '{key}': contains '{pattern}'"
                     raise SecurityException(
-                        f"Insecure secret detected for '{key}': contains '{pattern}'",
+                        msg,
                         context={
                             "key": key,
                             "pattern": pattern,
@@ -129,22 +131,27 @@ class SecureCredentialManager:
                         },
                     )
                 self.logger.warning(
-                    f"Development secret detected for '{key}': contains '{pattern}'",
+                    "Development secret detected for '%s': contains '%s'",
+                    key,
+                    pattern,
                 )
 
         # Check minimum length
         if len(value) < min_len:
             if self.config.require_secure_secrets:
+                msg = f"Secret '{key}' is too short: {len(value)} < {min_len}"
                 raise SecurityException(
-                    f"Secret '{key}' is too short: {len(value)} < {min_len}",
+                    msg,
                     context={"key": key, "length": len(value), "min_length": min_len},
                 )
             self.logger.warning(
-                f"Short secret detected for '{key}': {len(value)} characters",
+                "Short secret detected for '%s': %s characters",
+                key,
+                len(value),
             )
 
     def generate_secure_secret(self, length: int = 64, url_safe: bool = True) -> str:
-        """Generate a cryptographically secure secret
+        """Generate a cryptographically secure secret.
 
         Args:
             length: Length of the secret
@@ -158,19 +165,21 @@ class SecureCredentialManager:
         return secrets.token_hex(length)
 
     def get_jwt_secret(self, key: str = "JWT_SECRET_KEY") -> str:
-        """Get JWT secret with appropriate validation"""
+        """Get JWT secret with appropriate validation."""
         secret = self.get_secret(key, min_length=64)
         if secret is None:
             if self.config.environment == "production":
+                msg = f"JWT secret '{key}' is required in production"
                 raise SecurityException(
-                    f"JWT secret '{key}' is required in production",
+                    msg,
                     context={"key": key, "environment": self.config.environment},
                 )
             # Generate a development secret
             secret = self.generate_secure_secret(64)
             self.logger.warning(
-                f"Generated temporary JWT secret for development. "
-                f"Set {key} environment variable for production.",
+                "Generated temporary JWT secret for development. "
+                "Set %s environment variable for production.",
+                key,
             )
 
         return secret
@@ -179,9 +188,9 @@ class SecureCredentialManager:
         self,
         service_name: str,
         key: str | None = None,
-            allow_test_keys: Optional[bool] = None,
+        allow_test_keys: bool | None = None,
     ) -> str:
-        """Get API key for external service
+        """Get API key for external service.
 
         Args:
             service_name: Name of the service
@@ -206,8 +215,9 @@ class SecureCredentialManager:
         if not allow_test_keys and api_key:
             test_patterns = ["test", "dev", "mock", "fake", "sample"]
             if any(pattern in api_key.lower() for pattern in test_patterns):
+                msg = f"Test API key detected for {service_name} in production"
                 raise SecurityException(
-                    f"Test API key detected for {service_name} in production",
+                    msg,
                     context={
                         "service": service_name,
                         "key": key,
@@ -218,7 +228,7 @@ class SecureCredentialManager:
         return api_key or ""
 
     def get_database_credentials(self, prefix: str = "DB") -> dict[str, str]:
-        """Get database credentials safely"""
+        """Get database credentials safely."""
         credentials = {}
 
         for field in ["HOST", "PORT", "NAME", "USER", "PASSWORD"]:
@@ -235,10 +245,10 @@ class SecureCredentialManager:
 
     def mask_sensitive_data(
         self,
-        data: dict[str, Any],
-        sensitive_keys: list[str] | None = None,
-    ) -> dict[str, Any]:
-        """Mask sensitive data for logging
+        data: Dict[str, Any],
+        sensitive_keys: List[str] | None = None,
+    ) -> Dict[str, Any]:
+        """Mask sensitive data for logging.
 
         Args:
             data: Data dictionary
@@ -277,12 +287,12 @@ class SecureCredentialManager:
         return masked_data
 
     def clear_credentials_cache(self) -> None:
-        """Clear the credentials cache"""
+        """Clear the credentials cache."""
         self._credentials_cache.clear()
         self.logger.info("Credentials cache cleared")
 
-    def audit_secrets_usage(self) -> dict[str, Any]:
-        """Get audit information about secrets usage"""
+    def audit_secrets_usage(self) -> Dict[str, Any]:
+        """Get audit information about secrets usage."""
         return {
             "cached_secrets": list(self._credentials_cache.keys()),
             "cache_size": len(self._credentials_cache),
@@ -296,11 +306,11 @@ class SecureCredentialManager:
 
 
 class PasswordHasher:
-    """Secure REDACTED_SECRET hashing utility"""
+    """Secure REDACTED_SECRET hashing utility."""
 
     @staticmethod
     def hash_REDACTED_SECRET(REDACTED_SECRET: str, salt: str | None = None) -> str:
-        """Hash REDACTED_SECRET with salt"""
+        """Hash REDACTED_SECRET with salt."""
         if salt is None:
             salt = secrets.token_hex(32)
 
@@ -316,7 +326,7 @@ class PasswordHasher:
 
     @staticmethod
     def verify_REDACTED_SECRET(REDACTED_SECRET: str, hashed: str) -> bool:
-        """Verify REDACTED_SECRET against hash"""
+        """Verify REDACTED_SECRET against hash."""
         try:
             algorithm, salt, hash_value = hashed.split("$")
             if algorithm != "pbkdf2_sha256":
@@ -341,7 +351,7 @@ _credential_manager: SecureCredentialManager | None = None
 def get_credential_manager(
     config: SecretConfig | None = None,
 ) -> SecureCredentialManager:
-    """Get the global credential manager instance"""
+    """Get the global credential manager instance."""
     global _credential_manager
     if _credential_manager is None:
         _credential_manager = SecureCredentialManager(config)
@@ -354,7 +364,7 @@ def get_secure_secret(
     required: bool = True,
     min_length: int | None = None,
 ) -> str | None:
-    """Convenience function to get a secure secret"""
+    """Convenience function to get a secure secret."""
     manager = get_credential_manager()
     return manager.get_secret(key, default, required, min_length)
 
@@ -362,31 +372,31 @@ def get_secure_secret(
 def get_secure_api_key(
     service_name: str,
     key: str | None = None,
-    allow_test_keys: Optional[bool] = None,
+    allow_test_keys: bool | None = None,
 ) -> str:
-    """Convenience function to get a secure API key"""
+    """Convenience function to get a secure API key."""
     manager = get_credential_manager()
     return manager.get_api_key(service_name, key, allow_test_keys)
 
 
 def generate_secure_token(length: int = 64) -> str:
-    """Generate a secure token"""
+    """Generate a secure token."""
     manager = get_credential_manager()
     return manager.generate_secure_secret(length)
 
 
 def mask_sensitive_dict(
-    data: dict[str, Any],
-    sensitive_keys: list[str] | None = None,
-) -> dict[str, Any]:
-    """Mask sensitive data in a dictionary"""
+    data: Dict[str, Any],
+    sensitive_keys: List[str] | None = None,
+) -> Dict[str, Any]:
+    """Mask sensitive data in a dictionary."""
     manager = get_credential_manager()
     return manager.mask_sensitive_data(data, sensitive_keys)
 
 
 # Security validation functions
-def validate_environment_security() -> list[str]:
-    """Validate the security configuration of the environment
+def validate_environment_security() -> List[str]:
+    """Validate the security configuration of the environment.
 
     Returns:
         List of security warnings/issues
@@ -407,7 +417,7 @@ def validate_environment_security() -> list[str]:
 
 
 def create_security_headers() -> dict[str, str]:
-    """Create security headers for HTTP responses"""
+    """Create security headers for HTTP responses."""
     return {
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",

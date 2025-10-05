@@ -22,7 +22,7 @@ import asyncio
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class MigrationRunner:
     """Handles database migrations for the curation system."""
 
-    def __init__(self, connection_config: dict[str, Any]):
+    def __init__(self) -> None:
         self.connection_config = connection_config
         self.migrations_dir = Path(__file__).parent / "migrations"
         self.migration_files = [
@@ -75,7 +75,7 @@ class MigrationRunner:
             logger.info("Successfully connected to database")
             return conn
         except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
+            logger.error("Failed to connect to database: %s", e)
             raise
 
     async def create_migration_table(self, conn: asyncpg.Connection) -> None:
@@ -97,10 +97,10 @@ class MigrationRunner:
             await conn.execute(create_table_sql)
             logger.info("Migration tracking table ready")
         except Exception as e:
-            logger.error(f"Failed to create migration table: {e}")
+            logger.error("Failed to create migration table: %s", e)
             raise
 
-    async def get_applied_migrations(self, conn: asyncpg.Connection) -> list[str]:
+    async def get_applied_migrations(self, conn: asyncpg.Connection) -> List[str]:
         """Get list of already applied migrations."""
         try:
             rows = await conn.fetch(
@@ -108,7 +108,7 @@ class MigrationRunner:
             )
             return [row["filename"] for row in rows]
         except Exception as e:
-            logger.error(f"Failed to fetch applied migrations: {e}")
+            logger.error("Failed to fetch applied migrations: %s", e)
             return []
 
     def calculate_checksum(self, content: str) -> str:
@@ -127,7 +127,7 @@ class MigrationRunner:
         migration_file = self.migrations_dir / filename
 
         if not migration_file.exists():
-            logger.error(f"Migration file not found: {migration_file}")
+            logger.error("Migration file not found: %s", migration_file)
             return False
 
         try:
@@ -137,12 +137,12 @@ class MigrationRunner:
             checksum = self.calculate_checksum(content)
 
             if dry_run:
-                logger.info(f"DRY RUN: Would execute migration {filename}")
-                logger.info(f"Content preview: {content[:200]}...")
+                logger.info("DRY RUN: Would execute migration %s", filename)
+                logger.info("Content preview: %s...", content[:200])
                 return True
 
-            logger.info(f"Executing migration: {filename}")
-            start_time = datetime.now()
+            logger.info("Executing migration: %s", filename)
+            start_time = datetime.now(UTC)
 
             # Execute migration within a transaction
             async with conn.transaction():
@@ -150,7 +150,7 @@ class MigrationRunner:
 
                 # Record migration as applied
                 execution_time = int(
-                    (datetime.now() - start_time).total_seconds() * 1000,
+                    (datetime.now(UTC) - start_time).total_seconds() * 1000,
                 )
                 await conn.execute(
                     """
@@ -163,12 +163,14 @@ class MigrationRunner:
                 )
 
             logger.info(
-                f"Successfully executed migration {filename} in {execution_time}ms",
+                "Successfully executed migration %s in %sms",
+                filename,
+                execution_time,
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to execute migration {filename}: {e}")
+            logger.error("Failed to execute migration %s: %s", filename, e)
             return False
 
     async def run_migrations(self, dry_run: bool = False) -> bool:
@@ -193,7 +195,7 @@ class MigrationRunner:
                 logger.info("No pending migrations found")
                 return True
 
-            logger.info(f"Found {len(pending_migrations)} pending migrations")
+            logger.info("Found %s pending migrations", len(pending_migrations))
 
             success = True
             for filename in pending_migrations:
@@ -214,7 +216,7 @@ class MigrationRunner:
             return success
 
         except Exception as e:
-            logger.error(f"Migration process failed: {e}")
+            logger.error("Migration process failed: %s", e)
             return False
 
     async def rollback_migration(self, filename: str) -> bool:
@@ -222,7 +224,7 @@ class MigrationRunner:
         rollback_file = self.migrations_dir / f"rollback_{filename}"
 
         if not rollback_file.exists():
-            logger.error(f"No rollback script found for {filename}")
+            logger.error("No rollback script found for %s", filename)
             return False
 
         try:
@@ -231,7 +233,7 @@ class MigrationRunner:
             with open(rollback_file) as f:
                 content = f.read()
 
-            logger.info(f"Rolling back migration: {filename}")
+            logger.info("Rolling back migration: %s", filename)
 
             async with conn.transaction():
                 await conn.execute(content)
@@ -244,14 +246,14 @@ class MigrationRunner:
 
             await conn.close()
 
-            logger.info(f"Successfully rolled back migration {filename}")
+            logger.info("Successfully rolled back migration %s", filename)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to rollback migration {filename}: {e}")
+            logger.error("Failed to rollback migration %s: %s", filename, e)
             return False
 
-    async def get_migration_status(self) -> dict[str, Any]:
+    async def get_migration_status(self) -> Dict[str, Any]:
         """Get current migration status."""
         try:
             conn = await self.create_connection()
@@ -290,11 +292,11 @@ class MigrationRunner:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get migration status: {e}")
+            logger.error("Failed to get migration status: %s", e)
             return {"error": str(e)}
 
 
-def get_database_config() -> dict[str, Any]:
+def get_database_config() -> Dict[str, Any]:
     """Get database connection configuration from environment variables."""
     # Check for full database URL first
     database_url = os.getenv("DATABASE_URL")
@@ -312,13 +314,15 @@ def get_database_config() -> dict[str, Any]:
 
     if not config["REDACTED_SECRET"]:
         # Try to get from existing PAKE configuration
-        config["REDACTED_SECRET"] = os.getenv("POSTGRES_PASSWORD", "pake_REDACTED_SECRET")
+        config["REDACTED_SECRET"] = os.getenv(
+            "POSTGRES_PASSWORD", "pake_REDACTED_SECRET"
+        )
         config["database"] = os.getenv("POSTGRES_DB", "pake_system")
 
     return config
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point for the migration runner."""
     parser = argparse.ArgumentParser(description="Run curation database migrations")
     parser.add_argument(
@@ -356,7 +360,7 @@ async def main():
         if args.status:
             status = await runner.get_migration_status()
             if "error" in status:
-                logger.error(f"Failed to get status: {status['error']}")
+                logger.error("Failed to get status: %s", status["error"])
                 sys.exit(1)
 
             print("\n=== Migration Status ===")
@@ -390,7 +394,7 @@ async def main():
         logger.info("Migration process interrupted by user")
         sys.exit(1)
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error("Unexpected error: %s", e)
         sys.exit(1)
 
 

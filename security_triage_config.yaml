@@ -1,0 +1,179 @@
+# PAKE System Security Triage Configuration
+
+priorities:
+  critical:
+    priority: "P0"
+    sla_hours: 4
+    auto_assign: true
+    notification_channels:
+      - "slack"
+      - "email"
+      - "sms"
+
+  high:
+    priority: "P1"
+    sla_hours: 24
+    auto_assign: true
+    notification_channels:
+      - "slack"
+      - "email"
+
+  medium:
+    priority: "P2"
+    sla_hours: 168  # 1 week
+    auto_assign: false
+    notification_channels:
+      - "slack"
+
+  low:
+    priority: "P3"
+    sla_hours: 720  # 1 month
+    auto_assign: false
+    notification_channels: []
+
+  informational:
+    priority: "P4"
+    sla_hours: 0
+    auto_assign: false
+    notification_channels: []
+
+assignments:
+  default_assignee: "security-team"
+  escalation_rules:
+    overdue_hours: 24
+    escalation_chain:
+      - "security-team"
+      - "security-lead"
+      - "cto"
+
+  team_members:
+    security-team:
+      - "security-engineer-1"
+      - "security-engineer-2"
+    frontend-team:
+      - "frontend-dev-1"
+      - "frontend-dev-2"
+    backend-team:
+      - "backend-dev-1"
+      - "backend-dev-2"
+    devops-team:
+      - "devops-engineer-1"
+      - "devops-engineer-2"
+
+notifications:
+  slack:
+    enabled: true
+    webhook_url: null  # Set via environment variable
+    channels:
+      - "#security-alerts"
+      - "#dev-team"
+      - "#incident-response"
+
+  email:
+    enabled: true
+    smtp_server: null  # Set via environment variable
+    recipients:
+      - "security-team@company.com"
+      - "dev-team@company.com"
+
+  sms:
+    enabled: false
+    provider: null  # Set via environment variable
+    recipients: []
+
+workflow:
+  auto_triage: true
+  auto_assignment: true
+  escalation_enabled: true
+  sla_tracking: true
+
+  rules:
+    auto_triage_critical:
+      enabled: true
+      conditions:
+        severity: "critical"
+        workflow_stage: "discovery"
+      actions:
+        - type: "set_priority"
+          value: "P0"
+        - type: "set_status"
+          value: "assigned"
+        - type: "auto_assign"
+        - type: "notify"
+          channels: ["slack", "email"]
+
+    auto_triage_high:
+      enabled: true
+      conditions:
+        severity: "high"
+        workflow_stage: "discovery"
+      actions:
+        - type: "set_priority"
+          value: "P1"
+        - type: "set_status"
+          value: "assigned"
+        - type: "auto_assign"
+        - type: "notify"
+          channels: ["slack"]
+
+    escalation_overdue:
+      enabled: true
+      conditions:
+        status: ["assigned", "in_progress"]
+        overdue: true
+      actions:
+        - type: "escalate"
+        - type: "notify"
+          channels: ["slack", "email"]
+        - type: "update_priority"
+          value: "increase"
+
+    auto_close_false_positive:
+      enabled: true
+      conditions:
+        status: "false_positive"
+        workflow_stage: "triage"
+      actions:
+        - type: "set_status"
+          value: "resolved"
+        - type: "set_workflow_stage"
+          value: "closure"
+        - type: "add_note"
+          value: "Automatically closed as false positive"
+
+reporting:
+  metrics_enabled: true
+  dashboard_url: null  # Set via environment variable
+  report_formats:
+    - "json"
+    - "html"
+    - "pdf"
+
+  kpis:
+    - "total_findings"
+    - "open_findings"
+    - "resolved_findings"
+    - "sla_compliance_rate"
+    - "false_positive_rate"
+    - "avg_remediation_time"
+
+  schedules:
+    daily_summary: "09:00"
+    weekly_report: "monday 09:00"
+    monthly_report: "1st 09:00"
+
+compliance:
+  frameworks:
+    - "OWASP Top 10"
+    - "NIST Cybersecurity Framework"
+    - "ISO 27001"
+
+  audit_trail:
+    enabled: true
+    retention_days: 2555  # 7 years
+
+  reporting:
+    enabled: true
+    recipients:
+      - "compliance-team@company.com"
+      - "audit-team@company.com"

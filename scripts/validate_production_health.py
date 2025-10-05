@@ -17,7 +17,7 @@ import httpx
 class ProductionHealthValidator:
     """Production health validation for PAKE System"""
 
-    def __init__(self, base_url: str = "https://pake-system.com"):
+    def __init__(self) -> None:
         self.base_url = base_url.rstrip("/")
         self.results = {
             "timestamp": time.time(),
@@ -26,7 +26,7 @@ class ProductionHealthValidator:
             "summary": {"total": 0, "passed": 0, "failed": 0, "critical_failures": 0},
         }
 
-    async def run_check(self, check_name: str, check_func) -> dict[str, Any]:
+    async def run_check(self, check_name: str, check_func) -> Dict[str, Any]:
         """Run a single health check"""
         print(f"🔍 Running health check: {check_name}")
 
@@ -65,7 +65,7 @@ class ProductionHealthValidator:
 
         self.results["summary"]["total"] += 1
 
-    async def check_basic_health(self) -> dict[str, Any]:
+    async def check_basic_health(self) -> Dict[str, Any]:
         """Check basic health endpoints"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             health_endpoints = ["/health", "/auth/generate-password", "/api/v1/status"]
@@ -87,7 +87,7 @@ class ProductionHealthValidator:
                 else "All health endpoints responding",
             }
 
-    async def check_ssl_certificate(self) -> dict[str, Any]:
+    async def check_ssl_certificate(self) -> Dict[str, Any]:
         """Check SSL certificate validity"""
         try:
             import socket
@@ -111,7 +111,7 @@ class ProductionHealthValidator:
                     not_after = datetime.datetime.strptime(
                         cert["notAfter"], "%b %d %H:%M:%S %Y %Z"
                     )
-                    days_until_expiry = (not_after - datetime.datetime.now()).days
+                    days_until_expiry = (not_after - datetime.now(UTC)).days
 
                     ssl_valid = days_until_expiry > 30  # More than 30 days remaining
 
@@ -127,7 +127,7 @@ class ProductionHealthValidator:
                 "details": f"SSL certificate check failed: {str(e)}",
             }
 
-    async def check_response_times(self) -> dict[str, Any]:
+    async def check_response_times(self) -> Dict[str, Any]:
         """Check response times are within acceptable limits"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             endpoints = ["/health", "/auth/generate-password", "/api/v1/data"]
@@ -152,7 +152,7 @@ class ProductionHealthValidator:
                 else "All endpoints responding quickly",
             }
 
-    async def check_database_connectivity(self) -> dict[str, Any]:
+    async def check_database_connectivity(self) -> Dict[str, Any]:
         """Check database connectivity"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
@@ -177,7 +177,7 @@ class ProductionHealthValidator:
                     "details": f"Database connectivity check failed: {str(e)}",
                 }
 
-    async def check_cache_system(self) -> dict[str, Any]:
+    async def check_cache_system(self) -> Dict[str, Any]:
         """Check cache system functionality"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
@@ -200,7 +200,7 @@ class ProductionHealthValidator:
                     "details": f"Cache system check failed: {str(e)}",
                 }
 
-    async def check_security_headers(self) -> dict[str, Any]:
+    async def check_security_headers(self) -> Dict[str, Any]:
         """Check security headers are present"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
@@ -229,7 +229,7 @@ class ProductionHealthValidator:
                     "details": f"Security headers check failed: {str(e)}",
                 }
 
-    async def run_all_checks(self):
+    async def run_all_checks(self) -> None:
         """Run all health checks"""
         print("🔍 Starting PAKE System Production Health Validation")
         print(f"Target URL: {self.base_url}")
@@ -258,21 +258,20 @@ class ProductionHealthValidator:
         if self.results["summary"]["critical_failures"] > 0:
             print("❌ CRITICAL HEALTH ISSUES FOUND!")
             return False
-        elif self.results["summary"]["failed"] > 0:
+        if self.results["summary"]["failed"] > 0:
             print("⚠️ Some health issues found, but none critical")
             return True
-        else:
-            print("✅ All health checks passed!")
-            return True
+        print("✅ All health checks passed!")
+        return True
 
-    def save_report(self, filename: str = "production_health_report.json"):
+    def save_report(self) -> None:
         """Save validation results to file"""
         with open(filename, "w") as f:
             json.dump(self.results, f, indent=2)
         print(f"📄 Production health report saved to {filename}")
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="PAKE System Production Health Validator"

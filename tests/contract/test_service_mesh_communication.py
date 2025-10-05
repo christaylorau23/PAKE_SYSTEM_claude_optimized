@@ -19,8 +19,8 @@ import pytest
 class TestServiceMeshCommunicationContract:
     """Contract tests for Service Mesh inter-service communication"""
 
-    @pytest.fixture()
-    def service_mesh_config(self) -> dict[str, Any]:
+    @pytest.fixture
+    def service_mesh_config(self) -> Dict[str, Any]:
         """Service mesh configuration for testing"""
         return {
             "services": {
@@ -48,16 +48,14 @@ class TestServiceMeshCommunicationContract:
             },
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         """HTTP client for service mesh testing"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_service_discovery_registration(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_discovery_registration(self) -> None:
         """
         Test that services can register with service mesh
 
@@ -81,17 +79,20 @@ class TestServiceMeshCommunicationContract:
                 )
 
                 # Service should be reachable via service mesh
-                assert response.status_code in [
-                    200,
-                    503,
-                ], f"Service {service_name} not reachable via service mesh: {response.status_code}"
+                assert (
+                    response.status_code
+                    in [
+                        200,
+                        503,
+                    ]
+                ), f"Service {service_name} not reachable via service mesh: {response.status_code}"
 
             except (httpx.ConnectError, httpx.TimeoutException):
                 # Expected to fail until service mesh is implemented
                 pytest.fail(f"Service {service_name} not registered in service mesh")
 
-    @pytest.mark.asyncio()
-    async def test_mtls_communication(self, service_mesh_config: dict[str, Any]):
+    @pytest.mark.asyncio
+    async def test_mtls_communication(self) -> None:
         """
         Test that inter-service communication uses mTLS
 
@@ -125,10 +126,8 @@ class TestServiceMeshCommunicationContract:
             # Expected to fail until mTLS is properly configured
             pytest.fail("mTLS not properly configured in service mesh")
 
-    @pytest.mark.asyncio()
-    async def test_circuit_breaker_pattern(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_pattern(self) -> None:
         """
         Test that circuit breaker pattern is implemented
 
@@ -173,10 +172,8 @@ class TestServiceMeshCommunicationContract:
             circuit_breaker_activated
         ), "Circuit breaker pattern not implemented in service mesh"
 
-    @pytest.mark.asyncio()
-    async def test_retry_policy_implementation(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_retry_policy_implementation(self) -> None:
         """
         Test that retry policy is implemented for failed requests
 
@@ -221,10 +218,8 @@ class TestServiceMeshCommunicationContract:
                 request_duration >= 10.0
             ), "Request timed out too quickly - retries not implemented"
 
-    @pytest.mark.asyncio()
-    async def test_load_balancing_across_instances(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_load_balancing_across_instances(self) -> None:
         """
         Test that load balancing distributes requests across service instances
 
@@ -271,10 +266,8 @@ class TestServiceMeshCommunicationContract:
                 "Multiple service instances not available for load balancing test"
             )
 
-    @pytest.mark.asyncio()
-    async def test_service_mesh_observability(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_mesh_observability(self) -> None:
         """
         Test that service mesh provides observability features
 
@@ -322,10 +315,8 @@ class TestServiceMeshCommunicationContract:
             # Expected until service mesh is implemented
             pytest.fail("Service mesh observability not implemented")
 
-    @pytest.mark.asyncio()
-    async def test_traffic_policies_enforcement(
-        self, service_mesh_config: dict[str, Any], http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_traffic_policies_enforcement(self) -> None:
         """
         Test that traffic policies are enforced by service mesh
 
@@ -392,8 +383,8 @@ class TestServiceMeshCommunicationContract:
 class TestServiceMeshPerformance:
     """Performance contract tests for service mesh communication"""
 
-    @pytest.mark.asyncio()
-    async def test_service_mesh_latency_overhead(self):
+    @pytest.mark.asyncio
+    async def test_service_mesh_latency_overhead(self) -> None:
         """
         Test that service mesh adds minimal latency overhead
 
@@ -428,9 +419,7 @@ class TestServiceMeshPerformance:
             p95_index = int(0.95 * len(latencies))
             p95_latency = latencies[p95_index]
 
-            assert (
-                p95_latency < 50
-            ), (  # Relaxed for initial testing
+            assert p95_latency < 50, (  # Relaxed for initial testing
                 f"Service mesh P95 latency {p95_latency:.2f}ms exceeds 50ms target"
             )
         else:

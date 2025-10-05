@@ -1,4 +1,4 @@
-"""RecommendationService
+"""RecommendationService.
 
 Advanced ML-powered recommendation system that provides personalized content recommendations
 based on user preferences, interaction history, content analysis, and collaborative filtering.
@@ -9,7 +9,7 @@ import asyncio
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class RecommendationStrategy(str, Enum):
-    """Different recommendation strategies"""
+    """Different recommendation strategies."""
 
     CONTENT_BASED = "content_based"  # Based on content similarity
     COLLABORATIVE = "collaborative"  # Based on user similarity
@@ -41,7 +41,7 @@ class RecommendationStrategy(str, Enum):
 
 @dataclass(frozen=True)
 class RecommendationRequest:
-    """Request for content recommendations"""
+    """Request for content recommendations."""
 
     user_profile: UserProfile
     num_recommendations: int = 10
@@ -50,12 +50,12 @@ class RecommendationRequest:
     include_explanation: bool = True
     diversity_factor: float = 0.2  # 0.0 = pure relevance, 1.0 = maximum diversity
     recency_bias: float = 0.1  # How much to favor recent content
-    categories: list[str] | None = None  # Specific categories to focus on
+    categories: List[str] | None = None  # Specific categories to focus on
 
 
 @dataclass(frozen=True)
 class ScoredContent:
-    """Content item with recommendation score and explanation"""
+    """Content item with recommendation score and explanation."""
 
     content_item: ContentItem
     relevance_score: float
@@ -67,7 +67,7 @@ class ScoredContent:
 
 @dataclass(frozen=True)
 class RecommendationResult:
-    """Complete recommendation result"""
+    """Complete recommendation result."""
 
     user_id: str
     recommendations: list[Recommendation]
@@ -75,7 +75,7 @@ class RecommendationResult:
     total_candidates: int
     processing_time_ms: float
     explanation: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class RecommendationService:
@@ -85,12 +85,7 @@ class RecommendationService:
     collaborative filtering, and hybrid approaches with real-time learning.
     """
 
-    def __init__(
-        self,
-        enable_collaborative: bool = True,
-        enable_diversity: bool = True,
-        min_interactions_for_cf: int = 5,
-    ):
+    def __init__(self) -> None:
         """Initialize recommendation service.
 
         Args:
@@ -143,7 +138,7 @@ class RecommendationService:
         Returns:
             Complete recommendation result with explanations
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         try:
             # Filter content based on request parameters
@@ -202,7 +197,7 @@ class RecommendationService:
                 request.include_explanation,
             )
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             result = RecommendationResult(
                 user_id=str(request.user_profile.user_id),
@@ -223,15 +218,15 @@ class RecommendationService:
             )
 
             logger.info(
-                f"Generated {len(recommendations)} recommendations for user {
-                    request.user_profile.user_id
-                }",
+                "Generated %s recommendations for user %s",
+                len(recommendations),
+                request.user_profile.user_id,
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error generating recommendations: {str(e)}")
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            logger.error("Error generating recommendations: %s", str(e))
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return self._create_error_result(request, processing_time)
 
     async def _filter_candidates(
@@ -240,7 +235,7 @@ class RecommendationService:
         request: RecommendationRequest,
         user_interactions: list[UserInteraction],
     ) -> list[ContentItem]:
-        """Filter content to create candidate pool"""
+        """Filter content to create candidate pool."""
         # Get content IDs the user has already interacted with
         seen_content_ids = set()
         if request.exclude_seen:
@@ -278,7 +273,7 @@ class RecommendationService:
         candidates: list[ContentItem],
         user_interactions: list[UserInteraction],
     ) -> list[ScoredContent]:
-        """Generate content-based recommendations using similarity"""
+        """Generate content-based recommendations using similarity."""
         # Build user preference profile from interactions
         user_preference_vector = await self._build_user_preference_vector(
             request.user_profile,
@@ -345,7 +340,7 @@ class RecommendationService:
         user_interactions: list[UserInteraction],
         all_user_interactions: list[UserInteraction] | None,
     ) -> list[ScoredContent]:
-        """Generate collaborative filtering recommendations"""
+        """Generate collaborative filtering recommendations."""
         if (
             not all_user_interactions
             or len(user_interactions) < self.min_interactions_for_cf
@@ -431,7 +426,7 @@ class RecommendationService:
         request: RecommendationRequest,
         candidates: list[ContentItem],
     ) -> list[ScoredContent]:
-        """Generate trending/popular content recommendations"""
+        """Generate trending/popular content recommendations."""
         scored_items = []
 
         for content in candidates:
@@ -494,7 +489,7 @@ class RecommendationService:
         candidates: list[ContentItem],
         user_interactions: list[UserInteraction],
     ) -> list[ScoredContent]:
-        """Generate diverse content recommendations to encourage exploration"""
+        """Generate diverse content recommendations to encourage exploration."""
         # First get content-based recommendations as baseline
         content_based = await self._content_based_recommendations(
             request,
@@ -565,7 +560,7 @@ class RecommendationService:
         user_interactions: list[UserInteraction],
         all_user_interactions: list[UserInteraction] | None,
     ) -> list[ScoredContent]:
-        """Generate hybrid recommendations combining multiple strategies"""
+        """Generate hybrid recommendations combining multiple strategies."""
         # Get recommendations from different strategies
         strategies_results = await asyncio.gather(
             self._content_based_recommendations(request, candidates, user_interactions),
@@ -685,7 +680,7 @@ class RecommendationService:
         scored_content: list[ScoredContent],
         diversity_factor: float,
     ) -> list[ScoredContent]:
-        """Apply diversity re-ranking to recommendations"""
+        """Apply diversity re-ranking to recommendations."""
         if not scored_content or diversity_factor <= 0:
             return scored_content
 
@@ -763,7 +758,7 @@ class RecommendationService:
         user_interactions: list[UserInteraction],
         available_content: list[ContentItem],
     ) -> np.ndarray | None:
-        """Build user preference vector from profile and interactions"""
+        """Build user preference vector from profile and interactions."""
         # Start with profile preference vector if available
         if (
             user_profile.preference_vector
@@ -790,7 +785,7 @@ class RecommendationService:
                 interaction_weight = interaction.get_weighted_value()
 
                 # Apply recency decay (interactions lose weight over time)
-                days_old = (datetime.now() - interaction.timestamp).days
+                days_old = (datetime.now(UTC) - interaction.timestamp).days
                 recency_weight = math.exp(-days_old / 30.0)  # 30-day half-life
 
                 final_weight = interaction_weight * recency_weight
@@ -825,7 +820,7 @@ class RecommendationService:
         all_interactions: list[UserInteraction],
         available_content: list[ContentItem],
     ) -> dict[str, dict[str, float]] | None:
-        """Build user-item interaction matrix for collaborative filtering"""
+        """Build user-item interaction matrix for collaborative filtering."""
         if not all_interactions:
             return None
 
@@ -845,7 +840,7 @@ class RecommendationService:
 
             # Calculate rating based on interaction type and recency
             rating = interaction.get_weighted_value()
-            days_old = (datetime.now() - interaction.timestamp).days
+            days_old = (datetime.now(UTC) - interaction.timestamp).days
             # 60-day half-life for collaborative
             recency_weight = math.exp(-days_old / 60.0)
 
@@ -867,7 +862,7 @@ class RecommendationService:
         user_id: str,
         user_item_matrix: dict[str, dict[str, float]],
     ) -> list[tuple[str, float]]:
-        """Find users similar to the target user"""
+        """Find users similar to the target user."""
         if user_id not in user_item_matrix:
             return []
 
@@ -906,7 +901,7 @@ class RecommendationService:
         self,
         content_item: ContentItem,
     ) -> ContentEmbedding | None:
-        """Get or generate content embedding"""
+        """Get or generate content embedding."""
         if (
             content_item.content_embedding
             and len(content_item.content_embedding.vector) > 0
@@ -918,7 +913,7 @@ class RecommendationService:
         return None
 
     def _calculate_cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
-        """Calculate cosine similarity between two vectors"""
+        """Calculate cosine similarity between two vectors."""
         try:
             dot_product = np.dot(vec1, vec2)
             norm1 = np.linalg.norm(vec1)
@@ -936,11 +931,11 @@ class RecommendationService:
         content_item: ContentItem,
         recency_bias: float,
     ) -> float:
-        """Calculate recency score for content"""
+        """Calculate recency score for content."""
         if not content_item.published_date:
             return 0.5  # Neutral score for unknown date
 
-        days_old = (datetime.now() - content_item.published_date).days
+        days_old = (datetime.now(UTC) - content_item.published_date).days
 
         # Exponential decay for recency
         recency_score = math.exp(-days_old / 30.0)  # 30-day half-life
@@ -951,7 +946,7 @@ class RecommendationService:
         scored_content: list[ScoredContent],
         include_explanation: bool,
     ) -> list[Recommendation]:
-        """Convert scored content to Recommendation objects"""
+        """Convert scored content to Recommendation objects."""
         recommendations = []
 
         for i, scored in enumerate(scored_content):
@@ -986,14 +981,14 @@ class RecommendationService:
             )
 
             recommendation = Recommendation(
-                id=f"rec_{scored.content_item.id}_{datetime.now().timestamp()}",
+                id=f"rec_{scored.content_item.id}_{datetime.now(UTC).timestamp()}",
                 user_id=None,  # Will be set by caller
                 content_id=scored.content_item.id,
                 relevance_score=scored.final_score,
                 explanation=explanation,
                 feature_weights=feature_weights,
                 rank=i + 1,
-                created_at=datetime.now(),
+                created_at=datetime.now(UTC),
             )
 
             recommendations.append(recommendation)
@@ -1006,7 +1001,7 @@ class RecommendationService:
         total_candidates: int,
         num_recommendations: int,
     ) -> str:
-        """Generate explanation for the recommendation result"""
+        """Generate explanation for the recommendation result."""
         strategy_name = {
             RecommendationStrategy.CONTENT_BASED: "content similarity",
             RecommendationStrategy.COLLABORATIVE: "user similarity",
@@ -1032,7 +1027,7 @@ class RecommendationService:
         request: RecommendationRequest,
         processing_time: float,
     ) -> RecommendationResult:
-        """Create empty result when no recommendations can be generated"""
+        """Create empty result when no recommendations can be generated."""
         return RecommendationResult(
             user_id=str(request.user_profile.user_id),
             recommendations=[],
@@ -1047,7 +1042,7 @@ class RecommendationService:
         request: RecommendationRequest,
         processing_time: float,
     ) -> RecommendationResult:
-        """Create error result when recommendation generation fails"""
+        """Create error result when recommendation generation fails."""
         return RecommendationResult(
             user_id=str(request.user_profile.user_id),
             recommendations=[],
@@ -1061,7 +1056,7 @@ class RecommendationService:
         self,
         performance_metrics: dict[RecommendationStrategy, float],
     ) -> None:
-        """Update strategy weights based on performance feedback"""
+        """Update strategy weights based on performance feedback."""
         total_performance = sum(performance_metrics.values())
 
         if total_performance > 0:
@@ -1074,14 +1069,14 @@ class RecommendationService:
                         self.strategy_weights[strategy] * 0.8 + new_weight * 0.2
                     )
 
-            logger.info(f"Updated strategy weights: {self.strategy_weights}")
+            logger.info("Updated strategy weights: %s", self.strategy_weights)
 
     async def explain_recommendation(
         self,
         recommendation: Recommendation,
         content_item: ContentItem,
     ) -> str:
-        """Generate detailed explanation for a specific recommendation"""
+        """Generate detailed explanation for a specific recommendation."""
         if not recommendation.explanation:
             return "Recommended based on your preferences"
 

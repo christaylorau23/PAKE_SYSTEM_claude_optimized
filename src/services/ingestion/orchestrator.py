@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class SourceType(Enum):
-    """Supported ingestion source types"""
+    """Supported ingestion source types."""
 
     WEB = "web"
     ARXIV = "arxiv"
@@ -46,7 +46,7 @@ class SourceType(Enum):
 
 
 class IngestionStatus(Enum):
-    """Ingestion execution status"""
+    """Ingestion execution status."""
 
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
@@ -57,7 +57,7 @@ class IngestionStatus(Enum):
 
 @dataclass(frozen=True)
 class IngestionConfig:
-    """Configuration for ingestion orchestrator"""
+    """Configuration for ingestion orchestrator."""
 
     max_concurrent_sources: int = 5
     timeout_per_source: int = 300
@@ -69,16 +69,16 @@ class IngestionConfig:
     deduplication_enabled: bool = True
     caching_enabled: bool = True
     cache_ttl_hours: int = 24
-    custom_source_configs: dict[str, Any] = field(default_factory=dict)
+    custom_source_configs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class IngestionSource:
-    """Configuration for a single ingestion source"""
+    """Configuration for a single ingestion source."""
 
     source_type: str
     priority: int
-    query_parameters: dict[str, Any]
+    query_parameters: Dict[str, Any]
     estimated_results: int
     timeout: int
     source_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -89,7 +89,7 @@ class IngestionSource:
 
 @dataclass
 class IngestionPlan:
-    """Comprehensive ingestion plan for multi-source content retrieval"""
+    """Comprehensive ingestion plan for multi-source content retrieval."""
 
     topic: str
     sources: list[IngestionSource]
@@ -98,14 +98,14 @@ class IngestionPlan:
     estimated_duration: int
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    context: dict[str, Any] = field(default_factory=dict)
+    context: Dict[str, Any] = field(default_factory=dict)
     enable_cross_source_workflows: bool = False
     enable_deduplication: bool = True
 
 
 @dataclass
 class IngestionResult:
-    """Comprehensive results from ingestion plan execution"""
+    """Comprehensive results from ingestion plan execution."""
 
     success: bool
     plan_id: str
@@ -115,8 +115,8 @@ class IngestionResult:
     sources_completed: int
     sources_failed: int
     execution_time: float
-    error_details: list[dict[str, Any]] = field(default_factory=list)
-    metrics: dict[str, Any] = field(default_factory=dict)
+    error_details: list[Dict[str, Any]] = field(default_factory=list)
+    metrics: Dict[str, Any] = field(default_factory=dict)
 
     # Cognitive processing results
     cognitive_assessment_applied: bool = False
@@ -150,14 +150,8 @@ class IngestionOrchestrator:
     workflow automation, error handling, and performance optimization.
     """
 
-    def __init__(
-        self,
-        config: IngestionConfig,
-        cognitive_engine=None,
-        n8n_manager=None,
-        performance_config: OptimizationConfig = None,
-    ):
-        """Initialize ingestion orchestrator"""
+    def __init__(self) -> None:
+        """Initialize ingestion orchestrator."""
         self.config = config
         self.cognitive_engine = cognitive_engine
         self.n8n_manager = n8n_manager
@@ -185,20 +179,21 @@ class IngestionOrchestrator:
         }
 
         logger.info(
-            f"IngestionOrchestrator initialized with {self.performance_optimizer.config.mode.value} performance optimization",
+            "IngestionOrchestrator initialized with %s performance optimization",
+            self.performance_optimizer.config.mode.value,
         )
 
     async def create_ingestion_plan(
         self,
         topic: str,
-        context: dict[str, Any] | None = None,
+        context: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Create comprehensive ingestion plan based on research topic and context.
 
         Analyzes the topic and context to determine optimal sources, queries,
         and execution strategy.
         """
-        logger.info(f"Creating ingestion plan for topic: {topic}")
+        logger.info("Creating ingestion plan for topic: %s", topic)
 
         if context is None:
             context = {}
@@ -247,8 +242,9 @@ class IngestionOrchestrator:
         )
 
         logger.info(
-            f"Created ingestion plan with {total_sources} sources, "
-            f"estimated {estimated_total_results} results",
+            "Created ingestion plan with %s sources, estimated %s results",
+            total_sources,
+            estimated_total_results,
         )
 
         return plan
@@ -256,9 +252,9 @@ class IngestionOrchestrator:
     def _create_web_source(
         self,
         topic: str,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> IngestionSource | None:
-        """Create web scraping source configuration"""
+        """Create web scraping source configuration."""
         # Generate relevant URLs based on topic
         base_urls = [
             f"https://example.com/{topic.replace(' ', '-')}-overview",
@@ -283,9 +279,9 @@ class IngestionOrchestrator:
     def _create_arxiv_source(
         self,
         topic: str,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> IngestionSource | None:
-        """Create ArXiv source configuration"""
+        """Create ArXiv source configuration."""
         # Extract key terms from topic
         terms = self._extract_search_terms(topic)
 
@@ -311,9 +307,9 @@ class IngestionOrchestrator:
     def _create_pubmed_source(
         self,
         topic: str,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> IngestionSource | None:
-        """Create PubMed source configuration"""
+        """Create PubMed source configuration."""
         # Extract medical/biological terms
         terms = self._extract_search_terms(topic)
 
@@ -339,7 +335,7 @@ class IngestionOrchestrator:
         )
 
     def _extract_research_domain(self, topic: str) -> str | None:
-        """Extract research domain from topic for workflow routing"""
+        """Extract research domain from topic for workflow routing."""
         topic_lower = topic.lower()
 
         # Medical/Biomedical domain
@@ -411,8 +407,8 @@ class IngestionOrchestrator:
 
         return None  # Generic processing if no specific domain detected
 
-    def _extract_search_terms(self, topic: str) -> list[str]:
-        """Extract relevant search terms from research topic"""
+    def _extract_search_terms(self, topic: str) -> List[str]:
+        """Extract relevant search terms from research topic."""
         # Simple term extraction - can be enhanced with NLP
         terms = []
 
@@ -455,7 +451,9 @@ class IngestionOrchestrator:
         Coordinates parallel execution across all sources with proper error handling,
         cognitive processing, workflow automation, and performance optimization.
         """
-        logger.info(f"Executing ingestion plan {plan.plan_id} for topic: {plan.topic}")
+        logger.info(
+            "Executing ingestion plan %s for topic: %s", plan.plan_id, plan.topic
+        )
         start_time = time.time()
 
         # Initialize result tracking
@@ -482,7 +480,7 @@ class IngestionOrchestrator:
                 source_names,
             )
         except TimeoutError:
-            logger.warning(f"Plan {plan.plan_id} execution timed out")
+            logger.warning("Plan %s execution timed out", plan.plan_id)
             results = [Exception("Execution timeout")] * len(source_tasks)
 
         # Process results
@@ -562,7 +560,8 @@ class IngestionOrchestrator:
         self._update_execution_metrics(result)
 
         logger.info(
-            f"Completed ingestion plan {plan.plan_id}: "
+            "Completed ingestion plan %s: %s",
+            plan.plan_id,
             f"{result.total_content_items} items from {sources_completed}/{len(plan.sources)} sources "
             f"in {execution_time:.2f}s",
         )
@@ -573,9 +572,11 @@ class IngestionOrchestrator:
         self,
         source: IngestionSource,
         plan: IngestionPlan,
-    ) -> tuple[list[ContentItem], dict[str, Any]]:
-        """Execute ingestion for a single source with retry logic"""
-        logger.info(f"Executing source {source.source_type} (ID: {source.source_id})")
+    ) -> tuple[list[ContentItem], Dict[str, Any]]:
+        """Execute ingestion for a single source with retry logic."""
+        logger.info(
+            "Executing source %s (ID: %s)", source.source_type, source.source_id
+        )
 
         content_items = []
         metrics = {"retry_attempts": 0, "cache_hits": 0}
@@ -590,7 +591,9 @@ class IngestionOrchestrator:
                         cache_key,
                     )
                     if cached_result is not None:
-                        logger.info(f"Using intelligent cache for {source.source_type}")
+                        logger.info(
+                            "Using intelligent cache for %s", source.source_type
+                        )
                         metrics["cache_hits"] = 1
                         return cached_result, metrics
 
@@ -604,7 +607,8 @@ class IngestionOrchestrator:
                 elif source.source_type == "test_source":
                     content_items = await self._execute_test_source(source)
                 else:
-                    raise ValueError(f"Unsupported source type: {source.source_type}")
+                    msg = f"Unsupported source type: {source.source_type}"
+                    raise ValueError(msg)
 
                 # Cache successful results with intelligent cache
                 if self.config.caching_enabled and content_items:
@@ -623,14 +627,19 @@ class IngestionOrchestrator:
                     )
 
                 logger.info(
-                    f"Successfully retrieved {len(content_items)} items from {source.source_type}",
+                    "Successfully retrieved %s items from %s",
+                    len(content_items),
+                    source.source_type,
                 )
                 return content_items, metrics
 
             except Exception as e:
                 metrics["retry_attempts"] += 1
                 logger.warning(
-                    f"Attempt {attempt + 1} failed for {source.source_type}: {e}",
+                    "Attempt %s failed for %s: %s",
+                    attempt + 1,
+                    source.source_type,
+                    e,
                 )
 
                 if attempt < self.config.max_retries:
@@ -639,13 +648,13 @@ class IngestionOrchestrator:
                     await asyncio.sleep(wait_time)
                 else:
                     # Final failure
-                    logger.error(f"All attempts failed for {source.source_type}")
+                    logger.error("All attempts failed for %s", source.source_type)
                     raise e
 
         return content_items, metrics
 
     async def _execute_web_source(self, source: IngestionSource) -> list[ContentItem]:
-        """Execute web scraping source"""
+        """Execute web scraping source."""
         content_items = []
         params = source.query_parameters
 
@@ -657,7 +666,8 @@ class IngestionOrchestrator:
         # Check for intentional failure test URLs
         failure_test_urls = ["https://nonexistent-failure-test.com"]
         if any(url in failure_test_urls for url in urls):
-            raise Exception("Simulated network failure for testing")
+            msg = "Simulated network failure for testing"
+            raise Exception(msg)
 
         for url in urls:
             try:
@@ -669,13 +679,13 @@ class IngestionOrchestrator:
                     )
                     content_items.append(content_item)
             except Exception as e:
-                logger.warning(f"Failed to scrape {url}: {e}")
+                logger.warning("Failed to scrape %s: %s", url, e)
                 continue
 
         return content_items
 
     async def _execute_arxiv_source(self, source: IngestionSource) -> list[ContentItem]:
-        """Execute ArXiv source"""
+        """Execute ArXiv source."""
         params = source.query_parameters
 
         query = ArxivSearchQuery(
@@ -704,7 +714,7 @@ class IngestionOrchestrator:
         self,
         source: IngestionSource,
     ) -> list[ContentItem]:
-        """Execute PubMed source"""
+        """Execute PubMed source."""
         params = source.query_parameters
 
         query = PubMedSearchQuery(
@@ -731,7 +741,7 @@ class IngestionOrchestrator:
         return []
 
     async def _execute_test_source(self, source: IngestionSource) -> list[ContentItem]:
-        """Execute test source - used for testing retry logic"""
+        """Execute test source - used for testing retry logic."""
         # This method can be mocked in tests to simulate failures
         params = source.query_parameters
 
@@ -751,7 +761,7 @@ class IngestionOrchestrator:
         return [test_item]
 
     def _generate_cache_key(self, source: IngestionSource) -> str:
-        """Generate cache key for source query"""
+        """Generate cache key for source query."""
         key_data = {
             "source_type": source.source_type,
             "query_parameters": source.query_parameters,
@@ -759,8 +769,8 @@ class IngestionOrchestrator:
         key_string = json.dumps(key_data, sort_keys=True)
         return hashlib.sha256(key_string.encode()).hexdigest()
 
-    def _is_cache_valid(self, cache_entry: dict[str, Any]) -> bool:
-        """Check if cache entry is still valid"""
+    def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
+        """Check if cache entry is still valid."""
         timestamp = cache_entry["timestamp"]
         age_hours = (datetime.now(UTC) - timestamp).total_seconds() / 3600
         return age_hours < self.config.cache_ttl_hours
@@ -770,8 +780,8 @@ class IngestionOrchestrator:
         content_items: list[ContentItem],
         plan: IngestionPlan,
     ) -> tuple[bool, int]:
-        """Apply cognitive processing to content items"""
-        logger.info(f"Applying cognitive processing to {len(content_items)} items")
+        """Apply cognitive processing to content items."""
+        logger.info("Applying cognitive processing to %s items", len(content_items))
 
         # Apply quality assessment
         for item in content_items:
@@ -792,8 +802,10 @@ class IngestionOrchestrator:
         self,
         content_items: list[ContentItem],
     ) -> list[ContentItem]:
-        """Apply enhanced content deduplication with performance optimization"""
-        logger.info(f"Applying intelligent deduplication to {len(content_items)} items")
+        """Apply enhanced content deduplication with performance optimization."""
+        logger.info(
+            "Applying intelligent deduplication to %s items", len(content_items)
+        )
 
         # Use performance optimizer's enhanced deduplication
         unique_items = await self.performance_optimizer.deduplicate_content(
@@ -802,7 +814,8 @@ class IngestionOrchestrator:
         )
 
         logger.info(
-            f"Intelligent deduplication complete: {len(unique_items)} unique items",
+            "Intelligent deduplication complete: %s unique items",
+            len(unique_items),
         )
         return unique_items
 
@@ -811,8 +824,8 @@ class IngestionOrchestrator:
         content_items: list[ContentItem],
         plan: IngestionPlan,
     ) -> tuple[int, int]:
-        """Trigger n8n workflows based on content"""
-        logger.info(f"Triggering workflows for {len(content_items)} items")
+        """Trigger n8n workflows based on content."""
+        logger.info("Triggering workflows for %s items", len(content_items))
 
         workflows_triggered = 0
         cross_source_workflows = 0
@@ -854,7 +867,9 @@ class IngestionOrchestrator:
             cross_source_workflows += 1
 
         logger.info(
-            f"Triggered {workflows_triggered} workflows, {cross_source_workflows} cross-source",
+            "Triggered %s workflows, %s cross-source",
+            workflows_triggered,
+            cross_source_workflows,
         )
         return workflows_triggered, cross_source_workflows
 
@@ -863,8 +878,8 @@ class IngestionOrchestrator:
         content_items: list[ContentItem],
         execution_time: float,
         plan: IngestionPlan,
-    ) -> dict[str, Any]:
-        """Calculate comprehensive execution metrics"""
+    ) -> Dict[str, Any]:
+        """Calculate comprehensive execution metrics."""
         total_items = len(content_items)
 
         # Quality metrics
@@ -903,8 +918,8 @@ class IngestionOrchestrator:
             "retry_success_rate": 0.8,  # Mock value
         }
 
-    def _update_execution_metrics(self, result: IngestionResult):
-        """Update global execution metrics"""
+    def _update_execution_metrics(self) -> None:
+        """Update global execution metrics."""
         self.execution_metrics["plans_executed"] += 1
         self.execution_metrics["total_content_retrieved"] += result.total_content_items
 
@@ -921,12 +936,12 @@ class IngestionOrchestrator:
             current_success * (total_plans - 1) + success_increment
         ) / total_plans
 
-    async def get_execution_metrics(self) -> dict[str, Any]:
-        """Get current execution metrics"""
+    async def get_execution_metrics(self) -> Dict[str, Any]:
+        """Get current execution metrics."""
         return self.execution_metrics.copy()
 
-    async def clear_cache(self):
-        """Clear query cache"""
+    async def clear_cache(self) -> None:
+        """Clear query cache."""
         self.query_cache.clear()
         logger.info("Query cache cleared")
 
@@ -934,9 +949,9 @@ class IngestionOrchestrator:
         self,
         sources: list[IngestionSource],
         topic: str,
-        context: dict[str, Any],
+        context: Dict[str, Any],
     ) -> list[IngestionSource]:
-        """Optimize source queries using cognitive engine"""
+        """Optimize source queries using cognitive engine."""
         optimized_sources = []
 
         for source in sources:
@@ -973,19 +988,21 @@ class IngestionOrchestrator:
                     )
                     optimized_sources.append(optimized_source)
                     logger.info(
-                        f"Optimized {source.source_type} query with confidence {optimization_result.get('confidence', 'N/A')}",
+                        "Optimized %s query with confidence %s",
+                        source.source_type,
+                        optimization_result.get("confidence", "N/A"),
                     )
                 else:
                     optimized_sources.append(source)
 
             except Exception as e:
-                logger.warning(f"Failed to optimize {source.source_type} query: {e}")
+                logger.warning("Failed to optimize %s query: %s", source.source_type, e)
                 optimized_sources.append(source)  # Use original if optimization fails
 
         return optimized_sources
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform comprehensive orchestrator health check with performance metrics"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform comprehensive orchestrator health check with performance metrics."""
         # Get performance optimization metrics
         perf_metrics = await self.performance_optimizer.get_performance_metrics()
 

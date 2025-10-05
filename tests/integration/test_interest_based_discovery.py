@@ -12,7 +12,7 @@ IMPORTANT: This test MUST fail initially (TDD requirement).
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -23,7 +23,7 @@ import pytest
 class MockCurationSystem:
     """Mock curation system - replace with actual implementation"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.users = {}
         self.content = {}
         self.recommendations = {}
@@ -31,41 +31,44 @@ class MockCurationSystem:
     async def create_user_profile(
         self,
         user_id: str,
-        interests: list[str],
-    ) -> dict[str, Any]:
-        raise NotImplementedError("UserPreferenceService not implemented")
+        interests: List[str],
+    ) -> Dict[str, Any]:
+        msg = "UserPreferenceService not implemented"
+        raise NotImplementedError(msg)
 
-    async def ingest_content(self, content_data: dict[str, Any]) -> str:
-        raise NotImplementedError("ContentAnalysisService not implemented")
+    async def ingest_content(self, content_data: Dict[str, Any]) -> str:
+        msg = "ContentAnalysisService not implemented"
+        raise NotImplementedError(msg)
 
     async def generate_recommendations(
         self,
         user_id: str,
         limit: int = 10,
-    ) -> list[dict[str, Any]]:
-        raise NotImplementedError("RecommendationService not implemented")
+    ) -> list[Dict[str, Any]]:
+        msg = "RecommendationService not implemented"
+        raise NotImplementedError(msg)
 
 
-@pytest.fixture()
-def curation_system():
+@pytest.fixture
+def curation_system(self) -> None:
     """Provide mock curation system"""
     return MockCurationSystem()
 
 
-@pytest.fixture()
-def test_user_id():
+@pytest.fixture
+def test_user_id(self) -> None:
     """Provide test user ID"""
     return f"test_user_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.fixture()
-def user_interests():
+@pytest.fixture
+def user_interests(self) -> None:
     """User interests for testing"""
     return ["machine learning", "healthcare"]
 
 
-@pytest.fixture()
-def sample_ml_healthcare_content():
+@pytest.fixture
+def sample_ml_healthcare_content(self) -> None:
     """Sample content that matches user interests"""
     return [
         {
@@ -105,8 +108,8 @@ def sample_ml_healthcare_content():
     ]
 
 
-@pytest.fixture()
-def unrelated_content():
+@pytest.fixture
+def unrelated_content(self) -> None:
     """Sample content that doesn't match user interests"""
     return [
         {
@@ -126,14 +129,7 @@ def unrelated_content():
 class TestInterestBasedDiscovery:
     """Integration test for interest-based content discovery user story"""
 
-    async def test_complete_interest_based_discovery_workflow(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        sample_ml_healthcare_content,
-        unrelated_content,
-    ):
+    async def test_complete_interest_based_discovery_workflow(self) -> None:
         """Test the complete interest-based discovery workflow"""
 
         # Step 1: User sets up profile with interests
@@ -185,13 +181,7 @@ class TestInterestBasedDiscovery:
         #     content_tags = rec["content"]["topic_tags"]
         #     assert any(interest in content_tags for interest in user_interests)
 
-    async def test_interest_matching_accuracy(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        sample_ml_healthcare_content,
-    ):
+    async def test_interest_matching_accuracy(self) -> None:
         """Test accuracy of interest matching in recommendations"""
 
         # This test MUST fail initially - no services implemented
@@ -217,14 +207,7 @@ class TestInterestBasedDiscovery:
         #     # Relevance score should be high for matching content
         #     assert rec["relevance_score"] >= 0.6
 
-    async def test_content_prioritization_by_interest_match(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        sample_ml_healthcare_content,
-        unrelated_content,
-    ):
+    async def test_content_prioritization_by_interest_match(self) -> None:
         """Test that content matching user interests is prioritized"""
 
         # This test MUST fail initially
@@ -262,13 +245,7 @@ class TestInterestBasedDiscovery:
         # assert matching_in_top >= total_matching * 0.8  # 80% of matching
         # content in top half
 
-    async def test_explanation_includes_interest_match(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        sample_ml_healthcare_content,
-    ):
+    async def test_explanation_includes_interest_match(self) -> None:
         """Test that recommendation explanations mention interest matching"""
 
         # This test MUST fail initially
@@ -296,12 +273,7 @@ class TestInterestBasedDiscovery:
         #     )
         #     assert interest_mentioned
 
-    async def test_relevance_score_correlation_with_interests(
-        self,
-        curation_system,
-        test_user_id,
-        sample_ml_healthcare_content,
-    ):
+    async def test_relevance_score_correlation_with_interests(self) -> None:
         """Test that relevance scores correlate with interest matching strength"""
 
         # Test different interest combinations
@@ -341,12 +313,7 @@ class TestInterestBasedDiscovery:
             #     else:
             #         assert rec["relevance_score"] < 0.6
 
-    async def test_interest_update_affects_recommendations(
-        self,
-        curation_system,
-        test_user_id,
-        sample_ml_healthcare_content,
-    ):
+    async def test_interest_update_affects_recommendations(self) -> None:
         """Test that updating user interests changes recommendations"""
 
         # This test MUST fail initially
@@ -388,13 +355,7 @@ class TestInterestBasedDiscovery:
         #
         # assert healthcare_content_improved
 
-    async def test_performance_requirements_met(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        sample_ml_healthcare_content,
-    ):
+    async def test_performance_requirements_met(self) -> None:
         """Test that interest-based discovery meets performance requirements"""
 
         import time
@@ -424,8 +385,8 @@ class TestInterestBasedDiscovery:
 # Performance test fixtures
 
 
-@pytest.fixture()
-def large_content_dataset():
+@pytest.fixture
+def large_content_dataset(self) -> None:
     """Large dataset for performance testing"""
     content_items = []
     for i in range(100):  # 100 content items
@@ -440,24 +401,18 @@ def large_content_dataset():
                     if i % 3 == 0
                     else ["machine learning"]
                 ),
-                "published_date": (datetime.now() - timedelta(days=i)).isoformat()
+                "published_date": (datetime.now(UTC) - timedelta(days=i)).isoformat()
                 + "Z",
             },
         )
     return content_items
 
 
-@pytest.mark.performance()
+@pytest.mark.performance
 class TestInterestBasedDiscoveryPerformance:
     """Performance tests for interest-based discovery"""
 
-    async def test_large_dataset_performance(
-        self,
-        curation_system,
-        test_user_id,
-        user_interests,
-        large_content_dataset,
-    ):
+    async def test_large_dataset_performance(self) -> None:
         """Test performance with large content dataset"""
 
         # This test MUST fail initially

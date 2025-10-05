@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Cosmic Calibration Protocol - Phase 1 Demonstration
-Advanced Autonomous Cognitive Evolution System
+Advanced Autonomous Cognitive Evolution System.
 
 Live demonstration of the autonomous self-optimization framework
 implementing the complete "Cosmic Calibration" protocol.
@@ -10,7 +10,7 @@ import asyncio
 import logging
 import signal
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from services.cognitive.cosmic_calibration_coordinator import (
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 
 class CosmicCalibrationDemo:
-    """Live demonstration of the Cosmic Calibration Protocol
+    """Live demonstration of the Cosmic Calibration Protocol.
 
     Features demonstrated:
     - Autonomous system initialization
@@ -33,7 +33,7 @@ class CosmicCalibrationDemo:
     - Emergency handling capabilities
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.coordinator: CosmicCalibrationCoordinator | None = None
         self.demo_active = False
         self.demo_start_time = None
@@ -93,7 +93,7 @@ class CosmicCalibrationDemo:
         signal.signal(signal.SIGTERM, self._signal_handler)
 
     def _setup_demo_logging(self) -> logging.Logger:
-        """Setup comprehensive logging for demo"""
+        """Setup comprehensive logging for demo."""
         logger = logging.getLogger("CosmicCalibrationDemo")
         logger.setLevel(logging.INFO)
 
@@ -121,13 +121,13 @@ class CosmicCalibrationDemo:
 
         return logger
 
-    def _signal_handler(self, signum, frame):
-        """Handle graceful shutdown signals"""
-        self.logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+    def _signal_handler(self) -> None:
+        """Handle graceful shutdown signals."""
+        self.logger.info("Received signal %s, initiating graceful shutdown...", signum)
         self.demo_active = False
 
     async def initialize_demo(self) -> bool:
-        """Initialize the cosmic calibration demonstration"""
+        """Initialize the cosmic calibration demonstration."""
         try:
             self.logger.info("=" * 70)
             self.logger.info(
@@ -150,17 +150,17 @@ class CosmicCalibrationDemo:
                 self.logger.info("📊 Performance monitoring: ENABLED")
                 self.logger.info("🎯 Multi-model coordination: OPERATIONAL")
                 self.demo_active = True
-                self.demo_start_time = datetime.now()
+                self.demo_start_time = datetime.now(UTC)
                 return True
             self.logger.error("❌ Failed to initialize Cosmic Calibration Protocol")
             return False
 
         except Exception as e:
-            self.logger.error(f"❌ Demo initialization failed: {e}")
+            self.logger.error("❌ Demo initialization failed: %s", e)
             return False
 
-    async def run_live_demonstration(self):
-        """Run live demonstration of cosmic calibration"""
+    async def run_live_demonstration(self) -> None:
+        """Run live demonstration of cosmic calibration."""
         self.logger.info("")
         self.logger.info("🚀 STARTING LIVE COSMIC CALIBRATION DEMONSTRATION")
         self.logger.info("")
@@ -204,11 +204,13 @@ class CosmicCalibrationDemo:
                     await asyncio.sleep(15)
 
             except Exception as e:
-                self.logger.error(f"❌ Error in demonstration phase {demo_phase}: {e}")
+                self.logger.error(
+                    "❌ Error in demonstration phase %s: %s", demo_phase, e
+                )
                 await asyncio.sleep(10)
 
-    async def _demonstrate_health_assessment(self):
-        """Demonstrate system health assessment capabilities"""
+    async def _demonstrate_health_assessment(self) -> None:
+        """Demonstrate system health assessment capabilities."""
         self.logger.info("📊 === PHASE 1: SYSTEM HEALTH ASSESSMENT ===")
 
         # Collect comprehensive metrics
@@ -216,22 +218,29 @@ class CosmicCalibrationDemo:
         metrics = await self.coordinator._collect_system_metrics()
 
         self.logger.info(
-            f"🏥 System Health: {metrics.overall_system_health.value.upper()}",
+            "🏥 System Health: %s",
+            metrics.overall_system_health.value.upper(),
         )
         self.logger.info(
-            f"🧠 Cognitive Performance: {metrics.cognitive_performance_score:.3f}",
+            "🧠 Cognitive Performance: %s",
+            metrics.cognitive_performance_score,
         )
         self.logger.info(
-            f"⚡ Optimization Efficiency: {metrics.optimization_efficiency:.3f}",
+            "⚡ Optimization Efficiency: %s",
+            metrics.optimization_efficiency,
         )
-        self.logger.info(f"🧬 Evolution Progress: {metrics.evolution_progress:.3f}")
+        self.logger.info("🧬 Evolution Progress: %.3f%%", metrics.evolution_progress)
         self.logger.info(
-            f"🔍 Self-Critique Quality: {metrics.self_critique_quality:.3f}",
+            "🔍 Self-Critique Quality: %s",
+            metrics.self_critique_quality,
         )
-        self.logger.info(f"📈 Improvement Velocity: {metrics.improvement_velocity:.3f}")
-        self.logger.info(f"🎯 Stability Index: {metrics.stability_index:.3f}")
         self.logger.info(
-            f"🤖 Autonomous Capability: {metrics.autonomous_capability_level:.3f}",
+            "📈 Improvement Velocity: %.3f%%", metrics.improvement_velocity
+        )
+        self.logger.info("🎯 Stability Index: %.3f%%", metrics.stability_index)
+        self.logger.info(
+            "🤖 Autonomous Capability: %s",
+            metrics.autonomous_capability_level,
         )
 
         # Demonstrate decision making
@@ -241,18 +250,19 @@ class CosmicCalibrationDemo:
             metrics.overall_system_health,
         )
 
-        self.logger.info(f"🎯 Should Optimize: {decisions['should_optimize']}")
-        self.logger.info(f"⭐ Priority Level: {decisions['optimization_priority']}")
-        self.logger.info(f"🎛️ Intensity: {decisions['optimization_intensity']}")
+        self.logger.info("🎯 Should Optimize: %s", decisions["should_optimize"])
+        self.logger.info("⭐ Priority Level: %s", decisions["optimization_priority"])
+        self.logger.info("🎛️ Intensity: %s", decisions["optimization_intensity"])
         if decisions["target_components"]:
             self.logger.info(
-                f"🎯 Target Components: {', '.join(decisions['target_components'])}",
+                "🎯 Target Components: %s",
+                ", ".join(decisions["target_components"]),
             )
 
         self.logger.info("✅ Health assessment completed")
 
-    async def _demonstrate_autonomous_optimization(self):
-        """Demonstrate autonomous optimization capabilities"""
+    async def _demonstrate_autonomous_optimization(self) -> None:
+        """Demonstrate autonomous optimization capabilities."""
         self.logger.info("🔄 === PHASE 2: AUTONOMOUS OPTIMIZATION ===")
 
         self.logger.info("🧠 Triggering autonomous optimization cycle...")
@@ -272,16 +282,18 @@ class CosmicCalibrationDemo:
         # Show optimization results
         post_optimization_metrics = await self.coordinator._collect_system_metrics()
         self.logger.info(
-            f"📈 Post-optimization Performance: {post_optimization_metrics.cognitive_performance_score:.3f}",
+            "📈 Post-optimization Performance: %s",
+            post_optimization_metrics.cognitive_performance_score,
         )
         self.logger.info(
-            f"⚡ Optimization Efficiency: {post_optimization_metrics.optimization_efficiency:.3f}",
+            "⚡ Optimization Efficiency: %s",
+            post_optimization_metrics.optimization_efficiency,
         )
 
         self.logger.info("✅ Autonomous optimization demonstrated")
 
-    async def _demonstrate_component_coordination(self):
-        """Demonstrate multi-component coordination"""
+    async def _demonstrate_component_coordination(self) -> None:
+        """Demonstrate multi-component coordination."""
         self.logger.info("🎼 === PHASE 3: COMPONENT COORDINATION ===")
 
         # Get status from all components
@@ -293,39 +305,44 @@ class CosmicCalibrationDemo:
         self.logger.info("🧠 Cognitive Engine Status:")
         cognitive_status = component_status["cognitive_engine"]
         if "state" in cognitive_status:
-            self.logger.info(f"   State: {cognitive_status['state']}")
+            self.logger.info("   State: %s", cognitive_status["state"])
 
         self.logger.info("🔧 Metacognitive Optimizer Status:")
         metacog_status = component_status["metacognitive_optimizer"]
         if "optimization_phase" in metacog_status:
-            self.logger.info(f"   Phase: {metacog_status['optimization_phase']}")
+            self.logger.info("   Phase: %s", metacog_status["optimization_phase"])
         if "optimization_cycles_completed" in metacog_status:
             self.logger.info(
-                f"   Cycles: {metacog_status['optimization_cycles_completed']}",
+                "   Cycles: %s",
+                metacog_status["optimization_cycles_completed"],
             )
 
         self.logger.info("🧬 Prompt Evolution Status:")
         evolution_status = component_status["prompt_evolution"]
         if "evolution_stage" in evolution_status:
-            self.logger.info(f"   Stage: {evolution_status['evolution_stage']}")
+            self.logger.info("   Stage: %s", evolution_status["evolution_stage"])
         if "total_evolution_cycles" in evolution_status:
-            self.logger.info(f"   Cycles: {evolution_status['total_evolution_cycles']}")
+            self.logger.info(
+                "   Cycles: %s", evolution_status["total_evolution_cycles"]
+            )
 
         self.logger.info("🔍 Self-Critique Status:")
         critique_status = component_status["self_critique"]
         if "total_critiques_performed" in critique_status:
             self.logger.info(
-                f"   Critiques: {critique_status['total_critiques_performed']}",
+                "   Critiques: %s",
+                critique_status["total_critiques_performed"],
             )
         if "recent_average_quality" in critique_status:
             self.logger.info(
-                f"   Quality: {critique_status['recent_average_quality']:.3f}",
+                "   Quality: %s",
+                f"{critique_status['recent_average_quality']:.3f}",
             )
 
         self.logger.info("✅ Component coordination demonstrated")
 
-    async def _demonstrate_emergency_response(self):
-        """Demonstrate emergency response capabilities"""
+    async def _demonstrate_emergency_response(self) -> None:
+        """Demonstrate emergency response capabilities."""
         self.logger.info("🚨 === PHASE 4: EMERGENCY RESPONSE ===")
 
         self.logger.info("⚠️ Simulating emergency scenario...")
@@ -337,19 +354,19 @@ class CosmicCalibrationDemo:
         )
 
         emergency_event = result["emergency_event"]
-        self.logger.info(f"🚨 Emergency ID: {emergency_event['event_id']}")
+        self.logger.info("🚨 Emergency ID: %s", emergency_event["event_id"])
         self.logger.info("⏰ Response Time: <1 second")
-        self.logger.info(f"📊 Impact Level: {emergency_event['severity'].upper()}")
+        self.logger.info("📊 Impact Level: %s", emergency_event["severity"].upper())
 
         system_response = result["system_response"]
         self.logger.info("🔧 Automatic Response Actions:")
         for action in system_response["coordination_actions"]:
-            self.logger.info(f"   - {action.replace('_', ' ').title()}")
+            self.logger.info("   - %s", action.replace("_", " ").title())
 
         self.logger.info("✅ Emergency response demonstrated")
 
-    async def _demonstrate_evolution_cycle(self):
-        """Demonstrate cognitive evolution capabilities"""
+    async def _demonstrate_evolution_cycle(self) -> None:
+        """Demonstrate cognitive evolution capabilities."""
         self.logger.info("🧬 === PHASE 5: COGNITIVE EVOLUTION ===")
 
         self.logger.info("🔬 Triggering prompt evolution cycle...")
@@ -360,10 +377,12 @@ class CosmicCalibrationDemo:
 
             self.logger.info("🧬 Evolution Results:")
             for category, results in evolution_results.items():
-                self.logger.info(f"   {category}:")
-                self.logger.info(f"     New Organisms: {results['new_organisms']}")
-                self.logger.info(f"     Population Size: {results['total_population']}")
-                self.logger.info(f"     Best Fitness: {results['best_fitness']:.3f}")
+                self.logger.info("   %s:", category)
+                self.logger.info("     New Organisms: %s", results["new_organisms"])
+                self.logger.info(
+                    "     Population Size: %s", results["total_population"]
+                )
+                self.logger.info("     Best Fitness: %.3f%%", results["best_fitness"])
 
         self.logger.info("🎯 Demonstrating self-critique analysis...")
 
@@ -371,46 +390,50 @@ class CosmicCalibrationDemo:
         if self.coordinator.self_critique:
             critique_status = self.coordinator.self_critique.get_status()
             self.logger.info(
-                f"🔍 Total Critiques: {critique_status.get('total_critiques_performed', 0)}",
+                "🔍 Total Critiques: %s",
+                critique_status.get("total_critiques_performed", 0),
             )
             self.logger.info(
-                f"📊 Quality Score: {critique_status.get('recent_average_quality', 0.0):.3f}",
+                "📊 Quality Score: %s",
+                f"{critique_status.get('recent_average_quality', 0.0):.3f}",
             )
 
         self.logger.info("✅ Cognitive evolution demonstrated")
 
-    async def _demonstrate_continuous_monitoring(self):
-        """Demonstrate continuous monitoring capabilities"""
+    async def _demonstrate_continuous_monitoring(self) -> None:
+        """Demonstrate continuous monitoring capabilities."""
         self.logger.info("👁️ === CONTINUOUS MONITORING ACTIVE ===")
 
         # Calculate demo runtime
         if self.demo_start_time:
-            runtime = datetime.now() - self.demo_start_time
-            self.logger.info(f"⏱️ Demo Runtime: {runtime}")
+            runtime = datetime.now(UTC) - self.demo_start_time
+            self.logger.info("⏱️ Demo Runtime: %s", runtime)
 
         # Show real-time metrics
         metrics = await self.coordinator._collect_system_metrics()
-        self.logger.info(f"💓 System Heartbeat: {metrics.overall_system_health.value}")
-        self.logger.info(f"📈 Performance: {metrics.cognitive_performance_score:.3f}")
-        self.logger.info(f"🎯 Stability: {metrics.stability_index:.3f}")
+        self.logger.info("💓 System Heartbeat: %s", metrics.overall_system_health.value)
+        self.logger.info("📈 Performance: %.3f%%", metrics.cognitive_performance_score)
+        self.logger.info("🎯 Stability: %.3f%%", metrics.stability_index)
 
         # Show optimization history
         optimization_count = len(self.coordinator.system_metrics_history)
-        self.logger.info(f"🔄 Optimization Cycles: {optimization_count}")
+        self.logger.info("🔄 Optimization Cycles: %s", optimization_count)
 
         # Show component activity
         system_status = await self.coordinator.get_system_status()
         self.logger.info(
-            f"🎛️ Calibration Phase: {system_status['calibration_phase'].upper()}",
+            "🎛️ Calibration Phase: %s",
+            system_status["calibration_phase"].upper(),
         )
         self.logger.info(
-            f"⚡ Active Optimizations: {system_status['active_optimizations']}",
+            "⚡ Active Optimizations: %s",
+            system_status["active_optimizations"],
         )
 
         self.logger.info("✅ Continuous monitoring active")
 
-    async def run_demo(self):
-        """Run the complete cosmic calibration demonstration"""
+    async def run_demo(self) -> None:
+        """Run the complete cosmic calibration demonstration."""
         try:
             # Initialize
             if not await self.initialize_demo():
@@ -433,14 +456,14 @@ class CosmicCalibrationDemo:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ Demo failed: {e}")
+            self.logger.error("❌ Demo failed: %s", e)
             return False
 
         finally:
             await self._cleanup_demo()
 
-    async def _cleanup_demo(self):
-        """Cleanup demo resources"""
+    async def _cleanup_demo(self) -> None:
+        """Cleanup demo resources."""
         self.logger.info("")
         self.logger.info("🛑 SHUTTING DOWN COSMIC CALIBRATION DEMONSTRATION")
 
@@ -449,25 +472,27 @@ class CosmicCalibrationDemo:
             try:
                 final_metrics = await self.coordinator._collect_system_metrics()
                 self.logger.info(
-                    f"📈 Final Performance Score: {final_metrics.cognitive_performance_score:.3f}",
+                    "📈 Final Performance Score: %s",
+                    final_metrics.cognitive_performance_score,
                 )
                 self.logger.info(
-                    f"🎯 Final Stability Index: {final_metrics.stability_index:.3f}",
+                    "🎯 Final Stability Index: %s",
+                    final_metrics.stability_index,
                 )
 
                 total_cycles = len(self.coordinator.system_metrics_history)
-                self.logger.info(f"🔄 Total Optimization Cycles: {total_cycles}")
+                self.logger.info("🔄 Total Optimization Cycles: %s", total_cycles)
 
             except Exception as e:
-                self.logger.warning(f"Could not collect final metrics: {e}")
+                self.logger.warning("Could not collect final metrics: %s", e)
 
             self.logger.info("🔧 Shutting down cosmic calibration coordinator...")
             await self.coordinator.shutdown()
 
         # Calculate total runtime
         if self.demo_start_time:
-            total_runtime = datetime.now() - self.demo_start_time
-            self.logger.info(f"⏱️ Total Demo Runtime: {total_runtime}")
+            total_runtime = datetime.now(UTC) - self.demo_start_time
+            self.logger.info("⏱️ Total Demo Runtime: %s", total_runtime)
 
         self.logger.info("")
         self.logger.info("=" * 70)
@@ -483,8 +508,8 @@ class CosmicCalibrationDemo:
         self.logger.info("=" * 70)
 
 
-async def main():
-    """Main entry point for cosmic calibration demonstration"""
+async def main(self) -> None:
+    """Main entry point for cosmic calibration demonstration."""
     print("🌟 COSMIC CALIBRATION PROTOCOL - Phase 1 Demo")
     print("Advanced Autonomous Cognitive Evolution System")
     print()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - FirecrawlService Implementation
-REFACTOR PHASE: Optimized implementation with real API integration + test mode
+REFACTOR PHASE: Optimized implementation with real API integration + test mode.
 
 Following TDD methodology:
 - All tests passing (GREEN phase complete)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class FirecrawlError:
-    """Immutable error class for Firecrawl service errors"""
+    """Immutable error class for Firecrawl service errors."""
 
     message: str
     error_code: str = "UNKNOWN_ERROR"
@@ -32,7 +32,7 @@ class FirecrawlError:
 
     @property
     def is_retryable(self) -> bool:
-        """Determine if error is retryable based on error code"""
+        """Determine if error is retryable based on error code."""
         retryable_codes = [
             "RATE_LIMIT",
             "RATE_LIMIT_EXCEEDED",
@@ -44,7 +44,7 @@ class FirecrawlError:
 
 @dataclass(frozen=True)
 class ScrapingOptions:
-    """Immutable configuration options for scraping operations"""
+    """Immutable configuration options for scraping operations."""
 
     timeout: int = 30000  # 30 seconds default
     wait_time: int = 3000  # 3 seconds wait for JavaScript
@@ -57,18 +57,18 @@ class ScrapingOptions:
 
 @dataclass(frozen=True)
 class FirecrawlResult:
-    """Immutable result from Firecrawl scraping operation"""
+    """Immutable result from Firecrawl scraping operation."""
 
     success: bool
     url: str
     content: str | None = None
     title: str | None = None
-    headings: list[str] | None = field(default_factory=list)
-    links: list[str] | None = field(default_factory=list)
-    metadata: dict[str, Any] | None = field(default_factory=dict)
+    headings: List[str] | None = field(default_factory=list)
+    links: List[str] | None = field(default_factory=list)
+    metadata: Dict[str, Any] | None = field(default_factory=dict)
     error: FirecrawlError | None = None
     quality_score: float | None = None
-    cognitive_assessment: dict[str, Any] | None = None
+    cognitive_assessment: Dict[str, Any] | None = None
     optimization_applied: bool = False
     scraping_attempts: int = 1
     retry_after: int | None = None
@@ -80,13 +80,8 @@ class FirecrawlService:
     Supports both real API integration and mock testing mode.
     """
 
-    def __init__(
-        self,
-        api_key: str,
-        base_url: str = "https://api.firecrawl.dev",
-        test_mode: bool = None,
-    ):
-        """Initialize FirecrawlService with API credentials"""
+    def __init__(self) -> None:
+        """Initialize FirecrawlService with API credentials."""
         self.api_key = api_key
         self.base_url = base_url
         self.session: aiohttp.ClientSession | None = None
@@ -101,7 +96,7 @@ class FirecrawlService:
             self.test_mode = test_mode
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session"""
+        """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 headers={
@@ -115,8 +110,8 @@ class FirecrawlService:
     async def _get_mock_response(
         self,
         url: str,
-        data: dict[str, Any],
-    ) -> dict[str, Any]:
+        data: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Generate realistic mock response for testing mode."""
         # Handle specific test scenarios
         if "rate-limit-test" in url:
@@ -180,7 +175,7 @@ class FirecrawlService:
             },
         }
 
-    async def _make_api_request(self, url: str, data: dict[str, Any]) -> dict[str, Any]:
+    async def _make_api_request(self, url: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Make API request to Firecrawl service or return mock data in test mode.
         REFACTOR phase: Production-ready implementation with real API integration.
         """
@@ -195,8 +190,7 @@ class FirecrawlService:
         try:
             async with session.post(api_url, json=data) as response:
                 if response.status == 200:
-                    result = await response.json()
-                    return result
+                    return await response.json()
                 if response.status == 401:
                     error_text = await response.text()
                     return {
@@ -231,7 +225,7 @@ class FirecrawlService:
             }
 
     def _validate_url(self, url: str) -> bool:
-        """Validate URL format - minimal implementation"""
+        """Validate URL format - minimal implementation."""
         if not url or not isinstance(url, str):
             return False
 
@@ -412,7 +406,7 @@ class FirecrawlService:
                 ),
             )
 
-    async def to_content_item(self, result: FirecrawlResult, source_name: str):
+    async def to_content_item(self) -> None:
         """Convert FirecrawlResult to ContentItem for pipeline integration.
         REFACTOR PHASE: Enhanced implementation.
         """
@@ -431,7 +425,7 @@ class FirecrawlService:
 
     async def scrape_bulk(
         self,
-        urls: list[str],
+        urls: List[str],
         max_concurrent: int = 2,
         delay_between_requests: float = 1.0,
     ) -> list[FirecrawlResult]:
@@ -510,7 +504,7 @@ class FirecrawlService:
                     cognitive_assessment={"assessed": True, "score": quality_score},
                 )
             except Exception as e:
-                logger.warning(f"Cognitive assessment failed for {url}: {e}")
+                logger.warning("Cognitive assessment failed for %s: %s", url, e)
                 # Return result without cognitive assessment on error
 
         return result
@@ -558,7 +552,7 @@ class FirecrawlService:
                     scraping_attempts=2,
                 )
             except Exception as e:
-                logger.warning(f"Metacognitive optimization failed for {url}: {e}")
+                logger.warning("Metacognitive optimization failed for %s: %s", url, e)
 
         return result
 
@@ -567,7 +561,7 @@ class FirecrawlService:
         result: FirecrawlResult,
         n8n_manager,
         workflow_type: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Trigger n8n workflow processing.
         REFACTOR PHASE: Enhanced implementation with error handling.
         """
@@ -585,21 +579,24 @@ class FirecrawlService:
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to trigger workflow {workflow_type} for {result.url}: {e}",
+                    "Failed to trigger workflow %s for %s: %s",
+                    workflow_type,
+                    result.url,
+                    e,
                 )
                 return {"workflow_id": None, "error": str(e)}
 
         return {"workflow_id": None}
 
-    async def close(self):
-        """Clean up resources"""
+    async def close(self) -> None:
+        """Clean up resources."""
         if self.session and not self.session.closed:
             await self.session.close()
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         await self.close()

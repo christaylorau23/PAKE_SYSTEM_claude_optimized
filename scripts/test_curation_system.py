@@ -7,7 +7,7 @@ Validates all components and provides comprehensive testing.
 import asyncio
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from services.curation.integration.curation_orchestrator import (
@@ -25,12 +25,12 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 class CurationSystemTester:
     """Comprehensive tester for the curation system"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.orchestrator = None
         self.test_results = []
         self.start_time = None
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run all system tests"""
         print("🧠 PAKE Intelligent Content Curation System Test Suite")
         print("=" * 60)
@@ -67,7 +67,7 @@ class CurationSystemTester:
 
         return True
 
-    async def test_system_initialization(self):
+    async def test_system_initialization(self) -> None:
         """Test system initialization"""
         print("\n🔧 Testing System Initialization...")
 
@@ -98,7 +98,7 @@ class CurationSystemTester:
             print(f"❌ System initialization error: {e}")
             self.test_results.append(("System Initialization", "ERROR", str(e)))
 
-    async def test_content_analysis(self):
+    async def test_content_analysis(self) -> None:
         """Test content analysis functionality"""
         print("\n📊 Testing Content Analysis...")
 
@@ -110,7 +110,7 @@ class CurationSystemTester:
                 content_text="Machine learning is revolutionizing healthcare by enabling early disease detection, personalized treatment plans, and improved patient outcomes. Recent advances in deep learning have shown remarkable success in medical imaging analysis, drug discovery, and clinical decision support systems.",
                 author="Dr. Jane Smith",
                 source_url="https://example.com/ml-healthcare-review",
-                published_date=datetime.now(),
+                published_date=datetime.now(UTC),
                 content_type="article",
                 tags=["machine learning", "healthcare", "AI", "medical"],
                 source_authority_score=0.9,
@@ -146,7 +146,7 @@ class CurationSystemTester:
             print(f"❌ Content analysis error: {e}")
             self.test_results.append(("Content Analysis", "ERROR", str(e)))
 
-    async def test_recommendation_generation(self):
+    async def test_recommendation_generation(self) -> None:
         """Test recommendation generation"""
         print("\n🎯 Testing Recommendation Generation...")
 
@@ -205,7 +205,7 @@ class CurationSystemTester:
             print(f"❌ Recommendation generation error: {e}")
             self.test_results.append(("Recommendation Generation", "ERROR", str(e)))
 
-    async def test_user_preference_learning(self):
+    async def test_user_preference_learning(self) -> None:
         """Test user preference learning"""
         print("\n🧠 Testing User Preference Learning...")
 
@@ -229,7 +229,7 @@ class CurationSystemTester:
                     user_id="test-user-002",
                     content_id="content-001",
                     interaction_type=InteractionType.LIKE,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     session_duration=180,
                 ),
                 UserInteraction(
@@ -237,7 +237,7 @@ class CurationSystemTester:
                     user_id="test-user-002",
                     content_id="content-002",
                     interaction_type=InteractionType.SHARE,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     session_duration=240,
                 ),
             ]
@@ -272,7 +272,7 @@ class CurationSystemTester:
             print(f"❌ User preference learning error: {e}")
             self.test_results.append(("User Preference Learning", "ERROR", str(e)))
 
-    async def test_feedback_processing(self):
+    async def test_feedback_processing(self) -> None:
         """Test feedback processing"""
         print("\n💬 Testing Feedback Processing...")
 
@@ -308,7 +308,7 @@ class CurationSystemTester:
             print(f"❌ Feedback processing error: {e}")
             self.test_results.append(("Feedback Processing", "ERROR", str(e)))
 
-    async def test_feature_extraction(self):
+    async def test_feature_extraction(self) -> None:
         """Test feature extraction"""
         print("\n🔍 Testing Feature Extraction...")
 
@@ -351,7 +351,7 @@ class CurationSystemTester:
             print(f"❌ Feature extraction error: {e}")
             self.test_results.append(("Feature Extraction", "ERROR", str(e)))
 
-    async def test_model_training(self):
+    async def test_model_training(self) -> None:
         """Test model training"""
         print("\n🤖 Testing Model Training...")
 
@@ -378,7 +378,7 @@ class CurationSystemTester:
             print(f"❌ Model training error: {e}")
             self.test_results.append(("Model Training", "ERROR", str(e)))
 
-    async def test_prediction_engine(self):
+    async def test_prediction_engine(self) -> None:
         """Test prediction engine"""
         print("\n🎲 Testing Prediction Engine...")
 
@@ -425,7 +425,7 @@ class CurationSystemTester:
             print(f"❌ Prediction engine error: {e}")
             self.test_results.append(("Prediction Engine", "ERROR", str(e)))
 
-    async def test_end_to_end_workflow(self):
+    async def test_end_to_end_workflow(self) -> None:
         """Test complete end-to-end workflow"""
         print("\n🔄 Testing End-to-End Workflow...")
 
@@ -471,7 +471,7 @@ class CurationSystemTester:
             print(f"❌ End-to-end workflow error: {e}")
             self.test_results.append(("End-to-End Workflow", "ERROR", str(e)))
 
-    async def test_performance_requirements(self):
+    async def test_performance_requirements(self) -> None:
         """Test performance requirements"""
         print("\n⚡ Testing Performance Requirements...")
 
@@ -524,7 +524,7 @@ class CurationSystemTester:
             print(f"❌ Performance test error: {e}")
             self.test_results.append(("Performance Requirements", "ERROR", str(e)))
 
-    def generate_test_report(self):
+    def generate_test_report(self) -> None:
         """Generate comprehensive test report"""
         print("\n" + "=" * 60)
         print("📋 TEST REPORT")
@@ -566,7 +566,7 @@ class CurationSystemTester:
         return False
 
 
-async def main():
+async def main(self) -> None:
     """Main test execution"""
     tester = CurationSystemTester()
     success = await tester.run_all_tests()

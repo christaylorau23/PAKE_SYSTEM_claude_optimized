@@ -35,7 +35,7 @@ Context engineering represents the next evolution in AI interaction design, movi
 Context engineering operates on a three-layer architecture:
 
 1. **Foundational Context**: Static knowledge base and model training data
-2. **Dynamic Context**: Real-time information and task-specific data  
+2. **Dynamic Context**: Real-time information and task-specific data
 3. **Interactive Context**: User inputs and conversation history
 
 ### 2. Essential Techniques
@@ -59,7 +59,7 @@ Context engineering operates on a three-layer architecture:
 
 **Prompt Scaffolding**
 ```
-System Design → User Input Wrapping → Structured Templates → 
+System Design → User Input Wrapping → Structured Templates →
 Defensive Prompting → Response Constraints
 ```
 

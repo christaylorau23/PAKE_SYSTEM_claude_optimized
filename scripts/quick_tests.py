@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def main():
+def main(self) -> None:
     """Run quick unit tests"""
     project_root = Path(__file__).parent.parent
 

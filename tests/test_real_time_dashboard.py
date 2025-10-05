@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 import pytest_asyncio
+
 from services.monitoring.real_time_dashboard import (
     DashboardConfig,
     HealthStatus,
@@ -34,8 +35,8 @@ class TestRealTimeMonitoringDashboard:
     Tests metrics collection, health monitoring, alerting, and dashboard updates.
     """
 
-    @pytest.fixture()
-    def dashboard_config(self):
+    @pytest.fixture
+    def dashboard_config(self) -> None:
         """Standard dashboard configuration for testing"""
         return DashboardConfig(
             metric_update_interval=0.1,  # Fast for testing
@@ -49,8 +50,8 @@ class TestRealTimeMonitoringDashboard:
             disk_usage_threshold=0.90,
         )
 
-    @pytest.fixture()
-    def mock_cache_manager(self):
+    @pytest.fixture
+    def mock_cache_manager(self) -> None:
         """Mock cache manager with test data"""
         mock_manager = AsyncMock()
         mock_stats = Mock()
@@ -63,20 +64,20 @@ class TestRealTimeMonitoringDashboard:
         mock_manager.get_stats.return_value = mock_stats
         return mock_manager
 
-    @pytest.fixture()
-    def mock_orchestrator_manager(self):
+    @pytest.fixture
+    def mock_orchestrator_manager(self) -> None:
         """Mock orchestrator manager with test data"""
         return Mock()
 
     @pytest_asyncio.fixture
-    async def dashboard(self, dashboard_config):
+    async def dashboard(self) -> None:
         """Create dashboard instance for testing"""
         dashboard = RealTimeMonitoringDashboard(dashboard_config)
         yield dashboard
         await dashboard.stop()
 
-    @pytest.fixture()
-    def sample_metric_points(self):
+    @pytest.fixture
+    def sample_metric_points(self) -> None:
         """Sample metric data points for testing"""
         now = datetime.now(UTC)
         return [
@@ -91,8 +92,8 @@ class TestRealTimeMonitoringDashboard:
     # Core Functionality Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_initialize_dashboard_with_default_config(self):
+    @pytest.mark.asyncio
+    async def test_should_initialize_dashboard_with_default_config(self) -> None:
         """
         Test: Should initialize monitoring dashboard with sensible defaults
         and proper component setup.
@@ -113,12 +114,8 @@ class TestRealTimeMonitoringDashboard:
         assert dashboard.metric_collector is not None
         assert dashboard.health_checker is not None
 
-    @pytest.mark.asyncio()
-    async def test_should_collect_metrics_from_integrated_systems(
-        self,
-        dashboard,
-        mock_cache_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_collect_metrics_from_integrated_systems(self) -> None:
         """
         Test: Should collect comprehensive metrics from cache and
         ingestion systems with proper data structure.
@@ -148,12 +145,8 @@ class TestRealTimeMonitoringDashboard:
         assert "cache_hits_memory" in metrics
         assert "cache_misses_disk" in metrics
 
-    @pytest.mark.asyncio()
-    async def test_should_track_metrics_history_with_retention_limits(
-        self,
-        dashboard,
-        sample_metric_points,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_track_metrics_history_with_retention_limits(self) -> None:
         """
         Test: Should maintain metrics history with proper retention
         and data point limits.
@@ -180,12 +173,8 @@ class TestRealTimeMonitoringDashboard:
         latest_point = dashboard.metrics_history["test_metric"][-1]
         assert latest_point.value == 149.0
 
-    @pytest.mark.asyncio()
-    async def test_should_perform_comprehensive_health_checks(
-        self,
-        dashboard,
-        mock_cache_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_perform_comprehensive_health_checks(self) -> None:
         """
         Test: Should perform multi-component health assessment
         with proper status calculation and alerting.
@@ -198,7 +187,7 @@ class TestRealTimeMonitoringDashboard:
 
         # Verify health check structure
         assert isinstance(health, SystemHealth)
-        assert health.overall_status in [status for status in HealthStatus]
+        assert health.overall_status in list(HealthStatus)
         assert health.last_check is not None
 
         # Verify component health tracking
@@ -207,14 +196,11 @@ class TestRealTimeMonitoringDashboard:
         assert "resources" in health.component_health
 
         # All components should report some status
-        for component, status in health.component_health.items():
-            assert status in [status for status in HealthStatus]
+        for _component, status in health.component_health.items():
+            assert status in list(HealthStatus)
 
-    @pytest.mark.asyncio()
-    async def test_should_generate_alerts_for_unhealthy_conditions(
-        self,
-        dashboard_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_generate_alerts_for_unhealthy_conditions(self) -> None:
         """
         Test: Should detect unhealthy system conditions and
         generate appropriate alerts with severity levels.
@@ -245,12 +231,8 @@ class TestRealTimeMonitoringDashboard:
             or "processing" in alert_text
         )
 
-    @pytest.mark.asyncio()
-    async def test_should_export_comprehensive_dashboard_data(
-        self,
-        dashboard,
-        mock_cache_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_export_comprehensive_dashboard_data(self) -> None:
         """
         Test: Should generate complete dashboard data export
         with metrics, health, and system information.
@@ -287,12 +269,8 @@ class TestRealTimeMonitoringDashboard:
     # Integration and Performance Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_metric_collection_safely(
-        self,
-        dashboard,
-        mock_cache_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_metric_collection_safely(self) -> None:
         """
         Test: Should handle concurrent metric collection and health
         monitoring without race conditions or data corruption.
@@ -301,7 +279,7 @@ class TestRealTimeMonitoringDashboard:
 
         # Start concurrent operations
         tasks = []
-        for i in range(10):
+        for _i in range(10):
             task = asyncio.create_task(dashboard.metric_collector.collect_metrics())
             tasks.append(task)
 
@@ -315,12 +293,12 @@ class TestRealTimeMonitoringDashboard:
             assert len(result) > 0
 
             # Check metric structure
-            for metric_name, points in result.items():
+            for _metric_name, points in result.items():
                 assert len(points) == 1
                 assert isinstance(points[0], MetricPoint)
 
-    @pytest.mark.asyncio()
-    async def test_should_maintain_performance_under_high_metric_load(self, dashboard):
+    @pytest.mark.asyncio
+    async def test_should_maintain_performance_under_high_metric_load(self) -> None:
         """
         Test: Should maintain acceptable performance when processing
         large volumes of metrics and maintaining history.
@@ -353,12 +331,8 @@ class TestRealTimeMonitoringDashboard:
         for metric_name, points in dashboard.metrics_history.items():
             assert len(points) <= dashboard.config.max_data_points
 
-    @pytest.mark.asyncio()
-    async def test_should_export_metrics_to_file_successfully(
-        self,
-        dashboard,
-        mock_cache_manager,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_export_metrics_to_file_successfully(self) -> None:
         """
         Test: Should export comprehensive metrics data to JSON file
         with proper formatting and completeness.
@@ -404,8 +378,8 @@ class TestRealTimeMonitoringDashboard:
     # Error Handling and Edge Cases
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_metric_collection_failures_gracefully(self, dashboard):
+    @pytest.mark.asyncio
+    async def test_should_handle_metric_collection_failures_gracefully(self) -> None:
         """
         Test: Should handle metric collection failures without
         stopping the monitoring system.
@@ -426,8 +400,8 @@ class TestRealTimeMonitoringDashboard:
         assert len(health.alerts) > 0
         assert "error" in " ".join(health.alerts).lower()
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_empty_metrics_gracefully(self, dashboard):
+    @pytest.mark.asyncio
+    async def test_should_handle_empty_metrics_gracefully(self) -> None:
         """
         Test: Should handle cases where no metrics are available
         without errors or crashes.
@@ -445,8 +419,8 @@ class TestRealTimeMonitoringDashboard:
         assert dashboard_data["current_metrics"] == {}
         assert dashboard_data["metric_history"] == {}
 
-    @pytest.mark.asyncio()
-    async def test_should_validate_dashboard_configuration(self, dashboard_config):
+    @pytest.mark.asyncio
+    async def test_should_validate_dashboard_configuration(self) -> None:
         """
         Test: Should validate dashboard configuration parameters
         and use sensible defaults for invalid values.
@@ -463,8 +437,8 @@ class TestRealTimeMonitoringDashboard:
         dashboard = RealTimeMonitoringDashboard(extreme_config)
         assert dashboard.config is not None
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_metric_history_corruption_safely(self, dashboard):
+    @pytest.mark.asyncio
+    async def test_should_handle_metric_history_corruption_safely(self) -> None:
         """
         Test: Should handle corrupted metric history data
         without affecting overall system operation.
@@ -494,7 +468,7 @@ class TestDashboardDataStructures:
     Test suite for dashboard data structures and utility classes.
     """
 
-    def test_metric_point_should_be_immutable_and_serializable(self):
+    def test_metric_point_should_be_immutable_and_serializable(self) -> None:
         """
         Test: MetricPoint should be immutable and properly serializable.
         """
@@ -515,7 +489,7 @@ class TestDashboardDataStructures:
         assert point_dict["value"] == 123.45
         assert point_dict["labels"]["source"] == "test"
 
-    def test_system_health_should_track_component_status_correctly(self):
+    def test_system_health_should_track_component_status_correctly(self) -> None:
         """
         Test: SystemHealth should properly track component health
         and overall system status.
@@ -538,7 +512,7 @@ class TestDashboardDataStructures:
         assert health_dict["component_health"]["database"] == "critical"
         assert len(health_dict["alerts"]) == 2
 
-    def test_dashboard_config_should_have_reasonable_defaults(self):
+    def test_dashboard_config_should_have_reasonable_defaults(self) -> None:
         """
         Test: DashboardConfig should provide sensible default values
         for production use.

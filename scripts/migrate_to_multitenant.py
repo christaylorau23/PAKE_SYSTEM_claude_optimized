@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from src.services.database.multi_tenant_schema import (
@@ -43,11 +43,7 @@ class MultiTenantMigration:
     5. Update application configuration
     """
 
-    def __init__(
-        self,
-        source_config: DatabaseConfig,
-        target_config: MultiTenantDatabaseConfig,
-    ):
+    def __init__(self) -> None:
         self.source_config = source_config
         self.target_config = target_config
         self.source_db: PostgreSQLService | None = None
@@ -75,7 +71,7 @@ class MultiTenantMigration:
             logger.info("✅ Target database initialized")
 
         except Exception as e:
-            logger.error(f"❌ Failed to initialize databases: {e}")
+            logger.error("❌ Failed to initialize databases: %s", e)
             raise
 
     async def close(self) -> None:
@@ -86,7 +82,7 @@ class MultiTenantMigration:
             await self.target_db.close()
         logger.info("Database connections closed")
 
-    async def validate_source_data(self) -> dict[str, Any]:
+    async def validate_source_data(self) -> Dict[str, Any]:
         """Validate source database data before migration"""
         logger.info("🔍 Validating source database data...")
 
@@ -95,15 +91,16 @@ class MultiTenantMigration:
             source_health = await self.source_db.health_check()
 
             if source_health["status"] != "healthy":
-                raise ValueError(f"Source database is not healthy: {source_health}")
+                msg = f"Source database is not healthy: {source_health}"
+                raise ValueError(msg)
 
             # Count records in each table
             counts = source_health["tables"]
 
             logger.info("📊 Source data validation:")
-            logger.info(f"  - Users: {counts['users']}")
-            logger.info(f"  - Search History: {counts['search_history']}")
-            logger.info(f"  - Saved Searches: {counts['saved_searches']}")
+            logger.info("  - Users: %s", counts["users"])
+            logger.info("  - Search History: %s", counts["search_history"])
+            logger.info("  - Saved Searches: %s", counts["saved_searches"])
 
             return {
                 "status": "valid",
@@ -112,7 +109,7 @@ class MultiTenantMigration:
             }
 
         except Exception as e:
-            logger.error(f"❌ Source data validation failed: {e}")
+            logger.error("❌ Source data validation failed: %s", e)
             return {"status": "invalid", "error": str(e)}
 
     async def create_default_tenant(self) -> str:
@@ -128,7 +125,7 @@ class MultiTenantMigration:
                 plan="enterprise",  # Give full access to migrated data
                 settings={
                     "migrated_from_single_tenant": True,
-                    "migration_date": datetime.utcnow().isoformat(),
+                    "migration_date": datetime.now(UTC).isoformat(),
                     "legacy_data_access": True,
                 },
                 limits={
@@ -138,13 +135,15 @@ class MultiTenantMigration:
                 },
             )
 
-            logger.info(f"✅ Created default tenant: {tenant['name']} ({tenant['id']})")
+            logger.info(
+                "✅ Created default tenant: %s (%s)", tenant["name"], tenant["id"]
+            )
             self.migration_stats["tenants_created"] = 1
 
             return tenant["id"]
 
         except Exception as e:
-            logger.error(f"❌ Failed to create default tenant: {e}")
+            logger.error("❌ Failed to create default tenant: %s", e)
             raise
 
     async def migrate_users(self, tenant_id: str) -> None:
@@ -181,7 +180,7 @@ class MultiTenantMigration:
                     migrated_count += 1
 
                     if migrated_count % 10 == 0:
-                        logger.info(f"  Migrated {migrated_count} users...")
+                        logger.info("  Migrated %s users...", migrated_count)
 
                 except Exception as e:
                     error_msg = f"Failed to migrate user {user_data['username']}: {e}"
@@ -189,10 +188,10 @@ class MultiTenantMigration:
                     self.migration_stats["errors"].append(error_msg)
 
             self.migration_stats["users_migrated"] = migrated_count
-            logger.info(f"✅ Migrated {migrated_count} users")
+            logger.info("✅ Migrated %s users", migrated_count)
 
         except Exception as e:
-            logger.error(f"❌ User migration failed: {e}")
+            logger.error("❌ User migration failed: %s", e)
             raise
 
     async def migrate_search_history(self, tenant_id: str) -> None:
@@ -233,7 +232,7 @@ class MultiTenantMigration:
                     migrated_count += 1
 
                     if migrated_count % 100 == 0:
-                        logger.info(f"  Migrated {migrated_count} search records...")
+                        logger.info("  Migrated %s search records...", migrated_count)
 
                 except Exception as e:
                     error_msg = f"Failed to migrate search {search_data['id']}: {e}"
@@ -241,10 +240,10 @@ class MultiTenantMigration:
                     self.migration_stats["errors"].append(error_msg)
 
             self.migration_stats["search_history_migrated"] = migrated_count
-            logger.info(f"✅ Migrated {migrated_count} search history records")
+            logger.info("✅ Migrated %s search history records", migrated_count)
 
         except Exception as e:
-            logger.error(f"❌ Search history migration failed: {e}")
+            logger.error("❌ Search history migration failed: %s", e)
             raise
 
     async def migrate_saved_searches(self, tenant_id: str) -> None:
@@ -272,7 +271,7 @@ class MultiTenantMigration:
                     # Note: We need to use the target database's save_search method
                     # This would need to be implemented in the multi-tenant service
                     # For now, we'll log the data that would be migrated
-                    logger.debug(f"Would migrate saved search: {search_data['name']}")
+                    logger.debug("Would migrate saved search: %s", search_data["name"])
 
                     migrated_count += 1
 
@@ -284,10 +283,10 @@ class MultiTenantMigration:
                     self.migration_stats["errors"].append(error_msg)
 
             self.migration_stats["saved_searches_migrated"] = migrated_count
-            logger.info(f"✅ Migrated {migrated_count} saved searches")
+            logger.info("✅ Migrated %s saved searches", migrated_count)
 
         except Exception as e:
-            logger.error(f"❌ Saved searches migration failed: {e}")
+            logger.error("❌ Saved searches migration failed: %s", e)
             raise
 
     async def migrate_system_metrics(self, tenant_id: str) -> None:
@@ -313,7 +312,7 @@ class MultiTenantMigration:
 
                     # Note: We need to implement save_system_metrics in multi-tenant service
                     # For now, we'll log the data that would be migrated
-                    logger.debug(f"Would migrate metric: {metric_data['metric_type']}")
+                    logger.debug("Would migrate metric: %s", metric_data["metric_type"])
 
                     migrated_count += 1
 
@@ -323,13 +322,13 @@ class MultiTenantMigration:
                     self.migration_stats["errors"].append(error_msg)
 
             self.migration_stats["system_metrics_migrated"] = migrated_count
-            logger.info(f"✅ Migrated {migrated_count} system metrics")
+            logger.info("✅ Migrated %s system metrics", migrated_count)
 
         except Exception as e:
-            logger.error(f"❌ System metrics migration failed: {e}")
+            logger.error("❌ System metrics migration failed: %s", e)
             raise
 
-    async def validate_migration(self, tenant_id: str) -> dict[str, Any]:
+    async def validate_migration(self, tenant_id: str) -> Dict[str, Any]:
         """Validate migrated data integrity"""
         logger.info("🔍 Validating migration integrity...")
 
@@ -355,23 +354,23 @@ class MultiTenantMigration:
             }
 
             logger.info("✅ Migration validation completed")
-            logger.info(f"  - Tenant users: {len(tenant_users)}")
-            logger.info(f"  - Tenant search history: {len(tenant_searches)}")
+            logger.info("  - Tenant users: %s", len(tenant_users))
+            logger.info("  - Tenant search history: %s", len(tenant_searches))
 
             return validation_results
 
         except Exception as e:
-            logger.error(f"❌ Migration validation failed: {e}")
+            logger.error("❌ Migration validation failed: %s", e)
             return {
                 "status": "invalid",
                 "error": str(e),
                 "migration_stats": self.migration_stats,
             }
 
-    async def generate_migration_report(self) -> dict[str, Any]:
+    async def generate_migration_report(self) -> Dict[str, Any]:
         """Generate comprehensive migration report"""
-        report = {
-            "migration_timestamp": datetime.utcnow().isoformat(),
+        return {
+            "migration_timestamp": datetime.now(UTC).isoformat(),
             "source_config": {
                 "host": self.source_config.host,
                 "database": self.source_config.database,
@@ -393,9 +392,7 @@ class MultiTenantMigration:
             ],
         }
 
-        return report
-
-    async def run_migration(self, dry_run: bool = False) -> dict[str, Any]:
+    async def run_migration(self, dry_run: bool = False) -> Dict[str, Any]:
         """Run complete migration process"""
         logger.info("🚀 Starting multi-tenant migration process...")
 
@@ -406,7 +403,8 @@ class MultiTenantMigration:
             # Validate source data
             validation = await self.validate_source_data()
             if validation["status"] != "valid":
-                raise ValueError(f"Source data validation failed: {validation}")
+                msg = f"Source data validation failed: {validation}"
+                raise ValueError(msg)
 
             if dry_run:
                 logger.info("🔍 DRY RUN MODE - No data will be migrated")
@@ -434,19 +432,25 @@ class MultiTenantMigration:
             logger.info("🎉 Migration completed successfully!")
             logger.info("📊 Migration Summary:")
             logger.info(
-                f"  - Tenants created: {self.migration_stats['tenants_created']}",
-            )
-            logger.info(f"  - Users migrated: {self.migration_stats['users_migrated']}")
-            logger.info(
-                f"  - Search history migrated: {self.migration_stats['search_history_migrated']}",
+                "  - Tenants created: %s",
+                self.migration_stats["tenants_created"],
             )
             logger.info(
-                f"  - Saved searches migrated: {self.migration_stats['saved_searches_migrated']}",
+                "  - Users migrated: %s", self.migration_stats["users_migrated"]
             )
             logger.info(
-                f"  - System metrics migrated: {self.migration_stats['system_metrics_migrated']}",
+                "  - Search history migrated: %s",
+                self.migration_stats["search_history_migrated"],
             )
-            logger.info(f"  - Errors: {len(self.migration_stats['errors'])}")
+            logger.info(
+                "  - Saved searches migrated: %s",
+                self.migration_stats["saved_searches_migrated"],
+            )
+            logger.info(
+                "  - System metrics migrated: %s",
+                self.migration_stats["system_metrics_migrated"],
+            )
+            logger.info("  - Errors: %s", len(self.migration_stats["errors"]))
 
             return {
                 "status": "success",
@@ -456,7 +460,7 @@ class MultiTenantMigration:
             }
 
         except Exception as e:
-            logger.error(f"❌ Migration failed: {e}")
+            logger.error("❌ Migration failed: %s", e)
             return {
                 "status": "failed",
                 "error": str(e),
@@ -466,7 +470,7 @@ class MultiTenantMigration:
             await self.close()
 
 
-async def main():
+async def main(self) -> None:
     """Main migration function"""
     parser = argparse.ArgumentParser(description="PAKE System Multi-Tenant Migration")
     parser.add_argument(
@@ -514,7 +518,7 @@ async def main():
     if args.output_report:
         with open(args.output_report, "w") as f:
             json.dump(result, f, indent=2)
-        logger.info(f"📄 Migration report saved to: {args.output_report}")
+        logger.info("📄 Migration report saved to: %s", args.output_report)
 
     # Print summary
     print("\n" + "=" * 60)

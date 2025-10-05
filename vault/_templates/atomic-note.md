@@ -24,6 +24,6 @@ human_notes: ""
 ## Cross-Domain Connections
 
 ## Metadata Trail
-- Ingestion Method: 
-- Processing Pipeline: 
+- Ingestion Method:
+- Processing Pipeline:
 - Verification Date:

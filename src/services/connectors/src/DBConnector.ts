@@ -335,7 +335,7 @@ export class DBConnector extends Connector {
       (this.config as DBConfig).enablePreparedStatements &&
       queryRequest.parameters
     ) {
-      const stmtHash = createHash('md5').update(sql).digest('hex');
+      const stmtHash = createHash('sha256').update(sql).digest('hex');
 
       if (!this.preparedStatements.has(stmtHash)) {
         this.preparedStatements.set(stmtHash, `stmt_${stmtHash}`);

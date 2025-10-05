@@ -3,7 +3,6 @@ Comprehensive End-to-End Tests for PAKE System
 Tests complete user journeys from API request to database persistence
 """
 
-
 import pytest
 
 from src.pake_system.auth.security import create_password_hash
@@ -12,9 +11,9 @@ from src.pake_system.auth.security import create_password_hash
 class TestCriticalUserJourneys:
     """End-to-end tests for critical user journeys"""
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_complete_user_registration_and_login_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_complete_user_registration_and_login_journey(self) -> None:
         """
         Test complete user journey: Registration -> Login -> Access Protected Resources
 
@@ -97,9 +96,9 @@ class TestCriticalUserJourneys:
         assert logout_response.status_code == 200
         assert logout_response.json()["message"] == "Successfully logged out"
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_password_strength_validation_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_password_strength_validation_journey(self) -> None:
         """
         Test complete password strength validation journey
 
@@ -156,9 +155,9 @@ class TestCriticalUserJourneys:
         assert validation_result["is_valid"] is True
         assert len(validation_result["errors"]) == 0
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_secure_password_generation_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_secure_password_generation_journey(self) -> None:
         """
         Test secure password generation journey
 
@@ -190,9 +189,9 @@ class TestCriticalUserJourneys:
             assert validation_result["is_valid"] is True
             assert len(validation_result["errors"]) == 0
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_authentication_failure_and_recovery_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_authentication_failure_and_recovery_journey(self) -> None:
         """
         Test authentication failure and recovery journey
 
@@ -248,9 +247,9 @@ class TestCriticalUserJourneys:
         user_info = protected_response.json()
         assert user_info["username"] == username
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_token_expiration_and_refresh_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_token_expiration_and_refresh_journey(self) -> None:
         """
         Test token expiration and refresh journey
 
@@ -317,9 +316,9 @@ class TestCriticalUserJourneys:
         # This test assumes tokens have some overlap time
         assert old_protected_response.status_code in [200, 401]
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_concurrent_user_operations_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_concurrent_user_operations_journey(self) -> None:
         """
         Test concurrent user operations journey
 
@@ -342,9 +341,8 @@ class TestCriticalUserJourneys:
         # Act: Concurrent user registration
         start_time = time.time()
 
-        async def register_user(user_data):
-            response = test_client.post("/auth/register", json=user_data)
-            return response
+        async def register_user(self) -> None:
+            return test_client.post("/auth/register", json=user_data)
 
         tasks = [register_user(user_data) for user_data in users_data]
         registration_responses = await asyncio.gather(*tasks)
@@ -358,15 +356,14 @@ class TestCriticalUserJourneys:
         # Act: Concurrent login attempts
         start_time = time.time()
 
-        async def login_user(user_data):
-            response = test_client.post(
+        async def login_user(self) -> None:
+            return test_client.post(
                 "/auth/token",
                 data={
                     "username": user_data["username"],
                     "password": user_data["password"],
                 },
             )
-            return response
 
         login_tasks = [login_user(user_data) for user_data in users_data]
         login_responses = await asyncio.gather(*login_tasks)
@@ -383,9 +380,9 @@ class TestCriticalUserJourneys:
         assert registration_time < 10.0  # Registration within 10 seconds
         assert login_time < 5.0  # Login within 5 seconds
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_security_headers_and_cors_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_security_headers_and_cors_journey(self) -> None:
         """
         Test security headers and CORS journey
 
@@ -421,9 +418,9 @@ class TestCriticalUserJourneys:
             assert headers["X-Content-Type-Options"] == "nosniff"
             assert "mode=block" in headers["X-XSS-Protection"]
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_error_handling_and_recovery_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_error_handling_and_recovery_journey(self) -> None:
         """
         Test error handling and recovery journey
 
@@ -469,9 +466,9 @@ class TestCriticalUserJourneys:
         response = test_client.post("/auth/refresh", json={"refresh_token": "invalid"})
         assert response.status_code == 401
 
-    @pytest.mark.e2e()
-    @pytest.mark.asyncio()
-    async def test_data_persistence_and_consistency_journey(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_data_persistence_and_consistency_journey(self) -> None:
         """
         Test data persistence and consistency journey
 
@@ -531,10 +528,10 @@ class TestCriticalUserJourneys:
 class TestPerformanceE2E:
     """End-to-end performance tests"""
 
-    @pytest.mark.e2e()
-    @pytest.mark.performance()
-    @pytest.mark.asyncio()
-    async def test_authentication_performance_under_load(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.performance
+    @pytest.mark.asyncio
+    async def test_authentication_performance_under_load(self) -> None:
         """
         Test authentication performance under load
 
@@ -561,11 +558,10 @@ class TestPerformanceE2E:
         # Act: Multiple concurrent login requests
         start_time = time.time()
 
-        async def login_request():
-            response = test_client.post(
+        async def login_request(self) -> None:
+            return test_client.post(
                 "/auth/token", data={"username": username, "password": password}
             )
-            return response
 
         # Create 10 concurrent login requests
         tasks = [login_request() for _ in range(10)]
@@ -584,10 +580,10 @@ class TestPerformanceE2E:
         rps = len(responses) / total_time
         assert rps > 2.0  # Should handle at least 2 requests per second
 
-    @pytest.mark.e2e()
-    @pytest.mark.performance()
-    @pytest.mark.asyncio()
-    async def test_password_generation_performance(self, test_client):
+    @pytest.mark.e2e
+    @pytest.mark.performance
+    @pytest.mark.asyncio
+    async def test_password_generation_performance(self) -> None:
         """
         Test password generation performance
 

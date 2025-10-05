@@ -1,11 +1,11 @@
 """Enhanced Analytics Endpoints for Visualization
-Provides rich data for the enhanced analytics dashboard
+Provides rich data for the enhanced analytics dashboard.
 """
 
 import logging
 import random
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -27,7 +27,7 @@ class TimeSeriesPoint:
 
     timestamp: datetime
     value: float
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -63,15 +63,15 @@ class RealTimeActivity:
     activity_type: str
     description: str
     value: float
-    metadata: Optional[dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class VisualizationAnalyticsService:
     """Enhanced analytics service for visualization dashboards."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the service."""
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(UTC)
         self.metrics_cache = {}
         self.activity_stream = []
 
@@ -86,8 +86,8 @@ class VisualizationAnalyticsService:
     async def get_enhanced_dashboard_data(
         self,
         time_range: str = "24h",
-        metric_types: list[str] = None,
-    ) -> dict[str, Any]:
+        metric_types: List[str] = None,
+    ) -> Dict[str, Any]:
         """Get comprehensive dashboard data with enhanced visualizations.
 
         Args:
@@ -98,15 +98,15 @@ class VisualizationAnalyticsService:
             Enhanced dashboard data structure
         """
         try:
-            logger.info(f"Generating enhanced dashboard data for range: {time_range}")
+            logger.info("Generating enhanced dashboard data for range: %s", time_range)
 
             # Parse time range
             hours = self._parse_time_range(time_range)
-            end_time = datetime.now()
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=hours)
 
             # Generate data for each metric type
-            dashboard_data = {
+            return {
                 "timestamp": end_time.isoformat(),
                 "time_range": time_range,
                 "performance_metrics": await self._generate_performance_metrics(
@@ -140,10 +140,8 @@ class VisualizationAnalyticsService:
                 },
             }
 
-            return dashboard_data
-
         except Exception as e:
-            logger.error(f"Error generating enhanced dashboard data: {e}")
+            logger.error("Error generating enhanced dashboard data: %s", e)
             return self._get_error_response(str(e))
 
     async def get_time_series_data(
@@ -191,14 +189,14 @@ class VisualizationAnalyticsService:
             return points
 
         except Exception as e:
-            logger.error(f"Error generating time series for {metric_name}: {e}")
+            logger.error("Error generating time series for %s: %s", metric_name, e)
             return []
 
     async def get_correlation_matrix(
         self,
-        metrics: list[str],
+        metrics: List[str],
         time_range: str = "24h",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate correlation matrix between metrics.
 
         Args:
@@ -255,14 +253,14 @@ class VisualizationAnalyticsService:
                     if abs(c.correlation_coefficient)
                     > self.config["correlation_threshold"]
                 ],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Error generating correlation matrix: {e}")
+            logger.error("Error generating correlation matrix: %s", e)
             return {"error": str(e)}
 
-    async def get_real_time_stream(self, limit: int = 50) -> list[dict[str, Any]]:
+    async def get_real_time_stream(self, limit: int = 50) -> list[Dict[str, Any]]:
         """Get recent real-time activity events.
 
         Args:
@@ -274,9 +272,9 @@ class VisualizationAnalyticsService:
         try:
             # Generate recent activities
             activities = []
-            now = datetime.now()
+            now = datetime.now(UTC)
 
-            for i in range(limit):
+            for _i in range(limit):
                 timestamp = now - timedelta(minutes=random.randint(0, 60))
                 activity_type = random.choice(
                     ["search", "analysis", "enhancement", "correlation", "insight"],
@@ -303,7 +301,7 @@ class VisualizationAnalyticsService:
             return activities
 
         except Exception as e:
-            logger.error(f"Error getting real-time stream: {e}")
+            logger.error("Error getting real-time stream: %s", e)
             return []
 
     def _parse_time_range(self, time_range: str) -> int:
@@ -315,7 +313,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate performance metrics data."""
         hours = (end_time - start_time).total_seconds() / 3600
 
@@ -375,7 +373,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate usage analytics data."""
         return {
             "total_searches": random.randint(100, 1000),
@@ -399,7 +397,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate ML intelligence metrics."""
         return {
             "ml_enhancement_rate": random.uniform(70, 95),
@@ -420,7 +418,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate correlation analysis data."""
         metrics = [
             "response_time",
@@ -458,11 +456,11 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Generate real-time activity stream."""
         return await self.get_real_time_stream(limit=100)
 
-    async def _get_system_health(self) -> dict[str, Any]:
+    async def _get_system_health(self) -> Dict[str, Any]:
         """Get system health information."""
         return {
             "overall_health": "healthy",
@@ -490,7 +488,7 @@ class VisualizationAnalyticsService:
             },
         }
 
-    async def _get_top_queries(self) -> list[dict[str, Any]]:
+    async def _get_top_queries(self) -> list[Dict[str, Any]]:
         """Get top search queries."""
         queries = [
             "machine learning",
@@ -515,7 +513,7 @@ class VisualizationAnalyticsService:
             for query in random.sample(queries, 5)
         ]
 
-    async def _get_source_distribution(self) -> dict[str, Any]:
+    async def _get_source_distribution(self) -> Dict[str, Any]:
         """Get distribution of results by source."""
         return {
             "web": random.randint(30, 50),
@@ -642,12 +640,12 @@ class VisualizationAnalyticsService:
         """Calculate expected number of data points."""
         return hours * 12  # 5-minute intervals
 
-    def _get_error_response(self, error_message: str) -> dict[str, Any]:
+    def _get_error_response(self, error_message: str) -> Dict[str, Any]:
         """Generate error response."""
         return {
             "error": True,
             "message": error_message,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "fallback_data": {
                 "performance_metrics": {},
                 "usage_analytics": {},

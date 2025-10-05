@@ -22,7 +22,7 @@ A modern, real-time dashboard for monitoring the PAKE System enterprise knowledg
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - GitHub Personal Access Token with `repo` scope
 

@@ -1,5 +1,5 @@
 """Security utilities for PAKE System authentication
-Implements secure password hashing and JWT token generation with enhanced security features
+Implements secure password hashing and JWT token generation with enhanced security features.
 """
 
 import secrets
@@ -63,7 +63,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    data: dict[str, Any], expires_delta: timedelta | None = None
+    data: Dict[str, Any], expires_delta: timedelta | None = None
 ) -> str:
     """Create a JWT access token with an expiration claim.
 
@@ -88,7 +88,8 @@ def create_access_token(
         - The exp claim is automatically validated by FastAPI
     """
     if not settings.SECRET_KEY:
-        raise ValueError("SECRET_KEY must be configured for JWT token creation")
+        msg = "SECRET_KEY must be configured for JWT token creation"
+        raise ValueError(msg)
 
     to_encode = data.copy()
 
@@ -109,14 +110,10 @@ def create_access_token(
     )
 
     # Encode and sign the token
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
-
-    return encoded_jwt
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def decode_token(token: str) -> dict[str, Any]:
+def decode_token(token: str) -> Dict[str, Any]:
     """Decode and validate a JWT token.
 
     This function verifies the token signature and checks expiration.
@@ -138,12 +135,13 @@ def decode_token(token: str) -> dict[str, Any]:
         'user@example.com'
     """
     if not settings.SECRET_KEY:
-        raise ValueError("SECRET_KEY must be configured for JWT token validation")
+        msg = "SECRET_KEY must be configured for JWT token validation"
+        raise ValueError(msg)
 
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
 
-def validate_password_strength(password: str) -> tuple[bool, list[str]]:
+def validate_password_strength(password: str) -> tuple[bool, List[str]]:
     """Validate password strength according to enterprise security standards.
 
     Args:
@@ -253,7 +251,7 @@ def generate_secure_password(length: int = 16) -> str:
     return "".join(password)
 
 
-def create_refresh_token(data: dict[str, Any]) -> str:
+def create_refresh_token(data: Dict[str, Any]) -> str:
     """Create a JWT refresh token with longer expiration.
 
     Refresh tokens are used to obtain new access tokens without
@@ -270,7 +268,8 @@ def create_refresh_token(data: dict[str, Any]) -> str:
         >>> # Returns: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     """
     if not settings.SECRET_KEY:
-        raise ValueError("SECRET_KEY must be configured for JWT token creation")
+        msg = "SECRET_KEY must be configured for JWT token creation"
+        raise ValueError(msg)
 
     to_encode = data.copy()
 
@@ -287,11 +286,7 @@ def create_refresh_token(data: dict[str, Any]) -> str:
     )
 
     # Encode and sign the token
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
-
-    return encoded_jwt
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def verify_token_type(token: str, expected_type: str) -> bool:

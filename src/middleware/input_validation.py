@@ -1,5 +1,5 @@
 """Input Validation Middleware for PAKE System
-Prevents injection attacks and ensures data integrity
+Prevents injection attacks and ensures data integrity.
 
 SECURITY POLICY: All inputs must be validated and sanitized before processing
 """
@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationError(Exception):
-    """Custom exception for validation errors"""
+    """Custom exception for validation errors."""
 
 
 class SecurityLevel(Enum):
-    """Security validation levels"""
+    """Security validation levels."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -30,20 +30,20 @@ class SecurityLevel(Enum):
 
 @dataclass
 class ValidationResult:
-    """Result of input validation"""
+    """Result of input validation."""
 
     is_valid: bool
     sanitized_value: Any
     error_message: str | None = None
-    security_warnings: list[str] = None
+    security_warnings: List[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.security_warnings is None:
             self.security_warnings = []
 
 
 class InputValidator:
-    """Comprehensive input validation and sanitization"""
+    """Comprehensive input validation and sanitization."""
 
     # Dangerous patterns that could indicate injection attempts
     DANGEROUS_PATTERNS = [
@@ -70,13 +70,13 @@ class InputValidator:
 
     @classmethod
     def validate_string(
-        self,
+        cls,
         value: str,
         max_length: int = 1000,
         security_level: SecurityLevel = SecurityLevel.MEDIUM,
         allow_html: bool = False,
     ) -> ValidationResult:
-        """Validate and sanitize string input
+        """Validate and sanitize string input.
 
         Args:
             value: Input string to validate
@@ -102,7 +102,7 @@ class InputValidator:
             )
 
         # Security pattern detection
-        for pattern in self._compiled_patterns:
+        for pattern in cls._compiled_patterns:
             if pattern.search(value):
                 if security_level in [SecurityLevel.HIGH, SecurityLevel.CRITICAL]:
                     return ValidationResult(
@@ -128,7 +128,7 @@ class InputValidator:
 
     @classmethod
     def validate_email(cls, value: str) -> ValidationResult:
-        """Validate email address format"""
+        """Validate email address format."""
         if not isinstance(value, str):
             return ValidationResult(
                 is_valid=False,
@@ -156,7 +156,7 @@ class InputValidator:
         value: str | dict,
         max_size: int = 10000,
     ) -> ValidationResult:
-        """Validate JSON input"""
+        """Validate JSON input."""
         if isinstance(value, str):
             try:
                 parsed_json = json.loads(value)
@@ -193,7 +193,7 @@ class InputValidator:
         min_val: int = None,
         max_val: int = None,
     ) -> ValidationResult:
-        """Validate integer input"""
+        """Validate integer input."""
         try:
             int_value = int(value)
         except (ValueError, TypeError):
@@ -221,7 +221,7 @@ class InputValidator:
 
     @classmethod
     def validate_uuid(cls, value: str) -> ValidationResult:
-        """Validate UUID format"""
+        """Validate UUID format."""
         if not isinstance(value, str):
             return ValidationResult(
                 is_valid=False,
@@ -241,7 +241,7 @@ class InputValidator:
 
     @classmethod
     def validate_api_key(cls, value: str) -> ValidationResult:
-        """Validate API key format"""
+        """Validate API key format."""
         if not isinstance(value, str):
             return ValidationResult(
                 is_valid=False,
@@ -262,16 +262,16 @@ class InputValidator:
 
 
 class RequestValidator:
-    """Request-level validation middleware"""
+    """Request-level validation middleware."""
 
     @classmethod
     def validate_request_data(
         cls,
-        data: dict[str, Any],
-        schema: dict[str, Any],
+        data: Dict[str, Any],
+        schema: Dict[str, Any],
         security_level: SecurityLevel = SecurityLevel.MEDIUM,
     ) -> ValidationResult:
-        """Validate request data against schema
+        """Validate request data against schema.
 
         Args:
             data: Request data to validate
@@ -341,7 +341,7 @@ class RequestValidator:
 
 
 def validate_input(value: Any, field_type: str = "string", **kwargs) -> Any:
-    """Convenience function for input validation
+    """Convenience function for input validation.
 
     Args:
         value: Value to validate
@@ -369,13 +369,14 @@ def validate_input(value: Any, field_type: str = "string", **kwargs) -> Any:
     elif field_type == "json":
         result = validator.validate_json(value, **kwargs)
     else:
-        raise ValidationError(f"Unknown field type: {field_type}")
+        msg = f"Unknown field type: {field_type}"
+        raise ValidationError(msg)
 
     if not result.is_valid:
         raise ValidationError(result.error_message)
 
     # Log security warnings
     for warning in result.security_warnings:
-        logger.warning(f"Security warning: {warning}")
+        logger.warning("Security warning: %s", warning)
 
     return result.sanitized_value

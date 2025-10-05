@@ -1,5 +1,4 @@
-"""
-Performance Testing Scripts
+"""Performance Testing Scripts.
 ===========================
 
 This directory contains scripts for running performance tests
@@ -16,18 +15,18 @@ Usage:
     python performance_tests/scripts/run_load_test.py --scenario stress
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from environment_manager import PerformanceEnvironmentManager, PerformanceTestRunner
 import argparse
-import json
-import time
+
+from environment_manager import PerformanceEnvironmentManager, PerformanceTestRunner
 
 
-def run_smoke_test():
-    """Run smoke test for CI/CD pipeline"""
+def run_smoke_test(self) -> None:
+    """Run smoke test for CI/CD pipeline."""
     print("🚀 Starting PAKE System Smoke Test")
     print("=" * 50)
 
@@ -47,15 +46,15 @@ def run_smoke_test():
     print(f"Avg Response Time: {results.get('avg_response_time', 0):.2f}s")
     print(f"Requests/Second: {results.get('requests_per_second', 0):.2f}")
 
-    if not results.get('success'):
+    if not results.get("success"):
         print(f"Error: {results.get('error', 'Unknown error')}")
         return False
 
     return True
 
 
-def run_load_test(environment: str = "local", scenario: str = "normal"):
-    """Run comprehensive load test"""
+def run_load_test(self) -> None:
+    """Run comprehensive load test."""
     print(f"🚀 Starting PAKE System Load Test - {scenario.upper()}")
     print(f"Environment: {environment}")
     print("=" * 50)
@@ -81,7 +80,7 @@ def run_load_test(environment: str = "local", scenario: str = "normal"):
     print(f"Requests/Second: {results.get('requests_per_second', 0):.2f}")
 
     # Performance validation
-    validation = results.get('performance_validation', {})
+    validation = results.get("performance_validation", {})
     if validation:
         print("\n🎯 Performance Validation:")
         print("-" * 30)
@@ -90,25 +89,39 @@ def run_load_test(environment: str = "local", scenario: str = "normal"):
         print(f"Throughput: {'✅' if validation.get('throughput') else '❌'}")
         print(f"Overall: {'✅' if validation.get('overall') else '❌'}")
 
-    if not results.get('success'):
+    if not results.get("success"):
         print(f"Error: {results.get('error', 'Unknown error')}")
         return False
 
     return True
 
 
-def main():
-    """Main function"""
-    parser = argparse.ArgumentParser(description="PAKE System Performance Testing Scripts")
-    parser.add_argument("--environment", "-e", default="local",
-                       choices=["local", "staging", "production"],
-                       help="Target environment")
-    parser.add_argument("--scenario", "-s", default="normal",
-                       choices=["smoke", "normal", "peak", "stress", "endurance"],
-                       help="Test scenario")
-    parser.add_argument("--test-type", "-t", default="smoke",
-                       choices=["smoke", "load"],
-                       help="Type of test to run")
+def main(self) -> None:
+    """Main function."""
+    parser = argparse.ArgumentParser(
+        description="PAKE System Performance Testing Scripts"
+    )
+    parser.add_argument(
+        "--environment",
+        "-e",
+        default="local",
+        choices=["local", "staging", "production"],
+        help="Target environment",
+    )
+    parser.add_argument(
+        "--scenario",
+        "-s",
+        default="normal",
+        choices=["smoke", "normal", "peak", "stress", "endurance"],
+        help="Test scenario",
+    )
+    parser.add_argument(
+        "--test-type",
+        "-t",
+        default="smoke",
+        choices=["smoke", "load"],
+        help="Type of test to run",
+    )
 
     args = parser.parse_args()
 
@@ -121,9 +134,8 @@ def main():
         if success:
             print("\n🎉 Performance test completed successfully!")
             return 0
-        else:
-            print("\n💥 Performance test failed!")
-            return 1
+        print("\n💥 Performance test failed!")
+        return 1
 
     except KeyboardInterrupt:
         print("\n⏹️ Test interrupted by user")

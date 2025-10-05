@@ -37,6 +37,13 @@ local.json
 local.yml
 local.yaml
 
+# Phase 2: act configuration files
+.secrets
+.vars
+.actrc.local
+act-debug.log
+act-artifacts/
+
 # Temporary security files
 *.tmp.env
 *.backup.env

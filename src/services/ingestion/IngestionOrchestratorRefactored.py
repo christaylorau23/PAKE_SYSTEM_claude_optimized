@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Refactored Ingestion Orchestrator (SRP Compliant)
-Single Responsibility: Orchestrating multi-source content ingestion workflow
+Single Responsibility: Orchestrating multi-source content ingestion workflow.
 
 This orchestrator now follows SRP by delegating specific responsibilities to focused managers:
 - Plan Building: IngestionPlanBuilder
@@ -19,9 +19,7 @@ from typing import Any
 
 from .interfaces import (
     IngestionPlan,
-    IngestionPlanBuilderInterface,
     IngestionResult,
-    SourceExecutorInterface,
 )
 from .managers.IngestionPlanBuilder import IngestionPlanBuilder, PlanBuilderConfig
 from .managers.SourceExecutor import SourceExecutor
@@ -31,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OrchestratorConfig:
-    """Configuration for ingestion orchestrator"""
+    """Configuration for ingestion orchestrator."""
 
     max_concurrent_sources: int = 5
     timeout_per_source: int = 300
@@ -42,14 +40,9 @@ class OrchestratorConfig:
 
 
 class IngestionOrchestratorRefactored:
-    """Refactored orchestrator following Single Responsibility Principle"""
+    """Refactored orchestrator following Single Responsibility Principle."""
 
-    def __init__(
-        self,
-        config: OrchestratorConfig | None = None,
-        plan_builder: IngestionPlanBuilderInterface | None = None,
-        source_executor: SourceExecutorInterface | None = None,
-    ):
+    def __init__(self) -> None:
         self.config = config or OrchestratorConfig()
 
         # Use dependency injection for managers
@@ -77,7 +70,7 @@ class IngestionOrchestratorRefactored:
         plan: IngestionPlan,
         user_id: str | None = None,
     ) -> IngestionResult:
-        """Execute ingestion plan using decomposed managers"""
+        """Execute ingestion plan using decomposed managers."""
         start_time = time.time()
         logger.info(
             "Starting ingestion plan execution",
@@ -144,8 +137,8 @@ class IngestionOrchestratorRefactored:
     async def _execute_sources_concurrently(
         self,
         plan: IngestionPlan,
-    ) -> list[tuple[list[Any], dict[str, Any]]]:
-        """Execute all sources concurrently using asyncio"""
+    ) -> list[tuple[list[Any], Dict[str, Any]]]:
+        """Execute all sources concurrently using asyncio."""
         # Create tasks for concurrent execution
         tasks = []
         for source in plan.sources:
@@ -187,7 +180,7 @@ class IngestionOrchestratorRefactored:
 
             return processed_results
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Ingestion plan timed out")
             # Cancel remaining tasks
             for task in tasks:
@@ -197,10 +190,10 @@ class IngestionOrchestratorRefactored:
 
     def _process_source_results(
         self,
-        source_results: list[tuple[list[Any], dict[str, Any]]],
+        source_results: list[tuple[list[Any], Dict[str, Any]]],
         result: IngestionResult,
     ) -> None:
-        """Process results from source executions"""
+        """Process results from source executions."""
         for content_items, metrics in source_results:
             if metrics.get("success", False):
                 result.successful_sources += 1
@@ -216,7 +209,7 @@ class IngestionOrchestratorRefactored:
         result: IngestionResult,
         start_time: float,
     ) -> None:
-        """Update orchestrator statistics"""
+        """Update orchestrator statistics."""
         self._stats["plans_executed"] += 1
         self._stats["sources_processed"] += result.total_sources
         self._stats["total_items_retrieved"] += result.total_items_retrieved
@@ -234,17 +227,17 @@ class IngestionOrchestratorRefactored:
                 total_time / self._stats["plans_executed"]
             )
 
-    def get_statistics(self) -> dict[str, Any]:
-        """Get orchestrator statistics"""
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get orchestrator statistics."""
         return self._stats.copy()
 
     def create_plan_from_config(
         self,
         topic: str,
-        source_configs: list[dict[str, Any]],
-        user_preferences: dict[str, Any] | None = None,
+        source_configs: list[Dict[str, Any]],
+        user_preferences: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
-        """Create an ingestion plan using the plan builder"""
+        """Create an ingestion plan using the plan builder."""
         return self.plan_builder.build_plan(
             topic=topic,
             source_configs=source_configs,
@@ -252,12 +245,12 @@ class IngestionOrchestratorRefactored:
         )
 
     def optimize_plan(self, plan: IngestionPlan) -> IngestionPlan:
-        """Optimize an ingestion plan using the plan builder"""
+        """Optimize an ingestion plan using the plan builder."""
         return self.plan_builder.optimize_plan(plan)
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform health check on orchestrator and its components"""
-        health_status = {
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on orchestrator and its components."""
+        return {
             "orchestrator": "healthy",
             "plan_builder": "healthy",
             "source_executor": "healthy",
@@ -269,5 +262,3 @@ class IngestionOrchestratorRefactored:
                 "max_retries": self.config.max_retries,
             },
         }
-
-        return health_status

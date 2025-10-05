@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
+from scripts.ingestion_pipeline import ContentItem
 from services.ingestion.social_media_service import (
     SocialMediaConfig,
     SocialMediaPost,
@@ -19,8 +21,6 @@ from services.ingestion.social_media_service import (
     SocialPlatform,
 )
 
-from scripts.ingestion_pipeline import ContentItem
-
 
 class TestSocialMediaService:
     """
@@ -28,8 +28,8 @@ class TestSocialMediaService:
     Tests multi-platform integration, intelligent filtering, and sentiment analysis.
     """
 
-    @pytest.fixture()
-    def twitter_config(self):
+    @pytest.fixture
+    def twitter_config(self) -> None:
         """Twitter API configuration"""
         return SocialMediaConfig(
             platform=SocialPlatform.TWITTER,
@@ -43,8 +43,8 @@ class TestSocialMediaService:
             timeout=30,
         )
 
-    @pytest.fixture()
-    def linkedin_config(self):
+    @pytest.fixture
+    def linkedin_config(self) -> None:
         """LinkedIn API configuration"""
         return SocialMediaConfig(
             platform=SocialPlatform.LINKEDIN,
@@ -57,8 +57,8 @@ class TestSocialMediaService:
             timeout=30,
         )
 
-    @pytest.fixture()
-    def reddit_config(self):
+    @pytest.fixture
+    def reddit_config(self) -> None:
         """Reddit API configuration"""
         return SocialMediaConfig(
             platform=SocialPlatform.REDDIT,
@@ -71,29 +71,23 @@ class TestSocialMediaService:
             timeout=30,
         )
 
-    @pytest.fixture()
-    def mock_cognitive_engine(self):
+    @pytest.fixture
+    def mock_cognitive_engine(self) -> None:
         """Mock cognitive engine for quality assessment"""
         engine = Mock()
         engine.assess_content_quality = AsyncMock(return_value=0.78)
         return engine
 
-    @pytest.fixture()
-    def social_media_service(
-        self,
-        twitter_config,
-        linkedin_config,
-        reddit_config,
-        mock_cognitive_engine,
-    ):
+    @pytest.fixture
+    def social_media_service(self) -> None:
         """Create social media service with all platforms"""
         return SocialMediaService(
             configs=[twitter_config, linkedin_config, reddit_config],
             cognitive_engine=mock_cognitive_engine,
         )
 
-    @pytest.fixture()
-    def twitter_service(self, twitter_config, mock_cognitive_engine):
+    @pytest.fixture
+    def twitter_service(self) -> None:
         """Create Twitter-only service"""
         return SocialMediaService(
             configs=[twitter_config],
@@ -104,8 +98,8 @@ class TestSocialMediaService:
     # TWITTER INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_search_twitter_posts_successfully(self, twitter_service):
+    @pytest.mark.asyncio
+    async def test_should_search_twitter_posts_successfully(self) -> None:
         """
         Test: Should search Twitter posts with keyword filtering
         and return structured results with engagement metrics.
@@ -135,8 +129,8 @@ class TestSocialMediaService:
         assert "likes" in post.engagement_metrics
         assert "retweets" in post.engagement_metrics
 
-    @pytest.mark.asyncio()
-    async def test_should_filter_twitter_hashtags_correctly(self, twitter_service):
+    @pytest.mark.asyncio
+    async def test_should_filter_twitter_hashtags_correctly(self) -> None:
         """
         Test: Should filter Twitter posts by hashtags
         with case-insensitive matching.
@@ -161,8 +155,8 @@ class TestSocialMediaService:
                 hashtag in post_hashtags_lower for hashtag in query_hashtags_lower
             )
 
-    @pytest.mark.asyncio()
-    async def test_should_respect_twitter_retweet_exclusion(self, twitter_service):
+    @pytest.mark.asyncio
+    async def test_should_respect_twitter_retweet_exclusion(self) -> None:
         """
         Test: Should exclude retweets when requested
         for Twitter platform.
@@ -187,11 +181,8 @@ class TestSocialMediaService:
     # LINKEDIN INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_search_linkedin_posts_with_professional_content(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_search_linkedin_posts_with_professional_content(self) -> None:
         """
         Test: Should search LinkedIn posts and prioritize
         professional content with proper engagement metrics.
@@ -238,11 +229,8 @@ class TestSocialMediaService:
     # REDDIT INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_search_reddit_posts_with_subreddit_context(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_search_reddit_posts_with_subreddit_context(self) -> None:
         """
         Test: Should search Reddit posts with subreddit filtering
         and maintain thread context information.
@@ -274,8 +262,8 @@ class TestSocialMediaService:
         if query.subreddits:
             assert post.thread_context["subreddit"] in query.subreddits
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_reddit_upvote_filtering(self, social_media_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_reddit_upvote_filtering(self) -> None:
         """
         Test: Should filter Reddit posts by minimum engagement
         using upvotes as the primary metric.
@@ -300,8 +288,8 @@ class TestSocialMediaService:
     # SENTIMENT ANALYSIS TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_apply_sentiment_analysis_to_posts(self, social_media_service):
+    @pytest.mark.asyncio
+    async def test_should_apply_sentiment_analysis_to_posts(self) -> None:
         """
         Test: Should apply sentiment analysis to social media posts
         and provide meaningful sentiment scores.
@@ -323,11 +311,8 @@ class TestSocialMediaService:
             assert hasattr(post, "sentiment_score")
             assert -1.0 <= post.sentiment_score <= 1.0
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_positive_sentiment_accurately(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_detect_positive_sentiment_accurately(self) -> None:
         """
         Test: Should accurately detect positive sentiment in posts
         with positive language and expressions.
@@ -373,11 +358,8 @@ class TestSocialMediaService:
     # COGNITIVE INTEGRATION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_integrate_cognitive_quality_assessment(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_integrate_cognitive_quality_assessment(self) -> None:
         """
         Test: Should apply cognitive quality assessment to social media posts
         and incorporate quality scores into ranking.
@@ -404,11 +386,8 @@ class TestSocialMediaService:
             social_media_service.cognitive_engine.assess_content_quality.call_count > 0
         )
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_cognitive_assessment_failures_gracefully(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_cognitive_assessment_failures_gracefully(self) -> None:
         """
         Test: Should continue processing when cognitive assessment fails
         and provide meaningful fallback quality scoring.
@@ -438,11 +417,8 @@ class TestSocialMediaService:
     # CONTENT ITEM CONVERSION TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_convert_social_posts_to_content_items_correctly(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_convert_social_posts_to_content_items_correctly(self) -> None:
         """
         Test: Should convert social media posts to standardized ContentItem format
         with comprehensive metadata preservation.
@@ -487,11 +463,8 @@ class TestSocialMediaService:
     # MULTI-PLATFORM SUPPORT TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_support_multiple_platforms_concurrently(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_support_multiple_platforms_concurrently(self) -> None:
         """
         Test: Should handle multiple social media platforms
         with proper configuration and rate limiting.
@@ -520,8 +493,8 @@ class TestSocialMediaService:
     # ERROR HANDLING AND RESILIENCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_unsupported_platform_gracefully(self, twitter_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_unsupported_platform_gracefully(self) -> None:
         """
         Test: Should handle requests for unconfigured platforms
         with proper error reporting.
@@ -538,8 +511,8 @@ class TestSocialMediaService:
         assert not result.success
         assert "not configured" in result.error_details.lower()
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_api_rate_limiting(self, twitter_service):
+    @pytest.mark.asyncio
+    async def test_should_handle_api_rate_limiting(self) -> None:
         """
         Test: Should track and respect API rate limits
         with proper rate limit reporting.
@@ -567,11 +540,8 @@ class TestSocialMediaService:
     # PERFORMANCE AND SCALABILITY TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_complete_search_within_reasonable_time(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_complete_search_within_reasonable_time(self) -> None:
         """
         Test: Should complete social media searches within acceptable time limits
         even with complex filtering and sentiment analysis.
@@ -590,8 +560,8 @@ class TestSocialMediaService:
         assert result.success
         assert result.execution_time < 3.0  # Should complete within 3 seconds
 
-    @pytest.mark.asyncio()
-    async def test_should_respect_max_results_limit(self, social_media_service):
+    @pytest.mark.asyncio
+    async def test_should_respect_max_results_limit(self) -> None:
         """
         Test: Should properly limit results according to max_results parameter
         and provide accurate count statistics.
@@ -613,11 +583,8 @@ class TestSocialMediaService:
     # HEALTH CHECK AND MAINTENANCE TESTS
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_comprehensive_health_status(
-        self,
-        social_media_service,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_provide_comprehensive_health_status(self) -> None:
         """
         Test: Should provide detailed health check information including
         platform status, rate limits, and service availability.
@@ -638,8 +605,8 @@ class TestSocialMediaService:
         assert "linkedin" in health_status["platforms"]
         assert "reddit" in health_status["platforms"]
 
-    @pytest.mark.asyncio()
-    async def test_should_cleanup_resources_properly(self, social_media_service):
+    @pytest.mark.asyncio
+    async def test_should_cleanup_resources_properly(self) -> None:
         """
         Test: Should properly close connections and clean up resources
         when service is shut down.
@@ -667,7 +634,7 @@ class TestSocialMediaService:
 class TestSocialMediaDataStructures:
     """Test social media-specific data structures and configurations"""
 
-    def test_social_media_query_should_have_sensible_defaults(self):
+    def test_social_media_query_should_have_sensible_defaults(self) -> None:
         """
         Test: SocialMediaQuery should provide reasonable default values
         for all configuration parameters.
@@ -684,11 +651,11 @@ class TestSocialMediaDataStructures:
         assert query.max_results == 100
         assert query.min_engagement == 0
         assert query.exclude_retweets
-        assert query.include_comments == False
+        assert query.include_comments is False
         assert query.content_language == "en"
         assert query.sentiment_filter is None
 
-    def test_social_media_post_should_be_immutable(self):
+    def test_social_media_post_should_be_immutable(self) -> None:
         """
         Test: SocialMediaPost instances should be immutable to ensure
         data integrity throughout processing pipeline.
@@ -708,7 +675,7 @@ class TestSocialMediaDataStructures:
         with pytest.raises(AttributeError):
             post.content = "Modified content"
 
-    def test_social_platform_enum_should_have_correct_values(self):
+    def test_social_platform_enum_should_have_correct_values(self) -> None:
         """
         Test: SocialPlatform enum should have correct platform identifiers
         for supported social media platforms.

@@ -9,20 +9,22 @@ import logging
 # import pickle  # SECURITY: Replaced with secure serialization
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
-from redis.asyncio import Redis
 
-from ...utils.secure_serialization import deserialize, serialize
+from src.utils.secure_serialization import deserialize, serialize
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class CacheConfig:
-    """Configuration for Redis cache service"""
+    """Configuration for Redis cache service."""
 
     redis_url: str = "redis://localhost:6379/0"
     default_ttl: int = 3600
@@ -32,7 +34,7 @@ class CacheConfig:
 
 @dataclass
 class CacheKey:
-    """Structured cache key generator"""
+    """Structured cache key generator."""
 
     namespace: str
     identifier: str
@@ -44,31 +46,31 @@ class CacheKey:
 
 @dataclass
 class CacheMetadata:
-    """Cache entry metadata"""
+    """Cache entry metadata."""
 
     created_at: datetime
     expires_at: datetime
     access_count: int = 0
     last_accessed: datetime | None = None
-    tags: list[str] | None = None
+    tags: List[str] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.tags is None:
             self.tags = []
 
 
 class CacheEntry:
-    """Wrapper for cached data with metadata"""
+    """Wrapper for cached data with metadata."""
 
-    def __init__(self, data: Any, metadata: CacheMetadata):
+    def __init__(self) -> None:
         self.data = data
         self.metadata = metadata
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {"data": self.data, "metadata": asdict(self.metadata)}
 
     @classmethod
-    def from_dict(cls, cache_dict: dict[str, Any]) -> "CacheEntry":
+    def from_dict(cls, cache_dict: Dict[str, Any]) -> "CacheEntry":
         metadata_dict = cache_dict["metadata"]
         metadata = CacheMetadata(
             created_at=datetime.fromisoformat(metadata_dict["created_at"]),
@@ -84,12 +86,12 @@ class CacheEntry:
         return cls(cache_dict["data"], metadata)
 
     def is_expired(self) -> bool:
-        return datetime.now() > self.metadata.expires_at
+        return datetime.now(UTC) > self.metadata.expires_at
 
-    def access(self):
-        """Mark entry as accessed"""
+    def access(self) -> None:
+        """Mark entry as accessed."""
         self.metadata.access_count += 1
-        self.metadata.last_accessed = datetime.now()
+        self.metadata.last_accessed = datetime.now(UTC)
 
 
 class RedisCacheService:
@@ -98,16 +100,10 @@ class RedisCacheService:
     - Intelligent cache warming
     - Tag-based invalidation
     - Performance metrics
-    - Automatic cleanup
+    - Automatic cleanup.
     """
 
-    def __init__(
-        self,
-        config: CacheConfig | None = None,
-        redis_url: str = "redis://localhost:6379/0",
-        default_ttl: int = 3600,
-        max_memory_cache_size: int = 1000,
-    ):
+    def __init__(self) -> None:
         if config:
             self.redis_url = config.redis_url
             self.default_ttl = config.default_ttl
@@ -119,7 +115,7 @@ class RedisCacheService:
 
         # L1 Cache (in-memory)
         self._memory_cache: dict[str, CacheEntry] = {}
-        self._memory_access_order: list[str] = []
+        self._memory_access_order: List[str] = []
 
         # Redis connection
         self._redis: Redis | None = None
@@ -139,22 +135,22 @@ class RedisCacheService:
         self._metrics_task: asyncio.Task | None = None
 
     async def initialize(self) -> None:
-        """Initialize Redis connection and background tasks"""
+        """Initialize Redis connection and background tasks."""
         try:
             self._redis = redis.from_url(self.redis_url, decode_responses=False)
             await self._redis.ping()
-            logger.info(f"✅ Redis cache service connected: {self.redis_url}")
+            logger.info("✅ Redis cache service connected: %s", self.redis_url)
 
             # Start background tasks
             self._cleanup_task = asyncio.create_task(self._cleanup_expired())
             self._metrics_task = asyncio.create_task(self._report_metrics())
 
         except Exception as e:
-            logger.warning(f"⚠️ Redis not available, using memory-only cache: {e}")
+            logger.warning("⚠️ Redis not available, using memory-only cache: %s", e)
             self._redis = None
 
     async def close(self) -> None:
-        """Close connections and cleanup"""
+        """Close connections and cleanup."""
         if self._cleanup_task:
             self._cleanup_task.cancel()
         if self._metrics_task:
@@ -169,7 +165,7 @@ class RedisCacheService:
         default: Any = None,
         update_access: bool = True,
     ) -> Any:
-        """Get value from cache (L1 -> L2 hierarchy)"""
+        """Get value from cache (L1 -> L2 hierarchy)."""
         cache_key = str(key)
 
         # L1 Cache check
@@ -181,7 +177,7 @@ class RedisCacheService:
                     self._update_access_order(cache_key)
                 self.stats["hits"] += 1
                 self.stats["l1_hits"] += 1
-                logger.debug(f"L1 cache hit: {cache_key}")
+                logger.debug("L1 cache hit: %s", cache_key)
                 return entry.data
             # Remove expired entry
             self._remove_from_memory_cache(cache_key)
@@ -208,23 +204,23 @@ class RedisCacheService:
                                 serialize(entry.to_dict()),
                                 ex=int(
                                     (
-                                        entry.metadata.expires_at - datetime.now()
+                                        entry.metadata.expires_at - datetime.now(UTC)
                                     ).total_seconds(),
                                 ),
                             )
 
                         self.stats["hits"] += 1
                         self.stats["l2_hits"] += 1
-                        logger.debug(f"L2 cache hit: {cache_key}")
+                        logger.debug("L2 cache hit: %s", cache_key)
                         return entry.data
                     # Remove expired entry
                     await self._redis.delete(cache_key)
             except Exception as e:
-                logger.warning(f"Redis get error for {cache_key}: {e}")
+                logger.warning("Redis get error for %s: %s", cache_key, e)
 
         # Cache miss
         self.stats["misses"] += 1
-        logger.debug(f"Cache miss: {cache_key}")
+        logger.debug("Cache miss: %s", cache_key)
         return default
 
     async def set(
@@ -232,17 +228,17 @@ class RedisCacheService:
         key: str | CacheKey,
         value: Any,
         ttl: int | None = None,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
     ) -> None:
-        """Set value in cache (both L1 and L2)"""
+        """Set value in cache (both L1 and L2)."""
         cache_key = str(key)
         ttl = ttl or self.default_ttl
         tags = tags or []
 
         # Create cache entry
         metadata = CacheMetadata(
-            created_at=datetime.now(),
-            expires_at=datetime.now() + timedelta(seconds=ttl),
+            created_at=datetime.now(UTC),
+            expires_at=datetime.now(UTC) + timedelta(seconds=ttl),
             tags=tags,
         )
         entry = CacheEntry(value, metadata)
@@ -262,13 +258,13 @@ class RedisCacheService:
                     await self._redis.expire(f"tag:{tag}", ttl + 3600)
 
             except Exception as e:
-                logger.warning(f"Redis set error for {cache_key}: {e}")
+                logger.warning("Redis set error for %s: %s", cache_key, e)
 
         self.stats["sets"] += 1
-        logger.debug(f"Cache set: {cache_key} (TTL: {ttl}s, Tags: {tags})")
+        logger.debug("Cache set: %s (TTL: %ss, Tags: %s)", cache_key, ttl, tags)
 
     async def delete(self, key: str | CacheKey) -> None:
-        """Delete from both cache levels"""
+        """Delete from both cache levels."""
         cache_key = str(key)
 
         # Remove from L1
@@ -279,12 +275,12 @@ class RedisCacheService:
             try:
                 await self._redis.delete(cache_key)
             except Exception as e:
-                logger.warning(f"Redis delete error for {cache_key}: {e}")
+                logger.warning("Redis delete error for %s: %s", cache_key, e)
 
         self.stats["deletes"] += 1
 
     async def invalidate_by_tag(self, tag: str) -> int:
-        """Invalidate all cache entries with given tag"""
+        """Invalidate all cache entries with given tag."""
         if not self._redis:
             return 0
 
@@ -303,15 +299,15 @@ class RedisCacheService:
             # Clean up tag set
             await self._redis.delete(f"tag:{tag}")
 
-            logger.info(f"Invalidated {count} cache entries with tag: {tag}")
+            logger.info("Invalidated %s cache entries with tag: %s", count, tag)
             return count
 
         except Exception as e:
-            logger.error(f"Tag invalidation error for {tag}: {e}")
+            logger.error("Tag invalidation error for %s: %s", tag, e)
             return 0
 
     async def clear_all(self) -> None:
-        """Clear all cache data"""
+        """Clear all cache data."""
         # Clear L1
         self._memory_cache.clear()
         self._memory_access_order.clear()
@@ -322,10 +318,10 @@ class RedisCacheService:
                 await self._redis.flushdb()
                 logger.info("All cache data cleared")
             except Exception as e:
-                logger.error(f"Redis clear error: {e}")
+                logger.error("Redis clear error: %s", e)
 
-    def get_stats(self) -> dict[str, Any]:
-        """Get cache performance statistics"""
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache performance statistics."""
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_rate = (
             (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
@@ -340,9 +336,9 @@ class RedisCacheService:
         }
 
     # Cache warming methods
-    async def warm_search_cache(self, popular_queries: list[str]) -> None:
-        """Pre-warm cache with popular search queries"""
-        logger.info(f"Warming cache with {len(popular_queries)} popular queries")
+    async def warm_search_cache(self, popular_queries: List[str]) -> None:
+        """Pre-warm cache with popular search queries."""
+        logger.info("Warming cache with %s popular queries", len(popular_queries))
 
         for query in popular_queries:
             cache_key = CacheKey("search", f"warm:{query}")
@@ -352,7 +348,7 @@ class RedisCacheService:
 
     # Private methods
     def _add_to_memory_cache(self, key: str, entry: CacheEntry) -> None:
-        """Add entry to L1 memory cache with LRU eviction"""
+        """Add entry to L1 memory cache with LRU eviction."""
         # Remove if exists (to update position)
         if key in self._memory_cache:
             self._memory_access_order.remove(key)
@@ -367,20 +363,20 @@ class RedisCacheService:
             del self._memory_cache[oldest_key]
 
     def _remove_from_memory_cache(self, key: str) -> None:
-        """Remove entry from L1 memory cache"""
+        """Remove entry from L1 memory cache."""
         if key in self._memory_cache:
             del self._memory_cache[key]
             if key in self._memory_access_order:
                 self._memory_access_order.remove(key)
 
     def _update_access_order(self, key: str) -> None:
-        """Update LRU access order"""
+        """Update LRU access order."""
         if key in self._memory_access_order:
             self._memory_access_order.remove(key)
             self._memory_access_order.append(key)
 
     async def _cleanup_expired(self) -> None:
-        """Background task to cleanup expired cache entries"""
+        """Background task to cleanup expired cache entries."""
         while True:
             try:
                 await asyncio.sleep(300)  # Run every 5 minutes
@@ -396,25 +392,26 @@ class RedisCacheService:
 
                 if expired_keys:
                     logger.debug(
-                        f"Cleaned {len(expired_keys)} expired L1 cache entries",
+                        "Cleaned %s expired L1 cache entries",
+                        len(expired_keys),
                     )
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cache cleanup error: {e}")
+                logger.error("Cache cleanup error: %s", e)
 
     async def _report_metrics(self) -> None:
-        """Background task to report cache metrics"""
+        """Background task to report cache metrics."""
         while True:
             try:
                 await asyncio.sleep(600)  # Report every 10 minutes
                 stats = self.get_stats()
-                logger.info(f"Cache metrics: {stats}")
+                logger.info("Cache metrics: %s", stats)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics reporting error: {e}")
+                logger.error("Metrics reporting error: %s", e)
 
 
 # Context manager for cache service
@@ -424,7 +421,7 @@ class RedisCacheService:
 async def get_cache_service(
     redis_url: str = "redis://localhost:6379/0",
 ) -> RedisCacheService:
-    """Context manager for cache service lifecycle"""
+    """Context manager for cache service lifecycle."""
     service = RedisCacheService(redis_url=redis_url)
     try:
         await service.initialize()
@@ -438,7 +435,7 @@ _cache_service: RedisCacheService | None = None
 
 
 async def get_cache() -> RedisCacheService:
-    """Get global cache service instance"""
+    """Get global cache service instance."""
     global _cache_service
     if _cache_service is None:
         _cache_service = RedisCacheService()
@@ -447,7 +444,7 @@ async def get_cache() -> RedisCacheService:
 
 
 async def create_redis_cache_service(config: CacheConfig) -> RedisCacheService:
-    """Factory function to create and initialize Redis cache service"""
+    """Factory function to create and initialize Redis cache service."""
     service = RedisCacheService(config=config)
     await service.initialize()
     return service
@@ -456,11 +453,11 @@ async def create_redis_cache_service(config: CacheConfig) -> RedisCacheService:
 # Decorators for caching
 
 
-def cached(ttl: int = 3600, tags: list[str] | None = None):
-    """Decorator for caching function results"""
+def cached(self) -> None:
+    """Decorator for caching function results."""
 
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
+    def decorator(self) -> None:
+        async def wrapper(self) -> None:
             cache = await get_cache()
 
             # Generate cache key from function name and args
@@ -485,7 +482,7 @@ def cached(ttl: int = 3600, tags: list[str] | None = None):
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         async with get_cache_service() as cache:
             # Test basic operations
             await cache.set("test:key", {"data": "test"}, ttl=60)

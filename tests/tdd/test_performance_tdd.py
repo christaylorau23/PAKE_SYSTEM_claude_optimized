@@ -13,11 +13,11 @@ import yaml
 class TestPerformanceTDD:
     """Test-Driven Development for performance components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
 
-    def test_kubernetes_autoscaling_configuration(self):
+    def test_kubernetes_autoscaling_configuration(self) -> None:
         """TDD: Test Kubernetes autoscaling configuration for performance"""
         # Arrange
         production_values_path = (
@@ -31,7 +31,7 @@ class TestPerformanceTDD:
         # Assert
         autoscaling = values_data.get("autoscaling", {})
 
-        assert autoscaling.get("enabled") == True, "Should enable autoscaling"
+        assert autoscaling.get("enabled") is True, "Should enable autoscaling"
         assert (
             autoscaling.get("minReplicas") >= 3
         ), "Should have minimum 3 replicas for high availability"
@@ -48,7 +48,7 @@ class TestPerformanceTDD:
             memory_threshold <= 80
         ), "Memory threshold should be <= 80% for performance"
 
-    def test_resource_limits_configuration(self):
+    def test_resource_limits_configuration(self) -> None:
         """TDD: Test resource limits configuration for performance"""
         # Arrange
         production_values_path = (
@@ -72,7 +72,7 @@ class TestPerformanceTDD:
         assert requests.get("cpu") == "1000m", "Should have 1 CPU core request"
         assert requests.get("memory") == "2Gi", "Should have 2GB memory request"
 
-    def test_database_performance_configuration(self):
+    def test_database_performance_configuration(self) -> None:
         """TDD: Test database performance configuration"""
         # Arrange
         production_values_path = (
@@ -104,7 +104,7 @@ class TestPerformanceTDD:
             read_replicas.get("replicaCount") == 2
         ), "Should have 2 read replicas for performance"
 
-    def test_redis_performance_configuration(self):
+    def test_redis_performance_configuration(self) -> None:
         """TDD: Test Redis performance configuration"""
         # Arrange
         production_values_path = (
@@ -121,7 +121,7 @@ class TestPerformanceTDD:
         # Check Redis cluster configuration
         cluster = redis.get("cluster", {})
         assert (
-            cluster.get("enabled") == True
+            cluster.get("enabled") is True
         ), "Should enable Redis cluster for performance"
         assert cluster.get("nodes") == 6, "Should have 6 Redis nodes for performance"
 
@@ -132,7 +132,7 @@ class TestPerformanceTDD:
         assert master_limits.get("cpu") == "1000m", "Redis should have 1 CPU core"
         assert master_limits.get("memory") == "2Gi", "Redis should have 2GB memory"
 
-    def test_monitoring_performance_configuration(self):
+    def test_monitoring_performance_configuration(self) -> None:
         """TDD: Test monitoring performance configuration"""
         # Arrange
         production_values_path = (
@@ -150,7 +150,7 @@ class TestPerformanceTDD:
         prometheus = monitoring.get("prometheus", {})
         prometheus_ha = prometheus.get("server", {}).get("ha", {})
 
-        assert prometheus_ha.get("enabled") == True, "Should enable Prometheus HA"
+        assert prometheus_ha.get("enabled") is True, "Should enable Prometheus HA"
         assert prometheus_ha.get("replicas") == 2, "Should have 2 Prometheus replicas"
 
         # Check Prometheus resources
@@ -164,7 +164,7 @@ class TestPerformanceTDD:
             prometheus_limits.get("memory") == "4Gi"
         ), "Prometheus should have 4GB memory"
 
-    def test_service_mesh_performance_configuration(self):
+    def test_service_mesh_performance_configuration(self) -> None:
         """TDD: Test service mesh performance configuration"""
         # Arrange
         production_values_path = (
@@ -179,7 +179,7 @@ class TestPerformanceTDD:
         service_mesh = values_data.get("serviceMesh", {})
 
         assert (
-            service_mesh.get("enabled") == True
+            service_mesh.get("enabled") is True
         ), "Should enable service mesh for performance"
         assert service_mesh.get("type") == "istio", "Should use Istio for performance"
 
@@ -192,7 +192,7 @@ class TestPerformanceTDD:
             sidecar_limits.get("memory") == "256Mi"
         ), "Sidecar should have 256Mi memory"
 
-    def test_health_check_performance_configuration(self):
+    def test_health_check_performance_configuration(self) -> None:
         """TDD: Test health check performance configuration"""
         # Arrange
         production_values_path = (
@@ -220,7 +220,7 @@ class TestPerformanceTDD:
         assert readiness_probe.get("periodSeconds") == 5, "Should check every 5s"
         assert readiness_probe.get("timeoutSeconds") == 3, "Should timeout after 3s"
 
-    def test_prometheus_scrape_performance(self):
+    def test_prometheus_scrape_performance(self) -> None:
         """TDD: Test Prometheus scrape performance configuration"""
         # Arrange
         prometheus_config_path = (
@@ -246,7 +246,7 @@ class TestPerformanceTDD:
         ), "Should use Kubernetes service discovery"
         assert "relabel_configs" in content, "Should have relabeling for performance"
 
-    def test_grafana_dashboard_performance(self):
+    def test_grafana_dashboard_performance(self) -> None:
         """TDD: Test Grafana dashboard performance configuration"""
         # Arrange
         dashboard_path = (
@@ -272,7 +272,7 @@ class TestPerformanceTDD:
             "from", ""
         ), "Should show last 1 hour by default"
 
-    def test_jaeger_performance_configuration(self):
+    def test_jaeger_performance_configuration(self) -> None:
         """TDD: Test Jaeger performance configuration"""
         # Arrange
         jaeger_config_path = self.project_root / "monitoring/jaeger/jaeger-config.yaml"
@@ -295,7 +295,7 @@ class TestPerformanceTDD:
             storage.get("type") == "elasticsearch"
         ), "Should use Elasticsearch for performance"
 
-    def test_ci_cd_performance_configuration(self):
+    def test_ci_cd_performance_configuration(self) -> None:
         """TDD: Test CI/CD performance configuration"""
         # Arrange
         ci_workflow_path = self.project_root / ".github/workflows/ci.yml"
@@ -325,7 +325,7 @@ class TestPerformanceTDD:
         ]
         assert len(cache_steps) > 0, "Should have caching steps for performance"
 
-    def test_dockerfile_performance_optimization(self):
+    def test_dockerfile_performance_optimization(self) -> None:
         """TDD: Test Dockerfile performance optimization"""
         # Arrange
         dockerfile_path = self.project_root / "pkgs/service-template/Dockerfile"
@@ -347,7 +347,7 @@ class TestPerformanceTDD:
         # Check for cleanup
         assert "rm -rf" in content, "Should clean up package cache"
 
-    def test_kubernetes_performance_best_practices(self):
+    def test_kubernetes_performance_best_practices(self) -> None:
         """TDD: Test Kubernetes performance best practices"""
         # Arrange
         deployment_template_path = (
@@ -373,7 +373,7 @@ class TestPerformanceTDD:
         assert "selector:" in content, "Should have selector configuration"
         assert "matchLabels:" in content, "Should have match labels"
 
-    def test_performance_monitoring_metrics(self):
+    def test_performance_monitoring_metrics(self) -> None:
         """TDD: Test performance monitoring metrics configuration"""
         # Arrange
         prometheus_rules_path = (
@@ -398,7 +398,7 @@ class TestPerformanceTDD:
                 f"alert: {alert}" in content
             ), f"Should have {alert} performance alert"
 
-    def test_backup_performance_configuration(self):
+    def test_backup_performance_configuration(self) -> None:
         """TDD: Test backup performance configuration"""
         # Arrange
         production_values_path = (
@@ -412,7 +412,7 @@ class TestPerformanceTDD:
         # Assert
         backup = values_data.get("backup", {})
 
-        assert backup.get("enabled") == True, "Should enable backups"
+        assert backup.get("enabled") is True, "Should enable backups"
         assert backup.get("schedule") == "0 2 * * *", "Should backup daily at 2 AM"
         assert backup.get("retention") == "30d", "Should retain backups for 30 days"
 

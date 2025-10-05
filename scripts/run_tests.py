@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-def main():
+def main(self) -> None:
     parser = argparse.ArgumentParser(description="PAKE System Test Executor")
     parser.add_argument(
         "--level", choices=["unit", "integration", "e2e", "all"], default="all"

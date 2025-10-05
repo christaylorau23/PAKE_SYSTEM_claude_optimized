@@ -20,32 +20,28 @@ import pytest
 class MockTestClient:
     """Mock test client - replace with actual FastAPI test client"""
 
-    def get(
-        self,
-        url: str,
-        headers: dict[str, str] = None,
-        params: dict[str, Any] = None,
-    ):
+    def get(self) -> None:
         # This will fail initially - no implementation exists yet
+        msg = "GET /curation/recommendations endpoint not implemented"
         raise NotImplementedError(
-            "GET /curation/recommendations endpoint not implemented",
+            msg,
         )
 
 
-@pytest.fixture()
-def test_client():
+@pytest.fixture
+def test_client(self) -> None:
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture()
-def auth_headers():
+@pytest.fixture
+def auth_headers(self) -> None:
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture()
-def sample_user_id():
+@pytest.fixture
+def sample_user_id(self) -> None:
     """Provide sample user ID for testing"""
     return str(uuid.uuid4())
 
@@ -53,7 +49,7 @@ def sample_user_id():
 class TestRecommendationsGetContract:
     """Contract tests for GET /curation/recommendations endpoint"""
 
-    def test_get_recommendations_success_schema(self, test_client, auth_headers):
+    def test_get_recommendations_success_schema(self) -> None:
         """Test successful recommendations response schema"""
 
         # This test MUST fail initially
@@ -103,7 +99,7 @@ class TestRecommendationsGetContract:
         # assert response.status_code == 200
         # assert validate_response_schema(response.json(), expected_schema)
 
-    def test_get_recommendations_with_pagination(self, test_client, auth_headers):
+    def test_get_recommendations_with_pagination(self) -> None:
         """Test recommendations with pagination parameters"""
 
         # This test MUST fail initially
@@ -121,7 +117,7 @@ class TestRecommendationsGetContract:
         # assert data["pagination"]["offset"] == 10
         # assert data["pagination"]["limit"] == 5
 
-    def test_get_recommendations_with_filters(self, test_client, auth_headers):
+    def test_get_recommendations_with_filters(self) -> None:
         """Test recommendations with filter parameters"""
 
         # This test MUST fail initially
@@ -147,7 +143,7 @@ class TestRecommendationsGetContract:
         #     assert any(tag in ["machine learning", "healthcare"]
         #               for tag in rec["content"]["topic_tags"])
 
-    def test_get_recommendations_unauthorized(self, test_client):
+    def test_get_recommendations_unauthorized(self) -> None:
         """Test unauthorized access returns 401"""
 
         # This test MUST fail initially
@@ -159,7 +155,7 @@ class TestRecommendationsGetContract:
         # data = response.json()
         # assert data["error"] == "Authentication required"
 
-    def test_get_recommendations_invalid_parameters(self, test_client, auth_headers):
+    def test_get_recommendations_invalid_parameters(self) -> None:
         """Test invalid parameters return 400"""
 
         # Test cases for invalid parameters
@@ -186,7 +182,7 @@ class TestRecommendationsGetContract:
             # data = response.json()
             # assert "error" in data
 
-    def test_get_recommendations_server_error(self, test_client, auth_headers):
+    def test_get_recommendations_server_error(self) -> None:
         """Test server error handling returns 500"""
 
         # This test MUST fail initially - no error handling implemented
@@ -203,7 +199,7 @@ class TestRecommendationsGetContract:
         # assert "error" in data
         # assert "request_id" in data
 
-    def test_get_recommendations_empty_results(self, test_client, auth_headers):
+    def test_get_recommendations_empty_results(self) -> None:
         """Test handling of empty recommendation results"""
 
         # This test MUST fail initially
@@ -221,7 +217,7 @@ class TestRecommendationsGetContract:
         # assert data["total_count"] == 0
         # assert data["pagination"]["has_more"] == False
 
-    def test_get_recommendations_response_time(self, test_client, auth_headers):
+    def test_get_recommendations_response_time(self) -> None:
         """Test response time meets performance requirements (<500ms)"""
 
         import time
@@ -243,8 +239,8 @@ class TestRecommendationsGetContract:
 
 
 def validate_response_schema(
-    data: dict[str, Any],
-    expected_schema: dict[str, Any],
+    data: Dict[str, Any],
+    expected_schema: Dict[str, Any],
 ) -> bool:
     """Validate response data against expected schema"""
     # This is a placeholder for actual schema validation
@@ -289,8 +285,8 @@ def validate_url(value: str) -> bool:
 # Test fixtures for data validation
 
 
-@pytest.fixture()
-def sample_recommendation_response():
+@pytest.fixture
+def sample_recommendation_response(self) -> None:
     """Sample recommendation response for validation testing"""
     return {
         "recommendations": [

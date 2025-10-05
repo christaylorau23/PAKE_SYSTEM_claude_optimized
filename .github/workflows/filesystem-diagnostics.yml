@@ -1,0 +1,222 @@
+name: Filesystem Diagnostics
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  filesystem-diagnostics:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-core.txt
+
+    - name: Inspect filesystem structure
+      run: |
+        echo "=== FILESYSTEM STRUCTURE ANALYSIS ==="
+        echo "Current working directory:"
+        pwd
+        echo ""
+        echo "=== ROOT DIRECTORY CONTENTS ==="
+        ls -la
+        echo ""
+        echo "=== SRC DIRECTORY STRUCTURE ==="
+        ls -la src/
+        echo ""
+        echo "=== SERVICES DIRECTORY STRUCTURE ==="
+        ls -la src/services/
+        echo ""
+        echo "=== HYPHENATED DIRECTORIES (CASE SENSITIVITY ISSUES) ==="
+        find src/services -maxdepth 1 -type d -name "*-*" | sort
+        echo ""
+        echo "=== PYTHON FILES WITH IMPORT ISSUES ==="
+        grep -r "from.*services.*-" src/ --include="*.py" || echo "No hyphenated imports found"
+        echo ""
+        echo "=== SYS.PATH MANIPULATION PATTERNS ==="
+        grep -r "sys\.path\.append" src/ --include="*.py" | head -10 || echo "No sys.path.append found"
+        echo ""
+        echo "=== HARDCODED ABSOLUTE PATHS ==="
+        grep -r '"/[a-zA-Z]' src/ --include="*.py" | head -10 || echo "No hardcoded paths found"
+        echo ""
+        echo "=== WORKING DIRECTORY ASSUMPTIONS ==="
+        grep -r "os\.getcwd\|os\.chdir" src/ --include="*.py" | head -10 || echo "No working directory assumptions found"
+
+    - name: Test import resolution
+      run: |
+        echo "=== IMPORT RESOLUTION TESTING ==="
+        echo "Testing Python import system..."
+
+        # Test basic imports
+        python -c "
+        import sys
+        print('Python version:', sys.version)
+        print('Python path:', sys.path[:3])
+        print('Current working directory:', sys.path[0])
+        "
+
+        # Test service imports (these should fail with hyphenated directories)
+        echo ""
+        echo "Testing service imports..."
+        python -c "
+        try:
+            from src.services.secrets_manager import *
+            print('✅ secrets_manager import successful')
+        except ImportError as e:
+            print('❌ secrets_manager import failed:', e)
+        " || echo "Import test completed"
+
+        python -c "
+        try:
+            from src.services.knowledge_graph import *
+            print('✅ knowledge_graph import successful')
+        except ImportError as e:
+            print('❌ knowledge_graph import failed:', e)
+        " || echo "Import test completed"
+
+    - name: Run filesystem diagnostics script
+      run: |
+        echo "=== RUNNING COMPREHENSIVE DIAGNOSTICS ==="
+        python scripts/filesystem_diagnostics.py --verbose --output filesystem_report.txt
+
+    - name: Upload diagnostics report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: filesystem-diagnostics-report
+        path: filesystem_report.txt
+
+    - name: Check for critical issues
+      run: |
+        echo "=== CRITICAL ISSUES CHECK ==="
+        if grep -q "CRITICAL\|HIGH" filesystem_report.txt; then
+          echo "❌ Critical filesystem issues detected!"
+          echo "Please review the diagnostics report and fix issues before merging."
+          exit 1
+        else
+          echo "✅ No critical filesystem issues detected."
+        fi
+
+    - name: Test case sensitivity
+      run: |
+        echo "=== CASE SENSITIVITY TESTING ==="
+        # Create test files with different cases
+        touch src/test_case.txt
+        touch src/TEST_CASE.txt
+
+        # Test case sensitivity
+        if [ -f src/test_case.txt ] && [ -f src/TEST_CASE.txt ]; then
+          echo "✅ Filesystem is case-sensitive (Linux behavior)"
+          rm src/test_case.txt src/TEST_CASE.txt
+        else
+          echo "❌ Unexpected filesystem behavior"
+          exit 1
+        fi
+
+    - name: Validate directory structure
+      run: |
+        echo "=== DIRECTORY STRUCTURE VALIDATION ==="
+
+        # Check for required directories
+        required_dirs=(
+          "src"
+          "src/services"
+          "tests"
+          "scripts"
+        )
+
+        for dir in "${required_dirs[@]}"; do
+          if [ -d "$dir" ]; then
+            echo "✅ $dir exists"
+          else
+            echo "❌ $dir missing"
+            exit 1
+          fi
+        done
+
+        # Check for problematic hyphenated directories
+        hyphenated_dirs=$(find src/services -maxdepth 1 -type d -name "*-*" | wc -l)
+        if [ "$hyphenated_dirs" -gt 0 ]; then
+          echo "⚠️ Found $hyphenated_dirs hyphenated directories (potential case sensitivity issues)"
+          find src/services -maxdepth 1 -type d -name "*-*"
+        else
+          echo "✅ No hyphenated directories found"
+        fi
+
+    - name: Test path resolution
+      run: |
+        echo "=== PATH RESOLUTION TESTING ==="
+
+        # Test relative path resolution
+        cd src/services
+        if [ -f "../../requirements-core.txt" ]; then
+          echo "✅ Relative path resolution works"
+        else
+          echo "❌ Relative path resolution failed"
+          exit 1
+        fi
+
+        # Return to root
+        cd ../..
+
+        # Test absolute path resolution
+        abs_path=$(realpath src/services)
+        if [ -d "$abs_path" ]; then
+          echo "✅ Absolute path resolution works: $abs_path"
+        else
+          echo "❌ Absolute path resolution failed"
+          exit 1
+        fi
+
+    - name: Check file permissions
+      run: |
+        echo "=== FILE PERMISSIONS CHECK ==="
+
+        # Check Python files have correct permissions
+        python_files=$(find src/ -name "*.py" | wc -l)
+        executable_python=$(find src/ -name "*.py" -executable | wc -l)
+
+        echo "Total Python files: $python_files"
+        echo "Executable Python files: $executable_python"
+
+        if [ "$executable_python" -gt 0 ]; then
+          echo "⚠️ Found executable Python files (may cause issues)"
+          find src/ -name "*.py" -executable
+        else
+          echo "✅ No executable Python files found"
+        fi
+
+    - name: Generate summary report
+      run: |
+        echo "=== FILESYSTEM DIAGNOSTICS SUMMARY ==="
+        echo "Timestamp: $(date)"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo ""
+        echo "Filesystem Type: $(df -T . | tail -1 | awk '{print $2}')"
+        echo "Case Sensitivity: Case-sensitive (Linux)"
+        echo ""
+        echo "Key Findings:"
+        echo "- Hyphenated directories: $(find src/services -maxdepth 1 -type d -name "*-*" | wc -l)"
+        echo "- sys.path.append usage: $(grep -r "sys\.path\.append" src/ --include="*.py" | wc -l)"
+        echo "- Hardcoded paths: $(grep -r '"/[a-zA-Z]' src/ --include="*.py" | wc -l)"
+        echo ""
+        echo "Recommendations:"
+        echo "1. Rename hyphenated directories to use underscores"
+        echo "2. Replace sys.path manipulation with proper package structure"
+        echo "3. Use relative paths instead of hardcoded absolute paths"
+        echo "4. Implement centralized import utilities"

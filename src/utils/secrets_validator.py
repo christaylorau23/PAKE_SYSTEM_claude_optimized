@@ -1,5 +1,5 @@
 """Centralized Secrets Validation Utility for Python Services
-Implements fail-fast pattern for missing secrets - NO FALLBACKS ALLOWED
+Implements fail-fast pattern for missing secrets - NO FALLBACKS ALLOWED.
 
 SECURITY POLICY: Application must crash if required secrets are missing
 This prevents weak REDACTED_SECRET fallbacks and ensures proper secret management
@@ -13,7 +13,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class SecretValidationResult:
-    """Result of secret validation"""
+    """Result of secret validation."""
 
     is_valid: bool
     secret_name: str
@@ -21,7 +21,7 @@ class SecretValidationResult:
 
 
 class SecretsValidator:
-    """Centralized secrets validation for Python services"""
+    """Centralized secrets validation for Python services."""
 
     # Required secrets for the PAKE system
     REQUIRED_SECRETS = [
@@ -56,10 +56,10 @@ class SecretsValidator:
     @classmethod
     def validate_all_secrets(cls) -> None:
         """Validate all required secrets at application startup
-        FAILS FAST if any required secret is missing or weak
+        FAILS FAST if any required secret is missing or weak.
         """
-        missing_secrets: list[str] = []
-        weak_secrets: list[str] = []
+        missing_secrets: List[str] = []
+        weak_secrets: List[str] = []
 
         for secret_name in cls.REQUIRED_SECRETS:
             value = os.getenv(secret_name)
@@ -92,7 +92,7 @@ class SecretsValidator:
     @classmethod
     def get_required_secret(cls, secret_name: str) -> str:
         """Get a required secret with validation
-        FAILS FAST if secret is missing or weak
+        FAILS FAST if secret is missing or weak.
         """
         value = os.getenv(secret_name)
 
@@ -118,7 +118,7 @@ class SecretsValidator:
 
     @classmethod
     def get_optional_secret(cls, secret_name: str) -> str | None:
-        """Get an optional secret (returns None if not set, but validates if set)"""
+        """Get an optional secret (returns None if not set, but validates if set)."""
         value = os.getenv(secret_name)
 
         if not value:
@@ -140,7 +140,7 @@ class SecretsValidator:
         secret_name: str,
         value: str,
     ) -> SecretValidationResult:
-        """Validate secret strength (minimum requirements)"""
+        """Validate secret strength (minimum requirements)."""
         if len(value) < 16:
             return SecretValidationResult(
                 is_valid=False,
@@ -159,7 +159,7 @@ class SecretsValidator:
 
     @classmethod
     def get_configured_secrets(cls) -> dict[str, bool]:
-        """Get all configured secrets (for debugging - never log actual values)"""
+        """Get all configured secrets (for debugging - never log actual values)."""
         result: dict[str, bool] = {}
 
         for secret_name in cls.REQUIRED_SECRETS:
@@ -169,13 +169,13 @@ class SecretsValidator:
 
     @classmethod
     def _is_weak_secret(cls, value: str) -> bool:
-        """Check if a secret value is weak (matches known weak patterns)"""
+        """Check if a secret value is weak (matches known weak patterns)."""
         lower_value = value.lower()
         return any(pattern.lower() in lower_value for pattern in cls.WEAK_PATTERNS)
 
     @classmethod
-    def get_database_config(cls) -> dict[str, Any]:
-        """Get validated database configuration"""
+    def get_database_config(cls) -> Dict[str, Any]:
+        """Get validated database configuration."""
         return {
             "host": os.getenv("DB_HOST", "localhost"),
             "port": int(os.getenv("DB_PORT", "5432")),
@@ -185,8 +185,8 @@ class SecretsValidator:
         }
 
     @classmethod
-    def get_redis_config(cls) -> dict[str, Any]:
-        """Get validated Redis configuration"""
+    def get_redis_config(cls) -> Dict[str, Any]:
+        """Get validated Redis configuration."""
         return {
             "host": os.getenv("REDIS_HOST", "localhost"),
             "port": int(os.getenv("REDIS_PORT", "6379")),

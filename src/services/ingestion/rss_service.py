@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """PAKE System - RSS/Atom Feed Integration Service
-Phase 2B Sprint 3: Real-time RSS/Atom feed monitoring and processing
+Phase 2B Sprint 3: Real-time RSS/Atom feed monitoring and processing.
 
 Provides enterprise RSS/Atom feed integration with real-time monitoring,
 intelligent content filtering, and cognitive quality assessment.
 """
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import re
@@ -24,16 +25,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class FeedConfiguration:
-    """Immutable RSS/Atom feed configuration"""
+    """Immutable RSS/Atom feed configuration."""
 
     url: str
     name: str
     category: str = "general"
     update_interval: int = 3600  # seconds
     max_items_per_fetch: int = 50
-    content_filters: list[str] = field(default_factory=list)
-    keyword_filters: list[str] = field(default_factory=list)
-    exclude_keywords: list[str] = field(default_factory=list)
+    content_filters: List[str] = field(default_factory=list)
+    keyword_filters: List[str] = field(default_factory=list)
+    exclude_keywords: List[str] = field(default_factory=list)
     min_content_length: int = 100
     enable_full_content_extraction: bool = True
     custom_headers: dict[str, str] = field(default_factory=dict)
@@ -41,7 +42,7 @@ class FeedConfiguration:
 
 @dataclass(frozen=True)
 class FeedItem:
-    """Immutable RSS/Atom feed item representation"""
+    """Immutable RSS/Atom feed item representation."""
 
     item_id: str
     feed_url: str
@@ -53,9 +54,9 @@ class FeedItem:
     author: str | None
     published: datetime
     updated: datetime | None
-    categories: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
-    media_urls: list[str] = field(default_factory=list)
+    categories: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    media_urls: List[str] = field(default_factory=list)
     enclosures: list[dict[str, str]] = field(default_factory=list)
     guid: str | None = None
     language: str = "en"
@@ -66,7 +67,7 @@ class FeedItem:
 
 @dataclass(frozen=True)
 class FeedResult:
-    """Immutable result from RSS/Atom feed ingestion"""
+    """Immutable result from RSS/Atom feed ingestion."""
 
     success: bool
     feed_config: FeedConfiguration
@@ -98,10 +99,10 @@ class RSSFeedService:
     - Multi-format support (RSS, Atom, JSON Feed)
     """
 
-    def __init__(self, cognitive_engine=None):
-        """Initialize RSS feed service"""
+    def __init__(self) -> None:
+        """Initialize RSS feed service."""
         self.cognitive_engine = cognitive_engine
-        self._feed_cache: dict[str, dict[str, Any]] = {}
+        self._feed_cache: dict[str, Dict[str, Any]] = {}
         self._item_cache: dict[str, FeedItem] = {}
         self._session: aiohttp.ClientSession | None = None
         self._monitoring_tasks: dict[str, asyncio.Task] = {}
@@ -113,7 +114,7 @@ class RSSFeedService:
 
         Applies content filtering, deduplication, and cognitive assessment.
         """
-        logger.info(f"Fetching RSS feed: {config.name} ({config.url})")
+        logger.info("Fetching RSS feed: %s (%s)", config.name, config.url)
         start_time = asyncio.get_event_loop().time()
 
         try:
@@ -135,11 +136,12 @@ class RSSFeedService:
 
                 # Handle 304 Not Modified
                 if response.status == 304:
-                    logger.info(f"Feed {config.name} not modified, using cached data")
+                    logger.info("Feed %s not modified, using cached data", config.name)
                     return self._create_cached_result(config, start_time, http_status)
 
                 if response.status != 200:
-                    raise Exception(f"HTTP {response.status}: {response.reason}")
+                    msg = f"HTTP {response.status}: {response.reason}"
+                    raise Exception(msg)
 
                 content = await response.text()
                 etag = response.headers.get("ETag")
@@ -194,23 +196,21 @@ class RSSFeedService:
                 cognitive_assessments_applied=cognitive_assessments,
             )
 
-            logger.info(f"RSS feed fetch completed: {len(final_items)} new items")
+            logger.info("RSS feed fetch completed: %s new items", len(final_items))
             return result
 
         except Exception as e:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001
-            logger.error(f"RSS feed fetch failed: {e}")
+            logger.error("RSS feed fetch failed: %s", e)
 
             # Try to extract HTTP status from error
             http_status = 0
             error_msg = str(e)
             if "HTTP" in error_msg and ":" in error_msg:
-                try:
+                with contextlib.suppress(BaseException):
                     http_status = int(error_msg.split("HTTP ")[1].split(":")[0])
-                except BaseException:
-                    pass
 
             return FeedResult(
                 success=False,
@@ -221,7 +221,7 @@ class RSSFeedService:
             )
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session"""
+        """Get or create HTTP session."""
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=30, connect=10)
             headers = {
@@ -236,8 +236,8 @@ class RSSFeedService:
         self,
         content: str,
         config: FeedConfiguration,
-    ) -> tuple[dict[str, Any], list[FeedItem]]:
-        """Parse RSS/Atom feed content"""
+    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+        """Parse RSS/Atom feed content."""
         try:
             # Parse XML
             root = ET.fromstring(content)
@@ -247,23 +247,26 @@ class RSSFeedService:
                 return await self._parse_rss_feed(root, config)
             if root.tag.endswith("}feed") or root.tag == "feed":
                 return await self._parse_atom_feed(root, config)
-            raise ValueError(f"Unsupported feed format: {root.tag}")
+            msg = f"Unsupported feed format: {root.tag}"
+            raise ValueError(msg)
 
         except ET.ParseError as e:
             # Try to handle malformed XML
-            logger.warning(f"XML parse error, attempting recovery: {e}")
+            logger.warning("XML parse error, attempting recovery: %s", e)
             # In production, implement XML recovery strategies
-            raise Exception(f"Feed parsing failed: {e}")
+            msg = f"Feed parsing failed: {e}"
+            raise Exception(msg)
 
     async def _parse_rss_feed(
         self,
         root: ET.Element,
         config: FeedConfiguration,
-    ) -> tuple[dict[str, Any], list[FeedItem]]:
-        """Parse RSS 2.0 feed"""
+    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+        """Parse RSS 2.0 feed."""
         channel = root.find("channel")
         if channel is None:
-            raise ValueError("Invalid RSS feed: no channel element")
+            msg = "Invalid RSS feed: no channel element"
+            raise ValueError(msg)
 
         # Extract feed metadata
         feed_info = {
@@ -285,8 +288,8 @@ class RSSFeedService:
         self,
         root: ET.Element,
         config: FeedConfiguration,
-    ) -> tuple[dict[str, Any], list[FeedItem]]:
-        """Parse Atom 1.0 feed"""
+    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+        """Parse Atom 1.0 feed."""
         # Handle namespaces
         ns = {"atom": "http://www.w3.org/2005/Atom"}
         if root.tag.startswith("{"):
@@ -314,7 +317,7 @@ class RSSFeedService:
         item_elem: ET.Element,
         config: FeedConfiguration,
     ) -> FeedItem | None:
-        """Parse single RSS item"""
+        """Parse single RSS item."""
         try:
             title = self._get_text(item_elem.find("title"))
             link = self._get_text(item_elem.find("link"))
@@ -384,7 +387,7 @@ class RSSFeedService:
             )
 
         except Exception as e:
-            logger.warning(f"Failed to parse RSS item: {e}")
+            logger.warning("Failed to parse RSS item: %s", e)
             return None
 
     async def _parse_atom_entry(
@@ -393,7 +396,7 @@ class RSSFeedService:
         config: FeedConfiguration,
         ns: dict[str, str],
     ) -> FeedItem | None:
-        """Parse single Atom entry"""
+        """Parse single Atom entry."""
         try:
             title = self._get_text(entry_elem.find("atom:title", ns))
 
@@ -466,17 +469,17 @@ class RSSFeedService:
             )
 
         except Exception as e:
-            logger.warning(f"Failed to parse Atom entry: {e}")
+            logger.warning("Failed to parse Atom entry: %s", e)
             return None
 
     def _get_text(self, elem: ET.Element | None) -> str | None:
-        """Safely extract text from XML element"""
+        """Safely extract text from XML element."""
         if elem is None:
             return None
         return elem.text.strip() if elem.text else None
 
     def _parse_rss_date(self, elem: ET.Element | None) -> datetime | None:
-        """Parse RSS date format"""
+        """Parse RSS date format."""
         if elem is None or not elem.text:
             return None
 
@@ -489,7 +492,7 @@ class RSSFeedService:
             return None
 
     def _parse_atom_date(self, elem: ET.Element | None) -> datetime | None:
-        """Parse Atom date format (ISO 8601)"""
+        """Parse Atom date format (ISO 8601)."""
         if elem is None or not elem.text:
             return None
 
@@ -502,22 +505,20 @@ class RSSFeedService:
             return None
 
     def _clean_html_content(self, content: str) -> str:
-        """Clean HTML content and extract plain text"""
+        """Clean HTML content and extract plain text."""
         if not content:
             return ""
 
         # Simple HTML tag removal - in production use proper HTML parser
         content = re.sub(r"<[^>]+>", "", content)
-        content = re.sub(r"\s+", " ", content).strip()
-
-        return content
+        return re.sub(r"\s+", " ", content).strip()
 
     async def _apply_content_filters(
         self,
         items: list[FeedItem],
         config: FeedConfiguration,
     ) -> list[FeedItem]:
-        """Apply content filtering to feed items"""
+        """Apply content filtering to feed items."""
         filtered_items = []
 
         for item in items:
@@ -552,7 +553,7 @@ class RSSFeedService:
         items: list[FeedItem],
         config: FeedConfiguration,
     ) -> list[FeedItem]:
-        """Remove duplicate items based on content similarity"""
+        """Remove duplicate items based on content similarity."""
         new_items = []
         seen_urls = set()
         seen_titles = set()
@@ -578,9 +579,9 @@ class RSSFeedService:
         return new_items
 
     async def _extract_full_content(self, items: list[FeedItem]) -> list[FeedItem]:
-        """Extract full content from linked articles"""
+        """Extract full content from linked articles."""
         # Mock implementation - in production, implement article extraction
-        logger.info(f"Full content extraction enabled for {len(items)} items")
+        logger.info("Full content extraction enabled for %s items", len(items))
 
         # For now, return items as-is
         # In production: fetch article content, extract main text, update items
@@ -590,7 +591,7 @@ class RSSFeedService:
         self,
         items: list[FeedItem],
     ) -> list[FeedItem]:
-        """Apply cognitive quality assessment to feed items"""
+        """Apply cognitive quality assessment to feed items."""
         assessed_items = []
 
         for item in items:
@@ -627,7 +628,7 @@ class RSSFeedService:
                 assessed_items.append(assessed_item)
 
             except Exception as e:
-                logger.warning(f"Failed to assess item {item.item_id}: {e}")
+                logger.warning("Failed to assess item %s: %s", item.item_id, e)
                 assessed_items.append(item)  # Keep original
 
         return assessed_items
@@ -638,7 +639,7 @@ class RSSFeedService:
         start_time: float,
         http_status: int,
     ) -> FeedResult:
-        """Create result from cached data"""
+        """Create result from cached data."""
         execution_time = asyncio.get_event_loop().time() - start_time
         cache_info = self._feed_cache.get(config.url, {})
 
@@ -655,14 +656,8 @@ class RSSFeedService:
             last_modified=cache_info.get("last_modified"),
         )
 
-    def _update_feed_cache(
-        self,
-        url: str,
-        etag: str | None,
-        last_modified: str | None,
-        items: list[FeedItem],
-    ):
-        """Update feed cache with new data"""
+    def _update_feed_cache(self) -> None:
+        """Update feed cache with new data."""
         self._feed_cache[url] = {
             "etag": etag,
             "last_modified": last_modified,
@@ -675,7 +670,7 @@ class RSSFeedService:
         result: FeedResult,
         source_name: str,
     ) -> list[ContentItem]:
-        """Convert feed items to ContentItem format"""
+        """Convert feed items to ContentItem format."""
         content_items = []
 
         for item in result.items:
@@ -708,11 +703,11 @@ class RSSFeedService:
 
             content_items.append(content_item)
 
-        logger.info(f"Converted {len(content_items)} RSS items to content items")
+        logger.info("Converted %s RSS items to content items", len(content_items))
         return content_items
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform RSS service health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform RSS service health check."""
         session_healthy = self._session is not None and not self._session.closed
 
         return {
@@ -723,8 +718,8 @@ class RSSFeedService:
             "monitoring_tasks": len(self._monitoring_tasks),
         }
 
-    async def close(self):
-        """Clean up connections and resources"""
+    async def close(self) -> None:
+        """Clean up connections and resources."""
         # Cancel monitoring tasks
         for task in self._monitoring_tasks.values():
             task.cancel()

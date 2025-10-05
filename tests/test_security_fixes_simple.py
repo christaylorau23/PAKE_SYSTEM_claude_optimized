@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 class TestSecureSerialization:
     """Test secure serialization functionality"""
 
-    def test_serializer_import(self):
+    def test_serializer_import(self) -> None:
         """Test secure serializer can be imported"""
         try:
             from utils.secure_serialization import (
@@ -31,7 +31,7 @@ class TestSecureSerialization:
         except ImportError as e:
             pytest.fail(f"Failed to import secure serialization: {e}")
 
-    def test_json_serialization(self):
+    def test_json_serialization(self) -> None:
         """Test JSON serialization works correctly"""
         try:
             from utils.secure_serialization import (
@@ -51,7 +51,7 @@ class TestSecureSerialization:
         except ImportError:
             pytest.skip("Secure serialization not available")
 
-    def test_serialization_formats(self):
+    def test_serialization_formats(self) -> None:
         """Test serialization format enum"""
         try:
             from utils.secure_serialization import SerializationFormat
@@ -66,7 +66,7 @@ class TestSecureSerialization:
 class TestSecureNetworkConfig:
     """Test secure network configuration"""
 
-    def test_network_config_import(self):
+    def test_network_config_import(self) -> None:
         """Test network config can be imported"""
         try:
             from utils.secure_network_config import (
@@ -81,7 +81,7 @@ class TestSecureNetworkConfig:
         except ImportError as e:
             pytest.fail(f"Failed to import network config: {e}")
 
-    def test_environment_enum(self):
+    def test_environment_enum(self) -> None:
         """Test environment enum values"""
         try:
             from utils.secure_network_config import Environment
@@ -92,7 +92,7 @@ class TestSecureNetworkConfig:
         except ImportError:
             pytest.skip("Network config not available")
 
-    def test_development_config_secure(self):
+    def test_development_config_secure(self) -> None:
         """Test development config uses secure bindings"""
         try:
             from utils.secure_network_config import Environment, SecureNetworkConfig
@@ -110,7 +110,7 @@ class TestSecureNetworkConfig:
 class TestServiceConfigSecurity:
     """Test service configuration security"""
 
-    def test_service_config_import(self):
+    def test_service_config_import(self) -> None:
         """Test service config can be imported"""
         try:
             from configs.service_config import (
@@ -125,7 +125,7 @@ class TestServiceConfigSecurity:
         except ImportError as e:
             pytest.fail(f"Failed to import service config: {e}")
 
-    def test_security_config_validation(self):
+    def test_security_config_validation(self) -> None:
         """Test security config validation"""
         try:
             from configs.service_config import SecurityConfig
@@ -149,7 +149,7 @@ class TestServiceConfigSecurity:
 class TestDependencyFixes:
     """Test dependency-related fixes"""
 
-    def test_pyproject_toml_exists(self):
+    def test_pyproject_toml_exists(self) -> None:
         """Test pyproject.toml exists and has correct pycountry version"""
         pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
         assert pyproject_path.exists()
@@ -161,7 +161,7 @@ class TestDependencyFixes:
         assert 'pycountry = "^24.6.1"' in content
         assert 'pycountry = "^22.3.13"' not in content
 
-    def test_node_lock_files_exist(self):
+    def test_node_lock_files_exist(self) -> None:
         """Test Node.js lock files exist"""
         project_root = Path(__file__).parent.parent
 
@@ -171,7 +171,7 @@ class TestDependencyFixes:
         # Check that yarn.lock exists
         assert (project_root / "yarn.lock").exists()
 
-    def test_ci_cache_configuration(self):
+    def test_ci_cache_configuration(self) -> None:
         """Test CI cache configuration is correct"""
         ci_path = Path(__file__).parent.parent / ".github" / "workflows" / "ci.yml"
         assert ci_path.exists()
@@ -183,7 +183,7 @@ class TestDependencyFixes:
         assert "cache-dependency-path" in ci_content
         assert "package-lock.json" in ci_content
 
-    def test_gitops_permissions(self):
+    def test_gitops_permissions(self) -> None:
         """Test GitOps workflow has correct permissions"""
         gitops_path = (
             Path(__file__).parent.parent / ".github" / "workflows" / "gitops.yml"
@@ -200,26 +200,26 @@ class TestDependencyFixes:
 class TestSecurityFiles:
     """Test security-related files exist and are properly configured"""
 
-    def test_security_test_script_exists(self):
+    def test_security_test_script_exists(self) -> None:
         """Test comprehensive security test script exists"""
         script_path = (
             Path(__file__).parent.parent / "scripts" / "security_test_comprehensive.py"
         )
         assert script_path.exists()
 
-    def test_security_tests_exist(self):
+    def test_security_tests_exist(self) -> None:
         """Test security test files exist"""
         test_path = Path(__file__).parent / "test_security_fixes.py"
         assert test_path.exists()
 
-    def test_secure_serialization_file_exists(self):
+    def test_secure_serialization_file_exists(self) -> None:
         """Test secure serialization file exists"""
         serialization_path = (
             Path(__file__).parent.parent / "src" / "utils" / "secure_serialization.py"
         )
         assert serialization_path.exists()
 
-    def test_secure_network_config_exists(self):
+    def test_secure_network_config_exists(self) -> None:
         """Test secure network config file exists"""
         network_path = (
             Path(__file__).parent.parent / "src" / "utils" / "secure_network_config.py"
@@ -230,7 +230,7 @@ class TestSecurityFiles:
 class TestSecurityIntegration:
     """Integration tests for security fixes"""
 
-    def test_end_to_end_secure_serialization(self):
+    def test_end_to_end_secure_serialization(self) -> None:
         """Test end-to-end secure serialization workflow"""
         try:
             from utils.secure_serialization import deserialize, serialize
@@ -256,7 +256,7 @@ class TestSecurityIntegration:
         except ImportError:
             pytest.skip("Secure serialization not available")
 
-    def test_network_config_integration(self):
+    def test_network_config_integration(self) -> None:
         """Test network configuration integrates properly"""
         try:
             from utils.secure_network_config import Environment, SecureNetworkConfig

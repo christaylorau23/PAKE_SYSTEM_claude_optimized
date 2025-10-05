@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Content Summarization Service
-Phase 9B: Practical AI/ML Integration
+Phase 9B: Practical AI/ML Integration.
 
 Provides intelligent content summarization and analysis for research results
 using lightweight NLP techniques without heavy ML dependencies.
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SummaryResult:
-    """Result from content summarization"""
+    """Result from content summarization."""
 
     original_content: str
     extractive_summary: str
-    key_points: list[str]
+    key_points: List[str]
     abstract_summary: str
     content_type: str
     word_count_original: int
@@ -34,8 +34,8 @@ class SummaryResult:
     confidence_score: float
     processing_time_ms: float
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "extractive_summary": self.extractive_summary,
             "key_points": self.key_points,
@@ -54,7 +54,7 @@ class SummaryResult:
 
 @dataclass
 class SummarizationMetrics:
-    """Metrics for summarization performance"""
+    """Metrics for summarization performance."""
 
     total_documents: int
     avg_compression_ratio: float
@@ -73,7 +73,7 @@ class ContentSummarizationService:
     - Structured summarization for academic papers
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.processing_history: list[SummarizationMetrics] = []
 
         # Advanced stop words and transition words
@@ -201,7 +201,7 @@ class ContentSummarizationService:
         Returns:
             SummaryResult with multiple summarization approaches
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         if not content or len(content.strip()) < 50:
             return self._create_empty_summary(content, content_type, 0.0)
@@ -242,7 +242,7 @@ class ContentSummarizationService:
             sentences,
         )
 
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+        processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         return SummaryResult(
             original_content=content,
@@ -259,8 +259,8 @@ class ContentSummarizationService:
 
     async def summarize_research_results(
         self,
-        results: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        results: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
         """Summarize multiple research results with content-aware processing.
 
         Args:
@@ -310,11 +310,11 @@ class ContentSummarizationService:
         if processing_metrics:
             self._store_processing_metrics(processing_metrics)
 
-        logger.info(f"Summarized {len(processing_metrics)} research results")
+        logger.info("Summarized %s research results", len(processing_metrics))
         return enhanced_results
 
-    def _extract_sentences(self, content: str) -> list[str]:
-        """Extract and clean sentences from content"""
+    def _extract_sentences(self, content: str) -> List[str]:
+        """Extract and clean sentences from content."""
         # Improved sentence splitting with academic text handling
         sentence_endings = r"[.!?]+(?:\s|$)"
         sentences = re.split(sentence_endings, content)
@@ -335,11 +335,11 @@ class ContentSummarizationService:
 
     def _generate_extractive_summary(
         self,
-        sentences: list[str],
+        sentences: List[str],
         target_sentences: int,
         content_type: str,
     ) -> str:
-        """Generate extractive summary by selecting best sentences"""
+        """Generate extractive summary by selecting best sentences."""
         if len(sentences) <= target_sentences:
             return ". ".join(sentences) + "."
 
@@ -359,7 +359,7 @@ class ContentSummarizationService:
         return ". ".join(ordered_summary) + "."
 
     def _score_sentence(self, sentence: str, content_type: str) -> float:
-        """Score sentence for importance using multiple factors"""
+        """Score sentence for importance using multiple factors."""
         score = 0.0
         words = sentence.lower().split()
 
@@ -408,10 +408,10 @@ class ContentSummarizationService:
 
     def _maintain_sentence_order(
         self,
-        original_sentences: list[str],
-        selected_sentences: list[str],
-    ) -> list[str]:
-        """Maintain original sentence order in summary"""
+        original_sentences: List[str],
+        selected_sentences: List[str],
+    ) -> List[str]:
+        """Maintain original sentence order in summary."""
         ordered_summary = []
         original_indices = {
             sentence: i for i, sentence in enumerate(original_sentences)
@@ -426,8 +426,8 @@ class ContentSummarizationService:
 
         return [sentence for sentence, _ in selected_with_indices]
 
-    def _extract_key_points(self, content: str, sentences: list[str]) -> list[str]:
-        """Extract key points from content"""
+    def _extract_key_points(self, content: str, sentences: List[str]) -> List[str]:
+        """Extract key points from content."""
         key_points = []
 
         # Look for bullet points or numbered lists
@@ -466,10 +466,10 @@ class ContentSummarizationService:
     def _generate_abstract_summary(
         self,
         content: str,
-        sentences: list[str],
-        key_points: list[str],
+        sentences: List[str],
+        key_points: List[str],
     ) -> str:
-        """Generate abstract summary combining multiple signals"""
+        """Generate abstract summary combining multiple signals."""
         # Start with the most important information
         summary_parts = []
 
@@ -498,8 +498,8 @@ class ContentSummarizationService:
 
         return ". ".join(summary_parts) + "."
 
-    def _identify_main_topics(self, content: str) -> list[str]:
-        """Identify main topics in content using keyword frequency"""
+    def _identify_main_topics(self, content: str) -> List[str]:
+        """Identify main topics in content using keyword frequency."""
         words = re.findall(r"\b[a-zA-Z]+\b", content.lower())
 
         # Filter meaningful words
@@ -520,8 +520,8 @@ class ContentSummarizationService:
         # Return top topics
         return [word for word, _ in word_counts.most_common(8)]
 
-    def _determine_content_type(self, result: dict[str, Any]) -> str:
-        """Determine content type from result metadata"""
+    def _determine_content_type(self, result: Dict[str, Any]) -> str:
+        """Determine content type from result metadata."""
         source_type = result.get("source_type", "").lower()
 
         if "arxiv" in source_type:
@@ -532,8 +532,8 @@ class ContentSummarizationService:
             return "web"
         return "general"
 
-    def _extract_content_for_summarization(self, result: dict[str, Any]) -> str:
-        """Extract the best content for summarization from result"""
+    def _extract_content_for_summarization(self, result: Dict[str, Any]) -> str:
+        """Extract the best content for summarization from result."""
         content_parts = []
 
         # Add title if available
@@ -551,9 +551,9 @@ class ContentSummarizationService:
         self,
         original: str,
         summary: str,
-        sentences: list[str],
+        sentences: List[str],
     ) -> float:
-        """Calculate confidence score for the summary"""
+        """Calculate confidence score for the summary."""
         if not summary or not original:
             return 0.0
 
@@ -586,7 +586,7 @@ class ContentSummarizationService:
         content_type: str,
         processing_time_ms: float,
     ) -> SummaryResult:
-        """Create empty summary result for invalid content"""
+        """Create empty summary result for invalid content."""
         return SummaryResult(
             original_content=content,
             extractive_summary="Content too short or empty for summarization.",
@@ -600,8 +600,8 @@ class ContentSummarizationService:
             processing_time_ms=processing_time_ms,
         )
 
-    def _store_processing_metrics(self, metrics: list[dict[str, Any]]) -> None:
-        """Store processing metrics for analytics"""
+    def _store_processing_metrics(self, metrics: list[Dict[str, Any]]) -> None:
+        """Store processing metrics for analytics."""
         if not metrics:
             return
 
@@ -624,8 +624,8 @@ class ContentSummarizationService:
         if len(self.processing_history) > 50:  # Keep last 50 metrics
             self.processing_history = self.processing_history[-50:]
 
-    def get_summarization_analytics(self) -> dict[str, Any]:
-        """Get analytics from summarization history"""
+    def get_summarization_analytics(self) -> Dict[str, Any]:
+        """Get analytics from summarization history."""
         if not self.processing_history:
             return {"message": "No summarization history available"}
 
@@ -673,15 +673,15 @@ _summarization_service = None
 
 
 def get_content_summarization_service() -> ContentSummarizationService:
-    """Get or create global content summarization service instance"""
+    """Get or create global content summarization service instance."""
     global _summarization_service
     if _summarization_service is None:
         _summarization_service = ContentSummarizationService()
     return _summarization_service
 
 
-async def main():
-    """Demo of content summarization service"""
+async def main(self) -> None:
+    """Demo of content summarization service."""
     service = get_content_summarization_service()
 
     # Test with sample academic content

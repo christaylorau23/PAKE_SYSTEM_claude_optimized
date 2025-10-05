@@ -224,7 +224,7 @@ custom_patterns:
 
 ### Detection Accuracy
 - **SQL Injection**: 95% accuracy, <1% false positives
-- **XSS Detection**: 90% accuracy, <2% false positives  
+- **XSS Detection**: 90% accuracy, <2% false positives
 - **Path Traversal**: 98% accuracy, <0.5% false positives
 - **Failed Login**: 100% accuracy (pattern-based)
 
@@ -283,7 +283,7 @@ curl http://localhost:8080/health | jq '.'
   "status": "healthy",
   "components": {
     "ai_analyzer": "active",
-    "elasticsearch": "active", 
+    "elasticsearch": "active",
     "mcp_integration": "active"
   },
   "metrics": {
@@ -313,7 +313,7 @@ curl http://localhost:8080/health | jq '.'
 
 ### Planned Features
 - **Real LLM Integration** - OpenAI/Claude API integration
-- **Machine Learning Models** - Custom trained security models  
+- **Machine Learning Models** - Custom trained security models
 - **Automated Response** - Automatic blocking and mitigation
 - **SOAR Integration** - Security orchestration and response
 - **Threat Intelligence** - External threat feed integration

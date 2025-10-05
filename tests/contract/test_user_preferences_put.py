@@ -18,32 +18,28 @@ import pytest
 class MockTestClient:
     """Mock test client - replace with actual FastAPI test client"""
 
-    def put(
-        self,
-        url: str,
-        headers: dict[str, str] = None,
-        json: dict[str, Any] = None,
-    ):
+    def put(self) -> None:
         # This will fail initially - no implementation exists yet
+        msg = "PUT /curation/user/preferences endpoint not implemented"
         raise NotImplementedError(
-            "PUT /curation/user/preferences endpoint not implemented",
+            msg,
         )
 
 
-@pytest.fixture()
-def test_client():
+@pytest.fixture
+def test_client(self) -> None:
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture()
-def auth_headers():
+@pytest.fixture
+def auth_headers(self) -> None:
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture()
-def valid_preferences_update():
+@pytest.fixture
+def valid_preferences_update(self) -> None:
     """Valid preferences update payload"""
     return {
         "interests": ["machine learning", "healthcare", "artificial intelligence"],
@@ -60,12 +56,7 @@ def valid_preferences_update():
 class TestUserPreferencesPutContract:
     """Contract tests for PUT /curation/user/preferences endpoint"""
 
-    def test_update_user_preferences_success_schema(
-        self,
-        test_client,
-        auth_headers,
-        valid_preferences_update,
-    ):
+    def test_update_user_preferences_success_schema(self) -> None:
         """Test successful user preferences update response schema"""
 
         # This test MUST fail initially
@@ -99,7 +90,7 @@ class TestUserPreferencesPutContract:
         # assert data["diversity_preference"] == valid_preferences_update["diversity_preference"]
         # assert data["quality_threshold"] == valid_preferences_update["quality_threshold"]
 
-    def test_update_partial_preferences(self, test_client, auth_headers):
+    def test_update_partial_preferences(self) -> None:
         """Test partial preferences update (only some fields)"""
 
         partial_update = {"interests": ["new_interest"], "quality_threshold": 0.9}
@@ -119,7 +110,7 @@ class TestUserPreferencesPutContract:
         # assert data["quality_threshold"] == 0.9
         # # Other fields should remain unchanged from previous values
 
-    def test_update_interests_validation(self, test_client, auth_headers):
+    def test_update_interests_validation(self) -> None:
         """Test interests field validation"""
 
         test_cases = [
@@ -134,7 +125,7 @@ class TestUserPreferencesPutContract:
             {"interests": ["  "]},  # Whitespace-only not allowed
         ]
 
-        for i, update_data in enumerate(test_cases):
+        for _i, update_data in enumerate(test_cases):
             # This test MUST fail initially
             with pytest.raises(NotImplementedError):
                 response = test_client.put(
@@ -153,7 +144,7 @@ class TestUserPreferencesPutContract:
             #     data = response.json()
             #     assert "error" in data
 
-    def test_update_diversity_preference_validation(self, test_client, auth_headers):
+    def test_update_diversity_preference_validation(self) -> None:
         """Test diversity preference validation"""
 
         test_cases = [
@@ -167,7 +158,7 @@ class TestUserPreferencesPutContract:
             {"diversity_preference": "0.5"},  # Wrong type
         ]
 
-        for i, update_data in enumerate(test_cases):
+        for _i, update_data in enumerate(test_cases):
             # This test MUST fail initially
             with pytest.raises(NotImplementedError):
                 response = test_client.put(
@@ -182,7 +173,7 @@ class TestUserPreferencesPutContract:
             # else:  # Invalid cases
             #     assert response.status_code == 400
 
-    def test_update_quality_threshold_validation(self, test_client, auth_headers):
+    def test_update_quality_threshold_validation(self) -> None:
         """Test quality threshold validation"""
 
         test_cases = [
@@ -196,7 +187,7 @@ class TestUserPreferencesPutContract:
             {"quality_threshold": "high"},  # Wrong type
         ]
 
-        for i, update_data in enumerate(test_cases):
+        for _i, update_data in enumerate(test_cases):
             # This test MUST fail initially
             with pytest.raises(NotImplementedError):
                 response = test_client.put(
@@ -211,7 +202,7 @@ class TestUserPreferencesPutContract:
             # else:  # Invalid cases
             #     assert response.status_code == 400
 
-    def test_update_source_preferences_validation(self, test_client, auth_headers):
+    def test_update_source_preferences_validation(self) -> None:
         """Test source preferences validation"""
 
         test_cases = [
@@ -234,7 +225,7 @@ class TestUserPreferencesPutContract:
             },  # Invalid array content
         ]
 
-        for i, update_data in enumerate(test_cases):
+        for _i, update_data in enumerate(test_cases):
             # This test MUST fail initially
             with pytest.raises(NotImplementedError):
                 response = test_client.put(
@@ -249,7 +240,7 @@ class TestUserPreferencesPutContract:
             # else:  # Invalid cases
             #     assert response.status_code == 400
 
-    def test_update_temporal_preferences_validation(self, test_client, auth_headers):
+    def test_update_temporal_preferences_validation(self) -> None:
         """Test temporal preferences validation"""
 
         test_cases = [
@@ -274,7 +265,7 @@ class TestUserPreferencesPutContract:
             },  # Missing authority_weight
         ]
 
-        for i, update_data in enumerate(test_cases):
+        for _i, update_data in enumerate(test_cases):
             # This test MUST fail initially
             with pytest.raises(NotImplementedError):
                 response = test_client.put(
@@ -289,11 +280,7 @@ class TestUserPreferencesPutContract:
             # else:  # Invalid cases
             #     assert response.status_code == 400
 
-    def test_update_preferences_unauthorized(
-        self,
-        test_client,
-        valid_preferences_update,
-    ):
+    def test_update_preferences_unauthorized(self) -> None:
         """Test unauthorized access returns 401"""
 
         # This test MUST fail initially
@@ -308,7 +295,7 @@ class TestUserPreferencesPutContract:
         # data = response.json()
         # assert data["error"] == "Authentication required"
 
-    def test_update_preferences_malformed_json(self, test_client, auth_headers):
+    def test_update_preferences_malformed_json(self) -> None:
         """Test malformed JSON returns 400"""
 
         # This test MUST fail initially
@@ -325,7 +312,7 @@ class TestUserPreferencesPutContract:
         # data = response.json()
         # assert "error" in data
 
-    def test_update_preferences_empty_body(self, test_client, auth_headers):
+    def test_update_preferences_empty_body(self) -> None:
         """Test empty request body handling"""
 
         # This test MUST fail initially
@@ -342,12 +329,7 @@ class TestUserPreferencesPutContract:
         # - 200 if empty update is allowed (no changes)
         # assert response.status_code in [200, 400]
 
-    def test_update_preferences_server_error(
-        self,
-        test_client,
-        auth_headers,
-        valid_preferences_update,
-    ):
+    def test_update_preferences_server_error(self) -> None:
         """Test server error handling returns 500"""
 
         # This test MUST fail initially - no error handling implemented
@@ -365,12 +347,7 @@ class TestUserPreferencesPutContract:
         # assert "error" in data
         # assert "request_id" in data
 
-    def test_update_preferences_response_time(
-        self,
-        test_client,
-        auth_headers,
-        valid_preferences_update,
-    ):
+    def test_update_preferences_response_time(self) -> None:
         """Test response time meets performance requirements"""
 
         import time
@@ -390,12 +367,7 @@ class TestUserPreferencesPutContract:
         # assert response_time < 0.2  # Less than 200ms for preference updates
         # assert response.status_code == 200
 
-    def test_update_preferences_idempotency(
-        self,
-        test_client,
-        auth_headers,
-        valid_preferences_update,
-    ):
+    def test_update_preferences_idempotency(self) -> None:
         """Test that multiple identical updates are idempotent"""
 
         # This test MUST fail initially
@@ -422,11 +394,7 @@ class TestUserPreferencesPutContract:
         # data2 = response2.json()
         # assert data1 == data2
 
-    def test_update_preferences_validation_error_details(
-        self,
-        test_client,
-        auth_headers,
-    ):
+    def test_update_preferences_validation_error_details(self) -> None:
         """Test that validation errors provide detailed information"""
 
         invalid_update = {
@@ -458,14 +426,14 @@ class TestUserPreferencesPutContract:
 # Test fixtures for various update scenarios
 
 
-@pytest.fixture()
-def minimal_preferences_update():
+@pytest.fixture
+def minimal_preferences_update(self) -> None:
     """Minimal valid preferences update"""
     return {"interests": ["artificial intelligence"]}
 
 
-@pytest.fixture()
-def comprehensive_preferences_update():
+@pytest.fixture
+def comprehensive_preferences_update(self) -> None:
     """Comprehensive preferences update with all fields"""
     return {
         "interests": ["machine learning", "healthcare", "ai", "deep learning"],
@@ -479,8 +447,8 @@ def comprehensive_preferences_update():
     }
 
 
-@pytest.fixture()
-def invalid_preferences_update():
+@pytest.fixture
+def invalid_preferences_update(self) -> None:
     """Invalid preferences update for testing validation"""
     return {
         "interests": [],  # Empty array not allowed

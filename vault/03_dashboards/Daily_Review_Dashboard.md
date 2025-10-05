@@ -27,7 +27,7 @@ FLATTEN pair.key as key, pair.value as value
 ### Items Flagged for Immediate Review
 
 ```dataview
-TABLE 
+TABLE
   file.frontmatter.pake_id as "PAKE ID",
   file.frontmatter.confidence_score as "Confidence",
   file.frontmatter.type as "Type",
@@ -52,13 +52,13 @@ LIMIT 20
 *These notes may contain unreliable information that needs verification*
 
 ```dataview
-TABLE 
+TABLE
   file.frontmatter.source_uri as "Source",
   file.frontmatter.confidence_score as "Confidence",
   file.frontmatter.tags as "Tags",
   file.frontmatter.created as "Created"
 FROM "vault"
-WHERE file.frontmatter.type = "SourceNote" 
+WHERE file.frontmatter.type = "SourceNote"
   AND file.frontmatter.confidence_score < 0.5
   AND file.frontmatter.verification_status != "rejected"
 SORT file.frontmatter.confidence_score ASC
@@ -69,9 +69,9 @@ LIMIT 15
 *Synthesized insights waiting for human validation*
 
 ```dataview
-TABLE 
+TABLE
   split(file.frontmatter.source_uri, ":")[1] as "Source Notes",
-  file.frontmatter.confidence_score as "Confidence", 
+  file.frontmatter.confidence_score as "Confidence",
   file.frontmatter.tags as "Tags",
   file.frontmatter.created as "Created"
 FROM "vault"
@@ -85,7 +85,7 @@ LIMIT 10
 *Notes that encountered issues during ingestion or synthesis*
 
 ```dataview
-TABLE 
+TABLE
   file.frontmatter.pake_id as "PAKE ID",
   file.frontmatter.type as "Type",
   file.frontmatter.human_notes as "Error Details",
@@ -122,7 +122,7 @@ FLATTEN length(file.frontmatter) as total
 FLATTEN ranges.excellent as excellent, ranges.high as high, ranges.medium as medium, ranges.low as low, ranges.poor as poor
 FLATTEN [
   ["Excellent (0.9-1.0)", excellent],
-  ["High (0.7-0.9)", high], 
+  ["High (0.7-0.9)", high],
   ["Medium (0.5-0.7)", medium],
   ["Low (0.3-0.5)", low],
   ["Poor (0.0-0.3)", poor]
@@ -152,7 +152,7 @@ SORT count DESC
 ### Recently Created Notes (Last 7 Days)
 
 ```dataview
-TABLE 
+TABLE
   file.frontmatter.type as "Type",
   file.frontmatter.confidence_score as "Confidence",
   file.frontmatter.tags as "Tags",
@@ -167,7 +167,7 @@ LIMIT 15
 ### Recently Modified Notes (Last 24 Hours)
 
 ```dataview
-TABLE 
+TABLE
   file.frontmatter.type as "Type",
   file.frontmatter.verification_status as "Status",
   file.frontmatter.modified as "Modified"
@@ -191,9 +191,9 @@ For each note in the priority queue:
 - [ ] **Check confidence score** - Does it match your assessment?
 - [ ] **Review tags** - Are they specific and discoverable?
 - [ ] **Validate connections** - Are related notes properly linked?
-- [ ] **Update status**: 
+- [ ] **Update status**:
   - ✅ `verified` - Accurate and valuable
-  - ❌ `rejected` - Inaccurate or not valuable  
+  - ❌ `rejected` - Inaccurate or not valuable
   - 🔄 `refined` - Edited and improved
 - [ ] **Add human notes** - Document any changes or observations
 
@@ -210,7 +210,7 @@ status: refined
 human_notes: "Reviewed {{date:YYYY-MM-DD}} - Content verified and valuable"
 ```
 
-## Quarantine Note Template  
+## Quarantine Note Template
 **Action**: Update frontmatter
 ```yaml
 verification_status: rejected
@@ -220,7 +220,7 @@ human_notes: "Quarantined {{date:YYYY-MM-DD}} - [Reason for quarantine]"
 
 ## Request Revision Template
 **Action**: Update frontmatter
-```yaml  
+```yaml
 verification_status: pending
 human_notes: "Needs revision: [Specific feedback] - {{date:YYYY-MM-DD}}"
 ```
@@ -255,7 +255,7 @@ Look for patterns in:
 
 #### Common Issues Identified:
 - [ ] Source extraction problems
-- [ ] Inconsistent confidence scoring  
+- [ ] Inconsistent confidence scoring
 - [ ] Poor tag selection
 - [ ] Missing connections between related notes
 - [ ] Synthesis that doesn't add value beyond sources

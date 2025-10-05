@@ -13,10 +13,10 @@ def _contains_path_traversal(self, title: str) -> bool:
     # Layer 1: Allow safe standalone dots
     if title.strip() in ('.', '..', '...'):
         return False
-    
+
     # Layer 2: Pattern detection for classic attacks
     dangerous_patterns = ['../', '..\\', './', '.\\', '%2e%2e', '%2f', '%5c']
-    
+
     # Layer 3: URL decoding validation
     # Layer 4: Absolute path detection
     # Layer 5: Windows UNC path detection
@@ -51,7 +51,7 @@ python -m pytest tests/security/test_pake_server.py -v
 
 **Critical Attack Scenarios Tested:**
 - ✅ `../../../etc/passwd` → **BLOCKED**
-- ✅ `..\\..\\..\\Windows\\System32` → **BLOCKED**  
+- ✅ `..\\..\\..\\Windows\\System32` → **BLOCKED**
 - ✅ `/etc/shadow` → **BLOCKED**
 - ✅ `C:\\Windows\\System32` → **BLOCKED**
 - ✅ `%2e%2e%2f%2e%2e%2f%2e%2e%2f` → **BLOCKED**
@@ -127,7 +127,7 @@ ProtectControlGroups=true
 ReadWritePaths=/opt/pake-system/vault /opt/pake-system/logs
 ReadOnlyPaths=/opt/pake-system
 
-# Network restrictions  
+# Network restrictions
 RestrictAddressFamilies=AF_INET AF_INET6
 RestrictNamespaces=true
 
@@ -259,7 +259,7 @@ systemd-analyze security pake-system
 
 # Expected output should show:
 # ✓ PrivateTmp=yes
-# ✓ NoNewPrivileges=yes  
+# ✓ NoNewPrivileges=yes
 # ✓ ProtectSystem=strict
 ```
 

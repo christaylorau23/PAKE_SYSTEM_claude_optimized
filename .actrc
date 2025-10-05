@@ -1,0 +1,37 @@
+# PAKE System - act Configuration
+# Configuration file for act (local GitHub Actions runner)
+# This file is automatically created when you first run act
+
+# Default runner image size
+# Options: micro, medium, large
+# Recommended: medium for good balance of compatibility and disk space
+-P ubuntu-latest=catthehacker/ubuntu:full-22.04
+
+# Additional runner configurations
+-P ubuntu-20.04=catthehacker/ubuntu:full-20.04
+-P ubuntu-18.04=catthehacker/ubuntu:full-18.04
+
+# Container platform (for Apple Silicon Macs)
+--container-architecture linux/amd64
+
+# Bind mount configuration
+--bind
+
+# Artifact server configuration
+--artifact-server-path /tmp/act-artifacts
+
+# Secret and variable file paths
+--secret-file .secrets
+--var-file .vars
+
+# Default event (push)
+--eventpath .github/events/push.json
+
+# Verbose output for debugging
+--verbose
+
+# Dry run mode (uncomment to test without executing)
+# --dry-run
+
+# List mode (uncomment to see available jobs without running)
+# --list

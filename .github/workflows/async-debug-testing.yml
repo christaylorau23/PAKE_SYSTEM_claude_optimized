@@ -1,0 +1,231 @@
+name: Async Debug Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  # Enable asyncio debug mode for comprehensive async debugging
+  PYTHONASYNCIODEBUG: 1
+  # Enable Python debug mode for additional diagnostics
+  PYTHONDEBUG: 1
+  # Set log level for detailed async operation logging
+  LOG_LEVEL: DEBUG
+
+jobs:
+  async-debug-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+        test-type: [unit, integration, e2e]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev,testing,monitoring
+        poetry run pip install pytest-retry pytest-asyncio pytest-xdist
+
+    - name: Run async debug tests with retries
+      run: |
+        poetry run pytest tests/${{ matrix.test-type }}/ \
+          --retries 2 \
+          --retry-delay 1 \
+          --retry-delay-multiplier 2 \
+          --max-retry-delay 10 \
+          --asyncio-mode=auto \
+          --strict-markers \
+          --strict-config \
+          --tb=short \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --cov-fail-under=80 \
+          --junitxml=test-results-${{ matrix.test-type }}.xml \
+          --html=test-report-${{ matrix.test-type }}.html \
+          --self-contained-html \
+          -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-type }}
+        path: |
+          test-results-${{ matrix.test-type }}.xml
+          test-report-${{ matrix.test-type }}.html
+          htmlcov/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.test-type == 'unit'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  race-condition-detection:
+    runs-on: ubuntu-latest
+    needs: async-debug-tests
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry install --with dev,testing,monitoring
+        poetry run pip install pytest-retry pytest-asyncio pytest-xdist
+
+    - name: Run race condition detection tests
+      env:
+        PYTHONASYNCIODEBUG: 1
+        RACE_CONDITION_DETECTION: 1
+        CONCURRENT_TEST_RUNS: 10
+      run: |
+        # Run tests multiple times to detect race conditions
+        for i in {1..5}; do
+          echo "Running race condition detection test $i"
+          poetry run pytest tests/unit/services/ \
+            --retries 1 \
+            --retry-delay 0.5 \
+            --asyncio-mode=auto \
+            --maxfail=1 \
+            -k "test_concurrent or test_async or test_shared_state" \
+            -v
+        done
+
+    - name: Run stress tests for async operations
+      env:
+        PYTHONASYNCIODEBUG: 1
+        STRESS_TEST_ITERATIONS: 100
+      run: |
+        poetry run pytest tests/performance/ \
+          --retries 1 \
+          --asyncio-mode=auto \
+          -k "test_concurrent_load or test_async_performance" \
+          -v
+
+  flaky-test-analysis:
+    runs-on: ubuntu-latest
+    needs: async-debug-tests
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry install --with dev,testing,monitoring
+        poetry run pip install pytest-retry pytest-asyncio pytest-xdist
+
+    - name: Analyze flaky tests
+      env:
+        PYTHONASYNCIODEBUG: 1
+        FLAKY_TEST_ANALYSIS: 1
+      run: |
+        # Run tests multiple times to identify flaky patterns
+        poetry run pytest tests/ \
+          --retries 3 \
+          --retry-delay 2 \
+          --retry-delay-multiplier 1.5 \
+          --max-retry-delay 15 \
+          --asyncio-mode=auto \
+          --flaky-report=flaky-report.json \
+          --flaky-report-format=json \
+          -v
+
+    - name: Generate flaky test report
+      if: always()
+      run: |
+        echo "## Flaky Test Analysis Report" >> $GITHUB_STEP_SUMMARY
+        echo "### Tests with retries:" >> $GITHUB_STEP_SUMMARY
+        if [ -f flaky-report.json ]; then
+          cat flaky-report.json | jq -r '.flaky_tests[] | "- \(.test_name): \(.retry_count) retries"' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No flaky test data available" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload flaky test report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: flaky-test-report
+        path: flaky-report.json
+
+  async-performance-benchmark:
+    runs-on: ubuntu-latest
+    needs: async-debug-tests
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry install --with dev,testing,monitoring
+        poetry run pip install pytest-benchmark pytest-asyncio
+
+    - name: Run async performance benchmarks
+      env:
+        PYTHONASYNCIODEBUG: 1
+        BENCHMARK_MODE: 1
+      run: |
+        poetry run pytest tests/performance/ \
+          --benchmark-only \
+          --benchmark-sort=mean \
+          --benchmark-save=async-performance \
+          --benchmark-save-data \
+          --asyncio-mode=auto \
+          -v
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: async-performance-benchmarks
+        path: |
+          .benchmarks/
+          async-performance.json

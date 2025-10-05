@@ -1,0 +1,94 @@
+# PAKE System Security Gate Configuration
+
+thresholds:
+  critical: 0
+  high: 2
+  medium: 5
+  low: 10
+  informational: 50
+
+exclusions:
+  false_positives: []
+  accepted_risks: []
+  ignored_paths:
+    - "/api/health"
+    - "/api/metrics"
+    - "/api/status"
+
+notifications:
+  slack:
+    enabled: true
+    webhook_url: null  # Set via environment variable
+    channels:
+      - "#security-alerts"
+      - "#dev-team"
+
+  email:
+    enabled: true
+    smtp_server: null  # Set via environment variable
+    recipients: []  # Set via environment variable
+
+  github:
+    enabled: true
+    create_issues: true
+    labels:
+      - "security"
+      - "dast"
+      - "vulnerability"
+
+workflow:
+  auto_triage: true
+  auto_assignment: true
+  escalation_enabled: true
+  sla_tracking: true
+
+  sla_hours:
+    critical: 4
+    high: 24
+    medium: 168  # 1 week
+    low: 720     # 1 month
+    informational: 0
+
+assignments:
+  default_assignee: "security-team"
+  escalation_rules:
+    overdue_hours: 24
+    escalation_chain:
+      - "security-team"
+      - "security-lead"
+      - "cto"
+
+scanning:
+  zap:
+    host: "localhost"
+    port: 8080
+    timeout: 3600
+    max_children: 1000
+    recurse: true
+    subtree_only: false
+
+  policies:
+    default: "Default Policy"
+    custom: "PAKE System Policy"
+
+  contexts:
+    staging: "staging-context"
+    production: "production-context"
+
+reporting:
+  output_dir: "reports/dast"
+  formats:
+    - "json"
+    - "html"
+    - "xml"
+  include_false_positives: false
+  retention_days: 30
+
+monitoring:
+  metrics_enabled: true
+  dashboard_url: null  # Set via environment variable
+  alert_thresholds:
+    critical_count: 1
+    high_count: 3
+    medium_count: 10
+    low_count: 25

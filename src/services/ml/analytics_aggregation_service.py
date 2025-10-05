@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - ML Analytics Aggregation Service
-Phase 10A: ML Intelligence Dashboard
+Phase 10A: ML Intelligence Dashboard.
 
 Advanced analytics service that aggregates and processes ML insights
 from semantic search and content summarization for intelligent dashboards.
@@ -33,48 +33,48 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SearchSession:
-    """Represents a research session with multiple queries"""
+    """Represents a research session with multiple queries."""
 
     session_id: str
     start_time: datetime
     end_time: datetime | None = None
-    queries: list[str] = field(default_factory=list)
+    queries: List[str] = field(default_factory=list)
     total_results: int = 0
     avg_semantic_score: float = 0.0
-    dominant_topics: list[str] = field(default_factory=list)
+    dominant_topics: List[str] = field(default_factory=list)
     content_types_explored: dict[str, int] = field(default_factory=dict)
     session_duration_minutes: float = 0.0
 
 
 @dataclass
 class ResearchPattern:
-    """Identified research patterns and insights"""
+    """Identified research patterns and insights."""
 
     pattern_type: str  # 'topic_cluster', 'time_pattern', 'source_preference'
     pattern_name: str
     frequency: int
     confidence: float
     last_seen: datetime
-    related_queries: list[str] = field(default_factory=list)
-    insights: list[str] = field(default_factory=list)
+    related_queries: List[str] = field(default_factory=list)
+    insights: List[str] = field(default_factory=list)
 
 
 @dataclass
 class KnowledgeInsight:
-    """Knowledge insights and recommendations"""
+    """Knowledge insights and recommendations."""
 
     insight_type: str  # 'research_gap', 'trending_topic', 'deep_dive', 'related_area'
     title: str
     description: str
     confidence: float
-    actionable_suggestions: list[str] = field(default_factory=list)
-    related_topics: list[str] = field(default_factory=list)
+    actionable_suggestions: List[str] = field(default_factory=list)
+    related_topics: List[str] = field(default_factory=list)
     priority: str = "medium"  # low, medium, high
 
 
 @dataclass
 class DashboardMetrics:
-    """Real-time dashboard metrics"""
+    """Real-time dashboard metrics."""
 
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -91,12 +91,12 @@ class DashboardMetrics:
     # Research Intelligence
     active_research_sessions: int = 0
     trending_topics: list[tuple[str, int]] = field(default_factory=list)
-    knowledge_gaps: list[str] = field(default_factory=list)
+    knowledge_gaps: List[str] = field(default_factory=list)
 
     # User Insights
     research_productivity_score: float = 0.0
     exploration_diversity: float = 0.0
-    focus_areas: list[str] = field(default_factory=list)
+    focus_areas: List[str] = field(default_factory=list)
 
 
 class MLAnalyticsAggregationService:
@@ -106,15 +106,15 @@ class MLAnalyticsAggregationService:
     to provide actionable research intelligence and recommendations.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Core data storage
-        self.search_history: list[dict[str, Any]] = []
+        self.search_history: list[Dict[str, Any]] = []
         self.research_sessions: dict[str, SearchSession] = {}
         self.identified_patterns: list[ResearchPattern] = []
         self.knowledge_insights: list[KnowledgeInsight] = []
 
         # Analytics cache
-        self.analytics_cache: dict[str, Any] = {}
+        self.analytics_cache: Dict[str, Any] = {}
         self.cache_expiry: dict[str, datetime] = {}
 
         # Configuration
@@ -128,10 +128,10 @@ class MLAnalyticsAggregationService:
         self,
         query: str,
         results_count: int,
-        semantic_analytics: dict[str, Any] | None = None,
-        summarization_analytics: dict[str, Any] | None = None,
+        semantic_analytics: Dict[str, Any] | None = None,
+        summarization_analytics: Dict[str, Any] | None = None,
         execution_time_ms: float = 0.0,
-        sources_used: list[str] | None = None,
+        sources_used: List[str] | None = None,
     ) -> str:
         """Record a search event for analytics processing.
 
@@ -169,7 +169,9 @@ class MLAnalyticsAggregationService:
         self._invalidate_cache(["dashboard_metrics", "research_patterns"])
 
         logger.info(
-            f"Recorded search event for query '{query}' in session {session_id}",
+            "Recorded search event for query '%s' in session %s",
+            query,
+            session_id,
         )
         return session_id
 
@@ -177,9 +179,9 @@ class MLAnalyticsAggregationService:
         self,
         query: str,
         timestamp: datetime,
-        search_event: dict[str, Any],
+        search_event: Dict[str, Any],
     ) -> str:
-        """Manage research sessions and detect session boundaries"""
+        """Manage research sessions and detect session boundaries."""
         # Find active session (within timeout window)
         active_session_id = None
         timeout_threshold = timestamp - timedelta(minutes=self.session_timeout_minutes)
@@ -250,7 +252,7 @@ class MLAnalyticsAggregationService:
         return session_id
 
     async def generate_dashboard_metrics(self) -> DashboardMetrics:
-        """Generate real-time dashboard metrics"""
+        """Generate real-time dashboard metrics."""
         cache_key = "dashboard_metrics"
         if self._is_cache_valid(cache_key):
             return DashboardMetrics(**self.analytics_cache[cache_key])
@@ -349,9 +351,9 @@ class MLAnalyticsAggregationService:
 
     async def _calculate_productivity_score(
         self,
-        events: list[dict[str, Any]],
+        events: list[Dict[str, Any]],
     ) -> float:
-        """Calculate research productivity score based on search patterns"""
+        """Calculate research productivity score based on search patterns."""
         if not events:
             return 0.0
 
@@ -376,7 +378,7 @@ class MLAnalyticsAggregationService:
             factors.append(relevance_score)
 
         # Session depth (longer sessions = more focused research)
-        sessions = set(e.get("session_id") for e in events if e.get("session_id"))
+        sessions = {e.get("session_id") for e in events if e.get("session_id")}
         if sessions:
             avg_session_queries = len(events) / len(sessions)
             # Normalize to max 5 queries per session
@@ -387,9 +389,9 @@ class MLAnalyticsAggregationService:
 
     async def _calculate_exploration_diversity(
         self,
-        events: list[dict[str, Any]],
+        events: list[Dict[str, Any]],
     ) -> float:
-        """Calculate exploration diversity based on topic spread"""
+        """Calculate exploration diversity based on topic spread."""
         if not events:
             return 0.0
 
@@ -405,8 +407,8 @@ class MLAnalyticsAggregationService:
         diversity_score = min(unique_topics / max_expected_topics, 1.0)
         return round(diversity_score, 3)
 
-    async def _identify_focus_areas(self, events: list[dict[str, Any]]) -> list[str]:
-        """Identify main focus areas from search patterns"""
+    async def _identify_focus_areas(self, events: list[Dict[str, Any]]) -> List[str]:
+        """Identify main focus areas from search patterns."""
         topic_frequency = Counter()
 
         for event in events:
@@ -422,8 +424,8 @@ class MLAnalyticsAggregationService:
 
         return focus_areas[:8]  # Limit to top 8 focus areas
 
-    async def _identify_knowledge_gaps(self, events: list[dict[str, Any]]) -> list[str]:
-        """Identify potential knowledge gaps based on low-confidence searches"""
+    async def _identify_knowledge_gaps(self, events: list[Dict[str, Any]]) -> List[str]:
+        """Identify potential knowledge gaps based on low-confidence searches."""
         gap_indicators = []
 
         for event in events:
@@ -452,7 +454,7 @@ class MLAnalyticsAggregationService:
         return [topic for topic, _ in gap_frequency.most_common(5)]
 
     async def identify_research_patterns(self) -> list[ResearchPattern]:
-        """Identify recurring research patterns and insights"""
+        """Identify recurring research patterns and insights."""
         cache_key = "research_patterns"
         if self._is_cache_valid(cache_key):
             return [ResearchPattern(**p) for p in self.analytics_cache[cache_key]]
@@ -479,7 +481,7 @@ class MLAnalyticsAggregationService:
         return patterns
 
     async def _identify_topic_clusters(self) -> list[ResearchPattern]:
-        """Identify clusters of related research topics"""
+        """Identify clusters of related research topics."""
         topic_co_occurrence = defaultdict(Counter)
         topic_queries = defaultdict(list)
 
@@ -528,7 +530,7 @@ class MLAnalyticsAggregationService:
         return patterns
 
     async def _identify_time_patterns(self) -> list[ResearchPattern]:
-        """Identify time-based research patterns"""
+        """Identify time-based research patterns."""
         if not self.search_history:
             return []
 
@@ -568,7 +570,7 @@ class MLAnalyticsAggregationService:
         return patterns
 
     async def _identify_source_preferences(self) -> list[ResearchPattern]:
-        """Identify source usage patterns and preferences"""
+        """Identify source usage patterns and preferences."""
         source_usage = Counter()
         source_success = defaultdict(list)
 
@@ -612,7 +614,7 @@ class MLAnalyticsAggregationService:
         return patterns
 
     async def generate_knowledge_insights(self) -> list[KnowledgeInsight]:
-        """Generate actionable knowledge insights and recommendations"""
+        """Generate actionable knowledge insights and recommendations."""
         insights = []
 
         # Research gap insights
@@ -635,7 +637,7 @@ class MLAnalyticsAggregationService:
         return insights
 
     async def _generate_research_gap_insights(self) -> list[KnowledgeInsight]:
-        """Generate insights about potential research gaps"""
+        """Generate insights about potential research gaps."""
         insights = []
 
         metrics = await self.generate_dashboard_metrics()
@@ -660,7 +662,7 @@ class MLAnalyticsAggregationService:
         return insights
 
     async def _generate_trending_insights(self) -> list[KnowledgeInsight]:
-        """Generate insights about trending topics"""
+        """Generate insights about trending topics."""
         insights = []
 
         metrics = await self.generate_dashboard_metrics()
@@ -686,7 +688,7 @@ class MLAnalyticsAggregationService:
         return insights
 
     async def _generate_deep_dive_insights(self) -> list[KnowledgeInsight]:
-        """Generate deep dive recommendations for established interests"""
+        """Generate deep dive recommendations for established interests."""
         insights = []
 
         # Identify topics with consistent high-quality results
@@ -722,7 +724,7 @@ class MLAnalyticsAggregationService:
         return insights[:2]  # Limit to top 2
 
     async def _generate_related_area_insights(self) -> list[KnowledgeInsight]:
-        """Generate insights about related areas to explore"""
+        """Generate insights about related areas to explore."""
         insights = []
 
         patterns = await self.identify_research_patterns()
@@ -750,26 +752,23 @@ class MLAnalyticsAggregationService:
         return insights
 
     def _is_cache_valid(self, cache_key: str) -> bool:
-        """Check if cached data is still valid"""
+        """Check if cached data is still valid."""
         if cache_key not in self.analytics_cache:
             return False
 
         expiry = self.cache_expiry.get(cache_key)
-        if not expiry or datetime.now(UTC) > expiry:
-            return False
+        return not (not expiry or datetime.now(UTC) > expiry)
 
-        return True
-
-    def _invalidate_cache(self, cache_keys: list[str]) -> None:
-        """Invalidate specific cache entries"""
+    def _invalidate_cache(self, cache_keys: List[str]) -> None:
+        """Invalidate specific cache entries."""
         for key in cache_keys:
             if key in self.analytics_cache:
                 del self.analytics_cache[key]
             if key in self.cache_expiry:
                 del self.cache_expiry[key]
 
-    async def generate_knowledge_graph(self) -> dict[str, Any]:
-        """Generate knowledge graph from research data"""
+    async def generate_knowledge_graph(self) -> Dict[str, Any]:
+        """Generate knowledge graph from research data."""
         try:
             graph_service = get_knowledge_graph_service()
 
@@ -810,15 +809,15 @@ class MLAnalyticsAggregationService:
             }
 
         except Exception as e:
-            logger.warning(f"Failed to generate knowledge graph: {e}")
+            logger.warning("Failed to generate knowledge graph: %s", e)
             return {
                 "graph_data": {"nodes": [], "edges": [], "metadata": {}},
                 "graph_statistics": {"message": "Knowledge graph generation failed"},
                 "error": str(e),
             }
 
-    async def get_realtime_dashboard_data(self) -> dict[str, Any]:
-        """Get comprehensive real-time dashboard data"""
+    async def get_realtime_dashboard_data(self) -> Dict[str, Any]:
+        """Get comprehensive real-time dashboard data."""
         # Generate all components
         metrics = await self.generate_dashboard_metrics()
         patterns = await self.identify_research_patterns()
@@ -858,15 +857,15 @@ _analytics_service = None
 
 
 def get_ml_analytics_service() -> MLAnalyticsAggregationService:
-    """Get or create global ML analytics service instance"""
+    """Get or create global ML analytics service instance."""
     global _analytics_service
     if _analytics_service is None:
         _analytics_service = MLAnalyticsAggregationService()
     return _analytics_service
 
 
-async def main():
-    """Demo of ML analytics aggregation service"""
+async def main(self) -> None:
+    """Demo of ML analytics aggregation service."""
     service = get_ml_analytics_service()
 
     # Simulate some search events

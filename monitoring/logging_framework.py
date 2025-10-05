@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-PAKE System - Enterprise Logging & Observability Framework
+"""PAKE System - Enterprise Logging & Observability Framework
 Comprehensive logging, monitoring, and observability for enterprise applications.
 
 This module provides:
@@ -13,32 +12,28 @@ This module provides:
 """
 
 import asyncio
-import json
 import logging
 import os
 import sys
 import time
 import traceback
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Callable
+from typing import Any
 
-import aiofiles
 import structlog
 from datadog import initialize, statsd
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from pydantic import BaseModel, Field
 
 
 class LogLevel(Enum):
-    """Log levels"""
+    """Log levels."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -47,7 +42,8 @@ class LogLevel(Enum):
 
 
 class LogOutput(Enum):
-    """Log output destinations"""
+    """Log output destinations."""
+
     CONSOLE = "console"
     FILE = "file"
     JSON = "json"
@@ -58,7 +54,8 @@ class LogOutput(Enum):
 
 
 class MetricType(Enum):
-    """Metric types"""
+    """Metric types."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -66,83 +63,85 @@ class MetricType(Enum):
 
 
 class LogEntry(BaseModel):
-    """Structured log entry model"""
+    """Structured log entry model."""
+
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     level: LogLevel = Field(..., description="Log level")
     logger_name: str = Field(..., description="Logger name")
     message: str = Field(..., description="Log message")
-    module: Optional[str] = Field(None, description="Module name")
-    function: Optional[str] = Field(None, description="Function name")
-    line_number: Optional[int] = Field(None, description="Line number")
-    thread_id: Optional[str] = Field(None, description="Thread ID")
-    process_id: Optional[int] = Field(None, description="Process ID")
-    request_id: Optional[str] = Field(None, description="Request ID for tracing")
-    user_id: Optional[str] = Field(None, description="User ID")
-    session_id: Optional[str] = Field(None, description="Session ID")
-    correlation_id: Optional[str] = Field(None, description="Correlation ID")
+    module: str | None = Field(None, description="Module name")
+    function: str | None = Field(None, description="Function name")
+    line_number: int | None = Field(None, description="Line number")
+    thread_id: str | None = Field(None, description="Thread ID")
+    process_id: int | None = Field(None, description="Process ID")
+    request_id: str | None = Field(None, description="Request ID for tracing")
+    user_id: str | None = Field(None, description="User ID")
+    session_id: str | None = Field(None, description="Session ID")
+    correlation_id: str | None = Field(None, description="Correlation ID")
     service_name: str = Field(default="pake-system", description="Service name")
     environment: str = Field(default="development", description="Environment")
-    hostname: Optional[str] = Field(None, description="Hostname")
-    ip_address: Optional[str] = Field(None, description="IP address")
-    user_agent: Optional[str] = Field(None, description="User agent")
-    duration_ms: Optional[float] = Field(None, description="Operation duration in milliseconds")
-    memory_usage_mb: Optional[float] = Field(None, description="Memory usage in MB")
-    cpu_usage_percent: Optional[float] = Field(None, description="CPU usage percentage")
-    error_code: Optional[str] = Field(None, description="Error code")
-    stack_trace: Optional[str] = Field(None, description="Stack trace")
-    extra_data: Dict[str, Any] = Field(default_factory=dict, description="Additional data")
+    hostname: str | None = Field(None, description="Hostname")
+    ip_address: str | None = Field(None, description="IP address")
+    user_agent: str | None = Field(None, description="User agent")
+    duration_ms: float | None = Field(
+        None, description="Operation duration in milliseconds"
+    )
+    memory_usage_mb: float | None = Field(None, description="Memory usage in MB")
+    cpu_usage_percent: float | None = Field(None, description="CPU usage percentage")
+    error_code: str | None = Field(None, description="Error code")
+    stack_trace: str | None = Field(None, description="Stack trace")
+    extra_data: dict[str, Any] = Field(
+        default_factory=dict, description="Additional data"
+    )
 
 
 class MetricEntry(BaseModel):
-    """Metric entry model"""
+    """Metric entry model."""
+
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     metric_name: str = Field(..., description="Metric name")
     metric_type: MetricType = Field(..., description="Metric type")
-    value: Union[int, float] = Field(..., description="Metric value")
-    tags: Dict[str, str] = Field(default_factory=dict, description="Metric tags")
+    value: int | float = Field(..., description="Metric value")
+    tags: dict[str, str] = Field(default_factory=dict, description="Metric tags")
     service_name: str = Field(default="pake-system", description="Service name")
     environment: str = Field(default="development", description="Environment")
 
 
 class AuditEntry(BaseModel):
-    """Audit log entry model"""
+    """Audit log entry model."""
+
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event_type: str = Field(..., description="Event type")
-    user_id: Optional[str] = Field(None, description="User ID")
-    session_id: Optional[str] = Field(None, description="Session ID")
-    resource: Optional[str] = Field(None, description="Resource accessed")
+    user_id: str | None = Field(None, description="User ID")
+    session_id: str | None = Field(None, description="Session ID")
+    resource: str | None = Field(None, description="Resource accessed")
     action: str = Field(..., description="Action performed")
     result: str = Field(..., description="Result (success/failure)")
-    source_ip: Optional[str] = Field(None, description="Source IP")
-    user_agent: Optional[str] = Field(None, description="User agent")
-    request_id: Optional[str] = Field(None, description="Request ID")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Additional details")
+    source_ip: str | None = Field(None, description="Source IP")
+    user_agent: str | None = Field(None, description="User agent")
+    request_id: str | None = Field(None, description="Request ID")
+    details: dict[str, Any] = Field(
+        default_factory=dict, description="Additional details"
+    )
 
 
 class LoggingFramework:
-    """
-    Enterprise Logging & Observability Framework
+    """Enterprise Logging & Observability Framework.
 
     Provides comprehensive logging, monitoring, and observability capabilities
     for enterprise applications with support for multiple outputs and formats.
     """
 
-    def __init__(
-        self,
-        service_name: str = "pake-system",
-        environment: str = "development",
-        log_level: LogLevel = LogLevel.INFO,
-        outputs: List[LogOutput] = None
-    ):
+    def __init__(self) -> None:
         self.service_name = service_name
         self.environment = environment
         self.log_level = log_level
         self.outputs = outputs or [LogOutput.CONSOLE, LogOutput.FILE]
 
         # Initialize components
-        self.loggers: Dict[str, logging.Logger] = {}
-        self.metrics_buffer: List[MetricEntry] = []
-        self.audit_logs: List[AuditEntry] = []
+        self.loggers: dict[str, logging.Logger] = {}
+        self.metrics_buffer: list[MetricEntry] = []
+        self.audit_logs: list[AuditEntry] = []
         self.tracer = None
 
         # Setup logging
@@ -152,10 +151,10 @@ class LoggingFramework:
         self._setup_metrics()
 
         # Performance tracking
-        self.performance_metrics: Dict[str, List[float]] = {}
+        self.performance_metrics: dict[str, list[float]] = {}
 
-    def _setup_structured_logging(self):
-        """Setup structured logging with structlog"""
+    def _setup_structured_logging(self) -> None:
+        """Setup structured logging with structlog."""
         # Configure structlog
         structlog.configure(
             processors=[
@@ -167,7 +166,7 @@ class LoggingFramework:
                 structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer()
+                structlog.processors.JSONRenderer(),
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -178,8 +177,8 @@ class LoggingFramework:
         # Create main logger
         self.main_logger = structlog.get_logger(self.service_name)
 
-    def _setup_outputs(self):
-        """Setup log outputs"""
+    def _setup_outputs(self) -> None:
+        """Setup log outputs."""
         # Create logs directory
         self.logs_dir = Path("logs")
         self.logs_dir.mkdir(exist_ok=True)
@@ -196,39 +195,35 @@ class LoggingFramework:
         if LogOutput.DATADOG in self.outputs:
             self._setup_datadog()
 
-    def _setup_file_handlers(self):
-        """Setup file handlers for different log types"""
+    def _setup_file_handlers(self) -> None:
+        """Setup file handlers for different log types."""
         # Application logs
         app_handler = logging.FileHandler(
-            self.logs_dir / "application.log",
-            encoding='utf-8'
+            self.logs_dir / "application.log", encoding="utf-8"
         )
         app_handler.setLevel(logging.DEBUG)
 
         # Error logs
         error_handler = logging.FileHandler(
-            self.logs_dir / "errors.log",
-            encoding='utf-8'
+            self.logs_dir / "errors.log", encoding="utf-8"
         )
         error_handler.setLevel(logging.ERROR)
 
         # Audit logs
         audit_handler = logging.FileHandler(
-            self.logs_dir / "audit.log",
-            encoding='utf-8'
+            self.logs_dir / "audit.log", encoding="utf-8"
         )
         audit_handler.setLevel(logging.INFO)
 
         # Performance logs
         perf_handler = logging.FileHandler(
-            self.logs_dir / "performance.log",
-            encoding='utf-8'
+            self.logs_dir / "performance.log", encoding="utf-8"
         )
         perf_handler.setLevel(logging.INFO)
 
         # Configure formatters
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
         for handler in [app_handler, error_handler, audit_handler, perf_handler]:
@@ -242,20 +237,20 @@ class LoggingFramework:
         root_logger.addHandler(perf_handler)
         root_logger.setLevel(logging.DEBUG)
 
-    def _setup_console_handler(self):
-        """Setup console handler with colored output"""
+    def _setup_console_handler(self) -> None:
+        """Setup console handler with colored output."""
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(self.log_level.value)
 
         # Colored formatter for development
         if self.environment == "development":
             formatter = logging.Formatter(
-                '\033[92m%(asctime)s\033[0m - \033[94m%(name)s\033[0m - '
-                '\033[93m%(levelname)s\033[0m - %(message)s'
+                "\033[92m%(asctime)s\033[0m - \033[94m%(name)s\033[0m - "
+                "\033[93m%(levelname)s\033[0m - %(message)s"
             )
         else:
             formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
 
         console_handler.setFormatter(formatter)
@@ -263,20 +258,20 @@ class LoggingFramework:
         root_logger = logging.getLogger()
         root_logger.addHandler(console_handler)
 
-    def _setup_datadog(self):
-        """Setup Datadog integration"""
+    def _setup_datadog(self) -> None:
+        """Setup Datadog integration."""
         try:
             initialize(
-                api_key=os.getenv('DATADOG_API_KEY'),
-                app_key=os.getenv('DATADOG_APP_KEY')
+                api_key=os.getenv("DATADOG_API_KEY"),
+                app_key=os.getenv("DATADOG_APP_KEY"),
             )
             self.datadog_enabled = True
         except Exception as e:
             print(f"Failed to initialize Datadog: {e}")
             self.datadog_enabled = False
 
-    def _setup_tracing(self):
-        """Setup distributed tracing"""
+    def _setup_tracing(self) -> None:
+        """Setup distributed tracing."""
         try:
             # Create tracer provider
             trace.set_tracer_provider(TracerProvider())
@@ -284,8 +279,8 @@ class LoggingFramework:
 
             # Setup Jaeger exporter
             jaeger_exporter = JaegerExporter(
-                agent_host_name=os.getenv('JAEGER_AGENT_HOST', 'localhost'),
-                agent_port=int(os.getenv('JAEGER_AGENT_PORT', '14268')),
+                agent_host_name=os.getenv("JAEGER_AGENT_HOST", "localhost"),
+                agent_port=int(os.getenv("JAEGER_AGENT_PORT", "14268")),
             )
 
             # Add span processor
@@ -299,8 +294,8 @@ class LoggingFramework:
             print(f"Failed to setup tracing: {e}")
             self.tracer = None
 
-    def _setup_metrics(self):
-        """Setup metrics collection"""
+    def _setup_metrics(self) -> None:
+        """Setup metrics collection."""
         self.metrics_enabled = LogOutput.DATADOG in self.outputs
 
     # ========================================================================
@@ -308,17 +303,11 @@ class LoggingFramework:
     # ========================================================================
 
     def get_logger(self, name: str) -> structlog.BoundLogger:
-        """Get a structured logger"""
+        """Get a structured logger."""
         return structlog.get_logger(name)
 
-    async def log_structured(
-        self,
-        level: LogLevel,
-        message: str,
-        logger_name: str = None,
-        **kwargs
-    ):
-        """Log structured message"""
+    async def log_structured(self) -> None:
+        """Log structured message."""
         logger_name = logger_name or self.service_name
 
         # Create log entry
@@ -328,11 +317,11 @@ class LoggingFramework:
             message=message,
             service_name=self.service_name,
             environment=self.environment,
-            extra_data=kwargs
+            extra_data=kwargs,
         )
 
         # Add system information
-        log_entry.hostname = os.getenv('HOSTNAME')
+        log_entry.hostname = os.getenv("HOSTNAME")
         log_entry.process_id = os.getpid()
 
         # Get logger and log message
@@ -354,38 +343,23 @@ class LoggingFramework:
         if self.datadog_enabled:
             await self._send_to_datadog(log_entry)
 
-    async def log_error(
-        self,
-        message: str,
-        exception: Exception = None,
-        logger_name: str = None,
-        **kwargs
-    ):
-        """Log error with exception details"""
+    async def log_error(self) -> None:
+        """Log error with exception details."""
         extra_data = kwargs.copy()
 
         if exception:
-            extra_data.update({
-                'exception_type': type(exception).__name__,
-                'exception_message': str(exception),
-                'stack_trace': traceback.format_exc()
-            })
+            extra_data.update(
+                {
+                    "exception_type": type(exception).__name__,
+                    "exception_message": str(exception),
+                    "stack_trace": traceback.format_exc(),
+                }
+            )
 
-        await self.log_structured(
-            LogLevel.ERROR,
-            message,
-            logger_name,
-            **extra_data
-        )
+        await self.log_structured(LogLevel.ERROR, message, logger_name, **extra_data)
 
-    async def log_performance(
-        self,
-        operation: str,
-        duration_ms: float,
-        logger_name: str = None,
-        **kwargs
-    ):
-        """Log performance metrics"""
+    async def log_performance(self) -> None:
+        """Log performance metrics."""
         # Store performance metric
         if operation not in self.performance_metrics:
             self.performance_metrics[operation] = []
@@ -394,7 +368,9 @@ class LoggingFramework:
 
         # Keep only last 1000 measurements
         if len(self.performance_metrics[operation]) > 1000:
-            self.performance_metrics[operation] = self.performance_metrics[operation][-1000:]
+            self.performance_metrics[operation] = self.performance_metrics[operation][
+                -1000:
+            ]
 
         await self.log_structured(
             LogLevel.INFO,
@@ -402,7 +378,7 @@ class LoggingFramework:
             logger_name,
             operation=operation,
             duration_ms=duration_ms,
-            **kwargs
+            **kwargs,
         )
 
         # Send metric to Datadog
@@ -411,26 +387,18 @@ class LoggingFramework:
                 f"performance.{operation}",
                 MetricType.TIMER,
                 duration_ms,
-                tags={"operation": operation}
+                tags={"operation": operation},
             )
 
-    async def log_audit(
-        self,
-        event_type: str,
-        action: str,
-        result: str,
-        user_id: str = None,
-        resource: str = None,
-        **kwargs
-    ):
-        """Log audit event"""
+    async def log_audit(self) -> None:
+        """Log audit event."""
         audit_entry = AuditEntry(
             event_type=event_type,
             user_id=user_id,
             resource=resource,
             action=action,
             result=result,
-            details=kwargs
+            details=kwargs,
         )
 
         self.audit_logs.append(audit_entry)
@@ -438,36 +406,32 @@ class LoggingFramework:
         # Log to audit logger
         audit_logger = self.get_logger("audit")
         audit_logger.info(
-            f"Audit: {event_type} - {action} - {result}",
+            "Audit: %s - %s - %s",
+            event_type,
+            action,
+            result,
             event_type=event_type,
             action=action,
             result=result,
             user_id=user_id,
             resource=resource,
-            **kwargs
+            **kwargs,
         )
 
     # ========================================================================
     # Metrics Methods
     # ========================================================================
 
-    async def _send_metric(
-        self,
-        metric_name: str,
-        metric_type: MetricType,
-        value: Union[int, float],
-        tags: Dict[str, str] = None
-    ):
-        """Send metric to external service"""
+    async def _send_metric(self) -> None:
+        """Send metric to external service."""
         if not self.metrics_enabled:
             return
 
         try:
             metric_tags = tags or {}
-            metric_tags.update({
-                'service': self.service_name,
-                'environment': self.environment
-            })
+            metric_tags.update(
+                {"service": self.service_name, "environment": self.environment}
+            )
 
             if metric_type == MetricType.COUNTER:
                 statsd.increment(metric_name, value, tags=list(metric_tags.items()))
@@ -481,59 +445,39 @@ class LoggingFramework:
         except Exception as e:
             print(f"Failed to send metric: {e}")
 
-    async def increment_counter(
-        self,
-        metric_name: str,
-        value: int = 1,
-        tags: Dict[str, str] = None
-    ):
-        """Increment a counter metric"""
+    async def increment_counter(self) -> None:
+        """Increment a counter metric."""
         await self._send_metric(metric_name, MetricType.COUNTER, value, tags)
 
-    async def set_gauge(
-        self,
-        metric_name: str,
-        value: Union[int, float],
-        tags: Dict[str, str] = None
-    ):
-        """Set a gauge metric"""
+    async def set_gauge(self) -> None:
+        """Set a gauge metric."""
         await self._send_metric(metric_name, MetricType.GAUGE, value, tags)
 
-    async def record_histogram(
-        self,
-        metric_name: str,
-        value: Union[int, float],
-        tags: Dict[str, str] = None
-    ):
-        """Record a histogram metric"""
+    async def record_histogram(self) -> None:
+        """Record a histogram metric."""
         await self._send_metric(metric_name, MetricType.HISTOGRAM, value, tags)
 
-    async def record_timing(
-        self,
-        metric_name: str,
-        duration_ms: float,
-        tags: Dict[str, str] = None
-    ):
-        """Record a timing metric"""
+    async def record_timing(self) -> None:
+        """Record a timing metric."""
         await self._send_metric(metric_name, MetricType.TIMER, duration_ms, tags)
 
     # ========================================================================
     # Tracing Methods
     # ========================================================================
 
-    def start_span(self, name: str, **kwargs):
-        """Start a new span"""
+    def start_span(self) -> None:
+        """Start a new span."""
         if self.tracer:
             return self.tracer.start_span(name, **kwargs)
         return None
 
-    def add_span_attribute(self, span, key: str, value: Any):
-        """Add attribute to span"""
+    def add_span_attribute(self) -> None:
+        """Add attribute to span."""
         if span:
             span.set_attribute(key, value)
 
-    def add_span_event(self, span, name: str, attributes: Dict[str, Any] = None):
-        """Add event to span"""
+    def add_span_event(self) -> None:
+        """Add event to span."""
         if span:
             span.add_event(name, attributes or {})
 
@@ -541,10 +485,11 @@ class LoggingFramework:
     # Context Managers and Decorators
     # ========================================================================
 
-    def trace_operation(self, operation_name: str):
-        """Decorator to trace an operation"""
-        def decorator(func):
-            async def wrapper(*args, **kwargs):
+    def trace_operation(self) -> None:
+        """Decorator to trace an operation."""
+
+        def decorator(self) -> None:
+            async def wrapper(self) -> None:
                 start_time = time.time()
                 span = self.start_span(operation_name)
 
@@ -580,39 +525,40 @@ class LoggingFramework:
                         span.end()
 
             return wrapper
+
         return decorator
 
     # ========================================================================
     # External Service Integration
     # ========================================================================
 
-    async def _send_to_datadog(self, log_entry: LogEntry):
-        """Send log entry to Datadog"""
+    async def _send_to_datadog(self) -> None:
+        """Send log entry to Datadog."""
         if not self.datadog_enabled:
             return
 
         try:
             # Convert log entry to Datadog format
             datadog_log = {
-                'timestamp': log_entry.timestamp.isoformat(),
-                'level': log_entry.level.value,
-                'message': log_entry.message,
-                'service': log_entry.service_name,
-                'env': log_entry.environment,
-                'logger': log_entry.logger_name,
-                'hostname': log_entry.hostname,
-                'process_id': log_entry.process_id,
-                'thread_id': log_entry.thread_id,
-                'request_id': log_entry.request_id,
-                'user_id': log_entry.user_id,
-                'session_id': log_entry.session_id,
-                'correlation_id': log_entry.correlation_id,
-                'duration_ms': log_entry.duration_ms,
-                'memory_usage_mb': log_entry.memory_usage_mb,
-                'cpu_usage_percent': log_entry.cpu_usage_percent,
-                'error_code': log_entry.error_code,
-                'stack_trace': log_entry.stack_trace,
-                'extra_data': log_entry.extra_data
+                "timestamp": log_entry.timestamp.isoformat(),
+                "level": log_entry.level.value,
+                "message": log_entry.message,
+                "service": log_entry.service_name,
+                "env": log_entry.environment,
+                "logger": log_entry.logger_name,
+                "hostname": log_entry.hostname,
+                "process_id": log_entry.process_id,
+                "thread_id": log_entry.thread_id,
+                "request_id": log_entry.request_id,
+                "user_id": log_entry.user_id,
+                "session_id": log_entry.session_id,
+                "correlation_id": log_entry.correlation_id,
+                "duration_ms": log_entry.duration_ms,
+                "memory_usage_mb": log_entry.memory_usage_mb,
+                "cpu_usage_percent": log_entry.cpu_usage_percent,
+                "error_code": log_entry.error_code,
+                "stack_trace": log_entry.stack_trace,
+                "extra_data": log_entry.extra_data,
             }
 
             # Send to Datadog (implementation depends on Datadog client)
@@ -625,64 +571,67 @@ class LoggingFramework:
     # Analysis and Reporting
     # ========================================================================
 
-    async def get_performance_stats(self, operation: str = None) -> Dict[str, Any]:
-        """Get performance statistics"""
+    async def get_performance_stats(self, operation: str = None) -> dict[str, Any]:
+        """Get performance statistics."""
         if operation:
             if operation not in self.performance_metrics:
                 return {}
 
             values = self.performance_metrics[operation]
             return {
-                'operation': operation,
-                'count': len(values),
-                'min': min(values),
-                'max': max(values),
-                'avg': sum(values) / len(values),
-                'p50': sorted(values)[len(values) // 2],
-                'p95': sorted(values)[int(len(values) * 0.95)],
-                'p99': sorted(values)[int(len(values) * 0.99)]
+                "operation": operation,
+                "count": len(values),
+                "min": min(values),
+                "max": max(values),
+                "avg": sum(values) / len(values),
+                "p50": sorted(values)[len(values) // 2],
+                "p95": sorted(values)[int(len(values) * 0.95)],
+                "p99": sorted(values)[int(len(values) * 0.99)],
             }
-        else:
-            # Return stats for all operations
-            stats = {}
-            for op, values in self.performance_metrics.items():
-                stats[op] = {
-                    'count': len(values),
-                    'min': min(values),
-                    'max': max(values),
-                    'avg': sum(values) / len(values),
-                    'p50': sorted(values)[len(values) // 2],
-                    'p95': sorted(values)[int(len(values) * 0.95)],
-                    'p99': sorted(values)[int(len(values) * 0.99)]
-                }
-            return stats
+        # Return stats for all operations
+        stats = {}
+        for op, values in self.performance_metrics.items():
+            stats[op] = {
+                "count": len(values),
+                "min": min(values),
+                "max": max(values),
+                "avg": sum(values) / len(values),
+                "p50": sorted(values)[len(values) // 2],
+                "p95": sorted(values)[int(len(values) * 0.95)],
+                "p99": sorted(values)[int(len(values) * 0.99)],
+            }
+        return stats
 
     async def get_audit_logs(
         self,
         start_date: datetime = None,
         end_date: datetime = None,
         event_type: str = None,
-        user_id: str = None
-    ) -> List[AuditEntry]:
-        """Get filtered audit logs"""
+        user_id: str = None,
+    ) -> list[AuditEntry]:
+        """Get filtered audit logs."""
         filtered_logs = self.audit_logs
 
         if start_date:
-            filtered_logs = [log for log in filtered_logs if log.timestamp >= start_date]
+            filtered_logs = [
+                log for log in filtered_logs if log.timestamp >= start_date
+            ]
 
         if end_date:
             filtered_logs = [log for log in filtered_logs if log.timestamp <= end_date]
 
         if event_type:
-            filtered_logs = [log for log in filtered_logs if log.event_type == event_type]
+            filtered_logs = [
+                log for log in filtered_logs if log.event_type == event_type
+            ]
 
         if user_id:
             filtered_logs = [log for log in filtered_logs if log.user_id == user_id]
 
         return sorted(filtered_logs, key=lambda x: x.timestamp, reverse=True)
 
-    async def generate_log_report(self, days: int = 7) -> Dict[str, Any]:
-        """Generate comprehensive log report"""
+    async def generate_log_report(self, days: int = 7) -> dict[str, Any]:
+        """Generate comprehensive log report."""
         end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
 
@@ -709,43 +658,46 @@ class LoggingFramework:
         # Get performance stats
         performance_stats = await self.get_performance_stats()
 
-        report = {
-            'report_period': {
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat(),
-                'days': days
+        return {
+            "report_period": {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "days": days,
             },
-            'summary': {
-                'total_audit_events': len(audit_logs),
-                'unique_users': len(user_activity),
-                'unique_resources': len(resource_access),
-                'tracked_operations': len(performance_stats)
+            "summary": {
+                "total_audit_events": len(audit_logs),
+                "unique_users": len(user_activity),
+                "unique_resources": len(resource_access),
+                "tracked_operations": len(performance_stats),
             },
-            'event_breakdown': event_counts,
-            'top_users': dict(sorted(user_activity.items(), key=lambda x: x[1], reverse=True)[:10]),
-            'top_resources': dict(sorted(resource_access.items(), key=lambda x: x[1], reverse=True)[:10]),
-            'performance_summary': performance_stats
+            "event_breakdown": event_counts,
+            "top_users": dict(
+                sorted(user_activity.items(), key=lambda x: x[1], reverse=True)[:10]
+            ),
+            "top_resources": dict(
+                sorted(resource_access.items(), key=lambda x: x[1], reverse=True)[:10]
+            ),
+            "performance_summary": performance_stats,
         }
-
-        return report
 
 
 # ========================================================================
 # FastAPI Integration
 # ========================================================================
 
-class FastAPILoggingMiddleware:
-    """FastAPI middleware for request logging"""
 
-    def __init__(self, logging_framework: LoggingFramework):
+class FastAPILoggingMiddleware:
+    """FastAPI middleware for request logging."""
+
+    def __init__(self) -> None:
         self.logging_framework = logging_framework
 
-    async def __call__(self, request, call_next):
+    async def __call__(self) -> None:
         start_time = time.time()
 
         # Extract request information
-        request_id = request.headers.get('X-Request-ID', f"req_{int(time.time())}")
-        user_id = getattr(request.state, 'user_id', None)
+        request_id = request.headers.get("X-Request-ID", f"req_{int(time.time())}")
+        user_id = getattr(request.state, "user_id", None)
 
         # Start span
         span = self.logging_framework.start_span(f"http_request_{request.method}")
@@ -762,15 +714,23 @@ class FastAPILoggingMiddleware:
                 path=request.url.path,
                 query_params=dict(request.query_params),
                 client_ip=request.client.host if request.client else None,
-                user_agent=request.headers.get('User-Agent')
+                user_agent=request.headers.get("User-Agent"),
             )
 
             # Add span attributes
             if span:
-                self.logging_framework.add_span_attribute(span, "http.method", request.method)
-                self.logging_framework.add_span_attribute(span, "http.url", str(request.url))
-                self.logging_framework.add_span_attribute(span, "http.user_agent", request.headers.get('User-Agent'))
-                self.logging_framework.add_span_attribute(span, "request_id", request_id)
+                self.logging_framework.add_span_attribute(
+                    span, "http.method", request.method
+                )
+                self.logging_framework.add_span_attribute(
+                    span, "http.url", str(request.url)
+                )
+                self.logging_framework.add_span_attribute(
+                    span, "http.user_agent", request.headers.get("User-Agent")
+                )
+                self.logging_framework.add_span_attribute(
+                    span, "request_id", request_id
+                )
 
             # Process request
             response = await call_next(request)
@@ -789,23 +749,27 @@ class FastAPILoggingMiddleware:
                 path=request.url.path,
                 status_code=response.status_code,
                 duration_ms=duration_ms,
-                client_ip=request.client.host if request.client else None
+                client_ip=request.client.host if request.client else None,
             )
 
             # Add span attributes
             if span:
-                self.logging_framework.add_span_attribute(span, "http.status_code", response.status_code)
-                self.logging_framework.add_span_attribute(span, "duration_ms", duration_ms)
+                self.logging_framework.add_span_attribute(
+                    span, "http.status_code", response.status_code
+                )
+                self.logging_framework.add_span_attribute(
+                    span, "duration_ms", duration_ms
+                )
 
             # Record performance metric
             await self.logging_framework.record_timing(
-                f"http.request.duration",
+                "http.request.duration",
                 duration_ms,
                 tags={
                     "method": request.method,
                     "path": request.url.path,
-                    "status_code": str(response.status_code)
-                }
+                    "status_code": str(response.status_code),
+                },
             )
 
             return response
@@ -822,13 +786,15 @@ class FastAPILoggingMiddleware:
                 user_id=user_id,
                 method=request.method,
                 path=request.url.path,
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
 
             # Add span attributes
             if span:
                 self.logging_framework.add_span_attribute(span, "error", str(e))
-                self.logging_framework.add_span_attribute(span, "duration_ms", duration_ms)
+                self.logging_framework.add_span_attribute(
+                    span, "duration_ms", duration_ms
+                )
 
             raise
 
@@ -839,12 +805,12 @@ class FastAPILoggingMiddleware:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         # Initialize logging framework
         logging_framework = LoggingFramework(
             service_name="pake-system",
             environment="development",
-            outputs=[LogOutput.CONSOLE, LogOutput.FILE]
+            outputs=[LogOutput.CONSOLE, LogOutput.FILE],
         )
 
         # Get logger
@@ -854,7 +820,7 @@ if __name__ == "__main__":
         await logging_framework.log_structured(
             LogLevel.INFO,
             "Application started",
-            extra_data={"version": "1.0.0", "build": "123"}
+            extra_data={"version": "1.0.0", "build": "123"},
         )
 
         # Log performance
@@ -866,7 +832,7 @@ if __name__ == "__main__":
             "authenticate",
             "success",
             user_id="user123",
-            resource="/api/auth/login"
+            resource="/api/auth/login",
         )
 
         # Generate report

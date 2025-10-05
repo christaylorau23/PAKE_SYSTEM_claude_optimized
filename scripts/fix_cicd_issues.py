@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 class CICDFixer:
     """Comprehensive CI/CD pipeline fixer"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.fixes_applied = []
         self.fixes_failed = []
 
-    def fix_all_cicd_issues(self):
+    def fix_all_cicd_issues(self) -> None:
         """Fix all CI/CD pipeline issues"""
         logger.info("🔧 Starting CI/CD pipeline fixes...")
 
@@ -33,10 +33,10 @@ class CICDFixer:
             self._print_summary()
 
         except Exception as e:
-            logger.error(f"CI/CD fixes failed: {e}")
+            logger.error("CI/CD fixes failed: %s", e)
             sys.exit(1)
 
-    def _fix_secrets_detection(self):
+    def _fix_secrets_detection(self) -> None:
         """Fix secrets detection failures"""
         logger.info("🔑 Fixing secrets detection...")
 
@@ -136,9 +136,9 @@ jobs:
 
         except Exception as e:
             self.fixes_failed.append(("secrets_detection", str(e)))
-            logger.error(f"❌ Secrets detection fix failed: {e}")
+            logger.error("❌ Secrets detection fix failed: %s", e)
 
-    def _fix_core_tests(self):
+    def _fix_core_tests(self) -> None:
         """Fix core test suite failures"""
         logger.info("🧪 Fixing core tests...")
 
@@ -223,19 +223,19 @@ os.environ["PAKE_ENVIRONMENT"] = "test"
 os.environ["PAKE_DEBUG"] = "true"
 
 @pytest.fixture(scope="session")
-def event_loop():
+def event_loop(self) -> None:
     \"\"\"Create an instance of the default event loop for the test session.\"\"\"
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
 @pytest.fixture
-def test_data_dir():
+def test_data_dir(self) -> None:
     \"\"\"Get test data directory.\"\"\"
     return Path(__file__).parent / "data"
 
 @pytest.fixture
-def mock_env_vars():
+def mock_env_vars(self) -> None:
     \"\"\"Mock environment variables for testing.\"\"\"
     return {
         "PAKE_DB_HOST": "localhost",
@@ -258,7 +258,7 @@ def mock_env_vars():
 from src.utils.secure_serialization import SecureSerializer, SerializationFormat
 
 class TestSecurity:
-    def test_secure_serialization(self):
+    def test_secure_serialization(self) -> None:
         \"\"\"Test secure serialization functionality.\"\"\"
         serializer = SecureSerializer()
         test_data = {"test": "data", "number": 42}
@@ -271,7 +271,7 @@ class TestSecurity:
         deserialized = serializer.deserialize(serialized)
         assert deserialized == test_data
 
-    def test_serialization_formats(self):
+    def test_serialization_formats(self) -> None:
         \"\"\"Test different serialization formats.\"\"\"
         serializer = SecureSerializer()
         test_data = {"test": "data"}
@@ -294,7 +294,7 @@ class TestSecurity:
 from src.utils.secure_network_config import SecureNetworkConfig, Environment
 
 class TestNetworkConfig:
-    def test_development_config(self):
+    def test_development_config(self) -> None:
         \"\"\"Test development network configuration.\"\"\"
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
 
@@ -302,7 +302,7 @@ class TestNetworkConfig:
         assert config.config.port == 8000
         assert not config.config.enable_ssl
 
-    def test_production_config(self):
+    def test_production_config(self) -> None:
         \"\"\"Test production network configuration.\"\"\"
         config = SecureNetworkConfig(Environment.PRODUCTION)
 
@@ -310,7 +310,7 @@ class TestNetworkConfig:
         assert config.config.enable_ssl
         assert config.config.enable_rate_limiting
 
-    def test_config_validation(self):
+    def test_config_validation(self) -> None:
         \"\"\"Test configuration validation.\"\"\"
         config = SecureNetworkConfig(Environment.PRODUCTION)
         warnings = config.validate_configuration()
@@ -326,9 +326,9 @@ class TestNetworkConfig:
 
         except Exception as e:
             self.fixes_failed.append(("core_tests", str(e)))
-            logger.error(f"❌ Core tests fix failed: {e}")
+            logger.error("❌ Core tests fix failed: %s", e)
 
-    def _fix_security_pipeline(self):
+    def _fix_security_pipeline(self) -> None:
         """Fix security workflow pipeline"""
         logger.info("🔒 Fixing security pipeline...")
 
@@ -395,9 +395,9 @@ jobs:
 
         except Exception as e:
             self.fixes_failed.append(("security_pipeline", str(e)))
-            logger.error(f"❌ Security pipeline fix failed: {e}")
+            logger.error("❌ Security pipeline fix failed: %s", e)
 
-    def _fix_nodejs_audits(self):
+    def _fix_nodejs_audits(self) -> None:
         """Fix Node.js security audit failures"""
         logger.info("📦 Fixing Node.js audits...")
 
@@ -467,9 +467,9 @@ echo "✅ NPM audit fix completed"
 
         except Exception as e:
             self.fixes_failed.append(("nodejs_audits", str(e)))
-            logger.error(f"❌ Node.js audits fix failed: {e}")
+            logger.error("❌ Node.js audits fix failed: %s", e)
 
-    def _fix_linting(self):
+    def _fix_linting(self) -> None:
         """Fix code quality and linting issues"""
         logger.info("🔍 Fixing linting issues...")
 
@@ -640,23 +640,23 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def run_command(cmd, description):
+def run_command(self) -> None:
     \"\"\"Run a command and log results.\"\"\"
-    logger.info(f"Running {description}...")
+    logger.info("Running %s...", description)
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode == 0:
-            logger.info(f"✅ {description} passed")
+            logger.info("✅ %s passed", description)
             return True
         else:
-            logger.error(f"❌ {description} failed:")
+            logger.error("❌ %s failed:", description)
             logger.error(result.stderr)
             return False
     except Exception as e:
-        logger.error(f"❌ {description} failed with exception: {e}")
+        logger.error("❌ %s failed with exception: %s", description, e)
         return False
 
-def main():
+def main(self) -> None:
     \"\"\"Run all linting checks.\"\"\"
     project_root = Path(__file__).parent.parent
 
@@ -675,7 +675,7 @@ def main():
         if run_command(cmd, description):
             passed += 1
 
-    logger.info(f"\\nLinting Summary: {passed}/{total} checks passed")
+    logger.info("\\nLinting Summary: %s/%s checks passed", passed, total)
 
     if passed < total:
         sys.exit(1)
@@ -694,9 +694,9 @@ if __name__ == "__main__":
 
         except Exception as e:
             self.fixes_failed.append(("linting", str(e)))
-            logger.error(f"❌ Linting fix failed: {e}")
+            logger.error("❌ Linting fix failed: %s", e)
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         """Print fix summary"""
         print("\n" + "=" * 60)
         print("🔧 CI/CD PIPELINE FIX SUMMARY")
@@ -723,7 +723,7 @@ if __name__ == "__main__":
             print("\n✅ CI/CD pipeline fixes completed successfully!")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     logging.basicConfig(
         level=logging.INFO,

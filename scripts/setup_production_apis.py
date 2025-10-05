@@ -26,7 +26,7 @@ class Colors:
     END = "\033[0m"
 
 
-def print_status(status: str, message: str):
+def print_status(self) -> None:
     """Print colored status message"""
     if status == "SUCCESS":
         print(f"{Colors.GREEN}✅ {message}{Colors.END}")
@@ -40,7 +40,7 @@ def print_status(status: str, message: str):
         print(f"{Colors.PURPLE}🔄 {message}{Colors.END}")
 
 
-def print_header(title: str):
+def print_header(self) -> None:
     """Print section header"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 60}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.CYAN}{title.center(60)}{Colors.END}")
@@ -175,7 +175,7 @@ def check_environment_setup() -> dict[str, bool]:
     return {"required": required_vars, "optional": optional_vars, "all": all_vars}
 
 
-async def test_production_pipeline():
+async def test_production_pipeline(self) -> None:
     """Test the full production pipeline with real APIs"""
     print_step("Testing production omni-source pipeline...")
 
@@ -303,7 +303,7 @@ Generated: {os.popen("date").read().strip()}
     return summary
 
 
-async def main():
+async def main(self) -> None:
     """Main setup and validation process"""
 
     print_header("PAKE+ PRODUCTION API SETUP & VALIDATION")
@@ -403,7 +403,7 @@ async def main():
     print_status("INFO", "Full report saved to: production_readiness_report.txt")
 
 
-def print_step(message: str):
+def print_step(self) -> None:
     print_status("STEP", message)
 
 

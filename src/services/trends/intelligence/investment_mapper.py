@@ -1,11 +1,11 @@
-"""InvestmentMapper - Maps trends to specific investment opportunities
+"""InvestmentMapper - Maps trends to specific investment opportunities.
 
 Converts trend analysis into actionable investment recommendations with specific symbols and strategies.
 """
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ..models.investment_opportunity import (
@@ -21,17 +21,17 @@ from .trend_analyzer import TrendAnalysisResult
 
 @dataclass
 class InvestmentMapping:
-    """Mapping between trend and investment vehicle"""
+    """Mapping between trend and investment vehicle."""
 
     keyword_pattern: str
     investment_vehicles: list[InvestmentVehicle]
-    symbols: list[str]
+    symbols: List[str]
     sector: str
     confidence_multiplier: float = 1.0
 
 
 class InvestmentMapper:
-    """Advanced investment opportunity mapping engine
+    """Advanced investment opportunity mapping engine.
 
     Capabilities:
     - Trend-to-investment mapping
@@ -42,7 +42,7 @@ class InvestmentMapper:
     - Portfolio integration
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
         # Investment mapping database
@@ -60,7 +60,7 @@ class InvestmentMapper:
         self.generated_opportunities = []
 
     def _initialize_mappings(self) -> list[InvestmentMapping]:
-        """Initialize trend-to-investment mappings"""
+        """Initialize trend-to-investment mappings."""
         return [
             # Technology trends
             InvestmentMapping(
@@ -144,8 +144,8 @@ class InvestmentMapper:
             ),
         ]
 
-    def _initialize_symbol_database(self) -> dict[str, dict[str, Any]]:
-        """Initialize symbol database with market data"""
+    def _initialize_symbol_database(self) -> dict[str, Dict[str, Any]]:
+        """Initialize symbol database with market data."""
         # This would be populated from real market data APIs
         return {
             "NVDA": {
@@ -180,7 +180,7 @@ class InvestmentMapper:
         analysis_results: list[TrendAnalysisResult],
         correlations: list[TrendCorrelation] = None,
     ) -> list[InvestmentOpportunity]:
-        """Map trend analysis results to investment opportunities
+        """Map trend analysis results to investment opportunities.
 
         Args:
             analysis_results: Results from trend analysis
@@ -214,15 +214,15 @@ class InvestmentMapper:
         opportunities.sort(key=lambda x: x.confidence_score, reverse=True)
 
         self.logger.info(
-            f"Generated {len(opportunities)} investment opportunities from {
-                len(analysis_results)
-            } trends",
+            "Generated %s investment opportunities from %s trends",
+            len(opportunities),
+            len(analysis_results),
         )
 
         return opportunities
 
     def _find_matching_mappings(self, keyword: str) -> list[InvestmentMapping]:
-        """Find investment mappings that match the trend keyword"""
+        """Find investment mappings that match the trend keyword."""
         import re
 
         matching = []
@@ -241,7 +241,7 @@ class InvestmentMapper:
         mapping: InvestmentMapping,
         correlations: list[TrendCorrelation],
     ) -> InvestmentOpportunity | None:
-        """Create investment opportunity from trend analysis and mapping"""
+        """Create investment opportunity from trend analysis and mapping."""
         trend = analysis.trend_signal
 
         # Determine primary investment vehicle
@@ -288,7 +288,7 @@ class InvestmentMapper:
         ]
 
         try:
-            opportunity = InvestmentOpportunity(
+            return InvestmentOpportunity(
                 trend_signal=trend,
                 correlations=relevant_correlations[:3],  # Limit to top 3 correlations
                 investment_vehicle=primary_vehicle,
@@ -303,22 +303,20 @@ class InvestmentMapper:
                 position_size_pct=position_size,
                 symbols=selected_symbols,
                 reasoning=reasoning,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
-            return opportunity
-
         except Exception as e:
-            self.logger.error(f"Error creating investment opportunity: {e}")
+            self.logger.error("Error creating investment opportunity: %s", e)
             return None
 
     def _select_best_symbols(
         self,
-        candidate_symbols: list[str],
+        candidate_symbols: List[str],
         trend: TrendSignal,
         analysis: TrendAnalysisResult,
-    ) -> list[str]:
-        """Select the best symbols based on trend characteristics"""
+    ) -> List[str]:
+        """Select the best symbols based on trend characteristics."""
         # Score each symbol
         symbol_scores = []
 
@@ -356,7 +354,7 @@ class InvestmentMapper:
         analysis: TrendAnalysisResult,
         confidence: float,
     ) -> ActionType:
-        """Determine recommended action based on analysis"""
+        """Determine recommended action based on analysis."""
         if confidence < 0.3:
             return ActionType.AVOID
         if confidence < 0.5:
@@ -375,7 +373,7 @@ class InvestmentMapper:
         mapping: InvestmentMapping,
         vehicle: InvestmentVehicle,
     ) -> RiskLevel:
-        """Assess risk level for the investment"""
+        """Assess risk level for the investment."""
         # Base risk from trend analysis
         overall_risk = analysis.risk_assessment.get("overall_risk", 0.5)
 
@@ -420,7 +418,7 @@ class InvestmentMapper:
         mapping: InvestmentMapping,
         risk_level: RiskLevel,
     ) -> float:
-        """Calculate expected return percentage"""
+        """Calculate expected return percentage."""
         # Base return from investment score
         base_return = analysis.investment_score * 20.0  # Up to 20% return
 
@@ -454,7 +452,7 @@ class InvestmentMapper:
         return max(-50.0, min(100.0, final_return))
 
     def _calculate_time_horizon(self, analysis: TrendAnalysisResult) -> int:
-        """Calculate investment time horizon in days"""
+        """Calculate investment time horizon in days."""
         # Base horizon from lifecycle stage
         stage_horizons = {
             "emerging": 30,  # 1 month
@@ -486,7 +484,7 @@ class InvestmentMapper:
         risk_level: RiskLevel,
         expected_return: float,
     ) -> float:
-        """Calculate recommended position size percentage"""
+        """Calculate recommended position size percentage."""
         # Base size from confidence
         base_size = confidence * self.max_position_size
 
@@ -513,7 +511,7 @@ class InvestmentMapper:
         risk_level: RiskLevel,
         vehicle: InvestmentVehicle,
     ) -> float:
-        """Calculate stop loss percentage"""
+        """Calculate stop loss percentage."""
         # Base stop loss by risk level
         base_stop_loss = {
             RiskLevel.LOW: 8.0,
@@ -545,7 +543,7 @@ class InvestmentMapper:
         analysis: TrendAnalysisResult,
         mapping: InvestmentMapping,
     ) -> str:
-        """Generate human-readable investment reasoning"""
+        """Generate human-readable investment reasoning."""
         reasoning_parts = []
 
         # Trend strength
@@ -595,7 +593,7 @@ class InvestmentMapper:
         max_positions: int = 10,
         max_sector_exposure: float = 0.3,
     ) -> list[InvestmentOpportunity]:
-        """Get portfolio-optimized investment recommendations"""
+        """Get portfolio-optimized investment recommendations."""
         if not opportunities:
             return []
 
@@ -654,16 +652,17 @@ class InvestmentMapper:
             )
 
         self.logger.info(
-            f"Selected {len(selected)} opportunities for diversified portfolio",
+            "Selected %s opportunities for diversified portfolio",
+            len(selected),
         )
         return selected
 
-    def get_mapping_statistics(self) -> dict[str, Any]:
-        """Get statistics about investment mappings"""
+    def get_mapping_statistics(self) -> Dict[str, Any]:
+        """Get statistics about investment mappings."""
         total_symbols = sum(
             len(mapping.symbols) for mapping in self.investment_mappings
         )
-        sectors = set(mapping.sector for mapping in self.investment_mappings)
+        sectors = {mapping.sector for mapping in self.investment_mappings}
 
         return {
             "total_mappings": len(self.investment_mappings),

@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiohttp
@@ -51,23 +51,23 @@ class SecurityAuditResult:
     low_issues: int
     issues: list[SecurityIssue]
     security_score: float
-    recommendations: list[str]
+    recommendations: List[str]
 
 
 class SecurityAuditor:
     """Comprehensive security audit suite"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url
         self.issues: list[SecurityIssue] = []
         self.project_root = Path(__file__).parent.parent
 
-    def add_issue(self, issue: SecurityIssue):
+    def add_issue(self) -> None:
         """Add security issue to audit results"""
         self.issues.append(issue)
-        logger.warning(f"Security Issue [{issue.severity.upper()}]: {issue.title}")
+        logger.warning("Security Issue [%s]: %s", issue.severity.upper(), issue.title)
 
-    def check_environment_security(self):
+    def check_environment_security(self) -> None:
         """Check environment variables and configuration security"""
         logger.info("Checking environment security...")
 
@@ -82,7 +82,10 @@ class SecurityAuditor:
 
                     # Check for common secret patterns
                     secret_patterns = [
-                        (r'REDACTED_SECRET\s*=\s*["\']?[^"\'\s]+["\']?', "Hardcoded REDACTED_SECRET"),
+                        (
+                            r'REDACTED_SECRET\s*=\s*["\']?[^"\'\s]+["\']?',
+                            "Hardcoded REDACTED_SECRET",
+                        ),
                         (r'api_key\s*=\s*["\']?[^"\'\s]+["\']?', "Hardcoded API key"),
                         (r'secret\s*=\s*["\']?[^"\'\s]+["\']?', "Hardcoded secret"),
                         (r'token\s*=\s*["\']?[^"\'\s]+["\']?', "Hardcoded token"),
@@ -102,7 +105,7 @@ class SecurityAuditor:
                             )
 
                 except Exception as e:
-                    logger.warning(f"Could not read {env_file}: {e}")
+                    logger.warning("Could not read %s: %s", env_file, e)
 
         # Check for .env files in git
         try:
@@ -125,7 +128,7 @@ class SecurityAuditor:
         except Exception:
             pass  # Git not available or not a git repo
 
-    def check_dependency_security(self):
+    def check_dependency_security(self) -> None:
         """Check for vulnerable dependencies"""
         logger.info("Checking dependency security...")
 
@@ -174,9 +177,9 @@ class SecurityAuditor:
                             )
 
                 except Exception as e:
-                    logger.warning(f"Could not read {req_file}: {e}")
+                    logger.warning("Could not read %s: %s", req_file, e)
 
-    def check_code_security(self):
+    def check_code_security(self) -> None:
         """Check source code for security vulnerabilities"""
         logger.info("Checking source code security...")
 
@@ -196,7 +199,11 @@ class SecurityAuditor:
                     (r"pickle\.loads?\s*\(", "Use of pickle.loads()", "high"),
                     (r"yaml\.load\s*\(", "Use of yaml.load()", "high"),
                     (r"shell=True", "Shell injection vulnerability", "high"),
-                    (r'REDACTED_SECRET\s*=\s*["\'][^"\']+["\']', "Hardcoded REDACTED_SECRET", "high"),
+                    (
+                        r'REDACTED_SECRET\s*=\s*["\'][^"\']+["\']',
+                        "Hardcoded REDACTED_SECRET",
+                        "high",
+                    ),
                     (r'api_key\s*=\s*["\'][^"\']+["\']', "Hardcoded API key", "high"),
                     (r'secret\s*=\s*["\'][^"\']+["\']', "Hardcoded secret", "high"),
                     (r"DEBUG\s*=\s*True", "Debug mode enabled", "medium"),
@@ -220,7 +227,7 @@ class SecurityAuditor:
                         )
 
             except Exception as e:
-                logger.warning(f"Could not read {py_file}: {e}")
+                logger.warning("Could not read %s: %s", py_file, e)
 
         # Check JavaScript/TypeScript files
         js_files = list(self.project_root.rglob("*.js")) + list(
@@ -236,7 +243,11 @@ class SecurityAuditor:
                     (r"eval\s*\(", "Use of eval() function", "critical"),
                     (r"innerHTML\s*=", "Potential XSS vulnerability", "high"),
                     (r"document\.write\s*\(", "Use of document.write()", "medium"),
-                    (r"console\.log\s*\([^)]*REDACTED_SECRET", "Password logging", "medium"),
+                    (
+                        r"console\.log\s*\([^)]*REDACTED_SECRET",
+                        "Password logging",
+                        "medium",
+                    ),
                 ]
 
                 for pattern, description, severity in js_dangerous_patterns:
@@ -256,9 +267,9 @@ class SecurityAuditor:
                         )
 
             except Exception as e:
-                logger.warning(f"Could not read {js_file}: {e}")
+                logger.warning("Could not read %s: %s", js_file, e)
 
-    def check_authentication_security(self):
+    def check_authentication_security(self) -> None:
         """Check authentication and authorization security"""
         logger.info("Checking authentication security...")
 
@@ -313,7 +324,7 @@ class SecurityAuditor:
                 ),
             )
 
-    def check_input_validation(self):
+    def check_input_validation(self) -> None:
         """Check for input validation security"""
         logger.info("Checking input validation...")
 
@@ -346,9 +357,9 @@ class SecurityAuditor:
                     )
 
             except Exception as e:
-                logger.warning(f"Could not read server file: {e}")
+                logger.warning("Could not read server file: %s", e)
 
-    def check_ssl_tls_security(self):
+    def check_ssl_tls_security(self) -> None:
         """Check SSL/TLS configuration"""
         logger.info("Checking SSL/TLS security...")
 
@@ -408,7 +419,7 @@ class SecurityAuditor:
             except Exception:
                 continue
 
-    def check_file_permissions(self):
+    def check_file_permissions(self) -> None:
         """Check file permissions and access controls"""
         logger.info("Checking file permissions...")
 
@@ -446,9 +457,11 @@ class SecurityAuditor:
                         )
 
                 except Exception as e:
-                    logger.warning(f"Could not check permissions for {file_path}: {e}")
+                    logger.warning(
+                        "Could not check permissions for %s: %s", file_path, e
+                    )
 
-    async def check_api_security(self):
+    async def check_api_security(self) -> None:
         """Check API security endpoints"""
         logger.info("Checking API security...")
 
@@ -497,7 +510,7 @@ class SecurityAuditor:
                         )
 
         except Exception as e:
-            logger.warning(f"Could not test API security: {e}")
+            logger.warning("Could not test API security: %s", e)
 
     def calculate_security_score(self) -> float:
         """Calculate overall security score"""
@@ -513,7 +526,7 @@ class SecurityAuditor:
         score = max(0, 100 - (total_weight / max_possible_weight) * 100)
         return round(score, 1)
 
-    def generate_recommendations(self) -> list[str]:
+    def generate_recommendations(self) -> List[str]:
         """Generate security recommendations"""
         recommendations = []
 
@@ -591,7 +604,7 @@ class SecurityAuditor:
         recommendations = self.generate_recommendations()
 
         return SecurityAuditResult(
-            audit_timestamp=datetime.now().isoformat(),
+            audit_timestamp=datetime.now(UTC).isoformat(),
             total_issues=len(self.issues),
             critical_issues=severity_counts["critical"],
             high_issues=severity_counts["high"],
@@ -606,7 +619,7 @@ class SecurityAuditor:
         """Generate comprehensive security audit report"""
         report = []
         report.append("# PAKE System Security Audit Report")
-        report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
 
         # Executive Summary
@@ -726,7 +739,7 @@ class SecurityAuditor:
         return "\n".join(report)
 
 
-async def main():
+async def main(self) -> None:
     """Main security audit execution"""
     logger.info("Starting PAKE System Security Audit")
 
@@ -737,19 +750,19 @@ async def main():
     report = auditor.generate_report(result)
 
     # Save results
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     # Save JSON results
     results_file = f"security_audit_{timestamp}.json"
     with open(results_file, "w") as f:
         json.dump(asdict(result), f, indent=2)
-    logger.info(f"Security audit results saved to {results_file}")
+    logger.info("Security audit results saved to %s", results_file)
 
     # Save markdown report
     report_file = f"security_report_{timestamp}.md"
     with open(report_file, "w") as f:
         f.write(report)
-    logger.info(f"Security report saved to {report_file}")
+    logger.info("Security report saved to %s", report_file)
 
     # Print summary
     print("\n" + "=" * 60)

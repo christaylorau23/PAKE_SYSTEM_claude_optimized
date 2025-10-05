@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-PAKE System - Enterprise Monitoring Service
+"""PAKE System - Enterprise Monitoring Service
 Comprehensive monitoring service implementing enterprise best practices for:
 - Real-time application monitoring
 - Performance metrics collection
@@ -13,19 +12,20 @@ Comprehensive monitoring service implementing enterprise best practices for:
 import asyncio
 import json
 import os
-import psutil
-import time
-from datetime import UTC, datetime, timedelta
-from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Callable, AsyncGenerator
-from dataclasses import dataclass, field
-
-import aiohttp
-from pydantic import BaseModel, Field
 
 # Add project root to path for imports
 import sys
+import time
+from collections.abc import AsyncGenerator, Callable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import aiohttp
+import psutil
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -103,7 +103,7 @@ class MonitoringConfig:
     datadog_enabled: bool = False
     grafana_enabled: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration"""
         if self.collection_interval_seconds <= 0:
             raise ValueError("Collection interval must be positive")
@@ -116,10 +116,10 @@ class Metric(BaseModel):
     """Metric data model"""
 
     name: str = Field(..., description="Metric name")
-    value: Union[int, float] = Field(..., description="Metric value")
+    value: int | float = Field(..., description="Metric value")
     metric_type: MetricType = Field(..., description="Metric type")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    tags: Dict[str, str] = Field(default_factory=dict, description="Metric tags")
+    tags: dict[str, str] = Field(default_factory=dict, description="Metric tags")
     service_name: str = Field(default="pake-system", description="Service name")
     environment: str = Field(default="development", description="Environment")
 
@@ -131,10 +131,10 @@ class HealthCheck(BaseModel):
     status: HealthStatus = Field(..., description="Health status")
     message: str = Field(..., description="Status message")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    response_time_ms: Optional[float] = Field(
+    response_time_ms: float | None = Field(
         None, description="Response time in milliseconds"
     )
-    details: Dict[str, Any] = Field(
+    details: dict[str, Any] = Field(
         default_factory=dict, description="Additional details"
     )
 
@@ -150,8 +150,8 @@ class Alert(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     service_name: str = Field(default="pake-system", description="Service name")
     environment: str = Field(default="development", description="Environment")
-    tags: Dict[str, str] = Field(default_factory=dict, description="Alert tags")
-    resolved_at: Optional[datetime] = Field(None, description="Resolution timestamp")
+    tags: dict[str, str] = Field(default_factory=dict, description="Alert tags")
+    resolved_at: datetime | None = Field(None, description="Resolution timestamp")
 
 
 class SystemMetrics(BaseModel):
@@ -168,12 +168,11 @@ class SystemMetrics(BaseModel):
     network_bytes_sent: int = Field(..., description="Network bytes sent")
     network_bytes_recv: int = Field(..., description="Network bytes received")
     process_count: int = Field(..., description="Number of processes")
-    load_average: List[float] = Field(..., description="System load average")
+    load_average: list[float] = Field(..., description="System load average")
 
 
 class EnterpriseMonitoringService:
-    """
-    Enterprise-grade monitoring service implementing all best practices:
+    """Enterprise-grade monitoring service implementing all best practices:
     - Real-time application monitoring
     - Performance metrics collection
     - Health checks and alerting
@@ -182,31 +181,29 @@ class EnterpriseMonitoringService:
     - Capacity planning
     """
 
-    def __init__(
-        self, config: MonitoringConfig = None, logger: EnterpriseLoggingService = None
-    ):
+    def __init__(self) -> None:
         self.config = config or MonitoringConfig()
         self.logger = logger or (get_logger() if get_logger else None)
 
         # Metrics storage
-        self.metrics_buffer: List[Metric] = []
-        self.health_checks: Dict[str, HealthCheck] = {}
-        self.active_alerts: Dict[str, Alert] = {}
-        self.system_metrics_history: List[SystemMetrics] = []
+        self.metrics_buffer: list[Metric] = []
+        self.health_checks: dict[str, HealthCheck] = {}
+        self.active_alerts: dict[str, Alert] = {}
+        self.system_metrics_history: list[SystemMetrics] = []
 
         # Performance tracking
-        self.performance_metrics: Dict[str, List[float]] = {}
-        self.error_counts: Dict[str, int] = {}
+        self.performance_metrics: dict[str, list[float]] = {}
+        self.error_counts: dict[str, int] = {}
 
         # Background tasks
-        self._collection_task: Optional[asyncio.Task] = None
-        self._health_check_task: Optional[asyncio.Task] = None
-        self._alerting_task: Optional[asyncio.Task] = None
+        self._collection_task: asyncio.Task | None = None
+        self._health_check_task: asyncio.Task | None = None
+        self._alerting_task: asyncio.Task | None = None
 
         # Initialize monitoring
         self._start_monitoring()
 
-    def _start_monitoring(self):
+    def _start_monitoring(self) -> None:
         """Start background monitoring tasks"""
         if self.logger:
             self.logger.info(
@@ -223,7 +220,7 @@ class EnterpriseMonitoringService:
         if self.config.alerting_enabled:
             self._alerting_task = asyncio.create_task(self._alerting_loop())
 
-    async def _collect_metrics_loop(self):
+    async def _collect_metrics_loop(self) -> None:
         """Background task to collect system metrics"""
         while True:
             try:
@@ -238,7 +235,7 @@ class EnterpriseMonitoringService:
                     )
                 await asyncio.sleep(5)  # Short delay before retry
 
-    async def _health_check_loop(self):
+    async def _health_check_loop(self) -> None:
         """Background task to perform health checks"""
         while True:
             try:
@@ -253,7 +250,7 @@ class EnterpriseMonitoringService:
                     )
                 await asyncio.sleep(10)  # Short delay before retry
 
-    async def _alerting_loop(self):
+    async def _alerting_loop(self) -> None:
         """Background task to process alerts"""
         while True:
             try:
@@ -272,7 +269,7 @@ class EnterpriseMonitoringService:
     # Metrics Collection
     # ========================================================================
 
-    async def _collect_system_metrics(self):
+    async def _collect_system_metrics(self) -> None:
         """Collect system metrics"""
         try:
             # CPU metrics
@@ -338,7 +335,6 @@ class EnterpriseMonitoringService:
                     duration_ms=1000,  # Approximate collection time
                     memory_mb=memory_used_mb,
                     cpu_percent=cpu_percent,
-                    cpu_percent=cpu_percent,
                     memory_percent=memory_percent,
                     disk_percent=disk_percent,
                 )
@@ -354,7 +350,7 @@ class EnterpriseMonitoringService:
                     error=e,
                 )
 
-    async def _check_thresholds(self, metrics: SystemMetrics):
+    async def _check_thresholds(self) -> None:
         """Check metrics against thresholds and create alerts"""
         alerts_to_create = []
 
@@ -414,7 +410,7 @@ class EnterpriseMonitoringService:
     # Health Checks
     # ========================================================================
 
-    async def _perform_health_checks(self):
+    async def _perform_health_checks(self) -> None:
         """Perform all registered health checks"""
         for check_name, health_check in self.health_checks.items():
             try:
@@ -427,7 +423,7 @@ class EnterpriseMonitoringService:
                         error=e,
                     )
 
-    async def _run_health_check(self, name: str, health_check: HealthCheck):
+    async def _run_health_check(self) -> None:
         """Run a specific health check"""
         start_time = time.time()
 
@@ -455,7 +451,7 @@ class EnterpriseMonitoringService:
             health_check.response_time_ms = (time.time() - start_time) * 1000
             health_check.timestamp = datetime.now(UTC)
 
-    async def _check_database_health(self, health_check: HealthCheck):
+    async def _check_database_health(self) -> None:
         """Check database health"""
         # Simulate database health check
         await asyncio.sleep(0.1)  # Simulate DB query
@@ -463,7 +459,7 @@ class EnterpriseMonitoringService:
         health_check.message = "Database connection is healthy"
         health_check.details = {"connection_pool_size": 10, "active_connections": 3}
 
-    async def _check_redis_health(self, health_check: HealthCheck):
+    async def _check_redis_health(self) -> None:
         """Check Redis health"""
         # Simulate Redis health check
         await asyncio.sleep(0.05)  # Simulate Redis ping
@@ -471,7 +467,7 @@ class EnterpriseMonitoringService:
         health_check.message = "Redis connection is healthy"
         health_check.details = {"memory_usage": "45MB", "connected_clients": 5}
 
-    async def _check_api_health(self, health_check: HealthCheck):
+    async def _check_api_health(self) -> None:
         """Check API health"""
         # Simulate API health check
         await asyncio.sleep(0.2)  # Simulate API call
@@ -479,7 +475,7 @@ class EnterpriseMonitoringService:
         health_check.message = "API endpoints are responding"
         health_check.details = {"response_time_avg": "150ms", "error_rate": "0.1%"}
 
-    def register_health_check(self, name: str, check_func: Callable = None):
+    def register_health_check(self) -> None:
         """Register a health check"""
         health_check = HealthCheck(
             name=name,
@@ -503,13 +499,7 @@ class EnterpriseMonitoringService:
     # Metrics Recording
     # ========================================================================
 
-    def record_metric(
-        self,
-        name: str,
-        value: Union[int, float],
-        metric_type: MetricType = MetricType.GAUGE,
-        tags: Dict[str, str] = None,
-    ):
+    def record_metric(self) -> None:
         """Record a custom metric"""
         metric = Metric(
             name=name,
@@ -533,17 +523,15 @@ class EnterpriseMonitoringService:
                 tags=tags,
             )
 
-    def increment_counter(self, name: str, value: int = 1, tags: Dict[str, str] = None):
+    def increment_counter(self) -> None:
         """Increment a counter metric"""
         self.record_metric(name, value, MetricType.COUNTER, tags)
 
-    def set_gauge(
-        self, name: str, value: Union[int, float], tags: Dict[str, str] = None
-    ):
+    def set_gauge(self) -> None:
         """Set a gauge metric"""
         self.record_metric(name, value, MetricType.GAUGE, tags)
 
-    def record_timing(self, name: str, duration_ms: float, tags: Dict[str, str] = None):
+    def record_timing(self) -> None:
         """Record a timing metric"""
         self.record_metric(name, duration_ms, MetricType.TIMER, tags)
 
@@ -557,7 +545,7 @@ class EnterpriseMonitoringService:
         if len(self.performance_metrics[name]) > 1000:
             self.performance_metrics[name] = self.performance_metrics[name][-1000:]
 
-    def record_error(self, error_type: str, tags: Dict[str, str] = None):
+    def record_error(self) -> None:
         """Record an error occurrence"""
         self.increment_counter(f"errors.{error_type}", tags=tags)
 
@@ -577,13 +565,7 @@ class EnterpriseMonitoringService:
     # Alerting
     # ========================================================================
 
-    async def create_alert(
-        self,
-        title: str,
-        message: str,
-        severity: AlertSeverity,
-        tags: Dict[str, str] = None,
-    ):
+    async def create_alert(self) -> None:
         """Create a new alert"""
         alert_id = f"{self.config.service_name}_{int(time.time())}"
 
@@ -625,7 +607,7 @@ class EnterpriseMonitoringService:
 
         return alert_id
 
-    async def resolve_alert(self, alert_id: str, resolution_message: str = None):
+    async def resolve_alert(self) -> None:
         """Resolve an alert"""
         if alert_id in self.active_alerts:
             alert = self.active_alerts[alert_id]
@@ -648,7 +630,7 @@ class EnterpriseMonitoringService:
             # Remove from active alerts
             del self.active_alerts[alert_id]
 
-    async def _process_alerts(self):
+    async def _process_alerts(self) -> None:
         """Process active alerts"""
         # This would integrate with external alerting systems
         # For now, we'll just log active alerts
@@ -672,7 +654,7 @@ class EnterpriseMonitoringService:
     # Reporting and Analysis
     # ========================================================================
 
-    def get_system_metrics_summary(self, hours: int = 24) -> Dict[str, Any]:
+    def get_system_metrics_summary(self, hours: int = 24) -> dict[str, Any]:
         """Get system metrics summary for the last N hours"""
         cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         recent_metrics = [
@@ -717,7 +699,7 @@ class EnterpriseMonitoringService:
             },
         }
 
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """Get performance metrics summary"""
         summary = {}
 
@@ -738,7 +720,7 @@ class EnterpriseMonitoringService:
 
         return summary
 
-    def get_health_summary(self) -> Dict[str, Any]:
+    def get_health_summary(self) -> dict[str, Any]:
         """Get health check summary"""
         total_checks = len(self.health_checks)
         healthy_checks = sum(
@@ -770,7 +752,7 @@ class EnterpriseMonitoringService:
             },
         }
 
-    def get_alert_summary(self) -> Dict[str, Any]:
+    def get_alert_summary(self) -> dict[str, Any]:
         """Get alert summary"""
         active_alerts = len(self.active_alerts)
         critical_alerts = sum(
@@ -800,7 +782,7 @@ class EnterpriseMonitoringService:
             ],
         }
 
-    def generate_monitoring_report(self) -> Dict[str, Any]:
+    def generate_monitoring_report(self) -> dict[str, Any]:
         """Generate comprehensive monitoring report"""
         return {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -826,11 +808,11 @@ class EnterpriseMonitoringService:
     # Context Managers and Decorators
     # ========================================================================
 
-    def monitor_operation(self, operation_name: str):
+    def monitor_operation(self) -> None:
         """Decorator to monitor an operation"""
 
-        def decorator(func):
-            async def async_wrapper(*args, **kwargs):
+        def decorator(self) -> None:
+            async def async_wrapper(self) -> None:
                 start_time = time.time()
                 try:
                     result = await func(*args, **kwargs)
@@ -845,7 +827,7 @@ class EnterpriseMonitoringService:
                     self.record_timing(f"operation.{operation_name}.error", duration_ms)
                     raise
 
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(self) -> None:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
@@ -862,12 +844,11 @@ class EnterpriseMonitoringService:
 
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper
-            else:
-                return sync_wrapper
+            return sync_wrapper
 
         return decorator
 
-    async def stop_monitoring(self):
+    async def stop_monitoring(self) -> None:
         """Stop all monitoring tasks"""
         if self.logger:
             self.logger.info(
@@ -902,7 +883,7 @@ class EnterpriseMonitoringService:
 # ========================================================================
 
 # Create global monitoring instance
-_global_monitoring: Optional[EnterpriseMonitoringService] = None
+_global_monitoring: EnterpriseMonitoringService | None = None
 
 
 def get_monitoring_service(
@@ -927,7 +908,7 @@ def get_monitor() -> EnterpriseMonitoringService:
 
 if __name__ == "__main__":
 
-    async def main():
+    async def main(self) -> None:
         # Initialize monitoring service
         monitoring = get_monitoring_service()
 

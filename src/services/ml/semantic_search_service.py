@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Semantic Search Enhancement Service
-Phase 9B: Practical AI/ML Integration
+Phase 9B: Practical AI/ML Integration.
 
 Enhances search results with semantic similarity, content summarization,
 and intelligent ranking without heavy ML dependencies.
@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SearchEnhancement:
-    """Enhanced search result with ML insights"""
+    """Enhanced search result with ML insights."""
 
-    original_result: dict[str, Any]
+    original_result: Dict[str, Any]
     semantic_score: float
     content_summary: str
-    key_topics: list[str]
+    key_topics: List[str]
     similarity_explanation: str
     relevance_score: float
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             **self.original_result,
             "ml_enhancements": {
@@ -47,12 +47,12 @@ class SearchEnhancement:
 
 @dataclass
 class SearchAnalytics:
-    """Analytics and insights from search patterns"""
+    """Analytics and insights from search patterns."""
 
     query: str
     total_results: int
     avg_semantic_score: float
-    top_topics: list[str]
+    top_topics: List[str]
     search_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -64,7 +64,7 @@ class SemanticSearchService:
     Focuses on text analysis, keyword extraction, and intelligent ranking.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.search_history: list[SearchAnalytics] = []
 
         # Common stop words for better keyword extraction
@@ -132,7 +132,7 @@ class SemanticSearchService:
     async def enhance_search_results(
         self,
         query: str,
-        results: list[dict[str, Any]],
+        results: list[Dict[str, Any]],
     ) -> tuple[list[SearchEnhancement], SearchAnalytics]:
         """Enhance search results with semantic analysis and ranking.
 
@@ -143,7 +143,7 @@ class SemanticSearchService:
         Returns:
             Tuple of enhanced results and analytics
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         if not results:
             analytics = SearchAnalytics(
@@ -176,7 +176,7 @@ class SemanticSearchService:
         enhanced_results.sort(key=lambda x: x.relevance_score, reverse=True)
 
         # Generate analytics
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+        processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
         topic_counter = Counter(all_topics)
 
         analytics = SearchAnalytics(
@@ -195,18 +195,18 @@ class SemanticSearchService:
             self.search_history = self.search_history[-100:]
 
         logger.info(
-            f"Enhanced {len(enhanced_results)} search results for query '{query}' in {processing_time:.1f}ms",
+            # TODO: Fix unexpected colon - "Enhanced %s search results for query '%s' in %sms", len(enhanced_results), query, processing_time:.1f,
         )
 
         return enhanced_results, analytics
 
     async def _enhance_single_result(
         self,
-        result: dict[str, Any],
+        result: Dict[str, Any],
         query: str,
-        query_keywords: list[str],
+        query_keywords: List[str],
     ) -> SearchEnhancement:
-        """Enhance a single search result with ML insights"""
+        """Enhance a single search result with ML insights."""
         # Extract content for analysis
         content = self._extract_content_text(result)
         title = result.get("title", "")
@@ -248,8 +248,8 @@ class SemanticSearchService:
             relevance_score=relevance_score,
         )
 
-    def _extract_content_text(self, result: dict[str, Any]) -> str:
-        """Extract text content from search result"""
+    def _extract_content_text(self, result: Dict[str, Any]) -> str:
+        """Extract text content from search result."""
         content_parts = []
 
         # Common content fields
@@ -259,8 +259,8 @@ class SemanticSearchService:
 
         return " ".join(content_parts).strip()
 
-    def _extract_keywords(self, text: str) -> list[str]:
-        """Extract meaningful keywords from text"""
+    def _extract_keywords(self, text: str) -> List[str]:
+        """Extract meaningful keywords from text."""
         if not text:
             return []
 
@@ -284,10 +284,10 @@ class SemanticSearchService:
 
     def _calculate_semantic_similarity(
         self,
-        query_keywords: list[str],
+        query_keywords: List[str],
         content: str,
     ) -> float:
-        """Calculate semantic similarity using simplified TF-IDF approach"""
+        """Calculate semantic similarity using simplified TF-IDF approach."""
         if not query_keywords or not content:
             return 0.0
 
@@ -317,7 +317,7 @@ class SemanticSearchService:
         return min(1.0, normalized_score + coverage_bonus)
 
     def _generate_summary(self, content: str, max_sentences: int = 2) -> str:
-        """Generate a simple extractive summary"""
+        """Generate a simple extractive summary."""
         if not content:
             return "No content available for summary."
 
@@ -344,8 +344,8 @@ class SemanticSearchService:
 
         return ". ".join(top_sentences) + "."
 
-    def _extract_topics(self, text: str) -> list[str]:
-        """Extract key topics from text"""
+    def _extract_topics(self, text: str) -> List[str]:
+        """Extract key topics from text."""
         keywords = self._extract_keywords(text)
         keyword_counts = Counter(keywords)
 
@@ -372,11 +372,11 @@ class SemanticSearchService:
 
     def _generate_similarity_explanation(
         self,
-        query_keywords: list[str],
+        query_keywords: List[str],
         content: str,
         similarity_score: float,
     ) -> str:
-        """Generate human-readable explanation of similarity"""
+        """Generate human-readable explanation of similarity."""
         content_keywords = self._extract_keywords(content)
         matched = [kw for kw in query_keywords if kw in content_keywords]
 
@@ -399,13 +399,13 @@ class SemanticSearchService:
 
     def _calculate_relevance_score(
         self,
-        result: dict[str, Any],
+        result: Dict[str, Any],
         semantic_score: float,
-        query_keywords: list[str],
+        query_keywords: List[str],
         content: str,
         title: str,
     ) -> float:
-        """Calculate final relevance score combining multiple factors"""
+        """Calculate final relevance score combining multiple factors."""
         # Base semantic score
         relevance = semantic_score * 0.6
 
@@ -432,8 +432,8 @@ class SemanticSearchService:
         # Ensure score is between 0 and 1
         return max(0.0, min(1.0, relevance))
 
-    def get_search_insights(self) -> dict[str, Any]:
-        """Get insights from recent search history"""
+    def get_search_insights(self) -> Dict[str, Any]:
+        """Get insights from recent search history."""
         if not self.search_history:
             return {"message": "No search history available"}
 
@@ -477,15 +477,15 @@ _semantic_service = None
 
 
 def get_semantic_search_service() -> SemanticSearchService:
-    """Get or create global semantic search service instance"""
+    """Get or create global semantic search service instance."""
     global _semantic_service
     if _semantic_service is None:
         _semantic_service = SemanticSearchService()
     return _semantic_service
 
 
-async def main():
-    """Demo of semantic search enhancement"""
+async def main(self) -> None:
+    """Demo of semantic search enhancement."""
     service = get_semantic_search_service()
 
     # Sample search results (simulating orchestrator output)

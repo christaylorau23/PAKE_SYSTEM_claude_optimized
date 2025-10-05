@@ -47,16 +47,14 @@ class StageExecution:
     result: StageResult
     duration: float
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     exit_code: int = 0
 
 
 class CICDSimulator:
     """CI/CD Pipeline Simulator"""
 
-    def __init__(
-        self, verbose: bool = False, parallel: bool = False, skip_tests: bool = False
-    ):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.skip_tests = skip_tests
@@ -246,7 +244,7 @@ class CICDSimulator:
             },
         }
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
@@ -507,7 +505,7 @@ class CICDSimulator:
         # Calculate success rate
         success_rate = (passed_stages / total_stages * 100) if total_stages > 0 else 0
 
-        report = {
+        return {
             "summary": {
                 "total_stages": total_stages,
                 "passed_stages": passed_stages,
@@ -533,9 +531,7 @@ class CICDSimulator:
             else "FAILED",
         }
 
-        return report
-
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print pipeline summary"""
         report = self.generate_report()
 
@@ -554,7 +550,7 @@ class CICDSimulator:
         print(f"\n🎯 Overall Status: {report['overall_status']}")
 
         print("\n📋 Results by Stage:")
-        for stage_key, stage_info in report["stages"].items():
+        for _stage_key, stage_info in report["stages"].items():
             status_emoji = (
                 "✅"
                 if stage_info["result"] == "passed"
@@ -589,7 +585,7 @@ class CICDSimulator:
             print("\n🎉 All pipeline stages passed! Ready to push to GitHub.")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="PAKE System CI/CD Pipeline Simulation"

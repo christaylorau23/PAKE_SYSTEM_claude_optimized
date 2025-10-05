@@ -15,16 +15,16 @@ import pytest
 class TestAuthenticationE2EComprehensive:
     """Comprehensive E2E tests for authentication system"""
 
-    @pytest.fixture()
-    async def auth_test_client(self):
+    @pytest.fixture
+    async def auth_test_client(self) -> None:
         """Create httpx test client for authentication E2E tests"""
         async with httpx.AsyncClient(
             base_url="http://localhost:8000", timeout=30.0
         ) as client:
             yield client
 
-    @pytest.fixture()
-    async def authenticated_auth_client(self, auth_test_client):
+    @pytest.fixture
+    async def authenticated_auth_client(self) -> None:
         """Create authenticated test client with valid JWT token"""
         # Register a test user
         user_data = {
@@ -60,8 +60,8 @@ class TestAuthenticationE2EComprehensive:
     # AUTHENTICATION E2E TESTS - Complete Workflows
     # ============================================================================
 
-    @pytest.mark.e2e_user_journey()
-    async def test_complete_user_registration_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_complete_user_registration_flow(self) -> None:
         """Test complete user registration flow from API to database"""
         # Arrange
         user_data = {
@@ -92,8 +92,8 @@ class TestAuthenticationE2EComprehensive:
         retrieved_user = response.json()
         assert retrieved_user["username"] == user_data["username"]
 
-    @pytest.mark.e2e_user_journey()
-    async def test_complete_user_login_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_complete_user_login_flow(self) -> None:
         """Test complete user login flow from API to database"""
         # Arrange
         user_data = {
@@ -132,8 +132,8 @@ class TestAuthenticationE2EComprehensive:
         assert decoded_token["sub"] == login_result["user"]["id"]
         assert decoded_token["username"] == user_data["username"]
 
-    @pytest.mark.e2e_user_journey()
-    async def test_token_refresh_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_token_refresh_flow(self) -> None:
         """Test complete token refresh flow"""
         # Arrange
         user_data = {
@@ -174,8 +174,8 @@ class TestAuthenticationE2EComprehensive:
         assert refresh_result["access_token"] != login_result["access_token"]
         assert refresh_result["refresh_token"] != login_result["refresh_token"]
 
-    @pytest.mark.e2e_user_journey()
-    async def test_user_logout_flow(self, authenticated_auth_client):
+    @pytest.mark.e2e_user_journey
+    async def test_user_logout_flow(self) -> None:
         """Test complete user logout flow"""
         # Act - Logout user
         response = await authenticated_auth_client.post("/auth/logout")
@@ -193,8 +193,8 @@ class TestAuthenticationE2EComprehensive:
         error_result = response.json()
         assert "error" in error_result
 
-    @pytest.mark.e2e_user_journey()
-    async def test_password_reset_complete_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_password_reset_complete_flow(self) -> None:
         """Test complete password reset flow"""
         # Arrange
         user_data = {
@@ -253,8 +253,8 @@ class TestAuthenticationE2EComprehensive:
         # Assert - Login with old password fails
         assert response.status_code == 401
 
-    @pytest.mark.e2e_user_journey()
-    async def test_mfa_integration_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_mfa_integration_flow(self) -> None:
         """Test MFA integration flow"""
         # Arrange
         user_data = {
@@ -290,8 +290,8 @@ class TestAuthenticationE2EComprehensive:
         assert login_result["access_token"] is not None
         assert login_result["mfa_verified"] is True
 
-    @pytest.mark.e2e_user_journey()
-    async def test_session_management_flow(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_session_management_flow(self) -> None:
         """Test complete session management flow"""
         # Arrange
         user_data = {
@@ -350,8 +350,8 @@ class TestAuthenticationE2EComprehensive:
         # Assert - Session not found after logout
         assert response.status_code == 404
 
-    @pytest.mark.e2e_user_journey()
-    async def test_rbac_integration_flow(self, authenticated_auth_client):
+    @pytest.mark.e2e_user_journey
+    async def test_rbac_integration_flow(self) -> None:
         """Test RBAC integration flow"""
         # Act - Check user permissions
         response = await authenticated_auth_client.get("/auth/permissions")
@@ -379,8 +379,8 @@ class TestAuthenticationE2EComprehensive:
         assert "roles" in roles
         assert len(roles["roles"]) > 0
 
-    @pytest.mark.e2e_user_journey()
-    async def test_user_profile_management_flow(self, authenticated_auth_client):
+    @pytest.mark.e2e_user_journey
+    async def test_user_profile_management_flow(self) -> None:
         """Test complete user profile management flow"""
         # Act - Get current profile
         response = await authenticated_auth_client.get("/auth/profile")
@@ -426,8 +426,8 @@ class TestAuthenticationE2EComprehensive:
     # AUTHENTICATION ERROR HANDLING E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e_user_journey()
-    async def test_authentication_error_handling(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_authentication_error_handling(self) -> None:
         """Test authentication error handling and recovery"""
         # Arrange
         invalid_user_data = {
@@ -463,8 +463,8 @@ class TestAuthenticationE2EComprehensive:
         error_result = response.json()
         assert "error" in error_result
 
-    @pytest.mark.e2e_user_journey()
-    async def test_token_expiration_handling(self, auth_test_client):
+    @pytest.mark.e2e_user_journey
+    async def test_token_expiration_handling(self) -> None:
         """Test token expiration handling"""
         # Arrange
         user_data = {
@@ -511,8 +511,8 @@ class TestAuthenticationE2EComprehensive:
     # AUTHENTICATION PERFORMANCE E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e_performance()
-    async def test_authentication_performance_under_load(self, auth_test_client):
+    @pytest.mark.e2e_performance
+    async def test_authentication_performance_under_load(self) -> None:
         """Test authentication performance under load"""
         import time
 
@@ -531,7 +531,7 @@ class TestAuthenticationE2EComprehensive:
         # Act - Register users concurrently
         start_time = time.time()
 
-        async def register_user(user_data):
+        async def register_user(self) -> None:
             response = await auth_test_client.post("/auth/register", json=user_data)
             return response.status_code == 201
 
@@ -548,7 +548,7 @@ class TestAuthenticationE2EComprehensive:
         # Act - Login users concurrently
         start_time = time.time()
 
-        async def login_user(user_data):
+        async def login_user(self) -> None:
             login_data = {
                 "username": user_data["username"],
                 "password": user_data["password"],
@@ -566,8 +566,8 @@ class TestAuthenticationE2EComprehensive:
         execution_time = end_time - start_time
         assert execution_time < 20.0  # Should complete within 20 seconds
 
-    @pytest.mark.e2e_performance()
-    async def test_token_refresh_performance(self, auth_test_client):
+    @pytest.mark.e2e_performance
+    async def test_token_refresh_performance(self) -> None:
         """Test token refresh performance"""
         import time
 
@@ -597,7 +597,7 @@ class TestAuthenticationE2EComprehensive:
         # Act - Refresh token multiple times
         start_time = time.time()
 
-        async def refresh_token():
+        async def refresh_token(self) -> None:
             refresh_data = {"refresh_token": refresh_token}
             response = await auth_test_client.post("/auth/refresh", json=refresh_data)
             return response.status_code == 200
@@ -616,8 +616,8 @@ class TestAuthenticationE2EComprehensive:
     # AUTHENTICATION SECURITY E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e_security()
-    async def test_password_security_validation(self, auth_test_client):
+    @pytest.mark.e2e_security
+    async def test_password_security_validation(self) -> None:
         """Test password security validation"""
         # Arrange
         weak_passwords = [
@@ -647,8 +647,8 @@ class TestAuthenticationE2EComprehensive:
             assert "error" in error_result
             assert "password" in error_result["error"].lower()
 
-    @pytest.mark.e2e_security()
-    async def test_rate_limiting_protection(self, auth_test_client):
+    @pytest.mark.e2e_security
+    async def test_rate_limiting_protection(self) -> None:
         """Test rate limiting protection"""
         # Arrange
         user_data = {
@@ -683,8 +683,8 @@ class TestAuthenticationE2EComprehensive:
         assert "error" in error_result
         assert "rate limit" in error_result["error"].lower()
 
-    @pytest.mark.e2e_security()
-    async def test_session_security(self, auth_test_client):
+    @pytest.mark.e2e_security
+    async def test_session_security(self) -> None:
         """Test session security"""
         # Arrange
         user_data = {

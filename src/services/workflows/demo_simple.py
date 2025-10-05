@@ -1,8 +1,8 @@
-"""Simple demonstration of Proactive Anomaly-to-Action Workflows"""
+"""Simple demonstration of Proactive Anomaly-to-Action Workflows."""
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from .security_monitor_integration import ProactiveSecurityMonitor
 
@@ -11,8 +11,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def simple_demonstration():
-    """Simple demonstration of the workflow system"""
+async def simple_demonstration(self) -> None:
+    """Simple demonstration of the workflow system."""
     print("PROACTIVE ANOMALY-TO-ACTION WORKFLOWS DEMONSTRATION")
     print("=" * 60)
 
@@ -22,9 +22,9 @@ async def simple_demonstration():
 
     # Create a mock security alert
     class MockAlert:
-        def __init__(self):
+        def __init__(self) -> None:
             self.id = "alert-001"
-            self.timestamp = datetime.now()
+            self.timestamp = datetime.now(UTC)
             self.severity = "HIGH"
             self.pattern_type = "failed_login"
             self.message = "Multiple failed login attempts detected"

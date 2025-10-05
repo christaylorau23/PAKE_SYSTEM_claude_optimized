@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Cosmic Calibration Protocol - Windows Compatible Live Demo
-Advanced Autonomous Cognitive Evolution System - Phase 1
+Advanced Autonomous Cognitive Evolution System - Phase 1.
 """
 
 import asyncio
 import random
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 class CosmicDemo:
-    def __init__(self):
+    def __init__(self) -> None:
         self.demo_active = False
         self.start_time = None
         self.performance_score = 0.75
@@ -17,11 +17,11 @@ class CosmicDemo:
         self.evolution_cycles = 0
         self.critique_cycles = 0
 
-    def log(self, message):
-        timestamp = datetime.now().strftime("%H:%M:%S")
+    def log(self) -> None:
+        timestamp = datetime.now(UTC).strftime("%H:%M:%S")
         print(f"{timestamp} [COSMIC] {message}")
 
-    async def run_demo(self):
+    async def run_demo(self) -> None:
         print("=" * 70)
         print("COSMIC CALIBRATION PROTOCOL - PHASE 1 LIVE DEMONSTRATION")
         print("=" * 70)
@@ -30,7 +30,7 @@ class CosmicDemo:
         print()
 
         self.demo_active = True
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(UTC)
 
         # Phase 1: Initialization
         self.log("INITIALIZING COSMIC CALIBRATION PROTOCOL...")
@@ -233,7 +233,7 @@ class CosmicDemo:
         # Phase 7: Continuous Monitoring
         self.log("=== CONTINUOUS MONITORING ACTIVE ===")
 
-        runtime = datetime.now() - self.start_time
+        runtime = datetime.now(UTC) - self.start_time
         self.log(f"[RUNTIME] Demo duration: {runtime}")
 
         final_metrics = {
@@ -275,7 +275,7 @@ class CosmicDemo:
 
         print()
         print("FINAL STATISTICS:")
-        print(f"  Demo Runtime: {datetime.now() - self.start_time}")
+        print(f"  Demo Runtime: {datetime.now(UTC) - self.start_time}")
         print(f"  Optimization Cycles: {self.optimization_cycles}")
         print(f"  Evolution Cycles: {self.evolution_cycles}")
         print(f"  Critique Cycles: {self.critique_cycles}")
@@ -285,7 +285,7 @@ class CosmicDemo:
         print("=" * 70)
 
 
-async def main():
+async def main(self) -> None:
     print("COSMIC CALIBRATION PROTOCOL - Phase 1 Live Demo")
     print("Advanced Autonomous Cognitive Evolution System")
     print()

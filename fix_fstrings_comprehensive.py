@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""
-Comprehensive script to fix all unterminated f-strings in Python files.
+"""Comprehensive script to fix all unterminated f-strings in Python files.
 This script handles various patterns of malformed f-strings.
 """
 
 import re
-import os
-import sys
 from pathlib import Path
 
-def fix_fstrings_in_file(file_path):
+
+def fix_fstrings_in_file(self) -> None:
     """Fix f-string issues in a single file."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         original_content = content
@@ -20,7 +18,7 @@ def fix_fstrings_in_file(file_path):
         # Pattern 1: f"text {variable} more text" - single line
         pattern1 = r'f"([^"]*)\{\s*([^}]+)\s*\}([^"]*)"'
 
-        def fix_match1(match):
+        def fix_match1(self) -> None:
             prefix = match.group(1)
             variable = match.group(2).strip()
             suffix = match.group(3)
@@ -33,7 +31,7 @@ def fix_fstrings_in_file(file_path):
         #     variable} more text"
         pattern2 = r'f"([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
-        def fix_match2(match):
+        def fix_match2(self) -> None:
             prefix = match.group(1)
             variable = match.group(2).strip()
             suffix = match.group(3)
@@ -46,7 +44,7 @@ def fix_fstrings_in_file(file_path):
         #     variable2} text"
         pattern3 = r'f"([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
-        def fix_match3(match):
+        def fix_match3(self) -> None:
             prefix = match.group(1)
             var1 = match.group(2).strip()
             middle = match.group(3)
@@ -60,7 +58,7 @@ def fix_fstrings_in_file(file_path):
         #     variable}"
         pattern4 = r'f"\{\s*\n\s*([^}]+)\s*\n\s*\}"'
 
-        def fix_match4(match):
+        def fix_match4(self) -> None:
             variable = match.group(1).strip()
             return f'f"{{{variable}}}"'
 
@@ -69,7 +67,7 @@ def fix_fstrings_in_file(file_path):
         # Pattern 5: Cases where the f-string starts with a variable
         pattern5 = r'f"\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
-        def fix_match5(match):
+        def fix_match5(self) -> None:
             variable = match.group(1).strip()
             suffix = match.group(2)
             return f'f"{{{variable}}}{suffix}"'
@@ -78,7 +76,7 @@ def fix_fstrings_in_file(file_path):
 
         # Write back if changed
         if content != original_content:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             print(f"Fixed f-strings in: {file_path}")
             return True
@@ -88,7 +86,8 @@ def fix_fstrings_in_file(file_path):
         print(f"Error processing {file_path}: {e}")
         return False
 
-def main():
+
+def main(self) -> None:
     """Main function to fix f-strings in all Python files."""
     src_dir = Path("/home/chris/projects/PAKE_SYSTEM_claude_optimized/src")
 
@@ -107,6 +106,7 @@ def main():
 
     print(f"Processed {total_count} Python files")
     print(f"Fixed f-strings in {fixed_count} files")
+
 
 if __name__ == "__main__":
     main()

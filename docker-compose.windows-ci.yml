@@ -1,0 +1,148 @@
+# PAKE System - Windows Runner CI Simulation
+# Docker Compose configuration for simulating Windows GitHub Actions runner
+#
+# Windows Runner Specifications:
+# - CPU Cores: 2
+# - RAM: 7GB
+# - Storage: 14GB SSD
+# - Network: 1 Gbps
+# - OS: Windows Server 2022
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with Windows CI resource constraints
+  postgres-windows-ci:
+    image: postgres:15-alpine
+    container_name: pake-postgres-windows-ci
+    environment:
+      POSTGRES_DB: pake_system_test
+      POSTGRES_USER: pake_test
+      POSTGRES_PASSWORD: test_password_windows_ci
+    ports:
+      - '5436:5432'
+    volumes:
+      - postgres_windows_ci_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pake_test -d pake_system_test']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'          # Allocate 0.5 CPU cores to PostgreSQL
+          memory: 1g           # Allocate 1GB RAM to PostgreSQL
+        reservations:
+          cpus: '0.25'         # Reserve 0.25 CPU cores
+          memory: 512m         # Reserve 512MB RAM
+    networks:
+      - pake-windows-ci-network
+
+  # Redis Cache with Windows CI resource constraints
+  redis-windows-ci:
+    image: redis:7-alpine
+    container_name: pake-redis-windows-ci
+    ports:
+      - '6383:6379'
+    volumes:
+      - redis_windows_ci_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'        # Allocate 0.25 CPU cores to Redis
+          memory: 256m         # Allocate 256MB RAM to Redis
+        reservations:
+          cpus: '0.1'          # Reserve 0.1 CPU cores
+          memory: 128m         # Reserve 128MB RAM
+    networks:
+      - pake-windows-ci-network
+
+  # PAKE Backend with Windows CI resource constraints
+  pake-backend-windows-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pake-backend-windows-ci
+    environment:
+      DATABASE_URL: postgresql://pake_test:test_password_windows_ci@postgres-windows-ci:5432/pake_system_test
+      REDIS_URL: redis://redis-windows-ci:6379/0
+      CI: 'true'
+      GITHUB_ACTIONS: 'true'
+      ENVIRONMENT: 'windows-ci-simulation'
+      LOG_LEVEL: 'info'
+      JWT_SECRET_KEY: 'windows-ci-simulation-secret-key'
+      PYTEST_WORKERS: '1'      # Windows typically uses 1 worker
+      PYTEST_TIMEOUT: '300'
+      PYTEST_MAX_FAILURES: '3'
+      # Windows-specific environment variables
+      OS: 'Windows'
+      PLATFORM: 'win32'
+    ports:
+      - '8005:8000'
+    volumes:
+      - ./vault:/app/vault:ro
+      - ./logs:/app/logs
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+    depends_on:
+      postgres-windows-ci:
+        condition: service_healthy
+      redis-windows-ci:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'            # Simulate Windows: 2 CPU cores
+          memory: 7g           # Simulate Windows: 7GB RAM
+        reservations:
+          cpus: '1'            # Reserve 1 CPU core
+          memory: 2g           # Reserve 2GB RAM
+    networks:
+      - pake-windows-ci-network
+    command: >
+      sh -c "
+        echo '🪟 Windows CI Simulation Environment Starting...' &&
+        echo '   CPU Cores: 2 (Windows simulation)' &&
+        echo '   Memory: 7GB (Windows simulation)' &&
+        echo '   Workers: 1 (Windows-optimized)' &&
+        echo '   Timeout: 300s' &&
+        echo '' &&
+        echo '⏳ Waiting for services to be ready...' &&
+        sleep 15 &&
+        echo '🧪 Running tests with Windows CI resource constraints...' &&
+        python -m pytest tests/
+          -v
+          --tb=short
+          --maxfail=3
+          --durations=5
+          --disable-warnings
+          --timeout=300
+          --timeout-method=thread
+          -x
+          --junitxml=/app/logs/windows-ci-test-results.xml
+          --cov=src
+          --cov-report=xml:/app/logs/windows-coverage.xml
+          --cov-report=html:/app/logs/windows-htmlcov
+          --cov-fail-under=80
+      "
+
+volumes:
+  postgres_windows_ci_data:
+    driver: local
+  redis_windows_ci_data:
+    driver: local
+
+networks:
+  pake-windows-ci-network:
+    driver: bridge

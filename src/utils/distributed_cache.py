@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE+ Distributed Caching with Redis Cluster
-High-performance, fault-tolerant caching layer with intelligent failover
+High-performance, fault-tolerant caching layer with intelligent failover.
 """
 
 import asyncio
@@ -20,8 +20,9 @@ try:
     from redis.asyncio.cluster import RedisCluster
     from redis.exceptions import ConnectionError, RedisError, TimeoutError
 except ImportError:
+    msg = "Please install redis[asyncio]: pip install 'redis[asyncio]>=5.0.0'"
     raise ImportError(
-        "Please install redis[asyncio]: pip install 'redis[asyncio]>=5.0.0'",
+        msg,
     )
 
 from utils.error_handling import (
@@ -42,7 +43,7 @@ T = TypeVar("T")
 
 
 class CacheBackend(Enum):
-    """Cache backend types"""
+    """Cache backend types."""
 
     REDIS_SINGLE = "redis_single"
     REDIS_CLUSTER = "redis_cluster"
@@ -55,7 +56,7 @@ class CacheBackend(Enum):
 
 @dataclass
 class CacheConfig:
-    """Configuration for distributed cache"""
+    """Configuration for distributed cache."""
 
     # Connection settings
     host: str = "localhost"
@@ -93,15 +94,15 @@ class CacheConfig:
 
 
 class CacheError(PAKEException):
-    """Cache-specific errors"""
+    """Cache-specific errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
 
 
 @dataclass
 class CacheStats:
-    """Cache statistics"""
+    """Cache statistics."""
 
     hits: int = 0
     misses: int = 0
@@ -113,15 +114,15 @@ class CacheStats:
 
     @property
     def hit_rate(self) -> float:
-        """Calculate cache hit rate"""
+        """Calculate cache hit rate."""
         total_gets = self.hits + self.misses
         return self.hits / total_gets if total_gets > 0 else 0.0
 
 
 class DistributedCache:
-    """High-performance distributed cache with Redis Cluster support"""
+    """High-performance distributed cache with Redis Cluster support."""
 
-    def __init__(self, config: CacheConfig):
+    def __init__(self) -> None:
         self.config = config
         self.logger = get_logger(service_name="pake-distributed-cache")
         self.metrics = (
@@ -139,18 +140,18 @@ class DistributedCache:
         # Lock for thread-safe operations
         self._lock = asyncio.Lock()
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         await self.disconnect()
 
     @with_error_handling("cache_connect", severity=ErrorSeverity.HIGH)
     async def connect(self) -> None:
-        """Connect to Redis cache backend"""
+        """Connect to Redis cache backend."""
         try:
             if self.config.cluster_nodes:
                 # Redis Cluster mode
@@ -181,28 +182,29 @@ class DistributedCache:
             self.logger.info("Successfully connected to Redis cache")
 
         except Exception as e:
+            msg = f"Failed to connect to Redis: {str(e)}"
             raise CacheError(
-                f"Failed to connect to Redis: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     async def disconnect(self) -> None:
-        """Disconnect from Redis cache backend"""
+        """Disconnect from Redis cache backend."""
         if self._client:
             try:
                 await self._client.aclose()
                 self.logger.info("Disconnected from Redis cache")
             except Exception as e:
-                self.logger.warning(f"Error during Redis disconnect: {str(e)}")
+                self.logger.warning("Error during Redis disconnect: %s", str(e))
 
     def _format_key(self, key: str) -> str:
-        """Format cache key with optional prefix"""
+        """Format cache key with optional prefix."""
         if self.config.enable_key_prefix:
             return f"{self.config.key_prefix}{key}"
         return key
 
     def _serialize_value(self, value: Any, format: SerializationFormat = None) -> bytes:
-        """Serialize value for cache storage using secure serialization"""
+        """Serialize value for cache storage using secure serialization."""
         format = format or self.config.default_serialization
 
         try:
@@ -217,7 +219,8 @@ class DistributedCache:
             elif format == SerializationFormat.BINARY:
                 serialized = value if isinstance(value, bytes) else bytes(value)
             else:
-                raise ValueError(f"Unsupported serialization format: {format}")
+                msg = f"Unsupported serialization format: {format}"
+                raise ValueError(msg)
 
             # Apply compression if enabled and value is large enough
             if (
@@ -232,13 +235,14 @@ class DistributedCache:
             return b"RAW:" + serialized
 
         except Exception as e:
+            msg = f"Failed to serialize value: {str(e)}"
             raise CacheError(
-                f"Failed to serialize value: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     def _deserialize_value(self, data: bytes) -> Any:
-        """Deserialize value from cache storage"""
+        """Deserialize value from cache storage."""
         try:
             if data.startswith(b"GZIP:"):
                 import gzip
@@ -264,13 +268,14 @@ class DistributedCache:
                 return json.loads(data.decode("utf-8"))
 
         except Exception as e:
+            msg = f"Failed to deserialize value: {str(e)}"
             raise CacheError(
-                f"Failed to deserialize value: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     def _check_circuit_breaker(self) -> None:
-        """Check if circuit breaker is open"""
+        """Check if circuit breaker is open."""
         if self._is_circuit_open:
             if (
                 time.time() - self._circuit_breaker_last_failure
@@ -281,23 +286,25 @@ class DistributedCache:
                 self._circuit_breaker_failures = 0
                 self.logger.info("Circuit breaker reset")
             else:
+                msg = "Circuit breaker is open - cache operations are temporarily disabled"
                 raise CacheError(
-                    "Circuit breaker is open - cache operations are temporarily disabled",
+                    msg,
                 )
 
     def _handle_operation_failure(self) -> None:
-        """Handle operation failure for circuit breaker"""
+        """Handle operation failure for circuit breaker."""
         self._circuit_breaker_failures += 1
         self._circuit_breaker_last_failure = time.time()
 
         if self._circuit_breaker_failures >= self.config.circuit_breaker_threshold:
             self._is_circuit_open = True
             self.logger.warning(
-                f"Circuit breaker opened after {self._circuit_breaker_failures} failures",
+                "Circuit breaker opened after %s failures",
+                self._circuit_breaker_failures,
             )
 
     async def _execute_operation(self, operation_name: str, operation: Callable) -> Any:
-        """Execute cache operation with error handling and metrics"""
+        """Execute cache operation with error handling and metrics."""
         start_time = time.time()
 
         try:
@@ -324,7 +331,9 @@ class DistributedCache:
                 and duration > self.config.slow_operation_threshold
             ):
                 self.logger.warning(
-                    f"Slow cache operation: {operation_name} took {duration:.3f}s",
+                    "Slow cache operation: %.3f took %ss",
+                    operation_name,
+                    duration,
                 )
 
             return result
@@ -345,16 +354,17 @@ class DistributedCache:
                     labels={"operation": operation_name, "error": type(e).__name__},
                 )
 
+            msg = f"Cache operation {operation_name} failed: {str(e)}"
             raise CacheError(
-                f"Cache operation {operation_name} failed: {str(e)}",
+                msg,
                 original_exception=e,
             )
 
     @with_retry(RetryPolicy(max_attempts=3, base_delay=0.1))
     async def get(self, key: str, default: Any = None) -> Any:
-        """Get value from cache"""
+        """Get value from cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             data = await self._client.get(formatted_key)
 
@@ -380,9 +390,9 @@ class DistributedCache:
 
     @with_retry(RetryPolicy(max_attempts=3, base_delay=0.1))
     async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
-        """Set value in cache"""
+        """Set value in cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             serialized_value = self._serialize_value(value)
             ttl_value = ttl or self.config.default_ttl
@@ -411,9 +421,9 @@ class DistributedCache:
 
     @with_retry(RetryPolicy(max_attempts=3, base_delay=0.1))
     async def delete(self, key: str) -> bool:
-        """Delete value from cache"""
+        """Delete value from cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             result = await self._client.delete(formatted_key)
             self.stats.deletes += 1
@@ -428,10 +438,10 @@ class DistributedCache:
 
         return await self._execute_operation("delete", operation)
 
-    async def get_many(self, keys: list[str]) -> dict[str, Any]:
-        """Get multiple values from cache"""
+    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+        """Get multiple values from cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_keys = [self._format_key(key) for key in keys]
             values = await self._client.mget(formatted_keys)
 
@@ -451,10 +461,10 @@ class DistributedCache:
 
         return await self._execute_operation("get_many", operation)
 
-    async def set_many(self, data: dict[str, Any], ttl: int | None = None) -> bool:
-        """Set multiple values in cache"""
+    async def set_many(self, data: Dict[str, Any], ttl: int | None = None) -> bool:
+        """Set multiple values in cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             ttl_value = ttl or self.config.default_ttl
 
             # Use pipeline for better performance
@@ -476,9 +486,9 @@ class DistributedCache:
         return await self._execute_operation("set_many", operation)
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in cache"""
+        """Check if key exists in cache."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             result = await self._client.exists(formatted_key)
             return bool(result)
@@ -486,9 +496,9 @@ class DistributedCache:
         return await self._execute_operation("exists", operation)
 
     async def expire(self, key: str, ttl: int) -> bool:
-        """Set expiration time for key"""
+        """Set expiration time for key."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             result = await self._client.expire(formatted_key, ttl)
             return bool(result)
@@ -496,9 +506,9 @@ class DistributedCache:
         return await self._execute_operation("expire", operation)
 
     async def increment(self, key: str, amount: int = 1) -> int:
-        """Increment numeric value"""
+        """Increment numeric value."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_key = self._format_key(key)
             result = await self._client.incrby(formatted_key, amount)
             return int(result)
@@ -506,9 +516,9 @@ class DistributedCache:
         return await self._execute_operation("increment", operation)
 
     async def clear_pattern(self, pattern: str) -> int:
-        """Clear keys matching pattern"""
+        """Clear keys matching pattern."""
 
-        async def operation():
+        async def operation(self) -> None:
             formatted_pattern = self._format_key(pattern)
 
             # Scan for keys to avoid blocking
@@ -525,8 +535,8 @@ class DistributedCache:
 
         return await self._execute_operation("clear_pattern", operation)
 
-    async def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics"""
+    async def get_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
         return {
             "cache_stats": {
                 "hits": self.stats.hits,
@@ -551,20 +561,21 @@ class DistributedCache:
 
 
 class CacheManager:
-    """High-level cache manager with multiple cache instances"""
+    """High-level cache manager with multiple cache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.caches: dict[str, DistributedCache] = {}
         self.logger = get_logger(service_name="cache-manager")
 
     def add_cache(self, name: str, config: CacheConfig) -> None:
-        """Add a cache instance"""
+        """Add a cache instance."""
         self.caches[name] = DistributedCache(config)
 
     async def get_cache(self, name: str = "default") -> DistributedCache:
-        """Get cache instance by name"""
+        """Get cache instance by name."""
         if name not in self.caches:
-            raise CacheError(f"Cache '{name}' not found")
+            msg = f"Cache '{name}' not found"
+            raise CacheError(msg)
 
         cache = self.caches[name]
         if cache._client is None:
@@ -573,31 +584,31 @@ class CacheManager:
         return cache
 
     async def initialize_all(self) -> None:
-        """Initialize all cache connections"""
+        """Initialize all cache connections."""
         for name, cache in self.caches.items():
             try:
                 await cache.connect()
-                self.logger.info(f"Initialized cache: {name}")
+                self.logger.info("Initialized cache: %s", name)
             except Exception as e:
-                self.logger.error(f"Failed to initialize cache {name}: {str(e)}")
+                self.logger.error("Failed to initialize cache %s: %s", name, str(e))
 
     async def shutdown_all(self) -> None:
-        """Shutdown all cache connections"""
+        """Shutdown all cache connections."""
         for name, cache in self.caches.items():
             try:
                 await cache.disconnect()
-                self.logger.info(f"Shutdown cache: {name}")
+                self.logger.info("Shutdown cache: %s", name)
             except Exception as e:
-                self.logger.error(f"Error shutting down cache {name}: {str(e)}")
+                self.logger.error("Error shutting down cache %s: %s", name, str(e))
 
 
 # Decorators for automatic caching
-def cached(cache_key: str, ttl: int | None = None, cache_name: str = "default"):
-    """Decorator for automatic function result caching"""
+def cached(self) -> None:
+    """Decorator for automatic function result caching."""
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(self) -> None:
             cache_manager = CacheManager()
             cache = await cache_manager.get_cache(cache_name)
 
@@ -628,7 +639,7 @@ def cached(cache_key: str, ttl: int | None = None, cache_name: str = "default"):
 
 # Example configuration for PAKE system
 def create_pake_cache_config(redis_url: str = None) -> CacheConfig:
-    """Create optimized cache configuration for PAKE system"""
+    """Create optimized cache configuration for PAKE system."""
     import os
 
     # Parse Redis URL or use defaults
@@ -681,7 +692,7 @@ def create_pake_cache_config(redis_url: str = None) -> CacheConfig:
 if __name__ == "__main__":
     import asyncio
 
-    async def example_usage():
+    async def example_usage(self) -> None:
         # Create cache configuration
         config = create_pake_cache_config()
 

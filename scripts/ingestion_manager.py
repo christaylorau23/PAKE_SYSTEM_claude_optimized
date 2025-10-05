@@ -5,9 +5,10 @@ Web interface and management tools for the ingestion pipeline
 """
 
 import asyncio
+import contextlib
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
@@ -30,7 +31,7 @@ background_task: asyncio.Task | None = None
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event(self) -> None:
     """Initialize the ingestion pipeline on startup"""
     global pipeline_instance
 
@@ -41,16 +42,14 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event(self) -> None:
     """Clean up resources on shutdown"""
     global pipeline_instance, background_task
 
     if background_task and not background_task.done():
         background_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await background_task
-        except asyncio.CancelledError:
-            pass
 
     if pipeline_instance:
         await pipeline_instance.close()
@@ -69,7 +68,7 @@ def get_pipeline() -> UniversalIngestionPipeline:
 
 
 @app.get("/")
-async def root():
+async def root(self) -> None:
     """Root endpoint with basic info"""
     return {
         "service": "PAKE+ Ingestion Manager",
@@ -86,7 +85,7 @@ async def root():
     }
 
 
-@app.get("/sources", response_model=list[dict[str, Any]])
+@app.get("/sources", response_model=list[Dict[str, Any]])
 async def get_sources(pipeline: UniversalIngestionPipeline = Depends(get_pipeline)):
     """Get all configured sources"""
     sources_data = []
@@ -109,7 +108,7 @@ async def get_sources(pipeline: UniversalIngestionPipeline = Depends(get_pipelin
 
 @app.post("/sources")
 async def add_source(
-    source_data: dict[str, Any],
+    source_data: Dict[str, Any],
     pipeline: UniversalIngestionPipeline = Depends(get_pipeline),
 ):
     """Add a new ingestion source"""
@@ -135,14 +134,14 @@ async def add_source(
         return {"message": f"Source '{source.name}' added successfully"}
 
     except Exception as e:
-        logger.error(f"Error adding source: {e}")
+        logger.error("Error adding source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.put("/sources/{source_name}")
 async def update_source(
     source_name: str,
-    updates: dict[str, Any],
+    updates: Dict[str, Any],
     pipeline: UniversalIngestionPipeline = Depends(get_pipeline),
 ):
     """Update an existing source"""
@@ -171,7 +170,7 @@ async def update_source(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating source: {e}")
+        logger.error("Error updating source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -197,7 +196,7 @@ async def delete_source(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting source: {e}")
+        logger.error("Error deleting source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -219,11 +218,7 @@ async def disable_source(
     return await toggle_source(source_name, False, pipeline)
 
 
-async def toggle_source(
-    source_name: str,
-    enabled: bool,
-    pipeline: UniversalIngestionPipeline,
-):
+async def toggle_source(self) -> None:
     """Toggle source enabled/disabled state"""
     try:
         # Find the source
@@ -246,7 +241,7 @@ async def toggle_source(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error toggling source: {e}")
+        logger.error("Error toggling source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -261,13 +256,13 @@ async def get_statistics(pipeline: UniversalIngestionPipeline = Depends(get_pipe
             "running": background_task is not None and not background_task.done(),
             "sources_configured": len(pipeline.sources),
             "sources_enabled": len([s for s in pipeline.sources if s.enabled]),
-            "last_check": datetime.utcnow().isoformat(),
+            "last_check": datetime.now(UTC).isoformat(),
         }
 
         return stats
 
     except Exception as e:
-        logger.error(f"Error getting statistics: {e}")
+        logger.error("Error getting statistics: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -289,7 +284,7 @@ async def start_pipeline(
 
 
 @app.post("/pipeline/stop")
-async def stop_pipeline():
+async def stop_pipeline(self) -> None:
     """Stop the continuous ingestion pipeline"""
     global background_task
 
@@ -299,10 +294,8 @@ async def stop_pipeline():
     # Cancel the background task
     background_task.cancel()
 
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await background_task
-    except asyncio.CancelledError:
-        pass
 
     background_task = None
 
@@ -316,12 +309,12 @@ async def run_single_cycle(
 ):
     """Run a single ingestion cycle"""
 
-    async def run_cycle():
+    async def run_cycle(self) -> None:
         try:
             processed = await pipeline.run_single_cycle()
-            logger.info(f"Single cycle completed, processed {processed} items")
+            logger.info("Single cycle completed, processed %s items", processed)
         except Exception as e:
-            logger.error(f"Error in single cycle: {e}")
+            logger.error("Error in single cycle: %s", e)
 
     background_tasks.add_task(run_cycle)
 
@@ -329,19 +322,17 @@ async def run_single_cycle(
 
 
 @app.get("/pipeline/status")
-async def get_pipeline_status():
+async def get_pipeline_status(self) -> None:
     """Get current pipeline status"""
     global background_task
 
     is_running = background_task is not None and not background_task.done()
 
-    status = {
+    return {
         "running": is_running,
         "task_id": id(background_task) if background_task else None,
         "uptime": None,  # Could add uptime tracking if needed
     }
-
-    return status
 
 
 @app.post("/sources/{source_name}/test")
@@ -382,7 +373,7 @@ async def test_source(
         }
 
     except Exception as e:
-        logger.error(f"Error testing source {source_name}: {e}")
+        logger.error("Error testing source %s: %s", source_name, e)
         return {
             "source_name": source_name,
             "items_found": 0,
@@ -392,7 +383,7 @@ async def test_source(
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
+async def dashboard(self) -> None:
     """Simple web dashboard for monitoring"""
     html_content = """
     <!DOCTYPE html>
@@ -600,7 +591,7 @@ async def dashboard():
     return HTMLResponse(content=html_content)
 
 
-async def save_configuration(pipeline: UniversalIngestionPipeline):
+async def save_configuration(self) -> None:
     """Save current configuration to file"""
     try:
         config_data = {"sources": []}
@@ -628,7 +619,7 @@ async def save_configuration(pipeline: UniversalIngestionPipeline):
         logger.info("Configuration saved successfully")
 
     except Exception as e:
-        logger.error(f"Error saving configuration: {e}")
+        logger.error("Error saving configuration: %s", e)
         raise
 
 

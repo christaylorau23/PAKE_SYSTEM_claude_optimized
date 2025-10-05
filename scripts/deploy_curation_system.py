@@ -10,10 +10,11 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import uvicorn
+
 from services.curation.api.curation_api import app
 from services.curation.integration.curation_orchestrator import CurationOrchestrator
 
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 class CurationDeployment:
     """Handles deployment of the curation system"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self) -> None:
         self.config_path = config_path
         self.config = self._load_config()
         self.orchestrator = None
@@ -53,7 +54,7 @@ class CurationDeployment:
                     user_config = json.load(f)
                 default_config.update(user_config)
             except Exception as e:
-                logger.warning(f"Error loading config file: {e}")
+                logger.warning("Error loading config file: %s", e)
 
         return default_config
 
@@ -72,7 +73,7 @@ class CurationDeployment:
             return False
 
         except Exception as e:
-            logger.error(f"❌ Error initializing system: {e}")
+            logger.error("❌ Error initializing system: %s", e)
             return False
 
     async def train_models(self, force_retrain: bool = False) -> bool:
@@ -86,11 +87,12 @@ class CurationDeployment:
             # Check if retraining is needed
             if not force_retrain and self.orchestrator.last_model_update:
                 days_since_update = (
-                    datetime.now() - self.orchestrator.last_model_update
+                    datetime.now(UTC) - self.orchestrator.last_model_update
                 ).days
                 if days_since_update < self.config["retrain_interval_days"]:
                     logger.info(
-                        f"Models are up to date (updated {days_since_update} days ago)",
+                        "Models are up to date (updated %s days ago)",
+                        days_since_update,
                     )
                     return True
 
@@ -102,9 +104,9 @@ class CurationDeployment:
             # Check if we have enough data
             if len(contents) < self.config["min_training_samples"]:
                 logger.warning(
-                    f"Insufficient training data: {len(contents)} samples (minimum: {
-                        self.config['min_training_samples']
-                    })",
+                    "Insufficient training data: %s samples (minimum: %s)",
+                    len(contents),
+                    self.config["min_training_samples"],
                 )
                 return False
 
@@ -115,28 +117,29 @@ class CurationDeployment:
                 logger.info("✅ Models trained successfully")
                 return True
             logger.error(
-                f"❌ Model training failed: {results.get('error', 'Unknown error')}",
+                "❌ Model training failed: %s",
+                results.get("error", "Unknown error"),
             )
             return False
 
         except Exception as e:
-            logger.error(f"❌ Error training models: {e}")
+            logger.error("❌ Error training models: %s", e)
             return False
 
-    async def _get_training_content(self):
+    async def _get_training_content(self) -> None:
         """Get content for model training"""
         # TODO: Integrate with existing PAKE database
         # For now, return empty list - models will use fallback strategies
         logger.info("Getting training content from PAKE database...")
         return []
 
-    async def _get_training_users(self):
+    async def _get_training_users(self) -> None:
         """Get users for model training"""
         # TODO: Integrate with existing PAKE database
         logger.info("Getting training users from PAKE database...")
         return []
 
-    async def _get_training_interactions(self):
+    async def _get_training_interactions(self) -> None:
         """Get interactions for model training"""
         # TODO: Integrate with existing PAKE database
         logger.info("Getting training interactions from PAKE database...")
@@ -157,12 +160,12 @@ class CurationDeployment:
                 name for name, healthy in health.services_healthy.items() if not healthy
             ]
             if unhealthy_services:
-                logger.warning(f"Unhealthy services: {unhealthy_services}")
+                logger.warning("Unhealthy services: %s", unhealthy_services)
 
             # Check model status
             loaded_models = sum(health.models_loaded.values())
             total_models = len(health.models_loaded)
-            logger.info(f"Models loaded: {loaded_models}/{total_models}")
+            logger.info("Models loaded: %s/%s", loaded_models, total_models)
 
             # Check performance metrics
             avg_prediction_time = health.performance_metrics.get(
@@ -171,8 +174,8 @@ class CurationDeployment:
             )
             cache_hit_rate = health.cache_status.get("cache_hit_rate", 0)
 
-            logger.info(f"Average prediction time: {avg_prediction_time:.2f}ms")
-            logger.info(f"Cache hit rate: {cache_hit_rate:.2%}")
+            logger.info("Average prediction time: %.2f%%ms", avg_prediction_time)
+            logger.info("Cache hit rate: %s", f"{cache_hit_rate:.2%}")
 
             # Overall health assessment
             all_services_healthy = all(health.services_healthy.values())
@@ -185,7 +188,7 @@ class CurationDeployment:
             return False
 
         except Exception as e:
-            logger.error(f"❌ Health check failed: {e}")
+            logger.error("❌ Health check failed: %s", e)
             return False
 
     async def run_performance_test(self) -> bool:
@@ -209,36 +212,37 @@ class CurationDeployment:
             )
 
             # Measure response time
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             response = await self.orchestrator.curate_content(test_request)
-            end_time = datetime.now()
+            end_time = datetime.now(UTC)
 
             response_time = (end_time - start_time).total_seconds() * 1000
 
-            logger.info(f"Test response time: {response_time:.2f}ms")
-            logger.info(f"Recommendations generated: {len(response.recommendations)}")
-            logger.info(f"Content analyzed: {response.total_content_analyzed}")
-            logger.info(f"Cache hit rate: {response.cache_hit_rate:.2%}")
+            logger.info("Test response time: %.2f%%ms", response_time)
+            logger.info("Recommendations generated: %s", len(response.recommendations))
+            logger.info("Content analyzed: %s", response.total_content_analyzed)
+            logger.info("Cache hit rate: %s", f"{response.cache_hit_rate:.2%}")
 
             # Performance criteria
             if response_time < 1000:  # Sub-second response
                 logger.info("✅ Performance test passed")
                 return True
             logger.warning(
-                f"⚠️ Performance test failed: {response_time:.2f}ms > 1000ms",
+                "⚠️ Performance test failed: %sms > 1000ms",
+                response_time,
             )
             return False
 
         except Exception as e:
-            logger.error(f"❌ Performance test failed: {e}")
+            logger.error("❌ Performance test failed: %s", e)
             return False
 
-    def start_api_server(self):
+    def start_api_server(self) -> None:
         """Start the API server"""
         logger.info(
-            f"Starting API server on {self.config['api_host']}:{
-                self.config['api_port']
-            }",
+            "Starting API server on %s:%s",
+            self.config["api_host"],
+            self.config["api_port"],
         )
 
         uvicorn.run(
@@ -249,14 +253,14 @@ class CurationDeployment:
             access_log=True,
         )
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """Shutdown the system"""
         if self.orchestrator:
             await self.orchestrator.shutdown()
         logger.info("System shutdown completed")
 
 
-async def main():
+async def main(self) -> None:
     """Main deployment function"""
     parser = argparse.ArgumentParser(
         description="Deploy Intelligent Content Curation System",
@@ -353,7 +357,7 @@ async def main():
         logger.info("Deployment interrupted by user")
         return 0
     except Exception as e:
-        logger.error(f"Deployment failed: {e}")
+        logger.error("Deployment failed: %s", e)
         return 1
     finally:
         await deployment.shutdown()

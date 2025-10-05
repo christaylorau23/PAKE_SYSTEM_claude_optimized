@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """PAKE+ Standardized API Patterns
-Enterprise-grade API patterns with foundation component integration
+Enterprise-grade API patterns with foundation component integration.
 """
 
 import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 import redis.asyncio as redis
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
+
 from utils.async_task_queue import AsyncTaskQueue, TaskPriority
 from utils.distributed_cache import CacheConfig, DistributedCache
 from utils.error_handling import (
@@ -39,7 +40,7 @@ metrics = MetricsStore(service_name="pake-api-patterns")
 
 
 class APIVersion(Enum):
-    """API versioning"""
+    """API versioning."""
 
     V1 = "v1"
     V2 = "v2"
@@ -47,7 +48,7 @@ class APIVersion(Enum):
 
 
 class ResponseStatus(Enum):
-    """Standardized response statuses"""
+    """Standardized response statuses."""
 
     SUCCESS = "success"
     ERROR = "error"
@@ -57,7 +58,7 @@ class ResponseStatus(Enum):
 
 @dataclass
 class APIConfig:
-    """Configuration for API patterns"""
+    """Configuration for API patterns."""
 
     # Rate limiting
     rate_limit_requests_per_minute: int = 100
@@ -82,12 +83,12 @@ class APIConfig:
 
 # Standard API Response Models
 class APIError(BaseModel):
-    """Standardized error response"""
+    """Standardized error response."""
 
     type: str = Field(..., description="Error type classification")
     message: str = Field(..., description="Human-readable error message")
     code: str = Field(..., description="Error code for programmatic handling")
-    details: dict[str, Any] | None = Field(
+    details: Dict[str, Any] | None = Field(
         None,
         description="Additional error details",
     )
@@ -99,7 +100,7 @@ class APIError(BaseModel):
 
 
 class APIResponse(BaseModel):
-    """Standardized API response wrapper"""
+    """Standardized API response wrapper."""
 
     status: ResponseStatus = Field(..., description="Response status")
     data: Any | None = Field(None, description="Response data")
@@ -108,7 +109,7 @@ class APIResponse(BaseModel):
         None,
         description="Error details if status is error",
     )
-    metadata: dict[str, Any] | None = Field(None, description="Response metadata")
+    metadata: Dict[str, Any] | None = Field(None, description="Response metadata")
     trace_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         description="Request trace ID",
@@ -121,7 +122,7 @@ class APIResponse(BaseModel):
 
 
 class PaginationMetadata(BaseModel):
-    """Pagination metadata"""
+    """Pagination metadata."""
 
     page: int = Field(..., ge=1, description="Current page number")
     per_page: int = Field(..., ge=1, le=100, description="Items per page")
@@ -132,13 +133,13 @@ class PaginationMetadata(BaseModel):
 
 
 class PaginatedResponse(APIResponse):
-    """Paginated response with metadata"""
+    """Paginated response with metadata."""
 
     pagination: PaginationMetadata = Field(..., description="Pagination information")
 
 
 class RateLimitInfo(BaseModel):
-    """Rate limit information"""
+    """Rate limit information."""
 
     limit: int = Field(..., description="Rate limit per window")
     remaining: int = Field(..., description="Remaining requests in current window")
@@ -148,9 +149,9 @@ class RateLimitInfo(BaseModel):
 
 # Middleware Classes
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware for comprehensive request/response logging"""
+    """Middleware for comprehensive request/response logging."""
 
-    def __init__(self, app, config: APIConfig):
+    def __init__(self) -> None:
         super().__init__(app)
         self.config = config
         self.logger = get_logger(service_name="api-request-logging")
@@ -262,9 +263,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Rate limiting middleware with Redis backend"""
+    """Rate limiting middleware with Redis backend."""
 
-    def __init__(self, app, config: APIConfig, redis_client: redis.Redis):
+    def __init__(self) -> None:
         super().__init__(app)
         self.config = config
         self.redis_client = redis_client
@@ -279,7 +280,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not is_allowed:
             # Rate limit exceeded
-            self.logger.warning(f"Rate limit exceeded for client {client_id}")
+            self.logger.warning("Rate limit exceeded for client %s", client_id)
 
             response = JSONResponse(
                 status_code=429,
@@ -314,7 +315,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
     def _get_client_id(self, request: Request) -> str:
-        """Extract client identifier for rate limiting"""
+        """Extract client identifier for rate limiting."""
         # Try authentication token first
         auth_header = request.headers.get("authorization")
         if auth_header:
@@ -325,7 +326,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return f"ip:{client_ip}"
 
     async def _check_rate_limit(self, client_id: str) -> tuple[bool, RateLimitInfo]:
-        """Check rate limit using sliding window"""
+        """Check rate limit using sliding window."""
         window_key = f"rate_limit:{client_id}:window"
         current_time = time.time()
         window_start = current_time - 60  # 1 minute window
@@ -347,16 +348,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     withscores=True,
                 )
                 reset_time = (
-                    datetime.fromtimestamp(oldest_entries[0][1] + 60)
+                    datetime.fromtimestamp(oldest_entries[0][1] + 60, tz=UTC)
                     if oldest_entries
-                    else datetime.utcnow()
+                    else datetime.now(UTC)
                 )
 
                 return False, RateLimitInfo(
                     limit=self.config.rate_limit_requests_per_minute,
                     remaining=0,
                     reset=reset_time,
-                    retry_after=int((reset_time - datetime.utcnow()).total_seconds()),
+                    retry_after=int((reset_time - datetime.now(UTC)).total_seconds()),
                 )
 
             # Add current request
@@ -369,7 +370,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 remaining=self.config.rate_limit_requests_per_minute
                 - current_count
                 - 1,
-                reset=datetime.fromtimestamp(current_time + 60),
+                reset=datetime.fromtimestamp(current_time + 60, tz=UTC),
             )
 
         except Exception as e:
@@ -378,15 +379,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True, RateLimitInfo(
                 limit=self.config.rate_limit_requests_per_minute,
                 remaining=self.config.rate_limit_requests_per_minute,
-                reset=datetime.utcnow() + timedelta(minutes=1),
+                reset=datetime.now(UTC) + timedelta(minutes=1),
             )
 
 
 # API Pattern Factory
 class EnhancedAPIFactory:
-    """Factory for creating standardized API patterns with foundation integration"""
+    """Factory for creating standardized API patterns with foundation integration."""
 
-    def __init__(self, config: APIConfig, redis_url: str = "redis://localhost:6379/0"):
+    def __init__(self) -> None:
         self.config = config
         self.redis_url = redis_url
 
@@ -406,7 +407,7 @@ class EnhancedAPIFactory:
         description: str = "API with foundation hardening",
         version: str = "1.0.0",
     ) -> FastAPI:
-        """Create FastAPI app with all foundation components integrated"""
+        """Create FastAPI app with all foundation components integrated."""
         # Initialize Redis connection
         self.redis_client = redis.from_url(self.redis_url)
 
@@ -467,15 +468,15 @@ class EnhancedAPIFactory:
         # Add standard endpoints
         self._add_standard_endpoints(app)
 
-        self.logger.info(f"Created enhanced API: {title} v{version}")
+        self.logger.info("Created enhanced API: %s v%s", title, version)
 
         return app
 
-    def _add_exception_handlers(self, app: FastAPI):
-        """Add standardized exception handlers"""
+    def _add_exception_handlers(self) -> None:
+        """Add standardized exception handlers."""
 
         @app.exception_handler(PAKEException)
-        async def pake_exception_handler(request: Request, exc: PAKEException):
+        async def pake_exception_handler(self) -> None:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -498,7 +499,7 @@ class EnhancedAPIFactory:
             )
 
         @app.exception_handler(HTTPException)
-        async def http_exception_handler(request: Request, exc: HTTPException):
+        async def http_exception_handler(self) -> None:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -515,12 +516,12 @@ class EnhancedAPIFactory:
                 ).dict(),
             )
 
-    def _add_standard_endpoints(self, app: FastAPI):
-        """Add standard system endpoints"""
+    def _add_standard_endpoints(self) -> None:
+        """Add standard system endpoints."""
 
         @app.get("/health", response_model=APIResponse, tags=["System"])
-        async def health_check():
-            """System health check endpoint"""
+        async def health_check(self) -> None:
+            """System health check endpoint."""
             try:
                 # Check Redis connectivity
                 await self.redis_client.ping()
@@ -563,8 +564,8 @@ class EnhancedAPIFactory:
             )
 
         @app.get("/metrics", tags=["System"])
-        async def get_metrics():
-            """System metrics endpoint"""
+        async def get_metrics(self) -> None:
+            """System metrics endpoint."""
             # This would typically return Prometheus metrics
             # For now, return basic system info
             return APIResponse(
@@ -575,24 +576,14 @@ class EnhancedAPIFactory:
                 },
             )
 
-    def create_crud_endpoints(
-        self,
-        app: FastAPI,
-        model_class: type,
-        prefix: str,
-        tags: list[str] = None,
-    ):
-        """Create standardized CRUD endpoints with caching and security"""
+    def create_crud_endpoints(self) -> None:
+        """Create standardized CRUD endpoints with caching and security."""
 
         @app.post(f"{prefix}/", response_model=APIResponse, tags=tags or [])
-        @ secure_endpoint() if self.security_guard else lambda x: x
+        @secure_endpoint() if self.security_guard else lambda x: x
         @with_error_handling("create_resource")
-        async def create_resource(
-            item: model_class,
-            background_tasks: BackgroundTasks,
-            request: Request,
-        ):
-            """Create a new resource"""
+        async def create_resource(self) -> None:
+            """Create a new resource."""
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             # Process creation (would integrate with actual database)
@@ -624,8 +615,8 @@ class EnhancedAPIFactory:
 
         @app.get(f"{prefix}/{{item_id}}", response_model=APIResponse, tags=tags or [])
         @with_error_handling("get_resource")
-        async def get_resource(item_id: str, request: Request):
-            """Get a resource by ID with caching"""
+        async def get_resource(self) -> None:
+            """Get a resource by ID with caching."""
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             # Try cache first
@@ -652,7 +643,7 @@ class EnhancedAPIFactory:
             simulated_data = {
                 "id": item_id,
                 "name": f"Resource {item_id}",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             # Cache for future requests
@@ -672,7 +663,7 @@ class EnhancedAPIFactory:
 
 # Example usage models
 class TaskItem(BaseModel):
-    """Example task model"""
+    """Example task model."""
 
     title: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(None, max_length=1000)
@@ -680,9 +671,10 @@ class TaskItem(BaseModel):
     completed: bool = Field(default=False)
 
     @validator("title")
-    def title_must_not_be_empty(cls, v):
+    def title_must_not_be_empty(self) -> None:
         if not v.strip():
-            raise ValueError("Title cannot be empty")
+            msg = "Title cannot be empty"
+            raise ValueError(msg)
         return v.strip()
 
 
@@ -692,7 +684,7 @@ async def create_enhanced_api(
     config: APIConfig | None = None,
     redis_url: str = "redis://localhost:6379/0",
 ) -> FastAPI:
-    """Quick factory function for creating enhanced API"""
+    """Quick factory function for creating enhanced API."""
     api_config = config or APIConfig()
     factory = EnhancedAPIFactory(api_config, redis_url)
     app = await factory.create_app(title=title)
@@ -706,8 +698,8 @@ async def create_enhanced_api(
 # Testing function
 if __name__ == "__main__":
 
-    async def test_api_patterns():
-        """Test the API patterns system"""
+    async def test_api_patterns(self) -> None:
+        """Test the API patterns system."""
         print("Testing Enhanced API Patterns...")
 
         try:

@@ -1,4 +1,4 @@
-"""Task Management System for Security Incident Response
+"""Task Management System for Security Incident Response.
 
 Provides task creation, assignment, and tracking capabilities for
 automated incident response workflows.
@@ -6,17 +6,19 @@ automated incident response workflows.
 
 import logging
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
-    """Task status enumeration"""
+    """Task status enumeration."""
 
     CREATED = "created"
     ASSIGNED = "assigned"
@@ -28,7 +30,7 @@ class TaskStatus(Enum):
 
 
 class TaskPriority(Enum):
-    """Task priority levels"""
+    """Task priority levels."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -38,7 +40,7 @@ class TaskPriority(Enum):
 
 
 class TaskType(Enum):
-    """Task type categories"""
+    """Task type categories."""
 
     SECURITY_INCIDENT = "security_incident"
     INVESTIGATION = "investigation"
@@ -50,7 +52,7 @@ class TaskType(Enum):
 
 @dataclass
 class TaskAssignment:
-    """Task assignment information"""
+    """Task assignment information."""
 
     assignee_id: str
     assignee_name: str
@@ -63,23 +65,23 @@ class TaskAssignment:
 
 @dataclass
 class TaskContext:
-    """Contextual information attached to tasks"""
+    """Contextual information attached to tasks."""
 
     security_alert_id: str | None = None
     incident_id: str | None = None
-    affected_systems: list[str] = field(default_factory=list)
-    affected_users: list[str] = field(default_factory=list)
-    threat_indicators: dict[str, Any] = field(default_factory=dict)
-    attached_logs: list[str] = field(default_factory=list)
-    network_context: dict[str, Any] = field(default_factory=dict)
-    user_context: dict[str, Any] = field(default_factory=dict)
-    system_context: dict[str, Any] = field(default_factory=dict)
-    timeline: list[dict[str, Any]] = field(default_factory=list)
+    affected_systems: List[str] = field(default_factory=list)
+    affected_users: List[str] = field(default_factory=list)
+    threat_indicators: Dict[str, Any] = field(default_factory=dict)
+    attached_logs: List[str] = field(default_factory=list)
+    network_context: Dict[str, Any] = field(default_factory=dict)
+    user_context: Dict[str, Any] = field(default_factory=dict)
+    system_context: Dict[str, Any] = field(default_factory=dict)
+    timeline: list[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
 class Task:
-    """Core task representation"""
+    """Core task representation."""
 
     id: str
     title: str
@@ -93,43 +95,43 @@ class Task:
     context: TaskContext | None = None
     due_date: datetime | None = None
     estimated_duration: timedelta | None = None
-    tags: list[str] = field(default_factory=list)
-    checklist: list[dict[str, Any]] = field(default_factory=list)
-    comments: list[dict[str, Any]] = field(default_factory=list)
-    attachments: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    checklist: list[Dict[str, Any]] = field(default_factory=list)
+    comments: list[Dict[str, Any]] = field(default_factory=list)
+    attachments: List[str] = field(default_factory=list)
     parent_task_id: str | None = None
-    subtasks: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    subtasks: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     # Security-specific fields
     security_alert_id: str | None = None
     incident_type: str | None = None
-    investigation_checklist: list[str] = field(default_factory=list)
-    recommended_actions: list[str] = field(default_factory=list)
+    investigation_checklist: List[str] = field(default_factory=list)
+    recommended_actions: List[str] = field(default_factory=list)
     attached_logs: str | None = None
-    network_context: dict[str, Any] | None = None
-    user_context: dict[str, Any] | None = None
-    system_context: dict[str, Any] | None = None
-    timeline: list[dict[str, Any]] | None = None
+    network_context: Dict[str, Any] | None = None
+    user_context: Dict[str, Any] | None = None
+    system_context: Dict[str, Any] | None = None
+    timeline: list[Dict[str, Any]] | None = None
 
 
 class TaskManager:
-    """Task management system for incident response"""
+    """Task management system for incident response."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tasks: dict[str, Task] = {}
-        self.assignments: dict[str, list[str]] = {}  # assignee_id -> task_ids
-        self.task_history: list[dict[str, Any]] = []
+        self.assignments: dict[str, List[str]] = {}  # assignee_id -> task_ids
+        self.task_history: list[Dict[str, Any]] = []
         self.assignment_rules: list[Callable[[Task], str | None]] = []
 
         # Initialize default assignment rules
         self._setup_default_assignment_rules()
 
-    def _setup_default_assignment_rules(self):
-        """Setup default task assignment rules"""
+    def _setup_default_assignment_rules(self) -> None:
+        """Setup default task assignment rules."""
 
         def critical_security_rule(task: Task) -> str | None:
-            """Critical security incidents go to security team lead"""
+            """Critical security incidents go to security team lead."""
             if task.task_type == TaskType.SECURITY_INCIDENT and task.priority in [
                 TaskPriority.CRITICAL,
                 TaskPriority.EMERGENCY,
@@ -138,7 +140,7 @@ class TaskManager:
             return None
 
         def sql_injection_rule(task: Task) -> str | None:
-            """SQL injection incidents go to senior security analyst"""
+            """SQL injection incidents go to senior security analyst."""
             if (
                 task.incident_type == "sql_injection"
                 or "sql injection" in task.title.lower()
@@ -147,7 +149,7 @@ class TaskManager:
             return None
 
         def failed_login_rule(task: Task) -> str | None:
-            """Failed login incidents go to security analyst"""
+            """Failed login incidents go to security analyst."""
             if (
                 task.incident_type == "failed_login"
                 or "failed login" in task.title.lower()
@@ -156,7 +158,7 @@ class TaskManager:
             return None
 
         def privilege_escalation_rule(task: Task) -> str | None:
-            """Privilege escalation goes to senior analyst"""
+            """Privilege escalation goes to senior analyst."""
             if (
                 task.incident_type == "privilege_escalation"
                 or "privilege escalation" in task.title.lower()
@@ -165,7 +167,7 @@ class TaskManager:
             return None
 
         def default_assignment_rule(task: Task) -> str | None:
-            """Default assignment based on priority"""
+            """Default assignment based on priority."""
             if task.priority == TaskPriority.CRITICAL:
                 return "security_team_lead"
             if task.priority == TaskPriority.HIGH:
@@ -183,13 +185,13 @@ class TaskManager:
         ]
 
     async def create_task(self, task: Task) -> str:
-        """Create a new task"""
+        """Create a new task."""
         if not task.id:
             task.id = str(uuid.uuid4())
 
         # Set creation timestamp if not set
         if not task.created_at:
-            task.created_at = datetime.now()
+            task.created_at = datetime.now(UTC)
 
         # Auto-assign if not already assigned
         if not task.assignment:
@@ -205,12 +207,12 @@ class TaskManager:
             {
                 "action": "created",
                 "task_id": task.id,
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(UTC),
                 "details": {"title": task.title, "priority": task.priority.value},
             },
         )
 
-        logger.info(f"Created task {task.id}: {task.title}")
+        logger.info("Created task %s: %s", task.id, task.title)
         return task.id
 
     async def assign_task(
@@ -219,9 +221,9 @@ class TaskManager:
         assignee_id: str,
         assigned_by: str,
     ) -> bool:
-        """Assign a task to a user"""
+        """Assign a task to a user."""
         if task_id not in self.tasks:
-            logger.error(f"Task {task_id} not found")
+            logger.error("Task %s not found", task_id)
             return False
 
         task = self.tasks[task_id]
@@ -230,7 +232,7 @@ class TaskManager:
         assignment = TaskAssignment(
             assignee_id=assignee_id,
             assignee_name=self._get_assignee_name(assignee_id),
-            assigned_at=datetime.now(),
+            assigned_at=datetime.now(UTC),
             assigned_by=assigned_by,
             team=self._get_assignee_team(assignee_id),
             role=self._get_assignee_role(assignee_id),
@@ -249,16 +251,16 @@ class TaskManager:
             {
                 "action": "assigned",
                 "task_id": task_id,
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(UTC),
                 "details": {"assignee_id": assignee_id, "assigned_by": assigned_by},
             },
         )
 
-        logger.info(f"Assigned task {task_id} to {assignee_id}")
+        logger.info("Assigned task %s to %s", task_id, assignee_id)
         return True
 
     def _determine_assignee(self, task: Task) -> str | None:
-        """Determine appropriate assignee for a task"""
+        """Determine appropriate assignee for a task."""
         for rule in self.assignment_rules:
             assignee = rule(task)
             if assignee:
@@ -266,7 +268,7 @@ class TaskManager:
         return None
 
     def _get_assignee_name(self, assignee_id: str) -> str:
-        """Get display name for assignee"""
+        """Get display name for assignee."""
         # In production, this would lookup from user directory
         name_mapping = {
             "security_team_lead": "Security Team Lead",
@@ -278,7 +280,7 @@ class TaskManager:
         return name_mapping.get(assignee_id, assignee_id.replace("_", " ").title())
 
     def _get_assignee_team(self, assignee_id: str) -> str:
-        """Get team for assignee"""
+        """Get team for assignee."""
         if "security" in assignee_id:
             return "Security Team"
         if "incident" in assignee_id:
@@ -286,7 +288,7 @@ class TaskManager:
         return "IT Operations"
 
     def _get_assignee_role(self, assignee_id: str) -> str:
-        """Get role for assignee"""
+        """Get role for assignee."""
         if "lead" in assignee_id:
             return "Team Lead"
         if "senior" in assignee_id:
@@ -301,7 +303,7 @@ class TaskManager:
         status: TaskStatus,
         updated_by: str,
     ) -> bool:
-        """Update task status"""
+        """Update task status."""
         if task_id not in self.tasks:
             return False
 
@@ -312,7 +314,7 @@ class TaskManager:
             {
                 "action": "status_changed",
                 "task_id": task_id,
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(UTC),
                 "details": {
                     "old_status": old_status.value,
                     "new_status": status.value,
@@ -322,37 +324,40 @@ class TaskManager:
         )
 
         logger.info(
-            f"Updated task {task_id} status: {old_status.value} -> {status.value}",
+            "Updated task %s status: %s -> %s",
+            task_id,
+            old_status.value,
+            status.value,
         )
         return True
 
     def get_task(self, task_id: str) -> Task | None:
-        """Get task by ID"""
+        """Get task by ID."""
         return self.tasks.get(task_id)
 
     def get_tasks_by_assignee(self, assignee_id: str) -> list[Task]:
-        """Get all tasks assigned to a user"""
+        """Get all tasks assigned to a user."""
         task_ids = self.assignments.get(assignee_id, [])
         return [self.tasks[task_id] for task_id in task_ids if task_id in self.tasks]
 
     def get_tasks_by_status(self, status: TaskStatus) -> list[Task]:
-        """Get tasks by status"""
+        """Get tasks by status."""
         return [task for task in self.tasks.values() if task.status == status]
 
     def get_tasks_by_priority(self, priority: TaskPriority) -> list[Task]:
-        """Get tasks by priority"""
+        """Get tasks by priority."""
         return [task for task in self.tasks.values() if task.priority == priority]
 
     def get_security_incident_tasks(self) -> list[Task]:
-        """Get all security incident tasks"""
+        """Get all security incident tasks."""
         return [
             task
             for task in self.tasks.values()
             if task.task_type == TaskType.SECURITY_INCIDENT
         ]
 
-    def get_statistics(self) -> dict[str, Any]:
-        """Get task management statistics"""
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get task management statistics."""
         total_tasks = len(self.tasks)
 
         status_counts: Dict[str, int] = {}
@@ -381,15 +386,15 @@ class TaskManager:
 
 
 class TaskManagementSystem:
-    """High-level task management system interface"""
+    """High-level task management system interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.task_manager = TaskManager()
-        self.workflows: dict[str, Any] = {}
+        self.workflows: Dict[str, Any] = {}
         self.notification_handlers: list[Callable] = []
 
     async def create_task(self, task: Task) -> str:
-        """Create a task in the system"""
+        """Create a task in the system."""
         task_id = await self.task_manager.create_task(task)
 
         # Send notifications
@@ -403,7 +408,7 @@ class TaskManagementSystem:
         assignee_id: str,
         assigned_by: str = "system",
     ) -> bool:
-        """Assign a task to a user"""
+        """Assign a task to a user."""
         success = await self.task_manager.assign_task(task_id, assignee_id, assigned_by)
 
         if success:
@@ -413,18 +418,18 @@ class TaskManagementSystem:
 
         return success
 
-    async def _send_notifications(self, task: Task, action: str):
-        """Send notifications for task events"""
+    async def _send_notifications(self) -> None:
+        """Send notifications for task events."""
         for handler in self.notification_handlers:
             try:
                 await handler(task, action)
             except Exception as e:
-                logger.error(f"Notification handler failed: {e}")
+                logger.error("Notification handler failed: %s", e)
 
-    def add_notification_handler(self, handler: Callable):
-        """Add a notification handler"""
+    def add_notification_handler(self) -> None:
+        """Add a notification handler."""
         self.notification_handlers.append(handler)
 
     def get_task_manager(self) -> TaskManager:
-        """Get the underlying task manager"""
+        """Get the underlying task manager."""
         return self.task_manager

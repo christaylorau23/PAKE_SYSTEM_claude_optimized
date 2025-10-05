@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Personal Intelligence Engine Demo
+"""Personal Intelligence Engine Demo.
 
 Comprehensive demonstration of the intelligence engine capabilities implemented
 following the Personal Intelligence Engine blueprint. Showcases:
@@ -16,20 +15,18 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
-import logging
-import os
 import json
+import logging
 import time
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+from datetime import UTC, datetime
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -52,7 +49,7 @@ DEMO_DOCUMENTS = [
         Market analysts predict continued growth through 2025, with particular strength in enterprise AI solutions.
         """,
         "tags": ["AI", "investment", "venture capital", "trends", "2024"],
-        "source_type": "external_document"
+        "source_type": "external_document",
     },
     {
         "title": "Blockchain and DeFi Evolution",
@@ -72,7 +69,7 @@ DEMO_DOCUMENTS = [
         market maturation and institutional confidence.
         """,
         "tags": ["blockchain", "DeFi", "cryptocurrency", "Ethereum", "finance"],
-        "source_type": "web_content"
+        "source_type": "web_content",
     },
     {
         "title": "Quantum Computing Breakthrough",
@@ -91,7 +88,7 @@ DEMO_DOCUMENTS = [
         Microsoft is focusing on topological qubits for improved stability.
         """,
         "tags": ["quantum computing", "IBM", "technology", "breakthrough", "qubits"],
-        "source_type": "academic_paper"
+        "source_type": "academic_paper",
     },
     {
         "title": "Sustainable Technology Investment",
@@ -111,8 +108,14 @@ DEMO_DOCUMENTS = [
         Lucid Motors are scaling manufacturing. The transition to electric vehicles is accelerating
         across all market segments.
         """,
-        "tags": ["clean technology", "sustainability", "renewable energy", "electric vehicles", "investment"],
-        "source_type": "web_content"
+        "tags": [
+            "clean technology",
+            "sustainability",
+            "renewable energy",
+            "electric vehicles",
+            "investment",
+        ],
+        "source_type": "web_content",
     },
     {
         "title": "Biotechnology and Longevity Research",
@@ -132,14 +135,15 @@ DEMO_DOCUMENTS = [
         personalized medicine. The convergence of AI and biology is creating unprecedented opportunities.
         """,
         "tags": ["biotechnology", "healthcare", "CRISPR", "longevity", "genomics"],
-        "source_type": "academic_paper"
-    }
+        "source_type": "academic_paper",
+    },
 ]
 
+
 # Sample time series data for correlation analysis
-def generate_sample_time_series() -> Dict[str, pd.Series]:
+def generate_sample_time_series() -> dict[str, pd.Series]:
     """Generate sample time series data for correlation analysis."""
-    dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
+    dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
 
     # Generate correlated time series
     base_trend = np.linspace(100, 150, len(dates))
@@ -161,13 +165,12 @@ def generate_sample_time_series() -> Dict[str, pd.Series]:
         "ai_investment_index": pd.Series(ai_investment, index=dates),
         "tech_stock_index": pd.Series(tech_stocks, index=dates),
         "quantum_funding_index": pd.Series(quantum_funding, index=dates),
-        "clean_energy_adoption": pd.Series(clean_energy, index=dates)
+        "clean_energy_adoption": pd.Series(clean_energy, index=dates),
     }
 
 
 class IntelligenceEngineDemo:
-    """
-    Comprehensive demo of the Personal Intelligence Engine.
+    """Comprehensive demo of the Personal Intelligence Engine.
 
     Demonstrates all major capabilities:
     - Knowledge ingestion and processing
@@ -179,7 +182,7 @@ class IntelligenceEngineDemo:
     - Insight synthesis and alerting
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the demo environment."""
         self.demo_results = {}
         self.processing_times = {}
@@ -191,31 +194,33 @@ class IntelligenceEngineDemo:
             "neo4j_user": "neo4j",
             "neo4j_REDACTED_SECRET": "demo_REDACTED_SECRET",
             "postgres_url": "postgresql+asyncpg://demo_user:demo_REDACTED_SECRET@localhost/intelligence_demo",
-            "demo_data_path": "./demo_data"
+            "demo_data_path": "./demo_data",
         }
 
         # Create demo directories
         Path(self.config["demo_data_path"]).mkdir(exist_ok=True)
         Path(self.config["obsidian_vault_path"]).mkdir(exist_ok=True)
 
-    def print_header(self, title: str, level: int = 1):
+    def print_header(self) -> None:
         """Print formatted header for demo sections."""
         char = "=" if level == 1 else "-"
         print(f"\n{char * 80}")
         print(f"{title.center(80)}")
         print(f"{char * 80}\n")
 
-    def print_result(self, title: str, data: Any, max_items: int = 5):
+    def print_result(self) -> None:
         """Print formatted results."""
         print(f"📊 {title}:")
 
         if isinstance(data, list):
             print(f"   Found {len(data)} items:")
             for i, item in enumerate(data[:max_items]):
-                if hasattr(item, '__dict__'):
-                    print(f"   {i+1}. {item.__class__.__name__}: {getattr(item, 'title', getattr(item, 'text', str(item)[:100]))}")
+                if hasattr(item, "__dict__"):
+                    print(
+                        f"   {i + 1}. {item.__class__.__name__}: {getattr(item, 'title', getattr(item, 'text', str(item)[:100]))}"
+                    )
                 else:
-                    print(f"   {i+1}. {str(item)[:100]}")
+                    print(f"   {i + 1}. {str(item)[:100]}")
             if len(data) > max_items:
                 print(f"   ... and {len(data) - max_items} more")
 
@@ -228,7 +233,7 @@ class IntelligenceEngineDemo:
 
         print()
 
-    async def setup_demo_environment(self):
+    async def setup_demo_environment(self) -> None:
         """Setup the demo environment with sample data."""
         self.print_header("Setting Up Intelligence Engine Demo Environment")
 
@@ -237,22 +242,22 @@ class IntelligenceEngineDemo:
         # Create sample Obsidian notes
         vault_path = Path(self.config["obsidian_vault_path"])
 
-        for i, doc in enumerate(DEMO_DOCUMENTS):
+        for _i, doc in enumerate(DEMO_DOCUMENTS):
             note_path = vault_path / f"{doc['title'].replace(' ', '_').lower()}.md"
 
             # Create frontmatter
             frontmatter = f"""---
-title: {doc['title']}
-tags: {doc['tags']}
-source_type: {doc['source_type']}
-created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+title: {doc["title"]}
+tags: {doc["tags"]}
+source_type: {doc["source_type"]}
+created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 ---
 
 """
 
             # Write note
-            with open(note_path, 'w', encoding='utf-8') as f:
-                f.write(frontmatter + doc['content'])
+            with open(note_path, "w", encoding="utf-8") as f:
+                f.write(frontmatter + doc["content"])
 
         print(f"   ✅ Created {len(DEMO_DOCUMENTS)} sample notes in Obsidian vault")
 
@@ -271,10 +276,10 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             "obsidian_notes": len(DEMO_DOCUMENTS),
             "time_series_metrics": len(time_series_data),
             "vault_path": str(vault_path),
-            "data_path": str(data_path)
+            "data_path": str(data_path),
         }
 
-    async def demonstrate_nlp_pipeline(self):
+    async def demonstrate_nlp_pipeline(self) -> None:
         """Demonstrate advanced NLP capabilities."""
         self.print_header("Advanced NLP Pipeline Demonstration", 2)
 
@@ -282,7 +287,9 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
         try:
             # Import NLP service
-            from src.services.nlp.intelligence_nlp_service import get_intelligence_nlp_service
+            from src.services.nlp.intelligence_nlp_service import (
+                get_intelligence_nlp_service,
+            )
 
             print("🧠 Initializing Advanced NLP Service...")
             nlp_service = await get_intelligence_nlp_service()
@@ -292,19 +299,22 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             print(f"📝 Analyzing document: '{DEMO_DOCUMENTS[0]['title']}'")
 
             analysis = await nlp_service.analyze_document(
-                text=sample_doc,
-                include_embeddings=True,
-                include_topics=True
+                text=sample_doc, include_embeddings=True, include_topics=True
             )
 
             # Display results
             self.print_result("Extracted Entities", analysis.entities, max_items=10)
-            self.print_result("Extracted Relationships", analysis.relationships, max_items=5)
-            self.print_result("Sentiment Analysis", {
-                "polarity": analysis.sentiment.polarity,
-                "confidence": analysis.sentiment.confidence,
-                "label": analysis.sentiment.label
-            })
+            self.print_result(
+                "Extracted Relationships", analysis.relationships, max_items=5
+            )
+            self.print_result(
+                "Sentiment Analysis",
+                {
+                    "polarity": analysis.sentiment.polarity,
+                    "confidence": analysis.sentiment.confidence,
+                    "label": analysis.sentiment.label,
+                },
+            )
             self.print_result("Key Phrases", analysis.key_phrases, max_items=8)
             self.print_result("Text Statistics", analysis.text_statistics)
 
@@ -324,16 +334,18 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "sentiment_score": analysis.sentiment.polarity,
                 "topics_discovered": len(topics),
                 "processing_time_seconds": processing_time,
-                "embedding_dimensions": analysis.semantic_embedding.shape[0] if analysis.semantic_embedding.size > 0 else 0
+                "embedding_dimensions": analysis.semantic_embedding.shape[0]
+                if analysis.semantic_embedding.size > 0
+                else 0,
             }
 
             print(f"⏱️  NLP Pipeline completed in {processing_time:.2f} seconds")
 
         except Exception as e:
             print(f"❌ Error in NLP pipeline demo: {e}")
-            logger.error(f"NLP pipeline demo failed: {e}")
+            logger.error("NLP pipeline demo failed: %s", e)
 
-    async def demonstrate_vector_database(self):
+    async def demonstrate_vector_database(self) -> None:
         """Demonstrate vector database and semantic search."""
         self.print_header("Vector Database & Semantic Search Demonstration", 2)
 
@@ -341,8 +353,12 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
         try:
             # Import services
-            from src.services.database.vector_database_service import get_vector_database_service
-            from src.services.nlp.intelligence_nlp_service import get_intelligence_nlp_service
+            from src.services.database.vector_database_service import (
+                get_vector_database_service,
+            )
+            from src.services.nlp.intelligence_nlp_service import (
+                get_intelligence_nlp_service,
+            )
 
             print("🔍 Initializing Vector Database Service...")
             vector_db = await get_vector_database_service(
@@ -364,10 +380,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         content=doc["content"],
                         embedding=embeddings[0],
                         source=doc["source_type"],
-                        metadata={
-                            "title": doc["title"],
-                            "tags": doc["tags"]
-                        }
+                        metadata={"title": doc["title"], "tags": doc["tags"]},
                     )
 
                     if not result.success:
@@ -382,7 +395,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "artificial intelligence investment trends",
                 "quantum computing applications",
                 "renewable energy and sustainability",
-                "biotechnology and healthcare innovation"
+                "biotechnology and healthcare innovation",
             ]
 
             for query in search_queries:
@@ -392,14 +405,16 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     results = await vector_db.semantic_search(
                         query_embedding=query_embeddings[0],
                         limit=3,
-                        similarity_threshold=0.3
+                        similarity_threshold=0.3,
                     )
 
                     print(f"\n📊 Query: '{query}'")
                     print(f"   Found {len(results)} results:")
 
                     for i, result in enumerate(results):
-                        print(f"   {i+1}. Similarity: {result.similarity_score:.3f} - {result.metadata.get('title', 'Unknown')}")
+                        print(
+                            f"   {i + 1}. Similarity: {result.similarity_score:.3f} - {result.metadata.get('title', 'Unknown')}"
+                        )
 
             # Database statistics
             stats = await vector_db.get_database_stats()
@@ -412,16 +427,16 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "documents_indexed": len(DEMO_DOCUMENTS),
                 "search_queries_tested": len(search_queries),
                 "database_stats": stats,
-                "processing_time_seconds": processing_time
+                "processing_time_seconds": processing_time,
             }
 
             print(f"⏱️  Vector Database demo completed in {processing_time:.2f} seconds")
 
         except Exception as e:
             print(f"❌ Error in vector database demo: {e}")
-            logger.error(f"Vector database demo failed: {e}")
+            logger.error("Vector database demo failed: %s", e)
 
-    async def demonstrate_knowledge_core(self):
+    async def demonstrate_knowledge_core(self) -> None:
         """Demonstrate the tripartite knowledge core."""
         self.print_header("Tripartite Knowledge Core Demonstration", 2)
 
@@ -429,7 +444,6 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
         try:
             # Import core service
-            from src.services.knowledge.intelligence_core_service import get_intelligence_core_service
 
             print("🧠 Initializing Intelligence Core Service...")
 
@@ -447,10 +461,10 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
                 # Simulate NLP processing
                 await asyncio.sleep(0.1)  # Simulate processing time
-                print(f"      ✅ Extracted entities and relationships")
-                print(f"      ✅ Generated semantic embeddings")
-                print(f"      ✅ Stored in knowledge graph")
-                print(f"      ✅ Indexed in vector database")
+                print("      ✅ Extracted entities and relationships")
+                print("      ✅ Generated semantic embeddings")
+                print("      ✅ Stored in knowledge graph")
+                print("      ✅ Indexed in vector database")
 
             # Simulate knowledge queries
             print("\n🔍 Demonstrating unified knowledge queries...")
@@ -458,15 +472,15 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             queries = [
                 {"text": "AI investment trends", "type": "semantic"},
                 {"text": "quantum computing breakthrough", "type": "graph"},
-                {"text": "sustainable technology", "type": "hybrid"}
+                {"text": "sustainable technology", "type": "hybrid"},
             ]
 
             for query in queries:
                 print(f"   🔎 {query['type'].title()} Query: '{query['text']}'")
                 await asyncio.sleep(0.2)  # Simulate query time
-                print(f"      📊 Found 3 relevant knowledge items")
-                print(f"      🔗 Identified 7 related entities")
-                print(f"      📈 Discovered 2 trend patterns")
+                print("      📊 Found 3 relevant knowledge items")
+                print("      🔗 Identified 7 related entities")
+                print("      📈 Discovered 2 trend patterns")
 
             processing_time = time.time() - start_time
             self.processing_times["knowledge_core"] = processing_time
@@ -476,16 +490,18 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "knowledge_items_created": len(DEMO_DOCUMENTS),
                 "unified_queries_tested": len(queries),
                 "processing_time_seconds": processing_time,
-                "storage_systems": ["obsidian", "neo4j", "postgresql"]
+                "storage_systems": ["obsidian", "neo4j", "postgresql"],
             }
 
-            print(f"\n⏱️  Knowledge Core demo completed in {processing_time:.2f} seconds")
+            print(
+                f"\n⏱️  Knowledge Core demo completed in {processing_time:.2f} seconds"
+            )
 
         except Exception as e:
             print(f"❌ Error in knowledge core demo: {e}")
-            logger.error(f"Knowledge core demo failed: {e}")
+            logger.error("Knowledge core demo failed: %s", e)
 
-    async def demonstrate_insight_generation(self):
+    async def demonstrate_insight_generation(self) -> None:
         """Demonstrate advanced insight generation."""
         self.print_header("Advanced Insight Generation Demonstration", 2)
 
@@ -499,9 +515,24 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             await asyncio.sleep(0.5)
 
             simulated_topics = [
-                {"id": "ai_investment", "description": "AI Investment and Funding", "trend": "emerging", "growth": 0.15},
-                {"id": "quantum_tech", "description": "Quantum Computing Technology", "trend": "emerging", "growth": 0.08},
-                {"id": "clean_energy", "description": "Clean Energy Solutions", "trend": "stable", "growth": 0.05}
+                {
+                    "id": "ai_investment",
+                    "description": "AI Investment and Funding",
+                    "trend": "emerging",
+                    "growth": 0.15,
+                },
+                {
+                    "id": "quantum_tech",
+                    "description": "Quantum Computing Technology",
+                    "trend": "emerging",
+                    "growth": 0.08,
+                },
+                {
+                    "id": "clean_energy",
+                    "description": "Clean Energy Solutions",
+                    "trend": "stable",
+                    "growth": 0.05,
+                },
             ]
 
             self.print_result("Topic Evolution Analysis", simulated_topics)
@@ -514,9 +545,24 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             time_series_data = generate_sample_time_series()
 
             simulated_correlations = [
-                {"metrics": "AI Investment → Tech Stocks", "correlation": 0.78, "lag": "10 days", "significance": "high"},
-                {"metrics": "Quantum Funding ↔ AI Investment", "correlation": 0.65, "lag": "concurrent", "significance": "medium"},
-                {"metrics": "Clean Energy ⊥ Tech Stocks", "correlation": 0.12, "lag": "none", "significance": "low"}
+                {
+                    "metrics": "AI Investment → Tech Stocks",
+                    "correlation": 0.78,
+                    "lag": "10 days",
+                    "significance": "high",
+                },
+                {
+                    "metrics": "Quantum Funding ↔ AI Investment",
+                    "correlation": 0.65,
+                    "lag": "concurrent",
+                    "significance": "medium",
+                },
+                {
+                    "metrics": "Clean Energy ⊥ Tech Stocks",
+                    "correlation": 0.12,
+                    "lag": "none",
+                    "significance": "low",
+                },
             ]
 
             self.print_result("Correlation Discovery", simulated_correlations)
@@ -526,9 +572,24 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             await asyncio.sleep(0.4)
 
             simulated_communities = [
-                {"id": "ai_ecosystem", "size": 15, "description": "AI companies and researchers", "modularity": 0.82},
-                {"id": "quantum_network", "size": 8, "description": "Quantum computing entities", "modularity": 0.67},
-                {"id": "clean_tech_cluster", "size": 12, "description": "Sustainable technology players", "modularity": 0.73}
+                {
+                    "id": "ai_ecosystem",
+                    "size": 15,
+                    "description": "AI companies and researchers",
+                    "modularity": 0.82,
+                },
+                {
+                    "id": "quantum_network",
+                    "size": 8,
+                    "description": "Quantum computing entities",
+                    "modularity": 0.67,
+                },
+                {
+                    "id": "clean_tech_cluster",
+                    "size": 12,
+                    "description": "Sustainable technology players",
+                    "modularity": 0.73,
+                },
             ]
 
             self.print_result("Community Detection", simulated_communities)
@@ -543,15 +604,23 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     "confidence": 0.87,
                     "significance": "high",
                     "description": "Strong correlation between AI investment and tech stock performance suggests coordinated market movement",
-                    "recommendations": ["Monitor AI funding announcements", "Track tech stock volatility", "Identify early investment opportunities"]
+                    "recommendations": [
+                        "Monitor AI funding announcements",
+                        "Track tech stock volatility",
+                        "Identify early investment opportunities",
+                    ],
                 },
                 {
                     "title": "Emerging Quantum-AI Convergence",
                     "confidence": 0.74,
                     "significance": "medium",
                     "description": "Growing overlap between quantum computing and AI research communities",
-                    "recommendations": ["Track quantum AI research", "Monitor hybrid technology developments", "Assess competitive positioning"]
-                }
+                    "recommendations": [
+                        "Track quantum AI research",
+                        "Monitor hybrid technology developments",
+                        "Assess competitive positioning",
+                    ],
+                },
             ]
 
             self.print_result("Synthesis Insights", synthesis_insights)
@@ -561,8 +630,16 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             await asyncio.sleep(0.2)
 
             alerts = [
-                {"type": "trend_emergence", "urgency": "high", "message": "New AI investment trend detected with 87% confidence"},
-                {"type": "correlation_shift", "urgency": "medium", "message": "Significant change in quantum-AI funding correlation"}
+                {
+                    "type": "trend_emergence",
+                    "urgency": "high",
+                    "message": "New AI investment trend detected with 87% confidence",
+                },
+                {
+                    "type": "correlation_shift",
+                    "urgency": "medium",
+                    "message": "Significant change in quantum-AI funding correlation",
+                },
             ]
 
             self.print_result("Generated Alerts", alerts)
@@ -576,16 +653,18 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "communities_detected": len(simulated_communities),
                 "synthesis_insights": len(synthesis_insights),
                 "alerts_generated": len(alerts),
-                "processing_time_seconds": processing_time
+                "processing_time_seconds": processing_time,
             }
 
-            print(f"⏱️  Insight Generation demo completed in {processing_time:.2f} seconds")
+            print(
+                f"⏱️  Insight Generation demo completed in {processing_time:.2f} seconds"
+            )
 
         except Exception as e:
             print(f"❌ Error in insight generation demo: {e}")
-            logger.error(f"Insight generation demo failed: {e}")
+            logger.error("Insight generation demo failed: %s", e)
 
-    async def demonstrate_graphql_api(self):
+    async def demonstrate_graphql_api(self) -> None:
         """Demonstrate GraphQL API capabilities."""
         self.print_header("GraphQL API Demonstration", 2)
 
@@ -615,7 +694,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     }
                     """,
                     "variables": {"query": "artificial intelligence trends"},
-                    "description": "Search knowledge across all storage systems"
+                    "description": "Search knowledge across all storage systems",
                 },
                 {
                     "name": "Semantic Search",
@@ -630,7 +709,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     }
                     """,
                     "variables": {"text": "quantum computing applications"},
-                    "description": "Perform vector-based semantic search"
+                    "description": "Perform vector-based semantic search",
                 },
                 {
                     "name": "Get Insights",
@@ -647,8 +726,8 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     }
                     """,
                     "variables": {"filter": "high"},
-                    "description": "Retrieve generated insights and recommendations"
-                }
+                    "description": "Retrieve generated insights and recommendations",
+                },
             ]
 
             print("📊 Demonstrating GraphQL query capabilities...")
@@ -657,17 +736,17 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 print(f"\n🔎 {query_demo['name']}: {query_demo['description']}")
                 await asyncio.sleep(0.3)  # Simulate query execution
 
-                if "Knowledge Search" in query_demo['name']:
+                if "Knowledge Search" in query_demo["name"]:
                     print("   📚 Results: 4 knowledge items found")
                     print("   🔗 Entities: 12 entities extracted")
                     print("   ⚡ Response time: 245ms")
 
-                elif "Semantic Search" in query_demo['name']:
+                elif "Semantic Search" in query_demo["name"]:
                     print("   🎯 Results: 3 documents with similarity > 0.7")
                     print("   📈 Top match: 0.89 similarity")
                     print("   ⚡ Response time: 156ms")
 
-                elif "Get Insights" in query_demo['name']:
+                elif "Get Insights" in query_demo["name"]:
                     print("   🧠 Results: 2 high-significance insights")
                     print("   💡 Recommendations: 6 actionable items")
                     print("   ⚡ Response time: 98ms")
@@ -689,7 +768,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     }
                 }
                 """,
-                "description": "Add new knowledge item with automatic processing"
+                "description": "Add new knowledge item with automatic processing",
             }
 
             print(f"📝 {mutation_demo['name']}: {mutation_demo['description']}")
@@ -705,7 +784,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "queries_demonstrated": len(sample_queries),
                 "mutations_demonstrated": 1,
                 "avg_response_time_ms": 166,
-                "total_operations": len(sample_queries) + 1
+                "total_operations": len(sample_queries) + 1,
             }
 
             self.print_result("GraphQL API Statistics", api_stats)
@@ -717,16 +796,16 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 **api_stats,
                 "processing_time_seconds": processing_time,
                 "endpoint_url": "http://localhost:8000/graphql",
-                "documentation_url": "http://localhost:8000/docs"
+                "documentation_url": "http://localhost:8000/docs",
             }
 
             print(f"⏱️  GraphQL API demo completed in {processing_time:.2f} seconds")
 
         except Exception as e:
             print(f"❌ Error in GraphQL API demo: {e}")
-            logger.error(f"GraphQL API demo failed: {e}")
+            logger.error("GraphQL API demo failed: %s", e)
 
-    def generate_demo_summary(self):
+    def generate_demo_summary(self) -> None:
         """Generate comprehensive demo summary."""
         self.print_header("Intelligence Engine Demo Summary")
 
@@ -742,7 +821,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             "Knowledge Items Created": len(DEMO_DOCUMENTS),
             "Time Series Analyzed": 4,
             "API Operations": 4,
-            "Insights Generated": 2
+            "Insights Generated": 2,
         }
 
         self.print_result("Overall Statistics", summary_stats)
@@ -762,7 +841,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             "✅ Knowledge Graph Construction and Query",
             "✅ Unified GraphQL API for All Systems",
             "✅ Real-time Analytics and Monitoring",
-            "✅ Automated Insight Synthesis and Alerting"
+            "✅ Automated Insight Synthesis and Alerting",
         ]
 
         for achievement in achievements:
@@ -778,7 +857,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             "✅ Vector Database for Semantic Search",
             "✅ Advanced Analytics & Synthesis",
             "✅ RESTful API with GraphQL",
-            "✅ Enterprise-Grade Performance"
+            "✅ Enterprise-Grade Performance",
         ]
 
         for feature in blueprint_features:
@@ -794,7 +873,7 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             "⚖️  Load balancing and scaling",
             "🔒 SSL/TLS encryption",
             "📈 Performance optimization",
-            "🧪 Comprehensive testing suite"
+            "🧪 Comprehensive testing suite",
         ]
 
         for item in production_items:
@@ -802,27 +881,27 @@ created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
         # Save demo results
         demo_summary = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_demo_time_seconds": total_time,
             "component_results": self.demo_results,
             "performance_metrics": self.processing_times,
-            "summary_statistics": summary_stats
+            "summary_statistics": summary_stats,
         }
 
         # Write summary to file
         summary_path = Path(self.config["demo_data_path"]) / "demo_summary.json"
-        with open(summary_path, 'w') as f:
+        with open(summary_path, "w") as f:
             json.dump(demo_summary, f, indent=2, default=str)
 
         print(f"\n💾 Demo summary saved to: {summary_path}")
         print("\n🎉 Personal Intelligence Engine Demo Completed Successfully!")
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
 
 
-async def main():
+async def main(self) -> None:
     """Run the comprehensive intelligence engine demo."""
     print("🚀 PAKE System - Personal Intelligence Engine Demo")
-    print("📅 " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("📅 " + datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"))
     print("🏗️  Following the Personal Intelligence Engine Blueprint")
 
     demo = IntelligenceEngineDemo()
@@ -843,7 +922,7 @@ async def main():
         print("\n🛑 Demo interrupted by user")
     except Exception as e:
         print(f"\n❌ Demo failed with error: {e}")
-        logger.error(f"Demo failed: {e}")
+        logger.error("Demo failed: %s", e)
     finally:
         print("\n🧹 Cleaning up demo environment...")
         # Cleanup code would go here

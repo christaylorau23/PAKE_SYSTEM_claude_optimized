@@ -26,7 +26,7 @@ Transform external information sources into structured, searchable, and trackabl
 3. **Before proceeding**, search existing vault using `search_notes` with relevant filters to avoid duplicating existing knowledge
 4. If similar content exists, focus on finding **complementary** or **more recent** information
 
-### Step 2: Content Extraction Phase  
+### Step 2: Content Extraction Phase
 **Purpose**: Extract clean, structured content with high fidelity
 
 **Instructions**:
@@ -59,7 +59,7 @@ Transform external information sources into structured, searchable, and trackabl
 
 #### Confidence Score Guidelines:
 - **0.9-1.0**: Peer-reviewed academic sources, official specifications, established authority
-- **0.7-0.9**: Reputable industry publications, well-known expert sources, recent documentation  
+- **0.7-0.9**: Reputable industry publications, well-known expert sources, recent documentation
 - **0.5-0.7**: Professional blogs, industry reports, established but not authoritative sources
 - **0.3-0.5**: Community sources, individual blogs, unverified but useful information
 - **0.1-0.3**: Experimental, unverified, or potentially unreliable sources
@@ -85,13 +85,13 @@ Transform external information sources into structured, searchable, and trackabl
    - Key Value: [Brief description of what makes this source valuable]
 
 2. **[Title 2]** (PAKE ID: xxx-xxx-xxx)
-   - Source: [URL] 
+   - Source: [URL]
    - Confidence: X.X
    - Key Value: [Brief description]
 
 3. **[Title 3]** (PAKE ID: xxx-xxx-xxx)
    - Source: [URL]
-   - Confidence: X.X  
+   - Confidence: X.X
    - Key Value: [Brief description]
 
 ### Processing Summary:
@@ -136,7 +136,7 @@ Using research tools to identify authoritative sources on context engineering...
 
 [Executes research and finds 3-4 top sources]
 
-**Step 2: Vault Check** 
+**Step 2: Vault Check**
 Searching existing vault for related content...
 `search_notes({"filters": {"tags": ["ai", "context", "engineering"]}})`
 
@@ -156,7 +156,7 @@ Creating structured SourceNotes...
 ## Quality Standards
 - **Completeness**: Each note must contain full, usable information
 - **Traceability**: Clear source attribution and extraction context
-- **Discoverability**: Proper tagging and summarization for future retrieval  
+- **Discoverability**: Proper tagging and summarization for future retrieval
 - **Accuracy**: High-fidelity content extraction with minimal errors
 - **Context**: Human notes explaining selection rationale and any processing decisions
 

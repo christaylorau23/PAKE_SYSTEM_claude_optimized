@@ -1,4 +1,4 @@
-"""Trend Analysis Service
+"""Trend Analysis Service.
 
 Provides comprehensive trend analysis including time series decomposition,
 seasonality detection, trend forecasting, and trend comparison across metrics.
@@ -8,7 +8,7 @@ import logging
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -62,27 +62,27 @@ class TrendAnalysisResult:
     trend_r_squared: float
     seasonality_type: SeasonalityType
     seasonality_strength: float
-    stationarity_test: dict[str, Any]
+    stationarity_test: Dict[str, Any]
     decomposition: dict[str, list[float]]
     confidence_interval: tuple[float, float]
     forecast_horizon: int
     forecast_values: list[float]
     forecast_confidence: list[tuple[float, float]]
     trend_breakpoints: list[int]
-    trend_segments: list[dict[str, Any]]
+    trend_segments: list[Dict[str, Any]]
 
 
 @dataclass
 class TrendComparison:
     """Comparison between multiple trends."""
 
-    metrics: list[str]
+    metrics: List[str]
     trend_directions: dict[str, str]
     trend_strengths: dict[str, float]
     correlation_matrix: np.ndarray
     synchronized_trends: list[tuple[str, str]]
     divergent_trends: list[tuple[str, str]]
-    trend_clusters: list[list[str]]
+    trend_clusters: list[List[str]]
 
 
 @dataclass
@@ -93,8 +93,8 @@ class TrendBreakpoint:
     breakpoint_date: datetime
     confidence: float
     change_magnitude: float
-    trend_before: dict[str, Any]
-    trend_after: dict[str, Any]
+    trend_before: Dict[str, Any]
+    trend_after: Dict[str, Any]
 
 
 class TrendAnalysisService:
@@ -102,7 +102,7 @@ class TrendAnalysisService:
     decomposition, forecasting, and comparison capabilities.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the trend analysis service."""
         self.trend_models_cache = {}
         self.decomposition_cache = {}
@@ -153,9 +153,12 @@ class TrendAnalysisService:
                 )
 
             if len(time_series) < self.config["min_data_points"]:
-                raise ValueError(
+                msg = (
                     f"Insufficient data: {len(time_series)} < "
-                    f"{self.config['min_data_points']}",
+                    f"{self.config['min_data_points']}"
+                )
+                raise ValueError(
+                    msg,
                 )
 
             # Convert to pandas DataFrame
@@ -237,7 +240,7 @@ class TrendAnalysisService:
             )
 
         except Exception as e:
-            logger.error(f"Trend analysis failed for {metric_name}: {e}")
+            logger.error("Trend analysis failed for %s: %s", metric_name, e)
             # Return empty result on error
             return TrendAnalysisResult(
                 metric_name=metric_name,
@@ -294,7 +297,7 @@ class TrendAnalysisService:
                         best_model = trend_type
 
                 except Exception as e:
-                    logger.debug(f"Trend model {trend_type} failed: {e}")
+                    logger.debug("Trend model %s failed: %s", trend_type, e)
                     continue
 
             # Determine trend direction and strength
@@ -326,7 +329,7 @@ class TrendAnalysisService:
             )
 
         except Exception as e:
-            logger.error(f"Trend type detection failed: {e}")
+            logger.error("Trend type detection failed: %s", e)
             return TrendType.STATIONARY, 0.0, "unknown", 0.0, 0.0
 
     async def _fit_linear_trend(self, values: np.ndarray) -> tuple[float, float]:
@@ -344,7 +347,7 @@ class TrendAnalysisService:
             return max(r_squared, 0), slope
 
         except Exception as e:
-            logger.error(f"Linear trend fitting failed: {e}")
+            logger.error("Linear trend fitting failed: %s", e)
             return 0.0, 0.0
 
     async def _fit_exponential_trend(self, values: np.ndarray) -> tuple[float, float]:
@@ -368,7 +371,7 @@ class TrendAnalysisService:
             return max(r_squared, 0), slope
 
         except Exception as e:
-            logger.error(f"Exponential trend fitting failed: {e}")
+            logger.error("Exponential trend fitting failed: %s", e)
             return 0.0, 0.0
 
     async def _fit_logarithmic_trend(self, values: np.ndarray) -> tuple[float, float]:
@@ -389,7 +392,7 @@ class TrendAnalysisService:
             return max(r_squared, 0), slope
 
         except Exception as e:
-            logger.error(f"Logarithmic trend fitting failed: {e}")
+            logger.error("Logarithmic trend fitting failed: %s", e)
             return 0.0, 0.0
 
     async def _fit_polynomial_trend(self, values: np.ndarray) -> tuple[float, float]:
@@ -412,7 +415,7 @@ class TrendAnalysisService:
             return max(r_squared, 0), slope
 
         except Exception as e:
-            logger.error(f"Polynomial trend fitting failed: {e}")
+            logger.error("Polynomial trend fitting failed: %s", e)
             return 0.0, 0.0
 
     async def _detect_seasonality(
@@ -464,7 +467,7 @@ class TrendAnalysisService:
             return seasonality_type, best_score
 
         except Exception as e:
-            logger.error(f"Seasonality detection failed: {e}")
+            logger.error("Seasonality detection failed: %s", e)
             return SeasonalityType.NONE, 0.0
 
     async def _calculate_seasonality_score(
@@ -498,12 +501,10 @@ class TrendAnalysisService:
             cv = seasonal_std / seasonal_mean
 
             # Normalize to 0-1 scale
-            score = min(cv, 1.0)
-
-            return score
+            return min(cv, 1.0)
 
         except Exception as e:
-            logger.error(f"Seasonality score calculation failed: {e}")
+            logger.error("Seasonality score calculation failed: %s", e)
             return 0.0
 
     async def _decompose_time_series(
@@ -551,7 +552,7 @@ class TrendAnalysisService:
                         "residual": decomposition.resid.fillna(0).tolist(),
                     }
                 except Exception as e:
-                    logger.warning(f"Seasonal decomposition failed: {e}")
+                    logger.warning("Seasonal decomposition failed: %s", e)
 
             # Fallback: simple trend extraction
             # Use moving average for trend
@@ -574,14 +575,14 @@ class TrendAnalysisService:
             }
 
         except Exception as e:
-            logger.error(f"Time series decomposition failed: {e}")
+            logger.error("Time series decomposition failed: %s", e)
             return {
                 "trend": values.tolist(),
                 "seasonal": [0.0] * n,
                 "residual": [0.0] * n,
             }
 
-    async def _test_stationarity(self, series: pd.Series) -> dict[str, Any]:
+    async def _test_stationarity(self, series: pd.Series) -> Dict[str, Any]:
         """Test for stationarity using Augmented Dickey-Fuller test."""
         try:
             values = series.values
@@ -603,13 +604,13 @@ class TrendAnalysisService:
             }
 
         except Exception as e:
-            logger.error(f"Stationarity test failed: {e}")
+            logger.error("Stationarity test failed: %s", e)
             return {"is_stationary": False, "p_value": 1.0, "test_statistic": 0.0}
 
     async def _detect_trend_breakpoints(
         self,
         series: pd.Series,
-    ) -> tuple[list[int], list[dict[str, Any]]]:
+    ) -> tuple[list[int], list[Dict[str, Any]]]:
         """Detect trend breakpoints in the time series."""
         try:
             values = series.values
@@ -695,7 +696,7 @@ class TrendAnalysisService:
             return breakpoints, segments
 
         except Exception as e:
-            logger.error(f"Breakpoint detection failed: {e}")
+            logger.error("Breakpoint detection failed: %s", e)
             return [], []
 
     async def _forecast_trend(
@@ -737,7 +738,7 @@ class TrendAnalysisService:
             return forecast_values, forecast_confidence
 
         except Exception as e:
-            logger.error(f"Trend forecasting failed: {e}")
+            logger.error("Trend forecasting failed: %s", e)
             return [], []
 
     async def _calculate_trend_confidence_interval(
@@ -769,7 +770,7 @@ class TrendAnalysisService:
             return (slope - margin, slope + margin)
 
         except Exception as e:
-            logger.error(f"Trend confidence interval calculation failed: {e}")
+            logger.error("Trend confidence interval calculation failed: %s", e)
             return (0.0, 0.0)
 
     async def _generate_mock_time_series(
@@ -783,7 +784,7 @@ class TrendAnalysisService:
             time_range_hours = self._parse_time_range(time_range)
 
             # Generate timestamps
-            end_time = datetime.now()
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
             # Generate data points (one per hour)
@@ -824,9 +825,9 @@ class TrendAnalysisService:
             return time_series
 
         except Exception as e:
-            logger.error(f"Mock time series generation failed: {e}")
+            logger.error("Mock time series generation failed: %s", e)
             # Return minimal data
-            return [(datetime.now(), 100.0)]
+            return [(datetime.now(UTC), 100.0)]
 
     def _parse_time_range(self, time_range: str) -> int:
         """Parse time range string to hours."""
@@ -913,7 +914,7 @@ class TrendAnalysisService:
             )
 
         except Exception as e:
-            logger.error(f"Trend comparison failed: {e}")
+            logger.error("Trend comparison failed: %s", e)
             return TrendComparison(
                 metrics=[],
                 trend_directions={},
@@ -944,23 +945,21 @@ class TrendAnalysisService:
             type_similarity = 1.0 if result_a.trend_type == result_b.trend_type else 0.5
 
             # Combined similarity
-            similarity = (
+            return (
                 direction_similarity * 0.5
                 + strength_similarity * 0.3
                 + type_similarity * 0.2
             )
 
-            return similarity
-
         except Exception as e:
-            logger.error(f"Trend similarity calculation failed: {e}")
+            logger.error("Trend similarity calculation failed: %s", e)
             return 0.0
 
     async def _cluster_trends(
         self,
         trend_results: list[TrendAnalysisResult],
         correlation_matrix: np.ndarray,
-    ) -> list[list[str]]:
+    ) -> list[List[str]]:
         """Cluster trends based on similarity."""
         try:
             if len(trend_results) < 2:
@@ -1003,15 +1002,15 @@ class TrendAnalysisService:
             return list(clusters.values())
 
         except Exception as e:
-            logger.error(f"Trend clustering failed: {e}")
+            logger.error("Trend clustering failed: %s", e)
             return [[result.metric_name] for result in trend_results]
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check the health of the trend analysis service."""
         try:
             # Test basic functionality
             test_data = [
-                (datetime.now() - timedelta(days=i), 10 + i + np.random.normal(0, 1))
+                (datetime.now(UTC) - timedelta(days=i), 10 + i + np.random.normal(0, 1))
                 for i in range(20, 0, -1)
             ]
 

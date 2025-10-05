@@ -128,6 +128,11 @@ daphne = "^4.0.0"
 geopy = "^2.4.1"
 pycountry = "^24.6.1"
 hvac = "^2.3.0"
+pytest-json-report = "^1.5.0"
+pyyaml = "^6.0.0"
+python-frontmatter = "^1.1.0"
+chromadb = "^1.1.0"
+libcst = "^1.8.5"
 
 [tool.poetry.group.trends.dependencies]
 # ===== LIVE TREND DATA FEED SYSTEM =====
@@ -153,12 +158,15 @@ pytest-json-report = "^1.5.0"
 pytest-watch = "^4.2.0"
 pytest-sugar = "^0.9.7"
 pytest-clarity = "^1.0.1"
+pytest-retry = "^1.0.0"
 fakeredis = "^2.20.1"
 factory-boy = "^3.3.0"
 faker = "^22.0.0"
 freezegun = "^1.4.0"
 responses = "^0.24.1"
 testcontainers = "^3.7.1"
+requests-mock = "^1.11.0"
+aioresponses = "^0.7.6"
 
 # ===== SECURITY TESTING =====
 safety = "^2.3.5"
@@ -270,21 +278,6 @@ known_first_party = ["src"]
 known_third_party = ["fastapi", "uvicorn", "pydantic", "sqlalchemy", "redis"]
 skip_glob = ["venv/*", ".venv/*", "mcp-env/*", "test_env/*", "security_backups/*", "backups/*"]
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503", "E501"]
-exclude = [
-    ".git",
-    "__pycache__",
-    "venv",
-    ".venv",
-    "mcp-env",
-    "test_env",
-    "security_backups",
-    "backups",
-    "build",
-    "dist",
-]
 
 [tool.mypy]
 python_version = "3.12"
@@ -358,15 +351,30 @@ indent-width = 4
 target-version = "py312"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't combine pycodestyle and Pyflakes' rules into a single
-# category. Instead, Ruff maintains separate categories for each tool.
+# PAKE System - Comprehensive Ruff Ruleset for CI/CD Pipeline
+# This ruleset is designed to directly counteract the root causes of F821 and DTZ bugs,
+# creating a direct link between the problem and its preventative solution.
+# Based on Table 4.1 from the Engineering Plan for PAKE System CI
+
 select = [
+    # Core Python rules
     "E4",   # pycodestyle errors
     "E7",   # pycodestyle errors
     "E9",   # pycodestyle errors
-    "F",    # pyflakes
+    "F",    # pyflakes (includes F821 - UndefinedName)
     "W",    # pycodestyle warnings
+
+    # Critical bug prevention rules from engineering plan
+    "F821", # UndefinedName - Directly prevents F821 errors by failing build
+    "DTZ003", # CallDatetimeNowWithoutTzinfo - Prevents naive datetime objects
+    "DTZ004", # CallDatetimeFromtimestampWithoutTzinfo - Prevents naive datetime objects
+    "DTZ005", # CallDatetimeUTCNow - Crucially forbids datetime.utcnow()
+    "G004", # LoggingFString - Discourages f-strings in logs, pushes to structlog
+
+    # Security rules (Bandit integration)
+    "S",    # flake8-bandit - All security rules integrated into main linting pipeline
+
+    # Code quality and maintainability
     "B",    # flake8-bugbear
     "C4",   # flake8-comprehensions
     "UP",   # pyupgrade
@@ -378,10 +386,8 @@ select = [
     "I",    # isort
     "N",    # pep8-naming
     "D",    # pydocstyle
-    "S",    # flake8-bandit
     "A",    # flake8-builtins
     "COM",  # flake8-commas
-    "DTZ",  # flake8-datetimez
     "EM",   # flake8-errmsg
     "EXE",  # flake8-executable
     "FA",   # flake8-future-annotations
@@ -393,15 +399,10 @@ select = [
     "T20",  # flake8-print
     "PYI",  # flake8-pyi
     "PT",   # flake8-pytest-style
-    "Q",    # flake8-quotes
     "RSE",  # flake8-raise
     "RET",  # flake8-return
     "SLF",  # flake8-self
     "SLOT", # flake8-slots
-    "TCH",  # flake8-type-checking
-    "TID",  # flake8-tidy-imports
-    "TCH",  # flake8-type-checking
-    "UP",   # pyupgrade
     "YTT",  # flake8-2020
 ]
 
@@ -424,6 +425,17 @@ ignore = [
     "TID252",
     # Disable COM812 to avoid conflicts with Ruff formatter
     "COM812",
+    # Disable ISC001 to avoid conflicts with Ruff formatter
+    "ISC001",
+    # Migrated from .flake8 file (only valid Ruff rules)
+    "E203",  # whitespace before ':'
+    "E501",  # line too long (handled by formatter)
+    "F401",  # imported but unused
+    "F841",  # local variable assigned but never used
+    "E402",  # module level import not at top of file
+    "W291",  # trailing whitespace
+    "W292",  # no newline at end of file
+    "W293",  # blank line contains whitespace
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -441,11 +453,20 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "PLR2004", # magic value
     "TID252",  # relative import
     "D",       # docstrings
+    "F401",    # imported but unused
+    "F811",    # redefined while unused
 ]
 # Allow magic values in scripts
 "scripts/**/*.py" = [
     "PLR2004", # magic value
     "D",       # docstrings
+    "F401",    # imported but unused
+    "F811",    # redefined while unused
+    "E402",    # module level import not at top of file
+]
+# Allow unused imports in __init__.py files
+"**/__init__.py" = [
+    "F401",    # imported but unused
 ]
 
 [tool.ruff.lint.isort]
@@ -478,11 +499,12 @@ skips = ["B101", "B601"]
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [
-    "-ra",  # Show extra test summary info for all except passed
-    "-v",   # Verbose output
+    "-vv",              # Maximum verbosity - show one line per test
+    "-rA",              # Show extra test summary for all outcomes
+    "--showlocals",     # Show local variables in tracebacks
+    "--tb=native",      # Use native Python traceback format
     "--strict-markers",  # Require all markers to be defined
     "--strict-config",   # Require all config options to be valid
-    "--tb=short",        # Short traceback format
     "--maxfail=5",       # Stop after 5 failures
     "--durations=10",    # Show 10 slowest tests
     "--cov=src",         # Coverage on src directory
@@ -492,6 +514,24 @@ addopts = [
     "--cov-fail-under=80",        # Fail if coverage below 80%
     "--asyncio-mode=auto",        # Auto-detect async tests
 ]
+
+# ===== LOGGING CONFIGURATION =====
+# Enhanced logging configuration for test runs
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# Log file configuration for test runs
+log_file = "logs/test_run.log"
+log_file_level = "DEBUG"
+log_file_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s (%(filename)s:%(lineno)s)"
+log_file_date_format = "%Y-%m-%d %H:%M:%S"
+
+# Auto-use fixtures for logging
+log_auto_indent = true
+log_capture = true
+log_level = "DEBUG"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]

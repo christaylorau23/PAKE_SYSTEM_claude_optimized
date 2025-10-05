@@ -1,4 +1,4 @@
-"""RateLimitController - Manages API rate limiting across all platforms
+"""RateLimitController - Manages API rate limiting across all platforms.
 
 Implements intelligent rate limiting, cost optimization, and graceful degradation.
 """
@@ -13,7 +13,7 @@ from typing import Any
 
 @dataclass
 class RateLimit:
-    """Rate limit configuration for an API"""
+    """Rate limit configuration for an API."""
 
     requests_per_minute: int
     requests_per_hour: int
@@ -24,7 +24,7 @@ class RateLimit:
 
 @dataclass
 class RequestHistory:
-    """Track request history for rate limiting"""
+    """Track request history for rate limiting."""
 
     timestamps: deque = field(default_factory=deque)
     costs: deque = field(default_factory=deque)
@@ -33,7 +33,7 @@ class RequestHistory:
 
 
 class RateLimitController:
-    """Advanced rate limiting controller with cost optimization
+    """Advanced rate limiting controller with cost optimization.
 
     Features:
     - Per-API rate limiting
@@ -43,7 +43,7 @@ class RateLimitController:
     - Priority-based request queuing
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
         # Rate limit configurations
@@ -90,7 +90,7 @@ class RateLimitController:
         self.processing_requests = set()
 
     async def can_make_request(self, api_name: str, priority: int = 1) -> bool:
-        """Check if a request can be made considering rate limits and budget
+        """Check if a request can be made considering rate limits and budget.
 
         Args:
             api_name: Name of the API
@@ -100,7 +100,7 @@ class RateLimitController:
             bool: True if request can be made
         """
         if api_name not in self.rate_limits:
-            self.logger.warning(f"Unknown API: {api_name}")
+            self.logger.warning("Unknown API: %s", api_name)
             return False
 
         rate_limit = self.rate_limits[api_name]
@@ -123,7 +123,7 @@ class RateLimitController:
         rate_limit: RateLimit,
         now: float,
     ) -> bool:
-        """Check if rate limits are satisfied"""
+        """Check if rate limits are satisfied."""
         # Clean old timestamps
         minute_ago = now - 60
         hour_ago = now - 3600
@@ -151,7 +151,7 @@ class RateLimitController:
         return True
 
     def _check_budget_constraints(self, cost_per_request: float) -> bool:
-        """Check if request fits within budget constraints"""
+        """Check if request fits within budget constraints."""
         if cost_per_request == 0.0:
             return True
 
@@ -175,22 +175,25 @@ class RateLimitController:
         # Check if new request would exceed budget
         if hourly_spending + cost_per_request > self.hourly_budget:
             self.logger.warning(
-                f"Request would exceed hourly budget: ${hourly_spending:.2f} + ${
-                    cost_per_request:.2f} > ${self.hourly_budget:.2f}",
+                # TODO: Fix unexpected colon - "Request would exceed hourly budget: $%.2f + $%.2f > $%.2f", hourly_spending,
+                cost_per_request,
+                self.hourly_budget,
             )
             return False
 
         if daily_spending + cost_per_request > self.daily_budget:
             self.logger.warning(
-                f"Request would exceed daily budget: ${daily_spending:.2f} + ${
-                    cost_per_request:.2f} > ${self.daily_budget:.2f}",
+                "Request would exceed daily budget: $%s + $%s > $%s",
+                daily_spending,
+                f"{cost_per_request:.2f}",
+                self.daily_budget,
             )
             return False
 
         return True
 
     async def record_request(self, api_name: str, success: bool = True) -> None:
-        """Record a completed request for tracking"""
+        """Record a completed request for tracking."""
         if api_name not in self.rate_limits:
             return
 
@@ -204,12 +207,12 @@ class RateLimitController:
         history.total_cost += rate_limit.cost_per_request
 
         if success:
-            self.logger.debug(f"Recorded successful request for {api_name}")
+            self.logger.debug("Recorded successful request for %s", api_name)
         else:
-            self.logger.warning(f"Recorded failed request for {api_name}")
+            self.logger.warning("Recorded failed request for %s", api_name)
 
     async def get_remaining_quota(self, api_name: str) -> dict[str, int]:
-        """Get remaining quota for an API"""
+        """Get remaining quota for an API."""
         if api_name not in self.rate_limits:
             return {}
 
@@ -231,8 +234,8 @@ class RateLimitController:
             "day_remaining": max(0, rate_limit.requests_per_day - day_count),
         }
 
-    async def get_cost_summary(self) -> dict[str, Any]:
-        """Get cost summary across all APIs"""
+    async def get_cost_summary(self) -> Dict[str, Any]:
+        """Get cost summary across all APIs."""
         now = time.time()
         hour_ago = now - 3600
         day_ago = now - 86400
@@ -272,7 +275,7 @@ class RateLimitController:
         }
 
     async def calculate_backoff_time(self, api_name: str) -> float:
-        """Calculate intelligent backoff time for rate-limited API"""
+        """Calculate intelligent backoff time for rate-limited API."""
         if api_name not in self.rate_limits:
             return 60.0
 
@@ -294,9 +297,9 @@ class RateLimitController:
 
     async def optimize_request_scheduling(
         self,
-        api_requests: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Optimize request scheduling based on rate limits and costs
+        api_requests: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
+        """Optimize request scheduling based on rate limits and costs.
 
         Args:
             api_requests: List of request specifications with 'api_name', 'priority', etc.
@@ -329,8 +332,8 @@ class RateLimitController:
 
         return optimized_schedule
 
-    def get_rate_limit_status(self) -> dict[str, Any]:
-        """Get comprehensive rate limit status"""
+    def get_rate_limit_status(self) -> Dict[str, Any]:
+        """Get comprehensive rate limit status."""
         status = {}
 
         for api_name, rate_limit in self.rate_limits.items():
@@ -354,7 +357,7 @@ class RateLimitController:
         return status
 
     def _calculate_api_health(self, api_name: str) -> float:
-        """Calculate health score for API (0.0 to 1.0)"""
+        """Calculate health score for API (0.0 to 1.0)."""
         if api_name not in self.request_history:
             return 1.0
 
@@ -376,16 +379,18 @@ class RateLimitController:
             return 0.5
         return 0.2
 
-    async def set_budget(self, hourly_budget: float, daily_budget: float):
-        """Update budget constraints"""
+    async def set_budget(self) -> None:
+        """Update budget constraints."""
         self.hourly_budget = hourly_budget
         self.daily_budget = daily_budget
         self.logger.info(
-            f"Updated budgets: hourly=${hourly_budget:.2f}, daily=${daily_budget:.2f}",
+            "Updated budgets: hourly=$%s, daily=$%s",
+            f"{hourly_budget:.2f}",
+            daily_budget,
         )
 
-    async def emergency_throttle(self, api_name: str, reduction_factor: float = 0.5):
-        """Emergency throttle for specific API"""
+    async def emergency_throttle(self) -> None:
+        """Emergency throttle for specific API."""
         if api_name in self.rate_limits:
             rate_limit = self.rate_limits[api_name]
             self.rate_limits[api_name] = RateLimit(
@@ -398,5 +403,7 @@ class RateLimitController:
                 burst_allowance=int(rate_limit.burst_allowance * reduction_factor),
             )
             self.logger.warning(
-                f"Emergency throttle applied to {api_name}: {reduction_factor:.1%} reduction",
+                "Emergency throttle applied to %s: %s reduction",
+                api_name,
+                f"{reduction_factor:.1%}",
             )

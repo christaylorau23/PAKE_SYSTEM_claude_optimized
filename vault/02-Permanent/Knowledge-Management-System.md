@@ -61,7 +61,7 @@ vault/
 ├── 00-Inbox/          # New, unprocessed items
 ├── 01-Daily/           # Daily notes and logs
 ├── 02-Permanent/       # Verified, high-confidence knowledge
-├── 03-Projects/        # Active projects and initiatives  
+├── 03-Projects/        # Active projects and initiatives
 ├── 04-Areas/           # Ongoing areas of responsibility
 ├── 05-Resources/       # Reference materials and tools
 ├── 06-Archives/        # Completed or obsolete items

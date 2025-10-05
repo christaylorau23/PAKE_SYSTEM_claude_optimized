@@ -1,0 +1,343 @@
+name: Frontend Secure Build Process
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/**'
+      - 'src/bridge/**'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/frontend-secure-build.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/**'
+      - 'src/bridge/**'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/frontend-secure-build.yml'
+  workflow_dispatch: # Allows manual triggering
+
+env:
+  NODE_VERSION: '20.11.0'
+  YARN_VERSION: '1.22.22'
+  FRONTEND_BUILD_TIMEOUT: '600' # 10 minutes
+
+jobs:
+  validate-lockfile:
+    name: 🔒 Validate Lock File Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn@${{ env.YARN_VERSION }}
+          yarn --version
+
+      - name: Validate yarn.lock exists
+        run: |
+          if [ ! -f "yarn.lock" ]; then
+            echo "❌ yarn.lock file is missing!"
+            echo "Please run 'yarn install' to generate the lock file."
+            exit 1
+          fi
+          echo "✅ yarn.lock file found"
+
+      - name: Validate lock file integrity
+        run: |
+          echo "🔍 Validating lock file integrity..."
+          yarn install --frozen-lockfile --check-files
+          echo "✅ Lock file integrity validated"
+
+      - name: Check for lock file changes
+        run: |
+          if git diff --name-only HEAD~1 | grep -q "yarn.lock"; then
+            echo "📝 yarn.lock has been modified"
+            echo "Please ensure all dependency changes are properly committed"
+          else
+            echo "✅ No unexpected lock file changes"
+          fi
+
+  frontend-build:
+    name: 🏗️ Frontend Build
+    runs-on: ubuntu-latest
+    needs: validate-lockfile
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn@${{ env.YARN_VERSION }}
+          yarn --version
+
+      - name: Install dependencies with frozen lockfile
+        run: |
+          echo "🔒 Installing dependencies with frozen lockfile..."
+          yarn install --frozen-lockfile --network-timeout 300000
+          echo "✅ Dependencies installed successfully"
+
+      - name: Verify dependency integrity
+        run: |
+          echo "🔍 Verifying dependency integrity..."
+          yarn check --integrity
+          echo "✅ Dependency integrity verified"
+
+      - name: Run TypeScript type checking
+        run: |
+          echo "🔍 Running TypeScript type checking..."
+          cd frontend
+          yarn type-check
+          echo "✅ TypeScript type checking passed"
+
+      - name: Run ESLint
+        run: |
+          echo "🔍 Running ESLint..."
+          cd frontend
+          yarn lint
+          echo "✅ ESLint passed"
+
+      - name: Build frontend
+        run: |
+          echo "🏗️ Building frontend..."
+          cd frontend
+          yarn build
+          echo "✅ Frontend build completed"
+
+      - name: Verify build artifacts
+        run: |
+          echo "🔍 Verifying build artifacts..."
+          cd frontend
+          if [ -d ".next" ]; then
+            echo "✅ Next.js build artifacts found"
+            ls -la .next/
+          else
+            echo "❌ Build artifacts not found"
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-artifacts
+          path: frontend/.next/
+          retention-days: 7
+
+  bridge-build:
+    name: 🌉 Bridge Build
+    runs-on: ubuntu-latest
+    needs: validate-lockfile
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn@${{ env.YARN_VERSION }}
+          yarn --version
+
+      - name: Install dependencies with frozen lockfile
+        run: |
+          echo "🔒 Installing dependencies with frozen lockfile..."
+          yarn install --frozen-lockfile --network-timeout 300000
+          echo "✅ Dependencies installed successfully"
+
+      - name: Build TypeScript bridge
+        run: |
+          echo "🏗️ Building TypeScript bridge..."
+          cd src/bridge
+          yarn build
+          echo "✅ Bridge build completed"
+
+      - name: Verify bridge artifacts
+        run: |
+          echo "🔍 Verifying bridge artifacts..."
+          cd src/bridge
+          if [ -f "obsidian_bridge.js" ] && [ -f "obsidian_bridge.d.ts" ]; then
+            echo "✅ Bridge artifacts found"
+            ls -la *.js *.d.ts
+          else
+            echo "❌ Bridge artifacts not found"
+            exit 1
+          fi
+
+      - name: Upload bridge artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-build-artifacts
+          path: src/bridge/*.js
+          retention-days: 7
+
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    needs: validate-lockfile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn@${{ env.YARN_VERSION }}
+          yarn --version
+
+      - name: Install dependencies with frozen lockfile
+        run: |
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Run security audit
+        run: |
+          echo "🔒 Running security audit..."
+          yarn audit --level moderate
+          echo "✅ Security audit completed"
+
+      - name: Check for known vulnerabilities
+        run: |
+          echo "🔍 Checking for known vulnerabilities..."
+          yarn audit --json > audit-results.json || true
+          if [ -f "audit-results.json" ]; then
+            vulnerabilities=$(cat audit-results.json | jq '.metadata.vulnerabilities.total // 0')
+            if [ "$vulnerabilities" -gt 0 ]; then
+              echo "⚠️ Found $vulnerabilities vulnerabilities"
+              cat audit-results.json | jq '.advisories'
+            else
+              echo "✅ No vulnerabilities found"
+            fi
+          fi
+
+  reproducible-build-test:
+    name: 🔄 Reproducible Build Test
+    runs-on: ubuntu-latest
+    needs: [frontend-build, bridge-build]
+    strategy:
+      matrix:
+        node-version: ['20.11.0', '20.12.0']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn@${{ env.YARN_VERSION }}
+          yarn --version
+
+      - name: Install dependencies with frozen lockfile
+        run: |
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          yarn build
+
+      - name: Build bridge
+        run: |
+          cd src/bridge
+          yarn build
+
+      - name: Generate build hash
+        run: |
+          echo "🔍 Generating build hash for reproducibility test..."
+          find frontend/.next src/bridge -type f -name "*.js" -exec md5sum {} \; | sort > build-hash-${{ matrix.node-version }}.txt
+          echo "✅ Build hash generated for Node ${{ matrix.node-version }}"
+
+      - name: Upload build hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-hash-node-${{ matrix.node-version }}
+          path: build-hash-${{ matrix.node-version }}.txt
+          retention-days: 7
+
+  build-summary:
+    name: 📊 Build Summary
+    runs-on: ubuntu-latest
+    needs: [validate-lockfile, frontend-build, bridge-build, security-audit, reproducible-build-test]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate build summary
+        run: |
+          echo "# Frontend Secure Build Summary" > build-summary.md
+          echo "" >> build-summary.md
+          echo "## Build Status" >> build-summary.md
+          echo "- Lock File Validation: ${{ needs.validate-lockfile.result }}" >> build-summary.md
+          echo "- Frontend Build: ${{ needs.frontend-build.result }}" >> build-summary.md
+          echo "- Bridge Build: ${{ needs.bridge-build.result }}" >> build-summary.md
+          echo "- Security Audit: ${{ needs.security-audit.result }}" >> build-summary.md
+          echo "- Reproducible Build Test: ${{ needs.reproducible-build-test.result }}" >> build-summary.md
+          echo "" >> build-summary.md
+          echo "## Security Features" >> build-summary.md
+          echo "- ✅ Frozen lockfile enforcement" >> build-summary.md
+          echo "- ✅ Dependency integrity verification" >> build-summary.md
+          echo "- ✅ Security audit integration" >> build-summary.md
+          echo "- ✅ Reproducible builds across Node versions" >> build-summary.md
+          echo "- ✅ Build artifact verification" >> build-summary.md
+          echo "" >> build-summary.md
+          echo "## Build Artifacts" >> build-summary.md
+          echo "- Frontend build artifacts uploaded" >> build-summary.md
+          echo "- Bridge build artifacts uploaded" >> build-summary.md
+          echo "- Build hashes generated for reproducibility" >> build-summary.md
+
+      - name: Upload build summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-summary
+          path: build-summary.md
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('build-summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

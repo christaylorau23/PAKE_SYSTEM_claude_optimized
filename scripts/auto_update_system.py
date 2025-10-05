@@ -24,9 +24,9 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import psutil
 
@@ -68,7 +68,7 @@ class UpdatePackage:
 class AutoUpdateSystem:
     """Comprehensive auto-update system for PAKE"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.system_path = Path("D:/Projects/PAKE_SYSTEM")
         self.backup_path = Path("backups/system_backups")
         self.temp_path = Path("temp/updates")
@@ -82,7 +82,8 @@ class AutoUpdateSystem:
         self.current_version = self.get_current_version()
 
         logger.info(
-            f"Auto-update system initialized - Current version: {self.current_version}",
+            "Auto-update system initialized - Current version: %s",
+            self.current_version,
         )
 
     def load_config(self) -> dict[str, Any]:
@@ -111,19 +112,19 @@ class AutoUpdateSystem:
                     user_config = json.load(f)
                 default_config.update(user_config)
             except Exception as e:
-                logger.warning(f"Could not load config, using defaults: {e}")
+                logger.warning("Could not load config, using defaults: %s", e)
 
         # Save config back to ensure all defaults are present
         self.save_config(default_config)
         return default_config
 
-    def save_config(self, config: dict[str, Any]):
+    def save_config(self, config: dict[str, Any]) -> None:
         """Save configuration to file"""
         try:
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2, default=str)
         except Exception as e:
-            logger.error(f"Could not save config: {e}")
+            logger.error("Could not save config: %s", e)
 
     def get_current_version(self) -> str:
         """Get current system version"""
@@ -132,7 +133,7 @@ class AutoUpdateSystem:
             try:
                 return version_file.read_text().strip()
             except Exception as e:
-                logger.warning(f"Could not read version file: {e}")
+                logger.warning("Could not read version file: %s", e)
 
         # Generate version based on last modification time
         try:
@@ -142,14 +143,16 @@ class AutoUpdateSystem:
                     mod_time = file_path.stat().st_mtime
                     latest_mod = max(latest_mod, mod_time)
 
-            version = datetime.fromtimestamp(latest_mod).strftime("%Y.%m.%d.%H%M")
+            version = datetime.fromtimestamp(latest_mod, tz=UTC).strftime(
+                "%Y.%m.%d.%H%M"
+            )
 
             # Save version for future reference
             version_file.write_text(version)
             return version
 
         except Exception as e:
-            logger.error(f"Could not determine version: {e}")
+            logger.error("Could not determine version: %s", e)
             return "unknown"
 
     def calculate_file_checksum(self, file_path: Path) -> str:
@@ -161,7 +164,7 @@ class AutoUpdateSystem:
                     sha256_hash.update(byte_block)
             return sha256_hash.hexdigest()
         except Exception as e:
-            logger.error(f"Could not calculate checksum for {file_path}: {e}")
+            logger.error("Could not calculate checksum for %s: %s", file_path, e)
             return ""
 
     def scan_system_components(self) -> list[ComponentVersion]:
@@ -211,7 +214,7 @@ class AutoUpdateSystem:
                         components.append(component)
 
                     except Exception as e:
-                        logger.error(f"Error scanning component {file_path}: {e}")
+                        logger.error("Error scanning component %s: %s", file_path, e)
 
         return components
 
@@ -229,18 +232,18 @@ class AutoUpdateSystem:
             for component in components:
                 file_path = Path(component.file_path)
                 if file_path.exists():
-                    mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
-                    if mod_time > datetime.now() - timedelta(hours=1):
+                    mod_time = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
+                    if mod_time > datetime.now(UTC) - timedelta(hours=1):
                         # Mark as having updates if modified recently
-                        component.latest_version = datetime.now().strftime(
+                        component.latest_version = datetime.now(UTC).strftime(
                             "%Y.%m.%d.%H%M",
                         )
                         updates_available.append(component)
 
             if updates_available:
                 update_package = UpdatePackage(
-                    version=datetime.now().strftime("%Y.%m.%d.%H%M"),
-                    release_date=datetime.now(),
+                    version=datetime.now(UTC).strftime("%Y.%m.%d.%H%M"),
+                    release_date=datetime.now(UTC),
                     components=updates_available,
                     changelog=[
                         "System optimization improvements",
@@ -250,19 +253,19 @@ class AutoUpdateSystem:
                     ],
                 )
 
-                logger.info(f"Updates available: {len(updates_available)} components")
+                logger.info("Updates available: %s components", len(updates_available))
                 return update_package
 
             logger.info("No updates available")
             return None
 
         except Exception as e:
-            logger.error(f"Error checking for updates: {e}")
+            logger.error("Error checking for updates: %s", e)
             return None
 
     def create_backup(self, backup_name: str) -> bool:
         """Create system backup before update"""
-        logger.info(f"Creating backup: {backup_name}")
+        logger.info("Creating backup: %s", backup_name)
 
         try:
             backup_dir = self.backup_path / backup_name
@@ -289,7 +292,7 @@ class AutoUpdateSystem:
             # Save backup metadata
             backup_info = {
                 "backup_name": backup_name,
-                "creation_time": datetime.now().isoformat(),
+                "creation_time": datetime.now(UTC).isoformat(),
                 "system_version": self.current_version,
                 "backup_size": sum(
                     f.stat().st_size for f in backup_dir.rglob("*") if f.is_file()
@@ -299,16 +302,16 @@ class AutoUpdateSystem:
             with open(backup_dir / "backup_info.json", "w") as f:
                 json.dump(backup_info, f, indent=2)
 
-            logger.info(f"Backup created successfully: {backup_dir}")
+            logger.info("Backup created successfully: %s", backup_dir)
             return True
 
         except Exception as e:
-            logger.error(f"Error creating backup: {e}")
+            logger.error("Error creating backup: %s", e)
             return False
 
     def apply_update(self, update_package: UpdatePackage) -> bool:
         """Apply update package to system"""
-        logger.info(f"Applying update package: {update_package.version}")
+        logger.info("Applying update package: %s", update_package.version)
 
         try:
             # Create backup first
@@ -326,24 +329,26 @@ class AutoUpdateSystem:
             success_count = 0
             for component in update_package.components:
                 try:
-                    logger.info(f"Updating component: {component.name}")
+                    logger.info("Updating component: %s", component.name)
 
                     # In a real implementation, this would download and apply updates
                     # For simulation, we'll just update the version info
                     file_path = Path(component.file_path)
                     if file_path.exists():
                         # Add update timestamp to file
-                        update_comment = f"\n# Updated: {datetime.now().isoformat()}\n"
+                        update_comment = (
+                            f"\n# Updated: {datetime.now(UTC).isoformat()}\n"
+                        )
 
                         if file_path.suffix == ".py":
                             with open(file_path, "a") as f:
                                 f.write(update_comment)
 
                         success_count += 1
-                        logger.info(f"Component {component.name} updated successfully")
+                        logger.info("Component %s updated successfully", component.name)
 
                 except Exception as e:
-                    logger.error(f"Error updating component {component.name}: {e}")
+                    logger.error("Error updating component %s: %s", component.name, e)
 
             # Update version file
             version_file = self.system_path / "VERSION"
@@ -352,7 +357,7 @@ class AutoUpdateSystem:
             # Save update log
             update_log = {
                 "update_version": update_package.version,
-                "update_time": datetime.now().isoformat(),
+                "update_time": datetime.now(UTC).isoformat(),
                 "components_updated": success_count,
                 "total_components": len(update_package.components),
                 "backup_name": backup_name,
@@ -379,7 +384,7 @@ class AutoUpdateSystem:
             return False
 
         except Exception as e:
-            logger.error(f"Error applying update: {e}")
+            logger.error("Error applying update: %s", e)
             return False
 
     def verify_update(self, update_package: UpdatePackage) -> bool:
@@ -396,9 +401,9 @@ class AutoUpdateSystem:
             current_version = version_file.read_text().strip()
             if current_version != update_package.version:
                 logger.error(
-                    f"Version mismatch: expected {update_package.version}, got {
-                        current_version
-                    }",
+                    "Version mismatch: expected %s, got %s",
+                    update_package.version,
+                    current_version,
                 )
                 return False
 
@@ -411,17 +416,17 @@ class AutoUpdateSystem:
             return True
 
         except Exception as e:
-            logger.error(f"Error verifying update: {e}")
+            logger.error("Error verifying update: %s", e)
             return False
 
     def rollback_update(self, backup_name: str) -> bool:
         """Rollback to previous version using backup"""
-        logger.info(f"Rolling back update using backup: {backup_name}")
+        logger.info("Rolling back update using backup: %s", backup_name)
 
         try:
             backup_dir = self.backup_path / backup_name
             if not backup_dir.exists():
-                logger.error(f"Backup directory not found: {backup_dir}")
+                logger.error("Backup directory not found: %s", backup_dir)
                 return False
 
             # Stop services
@@ -454,10 +459,10 @@ class AutoUpdateSystem:
             return False
 
         except Exception as e:
-            logger.error(f"Error during rollback: {e}")
+            logger.error("Error during rollback: %s", e)
             return False
 
-    def stop_services(self):
+    def stop_services(self) -> None:
         """Stop PAKE services"""
         try:
             # Run stop script
@@ -485,9 +490,9 @@ class AutoUpdateSystem:
                     continue
 
         except Exception as e:
-            logger.error(f"Error stopping services: {e}")
+            logger.error("Error stopping services: %s", e)
 
-    def start_services(self):
+    def start_services(self) -> None:
         """Start PAKE services"""
         try:
             start_script = self.system_path / "start_pake_automation.ps1"
@@ -498,7 +503,7 @@ class AutoUpdateSystem:
                 )
                 time.sleep(10)  # Give services time to start
         except Exception as e:
-            logger.error(f"Error starting services: {e}")
+            logger.error("Error starting services: %s", e)
 
     def health_check(self) -> bool:
         """Perform system health check"""
@@ -512,7 +517,7 @@ class AutoUpdateSystem:
 
             for file_path in key_files:
                 if not (self.system_path / file_path).exists():
-                    logger.error(f"Key file missing: {file_path}")
+                    logger.error("Key file missing: %s", file_path)
                     return False
 
             # Check if services are running (wait up to 30 seconds)
@@ -539,14 +544,14 @@ class AutoUpdateSystem:
             return True  # Files are there, services might need manual start
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.error("Health check failed: %s", e)
             return False
 
-    def send_notification(self, message: str):
+    def send_notification(self, message: str) -> None:
         """Send update notification"""
         try:
             # Log notification
-            logger.info(f"NOTIFICATION: {message}")
+            logger.info("NOTIFICATION: %s", message)
 
             # In a real implementation, this would send email/SMS/etc
             # For now, just create a notification file
@@ -556,16 +561,16 @@ class AutoUpdateSystem:
             notification_file = (
                 notifications_dir / f"notification_{int(time.time())}.txt"
             )
-            notification_file.write_text(f"{datetime.now().isoformat()}: {message}")
+            notification_file.write_text(f"{datetime.now(UTC).isoformat()}: {message}")
 
         except Exception as e:
-            logger.error(f"Error sending notification: {e}")
+            logger.error("Error sending notification: %s", e)
 
-    def cleanup_old_backups(self):
+    def cleanup_old_backups(self) -> None:
         """Clean up old backups based on retention policy"""
         try:
             retention_days = self.config.get("backup_retention_days", 30)
-            cutoff_date = datetime.now() - timedelta(days=retention_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=retention_days)
 
             for backup_dir in self.backup_path.iterdir():
                 if backup_dir.is_dir():
@@ -580,18 +585,20 @@ class AutoUpdateSystem:
                             )
                             if creation_time < cutoff_date:
                                 shutil.rmtree(backup_dir)
-                                logger.info(f"Removed old backup: {backup_dir.name}")
+                                logger.info("Removed old backup: %s", backup_dir.name)
 
                         except Exception as e:
-                            logger.error(f"Error processing backup {backup_dir}: {e}")
+                            logger.error(
+                                "Error processing backup %s: %s", backup_dir, e
+                            )
 
         except Exception as e:
-            logger.error(f"Error cleaning up backups: {e}")
+            logger.error("Error cleaning up backups: %s", e)
 
-    def schedule_update_check(self):
+    def schedule_update_check(self) -> None:
         """Schedule periodic update checks"""
 
-        def update_checker():
+        def update_checker(self) -> None:
             while True:
                 try:
                     if self.config.get("auto_update_enabled", True):
@@ -599,15 +606,23 @@ class AutoUpdateSystem:
 
                         if update_package:
                             # Check if we're in update window
-                            current_time = datetime.now().time()
-                            start_time = datetime.strptime(
-                                self.config.get("update_window_start", "02:00"),
-                                "%H:%M",
-                            ).time()
-                            end_time = datetime.strptime(
-                                self.config.get("update_window_end", "04:00"),
-                                "%H:%M",
-                            ).time()
+                            current_time = datetime.now(UTC).time()
+                            start_time = (
+                                datetime.strptime(
+                                    self.config.get("update_window_start", "02:00"),
+                                    "%H:%M",
+                                )
+                                .replace(tzinfo=UTC)
+                                .time()
+                            )
+                            end_time = (
+                                datetime.strptime(
+                                    self.config.get("update_window_end", "04:00"),
+                                    "%H:%M",
+                                )
+                                .replace(tzinfo=UTC)
+                                .time()
+                            )
 
                             in_window = start_time <= current_time <= end_time
                             is_critical = any(
@@ -640,7 +655,7 @@ class AutoUpdateSystem:
                     time.sleep(interval_hours * 3600)
 
                 except Exception as e:
-                    logger.error(f"Error in update checker: {e}")
+                    logger.error("Error in update checker: %s", e)
                     time.sleep(3600)  # Wait 1 hour before retrying
 
         # Start update checker thread
@@ -648,7 +663,7 @@ class AutoUpdateSystem:
         update_thread.start()
         logger.info("Update checker scheduled")
 
-    def run_manual_update(self):
+    def run_manual_update(self) -> None:
         """Run manual update check and installation"""
         logger.info("Running manual update check...")
 
@@ -685,12 +700,12 @@ class AutoUpdateSystem:
             return True
 
         except Exception as e:
-            logger.error(f"Error in manual update: {e}")
+            logger.error("Error in manual update: %s", e)
             print(f"❌ Update error: {e}")
             return False
 
 
-async def main():
+async def main(self) -> None:
     """Main auto-update system entry point"""
     try:
         print("🔄 PAKE Auto-Update System")
@@ -714,7 +729,7 @@ async def main():
             sys.exit(0 if success else 1)
 
     except Exception as e:
-        logger.error(f"Fatal error in auto-update system: {e}")
+        logger.error("Fatal error in auto-update system: %s", e)
         print(f"❌ Fatal error: {e}")
         sys.exit(1)
 

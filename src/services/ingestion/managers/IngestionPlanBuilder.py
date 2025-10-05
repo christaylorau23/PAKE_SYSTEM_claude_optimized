@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Ingestion Plan Builder
-Single Responsibility: Building and validating ingestion plans
+Single Responsibility: Building and validating ingestion plans.
 """
 
 import uuid
@@ -19,7 +19,7 @@ from ..interfaces import (
 
 @dataclass
 class PlanBuilderConfig:
-    """Configuration for plan builder"""
+    """Configuration for plan builder."""
 
     max_sources_per_plan: int = 10
     default_timeout: int = 300
@@ -28,26 +28,26 @@ class PlanBuilderConfig:
 
 
 class IngestionPlanBuilder(IngestionPlanBuilderInterface):
-    """Single Responsibility: Building and validating ingestion plans"""
+    """Single Responsibility: Building and validating ingestion plans."""
 
-    def __init__(self, config: PlanBuilderConfig | None = None):
+    def __init__(self) -> None:
         self.config = config or PlanBuilderConfig()
 
     def build_plan(
         self,
         topic: str,
-        source_configs: list[dict[str, Any]],
-        user_preferences: dict[str, Any] | None = None,
+        source_configs: list[Dict[str, Any]],
+        user_preferences: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
-        """Build a comprehensive ingestion plan from source configurations"""
+        """Build a comprehensive ingestion plan from source configurations."""
         # Validate inputs
         if not topic or not source_configs:
-            raise ValueError("Topic and source configurations are required")
+            msg = "Topic and source configurations are required"
+            raise ValueError(msg)
 
         if len(source_configs) > self.config.max_sources_per_plan:
-            raise ValueError(
-                f"Too many sources (max: {self.config.max_sources_per_plan})"
-            )
+            msg = f"Too many sources (max: {self.config.max_sources_per_plan})"
+            raise ValueError(msg)
 
         # Build sources
         sources = []
@@ -78,8 +78,8 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
 
         return plan
 
-    def _build_source(self, config: dict[str, Any]) -> IngestionSource:
-        """Build a single ingestion source from configuration"""
+    def _build_source(self, config: Dict[str, Any]) -> IngestionSource:
+        """Build a single ingestion source from configuration."""
         # Extract required fields
         source_type = config.get("source_type", "web")
         query_parameters = config.get("query_parameters", {})
@@ -93,7 +93,8 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
         try:
             SourceType(source_type)
         except ValueError:
-            raise ValueError(f"Invalid source type: {source_type}")
+            msg = f"Invalid source type: {source_type}"
+            raise ValueError(msg)
 
         return IngestionSource(
             source_type=source_type,
@@ -106,7 +107,7 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
         )
 
     def _calculate_duration(self, sources: list[IngestionSource]) -> int:
-        """Calculate estimated total duration for all sources"""
+        """Calculate estimated total duration for all sources."""
         # Base duration per source type (seconds)
         duration_map = {
             "web": 30,
@@ -127,41 +128,41 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
         return total_duration
 
     def _validate_plan(self, plan: IngestionPlan) -> None:
-        """Validate the ingestion plan"""
+        """Validate the ingestion plan."""
         # Check plan constraints
         if plan.total_sources == 0:
-            raise ValueError("Plan must have at least one source")
+            msg = "Plan must have at least one source"
+            raise ValueError(msg)
 
         if plan.estimated_total_results == 0:
-            raise ValueError("Plan must have estimated results > 0")
+            msg = "Plan must have estimated results > 0"
+            raise ValueError(msg)
 
         if plan.estimated_duration <= 0:
-            raise ValueError("Plan must have positive estimated duration")
+            msg = "Plan must have positive estimated duration"
+            raise ValueError(msg)
 
         # Check source constraints
         for source in plan.sources:
             if not source.query_parameters:
-                raise ValueError(
-                    f"Source {source.source_id} must have query parameters"
-                )
+                msg = f"Source {source.source_id} must have query parameters"
+                raise ValueError(msg)
 
             if source.estimated_results <= 0:
-                raise ValueError(
-                    f"Source {source.source_id} must have estimated results > 0"
-                )
+                msg = f"Source {source.source_id} must have estimated results > 0"
+                raise ValueError(msg)
 
             if source.timeout <= 0:
-                raise ValueError(
-                    f"Source {source.source_id} must have positive timeout"
-                )
+                msg = f"Source {source.source_id} must have positive timeout"
+                raise ValueError(msg)
 
     def optimize_plan(self, plan: IngestionPlan) -> IngestionPlan:
-        """Optimize the ingestion plan for better performance"""
+        """Optimize the ingestion plan for better performance."""
         # Sort sources by priority (higher priority first)
         sorted_sources = sorted(plan.sources, key=lambda s: s.priority, reverse=True)
 
         # Create optimized plan
-        optimized_plan = IngestionPlan(
+        return IngestionPlan(
             topic=plan.topic,
             sources=sorted_sources,
             total_sources=plan.total_sources,
@@ -170,5 +171,3 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
             plan_id=plan.plan_id,
             created_at=plan.created_at,
         )
-
-        return optimized_plan

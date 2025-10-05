@@ -26,7 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class PythonLintingFixer:
     """Comprehensive Python linting issue fixer"""
 
-    def __init__(self, dry_run: bool = False, backup: bool = True):
+    def __init__(self) -> None:
         self.dry_run = dry_run
         self.backup = backup
         self.processed_files = 0
@@ -52,19 +52,19 @@ class PythonLintingFixer:
 
     def _create_backup_dir(self) -> str:
         """Create backup directory with timestamp"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         backup_dir = f"backups/linting_fixes_{timestamp}"
         os.makedirs(backup_dir, exist_ok=True)
-        logger.info(f"Created backup directory: {backup_dir}")
+        logger.info("Created backup directory: %s", backup_dir)
         return backup_dir
 
-    def find_python_files(self, directories: list[str]) -> list[str]:
+    def find_python_files(self, directories: List[str]) -> List[str]:
         """Find all Python files in specified directories"""
         python_files = []
 
         for directory in directories:
             if not os.path.exists(directory):
-                logger.warning(f"Directory not found: {directory}")
+                logger.warning("Directory not found: %s", directory)
                 continue
 
             for root, dirs, files in os.walk(directory):
@@ -80,7 +80,7 @@ class PythonLintingFixer:
                     if file.endswith(".py"):
                         python_files.append(os.path.join(root, file))
 
-        logger.info(f"Found {len(python_files)} Python files to process")
+        logger.info("Found %s Python files to process", len(python_files))
         return python_files
 
     def backup_file(self, file_path: str) -> None:
@@ -104,10 +104,10 @@ class PythonLintingFixer:
             except UnicodeDecodeError:
                 continue
             except Exception as e:
-                logger.error(f"Error reading {file_path}: {e}")
+                logger.error("Error reading %s: %s", file_path, e)
                 return None
 
-        logger.error(f"Could not decode {file_path} with any encoding")
+        logger.error("Could not decode %s with any encoding", file_path)
         return None
 
     def write_file_safely(self, file_path: str, content: str) -> bool:
@@ -117,7 +117,7 @@ class PythonLintingFixer:
                 f.write(content)
             return True
         except Exception as e:
-            logger.error(f"Error writing {file_path}: {e}")
+            logger.error("Error writing %s: %s", file_path, e)
             return False
 
     def get_used_names_from_ast(self, content: str) -> set[str]:
@@ -126,24 +126,25 @@ class PythonLintingFixer:
             tree = ast.parse(content)
         except SyntaxError as e:
             logger.warning(
-                f"Syntax error in file, skipping unused import detection: {e}",
+                "Syntax error in file, skipping unused import detection: %s",
+                e,
             )
             return set()
 
         used_names = set()
 
         class NameVisitor(ast.NodeVisitor):
-            def visit_Name(self, node):
+            def visit_Name(self) -> None:
                 used_names.add(node.id)
                 self.generic_visit(node)
 
-            def visit_Attribute(self, node):
+            def visit_Attribute(self) -> None:
                 # Handle module.attribute usage
                 if isinstance(node.value, ast.Name):
                     used_names.add(node.value.id)
                 self.generic_visit(node)
 
-            def visit_Call(self, node):
+            def visit_Call(self) -> None:
                 # Handle function calls
                 if isinstance(node.func, ast.Name):
                     used_names.add(node.func.id)
@@ -181,13 +182,11 @@ class PythonLintingFixer:
                 import_section = False
 
             # Handle import lines
-            if import_section and (
-                stripped.startswith("import ") or stripped.startswith("from ")
-            ):
+            if import_section and (stripped.startswith(("import ", "from "))):
                 if self._should_keep_import(stripped, used_names):
                     new_lines.append(line)
                 else:
-                    logger.debug(f"Removing unused import: {stripped}")
+                    logger.debug("Removing unused import: %s", stripped)
             else:
                 new_lines.append(line)
 
@@ -308,7 +307,7 @@ class PythonLintingFixer:
 
         return lines
 
-    def _split_arguments(self, args_str: str) -> list[str]:
+    def _split_arguments(self, args_str: str) -> List[str]:
         """Split function arguments respecting nested structures"""
         args = []
         current_arg = ""
@@ -510,7 +509,7 @@ class PythonLintingFixer:
                 for stdlib in ["os", "sys", "json", "datetime", "pathlib", "typing"]
             ):
                 stdlib_imports.append(imp)
-            elif stripped.startswith("from .") or stripped.startswith("from src"):
+            elif stripped.startswith(("from .", "from src")):
                 local_imports.append(imp)
             else:
                 third_party_imports.append(imp)
@@ -540,8 +539,7 @@ class PythonLintingFixer:
     def fix_bare_except(self, content: str) -> str:
         """Fix bare except clauses"""
         # Simple regex replacement for common patterns
-        content = re.sub(r"except\s*:", "except Exception:", content)
-        return content
+        return re.sub(r"except\s*:", "except Exception:", content)
 
     def fix_comment_spacing(self, content: str) -> str:
         """Fix comment spacing issues"""
@@ -594,7 +592,7 @@ class PythonLintingFixer:
 
     def fix_file(self, file_path: str) -> bool:
         """Fix all linting issues in a single file"""
-        logger.info(f"Processing: {file_path}")
+        logger.info("Processing: %s", file_path)
 
         try:
             # Read original content
@@ -631,24 +629,24 @@ class PythonLintingFixer:
             # Check if content changed
             if content != original_content:
                 if self.dry_run:
-                    logger.info(f"Would fix: {file_path}")
+                    logger.info("Would fix: %s", file_path)
                     # Show a preview of changes
                     self._show_diff_preview(original_content, content, file_path)
                 else:
                     if self.write_file_safely(file_path, content):
-                        logger.info(f"Fixed: {file_path}")
+                        logger.info("Fixed: %s", file_path)
                         self.fixed_files += 1
                     else:
-                        logger.error(f"Failed to write: {file_path}")
+                        logger.error("Failed to write: %s", file_path)
                         return False
             else:
-                logger.debug(f"No changes needed: {file_path}")
+                logger.debug("No changes needed: %s", file_path)
 
             self.processed_files += 1
             return True
 
         except Exception as e:
-            logger.error(f"Error processing {file_path}: {e}")
+            logger.error("Error processing %s: %s", file_path, e)
             self.errors.append(f"{file_path}: {e}")
             return False
 
@@ -662,38 +660,40 @@ class PythonLintingFixer:
             if orig != fix:
                 changes += 1
                 if changes <= 3:  # Show first 3 changes
-                    logger.info(f"  Line {i + 1}: '{orig.strip()}' -> '{fix.strip()}'")
+                    logger.info(
+                        "  Line %s: '%s' -> '%s'", i + 1, orig.strip(), fix.strip()
+                    )
 
         if len(fixed_lines) != len(original_lines):
-            logger.info(f"  Line count: {len(original_lines)} -> {len(fixed_lines)}")
+            logger.info("  Line count: %s -> %s", len(original_lines), len(fixed_lines))
 
         if changes > 3:
-            logger.info(f"  ... and {changes - 3} more changes")
+            logger.info("  ... and %s more changes", changes - 3)
 
-    def process_files(self, file_paths: list[str]) -> None:
+    def process_files(self, file_paths: List[str]) -> None:
         """Process multiple files with progress reporting"""
         total_files = len(file_paths)
-        logger.info(f"Starting to process {total_files} files")
+        logger.info("Starting to process %s files", total_files)
 
         for i, file_path in enumerate(file_paths, 1):
             if i % 10 == 0 or i == total_files:
-                logger.info(f"Progress: {i}/{total_files} files processed")
+                logger.info("Progress: %s/%s files processed", i, total_files)
 
             self.fix_file(file_path)
 
         # Summary
         logger.info("\nProcessing complete!")
-        logger.info(f"Files processed: {self.processed_files}")
-        logger.info(f"Files fixed: {self.fixed_files}")
+        logger.info("Files processed: %s", self.processed_files)
+        logger.info("Files fixed: %s", self.fixed_files)
         if self.errors:
-            logger.info(f"Errors: {len(self.errors)}")
+            logger.info("Errors: %s", len(self.errors))
             for error in self.errors[:5]:  # Show first 5 errors
-                logger.error(f"  {error}")
+                logger.error("  %s", error)
             if len(self.errors) > 5:
-                logger.error(f"  ... and {len(self.errors) - 5} more errors")
+                logger.error("  ... and %s more errors", len(self.errors) - 5)
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="Fix Python linting issues in PAKE codebase",
@@ -731,7 +731,7 @@ def main():
         if os.path.exists(args.target):
             directories = [args.target]
         else:
-            logger.error(f"Target directory not found: {args.target}")
+            logger.error("Target directory not found: %s", args.target)
             return 1
     else:
         # Default directories to process
@@ -761,7 +761,8 @@ def main():
             logger.info("\nDry run complete. Use without --dry-run to apply fixes.")
         else:
             logger.info(
-                f"\nLinting fixes complete. Backup created in: {fixer.backup_dir}",
+                "\nLinting fixes complete. Backup created in: %s",
+                fixer.backup_dir,
             )
 
         return 0
@@ -770,7 +771,7 @@ def main():
         logger.info("\nOperation cancelled by user")
         return 1
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error("Unexpected error: %s", e)
         return 1
 
 

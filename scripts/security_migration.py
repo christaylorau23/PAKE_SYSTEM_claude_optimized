@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 class SecurityMigrator:
     """Automated security migration tool"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.migrations_completed = []
         self.migrations_failed = []
 
-    def run_migration(self):
+    def run_migration(self) -> None:
         """Run all security migrations"""
         logger.info("🔒 Starting security migration...")
 
@@ -37,10 +37,10 @@ class SecurityMigrator:
             self._print_summary()
 
         except Exception as e:
-            logger.error(f"Migration failed: {e}")
+            logger.error("Migration failed: %s", e)
             sys.exit(1)
 
-    def _migrate_dependencies(self):
+    def _migrate_dependencies(self) -> None:
         """Migrate to secure dependencies"""
         logger.info("📦 Migrating dependencies...")
 
@@ -51,7 +51,7 @@ class SecurityMigrator:
                 # Backup original
                 backup_file = requirements_file.with_suffix(".txt.backup")
                 requirements_file.rename(backup_file)
-                logger.info(f"Backed up requirements to {backup_file}")
+                logger.info("Backed up requirements to %s", backup_file)
 
             # Install updated dependencies
             result = subprocess.run(
@@ -73,13 +73,13 @@ class SecurityMigrator:
                 logger.info("✅ Dependencies updated successfully")
             else:
                 self.migrations_failed.append(("dependencies", result.stderr))
-                logger.error(f"❌ Dependency update failed: {result.stderr}")
+                logger.error("❌ Dependency update failed: %s", result.stderr)
 
         except Exception as e:
             self.migrations_failed.append(("dependencies", str(e)))
-            logger.error(f"❌ Dependency migration failed: {e}")
+            logger.error("❌ Dependency migration failed: %s", e)
 
-    def _migrate_hash_algorithms(self):
+    def _migrate_hash_algorithms(self) -> None:
         """Migrate from MD5/SHA1 to SHA-256"""
         logger.info("🔐 Migrating hash algorithms...")
 
@@ -97,7 +97,7 @@ class SecurityMigrator:
                     continue
 
             if md5_files:
-                logger.warning(f"⚠️  Still found MD5 usage in {len(md5_files)} files")
+                logger.warning("⚠️  Still found MD5 usage in %s files", len(md5_files))
                 logger.warning(
                     "Please manually replace hashlib.md5 with hashlib.sha256",
                 )
@@ -107,9 +107,9 @@ class SecurityMigrator:
 
         except Exception as e:
             self.migrations_failed.append(("hash_algorithms", str(e)))
-            logger.error(f"❌ Hash algorithm migration failed: {e}")
+            logger.error("❌ Hash algorithm migration failed: %s", e)
 
-    def _migrate_serialization(self):
+    def _migrate_serialization(self) -> None:
         """Migrate from pickle to secure serialization"""
         logger.info("📄 Migrating serialization...")
 
@@ -135,9 +135,9 @@ class SecurityMigrator:
 
         except Exception as e:
             self.migrations_failed.append(("serialization", str(e)))
-            logger.error(f"❌ Serialization migration failed: {e}")
+            logger.error("❌ Serialization migration failed: %s", e)
 
-    def _migrate_network_config(self):
+    def _migrate_network_config(self) -> None:
         """Migrate network configuration"""
         logger.info("🌐 Migrating network configuration...")
 
@@ -150,19 +150,20 @@ class SecurityMigrator:
 
             if warnings:
                 logger.warning(
-                    f"⚠️  Network configuration has {len(warnings)} warnings:",
+                    "⚠️  Network configuration has %s warnings:",
+                    len(warnings),
                 )
                 for warning in warnings:
-                    logger.warning(f"  - {warning}")
+                    logger.warning("  - %s", warning)
 
             self.migrations_completed.append("network_config")
             logger.info("✅ Network configuration migrated successfully")
 
         except Exception as e:
             self.migrations_failed.append(("network_config", str(e)))
-            logger.error(f"❌ Network configuration migration failed: {e}")
+            logger.error("❌ Network configuration migration failed: %s", e)
 
-    def _create_security_docs(self):
+    def _create_security_docs(self) -> None:
         """Create security documentation"""
         logger.info("📚 Creating security documentation...")
 
@@ -267,9 +268,9 @@ For security-related questions or to report vulnerabilities:
 
         except Exception as e:
             self.migrations_failed.append(("security_docs", str(e)))
-            logger.error(f"❌ Security documentation creation failed: {e}")
+            logger.error("❌ Security documentation creation failed: %s", e)
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         """Print migration summary"""
         print("\n" + "=" * 60)
         print("🔒 SECURITY MIGRATION SUMMARY")
@@ -298,7 +299,7 @@ For security-related questions or to report vulnerabilities:
             print("\n✅ Security migration completed successfully!")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     logging.basicConfig(
         level=logging.INFO,

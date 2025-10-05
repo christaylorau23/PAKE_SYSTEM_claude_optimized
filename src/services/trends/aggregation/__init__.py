@@ -1,4 +1,4 @@
-"""Trend Aggregation Services
+"""Trend Aggregation Services.
 
 Time-based and geographic trend analysis:
 - Time-series aggregation (hourly, daily, weekly)

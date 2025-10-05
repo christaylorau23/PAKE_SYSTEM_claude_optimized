@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 from services.ml.ml_monitoring import MetricType
 from services.ml.ml_pipeline_demo import MLPipelineDemo
 from services.ml.model_serving import ModelFramework
@@ -33,11 +34,11 @@ logger = logging.getLogger(__name__)
 class MLPipelineTester:
     """Comprehensive ML pipeline tester"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.test_results = {}
         self.demo = None
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run all ML pipeline tests"""
         try:
             logger.info("Starting ML Pipeline Tests...")
@@ -60,10 +61,10 @@ class MLPipelineTester:
             self.print_test_summary()
 
         except Exception as e:
-            logger.error(f"ML pipeline tests failed: {e}")
+            logger.error("ML pipeline tests failed: %s", e)
             raise
 
-    async def test_model_serving(self):
+    async def test_model_serving(self) -> None:
         """Test model serving functionality"""
         try:
             logger.info("Testing Model Serving...")
@@ -97,10 +98,10 @@ class MLPipelineTester:
             logger.info("Model Serving tests completed")
 
         except Exception as e:
-            logger.error(f"Model serving test failed: {e}")
+            logger.error("Model serving test failed: %s", e)
             self.test_results["model_serving"] = f"FAIL: {e}"
 
-    async def test_training_pipeline(self):
+    async def test_training_pipeline(self) -> None:
         """Test training pipeline functionality"""
         try:
             logger.info("Testing Training Pipeline...")
@@ -138,10 +139,10 @@ class MLPipelineTester:
             logger.info("Training Pipeline tests completed")
 
         except Exception as e:
-            logger.error(f"Training pipeline test failed: {e}")
+            logger.error("Training pipeline test failed: %s", e)
             self.test_results["training_pipeline"] = f"FAIL: {e}"
 
-    async def test_feature_engineering(self):
+    async def test_feature_engineering(self) -> None:
         """Test feature engineering functionality"""
         try:
             logger.info("Testing Feature Engineering...")
@@ -188,10 +189,10 @@ class MLPipelineTester:
             logger.info("Feature Engineering tests completed")
 
         except Exception as e:
-            logger.error(f"Feature engineering test failed: {e}")
+            logger.error("Feature engineering test failed: %s", e)
             self.test_results["feature_engineering"] = f"FAIL: {e}"
 
-    async def test_prediction_service(self):
+    async def test_prediction_service(self) -> None:
         """Test prediction service functionality"""
         try:
             logger.info("Testing Prediction Service...")
@@ -235,10 +236,10 @@ class MLPipelineTester:
             logger.info("Prediction Service tests completed")
 
         except Exception as e:
-            logger.error(f"Prediction service test failed: {e}")
+            logger.error("Prediction service test failed: %s", e)
             self.test_results["prediction_service"] = f"FAIL: {e}"
 
-    async def test_ml_monitoring(self):
+    async def test_ml_monitoring(self) -> None:
         """Test ML monitoring functionality"""
         try:
             logger.info("Testing ML Monitoring...")
@@ -280,10 +281,10 @@ class MLPipelineTester:
             logger.info("ML Monitoring tests completed")
 
         except Exception as e:
-            logger.error(f"ML monitoring test failed: {e}")
+            logger.error("ML monitoring test failed: %s", e)
             self.test_results["ml_monitoring"] = f"FAIL: {e}"
 
-    async def test_integration_workflow(self):
+    async def test_integration_workflow(self) -> None:
         """Test integrated ML workflow"""
         try:
             logger.info("Testing Integration Workflow...")
@@ -314,10 +315,10 @@ class MLPipelineTester:
             logger.info("Integration Workflow tests completed")
 
         except Exception as e:
-            logger.error(f"Integration workflow test failed: {e}")
+            logger.error("Integration workflow test failed: %s", e)
             self.test_results["integration_workflow"] = f"FAIL: {e}"
 
-    def print_test_summary(self):
+    def print_test_summary(self) -> None:
         """Print test results summary"""
         try:
             logger.info("=" * 60)
@@ -331,18 +332,18 @@ class MLPipelineTester:
                 [r for r in self.test_results.values() if r.startswith("FAIL")],
             )
 
-            logger.info(f"Total Tests: {total_tests}")
-            logger.info(f"Passed: {passed_tests}")
-            logger.info(f"Skipped: {skipped_tests}")
-            logger.info(f"Failed: {failed_tests}")
-            logger.info(f"Success Rate: {(passed_tests / total_tests * 100):.1f}%")
+            logger.info("Total Tests: %s", total_tests)
+            logger.info("Passed: %s", passed_tests)
+            logger.info("Skipped: %s", skipped_tests)
+            logger.info("Failed: %s", failed_tests)
+            logger.info("Success Rate: %.1f%%%", (passed_tests / total_tests * 100))
 
             logger.info("\nDetailed Results:")
             for test_name, result in self.test_results.items():
                 status_icon = (
                     "✅" if result == "PASS" else "⏭️" if result == "SKIP" else "❌"
                 )
-                logger.info(f"  {status_icon} {test_name}: {result}")
+                logger.info("  %s %s: %s", status_icon, test_name, result)
 
             if failed_tests == 0:
                 logger.info(
@@ -350,16 +351,17 @@ class MLPipelineTester:
                 )
             else:
                 logger.info(
-                    f"\n⚠️  {failed_tests} tests failed. Please review and fix issues.",
+                    "\n⚠️  %s tests failed. Please review and fix issues.",
+                    failed_tests,
                 )
 
             logger.info("=" * 60)
 
         except Exception as e:
-            logger.error(f"Failed to print test summary: {e}")
+            logger.error("Failed to print test summary: %s", e)
 
 
-async def main():
+async def main(self) -> None:
     """Main function to run ML pipeline tests"""
     # Setup logging
     logging.basicConfig(

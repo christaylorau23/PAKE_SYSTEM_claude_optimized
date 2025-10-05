@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - ML Pipeline Integration Demo
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Demonstrates the complete ML pipeline integration including model serving,
 training orchestration, feature engineering, prediction services, and monitoring.
@@ -54,7 +54,7 @@ class MLPipelineDemo:
     Shows integration of all ML services in a production-like scenario.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialize services
         self.model_serving = None
         self.training_orchestrator = None
@@ -68,8 +68,8 @@ class MLPipelineDemo:
 
         logger.info("Initialized ML Pipeline Demo")
 
-    async def setup_services(self):
-        """Setup all ML services"""
+    async def setup_services(self) -> None:
+        """Setup all ML services."""
         try:
             logger.info("Setting up ML services...")
 
@@ -94,11 +94,11 @@ class MLPipelineDemo:
             logger.info("All ML services initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to setup ML services: {e}")
+            logger.error("Failed to setup ML services: %s", e)
             raise
 
-    async def generate_demo_data(self):
-        """Generate demo data for training and testing"""
+    async def generate_demo_data(self) -> None:
+        """Generate demo data for training and testing."""
         try:
             logger.info("Generating demo data...")
 
@@ -151,16 +151,18 @@ class MLPipelineDemo:
                 json.dump(self.demo_data, f, default=str)
 
             logger.info(
-                f"Generated demo data with {n_samples} samples, {len(X_df.columns)} features",
+                "Generated demo data with %s samples, %s features",
+                n_samples,
+                len(X_df.columns),
             )
-            logger.info(f"Demo data saved to {demo_data_path}")
+            logger.info("Demo data saved to %s", demo_data_path)
 
         except Exception as e:
-            logger.error(f"Failed to generate demo data: {e}")
+            logger.error("Failed to generate demo data: %s", e)
             raise
 
-    async def demonstrate_feature_engineering(self):
-        """Demonstrate feature engineering capabilities"""
+    async def demonstrate_feature_engineering(self) -> None:
+        """Demonstrate feature engineering capabilities."""
         try:
             logger.info("Demonstrating feature engineering...")
 
@@ -171,7 +173,7 @@ class MLPipelineDemo:
                 "demo_classification_pipeline",
             )
 
-            logger.info(f"Created feature pipeline: {pipeline_id}")
+            logger.info("Created feature pipeline: %s", pipeline_id)
 
             # Process features
             processed_data, result = await self.feature_engineer.process_features(
@@ -181,24 +183,24 @@ class MLPipelineDemo:
             )
 
             logger.info("Feature processing completed:")
-            logger.info(f"  Original shape: {self.demo_data['X_train'].shape}")
-            logger.info(f"  Processed shape: {processed_data.shape}")
-            logger.info(f"  Processing time: {result.processing_time_ms:.2f}ms")
-            logger.info(f"  Features created: {result.features_created}")
-            logger.info(f"  Features dropped: {result.features_dropped}")
+            logger.info("  Original shape: %s", self.demo_data["X_train"].shape)
+            logger.info("  Processed shape: %s", processed_data.shape)
+            logger.info("  Processing time: %.2f%%ms", result.processing_time_ms)
+            logger.info("  Features created: %s", result.features_created)
+            logger.info("  Features dropped: %s", result.features_dropped)
 
             # Get statistics
             stats = self.feature_engineer.get_processing_statistics()
-            logger.info(f"Feature engineering statistics: {stats}")
+            logger.info("Feature engineering statistics: %s", stats)
 
             return processed_data
 
         except Exception as e:
-            logger.error(f"Feature engineering demonstration failed: {e}")
+            logger.error("Feature engineering demonstration failed: %s", e)
             raise
 
-    async def demonstrate_model_training(self, processed_data: pd.DataFrame):
-        """Demonstrate model training capabilities"""
+    async def demonstrate_model_training(self) -> None:
+        """Demonstrate model training capabilities."""
         try:
             logger.info("Demonstrating model training...")
 
@@ -238,23 +240,23 @@ class MLPipelineDemo:
 
             # Submit training job
             job_id = await self.training_orchestrator.submit_training_job(job)
-            logger.info(f"Submitted training job: {job_id}")
+            logger.info("Submitted training job: %s", job_id)
 
             # Wait for completion
             while job_id in self.training_orchestrator.active_jobs:
                 await asyncio.sleep(2)
                 status = self.training_orchestrator.get_job_status(job_id)
                 if status:
-                    logger.info(f"Training status: {status.status.value}")
+                    logger.info("Training status: %s", status.status.value)
 
             # Get final result
             result = self.training_orchestrator.get_job_status(job_id)
             if result and result.status.value == "completed":
                 logger.info("Training completed successfully:")
-                logger.info(f"  Model path: {result.model_path}")
-                logger.info(f"  Model version: {result.model_version}")
-                logger.info(f"  Training time: {result.training_time_seconds:.2f}s")
-                logger.info(f"  Metrics: {result.metrics}")
+                logger.info("  Model path: %s", result.model_path)
+                logger.info("  Model version: %s", result.model_version)
+                logger.info("  Training time: %.2f%%s", result.training_time_seconds)
+                logger.info("  Metrics: %s", result.metrics)
 
                 # Store model info for serving
                 self.demo_models[job_id] = {
@@ -265,16 +267,17 @@ class MLPipelineDemo:
 
                 return result.model_path
             logger.error(
-                f"Training failed: {result.error_message if result else 'Unknown error'}",
+                "Training failed: %s",
+                result.error_message if result else "Unknown error",
             )
             return None
 
         except Exception as e:
-            logger.error(f"Model training demonstration failed: {e}")
+            logger.error("Model training demonstration failed: %s", e)
             raise
 
-    async def demonstrate_model_serving(self, model_path: str):
-        """Demonstrate model serving capabilities"""
+    async def demonstrate_model_serving(self) -> None:
+        """Demonstrate model serving capabilities."""
         try:
             logger.info("Demonstrating model serving...")
 
@@ -288,11 +291,11 @@ class MLPipelineDemo:
                 output_schema={"prediction": {"type": "array", "shape": [2]}},
             )
 
-            logger.info(f"Registered model: {model_id}")
+            logger.info("Registered model: %s", model_id)
 
             # Load model
             await self.model_serving.load_model(model_id)
-            logger.info(f"Loaded model: {model_id}")
+            logger.info("Loaded model: %s", model_id)
 
             # Test inference
             test_input = {
@@ -308,22 +311,22 @@ class MLPipelineDemo:
             response = await self.model_serving.predict(request)
 
             logger.info("Model serving test successful:")
-            logger.info(f"  Request ID: {response.request_id}")
-            logger.info(f"  Predictions: {response.predictions}")
-            logger.info(f"  Processing time: {response.processing_time_ms:.2f}ms")
+            logger.info("  Request ID: %s", response.request_id)
+            logger.info("  Predictions: %s", response.predictions)
+            logger.info("  Processing time: %.2f%%ms", response.processing_time_ms)
 
             # Get model status
             status = self.model_serving.get_model_status(model_id)
-            logger.info(f"Model status: {status.to_dict()}")
+            logger.info("Model status: %s", status.to_dict())
 
             return model_id
 
         except Exception as e:
-            logger.error(f"Model serving demonstration failed: {e}")
+            logger.error("Model serving demonstration failed: %s", e)
             raise
 
-    async def demonstrate_prediction_service(self, model_id: str):
-        """Demonstrate prediction service capabilities"""
+    async def demonstrate_prediction_service(self) -> None:
+        """Demonstrate prediction service capabilities."""
         try:
             logger.info("Demonstrating prediction service...")
 
@@ -340,10 +343,10 @@ class MLPipelineDemo:
             result = await self.prediction_service.predict(request)
 
             logger.info("Individual prediction completed:")
-            logger.info(f"  Request ID: {result.request_id}")
-            logger.info(f"  Predictions: {result.predictions}")
-            logger.info(f"  Processing time: {result.processing_time_ms:.2f}ms")
-            logger.info(f"  Status: {result.status.value}")
+            logger.info("  Request ID: %s", result.request_id)
+            logger.info("  Predictions: %s", result.predictions)
+            logger.info("  Processing time: %.2f%%ms", result.processing_time_ms)
+            logger.info("  Status: %s", result.status.value)
 
             # Test batch prediction
             batch_request = BatchPredictionRequest(
@@ -368,25 +371,27 @@ class MLPipelineDemo:
             batch_result = await self.prediction_service.batch_predict(batch_request)
 
             logger.info("Batch prediction completed:")
-            logger.info(f"  Batch ID: {batch_result.batch_id}")
+            logger.info("  Batch ID: %s", batch_result.batch_id)
             logger.info(
-                f"  Successful predictions: {batch_result.successful_predictions}",
+                "  Successful predictions: %s",
+                batch_result.successful_predictions,
             )
-            logger.info(f"  Failed predictions: {batch_result.failed_predictions}")
+            logger.info("  Failed predictions: %s", batch_result.failed_predictions)
             logger.info(
-                f"  Total processing time: {batch_result.total_processing_time_ms:.2f}ms",
+                "  Total processing time: %.2fms",
+                batch_result.total_processing_time_ms,
             )
 
             # Get service statistics
             stats = self.prediction_service.get_service_statistics()
-            logger.info(f"Prediction service statistics: {stats}")
+            logger.info("Prediction service statistics: %s", stats)
 
         except Exception as e:
-            logger.error(f"Prediction service demonstration failed: {e}")
+            logger.error("Prediction service demonstration failed: %s", e)
             raise
 
-    async def demonstrate_ml_monitoring(self, model_id: str):
-        """Demonstrate ML monitoring capabilities"""
+    async def demonstrate_ml_monitoring(self) -> None:
+        """Demonstrate ML monitoring capabilities."""
         try:
             logger.info("Demonstrating ML monitoring...")
 
@@ -400,7 +405,7 @@ class MLPipelineDemo:
 
             # Get metrics
             metrics = self.ml_monitor.get_model_metrics(model_id, limit=5)
-            logger.info(f"Collected {len(metrics)} metrics for model {model_id}")
+            logger.info("Collected %s metrics for model %s", len(metrics), model_id)
 
             # Start A/B test
             await self.ml_monitor.start_ab_test(
@@ -428,17 +433,17 @@ class MLPipelineDemo:
 
             # Get monitoring statistics
             stats = self.ml_monitor.get_monitoring_statistics()
-            logger.info(f"ML monitoring statistics: {stats}")
+            logger.info("ML monitoring statistics: %s", stats)
 
             # Stop monitoring
             await self.ml_monitor.stop_monitoring(model_id)
 
         except Exception as e:
-            logger.error(f"ML monitoring demonstration failed: {e}")
+            logger.error("ML monitoring demonstration failed: %s", e)
             raise
 
-    async def run_complete_demo(self):
-        """Run the complete ML pipeline demonstration"""
+    async def run_complete_demo(self) -> None:
+        """Run the complete ML pipeline demonstration."""
         try:
             logger.info("Starting complete ML pipeline demonstration...")
 
@@ -470,11 +475,11 @@ class MLPipelineDemo:
             await self.print_demo_summary()
 
         except Exception as e:
-            logger.error(f"Complete demo failed: {e}")
+            logger.error("Complete demo failed: %s", e)
             raise
 
-    async def print_demo_summary(self):
-        """Print demonstration summary"""
+    async def print_demo_summary(self) -> None:
+        """Print demonstration summary."""
         try:
             logger.info("=" * 60)
             logger.info("ML PIPELINE DEMONSTRATION SUMMARY")
@@ -484,22 +489,28 @@ class MLPipelineDemo:
             if self.model_serving:
                 serving_stats = self.model_serving.get_service_statistics()
                 logger.info("Model Serving:")
-                logger.info(f"  Loaded models: {serving_stats['loaded_models_count']}")
-                logger.info(f"  Total requests: {serving_stats['total_requests']}")
-                logger.info(f"  Success rate: {serving_stats['success_rate']:.2%}")
+                logger.info("  Loaded models: %s", serving_stats["loaded_models_count"])
+                logger.info("  Total requests: %s", serving_stats["total_requests"])
                 logger.info(
-                    f"  Average latency: {serving_stats['average_latency_ms']:.2f}ms",
+                    "  Success rate: %s", f"{serving_stats['success_rate']:.2%}"
+                )
+                logger.info(
+                    "  Average latency: %sms",
+                    f"{serving_stats['average_latency_ms']:.2f}",
                 )
 
             # Training summary
             if self.training_orchestrator:
                 training_stats = self.training_orchestrator.get_training_statistics()
                 logger.info("Training Orchestrator:")
-                logger.info(f"  Total jobs: {training_stats['total_jobs']}")
-                logger.info(f"  Completed jobs: {training_stats['completed_jobs']}")
-                logger.info(f"  Success rate: {training_stats['success_rate']:.2%}")
+                logger.info("  Total jobs: %s", training_stats["total_jobs"])
+                logger.info("  Completed jobs: %s", training_stats["completed_jobs"])
                 logger.info(
-                    f"  Average training time: {training_stats['average_training_time']:.2f}s",
+                    "  Success rate: %s", f"{training_stats['success_rate']:.2%}"
+                )
+                logger.info(
+                    "  Average training time: %ss",
+                    f"{training_stats['average_training_time']:.2f}",
                 )
 
             # Feature engineering summary
@@ -507,40 +518,51 @@ class MLPipelineDemo:
                 feature_stats = self.feature_engineer.get_processing_statistics()
                 logger.info("Feature Engineering:")
                 logger.info(
-                    f"  Pipelines executed: {feature_stats['pipelines_executed']}",
+                    "  Pipelines executed: %s",
+                    feature_stats["pipelines_executed"],
                 )
-                logger.info(f"  Features created: {feature_stats['features_created']}")
-                logger.info(f"  Cache hit rate: {feature_stats['cache_hit_rate']:.2%}")
+                logger.info("  Features created: %s", feature_stats["features_created"])
                 logger.info(
-                    f"  Average processing time: {feature_stats['average_processing_time_ms']:.2f}ms",
+                    "  Cache hit rate: %s", f"{feature_stats['cache_hit_rate']:.2%}"
+                )
+                logger.info(
+                    "  Average processing time: %sms",
+                    f"{feature_stats['average_processing_time_ms']:.2f}",
                 )
 
             # Prediction service summary
             if self.prediction_service:
                 prediction_stats = self.prediction_service.get_service_statistics()
                 logger.info("Prediction Service:")
-                logger.info(f"  Total requests: {prediction_stats['total_requests']}")
+                logger.info("  Total requests: %s", prediction_stats["total_requests"])
                 logger.info(
-                    f"  Ensemble requests: {prediction_stats['ensemble_requests']}",
+                    "  Ensemble requests: %s",
+                    prediction_stats["ensemble_requests"],
                 )
-                logger.info(f"  Batch requests: {prediction_stats['batch_requests']}")
-                logger.info(f"  Success rate: {prediction_stats['success_rate']:.2%}")
+                logger.info("  Batch requests: %s", prediction_stats["batch_requests"])
+                logger.info(
+                    "  Success rate: %s", f"{prediction_stats['success_rate']:.2%}"
+                )
 
             # ML monitoring summary
             if self.ml_monitor:
                 monitoring_stats = self.ml_monitor.get_monitoring_statistics()
                 logger.info("ML Monitoring:")
                 logger.info(
-                    f"  Monitored models: {monitoring_stats['monitored_models']}",
+                    "  Monitored models: %s",
+                    monitoring_stats["monitored_models"],
                 )
                 logger.info(
-                    f"  Metrics collected: {monitoring_stats['total_metrics_collected']}",
+                    "  Metrics collected: %s",
+                    monitoring_stats["total_metrics_collected"],
                 )
                 logger.info(
-                    f"  Alerts generated: {monitoring_stats['total_alerts_generated']}",
+                    "  Alerts generated: %s",
+                    monitoring_stats["total_alerts_generated"],
                 )
                 logger.info(
-                    f"  Active A/B tests: {monitoring_stats['active_ab_tests']}",
+                    "  Active A/B tests: %s",
+                    monitoring_stats["active_ab_tests"],
                 )
 
             logger.info("=" * 60)
@@ -548,11 +570,11 @@ class MLPipelineDemo:
             logger.info("=" * 60)
 
         except Exception as e:
-            logger.error(f"Failed to print demo summary: {e}")
+            logger.error("Failed to print demo summary: %s", e)
 
 
-async def main():
-    """Main function to run the ML pipeline demonstration"""
+async def main(self) -> None:
+    """Main function to run the ML pipeline demonstration."""
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,

@@ -12,14 +12,14 @@ import yaml
 class TestKubernetesDeploymentTDD:
     """Test-Driven Development for Kubernetes components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.k8s_dir = self.project_root / "k8s"
         self.helm_dir = self.k8s_dir / "helm" / "pake-system"
         self.argocd_dir = self.k8s_dir / "argocd" / "applications"
 
-    def test_helm_chart_structure(self):
+    def test_helm_chart_structure(self) -> None:
         """TDD: Test Helm chart has proper structure"""
         # Arrange
         required_files = [
@@ -34,7 +34,7 @@ class TestKubernetesDeploymentTDD:
             file_path = self.helm_dir / file_name
             assert file_path.exists(), f"Helm chart should have {file_name}"
 
-    def test_helm_chart_metadata(self):
+    def test_helm_chart_metadata(self) -> None:
         """TDD: Test Helm chart metadata is complete"""
         # Arrange
         chart_yaml_path = self.helm_dir / "Chart.yaml"
@@ -51,7 +51,7 @@ class TestKubernetesDeploymentTDD:
         assert "description" in chart_data, "Should have description"
         assert "dependencies" in chart_data, "Should have dependencies"
 
-    def test_helm_chart_dependencies(self):
+    def test_helm_chart_dependencies(self) -> None:
         """TDD: Test Helm chart dependencies are properly configured"""
         # Arrange
         chart_yaml_path = self.helm_dir / "Chart.yaml"
@@ -68,7 +68,7 @@ class TestKubernetesDeploymentTDD:
             dep_found = any(d["name"] == dep for d in dependencies)
             assert dep_found, f"Should have {dep} dependency"
 
-    def test_helm_values_structure(self):
+    def test_helm_values_structure(self) -> None:
         """TDD: Test Helm values files have proper structure"""
         # Arrange
         values_files = ["values.yaml", "values-staging.yaml", "values-production.yaml"]
@@ -96,7 +96,7 @@ class TestKubernetesDeploymentTDD:
                     section in values_data
                 ), f"{values_file} should have {section} section"
 
-    def test_helm_values_environment_specific(self):
+    def test_helm_values_environment_specific(self) -> None:
         """TDD: Test Helm values are environment-specific"""
         # Arrange
         staging_values_path = self.helm_dir / "values-staging.yaml"
@@ -136,7 +136,7 @@ class TestKubernetesDeploymentTDD:
             "cpu"
         ), "Production should have higher CPU limits"
 
-    def test_helm_templates_structure(self):
+    def test_helm_templates_structure(self) -> None:
         """TDD: Test Helm templates have proper structure"""
         # Arrange
         templates_dir = self.helm_dir / "templates"
@@ -155,7 +155,7 @@ class TestKubernetesDeploymentTDD:
             template_path = templates_dir / template
             assert template_path.exists(), f"Should have {template} template"
 
-    def test_helm_deployment_template(self):
+    def test_helm_deployment_template(self) -> None:
         """TDD: Test Helm deployment template configuration"""
         # Arrange
         deployment_template_path = self.helm_dir / "templates" / "deployment.yaml"
@@ -174,7 +174,7 @@ class TestKubernetesDeploymentTDD:
         assert "livenessProbe" in content, "Should have liveness probe"
         assert "readinessProbe" in content, "Should have readiness probe"
 
-    def test_helm_service_template(self):
+    def test_helm_service_template(self) -> None:
         """TDD: Test Helm service template configuration"""
         # Arrange
         service_template_path = self.helm_dir / "templates" / "service.yaml"
@@ -193,7 +193,7 @@ class TestKubernetesDeploymentTDD:
             "port: {{ .Values.service.port }}" in content
         ), "Should use service port from values"
 
-    def test_helm_helpers_template(self):
+    def test_helm_helpers_template(self) -> None:
         """TDD: Test Helm helpers template configuration"""
         # Arrange
         helpers_template_path = self.helm_dir / "templates" / "_helpers.tpl"
@@ -213,7 +213,7 @@ class TestKubernetesDeploymentTDD:
         for helper in required_helpers:
             assert f'define "{helper}"' in content, f"Should define {helper} helper"
 
-    def test_argocd_applications_structure(self):
+    def test_argocd_applications_structure(self) -> None:
         """TDD: Test ArgoCD applications have proper structure"""
         # Arrange
         required_apps = ["pake-system-staging.yaml", "pake-system-production.yaml"]
@@ -223,7 +223,7 @@ class TestKubernetesDeploymentTDD:
             app_path = self.argocd_dir / app_file
             assert app_path.exists(), f"Should have {app_file} ArgoCD application"
 
-    def test_argocd_application_configuration(self):
+    def test_argocd_application_configuration(self) -> None:
         """TDD: Test ArgoCD application configuration"""
         # Arrange
         staging_app_path = self.argocd_dir / "pake-system-staging.yaml"
@@ -251,7 +251,7 @@ class TestKubernetesDeploymentTDD:
         assert source["targetRevision"] == "develop", "Should target develop branch"
         assert source["path"] == "k8s/helm/pake-system", "Should point to Helm chart"
 
-    def test_argocd_sync_policy(self):
+    def test_argocd_sync_policy(self) -> None:
         """TDD: Test ArgoCD sync policy configuration"""
         # Arrange
         staging_app_path = self.argocd_dir / "pake-system-staging.yaml"
@@ -264,9 +264,9 @@ class TestKubernetesDeploymentTDD:
         sync_policy = app_data["spec"]["syncPolicy"]
 
         assert "automated" in sync_policy, "Should have automated sync"
-        assert sync_policy["automated"]["prune"] == True, "Should enable pruning"
+        assert sync_policy["automated"]["prune"] is True, "Should enable pruning"
         assert (
-            sync_policy["automated"]["selfHeal"] == True
+            sync_policy["automated"]["selfHeal"] is True
         ), "Should enable self-healing"
 
         assert "syncOptions" in sync_policy, "Should have sync options"
@@ -274,7 +274,7 @@ class TestKubernetesDeploymentTDD:
             "CreateNamespace=true" in sync_policy["syncOptions"]
         ), "Should create namespace"
 
-    def test_kubernetes_security_configuration(self):
+    def test_kubernetes_security_configuration(self) -> None:
         """TDD: Test Kubernetes security configuration"""
         # Arrange
         production_values_path = self.helm_dir / "values-production.yaml"
@@ -292,18 +292,18 @@ class TestKubernetesDeploymentTDD:
 
         # Check security context values
         pod_security = values_data["podSecurityContext"]
-        assert pod_security["runAsNonRoot"] == True, "Should run as non-root"
+        assert pod_security["runAsNonRoot"] is True, "Should run as non-root"
         assert pod_security["runAsUser"] == 1000, "Should run as user 1000"
 
         security_context = values_data["securityContext"]
         assert (
-            security_context["allowPrivilegeEscalation"] == False
+            security_context["allowPrivilegeEscalation"] is False
         ), "Should not allow privilege escalation"
         assert (
-            security_context["readOnlyRootFilesystem"] == True
+            security_context["readOnlyRootFilesystem"] is True
         ), "Should have read-only root filesystem"
 
-    def test_kubernetes_monitoring_integration(self):
+    def test_kubernetes_monitoring_integration(self) -> None:
         """TDD: Test Kubernetes monitoring integration"""
         # Arrange
         production_values_path = self.helm_dir / "values-production.yaml"
@@ -314,15 +314,15 @@ class TestKubernetesDeploymentTDD:
 
         # Assert
         monitoring = values_data.get("monitoring", {})
-        assert monitoring.get("enabled") == True, "Should enable monitoring"
+        assert monitoring.get("enabled") is True, "Should enable monitoring"
 
         prometheus = monitoring.get("prometheus", {})
-        assert prometheus.get("enabled") == True, "Should enable Prometheus"
+        assert prometheus.get("enabled") is True, "Should enable Prometheus"
 
         grafana = monitoring.get("grafana", {})
-        assert grafana.get("enabled") == True, "Should enable Grafana"
+        assert grafana.get("enabled") is True, "Should enable Grafana"
 
-    def test_kubernetes_autoscaling_configuration(self):
+    def test_kubernetes_autoscaling_configuration(self) -> None:
         """TDD: Test Kubernetes autoscaling configuration"""
         # Arrange
         production_values_path = self.helm_dir / "values-production.yaml"
@@ -333,11 +333,11 @@ class TestKubernetesDeploymentTDD:
 
         # Assert
         autoscaling = values_data.get("autoscaling", {})
-        assert autoscaling.get("enabled") == True, "Should enable autoscaling"
+        assert autoscaling.get("enabled") is True, "Should enable autoscaling"
         assert autoscaling.get("minReplicas") == 3, "Should have minimum 3 replicas"
         assert autoscaling.get("maxReplicas") == 20, "Should have maximum 20 replicas"
 
-    def test_kubernetes_health_checks(self):
+    def test_kubernetes_health_checks(self) -> None:
         """TDD: Test Kubernetes health checks configuration"""
         # Arrange
         production_values_path = self.helm_dir / "values-production.yaml"
@@ -351,13 +351,13 @@ class TestKubernetesDeploymentTDD:
         assert "readinessProbe" in values_data, "Should have readiness probe"
 
         liveness = values_data["livenessProbe"]
-        assert liveness.get("enabled") == True, "Should enable liveness probe"
+        assert liveness.get("enabled") is True, "Should enable liveness probe"
         assert (
             liveness.get("initialDelaySeconds") == 60
         ), "Should have appropriate initial delay"
 
         readiness = values_data["readinessProbe"]
-        assert readiness.get("enabled") == True, "Should enable readiness probe"
+        assert readiness.get("enabled") is True, "Should enable readiness probe"
         assert (
             readiness.get("initialDelaySeconds") == 10
         ), "Should have appropriate initial delay"

@@ -11,7 +11,7 @@ import os
 # Import our core models
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from src.services.curation.models.content_item import ContentItem, ContentType
@@ -27,13 +27,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 class LightweightCurationAPI:
     """Lightweight curation API for demonstration"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.content_database = []
         self.user_interactions = []
         self.user_feedback = []
         self._initialize_demo_content()
 
-    def _initialize_demo_content(self):
+    def _initialize_demo_content(self) -> None:
         """Initialize with demo content"""
         self.content_database = [
             ContentItem(
@@ -101,9 +101,9 @@ class LightweightCurationAPI:
     async def get_recommendations(
         self,
         user_id: str,
-        interests: list[str] = None,
+        interests: List[str] = None,
         max_results: int = 5,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get personalized content recommendations"""
 
         # Simple recommendation logic based on interests
@@ -158,7 +158,7 @@ class LightweightCurationAPI:
             "recommendations": recommendations,
             "total_analyzed": len(self.content_database),
             "processing_time_ms": 12.5,  # Simulated
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     async def submit_feedback(
@@ -167,7 +167,7 @@ class LightweightCurationAPI:
         content_id: str,
         feedback_type: str,
         feedback_value: float,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Submit user feedback"""
 
         try:
@@ -176,7 +176,7 @@ class LightweightCurationAPI:
                 content_id=content_id,
                 feedback_type=FeedbackType(feedback_type),
                 feedback_value=feedback_value,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
 
             self.user_feedback.append(feedback)
@@ -185,14 +185,14 @@ class LightweightCurationAPI:
                 "success": True,
                 "feedback_id": str(feedback.id),
                 "message": "Feedback recorded successfully",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
     async def track_interaction(
@@ -201,7 +201,7 @@ class LightweightCurationAPI:
         content_id: str,
         interaction_type: str,
         duration: int = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Track user interaction"""
 
         try:
@@ -209,7 +209,7 @@ class LightweightCurationAPI:
                 user_id=user_id,
                 content_id=content_id,
                 interaction_type=InteractionType(interaction_type),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 duration=duration,
             )
 
@@ -219,17 +219,17 @@ class LightweightCurationAPI:
                 "success": True,
                 "interaction_id": str(interaction.id),
                 "weighted_value": 5.0,  # Simulated
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
-    async def get_system_stats(self) -> dict[str, Any]:
+    async def get_system_stats(self) -> Dict[str, Any]:
         """Get system statistics"""
         return {
             "content_items": len(self.content_database),
@@ -256,11 +256,11 @@ class LightweightCurationAPI:
                 ),
             },
             "system_status": "operational",
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 
-async def run_api_demo():
+async def run_api_demo(self) -> None:
     """Run API demonstration"""
     print("🚀 LIGHTWEIGHT CURATION API DEMO")
     print("=" * 50)

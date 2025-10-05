@@ -48,14 +48,14 @@ class TestExecutionResult:
     tests_passed: int
     tests_failed: int
     tests_skipped: int
-    coverage_percentage: Optional[float] = None
-    error_message: Optional[str] = None
+    coverage_percentage: float | None = None
+    error_message: str | None = None
 
 
 class PAKETestRunner:
     """Comprehensive test runner for PAKE System"""
 
-    def __init__(self, verbose: bool = False, parallel: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.project_root = Path(__file__).parent.parent
@@ -95,7 +95,7 @@ class PAKETestRunner:
             },
         }
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
@@ -627,7 +627,7 @@ class PAKETestRunner:
         tests_run = tests_passed + tests_failed + tests_skipped
         return tests_run, tests_passed, tests_failed, tests_skipped
 
-    def _extract_coverage_percentage(self, output: str) -> Optional[float]:
+    def _extract_coverage_percentage(self, output: str) -> float | None:
         """Extract coverage percentage from pytest output"""
         lines = output.split("\n")
         for line in lines:
@@ -705,7 +705,7 @@ class PAKETestRunner:
             sum(coverage_results) / len(coverage_results) if coverage_results else None
         )
 
-        report = {
+        return {
             "summary": {
                 "total_tests": total_tests,
                 "tests_passed": total_passed,
@@ -734,9 +734,7 @@ class PAKETestRunner:
             else "FAILED",
         }
 
-        return report
-
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print test execution summary"""
         report = self.generate_report()
 
@@ -781,7 +779,7 @@ class PAKETestRunner:
         print("=" * 80)
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="PAKE System Comprehensive Test Runner"
@@ -802,10 +800,7 @@ def main():
     args = parser.parse_args()
 
     # Determine test mode
-    if args.quick:
-        mode = TestMode.QUICK
-    else:
-        mode = TestMode(args.mode)
+    mode = TestMode.QUICK if args.quick else TestMode(args.mode)
 
     # Create test runner
     runner = PAKETestRunner(verbose=args.verbose, parallel=args.parallel)

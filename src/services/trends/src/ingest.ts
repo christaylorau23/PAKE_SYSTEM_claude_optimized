@@ -456,7 +456,7 @@ export class TrendIngestPipeline extends EventEmitter {
       .replace(/\s+/g, ' ') // Normalize whitespace
       .substring(0, 100);
 
-    return createHash('md5').update(text).digest('hex');
+    return createHash('sha256').update(text).digest('hex');
   }
 
   /**

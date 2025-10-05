@@ -94,20 +94,20 @@ from services.workflows.security_monitor_integration import process_alert_with_w
 # Modify alert creation in ai-security-monitor.py
 async def create_enhanced_security_alert(alert_data):
     """Create security alert and trigger proactive workflows"""
-    
+
     # Create the standard SecurityAlert (existing code)
     alert = SecurityAlert(...)
-    
+
     # Add to global alerts storage (existing code)
     security_alerts.append(alert)
-    
+
     # NEW: Trigger proactive workflows
     try:
         workflow_result = await process_alert_with_workflows(alert)
         logger.info(f"Proactive workflow triggered: {workflow_result}")
     except Exception as e:
         logger.error(f"Proactive workflow failed: {e}")
-    
+
     return alert
 ```
 
@@ -119,13 +119,13 @@ from services.workflows.security_monitor_integration import get_workflow_dashboa
 @app.get("/dashboard/enhanced")
 async def get_enhanced_dashboard():
     """Enhanced dashboard with workflow data"""
-    
+
     # Get existing dashboard data
     standard_data = await get_security_dashboard()
-    
+
     # Add workflow statistics
     workflow_data = get_workflow_dashboard()
-    
+
     return {
         **standard_data,
         "proactive_workflows": workflow_data

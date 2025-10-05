@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """🤖 AI-Powered Trend Detection Engine with Google Trends Integration
-Personal Wealth Generation Platform - World-Class Engineering
+Personal Wealth Generation Platform - World-Class Engineering.
 
 Enhanced trend detection system that combines Google Trends data with multi-source
 analysis to identify emerging trends 2-6 months before mainstream adoption,
@@ -24,7 +24,7 @@ import asyncio
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -86,7 +86,7 @@ class InvestmentVehicle(Enum):
 
 @dataclass
 class TrendSignal:
-    """Individual signal contributing to trend detection"""
+    """Individual signal contributing to trend detection."""
 
     source: str  # "patents", "papers", "funding", "news", etc.
     signal_type: str  # "volume_increase", "sentiment_positive", etc.
@@ -94,12 +94,12 @@ class TrendSignal:
     confidence: float  # 0.0 to 1.0
     data_points: int  # Number of data points supporting signal
     time_period: str  # "last_30_days", "last_quarter", etc.
-    raw_data: dict[str, Any] = field(default_factory=dict)
+    raw_data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class EmergingTrend:
-    """Represents an emerging trend with investment opportunities"""
+    """Represents an emerging trend with investment opportunities."""
 
     name: str
     description: str
@@ -119,7 +119,7 @@ class EmergingTrend:
     signals: list[TrendSignal] = field(default_factory=list)
 
     # Investment opportunities
-    investment_opportunities: list[dict[str, Any]] = field(default_factory=list)
+    investment_opportunities: list[Dict[str, Any]] = field(default_factory=list)
 
     # Market potential
     estimated_market_size: float | None = None  # in billions USD
@@ -130,11 +130,11 @@ class EmergingTrend:
     last_updated: datetime = field(default_factory=datetime.utcnow)
 
     # Risk factors
-    risk_factors: list[str] = field(default_factory=list)
-    competitive_landscape: dict[str, Any] = field(default_factory=dict)
+    risk_factors: List[str] = field(default_factory=list)
+    competitive_landscape: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
             "description": self.description,
@@ -171,18 +171,18 @@ class EmergingTrend:
 
 
 class PatentAnalyzer:
-    """Analyzes patent filings for emerging technology trends"""
+    """Analyzes patent filings for emerging technology trends."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.uspto_base_url = "https://developer.uspto.gov/ptab-api/v1"
         # Note: Real implementation would use proper USPTO API credentials
 
     async def analyze_patent_trends(
         self,
-        keywords: list[str],
+        keywords: List[str],
         months_back: int = 12,
-    ) -> dict[str, Any]:
-        """Analyze patent filing trends for given keywords"""
+    ) -> Dict[str, Any]:
+        """Analyze patent filing trends for given keywords."""
         # Mock patent data - in production would use real USPTO API
         trend_data = {}
 
@@ -223,18 +223,18 @@ class PatentAnalyzer:
 
 
 class ResearchPaperAnalyzer:
-    """Analyzes academic research publications for emerging trends"""
+    """Analyzes academic research publications for emerging trends."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.arxiv_base_url = "http://export.arxiv.org/api/query"
         self.pubmed_base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
     async def analyze_research_trends(
         self,
-        keywords: list[str],
+        keywords: List[str],
         months_back: int = 12,
-    ) -> dict[str, Any]:
-        """Analyze research publication trends"""
+    ) -> Dict[str, Any]:
+        """Analyze research publication trends."""
         trend_data = {}
 
         for keyword in keywords:
@@ -279,15 +279,15 @@ class ResearchPaperAnalyzer:
                 }
 
             except Exception as e:
-                logger.error(f"Error analyzing research trends for {keyword}: {e}")
+                logger.error("Error analyzing research trends for %s: %s", keyword, e)
                 trend_data[keyword] = {"error": str(e), "signal_strength": 0.0}
 
         return trend_data
 
-    async def _query_arxiv(self, keyword: str, months_back: int) -> dict[str, Any]:
-        """Query ArXiv for research papers"""
+    async def _query_arxiv(self, keyword: str, months_back: int) -> Dict[str, Any]:
+        """Query ArXiv for research papers."""
         # Calculate date range
-        end_date = datetime.now()
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=months_back * 30)
 
         # Mock ArXiv query - in production would use real ArXiv API
@@ -300,8 +300,8 @@ class ResearchPaperAnalyzer:
             "query_keyword": keyword,
         }
 
-    async def _query_pubmed(self, keyword: str, months_back: int) -> dict[str, Any]:
-        """Query PubMed for biomedical research papers"""
+    async def _query_pubmed(self, keyword: str, months_back: int) -> Dict[str, Any]:
+        """Query PubMed for biomedical research papers."""
         # Mock PubMed query
         total_papers = (
             np.random.poisson(80)
@@ -320,8 +320,8 @@ class ResearchPaperAnalyzer:
             "query_keyword": keyword,
         }
 
-    def _extract_research_areas(self, keyword: str) -> list[str]:
-        """Extract related research areas for a keyword"""
+    def _extract_research_areas(self, keyword: str) -> List[str]:
+        """Extract related research areas for a keyword."""
         # Mock research area extraction - would use NLP in production
         area_mapping = {
             "quantum": ["quantum computing", "quantum cryptography", "quantum sensors"],
@@ -359,19 +359,19 @@ class ResearchPaperAnalyzer:
 
 
 class FundingAnalyzer:
-    """Analyzes startup funding and investment trends"""
+    """Analyzes startup funding and investment trends."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Note: In production would integrate with Crunchbase, PitchBook, or
         # similar APIs
         pass
 
     async def analyze_funding_trends(
         self,
-        keywords: list[str],
+        keywords: List[str],
         months_back: int = 12,
-    ) -> dict[str, Any]:
-        """Analyze startup funding trends in specific sectors"""
+    ) -> Dict[str, Any]:
+        """Analyze startup funding trends in specific sectors."""
         trend_data = {}
 
         for keyword in keywords:
@@ -425,8 +425,8 @@ class FundingAnalyzer:
         self,
         keyword: str,
         months_back: int,
-    ) -> list[dict[str, Any]]:
-        """Generate mock funding data for demonstration"""
+    ) -> list[Dict[str, Any]]:
+        """Generate mock funding data for demonstration."""
         funding_rounds = []
 
         # Base funding activity based on keyword
@@ -471,18 +471,18 @@ class FundingAnalyzer:
 
 
 class SentimentAnalyzer:
-    """Analyzes social sentiment and media coverage for trend validation"""
+    """Analyzes social sentiment and media coverage for trend validation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sentiment_pipeline = None
         if HAS_TRANSFORMERS:
             try:
                 self.sentiment_pipeline = pipeline("sentiment-analysis")
             except Exception as e:
-                logger.warning(f"Could not load sentiment pipeline: {e}")
+                logger.warning("Could not load sentiment pipeline: %s", e)
 
-    async def analyze_trend_sentiment(self, keywords: list[str]) -> dict[str, Any]:
-        """Analyze social sentiment around trend keywords"""
+    async def analyze_trend_sentiment(self, keywords: List[str]) -> Dict[str, Any]:
+        """Analyze social sentiment around trend keywords."""
         sentiment_data = {}
 
         for keyword in keywords:
@@ -521,8 +521,8 @@ class SentimentAnalyzer:
 
         return sentiment_data
 
-    def _generate_mock_social_data(self, keyword: str) -> list[dict[str, Any]]:
-        """Generate mock social media mentions"""
+    def _generate_mock_social_data(self, keyword: str) -> list[Dict[str, Any]]:
+        """Generate mock social media mentions."""
         mentions = []
         base_mentions = np.random.randint(50, 500)
 
@@ -539,15 +539,15 @@ class SentimentAnalyzer:
                         ["twitter", "reddit", "linkedin", "youtube"],
                     ),
                     "engagement": np.random.randint(1, 1000),
-                    "timestamp": datetime.now()
+                    "timestamp": datetime.now(UTC)
                     - timedelta(days=np.random.randint(0, 90)),
                 },
             )
 
         return mentions
 
-    def _generate_mock_news_data(self, keyword: str) -> list[dict[str, Any]]:
-        """Generate mock news mentions"""
+    def _generate_mock_news_data(self, keyword: str) -> list[Dict[str, Any]]:
+        """Generate mock news mentions."""
         mentions = []
         base_mentions = np.random.randint(20, 100)
 
@@ -565,7 +565,7 @@ class SentimentAnalyzer:
                     "source": np.random.choice(
                         ["TechCrunch", "Reuters", "Bloomberg", "The Verge", "Forbes"],
                     ),
-                    "timestamp": datetime.now()
+                    "timestamp": datetime.now(UTC)
                     - timedelta(days=np.random.randint(0, 30)),
                 },
             )
@@ -574,9 +574,9 @@ class SentimentAnalyzer:
 
     def _analyze_sentiment_scores(
         self,
-        mentions: list[dict[str, Any]],
+        mentions: list[Dict[str, Any]],
     ) -> dict[str, int]:
-        """Analyze sentiment distribution"""
+        """Analyze sentiment distribution."""
         positive = sum(1 for m in mentions if m["sentiment_score"] > 0.1)
         negative = sum(1 for m in mentions if m["sentiment_score"] < -0.1)
         neutral = len(mentions) - positive - negative
@@ -588,8 +588,8 @@ class SentimentAnalyzer:
             "total": len(mentions),
         }
 
-    def _calculate_sentiment_momentum(self, mentions: list[dict[str, Any]]) -> float:
-        """Calculate sentiment momentum over time"""
+    def _calculate_sentiment_momentum(self, mentions: list[Dict[str, Any]]) -> float:
+        """Calculate sentiment momentum over time."""
         if len(mentions) < 10:
             return 0.0
 
@@ -597,7 +597,7 @@ class SentimentAnalyzer:
         sorted_mentions = sorted(mentions, key=lambda x: x["timestamp"])
 
         # Calculate recent vs historical sentiment
-        cutoff_date = datetime.now() - timedelta(days=30)
+        cutoff_date = datetime.now(UTC) - timedelta(days=30)
         recent_mentions = [m for m in sorted_mentions if m["timestamp"] > cutoff_date]
         historical_mentions = [
             m for m in sorted_mentions if m["timestamp"] <= cutoff_date
@@ -616,10 +616,10 @@ class SentimentAnalyzer:
 
 class TrendDetectionEngine:
     """Enhanced trend detection engine with Google Trends integration
-    Orchestrates all analysis components including search behavior data
+    Orchestrates all analysis components including search behavior data.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
 
         # Initialize analyzers
@@ -638,7 +638,7 @@ class TrendDetectionEngine:
                 )
                 logger.info("Google Trends integration enabled")
             except Exception as e:
-                logger.error(f"Failed to initialize Google Trends service: {e}")
+                logger.error("Failed to initialize Google Trends service: %s", e)
 
         # AI integration
         self.openai_client = None
@@ -715,11 +715,12 @@ class TrendDetectionEngine:
         }
 
         logger.info(
-            f"TrendDetectionEngine initialized with {len(self.keyword_categories)} categories",
+            "TrendDetectionEngine initialized with %s categories",
+            len(self.keyword_categories),
         )
 
     async def detect_emerging_trends(self) -> list[EmergingTrend]:
-        """Enhanced trend detection method with Google Trends integration"""
+        """Enhanced trend detection method with Google Trends integration."""
         logger.info(
             "🔍 Starting comprehensive trend detection analysis with Google Trends...",
         )
@@ -743,14 +744,15 @@ class TrendDetectionEngine:
                         all_trends.append(trend_signal)
 
                 logger.info(
-                    f"📈 Found {len(google_opportunities)} Google Trends opportunities",
+                    "📈 Found %s Google Trends opportunities",
+                    len(google_opportunities),
                 )
             except Exception as e:
-                logger.error(f"Error in Google Trends analysis: {e}")
+                logger.error("Error in Google Trends analysis: %s", e)
 
         # Continue with traditional multi-source analysis
         for category, keywords in self.keyword_categories.items():
-            logger.info(f"Analyzing {category.value} trends...")
+            logger.info("Analyzing %s trends...", category.value)
 
             try:
                 # Analyze each data source
@@ -774,7 +776,9 @@ class TrendDetectionEngine:
                         )
                     except Exception as e:
                         logger.error(
-                            f"Error getting Google Trends for {category.value}: {e}",
+                            "Error getting Google Trends for %s: %s",
+                            category.value,
+                            e,
                         )
 
                 # Synthesize trends for this category (enhanced with Google Trends)
@@ -791,7 +795,7 @@ class TrendDetectionEngine:
                 all_trends.extend(category_trends)
 
             except Exception as e:
-                logger.error(f"Error analyzing {category.value} trends: {e}")
+                logger.error("Error analyzing %s trends: %s", category.value, e)
                 continue
 
         # Filter and rank all detected trends
@@ -801,7 +805,8 @@ class TrendDetectionEngine:
         self._update_active_trends(high_quality_trends)
 
         logger.info(
-            f"✅ Enhanced trend detection complete: {len(high_quality_trends)} high-quality trends detected",
+            "✅ Enhanced trend detection complete: %s high-quality trends detected",
+            len(high_quality_trends),
         )
 
         return high_quality_trends
@@ -809,14 +814,14 @@ class TrendDetectionEngine:
     async def _synthesize_category_trends(
         self,
         category: TrendCategory,
-        keywords: list[str],
-        patent_data: dict[str, Any],
-        research_data: dict[str, Any],
-        funding_data: dict[str, Any],
-        sentiment_data: dict[str, Any],
-        google_trends_data: dict[str, Any] = None,
+        keywords: List[str],
+        patent_data: Dict[str, Any],
+        research_data: Dict[str, Any],
+        funding_data: Dict[str, Any],
+        sentiment_data: Dict[str, Any],
+        google_trends_data: Dict[str, Any] = None,
     ) -> list[EmergingTrend]:
-        """Synthesize trends for a specific category"""
+        """Synthesize trends for a specific category."""
         trends = []
 
         for keyword in keywords:
@@ -899,7 +904,7 @@ class TrendDetectionEngine:
                         trends.append(trend)
 
             except Exception as e:
-                logger.error(f"Error synthesizing trend for {keyword}: {e}")
+                logger.error("Error synthesizing trend for %s: %s", keyword, e)
                 continue
 
         return trends
@@ -910,7 +915,7 @@ class TrendDetectionEngine:
         category: TrendCategory,
         signals: list[TrendSignal],
     ) -> EmergingTrend | None:
-        """Create an EmergingTrend object from collected signals"""
+        """Create an EmergingTrend object from collected signals."""
         if not signals:
             return None
 
@@ -979,7 +984,7 @@ class TrendDetectionEngine:
         )
 
     def _calculate_trend_momentum(self, signals: list[TrendSignal]) -> float:
-        """Calculate trend momentum from signals"""
+        """Calculate trend momentum from signals."""
         momentum_indicators = []
 
         for signal in signals:
@@ -998,7 +1003,7 @@ class TrendDetectionEngine:
         return 0.0
 
     def _determine_trend_stage(self, signals: list[TrendSignal]) -> TrendStage:
-        """Determine what stage the trend is in"""
+        """Determine what stage the trend is in."""
         # Simple heuristic based on signal sources and strength
         has_strong_research = any(
             s.source == "research_papers" and s.strength > 0.6 for s in signals
@@ -1022,8 +1027,8 @@ class TrendDetectionEngine:
         keyword: str,
         category: TrendCategory,
         signals: list[TrendSignal],
-    ) -> list[dict[str, Any]]:
-        """Generate investment opportunities based on trend analysis"""
+    ) -> list[Dict[str, Any]]:
+        """Generate investment opportunities based on trend analysis."""
         opportunities = []
 
         # Stock opportunities based on category
@@ -1192,7 +1197,7 @@ class TrendDetectionEngine:
         category: TrendCategory,
         signals: list[TrendSignal],
     ) -> float | None:
-        """Estimate total addressable market size in billions USD"""
+        """Estimate total addressable market size in billions USD."""
         # Base market sizes by category (rough estimates)
         base_markets = {
             TrendCategory.AI_ML: 500,  # AI market expected to reach $500B+
@@ -1211,7 +1216,7 @@ class TrendDetectionEngine:
         return base_size * size_multiplier
 
     def _estimate_growth_rate(self, signals: list[TrendSignal]) -> float | None:
-        """Estimate annual growth rate percentage"""
+        """Estimate annual growth rate percentage."""
         growth_rates = []
 
         for signal in signals:
@@ -1227,11 +1232,10 @@ class TrendDetectionEngine:
                 )  # Scale research growth
 
         if growth_rates:
-            estimated_growth = max(
+            return max(
                 10,
                 min(200, np.mean(growth_rates)),
             )  # Cap between 10% and 200%
-            return estimated_growth
         return 25.0  # Default growth rate
 
     async def _generate_trend_description(
@@ -1240,7 +1244,7 @@ class TrendDetectionEngine:
         category: TrendCategory,
         signals: list[TrendSignal],
     ) -> str:
-        """Generate AI-powered trend description"""
+        """Generate AI-powered trend description."""
         # If OpenAI is available, use it for better descriptions
         if self.openai_client:
             try:
@@ -1272,7 +1276,7 @@ class TrendDetectionEngine:
                 return response.choices[0].message.content.strip()
 
             except Exception as e:
-                logger.warning(f"OpenAI description generation failed: {e}")
+                logger.warning("OpenAI description generation failed: %s", e)
 
         # Fallback to template-based description
         return self._generate_template_description(keyword, category, signals)
@@ -1283,7 +1287,7 @@ class TrendDetectionEngine:
         category: TrendCategory,
         signals: list[TrendSignal],
     ) -> str:
-        """Generate description using templates"""
+        """Generate description using templates."""
         signal_types = [s.signal_type for s in signals]
 
         if (
@@ -1298,7 +1302,7 @@ class TrendDetectionEngine:
         } showing multiple positive indicators including research growth and market interest."
 
     def _summarize_signals(self, signals: list[TrendSignal]) -> str:
-        """Summarize signals for AI prompt"""
+        """Summarize signals for AI prompt."""
         summary_parts = []
 
         for signal in signals:
@@ -1314,7 +1318,7 @@ class TrendDetectionEngine:
         stage: TrendStage,
         momentum: float,
     ) -> datetime | None:
-        """Estimate when trend will reach mainstream adoption"""
+        """Estimate when trend will reach mainstream adoption."""
         base_months = {
             TrendStage.EMERGENCE: 36,  # 3 years
             TrendStage.EARLY_ADOPTION: 24,  # 2 years
@@ -1330,10 +1334,10 @@ class TrendDetectionEngine:
         elif momentum < -0.2:
             months_to_mainstream *= 1.3  # Slower with negative momentum
 
-        return datetime.now() + timedelta(days=int(months_to_mainstream * 30))
+        return datetime.now(UTC) + timedelta(days=int(months_to_mainstream * 30))
 
     def _estimate_current_adoption(self, stage: TrendStage) -> float:
-        """Estimate current adoption percentage"""
+        """Estimate current adoption percentage."""
         adoption_percentages = {
             TrendStage.EMERGENCE: 0.5,
             TrendStage.EARLY_ADOPTION: 2.5,
@@ -1349,8 +1353,8 @@ class TrendDetectionEngine:
         keyword: str,
         category: TrendCategory,
         signals: list[TrendSignal],
-    ) -> list[str]:
-        """Identify potential risk factors for the trend"""
+    ) -> List[str]:
+        """Identify potential risk factors for the trend."""
         risk_factors = []
 
         # Category-specific risks
@@ -1397,8 +1401,8 @@ class TrendDetectionEngine:
         self,
         keyword: str,
         signals: list[TrendSignal],
-    ) -> dict[str, Any]:
-        """Analyze competitive landscape"""
+    ) -> Dict[str, Any]:
+        """Analyze competitive landscape."""
         # Extract company information from signals
         companies = []
 
@@ -1434,7 +1438,7 @@ class TrendDetectionEngine:
         self,
         trends: list[EmergingTrend],
     ) -> list[EmergingTrend]:
-        """Filter and rank trends by investment potential"""
+        """Filter and rank trends by investment potential."""
         # Filter trends with minimum quality threshold
         filtered_trends = [
             trend
@@ -1467,8 +1471,8 @@ class TrendDetectionEngine:
 
         return filtered_trends[:15]  # Return top 15 trends
 
-    def _update_active_trends(self, new_trends: list[EmergingTrend]):
-        """Update active trends list"""
+    def _update_active_trends(self) -> None:
+        """Update active trends list."""
         # Remove old trends or update existing ones
         existing_trend_names = {trend.name.lower() for trend in self.active_trends}
 
@@ -1489,7 +1493,7 @@ class TrendDetectionEngine:
                 self.active_trends.append(new_trend)
 
         # Remove trends that are no longer detected (older than 30 days)
-        cutoff_date = datetime.now() - timedelta(days=30)
+        cutoff_date = datetime.now(UTC) - timedelta(days=30)
         self.active_trends = [
             trend for trend in self.active_trends if trend.last_updated > cutoff_date
         ]
@@ -1498,19 +1502,19 @@ class TrendDetectionEngine:
         self.active_trends.sort(key=lambda x: x.overall_score, reverse=True)
 
     def get_active_trends(self) -> list[EmergingTrend]:
-        """Get all active trends"""
+        """Get all active trends."""
         return self.active_trends.copy()
 
     def get_top_trends(self, limit: int = 10) -> list[EmergingTrend]:
-        """Get top trends by overall score"""
+        """Get top trends by overall score."""
         return self.active_trends[:limit]
 
     def get_trends_by_category(self, category: TrendCategory) -> list[EmergingTrend]:
-        """Get trends filtered by category"""
+        """Get trends filtered by category."""
         return [trend for trend in self.active_trends if trend.category == category]
 
     def get_early_stage_trends(self) -> list[EmergingTrend]:
-        """Get trends in emergence or early adoption stage (highest upside potential)"""
+        """Get trends in emergence or early adoption stage (highest upside potential)."""
         return [
             trend
             for trend in self.active_trends
@@ -1521,8 +1525,8 @@ class TrendDetectionEngine:
 # Example usage
 
 
-async def main_trend_detection_demo():
-    """Demo of the trend detection engine"""
+async def main_trend_detection_demo(self) -> None:
+    """Demo of the trend detection engine."""
     config = {
         "openai_api_key": None,  # Add your OpenAI API key for better descriptions
     }
@@ -1578,7 +1582,7 @@ async def main_trend_detection_demo():
         self,
         google_opportunity,
     ) -> EmergingTrend | None:
-        """Convert Google Trends opportunity to EmergingTrend signal"""
+        """Convert Google Trends opportunity to EmergingTrend signal."""
         try:
             # Determine category based on keyword
             category = self._classify_keyword_category(google_opportunity.keyword)
@@ -1615,7 +1619,7 @@ async def main_trend_detection_demo():
             ) / 3
 
             # Create EmergingTrend from Google Trends data
-            trend = EmergingTrend(
+            return EmergingTrend(
                 id=f"gt_{google_opportunity.opportunity_id}",
                 name=google_opportunity.keyword.title(),
                 category=category,
@@ -1628,22 +1632,20 @@ async def main_trend_detection_demo():
                 data_sources={"google_trends": trend_data.to_dict()},
                 estimated_market_size=trend_data.peak_interest * 100,  # Rough estimate
                 growth_rate_estimate=max(trend_data.momentum_score * 50, 10),
-                estimated_mainstream_date=datetime.now()
+                estimated_mainstream_date=datetime.now(UTC)
                 + timedelta(days=180 if stage == TrendStage.EMERGENCE else 90),
-                last_updated=datetime.now(),
+                last_updated=datetime.now(UTC),
             )
 
-            return trend
-
         except Exception as e:
-            logger.error(f"Error converting Google Trends opportunity to signal: {e}")
+            logger.error("Error converting Google Trends opportunity to signal: %s", e)
             return None
 
     async def _get_google_trends_for_category(
         self,
-        keywords: list[str],
-    ) -> dict[str, Any]:
-        """Get Google Trends data for specific category keywords"""
+        keywords: List[str],
+    ) -> Dict[str, Any]:
+        """Get Google Trends data for specific category keywords."""
         try:
             google_data = {}
 
@@ -1657,17 +1659,17 @@ async def main_trend_detection_demo():
                         google_data[keyword] = trend_data.to_dict()
                         await asyncio.sleep(1)  # Rate limiting
                 except Exception as e:
-                    logger.error(f"Error getting Google Trends for '{keyword}': {e}")
+                    logger.error("Error getting Google Trends for '%s': %s", keyword, e)
                     continue
 
             return google_data
 
         except Exception as e:
-            logger.error(f"Error getting Google Trends for category: {e}")
+            logger.error("Error getting Google Trends for category: %s", e)
             return {}
 
     def _classify_keyword_category(self, keyword: str) -> TrendCategory:
-        """Classify a keyword into trend category"""
+        """Classify a keyword into trend category."""
         keyword_lower = keyword.lower()
 
         # Check against each category's keywords
@@ -1704,8 +1706,8 @@ async def main_trend_detection_demo():
             return TrendCategory.FINANCE
         return TrendCategory.TECHNOLOGY  # Default fallback
 
-    def get_google_trends_dashboard(self) -> dict[str, Any]:
-        """Get Google Trends integration dashboard data"""
+    def get_google_trends_dashboard(self) -> Dict[str, Any]:
+        """Get Google Trends integration dashboard data."""
         try:
             if not self.google_trends_service:
                 return {"error": "Google Trends not available"}
@@ -1713,13 +1715,13 @@ async def main_trend_detection_demo():
             # This would be implemented as an async method in production
             return {
                 "integration_status": "active",
-                "last_analysis": datetime.now().isoformat(),
+                "last_analysis": datetime.now(UTC).isoformat(),
                 "trends_analyzed": len(self.active_trends),
                 "google_trends_enabled": True,
             }
 
         except Exception as e:
-            logger.error(f"Error getting Google Trends dashboard: {e}")
+            logger.error("Error getting Google Trends dashboard: %s", e)
             return {"error": str(e)}
 
 

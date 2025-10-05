@@ -16,18 +16,18 @@ import pytest
 class TestSQLInjectionRemediation:
     """Test SQL injection remediation with simple database operations."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment."""
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db.close()
         self.db_path = self.temp_db.name
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up test environment."""
         if os.path.exists(self.db_path):
             os.unlink(self.db_path)
 
-    def test_parameterized_query_execution(self):
+    def test_parameterized_query_execution(self) -> None:
         """Test that parameterized queries execute correctly."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -68,7 +68,7 @@ class TestSQLInjectionRemediation:
 
         conn.close()
 
-    def test_sql_injection_prevention(self):
+    def test_sql_injection_prevention(self) -> None:
         """Test that SQL injection attempts are prevented."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -117,7 +117,7 @@ class TestSQLInjectionRemediation:
 
         conn.close()
 
-    def test_comprehensive_sql_injection_protection(self):
+    def test_comprehensive_sql_injection_protection(self) -> None:
         """Comprehensive test for SQL injection protection."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -179,7 +179,7 @@ class TestSQLInjectionRemediation:
         conn.commit()
         conn.close()
 
-    def test_performance_with_parameterized_queries(self):
+    def test_performance_with_parameterized_queries(self) -> None:
         """Test that parameterized queries maintain good performance."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -232,7 +232,7 @@ class TestSQLInjectionRemediation:
 
         conn.close()
 
-    def test_like_operator_parameterization(self):
+    def test_like_operator_parameterization(self) -> None:
         """Test that LIKE operator uses parameterized queries."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()

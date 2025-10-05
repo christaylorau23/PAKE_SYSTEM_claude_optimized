@@ -10,7 +10,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -43,7 +43,7 @@ class ServiceConfig:
     health_endpoint: str = None
     process_name: str = None
     container_name: str = None
-    dependencies: list[str] = None
+    dependencies: List[str] = None
     critical: bool = True
     restart_command: str = None
     max_restart_attempts: int = 3
@@ -57,18 +57,18 @@ class HealthResult:
     status: HealthStatus
     response_time_ms: float
     error_message: str = None
-    details: dict[str, Any] = None
+    details: Dict[str, Any] = None
     timestamp: datetime = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
-            self.timestamp = datetime.now()
+            self.timestamp = datetime.now(UTC)
 
 
 class PAKEServiceMonitor:
     """Comprehensive PAKE+ service monitoring system"""
 
-    def __init__(self, config_file: str = None):
+    def __init__(self) -> None:
         self.base_dir = Path(__file__).parent.parent
         self.logs_dir = self.base_dir / "logs"
         self.data_dir = self.base_dir / "data"
@@ -95,10 +95,10 @@ class PAKEServiceMonitor:
 
         self.logger.info("PAKE Service Monitor initialized")
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """Setup comprehensive logging"""
         log_file = (
-            self.logs_dir / f"health_monitor_{datetime.now().strftime('%Y%m%d')}.log"
+            self.logs_dir / f"health_monitor_{datetime.now(UTC).strftime('%Y%m%d')}.log"
         )
 
         formatter = logging.Formatter(
@@ -215,11 +215,11 @@ class PAKEServiceMonitor:
                         default_services[service_name] = ServiceConfig(**config_data)
 
             except Exception as e:
-                self.logger.warning(f"Failed to load custom config: {e}")
+                self.logger.warning("Failed to load custom config: %s", e)
 
         return default_services
 
-    def init_database(self):
+    def init_database(self) -> None:
         """Initialize SQLite database for health history"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -503,7 +503,7 @@ class PAKEServiceMonitor:
         except Exception as e:
             return HealthResult(service.name, HealthStatus.UNKNOWN, 0.0, str(e))
 
-    def _store_health_result(self, result: HealthResult):
+    def _store_health_result(self) -> None:
         """Store health check result in database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -528,7 +528,7 @@ class PAKEServiceMonitor:
             conn.close()
 
         except Exception as e:
-            self.logger.error(f"Failed to store health result: {e}")
+            self.logger.error("Failed to store health result: %s", e)
 
     async def check_all_services(self) -> dict[str, HealthResult]:
         """Check health of all services"""
@@ -553,15 +553,18 @@ class PAKEServiceMonitor:
 
                 status_icon = self._get_status_icon(result.status)
                 self.logger.info(
-                    f"{status_icon} {service_name}: {result.status.value} "
-                    f"({result.response_time_ms:.1f}ms)",
+                    "%s %s: %s (%.1fms)",
+                    status_icon,
+                    service_name,
+                    result.status.value,
+                    result.response_time_ms,
                 )
 
                 if result.error_message:
-                    self.logger.warning(f"  Error: {result.error_message}")
+                    self.logger.warning("  Error: %s", result.error_message)
 
             except Exception as e:
-                self.logger.error(f"Health check failed for {service_name}: {e}")
+                self.logger.error("Health check failed for %s: %s", service_name, e)
                 results[service_name] = HealthResult(
                     service_name,
                     HealthStatus.UNKNOWN,
@@ -585,7 +588,7 @@ class PAKEServiceMonitor:
         }
         return icons.get(status, "❓")
 
-    async def _process_health_results(self, results: dict[str, HealthResult]):
+    async def _process_health_results(self) -> None:
         """Process health results and trigger recovery actions"""
         for service_name, result in results.items():
             service = self.services[service_name]
@@ -608,18 +611,15 @@ class PAKEServiceMonitor:
             if previous_status != result.status:
                 await self._generate_alert(service_name, result, previous_status)
 
-    async def _handle_service_failure(
-        self,
-        service_name: str,
-        service: ServiceConfig,
-        result: HealthResult,
-    ):
+    async def _handle_service_failure(self) -> None:
         """Handle service failure with recovery attempts"""
         restart_count = self.restart_attempts.get(service_name, 0)
 
         if restart_count >= service.max_restart_attempts:
             self.logger.critical(
-                f"Service {service_name} exceeded max restart attempts ({restart_count})",
+                "Service %s exceeded max restart attempts (%s)",
+                service_name,
+                restart_count,
             )
             await self._generate_alert(
                 service_name,
@@ -636,16 +636,19 @@ class PAKEServiceMonitor:
                 dep_status = self.health_history.get(dep, HealthStatus.UNKNOWN)
                 if dep_status != HealthStatus.HEALTHY:
                     self.logger.warning(
-                        f"Cannot restart {service_name}: dependency {dep} is {
-                            dep_status.value
-                        }",
+                        "Cannot restart %s: dependency %s is %s",
+                        service_name,
+                        dep,
+                        dep_status.value,
                     )
                     return
 
         # Attempt to restart service
         if service.restart_command:
             self.logger.info(
-                f"Attempting to restart {service_name} (attempt {restart_count + 1})",
+                "Attempting to restart %s (attempt %s)",
+                service_name,
+                restart_count + 1,
             )
 
             success = await self._restart_service(service_name, service.restart_command)
@@ -653,16 +656,18 @@ class PAKEServiceMonitor:
             self.restart_attempts[service_name] = restart_count + 1
 
             if success:
-                self.logger.info(f"Successfully restarted {service_name}")
+                self.logger.info("Successfully restarted %s", service_name)
                 # Wait a bit before next health check
                 await asyncio.sleep(10)
             else:
-                self.logger.error(f"Failed to restart {service_name}")
+                self.logger.error("Failed to restart %s", service_name)
 
     async def _restart_service(self, service_name: str, command: str) -> bool:
         """Restart a service using the provided command"""
         try:
-            self.logger.info(f"Executing restart command for {service_name}: {command}")
+            self.logger.info(
+                "Executing restart command for %s: %s", service_name, command
+            )
 
             process = await asyncio.create_subprocess_shell(
                 command,
@@ -694,25 +699,18 @@ class PAKEServiceMonitor:
             conn.close()
 
             if not success:
-                self.logger.error(f"Restart command failed: {stderr.decode()}")
+                self.logger.error("Restart command failed: %s", stderr.decode())
 
             return success
 
         except TimeoutError:
-            self.logger.error(f"Restart command timed out for {service_name}")
+            self.logger.error("Restart command timed out for %s", service_name)
             return False
         except Exception as e:
-            self.logger.error(f"Error executing restart command: {e}")
+            self.logger.error("Error executing restart command: %s", e)
             return False
 
-    async def _generate_alert(
-        self,
-        service_name: str,
-        result: HealthResult,
-        previous_status: HealthStatus = None,
-        level: AlertLevel = None,
-        custom_message: str = None,
-    ):
+    async def _generate_alert(self) -> None:
         """Generate and send alerts for service status changes"""
         if level is None:
             level = self._determine_alert_level(result.status)
@@ -766,11 +764,12 @@ class PAKEServiceMonitor:
         }
         return mapping.get(status, AlertLevel.WARNING)
 
-    async def start_monitoring(self, check_interval: int = 30):
+    async def start_monitoring(self) -> None:
         """Start continuous monitoring loop"""
         self.monitoring_active = True
         self.logger.info(
-            f"Starting continuous monitoring (interval: {check_interval}s)",
+            "Starting continuous monitoring (interval: %ss)",
+            check_interval,
         )
 
         while self.monitoring_active:
@@ -781,16 +780,16 @@ class PAKEServiceMonitor:
                 self.logger.info("Monitoring interrupted by user")
                 break
             except Exception as e:
-                self.logger.error(f"Error in monitoring loop: {e}")
+                self.logger.error("Error in monitoring loop: %s", e)
                 await asyncio.sleep(check_interval)
 
         self.logger.info("Monitoring stopped")
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop continuous monitoring"""
         self.monitoring_active = False
 
-    def get_health_summary(self) -> dict[str, Any]:
+    def get_health_summary(self) -> Dict[str, Any]:
         """Get overall system health summary"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -850,7 +849,7 @@ class PAKEServiceMonitor:
             "critical_services_down": critical_services_down,
             "services": services_status,
             "recent_alerts": recent_alerts,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     def generate_health_report(self, hours: int = 24) -> str:
@@ -860,7 +859,7 @@ class PAKEServiceMonitor:
 
         report = f"""
 # PAKE+ System Health Report
-Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 Report Period: Last {hours} hours
 
 ## System Overview
@@ -943,12 +942,14 @@ Report Period: Last {hours} hours
 
         conn.close()
 
-        report += f"\n---\n*Generated by PAKE+ Service Monitor at {datetime.now()}*\n"
+        report += (
+            f"\n---\n*Generated by PAKE+ Service Monitor at {datetime.now(UTC)}*\n"
+        )
 
         return report
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point for health monitoring"""
     import argparse
 

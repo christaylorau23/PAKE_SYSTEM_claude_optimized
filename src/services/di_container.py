@@ -11,7 +11,7 @@ This container manages all service dependencies and provides:
 
 import logging
 from collections.abc import Callable
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ T = TypeVar("T")
 
 
 class ServiceLifetime:
-    """Service lifetime enumeration"""
+    """Service lifetime enumeration."""
 
     SINGLETON = "singleton"
     TRANSIENT = "transient"
@@ -27,34 +27,28 @@ class ServiceLifetime:
 
 
 class ServiceRegistration:
-    """Service registration metadata"""
+    """Service registration metadata."""
 
-    def __init__(
-        self,
-        interface: type[T],
-        implementation: Optional[type[T]] = None,
-        lifetime: str = ServiceLifetime.TRANSIENT,
-        factory: Optional[Callable[[], T]] = None,
-    ):
+    def __init__(self) -> None:
         self.interface = interface
         self.implementation = implementation
         self.lifetime = lifetime
         self.factory = factory
-        self.instance: Optional[T] = None
+        self.instance: T | None = None
 
 
 class DIContainer:
-    """Dependency Injection Container for managing service dependencies"""
+    """Dependency Injection Container for managing service dependencies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._services: dict[str, ServiceRegistration] = {}
-        self._singletons: dict[str, Any] = {}
+        self._singletons: Dict[str, Any] = {}
         logger.info("DIContainer initialized")
 
     def register_singleton(
         self, interface: type[T], implementation: type[T]
     ) -> "DIContainer":
-        """Register a singleton service"""
+        """Register a singleton service."""
         return self._register_service(
             interface, implementation, ServiceLifetime.SINGLETON
         )
@@ -62,7 +56,7 @@ class DIContainer:
     def register_transient(
         self, interface: type[T], implementation: type[T]
     ) -> "DIContainer":
-        """Register a transient service"""
+        """Register a transient service."""
         return self._register_service(
             interface, implementation, ServiceLifetime.TRANSIENT
         )
@@ -73,38 +67,39 @@ class DIContainer:
         factory: Callable[[], T],
         lifetime: str = ServiceLifetime.TRANSIENT,
     ) -> "DIContainer":
-        """Register a service with custom factory"""
+        """Register a service with custom factory."""
         interface_name = interface.__name__
         self._services[interface_name] = ServiceRegistration(
             interface=interface, implementation=None, lifetime=lifetime, factory=factory
         )
-        logger.info(
-            f"Registered factory: {interface_name} (lifetime: {lifetime})"
-        )
+        logger.info("Registered factory: %s (lifetime: %s)", interface_name, lifetime)
         return self
 
     def register_instance(self, interface: type[T], instance: T) -> "DIContainer":
-        """Register a service instance"""
+        """Register a service instance."""
         interface_name = interface.__name__
         self._singletons[interface_name] = instance
-        logger.info(f"Registered instance: {interface_name}")
+        logger.info("Registered instance: %s", interface_name)
         return self
 
     def _register_service(
         self, interface: type[T], implementation: type[T], lifetime: str
     ) -> "DIContainer":
-        """Internal service registration method"""
+        """Internal service registration method."""
         interface_name = interface.__name__
         self._services[interface_name] = ServiceRegistration(
             interface=interface, implementation=implementation, lifetime=lifetime
         )
         logger.info(
-            f"Registered service: {interface_name} -> {implementation.__name__} (lifetime: {lifetime})"
+            "Registered service: %s -> %s (lifetime: %s)",
+            interface_name,
+            implementation.__name__,
+            lifetime,
         )
         return self
 
     def get(self, interface: type[T]) -> T:
-        """Get service instance"""
+        """Get service instance."""
         interface_name = interface.__name__
 
         # Check if we have a registered instance
@@ -113,7 +108,8 @@ class DIContainer:
 
         # Check if we have a service registration
         if interface_name not in self._services:
-            raise ValueError(f"No service registered for {interface_name}")
+            msg = f"No service registered for {interface_name}"
+            raise ValueError(msg)
 
         registration = self._services[interface_name]
 
@@ -127,11 +123,12 @@ class DIContainer:
         return self._create_instance(registration)
 
     def get_with_dependencies(self, interface: type[T], **kwargs) -> T:
-        """Get service instance with additional dependencies"""
+        """Get service instance with additional dependencies."""
         interface_name = interface.__name__
 
         if interface_name not in self._services:
-            raise ValueError(f"No service registered for {interface_name}")
+            msg = f"No service registered for {interface_name}"
+            raise ValueError(msg)
 
         registration = self._services[interface_name]
 
@@ -147,10 +144,11 @@ class DIContainer:
                 # Fallback to parameterless constructor
                 return registration.implementation()  # type: ignore[return-value]
 
-        raise ValueError(f"Cannot create instance for {interface_name}")
+        msg = f"Cannot create instance for {interface_name}"
+        raise ValueError(msg)
 
     def _create_instance(self, registration: ServiceRegistration) -> T:  # type: ignore[type-var]
-        """Create service instance"""
+        """Create service instance."""
         if registration.factory:
             return registration.factory()  # type: ignore[return-value]
 
@@ -160,17 +158,18 @@ class DIContainer:
                 return self._resolve_dependencies(registration.implementation)  # type: ignore[return-value]
             except Exception as e:
                 logger.warning(
-                    f"Failed to resolve dependencies for {registration.implementation.__name__}: {e}"
+                    "Failed to resolve dependencies for %s: %s",
+                    registration.implementation.__name__,
+                    e,
                 )
                 # Fallback to parameterless constructor
                 return registration.implementation()  # type: ignore[return-value]
 
-        raise ValueError(
-            f"Cannot create instance for {registration.interface.__name__}"
-        )
+        msg = f"Cannot create instance for {registration.interface.__name__}"
+        raise ValueError(msg)
 
     def _resolve_dependencies(self, implementation: type[T]) -> T:
-        """Resolve constructor dependencies"""
+        """Resolve constructor dependencies."""
         import inspect
 
         # Get constructor signature
@@ -187,45 +186,47 @@ class DIContainer:
                     dependencies[param_name] = self.get(param.annotation)
                 except ValueError:
                     logger.warning(
-                        f"Cannot resolve dependency {param_name} of type {param.annotation}"
+                        "Cannot resolve dependency %s of type %s",
+                        param_name,
+                        param.annotation,
                     )
 
         return implementation(**dependencies)
 
     def is_registered(self, interface: type[T]) -> bool:
-        """Check if service is registered"""
+        """Check if service is registered."""
         interface_name = interface.__name__
         return interface_name in self._services or interface_name in self._singletons
 
     def get_registered_services(self) -> dict[str, str]:
-        """Get list of registered services"""
+        """Get list of registered services."""
         services = {}
 
         # Add registered services
         for name, registration in self._services.items():
-            services[
-                name
-            ] = f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime})"
+            services[name] = (
+                f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime})"
+            )
 
         # Add singleton instances
-        for name in self._singletons.keys():
+        for name in self._singletons:
             services[name] = "Instance (singleton)"
 
         return services
 
-    def clear(self):
-        """Clear all registrations"""
+    def clear(self) -> None:
+        """Clear all registrations."""
         self._services.clear()
         self._singletons.clear()
         logger.info("DIContainer cleared")
 
 
 # Global container instance
-_container: Optional[DIContainer] = None
+_container: DIContainer | None = None
 
 
 def get_container() -> DIContainer:
-    """Get global DI container instance"""
+    """Get global DI container instance."""
     global _container
     if _container is None:
         _container = DIContainer()
@@ -233,7 +234,7 @@ def get_container() -> DIContainer:
 
 
 def configure_services(container: DIContainer) -> DIContainer:
-    """Configure all PAKE System services"""
+    """Configure all PAKE System services."""
     # Import here to avoid circular dependencies
     from ..business.user_service_refactored import UserService
     from ..domain.interfaces import (
@@ -263,22 +264,22 @@ def configure_services(container: DIContainer) -> DIContainer:
 
 # Mock implementations for demonstration
 class MockConfigService:
-    """Mock configuration service"""
+    """Mock configuration service."""
 
     def get_config(self, key: str, default: Any = None) -> Any:
         return default
 
-    def get_database_config(self) -> dict[str, Any]:
+    def get_database_config(self) -> Dict[str, Any]:
         return {"host": "localhost", "port": 5432}
 
-    def get_redis_config(self) -> dict[str, Any]:
+    def get_redis_config(self) -> Dict[str, Any]:
         return {"host": "localhost", "port": 6379}
 
 
 class MockCacheService:
-    """Mock cache service"""
+    """Mock cache service."""
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         return None
 
     async def set(self, key: str, value: Any, ttl: int = 3600) -> bool:
@@ -292,9 +293,9 @@ class MockCacheService:
 
 
 class MockAuthService:
-    """Mock authentication service"""
+    """Mock authentication service."""
 
-    async def authenticate_user(self, email: str, password: str):
+    async def authenticate_user(self) -> None:
         from ..domain.interfaces import ServiceResult, ServiceStatus
 
         return ServiceResult(
@@ -302,7 +303,7 @@ class MockAuthService:
             data={"user_id": "mock-user-id", "token": "mock-token"},
         )
 
-    async def create_user(self, user_data: dict[str, Any]):
+    async def create_user(self) -> None:
         from ..domain.interfaces import ServiceResult, ServiceStatus
 
         return ServiceResult(
@@ -310,7 +311,7 @@ class MockAuthService:
             data={"hashed_password": "mock-hashed-password"},
         )
 
-    async def validate_token(self, token: str):
+    async def validate_token(self) -> None:
         from ..domain.interfaces import ServiceResult, ServiceStatus
 
         return ServiceResult(
@@ -319,16 +320,14 @@ class MockAuthService:
 
 
 class MockNotificationService:
-    """Mock notification service"""
+    """Mock notification service."""
 
-    async def send_welcome_email(self, email: str, user_data: dict[str, Any]):
+    async def send_welcome_email(self) -> None:
         from ..domain.interfaces import ServiceResult, ServiceStatus
 
         return ServiceResult(status=ServiceStatus.SUCCESS, data=True)
 
-    async def send_notification(
-        self, user_id: str, message: str, notification_type: str
-    ):
+    async def send_notification(self) -> None:
         from ..domain.interfaces import ServiceResult, ServiceStatus
 
         return ServiceResult(status=ServiceStatus.SUCCESS, data=True)

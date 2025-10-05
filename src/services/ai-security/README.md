@@ -23,9 +23,9 @@ npm run dev
 
 ## 🎯 Success Criteria
 
-✅ **Zero successful prompt injections** - 100% detection rate against known attacks  
-✅ **Model extraction attempts detected and blocked** - Advanced query analysis  
-✅ **Token costs within 10% of projections** - Precise cost tracking and budgeting  
+✅ **Zero successful prompt injections** - 100% detection rate against known attacks
+✅ **Model extraction attempts detected and blocked** - Advanced query analysis
+✅ **Token costs within 10% of projections** - Precise cost tracking and budgeting
 ✅ **<5% false positive rate** - High accuracy adversarial detection
 
 ## 🏗️ Architecture

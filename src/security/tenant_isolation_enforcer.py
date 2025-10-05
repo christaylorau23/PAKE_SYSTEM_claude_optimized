@@ -11,7 +11,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.middleware.tenant_context import (
@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SecurityViolation:
-    """Security violation record"""
+    """Security violation record."""
 
     violation_id: str
     violation_type: str
     severity: str  # CRITICAL, HIGH, MEDIUM, LOW
     tenant_id: str | None
     user_id: str | None
-    details: dict[str, Any]
+    details: Dict[str, Any]
     timestamp: datetime
     ip_address: str | None
     user_agent: str | None
@@ -41,28 +41,28 @@ class SecurityViolation:
 
 @dataclass
 class SecurityPolicy:
-    """Security policy configuration"""
+    """Security policy configuration."""
 
     name: str
     enabled: bool
     severity: str
     action: str  # block, log, alert
-    parameters: dict[str, Any]
+    parameters: Dict[str, Any]
 
 
 class SecurityMetrics:
-    """Security metrics tracking"""
+    """Security metrics tracking."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.violations_by_type: dict[str, int] = {}
         self.violations_by_tenant: dict[str, int] = {}
         self.violations_by_severity: dict[str, int] = {}
         self.blocked_requests: int = 0
         self.total_requests: int = 0
-        self.last_reset: datetime = datetime.utcnow()
+        self.last_reset: datetime = datetime.now(UTC)
 
     def record_violation(self, violation: SecurityViolation) -> None:
-        """Record security violation in metrics"""
+        """Record security violation in metrics."""
         self.violations_by_type[violation.violation_type] = (
             self.violations_by_type.get(violation.violation_type, 0) + 1
         )
@@ -80,11 +80,11 @@ class SecurityMetrics:
             self.blocked_requests += 1
 
     def record_request(self) -> None:
-        """Record total request"""
+        """Record total request."""
         self.total_requests += 1
 
     def get_security_score(self) -> float:
-        """Calculate security score (0-100)"""
+        """Calculate security score (0-100)."""
         if self.total_requests == 0:
             return 100.0
 
@@ -103,13 +103,13 @@ class SecurityMetrics:
         return round(score, 2)
 
     def reset_metrics(self) -> None:
-        """Reset metrics"""
+        """Reset metrics."""
         self.violations_by_type.clear()
         self.violations_by_tenant.clear()
         self.violations_by_severity.clear()
         self.blocked_requests = 0
         self.total_requests = 0
-        self.last_reset = datetime.utcnow()
+        self.last_reset = datetime.now(UTC)
 
 
 class TenantIsolationEnforcer:
@@ -126,15 +126,15 @@ class TenantIsolationEnforcer:
     - Automated incident response
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.security_policies: dict[str, SecurityPolicy] = {}
         self.security_metrics = SecurityMetrics()
         self.violation_log: list[SecurityViolation] = []
         self.blocked_ips: set[str] = set()
-        self.suspicious_patterns: dict[str, list[str]] = {}
+        self.suspicious_patterns: dict[str, List[str]] = {}
 
         # Rate limiting
-        self.rate_limits: dict[str, dict[str, Any]] = {}
+        self.rate_limits: dict[str, Dict[str, Any]] = {}
 
         # Initialize default policies
         self._initialize_security_policies()
@@ -142,7 +142,7 @@ class TenantIsolationEnforcer:
         logger.info("Tenant Isolation Security Enforcer initialized")
 
     def _initialize_security_policies(self) -> None:
-        """Initialize default security policies"""
+        """Initialize default security policies."""
         # Cross-tenant access prevention
         self.security_policies["cross_tenant_access"] = SecurityPolicy(
             name="Cross-Tenant Access Prevention",
@@ -213,7 +213,7 @@ class TenantIsolationEnforcer:
         requested_tenant_id: str,
         operation: str,
         resource: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Validate tenant access permissions.
 
         This is the core security function that ensures tenant isolation.
@@ -293,7 +293,7 @@ class TenantIsolationEnforcer:
             }
 
         except Exception as e:
-            logger.error(f"Security validation error: {e}")
+            logger.error("Security validation error: %s", e)
             violation = await self._create_security_violation(
                 violation_type="security_validation_error",
                 severity="HIGH",
@@ -301,7 +301,7 @@ class TenantIsolationEnforcer:
             )
             return await self._handle_security_violation(violation)
 
-    async def scan_response_data(self, data: Any, tenant_id: str) -> dict[str, Any]:
+    async def scan_response_data(self, data: Any, tenant_id: str) -> Dict[str, Any]:
         """Scan response data for potential leakage.
 
         Ensures response data doesn't contain information from other tenants.
@@ -372,10 +372,10 @@ class TenantIsolationEnforcer:
             return {"clean": True, "message": "Response data validated"}
 
         except Exception as e:
-            logger.error(f"Response data scanning error: {e}")
+            logger.error("Response data scanning error: %s", e)
             return {"clean": False, "error": str(e)}
 
-    async def validate_input_parameters(self, params: dict[str, Any]) -> dict[str, Any]:
+    async def validate_input_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Validate input parameters for security threats.
 
         Protects against injection attacks and malicious input.
@@ -478,7 +478,7 @@ class TenantIsolationEnforcer:
             return {"safe": True, "message": "Input parameters validated"}
 
         except Exception as e:
-            logger.error(f"Input validation error: {e}")
+            logger.error("Input validation error: %s", e)
             return {"safe": False, "error": str(e)}
 
     async def monitor_authentication_patterns(
@@ -486,11 +486,11 @@ class TenantIsolationEnforcer:
         tenant_id: str,
         user_id: str,
         success: bool,
-        metadata: dict[str, Any],
+        metadata: Dict[str, Any],
     ) -> None:
-        """Monitor authentication patterns for anomalies"""
+        """Monitor authentication patterns for anomalies."""
         try:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(UTC)
             key = f"{tenant_id}:{user_id}"
 
             # Initialize tracking for this user if not exists
@@ -567,7 +567,7 @@ class TenantIsolationEnforcer:
                 await self._handle_security_violation(violation, block=False)
 
         except Exception as e:
-            logger.error(f"Authentication pattern monitoring error: {e}")
+            logger.error("Authentication pattern monitoring error: %s", e)
 
     # Helper methods
 
@@ -575,9 +575,9 @@ class TenantIsolationEnforcer:
         self,
         violation_type: str,
         severity: str,
-        details: dict[str, Any],
+        details: Dict[str, Any],
     ) -> SecurityViolation:
-        """Create security violation record"""
+        """Create security violation record."""
         request_context = get_current_request_context()
 
         return SecurityViolation(
@@ -587,7 +587,7 @@ class TenantIsolationEnforcer:
             tenant_id=get_current_tenant_id(),
             user_id=get_current_user_id(),
             details=details,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             ip_address=request_context.get("ip_address") if request_context else None,
             user_agent=request_context.get("user_agent") if request_context else None,
             blocked=False,  # Will be set by handler
@@ -597,8 +597,8 @@ class TenantIsolationEnforcer:
         self,
         violation: SecurityViolation,
         block: bool = True,
-    ) -> dict[str, Any]:
-        """Handle security violation based on policy"""
+    ) -> Dict[str, Any]:
+        """Handle security violation based on policy."""
         try:
             # Determine action based on severity and policy
             policy = self.security_policies.get(
@@ -618,7 +618,8 @@ class TenantIsolationEnforcer:
 
             # Log violation
             logger.warning(
-                f"Security violation detected: {violation.violation_type} "
+                "Security violation detected: %s %s",
+                violation.violation_type,
                 f"[{violation.severity}] - {violation.details}",
             )
 
@@ -645,15 +646,15 @@ class TenantIsolationEnforcer:
             }
 
         except Exception as e:
-            logger.error(f"Error handling security violation: {e}")
+            logger.error("Error handling security violation: %s", e)
             return {"allowed": False, "blocked": True, "error": "Security system error"}
 
     async def _check_rate_limit(
         self,
         tenant_id: str,
         user_id: str | None,
-    ) -> dict[str, Any]:
-        """Check rate limiting for tenant/user"""
+    ) -> Dict[str, Any]:
+        """Check rate limiting for tenant/user."""
         current_time = time.time()
         rate_limit_key = f"{tenant_id}:{user_id or 'anonymous'}"
 
@@ -703,7 +704,7 @@ class TenantIsolationEnforcer:
         }
 
     async def _detect_suspicious_patterns(self, operation: str, resource: str) -> bool:
-        """Detect suspicious access patterns"""
+        """Detect suspicious access patterns."""
         # Simple pattern detection - could be enhanced with ML
 
         # Check for rapid repeated requests
@@ -733,7 +734,7 @@ class TenantIsolationEnforcer:
         return len(self.suspicious_patterns[pattern_key]) > 20
 
     async def _extract_tenant_ids_from_data(self, data_str: str) -> set[str]:
-        """Extract potential tenant IDs from data string"""
+        """Extract potential tenant IDs from data string."""
         # Look for UUID patterns that might be tenant IDs
         uuid_pattern = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
         tenant_id_pattern = r'tenant[-_]?id["\s]*[:=]["\s]*([0-9a-f-]+)'
@@ -761,8 +762,8 @@ class TenantIsolationEnforcer:
 
     # Public API methods
 
-    def get_security_metrics(self) -> dict[str, Any]:
-        """Get current security metrics"""
+    def get_security_metrics(self) -> Dict[str, Any]:
+        """Get current security metrics."""
         return {
             "security_score": self.security_metrics.get_security_score(),
             "total_requests": self.security_metrics.total_requests,
@@ -778,8 +779,8 @@ class TenantIsolationEnforcer:
             ),
         }
 
-    def get_recent_violations(self, limit: int = 50) -> list[dict[str, Any]]:
-        """Get recent security violations"""
+    def get_recent_violations(self, limit: int = 50) -> list[Dict[str, Any]]:
+        """Get recent security violations."""
         recent_violations = sorted(
             self.violation_log[-limit:],
             key=lambda x: x.timestamp,
@@ -801,33 +802,33 @@ class TenantIsolationEnforcer:
         ]
 
     def update_security_policy(self, policy_name: str, policy: SecurityPolicy) -> bool:
-        """Update security policy"""
+        """Update security policy."""
         try:
             self.security_policies[policy_name] = policy
-            logger.info(f"Security policy updated: {policy_name}")
+            logger.info("Security policy updated: %s", policy_name)
             return True
         except Exception as e:
-            logger.error(f"Failed to update security policy {policy_name}: {e}")
+            logger.error("Failed to update security policy %s: %s", policy_name, e)
             return False
 
     def is_ip_blocked(self, ip_address: str) -> bool:
-        """Check if IP address is blocked"""
+        """Check if IP address is blocked."""
         return ip_address in self.blocked_ips
 
     def unblock_ip(self, ip_address: str) -> bool:
-        """Unblock IP address"""
+        """Unblock IP address."""
         if ip_address in self.blocked_ips:
             self.blocked_ips.remove(ip_address)
-            logger.info(f"IP address unblocked: {ip_address}")
+            logger.info("IP address unblocked: %s", ip_address)
             return True
         return False
 
-    async def health_check(self) -> dict[str, Any]:
-        """Security system health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Security system health check."""
         try:
             return {
                 "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "active_policies": len(
                     [p for p in self.security_policies.values() if p.enabled],
                 ),
@@ -836,7 +837,7 @@ class TenantIsolationEnforcer:
                     [
                         v
                         for v in self.violation_log
-                        if v.timestamp > datetime.utcnow() - timedelta(hours=1)
+                        if v.timestamp > datetime.now(UTC) - timedelta(hours=1)
                     ],
                 ),
                 "blocked_ips": len(self.blocked_ips),
@@ -846,7 +847,7 @@ class TenantIsolationEnforcer:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "service": "tenant_isolation_enforcer",
             }
 
@@ -856,7 +857,7 @@ _security_enforcer: TenantIsolationEnforcer | None = None
 
 
 def get_security_enforcer() -> TenantIsolationEnforcer:
-    """Get global security enforcer instance"""
+    """Get global security enforcer instance."""
     global _security_enforcer
     if _security_enforcer is None:
         _security_enforcer = TenantIsolationEnforcer()
@@ -866,11 +867,11 @@ def get_security_enforcer() -> TenantIsolationEnforcer:
 # Decorator for automatic security enforcement
 
 
-def enforce_tenant_isolation(operation: str, resource: str):
-    """Decorator to enforce tenant isolation on functions"""
+def enforce_tenant_isolation(self) -> None:
+    """Decorator to enforce tenant isolation on functions."""
 
     def decorator(func: Callable) -> Callable:
-        async def wrapper(*args, **kwargs):
+        async def wrapper(self) -> None:
             enforcer = get_security_enforcer()
 
             # Extract tenant ID from kwargs or context
@@ -885,7 +886,8 @@ def enforce_tenant_isolation(operation: str, resource: str):
                 )
 
                 if not validation.get("allowed"):
-                    raise PermissionError(f"Access denied: {validation.get('message')}")
+                    msg = f"Access denied: {validation.get('message')}"
+                    raise PermissionError(msg)
 
             # Execute original function
             result = await func(*args, **kwargs)
@@ -894,7 +896,7 @@ def enforce_tenant_isolation(operation: str, resource: str):
             if tenant_id and result is not None:
                 scan_result = await enforcer.scan_response_data(result, tenant_id)
                 if not scan_result.get("clean"):
-                    logger.warning(f"Data leakage concern in {operation}:{resource}")
+                    logger.warning("Data leakage concern in %s:%s", operation, resource)
 
             return result
 
@@ -905,7 +907,7 @@ def enforce_tenant_isolation(operation: str, resource: str):
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         enforcer = TenantIsolationEnforcer()
 
         print("Tenant Isolation Security Enforcer")

@@ -9,10 +9,11 @@ to ensure all components work together seamlessly.
 
 import asyncio
 import sys
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+
 from services.cognitive.cosmic_calibration_coordinator import (
     CalibrationPhase,
     CosmicCalibrationCoordinator,
@@ -38,8 +39,8 @@ class TestCosmicCalibrationIntegration:
     - Emergency handling capabilities
     """
 
-    @pytest.fixture()
-    def test_config(self):
+    @pytest.fixture
+    def test_config(self) -> None:
         """Create test configuration for cosmic calibration components"""
         return {
             "coordination_frequency": 60,  # 1 minute for testing
@@ -79,8 +80,8 @@ class TestCosmicCalibrationIntegration:
             },
         }
 
-    @pytest.fixture()
-    async def coordinator(self, test_config):
+    @pytest.fixture
+    async def coordinator(self) -> None:
         """Create and initialize cosmic calibration coordinator"""
         coordinator = CosmicCalibrationCoordinator(test_config)
 
@@ -95,8 +96,8 @@ class TestCosmicCalibrationIntegration:
         # Cleanup
         await coordinator.shutdown()
 
-    @pytest.mark.asyncio()
-    async def test_coordinator_initialization(self, test_config):
+    @pytest.mark.asyncio
+    async def test_coordinator_initialization(self) -> None:
         """Test cosmic calibration coordinator initialization"""
         coordinator = CosmicCalibrationCoordinator(test_config)
 
@@ -119,8 +120,8 @@ class TestCosmicCalibrationIntegration:
 
         await coordinator.shutdown()
 
-    @pytest.mark.asyncio()
-    async def test_system_metrics_collection(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_system_metrics_collection(self) -> None:
         """Test comprehensive system metrics collection"""
         # Collect system metrics
         metrics = await coordinator._collect_system_metrics()
@@ -140,17 +141,17 @@ class TestCosmicCalibrationIntegration:
         assert 0.0 <= metrics.self_critique_quality <= 1.0
 
         # Verify timestamp is recent
-        assert datetime.now() - metrics.timestamp < timedelta(seconds=10)
+        assert datetime.now(UTC) - metrics.timestamp < timedelta(seconds=10)
 
-    @pytest.mark.asyncio()
-    async def test_coordination_decision_making(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_coordination_decision_making(self) -> None:
         """Test coordination decision-making logic"""
         # Create test metrics with different health levels
         from services.cognitive.cosmic_calibration_coordinator import CalibrationMetrics
 
         # Test critical health scenario
         critical_metrics = CalibrationMetrics(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             overall_system_health=SystemHealth.CRITICAL,
             cognitive_performance_score=0.2,
             optimization_efficiency=0.3,
@@ -179,7 +180,7 @@ class TestCosmicCalibrationIntegration:
 
         # Test optimal health scenario
         optimal_metrics = CalibrationMetrics(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             overall_system_health=SystemHealth.OPTIMAL,
             cognitive_performance_score=0.9,
             optimization_efficiency=0.95,
@@ -202,8 +203,8 @@ class TestCosmicCalibrationIntegration:
         # Verify optimal decisions (should not require optimization)
         assert optimal_decisions["optimization_priority"] in ["none", "low"]
 
-    @pytest.mark.asyncio()
-    async def test_component_integration(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_component_integration(self) -> None:
         """Test integration between all cognitive components"""
 
         # Test component status retrieval
@@ -225,8 +226,8 @@ class TestCosmicCalibrationIntegration:
         assert "evolution_stage" in evolution_status
         assert "total_critiques_performed" in critique_status
 
-    @pytest.mark.asyncio()
-    async def test_optimization_execution(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_optimization_execution(self) -> None:
         """Test coordinated optimization execution"""
 
         # Create optimization decisions
@@ -243,12 +244,12 @@ class TestCosmicCalibrationIntegration:
 
         # Verify optimization was recorded
         assert coordinator.last_optimization_time is not None
-        assert datetime.now() - coordinator.last_optimization_time < timedelta(
+        assert datetime.now(UTC) - coordinator.last_optimization_time < timedelta(
             seconds=30,
         )
 
-    @pytest.mark.asyncio()
-    async def test_emergency_calibration(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_emergency_calibration(self) -> None:
         """Test emergency calibration trigger"""
 
         # Trigger emergency calibration
@@ -271,14 +272,14 @@ class TestCosmicCalibrationIntegration:
         latest_event = coordinator.calibration_events[-1]
         assert latest_event.event_type == "emergency_calibration"
 
-    @pytest.mark.asyncio()
-    async def test_performance_monitoring(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_performance_monitoring(self) -> None:
         """Test continuous performance monitoring"""
 
         # Simulate multiple metric collections over time
         metrics_history = []
 
-        for i in range(5):
+        for _i in range(5):
             metrics = await coordinator._collect_system_metrics()
             metrics_history.append(metrics)
             coordinator.system_metrics_history.append(metrics)
@@ -294,8 +295,8 @@ class TestCosmicCalibrationIntegration:
         assert isinstance(stability_index, float)
         assert 0.0 <= stability_index <= 1.0
 
-    @pytest.mark.asyncio()
-    async def test_logging_and_persistence(self, coordinator, tmp_path):
+    @pytest.mark.asyncio
+    async def test_logging_and_persistence(self) -> None:
         """Test logging and data persistence"""
 
         # Override log path for testing
@@ -326,13 +327,13 @@ class TestCosmicCalibrationIntegration:
         assert "System Health Assessment" in log_content
         assert "Coordination Decisions" in log_content
 
-    @pytest.mark.asyncio()
-    async def test_system_stability_under_load(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_system_stability_under_load(self) -> None:
         """Test system stability under rapid operations"""
 
         # Simulate rapid metric collections and decisions
         tasks = []
-        for i in range(10):
+        for _i in range(10):
             task = asyncio.create_task(coordinator._collect_system_metrics())
             tasks.append(task)
 
@@ -345,8 +346,8 @@ class TestCosmicCalibrationIntegration:
             assert hasattr(result, "timestamp")
             assert hasattr(result, "overall_system_health")
 
-    @pytest.mark.asyncio()
-    async def test_configuration_validation(self, test_config):
+    @pytest.mark.asyncio
+    async def test_configuration_validation(self) -> None:
         """Test configuration validation and error handling"""
 
         # Test with valid configuration
@@ -363,13 +364,13 @@ class TestCosmicCalibrationIntegration:
         await coordinator.shutdown()
         await coordinator_partial.shutdown()
 
-    def test_component_status_formats(self, coordinator):
+    def test_component_status_formats(self) -> None:
         """Test that all components return properly formatted status"""
 
         # Get comprehensive system status
         asyncio.run(self._test_status_format(coordinator))
 
-    async def _test_status_format(self, coordinator):
+    async def _test_status_format(self) -> None:
         """Helper for testing status format"""
         status = await coordinator.get_system_status()
 
@@ -403,8 +404,8 @@ class TestCosmicCalibrationIntegration:
 class TestCognitivePipeline:
     """Test the complete cognitive processing pipeline"""
 
-    @pytest.mark.asyncio()
-    async def test_end_to_end_cognitive_processing(self):
+    @pytest.mark.asyncio
+    async def test_end_to_end_cognitive_processing(self) -> None:
         """Test complete end-to-end cognitive processing"""
 
         # Create test configuration
@@ -452,7 +453,7 @@ if __name__ == "__main__":
     print()
 
     # Run basic smoke test
-    async def smoke_test():
+    async def smoke_test(self) -> None:
         config = {
             "coordination_frequency": 60,
             "cognitive_engine": {},

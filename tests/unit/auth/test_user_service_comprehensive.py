@@ -24,8 +24,8 @@ from tests.factories import UserInDBFactory
 class TestUserServiceComprehensive:
     """Comprehensive unit tests for UserService"""
 
-    @pytest.fixture()
-    def mock_dependencies(self):
+    @pytest.fixture
+    def mock_dependencies(self) -> None:
         """Create mocked dependencies for UserService"""
         return {
             "redis": AsyncMock(spec=RedisService),
@@ -37,8 +37,8 @@ class TestUserServiceComprehensive:
             "emailService": AsyncMock(spec=EmailService),
         }
 
-    @pytest.fixture()
-    def user_service(self, mock_dependencies):
+    @pytest.fixture
+    def user_service(self) -> None:
         """Create UserService instance with mocked dependencies"""
         return UserService(
             redis=mock_dependencies["redis"],
@@ -54,8 +54,8 @@ class TestUserServiceComprehensive:
     # PRIMARY USE CASES - Normal Operation Paths
     # ============================================================================
 
-    @pytest.mark.unit_functional()
-    async def test_create_user_success(self, user_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_create_user_success(self) -> None:
         """Test successful user creation with all valid inputs"""
         # Arrange
         user_data = {
@@ -91,8 +91,8 @@ class TestUserServiceComprehensive:
         mock_dependencies["redis"].set.assert_called()
         mock_dependencies["emailService"].send_welcome_email.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_authenticate_user_success(self, user_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_authenticate_user_success(self) -> None:
         """Test successful user authentication"""
         # Arrange
         username = "testuser"
@@ -125,8 +125,8 @@ class TestUserServiceComprehensive:
         mock_dependencies["tokenService"].generateTokens.assert_called_once()
         mock_dependencies["sessionService"].createSession.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_get_user_by_id_success(self, user_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_get_user_by_id_success(self) -> None:
         """Test successful user retrieval by ID"""
         # Arrange
         user_id = "user-123"
@@ -144,8 +144,8 @@ class TestUserServiceComprehensive:
         # Verify interactions
         mock_dependencies["redis"].get.assert_called_once_with(f"user:{user_id}")
 
-    @pytest.mark.unit_functional()
-    async def test_update_user_profile_success(self, user_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_update_user_profile_success(self) -> None:
         """Test successful user profile update"""
         # Arrange
         user_id = "user-123"
@@ -175,8 +175,8 @@ class TestUserServiceComprehensive:
     # EDGE CASES - Boundary Conditions and Edge Cases
     # ============================================================================
 
-    @pytest.mark.unit_edge_case()
-    async def test_create_user_with_minimal_data(self, user_service, mock_dependencies):
+    @pytest.mark.unit_edge_case
+    async def test_create_user_with_minimal_data(self) -> None:
         """Test user creation with minimal required data"""
         # Arrange
         minimal_data = {
@@ -200,10 +200,8 @@ class TestUserServiceComprehensive:
         assert result is not None
         assert result.roles == ["user"]  # Default role
 
-    @pytest.mark.unit_edge_case()
-    async def test_create_user_with_special_characters(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_create_user_with_special_characters(self) -> None:
         """Test user creation with special characters in names"""
         # Arrange
         special_data = {
@@ -229,10 +227,8 @@ class TestUserServiceComprehensive:
         assert result.firstName == special_data["firstName"]
         assert result.lastName == special_data["lastName"]
 
-    @pytest.mark.unit_edge_case()
-    async def test_authenticate_user_case_insensitive(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_authenticate_user_case_insensitive(self) -> None:
         """Test authentication with case-insensitive username"""
         # Arrange
         username = "TestUser"
@@ -255,8 +251,8 @@ class TestUserServiceComprehensive:
         # Assert
         assert result.success is True
 
-    @pytest.mark.unit_edge_case()
-    async def test_get_user_by_nonexistent_id(self, user_service, mock_dependencies):
+    @pytest.mark.unit_edge_case
+    async def test_get_user_by_nonexistent_id(self) -> None:
         """Test user retrieval with non-existent ID"""
         # Arrange
         user_id = "nonexistent-user"
@@ -268,8 +264,8 @@ class TestUserServiceComprehensive:
         # Assert
         assert result is None
 
-    @pytest.mark.unit_edge_case()
-    async def test_update_user_with_empty_data(self, user_service, mock_dependencies):
+    @pytest.mark.unit_edge_case
+    async def test_update_user_with_empty_data(self) -> None:
         """Test user update with empty update data"""
         # Arrange
         user_id = "user-123"
@@ -290,8 +286,8 @@ class TestUserServiceComprehensive:
     # ERROR HANDLING - Exception Scenarios and Error Cases
     # ============================================================================
 
-    @pytest.mark.unit_error_handling()
-    async def test_create_user_invalid_email(self, user_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_create_user_invalid_email(self) -> None:
         """Test user creation with invalid email format"""
         # Arrange
         invalid_data = {
@@ -306,8 +302,8 @@ class TestUserServiceComprehensive:
         with pytest.raises(ValueError, match="Invalid email format"):
             await user_service.createUser(**invalid_data)
 
-    @pytest.mark.unit_error_handling()
-    async def test_create_user_weak_password(self, user_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_create_user_weak_password(self) -> None:
         """Test user creation with weak password"""
         # Arrange
         weak_password_data = {
@@ -324,10 +320,8 @@ class TestUserServiceComprehensive:
         ):
             await user_service.createUser(**weak_password_data)
 
-    @pytest.mark.unit_error_handling()
-    async def test_authenticate_user_wrong_password(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_authenticate_user_wrong_password(self) -> None:
         """Test authentication with wrong password"""
         # Arrange
         username = "testuser"
@@ -344,10 +338,8 @@ class TestUserServiceComprehensive:
         assert result.success is False
         assert result.error == "Invalid credentials"
 
-    @pytest.mark.unit_error_handling()
-    async def test_authenticate_user_nonexistent_user(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_authenticate_user_nonexistent_user(self) -> None:
         """Test authentication with non-existent user"""
         # Arrange
         username = "nonexistent"
@@ -362,10 +354,8 @@ class TestUserServiceComprehensive:
         assert result.success is False
         assert result.error == "User not found"
 
-    @pytest.mark.unit_error_handling()
-    async def test_authenticate_user_disabled_account(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_authenticate_user_disabled_account(self) -> None:
         """Test authentication with disabled account"""
         # Arrange
         username = "testuser"
@@ -382,8 +372,8 @@ class TestUserServiceComprehensive:
         assert result.success is False
         assert result.error == "Account is disabled"
 
-    @pytest.mark.unit_error_handling()
-    async def test_update_user_nonexistent_user(self, user_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_update_user_nonexistent_user(self) -> None:
         """Test updating non-existent user"""
         # Arrange
         user_id = "nonexistent-user"
@@ -395,8 +385,8 @@ class TestUserServiceComprehensive:
         with pytest.raises(ValueError, match="User not found"):
             await user_service.updateUserProfile(user_id, update_data)
 
-    @pytest.mark.unit_error_handling()
-    async def test_redis_connection_failure(self, user_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_redis_connection_failure(self) -> None:
         """Test handling of Redis connection failures"""
         # Arrange
         user_id = "user-123"
@@ -408,8 +398,8 @@ class TestUserServiceComprehensive:
         with pytest.raises(Exception, match="Redis connection failed"):
             await user_service.getUserById(user_id)
 
-    @pytest.mark.unit_error_handling()
-    async def test_email_service_failure(self, user_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_email_service_failure(self) -> None:
         """Test handling of email service failures"""
         # Arrange
         user_data = {
@@ -436,8 +426,8 @@ class TestUserServiceComprehensive:
     # PERFORMANCE TESTS - Algorithm Efficiency and Performance
     # ============================================================================
 
-    @pytest.mark.unit_performance()
-    async def test_password_hashing_performance(self, user_service, mock_dependencies):
+    @pytest.mark.unit_performance
+    async def test_password_hashing_performance(self) -> None:
         """Test password hashing performance"""
         import time
 
@@ -467,8 +457,8 @@ class TestUserServiceComprehensive:
             password
         )
 
-    @pytest.mark.unit_performance()
-    async def test_concurrent_user_creation(self, user_service, mock_dependencies):
+    @pytest.mark.unit_performance
+    async def test_concurrent_user_creation(self) -> None:
         """Test concurrent user creation performance"""
         import asyncio
 
@@ -479,7 +469,7 @@ class TestUserServiceComprehensive:
         mock_dependencies["redis"].set.return_value = True
         mock_dependencies["emailService"].send_welcome_email.return_value = True
 
-        async def create_user(user_num):
+        async def create_user(self) -> None:
             return await user_service.createUser(
                 email=f"user{user_num}@example.com",
                 username=f"user{user_num}",
@@ -503,10 +493,8 @@ class TestUserServiceComprehensive:
     # SECURITY TESTS - Authentication and Authorization
     # ============================================================================
 
-    @pytest.mark.unit_security()
-    async def test_password_not_stored_in_plaintext(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_security
+    async def test_password_not_stored_in_plaintext(self) -> None:
         """Test that passwords are not stored in plaintext"""
         # Arrange
         password = "SecurePassword123!"
@@ -535,10 +523,8 @@ class TestUserServiceComprehensive:
         stored_data = mock_dependencies["redis"].set.call_args[0][1]
         assert password not in str(stored_data)
 
-    @pytest.mark.unit_security()
-    async def test_session_creation_on_authentication(
-        self, user_service, mock_dependencies
-    ):
+    @pytest.mark.unit_security
+    async def test_session_creation_on_authentication(self) -> None:
         """Test that sessions are created on successful authentication"""
         # Arrange
         username = "testuser"
@@ -561,8 +547,8 @@ class TestUserServiceComprehensive:
         # Assert
         mock_dependencies["sessionService"].createSession.assert_called_once()
 
-    @pytest.mark.unit_security()
-    async def test_role_based_access_control(self, user_service, mock_dependencies):
+    @pytest.mark.unit_security
+    async def test_role_based_access_control(self) -> None:
         """Test role-based access control integration"""
         # Arrange
         username = "adminuser"

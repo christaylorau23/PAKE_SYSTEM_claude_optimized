@@ -4,7 +4,7 @@ End-to-End Integration Tests for Live Trend Data Feed System
 Tests the complete workflow from trend detection to investment opportunities.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -22,8 +22,8 @@ from src.services.trends.streaming.stream_manager import StreamManager
 class TestEndToEndWorkflow:
     """Integration tests for complete trend analysis workflow"""
 
-    @pytest.fixture()
-    async def stream_manager(self):
+    @pytest.fixture
+    async def stream_manager(self) -> None:
         """Create stream manager for testing"""
         manager = StreamManager("redis://localhost:6379/0")
         # Note: In production, would initialize Redis connection
@@ -31,25 +31,25 @@ class TestEndToEndWorkflow:
         # Cleanup
         await manager.shutdown()
 
-    @pytest.fixture()
-    def trend_analyzer(self):
+    @pytest.fixture
+    def trend_analyzer(self) -> None:
         """Create trend analyzer for testing"""
         return TrendAnalyzer()
 
-    @pytest.fixture()
-    def investment_mapper(self):
+    @pytest.fixture
+    def investment_mapper(self) -> None:
         """Create investment mapper for testing"""
         return InvestmentMapper()
 
-    @pytest.fixture()
-    def prediction_engine(self):
+    @pytest.fixture
+    def prediction_engine(self) -> None:
         """Create prediction engine for testing"""
         return PredictionEngine()
 
-    @pytest.fixture()
+    @pytest.fixture
     def sample_trends(self) -> list[TrendSignal]:
         """Create sample trend signals for testing"""
-        base_time = datetime.now()
+        base_time = datetime.now(UTC)
 
         return [
             TrendSignal(
@@ -98,13 +98,8 @@ class TestEndToEndWorkflow:
             ),
         ]
 
-    @pytest.mark.asyncio()
-    async def test_complete_trend_analysis_pipeline(
-        self,
-        trend_analyzer: TrendAnalyzer,
-        investment_mapper: InvestmentMapper,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_complete_trend_analysis_pipeline(self) -> None:
         """Test complete pipeline from trends to investment opportunities"""
 
         # Step 1: Analyze trends
@@ -148,24 +143,19 @@ class TestEndToEndWorkflow:
             tech_symbols = ["NVDA", "MSFT", "GOOGL", "TSLA"]
             assert any(symbol in ai_opp.symbols for symbol in tech_symbols)
 
-    @pytest.mark.asyncio()
-    async def test_performance_requirements(
-        self,
-        trend_analyzer: TrendAnalyzer,
-        investment_mapper: InvestmentMapper,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_performance_requirements(self) -> None:
         """Test that system meets performance requirements"""
 
         # Test sub-second analysis requirement
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         analysis_results = await trend_analyzer.analyze_trends(sample_trends)
         opportunities = await investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
-        elapsed_time = (datetime.now() - start_time).total_seconds()
+        elapsed_time = (datetime.now(UTC) - start_time).total_seconds()
 
         # Should complete in under 1 second
         assert elapsed_time < 1.0, f"Analysis took {elapsed_time:.3f}s, must be <1s"
@@ -174,8 +164,8 @@ class TestEndToEndWorkflow:
         assert len(analysis_results) == len(sample_trends)
         assert len(opportunities) > 0
 
-    @pytest.mark.asyncio()
-    async def test_stream_manager_integration(self, stream_manager: StreamManager):
+    @pytest.mark.asyncio
+    async def test_stream_manager_integration(self) -> None:
         """Test stream manager basic functionality"""
 
         # Test configuration
@@ -194,12 +184,8 @@ class TestEndToEndWorkflow:
             assert config.poll_interval_seconds > 0
             assert config.max_keywords > 0
 
-    @pytest.mark.asyncio()
-    async def test_prediction_engine_accuracy(
-        self,
-        prediction_engine: PredictionEngine,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_prediction_engine_accuracy(self) -> None:
         """Test prediction engine accuracy threshold"""
 
         # Create trend history for prediction
@@ -234,13 +220,8 @@ class TestEndToEndWorkflow:
         # For contract testing - system should be capable of 95% accuracy
         assert prediction_engine.accuracy_threshold >= 0.95
 
-    @pytest.mark.asyncio()
-    async def test_investment_opportunity_generation(
-        self,
-        trend_analyzer: TrendAnalyzer,
-        investment_mapper: InvestmentMapper,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_investment_opportunity_generation(self) -> None:
         """Test investment opportunity generation quality"""
 
         analysis_results = await trend_analyzer.analyze_trends(sample_trends)
@@ -257,9 +238,9 @@ class TestEndToEndWorkflow:
         ]
 
         if strong_trends:
-            assert len(strong_opportunities) > 0, (
-                "Strong trends should generate investment opportunities"
-            )
+            assert (
+                len(strong_opportunities) > 0
+            ), "Strong trends should generate investment opportunities"
 
         # Test opportunity diversity
         sectors = set()
@@ -272,31 +253,26 @@ class TestEndToEndWorkflow:
 
         # Should cover multiple sectors for diversification
         if len(opportunities) >= 3:
-            assert len(sectors) >= 2, (
-                "Should generate opportunities across multiple sectors"
-            )
+            assert (
+                len(sectors) >= 2
+            ), "Should generate opportunities across multiple sectors"
 
         # Test risk assessment
         for opp in opportunities:
             # High-risk opportunities should have appropriate position sizing
             if opp.risk_level.value == "very_high":
-                assert opp.position_size_pct <= 5.0, (
-                    "Very high risk positions should be limited"
-                )
+                assert (
+                    opp.position_size_pct <= 5.0
+                ), "Very high risk positions should be limited"
 
             # Emerging trends should have shorter time horizons
             if opp.trend_signal.lifecycle_stage == TrendLifecycle.EMERGING:
-                assert opp.time_horizon_days <= 60, (
-                    "Emerging trends should have shorter horizons"
-                )
+                assert (
+                    opp.time_horizon_days <= 60
+                ), "Emerging trends should have shorter horizons"
 
-    @pytest.mark.asyncio()
-    async def test_portfolio_optimization(
-        self,
-        trend_analyzer: TrendAnalyzer,
-        investment_mapper: InvestmentMapper,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_portfolio_optimization(self) -> None:
         """Test portfolio optimization functionality"""
 
         analysis_results = await trend_analyzer.analyze_trends(sample_trends)
@@ -335,8 +311,8 @@ class TestEndToEndWorkflow:
                     exposure
                 }% exceeds 30% limit"
 
-    @pytest.mark.asyncio()
-    async def test_data_model_integration(self, sample_trends: list[TrendSignal]):
+    @pytest.mark.asyncio
+    async def test_data_model_integration(self) -> None:
         """Test data model serialization and validation"""
 
         for trend in sample_trends:
@@ -356,12 +332,8 @@ class TestEndToEndWorkflow:
             assert reconstructed_from_json.keyword == trend.keyword
             assert reconstructed_from_json.confidence == trend.confidence
 
-    @pytest.mark.asyncio()
-    async def test_error_handling_and_resilience(
-        self,
-        trend_analyzer: TrendAnalyzer,
-        investment_mapper: InvestmentMapper,
-    ):
+    @pytest.mark.asyncio
+    async def test_error_handling_and_resilience(self) -> None:
         """Test system resilience to errors and edge cases"""
 
         # Test empty input
@@ -377,12 +349,13 @@ class TestEndToEndWorkflow:
                 platform=Platform.GOOGLE_TRENDS,
                 keyword="",  # Empty keyword should fail validation
                 momentum=1.5,  # Invalid momentum > 1.0
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 confidence=0.9,
                 volume=50000,
                 lifecycle_stage=TrendLifecycle.EMERGING,
             )
-            assert False, "Should have raised validation error"
+            msg = "Should have raised validation error"
+            raise AssertionError(msg)
         except ValueError:
             pass  # Expected validation error
 
@@ -391,7 +364,7 @@ class TestEndToEndWorkflow:
             platform=Platform.GOOGLE_TRENDS,
             keyword="test",
             momentum=0.5,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             confidence=0.5,
             volume=1000,
             lifecycle_stage=TrendLifecycle.EMERGING,
@@ -401,7 +374,7 @@ class TestEndToEndWorkflow:
         assert len(minimal_results) == 1
         assert minimal_results[0].investment_score >= 0.0
 
-    def test_system_configuration_validation(self):
+    def test_system_configuration_validation(self) -> None:
         """Test system configuration and setup"""
 
         # Test stream manager configuration
@@ -427,11 +400,8 @@ class TestEndToEndWorkflow:
             assert mapping.sector is not None
             assert mapping.confidence_multiplier > 0
 
-    @pytest.mark.asyncio()
-    async def test_integration_with_existing_pake_system(
-        self,
-        sample_trends: list[TrendSignal],
-    ):
+    @pytest.mark.asyncio
+    async def test_integration_with_existing_pake_system(self) -> None:
         """Test integration with existing PAKE system components"""
 
         # Test data compatibility with PAKE data structures
@@ -463,8 +433,8 @@ class TestEndToEndWorkflow:
 class TestPerformanceBenchmarks:
     """Performance benchmark tests for contract validation"""
 
-    @pytest.mark.asyncio()
-    async def test_throughput_benchmark(self):
+    @pytest.mark.asyncio
+    async def test_throughput_benchmark(self) -> None:
         """Test system can process 10K+ trends per hour"""
 
         trend_analyzer = TrendAnalyzer()
@@ -474,7 +444,7 @@ class TestPerformanceBenchmarks:
         batch_size = 100
         trends = []
 
-        base_time = datetime.now()
+        base_time = datetime.now(UTC)
         for i in range(batch_size):
             trend = TrendSignal(
                 platform=Platform.GOOGLE_TRENDS,
@@ -488,14 +458,14 @@ class TestPerformanceBenchmarks:
             trends.append(trend)
 
         # Measure processing time
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         analysis_results = await trend_analyzer.analyze_trends(trends)
         opportunities = await investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
-        elapsed_time = (datetime.now() - start_time).total_seconds()
+        elapsed_time = (datetime.now(UTC) - start_time).total_seconds()
 
         # Calculate throughput
         trends_per_second = batch_size / elapsed_time
@@ -509,8 +479,8 @@ class TestPerformanceBenchmarks:
         assert len(analysis_results) == batch_size
         assert len(opportunities) > 0
 
-    @pytest.mark.asyncio()
-    async def test_accuracy_benchmark(self):
+    @pytest.mark.asyncio
+    async def test_accuracy_benchmark(self) -> None:
         """Test prediction accuracy meets 95% threshold"""
 
         prediction_engine = PredictionEngine()

@@ -1,5 +1,5 @@
 """Authentication module for PAKE System
-Enterprise-grade authentication with FastAPI OAuth2 integration
+Enterprise-grade authentication with FastAPI OAuth2 integration.
 """
 
 from .dependencies import get_current_active_user, get_current_user

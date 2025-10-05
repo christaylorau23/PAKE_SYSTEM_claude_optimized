@@ -13,15 +13,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-def generate_cache_key(data: dict[str, Any], prefix: str = "") -> str:
-    """Generate deterministic cache key from data dictionary"""
+def generate_cache_key(data: Dict[str, Any], prefix: str = "") -> str:
+    """Generate deterministic cache key from data dictionary."""
     cache_string = json.dumps(data, sort_keys=True)
     hash_digest = hashlib.sha256(cache_string.encode()).hexdigest()[:16]
     return f"{prefix}_{hash_digest}" if prefix else hash_digest
 
 
-def extract_search_terms(topic: str) -> list[str]:
-    """Extract relevant search terms from research topic"""
+def extract_search_terms(topic: str) -> List[str]:
+    """Extract relevant search terms from research topic."""
     # Simple term extraction - can be enhanced with NLP
     terms = []
 
@@ -60,7 +60,7 @@ def extract_search_terms(topic: str) -> list[str]:
 
 
 def extract_research_domain(topic: str) -> str | None:
-    """Extract research domain from topic for workflow routing"""
+    """Extract research domain from topic for workflow routing."""
     topic_lower = topic.lower()
 
     # Medical/Biomedical domain
@@ -133,8 +133,8 @@ def extract_research_domain(topic: str) -> str | None:
     return None  # Generic processing if no specific domain detected
 
 
-def calculate_duration_estimate(sources: list[dict[str, Any]]) -> int:
-    """Calculate estimated total duration for all sources"""
+def calculate_duration_estimate(sources: list[Dict[str, Any]]) -> int:
+    """Calculate estimated total duration for all sources."""
     # Base duration per source type (seconds)
     duration_map = {
         "web": 30,
@@ -158,13 +158,13 @@ def calculate_duration_estimate(sources: list[dict[str, Any]]) -> int:
     return total_duration
 
 
-def validate_source_config(config: dict[str, Any]) -> bool:
-    """Validate source configuration"""
+def validate_source_config(config: Dict[str, Any]) -> bool:
+    """Validate source configuration."""
     required_fields = ["source_type", "query_parameters"]
 
     for field in required_fields:
         if field not in config:
-            logger.error(f"Missing required field '{field}' in source config")
+            logger.error("Missing required field '%s' in source config", field)
             return False
 
     if not config.get("query_parameters"):
@@ -183,8 +183,8 @@ def format_execution_metrics(
     sources_completed: int,
     sources_failed: int,
     total_items: int,
-) -> dict[str, Any]:
-    """Format execution metrics in a standardized way"""
+) -> Dict[str, Any]:
+    """Format execution metrics in a standardized way."""
     return {
         "execution_time_ms": execution_time * 1000,
         "sources_completed": sources_completed,
@@ -201,8 +201,8 @@ def create_error_detail(
     source_type: str,
     error: str,
     attempt: int = 0,
-) -> dict[str, Any]:
-    """Create standardized error detail structure"""
+) -> Dict[str, Any]:
+    """Create standardized error detail structure."""
     return {
         "source_id": source_id,
         "source_type": source_type,
@@ -213,7 +213,7 @@ def create_error_detail(
 
 
 def merge_content_items(items_list: list[list[Any]]) -> list[Any]:
-    """Merge multiple lists of content items into a single list"""
+    """Merge multiple lists of content items into a single list."""
     merged = []
     for items in items_list:
         if isinstance(items, list):
@@ -227,7 +227,7 @@ def deduplicate_by_key(
     items: list[Any],
     key_extractor: Callable[[Any], str],
 ) -> list[Any]:
-    """Deduplicate items based on a key extraction function"""
+    """Deduplicate items based on a key extraction function."""
     seen_keys = set()
     unique_items = []
 

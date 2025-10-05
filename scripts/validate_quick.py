@@ -23,7 +23,7 @@ def run_command(command: list, description: str) -> bool:
         return False
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Quick Validation")
     parser.add_argument(

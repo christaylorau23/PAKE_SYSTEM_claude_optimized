@@ -1,13 +1,14 @@
-"""StreamManager - Central coordinator for all trend streaming services
+"""StreamManager - Central coordinator for all trend streaming services.
 
 Manages multiple platform streams with Redis Streams integration and performance monitoring.
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -19,7 +20,7 @@ from ..models.trend_signal import Platform, TrendSignal
 
 @dataclass
 class StreamConfig:
-    """Configuration for individual stream"""
+    """Configuration for individual stream."""
 
     platform: Platform
     enabled: bool = True
@@ -31,7 +32,7 @@ class StreamConfig:
 
 @dataclass
 class StreamStatus:
-    """Status information for a stream"""
+    """Status information for a stream."""
 
     platform: Platform
     is_running: bool
@@ -43,7 +44,7 @@ class StreamStatus:
 
 
 class StreamManager:
-    """Central manager for all trend streaming services
+    """Central manager for all trend streaming services.
 
     Capabilities:
     - Manages multiple platform streams
@@ -53,7 +54,7 @@ class StreamManager:
     - Graceful error handling and recovery
     """
 
-    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
+    def __init__(self) -> None:
         self.redis_url = redis_url
         self.redis_client: redis.Redis | None = None
         self.logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class StreamManager:
         # Performance tracking
         self.max_throughput = 10.0  # trends per second (for contract testing)
         self.trends_processed_total = 0
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(UTC)
 
         # Components
         self.rate_controller = RateLimitController()
@@ -78,8 +79,8 @@ class StreamManager:
 
         self._initialize_default_configs()
 
-    def _initialize_default_configs(self):
-        """Initialize default configurations for all platforms"""
+    def _initialize_default_configs(self) -> None:
+        """Initialize default configurations for all platforms."""
         self.stream_configs = {
             Platform.GOOGLE_TRENDS: StreamConfig(
                 platform=Platform.GOOGLE_TRENDS,
@@ -112,7 +113,7 @@ class StreamManager:
         }
 
     async def initialize(self) -> bool:
-        """Initialize Redis connection and stream infrastructure"""
+        """Initialize Redis connection and stream infrastructure."""
         try:
             self.redis_client = redis.from_url(self.redis_url)
             await self.redis_client.ping()
@@ -133,22 +134,22 @@ class StreamManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize StreamManager: {e}")
+            self.logger.error("Failed to initialize StreamManager: %s", e)
             return False
 
     async def start_stream(
         self,
         platform: Platform,
-        keywords: list[str] = None,
+        keywords: List[str] = None,
     ) -> bool:
-        """Start streaming for a specific platform"""
+        """Start streaming for a specific platform."""
         if platform in self.active_streams:
-            self.logger.warning(f"Stream for {platform.value} already running")
+            self.logger.warning("Stream for %s already running", platform.value)
             return False
 
         config = self.stream_configs.get(platform)
         if not config or not config.enabled:
-            self.logger.warning(f"Stream for {platform.value} is disabled")
+            self.logger.warning("Stream for %s is disabled", platform.value)
             return False
 
         try:
@@ -169,27 +170,25 @@ class StreamManager:
                 health_score=1.0,
             )
 
-            self.logger.info(f"Started stream for {platform.value}")
+            self.logger.info("Started stream for %s", platform.value)
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to start stream for {platform.value}: {e}")
+            self.logger.error("Failed to start stream for %s: %s", platform.value, e)
             return False
 
     async def stop_stream(self, platform: Platform) -> bool:
-        """Stop streaming for a specific platform"""
+        """Stop streaming for a specific platform."""
         if platform not in self.active_streams:
-            self.logger.warning(f"No active stream for {platform.value}")
+            self.logger.warning("No active stream for %s", platform.value)
             return False
 
         try:
             task = self.active_streams[platform]
             task.cancel()
 
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
             del self.active_streams[platform]
 
@@ -206,18 +205,18 @@ class StreamManager:
                     health_score=status.health_score,
                 )
 
-            self.logger.info(f"Stopped stream for {platform.value}")
+            self.logger.info("Stopped stream for %s", platform.value)
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to stop stream for {platform.value}: {e}")
+            self.logger.error("Failed to stop stream for %s: %s", platform.value, e)
             return False
 
     async def start_all_streams(
         self,
-        keywords: list[str] = None,
+        keywords: List[str] = None,
     ) -> dict[Platform, bool]:
-        """Start all enabled streams"""
+        """Start all enabled streams."""
         results = {}
         for platform in Platform:
             if self.stream_configs[platform].enabled:
@@ -225,14 +224,14 @@ class StreamManager:
         return results
 
     async def stop_all_streams(self) -> dict[Platform, bool]:
-        """Stop all active streams"""
+        """Stop all active streams."""
         results = {}
         for platform in list(self.active_streams.keys()):
             results[platform] = await self.stop_stream(platform)
         return results
 
-    async def get_status(self, platform: Platform = None) -> dict[str, Any]:
-        """Get status for specific platform or all platforms"""
+    async def get_status(self, platform: Platform = None) -> Dict[str, Any]:
+        """Get status for specific platform or all platforms."""
         if platform:
             status = self.stream_status.get(platform)
             return status.__dict__ if status else {"error": "Platform not found"}
@@ -240,7 +239,7 @@ class StreamManager:
         return {
             "active_streams": len(self.active_streams),
             "total_trends_processed": self.trends_processed_total,
-            "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
+            "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
             "average_throughput": self._calculate_average_throughput(),
             "platforms": {
                 platform.value: status.__dict__
@@ -249,17 +248,17 @@ class StreamManager:
         }
 
     def _calculate_average_throughput(self) -> float:
-        """Calculate average trends per second"""
-        uptime = (datetime.now() - self.start_time).total_seconds()
+        """Calculate average trends per second."""
+        uptime = (datetime.now(UTC) - self.start_time).total_seconds()
         return self.trends_processed_total / uptime if uptime > 0 else 0.0
 
-    async def _run_platform_stream(self, platform: Platform, keywords: list[str]):
-        """Run the streaming loop for a specific platform"""
+    async def _run_platform_stream(self) -> None:
+        """Run the streaming loop for a specific platform."""
         config = self.stream_configs[platform]
 
         while True:
             try:
-                start_time = datetime.now()
+                start_time = datetime.now(UTC)
 
                 # Check rate limits
                 if not await self.rate_controller.can_make_request(platform.value):
@@ -281,7 +280,7 @@ class StreamManager:
                         self.stream_status[platform] = StreamStatus(
                             platform=status.platform,
                             is_running=True,
-                            last_update=datetime.now(),
+                            last_update=datetime.now(UTC),
                             trends_processed=status.trends_processed + 1,
                             errors_count=status.errors_count,
                             average_latency_ms=status.average_latency_ms,
@@ -289,23 +288,23 @@ class StreamManager:
                         )
 
                 # Calculate latency
-                latency_ms = (datetime.now() - start_time).total_seconds() * 1000
+                latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 await self._update_latency_metrics(platform, latency_ms)
 
                 # Wait for next poll
                 await asyncio.sleep(config.poll_interval_seconds)
 
             except Exception as e:
-                self.logger.error(f"Error in {platform.value} stream: {e}")
+                self.logger.error("Error in %s stream: %s", platform.value, e)
                 await self._handle_stream_error(platform, e)
                 await asyncio.sleep(60)  # Error backoff
 
     async def _fetch_platform_trends(
         self,
         platform: Platform,
-        keywords: list[str],
+        keywords: List[str],
     ) -> list[TrendSignal]:
-        """Fetch trends from platform API (placeholder implementation)"""
+        """Fetch trends from platform API (placeholder implementation)."""
         # This is a placeholder - real implementation would use actual API clients
         from ..models.trend_signal import TrendLifecycle
 
@@ -315,7 +314,7 @@ class StreamManager:
                 platform=platform,
                 keyword=f"{keyword}_trend_{i}",
                 momentum=0.7 + (i * 0.05),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 confidence=0.8 + (i * 0.02),
                 volume=1000 + (i * 500),
                 lifecycle_stage=TrendLifecycle.EMERGING,
@@ -326,8 +325,8 @@ class StreamManager:
 
         return trends
 
-    async def _publish_trend(self, trend: TrendSignal):
-        """Publish trend to Redis stream"""
+    async def _publish_trend(self) -> None:
+        """Publish trend to Redis stream."""
         if not self.redis_client:
             return
 
@@ -343,10 +342,10 @@ class StreamManager:
             await self.redis_client.xadd(self.trend_stream_name, trend_data)
 
         except Exception as e:
-            self.logger.error(f"Failed to publish trend: {e}")
+            self.logger.error("Failed to publish trend: %s", e)
 
-    async def _update_latency_metrics(self, platform: Platform, latency_ms: float):
-        """Update latency metrics for platform"""
+    async def _update_latency_metrics(self) -> None:
+        """Update latency metrics for platform."""
         if platform in self.stream_status:
             status = self.stream_status[platform]
             # Simple moving average
@@ -362,8 +361,8 @@ class StreamManager:
                 health_score=status.health_score,
             )
 
-    async def _handle_stream_error(self, platform: Platform, error: Exception):
-        """Handle stream errors and update health metrics"""
+    async def _handle_stream_error(self) -> None:
+        """Handle stream errors and update health metrics."""
         if platform in self.stream_status:
             status = self.stream_status[platform]
             new_health = max(0.1, status.health_score - 0.1)  # Decrease health
@@ -382,7 +381,7 @@ class StreamManager:
         self,
         consumer_name: str = "default",
     ) -> AsyncGenerator[TrendSignal, None]:
-        """Get async generator for consuming trends from Redis stream"""
+        """Get async generator for consuming trends from Redis stream."""
         if not self.redis_client:
             return
 
@@ -397,7 +396,7 @@ class StreamManager:
                     block=1000,
                 )
 
-                for stream_name, messages in streams:
+                for _stream_name, messages in streams:
                     for message_id, fields in messages:
                         try:
                             trend_json = fields.get(b"trend_json", b"{}").decode()
@@ -413,15 +412,17 @@ class StreamManager:
 
                         except Exception as e:
                             self.logger.error(
-                                f"Failed to process message {message_id}: {e}",
+                                "Failed to process message %s: %s",
+                                message_id,
+                                e,
                             )
 
             except Exception as e:
-                self.logger.error(f"Error reading from stream: {e}")
+                self.logger.error("Error reading from stream: %s", e)
                 await asyncio.sleep(5)
 
-    async def shutdown(self):
-        """Gracefully shutdown all streams and cleanup"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown all streams and cleanup."""
         self.logger.info("Shutting down StreamManager...")
 
         # Stop all streams

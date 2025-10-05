@@ -8,7 +8,7 @@ import logging
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import nltk
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ContentFeatures:
-    """Extracted features from content"""
+    """Extracted features from content."""
 
     content_id: str
     text_features: dict[str, float] = field(default_factory=dict)
@@ -41,7 +41,7 @@ class ContentFeatures:
 
 @dataclass(frozen=True)
 class UserFeatures:
-    """Extracted features from user behavior"""
+    """Extracted features from user behavior."""
 
     user_id: str
     preference_features: dict[str, float] = field(default_factory=dict)
@@ -52,11 +52,11 @@ class UserFeatures:
 
 
 class FeatureExtractor:
-    """Advanced feature extraction pipeline for content and user analysis"""
+    """Advanced feature extraction pipeline for content and user analysis."""
 
-    def __init__(self, cache_size: int = 10000):
+    def __init__(self) -> None:
         self.cache_size = cache_size
-        self.feature_cache: dict[str, Any] = {}
+        self.feature_cache: Dict[str, Any] = {}
         self.text_vectorizer = TfidfVectorizer(
             max_features=5000,
             stop_words="english",
@@ -84,24 +84,24 @@ class FeatureExtractor:
             nltk.download("wordnet", quiet=True)
 
     def _get_cache_key(self, content_id: str, feature_type: str) -> str:
-        """Generate cache key for features"""
+        """Generate cache key for features."""
         return f"{feature_type}:{content_id}"
 
     def _is_cache_valid(self, cache_key: str, max_age_hours: int = 24) -> bool:
-        """Check if cached features are still valid"""
+        """Check if cached features are still valid."""
         if cache_key not in self.feature_cache:
             return False
 
         cached_data = self.feature_cache[cache_key]
-        age = datetime.now() - cached_data.get("extracted_at", datetime.min)
+        age = datetime.now(UTC) - cached_data.get("extracted_at", datetime.min)
         return age.total_seconds() < max_age_hours * 3600
 
     async def extract_content_features(self, content: ContentItem) -> ContentFeatures:
-        """Extract comprehensive features from content"""
+        """Extract comprehensive features from content."""
         cache_key = self._get_cache_key(content.id, "content")
 
         if self._is_cache_valid(cache_key):
-            logger.debug(f"Using cached features for content {content.id}")
+            logger.debug("Using cached features for content %s", content.id)
             return self.feature_cache[cache_key]["features"]
 
         try:
@@ -128,18 +128,18 @@ class FeatureExtractor:
             # Cache the features
             self.feature_cache[cache_key] = {
                 "features": features,
-                "extracted_at": datetime.now(),
+                "extracted_at": datetime.now(UTC),
             }
 
             # Manage cache size
             if len(self.feature_cache) > self.cache_size:
                 await self._cleanup_cache()
 
-            logger.info(f"Extracted features for content {content.id}")
+            logger.info("Extracted features for content %s", content.id)
             return features
 
         except Exception as e:
-            logger.error(f"Error extracting features for content {content.id}: {e}")
+            logger.error("Error extracting features for content %s: %s", content.id, e)
             raise
 
     async def extract_user_features(
@@ -147,11 +147,11 @@ class FeatureExtractor:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> UserFeatures:
-        """Extract comprehensive features from user behavior"""
+        """Extract comprehensive features from user behavior."""
         cache_key = self._get_cache_key(user_profile.user_id, "user")
 
         if self._is_cache_valid(cache_key):
-            logger.debug(f"Using cached features for user {user_profile.user_id}")
+            logger.debug("Using cached features for user %s", user_profile.user_id)
             return self.feature_cache[cache_key]["features"]
 
         try:
@@ -181,20 +181,22 @@ class FeatureExtractor:
             # Cache the features
             self.feature_cache[cache_key] = {
                 "features": features,
-                "extracted_at": datetime.now(),
+                "extracted_at": datetime.now(UTC),
             }
 
-            logger.info(f"Extracted features for user {user_profile.user_id}")
+            logger.info("Extracted features for user %s", user_profile.user_id)
             return features
 
         except Exception as e:
             logger.error(
-                f"Error extracting features for user {user_profile.user_id}: {e}",
+                "Error extracting features for user %s: %s",
+                user_profile.user_id,
+                e,
             )
             raise
 
     async def _extract_text_features(self, content: ContentItem) -> dict[str, float]:
-        """Extract text-based features"""
+        """Extract text-based features."""
         features = {}
 
         if not content.content_text:
@@ -273,7 +275,7 @@ class FeatureExtractor:
         self,
         content: ContentItem,
     ) -> dict[str, float]:
-        """Extract metadata-based features"""
+        """Extract metadata-based features."""
         features = {}
 
         # Source features
@@ -282,7 +284,7 @@ class FeatureExtractor:
 
         # Temporal features
         if content.published_date:
-            now = datetime.now()
+            now = datetime.now(UTC)
             age_days = (now - content.published_date).days
             features["content_age_days"] = age_days
             features["is_recent"] = 1.0 if age_days < 7 else 0.0
@@ -312,7 +314,7 @@ class FeatureExtractor:
         self,
         content: ContentItem,
     ) -> dict[str, float]:
-        """Extract semantic features using topic modeling"""
+        """Extract semantic features using topic modeling."""
         features = {}
 
         if not content.content_text:
@@ -346,7 +348,7 @@ class FeatureExtractor:
                 features[f"tfidf_top_{i}"] = tfidf_features[idx]
 
         except Exception as e:
-            logger.warning(f"Error in TF-IDF extraction: {e}")
+            logger.warning("Error in TF-IDF extraction: %s", e)
 
         # Topic distribution (if LDA model is trained)
         try:
@@ -355,12 +357,12 @@ class FeatureExtractor:
                 for i, prob in enumerate(topic_probs[0]):
                     features[f"topic_{i}_probability"] = prob
         except Exception as e:
-            logger.warning(f"Error in topic modeling: {e}")
+            logger.warning("Error in topic modeling: %s", e)
 
         return features
 
     async def _extract_quality_features(self, content: ContentItem) -> dict[str, float]:
-        """Extract content quality indicators"""
+        """Extract content quality indicators."""
         features = {}
 
         # Completeness features
@@ -390,7 +392,7 @@ class FeatureExtractor:
         self,
         user_profile: UserProfile,
     ) -> dict[str, float]:
-        """Extract user preference features"""
+        """Extract user preference features."""
         features = {}
 
         # Interest categories
@@ -426,7 +428,7 @@ class FeatureExtractor:
         self,
         interactions: list[UserInteraction],
     ) -> dict[str, float]:
-        """Extract behavioral features from user interactions"""
+        """Extract behavioral features from user interactions."""
         features = {}
 
         if not interactions:
@@ -466,7 +468,7 @@ class FeatureExtractor:
         self,
         interactions: list[UserInteraction],
     ) -> dict[str, float]:
-        """Extract temporal patterns from interactions"""
+        """Extract temporal patterns from interactions."""
         features = {}
 
         if not interactions:
@@ -485,7 +487,7 @@ class FeatureExtractor:
         features["is_weekend_user"] = 1.0 if np.mean(days) >= 5 else 0.0
 
         # Recency
-        now = datetime.now()
+        now = datetime.now(UTC)
         recent_interactions = [i for i in interactions if (now - i.timestamp).days < 7]
         features["recent_activity_ratio"] = len(recent_interactions) / len(interactions)
 
@@ -496,7 +498,7 @@ class FeatureExtractor:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> dict[str, float]:
-        """Extract social and collaborative features"""
+        """Extract social and collaborative features."""
         features = {}
 
         # Social indicators
@@ -514,7 +516,7 @@ class FeatureExtractor:
         return features
 
     def _calculate_flesch_score(self, text: str) -> float:
-        """Calculate Flesch Reading Ease score"""
+        """Calculate Flesch Reading Ease score."""
         try:
             sentences = re.findall(r"[.!?]+", text)
             words = text.split()
@@ -534,7 +536,7 @@ class FeatureExtractor:
         return 50.0  # Default middle score
 
     def _calculate_fk_grade(self, text: str) -> float:
-        """Calculate Flesch-Kincaid Grade Level"""
+        """Calculate Flesch-Kincaid Grade Level."""
         try:
             sentences = re.findall(r"[.!?]+", text)
             words = text.split()
@@ -554,7 +556,7 @@ class FeatureExtractor:
         return 8.0  # Default grade level
 
     def _count_syllables(self, word: str) -> int:
-        """Count syllables in a word"""
+        """Count syllables in a word."""
         word = word.lower()
         vowels = "aeiouy"
         syllable_count = 0
@@ -572,8 +574,8 @@ class FeatureExtractor:
 
         return max(1, syllable_count)
 
-    async def _cleanup_cache(self):
-        """Clean up old cache entries"""
+    async def _cleanup_cache(self) -> None:
+        """Clean up old cache entries."""
         if len(self.feature_cache) <= self.cache_size:
             return
 
@@ -587,14 +589,14 @@ class FeatureExtractor:
         for key, _ in sorted_items[:items_to_remove]:
             del self.feature_cache[key]
 
-        logger.info(f"Cleaned up {items_to_remove} cache entries")
+        logger.info("Cleaned up %s cache entries", items_to_remove)
 
     async def get_feature_vector(
         self,
         content_features: ContentFeatures,
         user_features: UserFeatures,
     ) -> np.ndarray:
-        """Combine content and user features into a single feature vector"""
+        """Combine content and user features into a single feature vector."""
         all_features = {}
 
         # Combine all feature dictionaries
@@ -611,9 +613,7 @@ class FeatureExtractor:
         feature_vector = np.array(list(all_features.values()))
 
         # Handle NaN values
-        feature_vector = np.nan_to_num(feature_vector, nan=0.0, posinf=1.0, neginf=-1.0)
-
-        return feature_vector
+        return np.nan_to_num(feature_vector, nan=0.0, posinf=1.0, neginf=-1.0)
 
     async def batch_extract_features(
         self,
@@ -621,11 +621,11 @@ class FeatureExtractor:
         user_profiles: list[UserProfile],
         interactions: list[UserInteraction],
     ) -> tuple[list[ContentFeatures], list[UserFeatures]]:
-        """Extract features for multiple contents and users in batch"""
+        """Extract features for multiple contents and users in batch."""
         logger.info(
-            f"Batch extracting features for {len(contents)} contents and {
-                len(user_profiles)
-            } users",
+            "Batch extracting features for %s contents and %s users",
+            len(contents),
+            len(user_profiles),
         )
 
         # Extract content features
@@ -649,8 +649,8 @@ class FeatureExtractor:
         user_features = [f for f in user_features if not isinstance(f, Exception)]
 
         logger.info(
-            f"Successfully extracted features for {len(content_features)} contents and {
-                len(user_features)
-            } users",
+            "Successfully extracted features for %s contents and %s users",
+            len(content_features),
+            len(user_features),
         )
         return content_features, user_features

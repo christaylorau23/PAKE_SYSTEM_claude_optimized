@@ -15,7 +15,7 @@ import string
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from src.services.database.multi_tenant_schema import (
@@ -70,16 +70,12 @@ class MultiTenantPerformanceTester:
     - Tenant context switching overhead
     """
 
-    def __init__(
-        self,
-        db_config: MultiTenantDatabaseConfig,
-        api_base_url: str = "http://localhost:8000",
-    ):
+    def __init__(self) -> None:
         self.db_config = db_config
         self.api_base_url = api_base_url
         self.db_service: MultiTenantPostgreSQLService | None = None
-        self.test_tenants: list[dict[str, Any]] = []
-        self.test_users: list[dict[str, Any]] = []
+        self.test_tenants: list[Dict[str, Any]] = []
+        self.test_users: list[Dict[str, Any]] = []
         self.performance_results: list[PerformanceMetrics] = []
 
     async def initialize(self) -> None:
@@ -89,7 +85,7 @@ class MultiTenantPerformanceTester:
             await self.db_service.initialize()
             logger.info("✅ Database service initialized")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize database service: {e}")
+            logger.error("❌ Failed to initialize database service: %s", e)
             raise
 
     async def close(self) -> None:
@@ -105,9 +101,9 @@ class MultiTenantPerformanceTester:
     async def setup_test_data(self, tenant_count: int, users_per_tenant: int) -> None:
         """Set up test data for performance testing"""
         logger.info(
-            f"🔧 Setting up test data: {tenant_count} tenants, {
+            "🔧 Setting up test data: %s tenants, %s users each", tenant_count,
                 users_per_tenant
-            } users each",
+            ,
         )
 
         self.test_tenants = []
@@ -135,9 +131,9 @@ class MultiTenantPerformanceTester:
                 self.test_users.append(user)
 
         logger.info(
-            f"✅ Created {len(self.test_tenants)} tenants and {
+            "✅ Created %s tenants and %s users", len(self.test_tenants),
                 len(self.test_users)
-            } users",
+            ,
         )
 
     async def cleanup_test_data(self) -> None:
@@ -148,7 +144,7 @@ class MultiTenantPerformanceTester:
             try:
                 await self.db_service.update_tenant_status(tenant["id"], "deleted")
             except Exception as e:
-                logger.warning(f"Failed to cleanup tenant {tenant['id']}: {e}")
+                logger.warning("Failed to cleanup tenant %s: %s", tenant["id"], e)
 
         logger.info("✅ Test data cleanup completed")
 
@@ -158,9 +154,9 @@ class MultiTenantPerformanceTester:
     ) -> PerformanceMetrics:
         """Test performance of tenant-isolated operations"""
         logger.info(
-            f"🧪 Testing tenant isolation performance: {
+            "🧪 Testing tenant isolation performance: %s operations per tenant",
                 operations_per_tenant
-            } operations per tenant",
+            ,
         )
 
         start_time = time.time()
@@ -168,7 +164,7 @@ class MultiTenantPerformanceTester:
         successful_ops = 0
         failed_ops = 0
 
-        async def perform_tenant_operations(tenant: dict[str, Any]) -> list[float]:
+        async def perform_tenant_operations(tenant: Dict[str, Any]) -> list[float]:
             """Perform operations for a single tenant"""
             tenant_response_times = []
             tenant_id = tenant["id"]
@@ -194,7 +190,7 @@ class MultiTenantPerformanceTester:
                     tenant_response_times.append(response_time)
 
                 except Exception as e:
-                    logger.error(f"Tenant operation failed: {e}")
+                    logger.error("Tenant operation failed: %s", e)
                     failed_ops += 1
 
             return tenant_response_times
@@ -236,8 +232,8 @@ class MultiTenantPerformanceTester:
         )
 
         logger.info(
-            f"✅ Tenant isolation performance test completed: {
-                metrics.operations_per_second:.2f} ops/sec",
+            "✅ Tenant isolation performance test completed: %.2f ops/sec",
+                metrics.operations_per_second,
         )
         return metrics
 
@@ -247,9 +243,9 @@ class MultiTenantPerformanceTester:
     ) -> PerformanceMetrics:
         """Test concurrent operations across multiple tenants"""
         logger.info(
-            f"🧪 Testing concurrent tenant operations: {
+            "🧪 Testing concurrent tenant operations: %s concurrent operations",
                 concurrent_operations
-            } concurrent operations",
+            ,
         )
 
         start_time = time.time()
@@ -303,7 +299,7 @@ class MultiTenantPerformanceTester:
                 return response_time
 
             except Exception as e:
-                logger.error(f"Concurrent operation {operation_id} failed: {e}")
+                logger.error("Concurrent operation %s failed: %s", operation_id, e)
                 failed_ops += 1
                 return None
 
@@ -342,8 +338,8 @@ class MultiTenantPerformanceTester:
         )
 
         logger.info(
-            f"✅ Concurrent operations test completed: {
-                metrics.operations_per_second:.2f} ops/sec",
+            "✅ Concurrent operations test completed: %s ops/sec",
+                metrics.operations_per_second:.2f,
         )
         return metrics
 
@@ -353,9 +349,9 @@ class MultiTenantPerformanceTester:
     ) -> PerformanceMetrics:
         """Test overhead of tenant context switching"""
         logger.info(
-            f"🧪 Testing tenant context switching overhead: {
+            "🧪 Testing tenant context switching overhead: %s switches",
                 context_switches
-            } switches",
+            ,
         )
 
         start_time = time.time()
@@ -365,6 +361,7 @@ class MultiTenantPerformanceTester:
 
         for i in range(context_switches):
             try:
+                    pass
                 # Select random tenant
                 tenant = random.choice(self.test_tenants)
                 tenant_id = tenant["id"]
@@ -380,7 +377,7 @@ class MultiTenantPerformanceTester:
                 successful_ops += 1
 
             except Exception as e:
-                logger.error(f"Context switch {i} failed: {e}")
+                logger.error("Context switch %s failed: %s", i, e)
                 failed_ops += 1
 
         end_time = time.time()
@@ -411,8 +408,8 @@ class MultiTenantPerformanceTester:
         )
 
         logger.info(
-            f"✅ Context switching test completed: {
-                metrics.operations_per_second:.2f} ops/sec",
+            "✅ Context switching test completed: %s ops/sec",
+                metrics.operations_per_second:.2f,
         )
         return metrics
 
@@ -422,7 +419,7 @@ class MultiTenantPerformanceTester:
         users_per_tenant: int = 10,
     ) -> PerformanceMetrics:
         """Test database scalability with increasing tenant count"""
-        logger.info(f"🧪 Testing database scalability: up to {max_tenants} tenants")
+        logger.info("🧪 Testing database scalability: up to %s tenants", max_tenants)
 
         start_time = time.time()
         response_times = []
@@ -439,7 +436,7 @@ class MultiTenantPerformanceTester:
 
             # Perform operations across all tenants
             async def perform_scalability_operation(
-                tenant: dict[str, Any],
+                tenant: Dict[str, Any],
             ) -> float | None:
                 try:
                     op_start = time.time()
@@ -458,7 +455,7 @@ class MultiTenantPerformanceTester:
 
                 except Exception as e:
                     logger.error(
-                        f"Scalability operation failed for tenant {tenant['id']}: {e}",
+                        "Scalability operation failed for tenant %s: %s", tenant['id'], e,
                     )
                     return None
 
@@ -502,8 +499,8 @@ class MultiTenantPerformanceTester:
         )
 
         logger.info(
-            f"✅ Database scalability test completed: {
-                metrics.operations_per_second:.2f} ops/sec",
+            "✅ Database scalability test completed: %s ops/sec",
+                metrics.operations_per_second:.2f,
         )
         return metrics
 
@@ -523,15 +520,16 @@ class MultiTenantPerformanceTester:
         self,
         tenant_count: int = 10,
         users_per_tenant: int = 5,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Run comprehensive performance test suite"""
         logger.info(
-            f"🚀 Starting comprehensive performance test: {tenant_count} tenants, {
+            "🚀 Starting comprehensive performance test: %s tenants, %s users each", tenant_count,
                 users_per_tenant
-            } users each",
+            ,
         )
 
         try:
+                pass
             # Initialize
             await self.initialize()
 
@@ -551,7 +549,7 @@ class MultiTenantPerformanceTester:
 
             results = {}
             for test_name, test_coro in tests:
-                logger.info(f"Running {test_name} test...")
+                logger.info("Running %s test...", test_name)
                 result = await test_coro
                 results[test_name] = result
                 self.performance_results.append(result)
@@ -563,7 +561,7 @@ class MultiTenantPerformanceTester:
             return report
 
         except Exception as e:
-            logger.error(f"❌ Performance test failed: {e}")
+            logger.error("❌ Performance test failed: %s", e)
             return {"status": "failed", "error": str(e)}
         finally:
             # Cleanup
@@ -573,10 +571,10 @@ class MultiTenantPerformanceTester:
     def _generate_performance_report(
         self,
         results: dict[str, PerformanceMetrics],
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate comprehensive performance report"""
         report = {
-            "test_timestamp": datetime.utcnow().isoformat(),
+            "test_timestamp": datetime.now(UTC).isoformat(),
             "test_summary": {
                 "total_tests": len(results),
                 "overall_status": "success",
@@ -701,7 +699,7 @@ class MultiTenantPerformanceTester:
         return report
 
 
-async def main():
+async def main(self) -> None:
     """Main performance testing function"""
     parser = argparse.ArgumentParser(
         description="PAKE System Multi-Tenant Performance Testing",
@@ -744,7 +742,7 @@ async def main():
     if args.output_report:
         with open(args.output_report, "w") as f:
             json.dump(report, f, indent=2)
-        logger.info(f"📄 Performance report saved to: {args.output_report}")
+        logger.info("📄 Performance report saved to: %s", args.output_report)
 
     # Print summary
     print("\n" + "=" * 80)

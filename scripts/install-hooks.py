@@ -9,7 +9,7 @@ import stat
 from pathlib import Path
 
 
-def install_git_hooks():
+def install_git_hooks(self) -> None:
     """Install Git hooks for PAKE+ validation"""
 
     project_root = Path(__file__).parent.parent
@@ -49,7 +49,7 @@ PAKE+ commit message validation
 import sys
 import re
 
-def validate_commit_message(message):
+def validate_commit_message(self) -> None:
     """Validate commit message format"""
     lines = message.strip().split('\\n')
 
@@ -105,7 +105,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-def log_commit():
+def log_commit(self) -> None:
     """Log commit information for PAKE+ system"""
     try:
         # Get commit info
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         return False
 
 
-def test_hooks():
+def test_hooks(self) -> None:
     """Test that hooks are working correctly"""
     print("\\n🧪 Testing Git hooks...")
 

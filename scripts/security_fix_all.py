@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 class SecurityFixer:
     """Comprehensive security fixer"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path(__file__).parent.parent
         self.fixes_applied = []
         self.fixes_failed = []
         self.backup_dir = self.project_root / "security_backups"
         self.backup_dir.mkdir(exist_ok=True)
 
-    def fix_all_issues(self):
+    def fix_all_issues(self) -> None:
         """Fix all security issues"""
         logger.info("🔒 Starting comprehensive security fixes...")
 
@@ -38,10 +38,10 @@ class SecurityFixer:
             self._print_summary()
 
         except Exception as e:
-            logger.error(f"Security fixes failed: {e}")
+            logger.error("Security fixes failed: %s", e)
             sys.exit(1)
 
-    def _fix_dependencies(self):
+    def _fix_dependencies(self) -> None:
         """Fix dependency vulnerabilities"""
         logger.info("📦 Fixing dependencies...")
 
@@ -58,9 +58,9 @@ class SecurityFixer:
 
         except Exception as e:
             self.fixes_failed.append(("dependencies", str(e)))
-            logger.error(f"❌ Dependency fix failed: {e}")
+            logger.error("❌ Dependency fix failed: %s", e)
 
-    def _fix_hash_algorithms(self):
+    def _fix_hash_algorithms(self) -> None:
         """Fix hash algorithm usage"""
         logger.info("🔐 Fixing hash algorithms...")
 
@@ -85,7 +85,8 @@ class SecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed MD5 usage in {file_path.relative_to(self.project_root)}",
+                    "Fixed MD5 usage in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             # Find all Python files with SHA1 usage
@@ -108,19 +109,22 @@ class SecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed SHA1 usage in {file_path.relative_to(self.project_root)}",
+                    "Fixed SHA1 usage in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("hash_algorithms")
             logger.info(
-                f"✅ Fixed hash algorithms in {len(md5_files)} MD5 files and {len(sha1_files)} SHA1 files",
+                "✅ Fixed hash algorithms in %s MD5 files and %s SHA1 files",
+                len(md5_files),
+                len(sha1_files),
             )
 
         except Exception as e:
             self.fixes_failed.append(("hash_algorithms", str(e)))
-            logger.error(f"❌ Hash algorithm fix failed: {e}")
+            logger.error("❌ Hash algorithm fix failed: %s", e)
 
-    def _fix_serialization(self):
+    def _fix_serialization(self) -> None:
         """Fix serialization security"""
         logger.info("📄 Fixing serialization...")
 
@@ -190,25 +194,26 @@ class SecurityFixer:
                         lines = content.split("\n")
                         import_index = 0
                         for i, line in enumerate(lines):
-                            if line.startswith("import ") or line.startswith("from "):
+                            if line.startswith(("import ", "from ")):
                                 import_index = i + 1
 
                         lines.insert(import_index, import_line)
                         content = "\n".join(lines)
 
                     file_path.write_text(content, encoding="utf-8")
-                    logger.info(f"Fixed pickle usage in {relative_path}")
+                    logger.info("Fixed pickle usage in %s", relative_path)
 
             self.fixes_applied.append("serialization")
             logger.info(
-                f"✅ Fixed serialization in {len(critical_files)} critical files",
+                "✅ Fixed serialization in %s critical files",
+                len(critical_files),
             )
 
         except Exception as e:
             self.fixes_failed.append(("serialization", str(e)))
-            logger.error(f"❌ Serialization fix failed: {e}")
+            logger.error("❌ Serialization fix failed: %s", e)
 
-    def _fix_network_bindings(self):
+    def _fix_network_bindings(self) -> None:
         """Fix network binding security"""
         logger.info("🌐 Fixing network bindings...")
 
@@ -234,17 +239,18 @@ class SecurityFixer:
 
                 file_path.write_text(fixed_content, encoding="utf-8")
                 logger.info(
-                    f"Fixed network binding in {file_path.relative_to(self.project_root)}",
+                    "Fixed network binding in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("network_bindings")
-            logger.info(f"✅ Fixed network bindings in {len(binding_files)} files")
+            logger.info("✅ Fixed network bindings in %s files", len(binding_files))
 
         except Exception as e:
             self.fixes_failed.append(("network_bindings", str(e)))
-            logger.error(f"❌ Network binding fix failed: {e}")
+            logger.error("❌ Network binding fix failed: %s", e)
 
-    def _fix_hardcoded_secrets(self):
+    def _fix_hardcoded_secrets(self) -> None:
         """Fix hardcoded secrets"""
         logger.info("🔑 Fixing hardcoded secrets...")
 
@@ -309,18 +315,19 @@ class SecurityFixer:
                         content = "\n".join(lines)
 
                     file_path.write_text(content, encoding="utf-8")
-                    logger.info(f"Fixed hardcoded secrets in {relative_path}")
+                    logger.info("Fixed hardcoded secrets in %s", relative_path)
 
             self.fixes_applied.append("hardcoded_secrets")
             logger.info(
-                f"✅ Fixed hardcoded secrets in {len(critical_files)} critical files",
+                "✅ Fixed hardcoded secrets in %s critical files",
+                len(critical_files),
             )
 
         except Exception as e:
             self.fixes_failed.append(("hardcoded_secrets", str(e)))
-            logger.error(f"❌ Hardcoded secrets fix failed: {e}")
+            logger.error("❌ Hardcoded secrets fix failed: %s", e)
 
-    def _fix_input_validation(self):
+    def _fix_input_validation(self) -> None:
         """Fix input validation issues"""
         logger.info("✅ Fixing input validation...")
 
@@ -350,17 +357,18 @@ class SecurityFixer:
 
                 file_path.write_text(content, encoding="utf-8")
                 logger.info(
-                    f"Fixed SQL injection risk in {file_path.relative_to(self.project_root)}",
+                    "Fixed SQL injection risk in %s",
+                    file_path.relative_to(self.project_root),
                 )
 
             self.fixes_applied.append("input_validation")
-            logger.info(f"✅ Fixed input validation in {len(sql_files)} files")
+            logger.info("✅ Fixed input validation in %s files", len(sql_files))
 
         except Exception as e:
             self.fixes_failed.append(("input_validation", str(e)))
-            logger.error(f"❌ Input validation fix failed: {e}")
+            logger.error("❌ Input validation fix failed: %s", e)
 
-    def _backup_file(self, file_path: Path):
+    def _backup_file(self) -> None:
         """Create backup of file before modification"""
         relative_path = file_path.relative_to(self.project_root)
         backup_path = self.backup_dir / relative_path
@@ -370,7 +378,7 @@ class SecurityFixer:
 
         shutil.copy2(file_path, backup_path)
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         """Print fix summary"""
         print("\n" + "=" * 60)
         print("🔒 SECURITY FIX SUMMARY")
@@ -398,7 +406,7 @@ class SecurityFixer:
             print("\n✅ Security fixes completed successfully!")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     logging.basicConfig(
         level=logging.INFO,

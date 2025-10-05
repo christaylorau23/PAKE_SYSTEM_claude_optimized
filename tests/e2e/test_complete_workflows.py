@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+
 from services.analytics.performance_analyzer import PerformanceAnalyzer
 from services.caching.redis_cache_strategy import RedisCacheStrategy
 from services.database.connection_manager import DatabaseConnectionManager
@@ -40,8 +41,8 @@ class TestCompleteUserWorkflows:
     validating the entire experience from start to finish.
     """
 
-    @pytest.fixture()
-    async def full_system_setup(self):
+    @pytest.fixture
+    async def full_system_setup(self) -> None:
         """Set up complete PAKE System for E2E testing"""
         # Database connection
         db_manager = DatabaseConnectionManager(
@@ -84,8 +85,8 @@ class TestCompleteUserWorkflows:
     # Knowledge Ingestion Workflow E2E Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_complete_knowledge_ingestion_workflow(self, full_system_setup):
+    @pytest.mark.asyncio
+    async def test_complete_knowledge_ingestion_workflow(self) -> None:
         """
         Test: Complete knowledge ingestion workflow from user request to stored knowledge
 
@@ -97,6 +98,8 @@ class TestCompleteUserWorkflows:
         5. Results are stored and cached
         6. User receives comprehensive results
         """
+        structured_logger.info("Starting complete knowledge ingestion workflow test")
+
         db_manager = full_system_setup["database"]
         cache = full_system_setup["cache"]
         message_bus = full_system_setup["message_bus"]
@@ -132,6 +135,13 @@ class TestCompleteUserWorkflows:
                 "enable_summarization": True,
             },
         }
+
+        structured_logger.info(
+            "Created user research request",
+            topic=user_request["topic"],
+            user_id=user_request["user_id"],
+            sources=user_request["requirements"]["sources"],
+        )
 
         # Create comprehensive ingestion plan
         ingestion_plan = {
@@ -184,13 +194,17 @@ class TestCompleteUserWorkflows:
         }
 
         # Mock successful API responses for realistic E2E testing
-        with patch(
-            "services.ingestion.firecrawl_service.FirecrawlService.extract_content"
-        ) as mock_firecrawl, patch(
-            "services.ingestion.arxiv_service.ArxivService.search_papers"
-        ) as mock_arxiv, patch(
-            "services.ingestion.pubmed_service.PubmedService.search_articles"
-        ) as mock_pubmed:
+        with (
+            patch(
+                "services.ingestion.firecrawl_service.FirecrawlService.extract_content"
+            ) as mock_firecrawl,
+            patch(
+                "services.ingestion.arxiv_service.ArxivService.search_papers"
+            ) as mock_arxiv,
+            patch(
+                "services.ingestion.pubmed_service.PubmedService.search_articles"
+            ) as mock_pubmed,
+        ):
             # Configure realistic mock responses
             mock_firecrawl.return_value = {
                 "success": True,
@@ -281,15 +295,15 @@ class TestCompleteUserWorkflows:
                     assert item["cognitive_assessment"]["overall_quality"] >= 0.7
 
             # Verify deduplication worked
-            unique_titles = set(item["title"] for item in result.content_items)
+            unique_titles = {item["title"] for item in result.content_items}
             assert len(unique_titles) == len(result.content_items)  # No duplicates
 
             # Verify cross-referencing
             if result.cross_references:
                 assert len(result.cross_references) > 0
 
-    @pytest.mark.asyncio()
-    async def test_user_research_session_workflow(self, full_system_setup):
+    @pytest.mark.asyncio
+    async def test_user_research_session_workflow(self) -> None:
         """
         Test: Complete user research session from login to results delivery
 
@@ -519,8 +533,8 @@ class TestCompleteUserWorkflows:
     # Performance and Scalability E2E Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_high_volume_ingestion_performance(self, full_system_setup):
+    @pytest.mark.asyncio
+    async def test_high_volume_ingestion_performance(self) -> None:
         """
         Test: System should handle high-volume ingestion with acceptable performance
 
@@ -564,7 +578,7 @@ class TestCompleteUserWorkflows:
             # Execute concurrent requests
             start_time = time.time()
 
-            async def process_request(topic):
+            async def process_request(self) -> None:
                 ingestion_plan = {
                     "topic": topic,
                     "sources": [
@@ -621,8 +635,8 @@ class TestCompleteUserWorkflows:
                 datetime.now(UTC),
             )
 
-    @pytest.mark.asyncio()
-    async def test_system_reliability_under_failure_conditions(self, full_system_setup):
+    @pytest.mark.asyncio
+    async def test_system_reliability_under_failure_conditions(self) -> None:
         """
         Test: System should maintain reliability under partial failure conditions
 
@@ -670,7 +684,7 @@ class TestCompleteUserWorkflows:
             "services.ingestion.firecrawl_service.FirecrawlService.extract_content"
         ) as mock_firecrawl:
 
-            def mock_extract_side_effect(url):
+            async def mock_extract_side_effect(self) -> None:
                 if "working-site.com" in url:
                     return {
                         "success": True,
@@ -678,12 +692,14 @@ class TestCompleteUserWorkflows:
                         "url": url,
                         "metadata": {"title": "Working Site Article"},
                     }
-                elif "failing-site.com" in url:
-                    raise Exception("Site unavailable")
-                elif "slow-site.com" in url:
-                    # Simulate timeout
-                    time.sleep(35)  # Longer than timeout
+                if "failing-site.com" in url:
+                    msg = "Site unavailable"
+                    raise Exception(msg)
+                if "slow-site.com" in url:
+                    # Simulate timeout using async sleep instead of blocking sleep
+                    await asyncio.sleep(35)  # Longer than timeout
                     return {"success": True, "content": "Slow site content", "url": url}
+                return None
 
             mock_firecrawl.side_effect = mock_extract_side_effect
 
@@ -716,8 +732,8 @@ class TestCompleteUserWorkflows:
     # User Experience E2E Tests
     # ========================================================================
 
-    @pytest.mark.asyncio()
-    async def test_complete_user_onboarding_workflow(self, full_system_setup):
+    @pytest.mark.asyncio
+    async def test_complete_user_onboarding_workflow(self) -> None:
         """
         Test: Complete user onboarding workflow from registration to first research
 

@@ -14,7 +14,7 @@ import time
 import traceback
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 import frontmatter
@@ -24,7 +24,7 @@ from watchdog.events import FileSystemEventHandler
 # Configure service-aware logging
 
 
-def setup_service_logging():
+def setup_service_logging(self) -> None:
     """Setup logging configuration for service operation"""
     log_dir = Path("D:/Projects/PAKE_SYSTEM/logs")
     log_dir.mkdir(exist_ok=True)
@@ -80,7 +80,7 @@ class ServiceHealth:
 class EnhancedConfidenceEngine:
     """Enhanced confidence scoring with error recovery"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.fallback_scores = {
             "minimal": 0.3,
             "basic": 0.5,
@@ -157,14 +157,14 @@ class EnhancedConfidenceEngine:
             return max(0.1, min(1.0, score))
 
         except Exception as e:
-            logger.error(f"Confidence calculation error: {e}")
+            logger.error("Confidence calculation error: %s", e)
             return self.fallback_scores["basic"]
 
 
 class RobustVectorEmbedding:
     """Robust vector embedding with fallback"""
 
-    def __init__(self, dimensions=128):
+    def __init__(self) -> None:
         self.dimensions = dimensions
 
     def create_embedding(self, content: str) -> list:
@@ -194,7 +194,7 @@ class RobustVectorEmbedding:
             return embedding
 
         except Exception as e:
-            logger.error(f"Vector embedding error: {e}")
+            logger.error("Vector embedding error: %s", e)
             # Return random normalized vector as fallback
             import random
 
@@ -210,13 +210,13 @@ class RobustVectorEmbedding:
 class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
     """Enhanced vault watcher designed for Windows Service operation"""
 
-    def __init__(self, vault_path: str, api_bridge_url: str = None):
+    def __init__(self) -> None:
         super().__init__()
         self.vault_path = Path(vault_path)
         self.api_bridge_url = api_bridge_url
         self.processing_queue = asyncio.Queue()
         self.processed_files = {}
-        self.service_start_time = datetime.now()
+        self.service_start_time = datetime.now(UTC)
 
         # Enhanced components
         self.confidence_engine = EnhancedConfidenceEngine()
@@ -224,7 +224,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
 
         # Service health tracking
         self.health = ServiceHealth(
-            last_activity=datetime.now(),
+            last_activity=datetime.now(UTC),
             files_processed_today=0,
             queue_size=0,
             error_count=0,
@@ -244,9 +244,9 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         # Ensure data directories exist
         self.setup_data_directories()
 
-        logger.info(f"Enhanced vault watcher initialized for service: {vault_path}")
+        logger.info("Enhanced vault watcher initialized for service: %s", vault_path)
 
-    def setup_data_directories(self):
+    def setup_data_directories(self) -> None:
         """Ensure all required directories exist"""
         dirs = [
             Path("D:/Projects/PAKE_SYSTEM/data"),
@@ -257,7 +257,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         for dir_path in dirs:
             dir_path.mkdir(parents=True, exist_ok=True)
 
-    def load_processing_state(self):
+    def load_processing_state(self) -> None:
         """Load processing state with error handling"""
         try:
             state_file = Path("D:/Projects/PAKE_SYSTEM/data/processing_state.json")
@@ -265,22 +265,22 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 with open(state_file) as f:
                     self.processed_files = json.load(f)
                 logger.info(
-                    f"Loaded processing state: {len(self.processed_files)} files",
+                    "Loaded processing state: %s files", len(self.processed_files),
                 )
         except Exception as e:
-            logger.error(f"Error loading processing state: {e}")
+            logger.error("Error loading processing state: %s", e)
             self.processed_files = {}
 
-    def save_processing_state(self):
+    def save_processing_state(self) -> None:
         """Save processing state with error handling"""
         try:
             state_file = Path("D:/Projects/PAKE_SYSTEM/data/processing_state.json")
             with open(state_file, "w") as f:
                 json.dump(self.processed_files, f, indent=2)
         except Exception as e:
-            logger.error(f"Error saving processing state: {e}")
+            logger.error("Error saving processing state: %s", e)
 
-    def load_knowledge_graph(self):
+    def load_knowledge_graph(self) -> None:
         """Load knowledge graph with error handling"""
         try:
             kg_file = Path("D:/Projects/PAKE_SYSTEM/data/knowledge_graph.json")
@@ -288,32 +288,32 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 with open(kg_file) as f:
                     self.knowledge_graph = json.load(f)
                 logger.info(
-                    f"Loaded knowledge graph: {len(self.knowledge_graph)} entries",
+                    "Loaded knowledge graph: %s entries", len(self.knowledge_graph),
                 )
             else:
                 self.knowledge_graph = {}
         except Exception as e:
-            logger.error(f"Error loading knowledge graph: {e}")
+            logger.error("Error loading knowledge graph: %s", e)
             self.knowledge_graph = {}
 
-    def update_health_status(self):
+    def update_health_status(self) -> None:
         """Update service health metrics"""
         try:
             process = psutil.Process()
             self.health.memory_usage_mb = process.memory_info().rss / 1024 / 1024
             self.health.uptime_hours = (
-                datetime.now() - self.service_start_time
+                datetime.now(UTC) - self.service_start_time
             ).total_seconds() / 3600
             self.health.queue_size = self.processing_queue.qsize()
 
             # Reset daily counter if new day
-            if datetime.now().date() > self.health.last_activity.date():
+            if datetime.now(UTC).date() > self.health.last_activity.date():
                 self.health.files_processed_today = 0
 
-            self.health.last_activity = datetime.now()
+            self.health.last_activity = datetime.now(UTC)
 
         except Exception as e:
-            logger.error(f"Error updating health status: {e}")
+            logger.error("Error updating health status: %s", e)
 
     def get_file_hash(self, file_path: Path) -> str | None:
         """Get file hash with error handling"""
@@ -323,10 +323,10 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             with open(file_path, "rb") as f:
                 return hashlib.sha256(f.read()).hexdigest()
         except Exception as e:
-            logger.error(f"Error getting file hash for {file_path}: {e}")
+            logger.error("Error getting file hash for %s: %s", file_path, e)
             return None
 
-    async def run_monitoring_cycle(self):
+    async def run_monitoring_cycle(self) -> None:
         """Run one cycle of monitoring - called by service"""
         try:
             self.update_health_status()
@@ -344,7 +344,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
 
         except Exception as e:
             self.consecutive_errors += 1
-            logger.error(f"Monitoring cycle error ({self.consecutive_errors}): {e}")
+            logger.error("Monitoring cycle error (%s): %s", self.consecutive_errors, e)
 
             if self.consecutive_errors >= self.max_consecutive_errors:
                 logger.critical(
@@ -352,7 +352,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 )
                 await asyncio.sleep(self.error_recovery_delay * self.consecutive_errors)
 
-    async def process_queue_batch(self):
+    async def process_queue_batch(self) -> None:
         """Process a batch of files from the queue"""
         batch_size = min(3, self.processing_queue.qsize())  # Process up to 3 files
 
@@ -370,9 +370,9 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
 
                 if result and not result.error:
                     self.health.files_processed_today += 1
-                    logger.info(f"Successfully processed: {file_path.name}")
+                    logger.info("Successfully processed: %s", file_path.name)
                 else:
-                    logger.warning(f"Processing failed: {file_path.name}")
+                    logger.warning("Processing failed: %s", file_path.name)
 
                 self.processing_queue.task_done()
 
@@ -380,10 +380,10 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 logger.warning("Queue processing timeout")
                 break
             except Exception as e:
-                logger.error(f"Batch processing error: {e}")
+                logger.error("Batch processing error: %s", e)
                 break
 
-    async def perform_health_maintenance(self):
+    async def perform_health_maintenance(self) -> None:
         """Perform periodic health maintenance"""
         try:
             # Memory cleanup
@@ -396,7 +396,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             vault_disk = psutil.disk_usage(str(self.vault_path))
             if vault_disk.free < 1024 * 1024 * 100:  # Less than 100MB
                 logger.warning(
-                    f"Low disk space: {vault_disk.free / 1024 / 1024:.1f}MB free",
+                    "Low disk space: %sMB free", vault_disk.free / 1024 / 1024:.1f,
                 )
 
             # Update health status
@@ -405,12 +405,12 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             )
 
             logger.debug(
-                f"Health maintenance: {self.health.memory_usage_mb:.1f}MB, "
+                "Health maintenance: %sMB, ", self.health.memory_usage_mb:.1f
                 f"{self.health.files_processed_today} files today",
             )
 
         except Exception as e:
-            logger.error(f"Health maintenance error: {e}")
+            logger.error("Health maintenance error: %s", e)
 
     # ... [include rest of the methods from original vault watcher with enhanced error handling]
 
@@ -419,6 +419,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         start_time = time.time()
 
         try:
+                pass
             # Validate file exists and is accessible
             if not file_path.exists():
                 return ProcessingResult(
@@ -456,7 +457,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             try:
                 embedding = self.vector_engine.create_embedding(content)
             except Exception as e:
-                logger.warning(f"Vector embedding failed, using fallback: {e}")
+                logger.warning("Vector embedding failed, using fallback: %s", e)
                 embedding = [0.0] * 128  # Fallback empty vector
 
             # Generate simple AI summary
@@ -467,7 +468,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 {
                     "pake_id": pake_id,
                     "confidence_score": confidence_score,
-                    "last_processed": datetime.now().isoformat(),
+                    "last_processed": datetime.now(UTC).isoformat(),
                     "ai_summary": ai_summary,
                     "vector_dimensions": len(embedding),
                     "automated_processing": True,
@@ -477,6 +478,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
 
             # Save updated file with backup
             try:
+                    pass
                 # Create backup
                 backup_path = file_path.with_suffix(".md.backup")
                 backup_path.write_text(file_content, encoding="utf-8")
@@ -492,7 +494,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                     backup_path.unlink()
 
             except Exception as e:
-                logger.error(f"File update failed: {e}")
+                logger.error("File update failed: %s", e)
                 # Restore from backup if it exists
                 backup_path = file_path.with_suffix(".md.backup")
                 if backup_path.exists():
@@ -521,7 +523,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
 
         except Exception as e:
             error_msg = f"Processing failed: {str(e)}"
-            logger.error(f"File processing error for {file_path}: {error_msg}")
+            logger.error("File processing error for %s: %s", file_path, error_msg)
             logger.error(traceback.format_exc())
 
             return ProcessingResult(
@@ -550,14 +552,14 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         except Exception:
             return "Content summary unavailable."
 
-    def update_knowledge_graph(self, pake_id: str, content: str, metadata: dict):
+    def update_knowledge_graph(self) -> None:
         """Update knowledge graph with error handling"""
         try:
             self.knowledge_graph[pake_id] = {
                 "title": metadata.get("title", "Untitled"),
                 "tags": metadata.get("tags", []),
                 "connections": metadata.get("connections", []),
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(UTC).isoformat(),
                 "content_preview": content[:200]
                 + ("..." if len(content) > 200 else ""),
                 "confidence_score": metadata.get("confidence_score", 0.0),
@@ -570,9 +572,9 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                     json.dump(self.knowledge_graph, f, indent=2)
 
         except Exception as e:
-            logger.error(f"Knowledge graph update error: {e}")
+            logger.error("Knowledge graph update error: %s", e)
 
-    def save_vector_embedding(self, pake_id: str, embedding: list):
+    def save_vector_embedding(self) -> None:
         """Save vector embedding with error handling"""
         try:
             vector_file = Path(f"D:/Projects/PAKE_SYSTEM/data/vectors/{pake_id}.json")
@@ -580,16 +582,16 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
                 "pake_id": pake_id,
                 "vector": embedding,
                 "dimensions": len(embedding),
-                "created": datetime.now().isoformat(),
+                "created": datetime.now(UTC).isoformat(),
             }
 
             with open(vector_file, "w") as f:
                 json.dump(vector_data, f)
 
         except Exception as e:
-            logger.error(f"Vector save error for {pake_id}: {e}")
+            logger.error("Vector save error for %s: %s", pake_id, e)
 
-    def on_created(self, event):
+    def on_created(self) -> None:
         """Handle file creation with error recovery"""
         try:
             if event.is_directory or not event.src_path.endswith(".md"):
@@ -601,14 +603,14 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             if any(part.startswith(("_", ".")) for part in file_path.parts):
                 return
 
-            logger.info(f"File created: {file_path}")
+            logger.info("File created: %s", file_path)
             # Queue for processing (will be handled in monitoring cycle)
             asyncio.create_task(self.processing_queue.put(file_path))
 
         except Exception as e:
-            logger.error(f"File creation handler error: {e}")
+            logger.error("File creation handler error: %s", e)
 
-    def on_modified(self, event):
+    def on_modified(self) -> None:
         """Handle file modification with error recovery"""
         try:
             if event.is_directory or not event.src_path.endswith(".md"):
@@ -625,11 +627,11 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
             stored_hash = self.processed_files.get(str(file_path))
 
             if current_hash and current_hash != stored_hash:
-                logger.info(f"File modified: {file_path}")
+                logger.info("File modified: %s", file_path)
                 asyncio.create_task(self.processing_queue.put(file_path))
 
         except Exception as e:
-            logger.error(f"File modification handler error: {e}")
+            logger.error("File modification handler error: %s", e)
 
 
 # Alias for backward compatibility

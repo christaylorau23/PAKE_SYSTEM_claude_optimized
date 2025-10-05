@@ -42,18 +42,18 @@ LIMIT 12
 
 ```dataview
 TABLE WITHOUT ID
-  choice(confidence_score >= 0.9, "Excellent (0.9-1.0)", 
-    choice(confidence_score >= 0.8, "High (0.8-0.9)", 
-      choice(confidence_score >= 0.6, "Good (0.6-0.8)", 
+  choice(confidence_score >= 0.9, "Excellent (0.9-1.0)",
+    choice(confidence_score >= 0.8, "High (0.8-0.9)",
+      choice(confidence_score >= 0.6, "Good (0.6-0.8)",
         choice(confidence_score >= 0.4, "Fair (0.4-0.6)", "Poor (0-0.4)")))) as "Confidence Range",
   length(rows) as "Count",
   round((length(rows) / 1.0), 1) + "%" as "Percentage"
 FROM ""
 WHERE confidence_score != null
 AND file.name != "Analytics-Dashboard"
-GROUP BY choice(confidence_score >= 0.9, "Excellent (0.9-1.0)", 
-    choice(confidence_score >= 0.8, "High (0.8-0.9)", 
-      choice(confidence_score >= 0.6, "Good (0.6-0.8)", 
+GROUP BY choice(confidence_score >= 0.9, "Excellent (0.9-1.0)",
+    choice(confidence_score >= 0.8, "High (0.8-0.9)",
+      choice(confidence_score >= 0.6, "Good (0.6-0.8)",
         choice(confidence_score >= 0.4, "Fair (0.4-0.6)", "Poor (0-0.4)"))))
 SORT length(rows) DESC
 ```
@@ -62,18 +62,18 @@ SORT length(rows) DESC
 
 ```dataview
 TABLE
-  choice(contains(source_uri, "local"), "📝 Local", 
-    choice(contains(source_uri, "http"), "🌐 Web", 
-      choice(contains(source_uri, "email"), "📧 Email", 
+  choice(contains(source_uri, "local"), "📝 Local",
+    choice(contains(source_uri, "http"), "🌐 Web",
+      choice(contains(source_uri, "email"), "📧 Email",
         choice(contains(source_uri, "rss"), "📰 RSS", "❓ Other")))) as "Source Type",
   length(rows) as "Count",
   round(average(rows.confidence_score), 2) as "Avg Confidence"
 FROM ""
 WHERE source_uri != null AND source_uri != ""
 AND file.name != "Analytics-Dashboard"
-GROUP BY choice(contains(source_uri, "local"), "📝 Local", 
-    choice(contains(source_uri, "http"), "🌐 Web", 
-      choice(contains(source_uri, "email"), "📧 Email", 
+GROUP BY choice(contains(source_uri, "local"), "📝 Local",
+    choice(contains(source_uri, "http"), "🌐 Web",
+      choice(contains(source_uri, "email"), "📧 Email",
         choice(contains(source_uri, "rss"), "📰 RSS", "❓ Other"))))
 SORT length(rows) DESC
 ```
@@ -195,7 +195,7 @@ LIMIT 10
 - **Notes This Week**: `= length(filter(file.lists, (x) => date(x.created) >= date(today) - dur(7 days))) - 1`
 - **Average Daily Notes**: `= round((length(file.lists) - 1) / 30, 1)` (last 30 days estimate)
 
-### Quality Metrics  
+### Quality Metrics
 - **High Confidence Ratio**: `= round((length(filter(file.lists, (x) => x.confidence_score >= 0.8)) / length(file.lists)) * 100, 1)`%
 - **Verification Rate**: `= round((length(filter(file.lists, (x) => x.verification_status = "verified")) / length(file.lists)) * 100, 1)`%
 

@@ -1,4 +1,4 @@
-"""Entity Management Service
+"""Entity Management Service.
 
 Provides high-level entity management functionality for the PAKE System.
 Handles different entity types, validation, and business logic for knowledge graph entities.
@@ -66,7 +66,7 @@ class EntityService:
     and business logic for knowledge graph operations.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.neo4j_service = get_neo4j_service()
         self._entity_schemas = self._init_schemas()
 
@@ -87,7 +87,7 @@ class EntityService:
             """Validate non-empty string."""
             return isinstance(value, str) and len(value.strip()) > 0
 
-        schemas = {
+        return {
             EntityType.PERSON: EntitySchema(
                 entity_type=EntityType.PERSON,
                 required_fields={"name"},
@@ -183,13 +183,11 @@ class EntityService:
             ),
         }
 
-        return schemas
-
     def validate_entity(
         self,
         entity_type: EntityType,
-        properties: dict[str, Any],
-    ) -> list[str]:
+        properties: Dict[str, Any],
+    ) -> List[str]:
         """Validate entity properties against schema.
 
         Args:
@@ -225,7 +223,7 @@ class EntityService:
     async def create_entity(
         self,
         entity_type: EntityType,
-        properties: dict[str, Any],
+        properties: Dict[str, Any],
     ) -> str | None:
         """Create a new entity with validation.
 
@@ -239,7 +237,7 @@ class EntityService:
         # Validate entity
         validation_errors = self.validate_entity(entity_type, properties)
         if validation_errors:
-            logger.error(f"Entity validation failed: {validation_errors}")
+            logger.error("Entity validation failed: %s", validation_errors)
             return None
 
         try:
@@ -253,12 +251,12 @@ class EntityService:
 
             # Create entity
             entity_id = self.neo4j_service.create_entity(entity_type.value, properties)
-            logger.info(f"Created {entity_type.value} entity: {entity_id}")
+            logger.info("Created %s entity: %s", entity_type.value, entity_id)
 
             return entity_id
 
         except Exception as e:
-            logger.error(f"Failed to create {entity_type.value} entity: {e}")
+            logger.error("Failed to create %s entity: %s", entity_type.value, e)
             return None
 
     async def create_person(
@@ -299,7 +297,7 @@ class EntityService:
         self,
         title: str,
         abstract: str | None = None,
-        authors: list[str] | None = None,
+        authors: List[str] | None = None,
         doi: str | None = None,
         **kwargs,
     ) -> str | None:
@@ -338,7 +336,7 @@ class EntityService:
         from_entity_id: str,
         to_entity_id: str,
         relationship_type: RelationshipType,
-        properties: dict[str, Any] | None = None,
+        properties: Dict[str, Any] | None = None,
     ) -> str | None:
         """Create a relationship between entities.
 
@@ -363,20 +361,21 @@ class EntityService:
             )
 
             logger.info(
-                f"Created {relationship_type.value} relationship: {from_entity_id} -> {
-                    to_entity_id
-                }",
+                "Created %s relationship: %s -> %s",
+                relationship_type.value,
+                from_entity_id,
+                to_entity_id,
             )
             return rel_id
 
         except Exception as e:
-            logger.error(f"Failed to create relationship: {e}")
+            logger.error("Failed to create relationship: %s", e)
             return None
 
     async def find_or_create_entity(
         self,
         entity_type: EntityType,
-        properties: dict[str, Any],
+        properties: Dict[str, Any],
     ) -> str:
         """Find existing entity or create new one.
 
@@ -407,24 +406,25 @@ class EntityService:
                             == properties[search_field]
                         ):
                             logger.info(
-                                f"Found existing {entity_type.value} entity: {
-                                    entity['id']
-                                }",
+                                "Found existing %s entity: %s",
+                                entity_type.value,
+                                entity["id"],
                             )
                             return entity["id"]
 
             # Create new entity if not found
             entity_id = await self.create_entity(entity_type, properties)
             if entity_id:
-                logger.info(f"Created new {entity_type.value} entity: {entity_id}")
+                logger.info("Created new %s entity: %s", entity_type.value, entity_id)
                 return entity_id
-            raise RuntimeError("Failed to create entity")
+            msg = "Failed to create entity"
+            raise RuntimeError(msg)
 
         except Exception as e:
-            logger.error(f"Error in find_or_create_entity: {e}")
+            logger.error("Error in find_or_create_entity: %s", e)
             raise
 
-    async def get_entity_by_id(self, entity_id: str) -> dict[str, Any] | None:
+    async def get_entity_by_id(self, entity_id: str) -> Dict[str, Any] | None:
         """Get entity by ID."""
         try:
             if not self.neo4j_service.driver:
@@ -433,7 +433,7 @@ class EntityService:
             return self.neo4j_service.get_entity(entity_id)
 
         except Exception as e:
-            logger.error(f"Error getting entity {entity_id}: {e}")
+            logger.error("Error getting entity %s: %s", entity_id, e)
             return None
 
     async def search_entities(
@@ -441,7 +441,7 @@ class EntityService:
         search_term: str,
         entity_types: list[EntityType] | None = None,
         limit: int = 50,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search entities by text."""
         try:
             if not self.neo4j_service.driver:
@@ -452,10 +452,10 @@ class EntityService:
             return self.neo4j_service.search_entities(search_term, type_strings, limit)
 
         except Exception as e:
-            logger.error(f"Error searching entities: {e}")
+            logger.error("Error searching entities: %s", e)
             return []
 
-    async def get_entity_relationships(self, entity_id: str) -> list[dict[str, Any]]:
+    async def get_entity_relationships(self, entity_id: str) -> list[Dict[str, Any]]:
         """Get all relationships for an entity."""
         try:
             if not self.neo4j_service.driver:
@@ -464,7 +464,7 @@ class EntityService:
             return self.neo4j_service.get_entity_relationships(entity_id)
 
         except Exception as e:
-            logger.error(f"Error getting relationships for entity {entity_id}: {e}")
+            logger.error("Error getting relationships for entity %s: %s", entity_id, e)
             return []
 
     async def get_knowledge_subgraph(
@@ -472,7 +472,7 @@ class EntityService:
         center_entity_id: str,
         depth: int = 2,
         max_nodes: int = 50,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get knowledge subgraph around an entity."""
         try:
             if not self.neo4j_service.driver:
@@ -481,10 +481,12 @@ class EntityService:
             return self.neo4j_service.get_subgraph(center_entity_id, depth, max_nodes)
 
         except Exception as e:
-            logger.error(f"Error getting subgraph for entity {center_entity_id}: {e}")
+            logger.error(
+                "Error getting subgraph for entity %s: %s", center_entity_id, e
+            )
             return {"nodes": [], "relationships": []}
 
-    async def get_graph_statistics(self) -> dict[str, Any]:
+    async def get_graph_statistics(self) -> Dict[str, Any]:
         """Get knowledge graph statistics."""
         try:
             if not self.neo4j_service.driver:
@@ -493,7 +495,7 @@ class EntityService:
             return self.neo4j_service.get_graph_stats()
 
         except Exception as e:
-            logger.error(f"Error getting graph statistics: {e}")
+            logger.error("Error getting graph statistics: %s", e)
             return {}
 
 

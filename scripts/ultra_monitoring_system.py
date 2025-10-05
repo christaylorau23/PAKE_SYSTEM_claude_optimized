@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from typing import Any
 
@@ -45,9 +45,9 @@ class SystemMetrics:
     network_bytes_sent: int
     network_bytes_recv: int
     process_count: int
-    pake_processes: list[dict[str, Any]]
-    vault_stats: dict[str, Any]
-    processing_stats: dict[str, Any]
+    pake_processes: list[Dict[str, Any]]
+    vault_stats: Dict[str, Any]
+    processing_stats: Dict[str, Any]
 
 
 @dataclass
@@ -57,9 +57,9 @@ class HealthStatus:
     timestamp: datetime
     overall_health: str  # EXCELLENT, GOOD, WARNING, CRITICAL
     component_health: dict[str, str]
-    active_alerts: list[str]
+    active_alerts: List[str]
     performance_score: float
-    recommendations: list[str]
+    recommendations: List[str]
     next_check: datetime
 
 
@@ -72,7 +72,7 @@ class Alert:
     level: str  # INFO, WARNING, CRITICAL
     component: str
     message: str
-    details: dict[str, Any]
+    details: Dict[str, Any]
     resolved: bool = False
     resolution_time: datetime | None = None
 
@@ -80,7 +80,7 @@ class Alert:
 class UltraMonitoringSystem:
     """Advanced monitoring system with self-healing capabilities"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.monitoring_active = True
         self.metrics_history = []
         self.alerts = []
@@ -104,7 +104,7 @@ class UltraMonitoringSystem:
 
         logger.info("Ultra Monitoring System initialized")
 
-    def init_monitoring_db(self):
+    def init_monitoring_db(self) -> None:
         """Initialize SQLite database for monitoring data"""
         try:
             os.makedirs("data", exist_ok=True)
@@ -169,9 +169,9 @@ class UltraMonitoringSystem:
             logger.info("Monitoring database initialized")
 
         except Exception as e:
-            logger.error(f"Failed to initialize monitoring database: {e}")
+            logger.error("Failed to initialize monitoring database: %s", e)
 
-    def start_monitoring_threads(self):
+    def start_monitoring_threads(self) -> None:
         """Start all monitoring threads"""
         # System metrics collection
         threading.Thread(target=self.metrics_collection_loop, daemon=True).start()
@@ -193,7 +193,7 @@ class UltraMonitoringSystem:
 
         logger.info("All monitoring threads started")
 
-    def metrics_collection_loop(self):
+    def metrics_collection_loop(self) -> None:
         """Continuous metrics collection"""
         while self.monitoring_active:
             try:
@@ -210,7 +210,7 @@ class UltraMonitoringSystem:
                 time.sleep(30)  # Collect every 30 seconds
 
             except Exception as e:
-                logger.error(f"Metrics collection error: {e}")
+                logger.error("Metrics collection error: %s", e)
                 time.sleep(60)  # Wait longer on error
 
     def collect_system_metrics(self) -> SystemMetrics:
@@ -255,7 +255,7 @@ class UltraMonitoringSystem:
             processing_stats = self.collect_processing_stats()
 
             metrics = SystemMetrics(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 cpu_percent=cpu_percent,
                 memory_used_mb=memory.used // (1024 * 1024),
                 memory_available_mb=memory.available // (1024 * 1024),
@@ -273,10 +273,10 @@ class UltraMonitoringSystem:
             return metrics
 
         except Exception as e:
-            logger.error(f"Error collecting system metrics: {e}")
+            logger.error("Error collecting system metrics: %s", e)
             raise
 
-    def collect_vault_stats(self) -> dict[str, Any]:
+    def collect_vault_stats(self) -> Dict[str, Any]:
         """Collect vault-specific statistics"""
         try:
             vault_path = Path("vault")
@@ -299,7 +299,7 @@ class UltraMonitoringSystem:
                                 str(md_file.relative_to(vault_path)),
                             )
                     except Exception as e:
-                        logger.debug(f"Error reading {md_file}: {e}")
+                        logger.debug("Error reading %s: %s", md_file, e)
 
             return {
                 "total_notes": total_notes,
@@ -313,10 +313,10 @@ class UltraMonitoringSystem:
             }
 
         except Exception as e:
-            logger.error(f"Error collecting vault stats: {e}")
+            logger.error("Error collecting vault stats: %s", e)
             return {"error": str(e)}
 
-    def collect_processing_stats(self) -> dict[str, Any]:
+    def collect_processing_stats(self) -> Dict[str, Any]:
         """Collect processing performance statistics"""
         try:
             # Check recent processing logs
@@ -345,7 +345,7 @@ class UltraMonitoringSystem:
                     elif "ERROR" in line:
                         error_count += 1
             except Exception as e:
-                logger.debug(f"Error parsing log file: {e}")
+                logger.debug("Error parsing log file: %s", e)
 
             avg_processing_time = (
                 statistics.mean(processing_times) if processing_times else 0
@@ -367,10 +367,10 @@ class UltraMonitoringSystem:
             }
 
         except Exception as e:
-            logger.error(f"Error collecting processing stats: {e}")
+            logger.error("Error collecting processing stats: %s", e)
             return {"error": str(e)}
 
-    def store_metrics(self, metrics: SystemMetrics):
+    def store_metrics(self) -> None:
         """Store metrics in database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -403,9 +403,9 @@ class UltraMonitoringSystem:
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error storing metrics: {e}")
+            logger.error("Error storing metrics: %s", e)
 
-    def analyze_metrics_trends(self, metrics: SystemMetrics):
+    def analyze_metrics_trends(self) -> None:
         """Analyze trends and generate alerts"""
         try:
             # CPU usage alerts
@@ -480,15 +480,9 @@ class UltraMonitoringSystem:
                 self.create_alert("CRITICAL", "pake", "No PAKE processes detected")
 
         except Exception as e:
-            logger.error(f"Error analyzing metrics trends: {e}")
+            logger.error("Error analyzing metrics trends: %s", e)
 
-    def create_alert(
-        self,
-        level: str,
-        component: str,
-        message: str,
-        details: dict[str, Any] = None,
-    ):
+    def create_alert(self) -> None:
         """Create and manage alerts"""
         alert_id = f"{component}_{level}_{hash(message) % 10000}"
 
@@ -502,7 +496,7 @@ class UltraMonitoringSystem:
 
         alert = Alert(
             id=alert_id,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             level=level,
             component=component,
             message=message,
@@ -512,13 +506,13 @@ class UltraMonitoringSystem:
         self.alerts.append(alert)
         self.store_alert(alert)
 
-        logger.warning(f"ALERT [{level}] {component}: {message}")
+        logger.warning("ALERT [%s] %s: %s", level, component, message)
 
         # Trigger self-healing for critical alerts
         if level == "CRITICAL":
             self.trigger_self_healing(alert)
 
-    def store_alert(self, alert: Alert):
+    def store_alert(self) -> None:
         """Store alert in database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -550,9 +544,9 @@ class UltraMonitoringSystem:
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error storing alert: {e}")
+            logger.error("Error storing alert: %s", e)
 
-    def health_assessment_loop(self):
+    def health_assessment_loop(self) -> None:
         """Continuous health assessment"""
         while self.monitoring_active:
             try:
@@ -563,7 +557,7 @@ class UltraMonitoringSystem:
                 time.sleep(300)  # Assess every 5 minutes
 
             except Exception as e:
-                logger.error(f"Health assessment error: {e}")
+                logger.error("Health assessment error: %s", e)
                 time.sleep(300)
 
     def assess_overall_health(self) -> HealthStatus:
@@ -571,13 +565,13 @@ class UltraMonitoringSystem:
         try:
             if not self.metrics_history:
                 return HealthStatus(
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     overall_health="UNKNOWN",
                     component_health={},
                     active_alerts=[],
                     performance_score=0,
                     recommendations=["Insufficient data for health assessment"],
-                    next_check=datetime.now() + timedelta(minutes=5),
+                    next_check=datetime.now(UTC) + timedelta(minutes=5),
                 )
 
             latest_metrics = self.metrics_history[-1]
@@ -653,32 +647,32 @@ class UltraMonitoringSystem:
             )
 
             return HealthStatus(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 overall_health=overall_health,
                 component_health=component_health,
                 active_alerts=active_alerts,
                 performance_score=avg_score,
                 recommendations=recommendations,
-                next_check=datetime.now() + timedelta(minutes=5),
+                next_check=datetime.now(UTC) + timedelta(minutes=5),
             )
 
         except Exception as e:
-            logger.error(f"Error assessing health: {e}")
+            logger.error("Error assessing health: %s", e)
             return HealthStatus(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
                 overall_health="ERROR",
                 component_health={},
                 active_alerts=[],
                 performance_score=0,
                 recommendations=[f"Health assessment error: {e}"],
-                next_check=datetime.now() + timedelta(minutes=5),
+                next_check=datetime.now(UTC) + timedelta(minutes=5),
             )
 
     def generate_recommendations(
         self,
         component_health: dict[str, str],
         metrics: SystemMetrics,
-    ) -> list[str]:
+    ) -> List[str]:
         """Generate actionable recommendations"""
         recommendations = []
 
@@ -747,10 +741,10 @@ class UltraMonitoringSystem:
             return min(100, max(0, performance_score))
 
         except Exception as e:
-            logger.error(f"Error calculating performance score: {e}")
+            logger.error("Error calculating performance score: %s", e)
             return 50  # Default middle score on error
 
-    def store_health_status(self, health_status: HealthStatus):
+    def store_health_status(self) -> None:
         """Store health status in database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -775,9 +769,9 @@ class UltraMonitoringSystem:
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error storing health status: {e}")
+            logger.error("Error storing health status: %s", e)
 
-    def generate_health_report(self, health_status: HealthStatus):
+    def generate_health_report(self) -> None:
         """Generate and save health report"""
         try:
             report = {
@@ -798,14 +792,14 @@ class UltraMonitoringSystem:
 
             # Log health status
             logger.info(
-                f"Health Status: {health_status.overall_health} (Score: {
-                    health_status.performance_score:.1f})",
+                "Health Status: %s (Score: %s)", health_status.overall_health,
+                    health_status.performance_score:.1f,
             )
 
         except Exception as e:
-            logger.error(f"Error generating health report: {e}")
+            logger.error("Error generating health report: %s", e)
 
-    def process_monitoring_loop(self):
+    def process_monitoring_loop(self) -> None:
         """Monitor PAKE processes specifically"""
         while self.monitoring_active:
             try:
@@ -813,12 +807,13 @@ class UltraMonitoringSystem:
                 time.sleep(60)  # Check every minute
 
             except Exception as e:
-                logger.error(f"Process monitoring error: {e}")
+                logger.error("Process monitoring error: %s", e)
                 time.sleep(60)
 
-    def monitor_pake_processes(self):
+    def monitor_pake_processes(self) -> None:
         """Monitor PAKE-specific processes"""
         try:
+                pass
             # Check if vault watcher is running
             vault_watcher_running = False
             api_bridge_running = False
@@ -851,9 +846,9 @@ class UltraMonitoringSystem:
                 )
 
         except Exception as e:
-            logger.error(f"Error monitoring PAKE processes: {e}")
+            logger.error("Error monitoring PAKE processes: %s", e)
 
-    def vault_monitoring_loop(self):
+    def vault_monitoring_loop(self) -> None:
         """Monitor vault-specific activities"""
         while self.monitoring_active:
             try:
@@ -861,22 +856,24 @@ class UltraMonitoringSystem:
                 time.sleep(120)  # Check every 2 minutes
 
             except Exception as e:
-                logger.error(f"Vault monitoring error: {e}")
+                logger.error("Vault monitoring error: %s", e)
                 time.sleep(120)
 
-    def monitor_vault_activity(self):
+    def monitor_vault_activity(self) -> None:
         """Monitor vault for processing issues"""
         try:
+                pass
             # Check for stuck files (files that haven't been processed in a while)
             vault_path = Path("vault")
             if not vault_path.exists():
                 return
 
-            now = datetime.now()
+            now = datetime.now(UTC)
             stuck_files = []
 
             for md_file in vault_path.rglob("*.md"):
                 try:
+                        pass
                     # Skip template and system files
                     if any(part.startswith(("_", ".")) for part in md_file.parts):
                         continue
@@ -885,7 +882,7 @@ class UltraMonitoringSystem:
 
                     # If file doesn't have pake_id and is older than 5 minutes
                     if "pake_id" not in content:
-                        file_age = now - datetime.fromtimestamp(md_file.stat().st_mtime)
+                        file_age = now - datetime.fromtimestamp(md_file.stat().st_mtime, tz=UTC)
                         if file_age.total_seconds() > 300:  # 5 minutes
                             stuck_files.append(str(md_file.relative_to(vault_path)))
 
@@ -901,9 +898,9 @@ class UltraMonitoringSystem:
                 )
 
         except Exception as e:
-            logger.error(f"Error monitoring vault activity: {e}")
+            logger.error("Error monitoring vault activity: %s", e)
 
-    def performance_optimization_loop(self):
+    def performance_optimization_loop(self) -> None:
         """Continuous performance optimization"""
         while self.monitoring_active:
             try:
@@ -911,12 +908,13 @@ class UltraMonitoringSystem:
                 time.sleep(1800)  # Optimize every 30 minutes
 
             except Exception as e:
-                logger.error(f"Performance optimization error: {e}")
+                logger.error("Performance optimization error: %s", e)
                 time.sleep(1800)
 
-    def optimize_performance(self):
+    def optimize_performance(self) -> None:
         """Perform automatic performance optimizations"""
         try:
+                pass
             # Clean up old log files
             self.cleanup_old_logs()
 
@@ -929,20 +927,20 @@ class UltraMonitoringSystem:
             logger.info("Performance optimization completed")
 
         except Exception as e:
-            logger.error(f"Error during performance optimization: {e}")
+            logger.error("Error during performance optimization: %s", e)
 
-    def cleanup_old_logs(self):
+    def cleanup_old_logs(self) -> None:
         """Clean up old log files"""
         try:
             logs_path = Path("logs")
             if not logs_path.exists():
                 return
 
-            cutoff_date = datetime.now() - timedelta(days=7)  # Keep logs for 7 days
+            cutoff_date = datetime.now(UTC) - timedelta(days=7)  # Keep logs for 7 days
 
             for log_file in logs_path.glob("*.log"):
                 try:
-                    file_time = datetime.fromtimestamp(log_file.stat().st_mtime)
+                    file_time = datetime.fromtimestamp(log_file.stat().st_mtime, tz=UTC)
                     if (
                         file_time < cutoff_date
                         and log_file.stat().st_size > 10 * 1024 * 1024
@@ -955,15 +953,15 @@ class UltraMonitoringSystem:
                         with open(log_file, "wb") as f:
                             f.write(content)
 
-                        logger.info(f"Truncated old log file: {log_file}")
+                        logger.info("Truncated old log file: %s", log_file)
 
                 except Exception as e:
-                    logger.debug(f"Error cleaning log file {log_file}: {e}")
+                    logger.debug("Error cleaning log file %s: %s", log_file, e)
 
         except Exception as e:
-            logger.error(f"Error cleaning up logs: {e}")
+            logger.error("Error cleaning up logs: %s", e)
 
-    def optimize_database(self):
+    def optimize_database(self) -> None:
         """Optimize monitoring database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -972,7 +970,7 @@ class UltraMonitoringSystem:
             conn.execute("VACUUM")
 
             # Clean up old records (keep last 30 days)
-            cutoff_date = datetime.now() - timedelta(days=30)
+            cutoff_date = datetime.now(UTC) - timedelta(days=30)
 
             conn.execute(
                 "DELETE FROM system_metrics WHERE timestamp < ?",
@@ -993,11 +991,12 @@ class UltraMonitoringSystem:
             logger.info("Database optimization completed")
 
         except Exception as e:
-            logger.error(f"Error optimizing database: {e}")
+            logger.error("Error optimizing database: %s", e)
 
-    def cleanup_temp_files(self):
+    def cleanup_temp_files(self) -> None:
         """Clean up temporary files"""
         try:
+                pass
             # Clean up temp files in logs directory
             temp_patterns = ["*.tmp", "*.temp", "*~"]
 
@@ -1006,12 +1005,12 @@ class UltraMonitoringSystem:
                     try:
                         temp_file.unlink()
                     except Exception as e:
-                        logger.debug(f"Error removing temp file {temp_file}: {e}")
+                        logger.debug("Error removing temp file %s: %s", temp_file, e)
 
         except Exception as e:
-            logger.error(f"Error cleaning temp files: {e}")
+            logger.error("Error cleaning temp files: %s", e)
 
-    def self_healing_loop(self):
+    def self_healing_loop(self) -> None:
         """Self-healing and recovery loop"""
         while self.monitoring_active:
             try:
@@ -1019,12 +1018,13 @@ class UltraMonitoringSystem:
                 time.sleep(300)  # Check every 5 minutes
 
             except Exception as e:
-                logger.error(f"Self-healing error: {e}")
+                logger.error("Self-healing error: %s", e)
                 time.sleep(300)
 
-    def perform_self_healing(self):
+    def perform_self_healing(self) -> None:
         """Perform autonomous self-healing actions"""
         try:
+                pass
             # Resolve critical alerts automatically
             critical_alerts = [
                 alert
@@ -1036,9 +1036,9 @@ class UltraMonitoringSystem:
                 self.auto_resolve_alert(alert)
 
         except Exception as e:
-            logger.error(f"Error during self-healing: {e}")
+            logger.error("Error during self-healing: %s", e)
 
-    def trigger_self_healing(self, alert: Alert):
+    def trigger_self_healing(self) -> None:
         """Trigger immediate self-healing for critical alerts"""
         threading.Thread(
             target=self.auto_resolve_alert,
@@ -1046,7 +1046,7 @@ class UltraMonitoringSystem:
             daemon=True,
         ).start()
 
-    def auto_resolve_alert(self, alert: Alert):
+    def auto_resolve_alert(self) -> None:
         """Automatically resolve alerts when possible"""
         try:
             resolved = False
@@ -1083,9 +1083,9 @@ class UltraMonitoringSystem:
 
             if resolved:
                 alert.resolved = True
-                alert.resolution_time = datetime.now()
+                alert.resolution_time = datetime.now(UTC)
                 self.store_alert(alert)
-                logger.info(f"Auto-resolved alert: {alert.message}")
+                logger.info("Auto-resolved alert: %s", alert.message)
 
                 # Create resolution log
                 self.create_alert(
@@ -1099,7 +1099,7 @@ class UltraMonitoringSystem:
                 )
 
         except Exception as e:
-            logger.error(f"Error auto-resolving alert {alert.id}: {e}")
+            logger.error("Error auto-resolving alert %s: %s", alert.id, e)
 
     def restart_pake_services(self) -> bool:
         """Restart PAKE services"""
@@ -1128,7 +1128,7 @@ class UltraMonitoringSystem:
             return self.restart_vault_watcher()
 
         except Exception as e:
-            logger.error(f"Error restarting PAKE services: {e}")
+            logger.error("Error restarting PAKE services: %s", e)
             return False
 
     def restart_vault_watcher(self) -> bool:
@@ -1147,7 +1147,7 @@ class UltraMonitoringSystem:
                         proc.terminate()
                         proc.wait(timeout=10)
                         logger.info(
-                            f"Terminated vault watcher process {proc.info['pid']}",
+                            "Terminated vault watcher process %s", proc.info['pid'],
                         )
                 except (
                     psutil.NoSuchProcess,
@@ -1180,7 +1180,7 @@ class UltraMonitoringSystem:
             return False
 
         except Exception as e:
-            logger.error(f"Error restarting vault watcher: {e}")
+            logger.error("Error restarting vault watcher: %s", e)
             return False
 
     def process_stuck_notes(self) -> bool:
@@ -1195,7 +1195,7 @@ class UltraMonitoringSystem:
             return True
 
         except Exception as e:
-            logger.error(f"Error processing stuck notes: {e}")
+            logger.error("Error processing stuck notes: %s", e)
             return False
 
     def cleanup_storage(self) -> bool:
@@ -1222,10 +1222,10 @@ class UltraMonitoringSystem:
             return True
 
         except Exception as e:
-            logger.error(f"Error cleaning up storage: {e}")
+            logger.error("Error cleaning up storage: %s", e)
             return False
 
-    def get_system_status(self) -> dict[str, Any]:
+    def get_system_status(self) -> Dict[str, Any]:
         """Get current system status summary"""
         try:
             if not self.metrics_history:
@@ -1235,7 +1235,7 @@ class UltraMonitoringSystem:
             health_status = self.assess_overall_health()
 
             return {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "overall_health": health_status.overall_health,
                 "performance_score": health_status.performance_score,
                 "system": {
@@ -1254,7 +1254,7 @@ class UltraMonitoringSystem:
             return {"status": "Error", "error": str(e)}
 
 
-def main():
+def main(self) -> None:
     """Main monitoring system entry point"""
     print("PAKE Ultra Monitoring & Self-Healing System")
     print("=" * 50)
@@ -1271,7 +1271,7 @@ def main():
             time.sleep(60)
             status = monitor.get_system_status()
             print(
-                f"[{datetime.now().strftime('%H:%M:%S')}] Health: {
+                f"[{datetime.now(UTC).strftime('%H:%M:%S')}] Health: {
                     status.get('overall_health', 'UNKNOWN')
                 } | "
                 f"Score: {status.get('performance_score', 0):.1f} | "
@@ -1284,7 +1284,7 @@ def main():
         monitor.monitoring_active = False
 
     except Exception as e:
-        logger.error(f"Fatal monitoring system error: {e}")
+        logger.error("Fatal monitoring system error: %s", e)
         print(f"ERROR: {e}")
 
 

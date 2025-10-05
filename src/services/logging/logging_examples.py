@@ -63,9 +63,9 @@ except ImportError:
 
 
 class LoggingExamples:
-    """Comprehensive examples of enterprise logging and monitoring"""
+    """Comprehensive examples of enterprise logging and monitoring."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = get_logger() if get_logger else None
         self.monitor = get_monitor() if get_monitor else None
         self.config_service = get_config_service() if get_config_service else None
@@ -74,8 +74,8 @@ class LoggingExamples:
     # Basic Logging Examples
     # ========================================================================
 
-    def example_basic_logging(self):
-        """Example of basic logging with different levels"""
+    def example_basic_logging(self) -> None:
+        """Example of basic logging with different levels."""
         if not self.logger:
             print("Logger not available - skipping basic logging example")
             return
@@ -94,8 +94,8 @@ class LoggingExamples:
 
         print("Basic logging examples completed")
 
-    def example_structured_logging(self):
-        """Example of structured logging with context"""
+    def example_structured_logging(self) -> None:
+        """Example of structured logging with context."""
         if not self.logger:
             print("Logger not available - skipping structured logging example")
             return
@@ -122,8 +122,8 @@ class LoggingExamples:
 
         print("Structured logging examples completed")
 
-    def example_security_logging(self):
-        """Example of security-aware logging"""
+    def example_security_logging(self) -> None:
+        """Example of security-aware logging."""
         if not self.logger:
             print("Logger not available - skipping security logging example")
             return
@@ -176,8 +176,8 @@ class LoggingExamples:
 
         print("Security logging examples completed")
 
-    def example_performance_logging(self):
-        """Example of performance monitoring and logging"""
+    def example_performance_logging(self) -> None:
+        """Example of performance monitoring and logging."""
         if not self.logger:
             print("Logger not available - skipping performance logging example")
             return
@@ -213,21 +213,21 @@ class LoggingExamples:
         )
 
         # Timer context manager
-        async def example_async_operation():
+        async def example_async_operation(self) -> None:
             async with self.logger.timer("expensive_operation"):
                 await asyncio.sleep(0.1)  # Simulate work
                 return "operation completed"
 
         # Decorator usage
         @self.logger.trace_operation("data_processing")
-        def process_data():
+        def process_data(self) -> None:
             time.sleep(0.05)  # Simulate work
             return "processed"
 
         print("Performance logging examples completed")
 
-    def example_business_logging(self):
-        """Example of business event logging"""
+    def example_business_logging(self) -> None:
+        """Example of business event logging."""
         if not self.logger:
             print("Logger not available - skipping business logging example")
             return
@@ -270,8 +270,8 @@ class LoggingExamples:
     # Monitoring Examples
     # ========================================================================
 
-    def example_monitoring_metrics(self):
-        """Example of monitoring metrics collection"""
+    def example_monitoring_metrics(self) -> None:
+        """Example of monitoring metrics collection."""
         if not self.monitor:
             print("Monitor not available - skipping monitoring examples")
             return
@@ -301,8 +301,8 @@ class LoggingExamples:
 
         print("Monitoring examples completed")
 
-    def example_health_checks(self):
-        """Example of health check registration"""
+    def example_health_checks(self) -> None:
+        """Example of health check registration."""
         if not self.monitor:
             print("Monitor not available - skipping health check examples")
             return
@@ -315,7 +315,7 @@ class LoggingExamples:
         self.monitor.register_health_check("api")
 
         # Custom health check function
-        def custom_health_check():
+        def custom_health_check(self) -> None:
             # Simulate health check logic
             return {
                 "status": "healthy",
@@ -327,8 +327,8 @@ class LoggingExamples:
 
         print("Health check examples completed")
 
-    def example_alerting(self):
-        """Example of alert creation and management"""
+    def example_alerting(self) -> None:
+        """Example of alert creation and management."""
         if not self.monitor:
             print("Monitor not available - skipping alerting examples")
             return
@@ -361,8 +361,8 @@ class LoggingExamples:
     # Configuration Examples
     # ========================================================================
 
-    def example_configuration_management(self):
-        """Example of configuration management"""
+    def example_configuration_management(self) -> None:
+        """Example of configuration management."""
         if not self.config_service:
             print("Config service not available - skipping configuration examples")
             return
@@ -397,8 +397,8 @@ class LoggingExamples:
     # Real-world Integration Examples
     # ========================================================================
 
-    def example_web_application_logging(self):
-        """Example of logging in a web application context"""
+    def example_web_application_logging(self) -> None:
+        """Example of logging in a web application context."""
         if not self.logger:
             print("Logger not available - skipping web application example")
             return
@@ -459,8 +459,8 @@ class LoggingExamples:
 
         print("Web application logging example completed")
 
-    def example_error_handling_and_recovery(self):
-        """Example of comprehensive error handling and recovery"""
+    def example_error_handling_and_recovery(self) -> None:
+        """Example of comprehensive error handling and recovery."""
         if not self.logger or not self.monitor:
             print("Services not available - skipping error handling example")
             return
@@ -541,19 +541,22 @@ class LoggingExamples:
 
         print("Error handling and recovery example completed")
 
-    def _simulate_risky_operation(self):
-        """Simulate an operation that might fail"""
+    def _simulate_risky_operation(self) -> None:
+        """Simulate an operation that might fail."""
         import random
 
         # Randomly fail with different error types
         failure_type = random.choice(["none", "validation", "connection", "unexpected"])
 
         if failure_type == "validation":
-            raise ValueError("Invalid email format")
-        elif failure_type == "connection":
-            raise ConnectionError("Database connection timeout")
-        elif failure_type == "unexpected":
-            raise RuntimeError("Unexpected system error")
+            msg = "Invalid email format"
+            raise ValueError(msg)
+        if failure_type == "connection":
+            msg = "Database connection timeout"
+            raise ConnectionError(msg)
+        if failure_type == "unexpected":
+            msg = "Unexpected system error"
+            raise RuntimeError(msg)
 
         return "Operation successful"
 
@@ -561,8 +564,8 @@ class LoggingExamples:
     # Reporting Examples
     # ========================================================================
 
-    def example_reporting(self):
-        """Example of generating reports from logs and metrics"""
+    def example_reporting(self) -> None:
+        """Example of generating reports from logs and metrics."""
         if not self.logger or not self.monitor:
             print("Services not available - skipping reporting example")
             return
@@ -595,8 +598,8 @@ class LoggingExamples:
     # Run All Examples
     # ========================================================================
 
-    async def run_all_examples(self):
-        """Run all logging and monitoring examples"""
+    async def run_all_examples(self) -> None:
+        """Run all logging and monitoring examples."""
         print("Starting PAKE System Logging and Monitoring Examples")
         print("=" * 60)
 
@@ -654,8 +657,8 @@ class LoggingExamples:
 # ========================================================================
 
 
-async def main():
-    """Main function to run examples"""
+async def main(self) -> None:
+    """Main function to run examples."""
     examples = LoggingExamples()
     await examples.run_all_examples()
 

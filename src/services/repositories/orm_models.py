@@ -10,7 +10,7 @@ Base = declarative_base()
 
 
 class UserORM(Base):
-    """SQLAlchemy ORM model for User"""
+    """SQLAlchemy ORM model for User."""
 
     __tablename__ = "users"
 
@@ -32,7 +32,7 @@ class UserORM(Base):
 
 
 class ContentORM(Base):
-    """SQLAlchemy ORM model for Content"""
+    """SQLAlchemy ORM model for Content."""
 
     __tablename__ = "content_items"
 
@@ -58,7 +58,7 @@ class ContentORM(Base):
 
 
 class SearchHistoryORM(Base):
-    """SQLAlchemy ORM model for Search History"""
+    """SQLAlchemy ORM model for Search History."""
 
     __tablename__ = "search_history"
 
@@ -75,7 +75,7 @@ class SearchHistoryORM(Base):
 
 
 class SavedSearchORM(Base):
-    """SQLAlchemy ORM model for Saved Search"""
+    """SQLAlchemy ORM model for Saved Search."""
 
     __tablename__ = "saved_searches"
 
@@ -96,7 +96,7 @@ class SavedSearchORM(Base):
 
 
 class TenantORM(Base):
-    """SQLAlchemy ORM model for Tenant"""
+    """SQLAlchemy ORM model for Tenant."""
 
     __tablename__ = "tenants"
 
@@ -118,7 +118,7 @@ class TenantORM(Base):
 
 
 class SystemMetricsORM(Base):
-    """SQLAlchemy ORM model for System Metrics"""
+    """SQLAlchemy ORM model for System Metrics."""
 
     __tablename__ = "system_metrics"
 
@@ -134,7 +134,7 @@ class SystemMetricsORM(Base):
 
 
 class TenantActivityORM(Base):
-    """SQLAlchemy ORM model for Tenant Activity"""
+    """SQLAlchemy ORM model for Tenant Activity."""
 
     __tablename__ = "tenant_activities"
 
@@ -152,7 +152,7 @@ class TenantActivityORM(Base):
 
 
 class TenantResourceUsageORM(Base):
-    """SQLAlchemy ORM model for Tenant Resource Usage"""
+    """SQLAlchemy ORM model for Tenant Resource Usage."""
 
     __tablename__ = "tenant_resource_usage"
 

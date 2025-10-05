@@ -29,11 +29,37 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Non-sensitive configuration
   PYTHON_VERSION: '3.12'
   POETRY_VERSION: '1.8.3'
   NODE_VERSION: '22.18.0'
   REGISTRY_URL: 'ghcr.io'
   IMAGE_NAME: 'pake-system'
+
+  # Sensitive secrets (from GitHub repository secrets)
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  API_KEY: ${{ secrets.API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+
+  # API Keys
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+  # Optional API Keys
+  DID_API_KEY: ${{ secrets.DID_API_KEY }}
+  HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+
+  # Webhook Security
+  WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+  # HashiCorp Vault Configuration
+  VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+  VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+  VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
 
 jobs:
   # ============================================================================
@@ -69,9 +95,17 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
-          poetry install --no-interaction --only=dev
+          poetry install --no-interaction --no-root
           npm ci
 
       - name: Run Ruff linting
@@ -118,10 +152,20 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
-          poetry install --no-interaction
+          poetry install --no-interaction --no-root
           npm ci
 
       - name: Run MyPy type checking
@@ -160,9 +204,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Run pip-audit for vulnerable dependencies
         run: poetry run pip-audit --format=json --output=pip-audit-report.json
@@ -209,9 +263,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Run unit tests with coverage
         run: |
@@ -222,7 +286,7 @@ jobs:
             --cov-fail-under=85 \
             --junitxml=unit-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload unit test results
         uses: actions/upload-artifact@v4
@@ -278,9 +342,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Wait for services
         run: |
@@ -330,7 +404,7 @@ jobs:
             --cov-fail-under=80 \
             --junitxml=integration-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -386,9 +460,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Set environment variables
         run: |
@@ -411,7 +495,7 @@ jobs:
             --cov-fail-under=75 \
             --junitxml=e2e-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload E2E test results
         uses: actions/upload-artifact@v4
@@ -465,9 +549,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Set environment variables
         run: |
@@ -485,7 +579,7 @@ jobs:
         run: |
           poetry run pytest tests/performance/ \
             --junitxml=performance-test-results.xml \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload performance test results
         uses: actions/upload-artifact@v4
@@ -535,9 +629,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Set environment variables
         run: |
@@ -581,9 +685,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Download all coverage reports
         uses: actions/download-artifact@v4
@@ -777,7 +891,7 @@ jobs:
           poetry run pytest tests/e2e/ \
             --base-url=https://staging.pake-system.com \
             --junitxml=staging-e2e-results.xml \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload staging test results
         uses: actions/upload-artifact@v4

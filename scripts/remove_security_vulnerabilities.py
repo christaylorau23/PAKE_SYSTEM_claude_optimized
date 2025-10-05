@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 class SecurityVulnerabilityRemover:
-    def __init__(self, project_root: str):
+    def __init__(self) -> None:
         self.project_root = Path(project_root)
         self.vulnerabilities_found = 0
         self.files_modified = 0
@@ -135,7 +135,7 @@ class SecurityVulnerabilityRemover:
             print(f"Warning: Could not create backup for {file_path}: {e}")
             return file_path
 
-    def run(self):
+    def run(self) -> None:
         """Main execution method"""
         print("🔒 PAKE System Security Vulnerability Removal")
         print("=" * 50)
@@ -181,15 +181,13 @@ class SecurityVulnerabilityRemover:
 
         if self.vulnerabilities_found > 0:
             print("✅ CRITICAL security vulnerabilities have been removed!")
-            print(
-                "⚠️  IMPORTANT: Update your environment variables with proper secrets"
-            )
+            print("⚠️  IMPORTANT: Update your environment variables with proper secrets")
             print("⚠️  The application will now fail-fast if secrets are missing")
         else:
             print("ℹ️  No vulnerabilities were found to remove")
 
 
-def main():
+def main(self) -> None:
     if len(sys.argv) != 2:
         print("Usage: python remove_security_vulnerabilities.py <project_root>")
         sys.exit(1)

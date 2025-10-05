@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Simple PAKE Automation Test
-Demonstrates the core automation without complex dependencies
+Demonstrates the core automation without complex dependencies.
 """
 
 import json
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from watchdog.events import FileSystemEventHandler
@@ -13,13 +13,13 @@ from watchdog.observers import Observer
 
 
 class SimpleAutomationHandler(FileSystemEventHandler):
-    """Simple file handler for testing automation"""
+    """Simple file handler for testing automation."""
 
-    def __init__(self, vault_path):
+    def __init__(self) -> None:
         self.vault_path = Path(vault_path)
         self.processed = set()
 
-    def on_created(self, event):
+    def on_created(self) -> None:
         if event.is_directory:
             return
 
@@ -28,7 +28,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"🔍 DETECTED: {file_path.name}")
             self.process_file(file_path)
 
-    def on_modified(self, event):
+    def on_modified(self) -> None:
         if event.is_directory:
             return
 
@@ -37,8 +37,8 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"📝 MODIFIED: {file_path.name}")
             self.process_file(file_path)
 
-    def process_file(self, file_path):
-        """Simple processing demonstration"""
+    def process_file(self) -> None:
+        """Simple processing demonstration."""
         try:
             print(f"⚙️  PROCESSING: {file_path.name}")
 
@@ -68,7 +68,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             # Create processing result
             result = {
                 "file": str(file_path),
-                "processed_at": datetime.now().isoformat(),
+                "processed_at": datetime.now(UTC).isoformat(),
                 "word_count": word_count,
                 "line_count": line_count,
                 "confidence_score": round(confidence, 3),
@@ -113,7 +113,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"❌ ERROR processing {file_path.name}: {e}")
 
 
-def main():
+def main(self) -> None:
     vault_path = "D:/Knowledge-Vault"
 
     print("🚀 PAKE Simple Automation Starting...")

@@ -18,21 +18,19 @@ import pytest
 class TestAPIGatewayRoutingContract:
     """Contract tests for API Gateway service routing"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def api_gateway_base_url(self) -> str:
         """API Gateway base URL for testing"""
         return "http://localhost:8080/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         """Async HTTP client for API calls"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.mark.asyncio()
-    async def test_service_routing_to_research_orchestrator(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_routing_to_research_orchestrator(self) -> None:
         """
         Test that /services/research/* routes to research orchestrator
 
@@ -52,11 +50,14 @@ class TestAPIGatewayRoutingContract:
         )
 
         # API Gateway should route this to research orchestrator
-        assert response.status_code in [
-            200,
-            202,
-            503,
-        ], f"Research routing returned {response.status_code}, expected 200/202 (success) or 503 (service unavailable)"
+        assert (
+            response.status_code
+            in [
+                200,
+                202,
+                503,
+            ]
+        ), f"Research routing returned {response.status_code}, expected 200/202 (success) or 503 (service unavailable)"
 
         # If successful, should return research results structure
         if response.status_code in [200, 202]:
@@ -65,10 +66,8 @@ class TestAPIGatewayRoutingContract:
                 "query" in result or "request_id" in result
             ), "Research response should contain query or request_id field"
 
-    @pytest.mark.asyncio()
-    async def test_service_routing_to_cache_service(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_routing_to_cache_service(self) -> None:
         """
         Test that /services/cache/* routes to cache service
 
@@ -79,10 +78,13 @@ class TestAPIGatewayRoutingContract:
         response = await http_client.get(f"{api_gateway_base_url}/services/cache/stats")
 
         # API Gateway should route this to cache service
-        assert response.status_code in [
-            200,
-            503,
-        ], f"Cache routing returned {response.status_code}, expected 200 (success) or 503 (service unavailable)"
+        assert (
+            response.status_code
+            in [
+                200,
+                503,
+            ]
+        ), f"Cache routing returned {response.status_code}, expected 200 (success) or 503 (service unavailable)"
 
         # If successful, should return cache statistics
         if response.status_code == 200:
@@ -91,10 +93,8 @@ class TestAPIGatewayRoutingContract:
                 "hit_rate" in stats or "cache_stats" in stats
             ), "Cache stats response should contain hit_rate or cache_stats"
 
-    @pytest.mark.asyncio()
-    async def test_service_routing_to_performance_monitor(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_routing_to_performance_monitor(self) -> None:
         """
         Test that /services/performance/* routes to performance monitor
 
@@ -106,10 +106,13 @@ class TestAPIGatewayRoutingContract:
         )
 
         # API Gateway should route this to performance monitor
-        assert response.status_code in [
-            200,
-            503,
-        ], f"Performance routing returned {response.status_code}, expected 200 (success) or 503 (service unavailable)"
+        assert (
+            response.status_code
+            in [
+                200,
+                503,
+            ]
+        ), f"Performance routing returned {response.status_code}, expected 200 (success) or 503 (service unavailable)"
 
         # If successful, should return performance metrics
         if response.status_code == 200:
@@ -118,10 +121,8 @@ class TestAPIGatewayRoutingContract:
                 "response_time" in metrics or "metrics" in metrics
             ), "Performance metrics should contain response_time or metrics field"
 
-    @pytest.mark.asyncio()
-    async def test_service_registry_routing(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_registry_routing(self) -> None:
         """
         Test that /services/* endpoints are properly registered and routable
 
@@ -139,7 +140,7 @@ class TestAPIGatewayRoutingContract:
         if response.status_code == 200:
             services = response.json()
             assert isinstance(
-                services, (list, dict)
+                services, list | dict
             ), "Services endpoint should return list or object of available services"
 
             # Should include core PAKE System services
@@ -154,10 +155,8 @@ class TestAPIGatewayRoutingContract:
                     service in name for name in service_names
                 ), f"Expected service '{service}' not found in available services: {service_names}"
 
-    @pytest.mark.asyncio()
-    async def test_routing_request_headers_preserved(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_routing_request_headers_preserved(self) -> None:
         """
         Test that API Gateway preserves important request headers
 
@@ -186,10 +185,8 @@ class TestAPIGatewayRoutingContract:
                 response_correlation == "test-correlation-123"
             ), f"Correlation ID not preserved: sent test-correlation-123, got {response_correlation}"
 
-    @pytest.mark.asyncio()
-    async def test_routing_with_authentication_required(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_routing_with_authentication_required(self) -> None:
         """
         Test that API Gateway enforces authentication for protected routes
 
@@ -204,11 +201,14 @@ class TestAPIGatewayRoutingContract:
         )
 
         # Should return 401 Unauthorized for protected endpoints
-        assert response_no_auth.status_code in [
-            401,
-            403,
-            503,
-        ], f"Expected 401/403 for unauthenticated request, got {response_no_auth.status_code}"
+        assert (
+            response_no_auth.status_code
+            in [
+                401,
+                403,
+                503,
+            ]
+        ), f"Expected 401/403 for unauthenticated request, got {response_no_auth.status_code}"
 
         # Test with invalid token - should be rejected
         response_bad_auth = await http_client.post(
@@ -223,10 +223,8 @@ class TestAPIGatewayRoutingContract:
             503,
         ], f"Expected 401/403 for invalid token, got {response_bad_auth.status_code}"
 
-    @pytest.mark.asyncio()
-    async def test_routing_response_transformation(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_routing_response_transformation(self) -> None:
         """
         Test that API Gateway properly transforms responses
 
@@ -252,10 +250,8 @@ class TestAPIGatewayRoutingContract:
                 except ValueError:
                     pytest.fail(f"Invalid response time header: {response_time}")
 
-    @pytest.mark.asyncio()
-    async def test_routing_error_handling(
-        self, api_gateway_base_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_routing_error_handling(self) -> None:
         """
         Test that API Gateway handles downstream service errors properly
 
@@ -284,10 +280,8 @@ class TestAPIGatewayRoutingContract:
 class TestAPIGatewayRoutingPerformance:
     """Performance contract tests for API Gateway routing"""
 
-    @pytest.mark.asyncio()
-    async def test_routing_latency_overhead(
-        self, api_gateway_base_url: str = "http://localhost:8080/v1"
-    ):
+    @pytest.mark.asyncio
+    async def test_routing_latency_overhead(self) -> None:
         """
         Test that API Gateway routing adds minimal latency
 
@@ -314,23 +308,19 @@ class TestAPIGatewayRoutingPerformance:
         p95_index = int(0.95 * len(latencies))
         p95_latency = latencies[p95_index]
 
-        assert (
-            p95_latency < 100
-        ), (  # Relaxed for initial testing
+        assert p95_latency < 100, (  # Relaxed for initial testing
             f"P95 routing latency {p95_latency:.2f}ms exceeds 100ms target"
         )
 
-    @pytest.mark.asyncio()
-    async def test_concurrent_routing_performance(
-        self, api_gateway_base_url: str = "http://localhost:8080/v1"
-    ):
+    @pytest.mark.asyncio
+    async def test_concurrent_routing_performance(self) -> None:
         """
         Test API Gateway routing under concurrent load
 
         Contract Requirement: Gateway must handle 100 concurrent requests efficiently
         """
 
-        async def single_request():
+        async def single_request(self) -> None:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{api_gateway_base_url}/health")
                 return response.status_code in [200, 503]

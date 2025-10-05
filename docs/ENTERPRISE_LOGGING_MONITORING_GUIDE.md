@@ -90,10 +90,10 @@ logger.critical("System shutting down", reason="critical_error")
 # ✅ Good: With correlation ID and context
 with logger.with_correlation_id("req-12345"):
     logger.info("Request processing started")
-    
+
     with logger.with_user("user123", "john_doe"):
         logger.info("User action performed", action="login")
-    
+
     with logger.with_request(
         request_id="req-12345",
         method="POST",
@@ -402,7 +402,7 @@ monitor = get_monitor()
 async def logging_middleware(request: Request, call_next):
     start_time = time.time()
     request_id = str(uuid.uuid4())
-    
+
     with logger.with_correlation_id(request_id):
         # Log request
         logger.info(
@@ -411,10 +411,10 @@ async def logging_middleware(request: Request, call_next):
             path=request.url.path,
             ip=request.client.host
         )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Log response
         duration_ms = (time.time() - start_time) * 1000
         logger.api(
@@ -424,11 +424,11 @@ async def logging_middleware(request: Request, call_next):
             status_code=response.status_code,
             duration_ms=duration_ms
         )
-        
+
         # Record metrics
         monitor.increment_counter("requests.total")
         monitor.record_timing("http.request", duration_ms)
-        
+
         return response
 ```
 
@@ -437,16 +437,16 @@ async def logging_middleware(request: Request, call_next):
 ```python
 async def create_user(user_data: dict):
     start_time = time.time()
-    
+
     try:
         # Database operation
         result = await database.execute(
             "INSERT INTO users (name, email) VALUES (?, ?)",
             user_data["name"], user_data["email"]
         )
-        
+
         duration_ms = (time.time() - start_time) * 1000
-        
+
         # Log success
         logger.database(
             "User created successfully",
@@ -455,16 +455,16 @@ async def create_user(user_data: dict):
             duration_ms=duration_ms,
             row_count=1
         )
-        
+
         # Record metrics
         monitor.increment_counter("database.operations", tags={"operation": "insert"})
         monitor.record_timing("database.insert", duration_ms)
-        
+
         return result
-        
+
     except Exception as e:
         duration_ms = (time.time() - start_time) * 1000
-        
+
         # Log error
         logger.database(
             "User creation failed",
@@ -473,10 +473,10 @@ async def create_user(user_data: dict):
             duration_ms=duration_ms,
             error=e
         )
-        
+
         # Record error
         monitor.record_error("database_insert_error")
-        
+
         raise
 ```
 
@@ -487,7 +487,7 @@ async def process_payment(payment_data: dict):
     try:
         # Process payment
         result = await payment_service.process(payment_data)
-        
+
         logger.business(
             "Payment processed successfully",
             event="payment_processed",
@@ -499,9 +499,9 @@ async def process_payment(payment_data: dict):
                 "currency": payment_data["currency"]
             }
         )
-        
+
         return result
-        
+
     except ValidationError as e:
         logger.error(
             "Payment validation failed",
@@ -509,20 +509,20 @@ async def process_payment(payment_data: dict):
             error_code="PAYMENT_VALIDATION_ERROR",
             payment_data=payment_data  # Will be masked
         )
-        
+
         monitor.record_error("payment_validation_error")
-        
+
         raise
-        
+
     except PaymentServiceError as e:
         logger.error(
             "Payment service error",
             error=e,
             error_code="PAYMENT_SERVICE_ERROR"
         )
-        
+
         monitor.record_error("payment_service_error")
-        
+
         # Create alert
         monitor.create_alert(
             title="Payment Service Error",
@@ -530,7 +530,7 @@ async def process_payment(payment_data: dict):
             severity=AlertSeverity.HIGH,
             tags={"service": "payment"}
         )
-        
+
         raise
 ```
 

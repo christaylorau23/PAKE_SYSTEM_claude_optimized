@@ -7,7 +7,7 @@ import logging
 import secrets
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AuthConfig:
-    """Authentication configuration"""
+    """Authentication configuration."""
 
     # JWT Settings
     jwt_secret_key: str = "change-in-production-use-env-var"
@@ -56,7 +56,7 @@ class AuthConfig:
 
 @dataclass
 class LoginRequest:
-    """Login request model"""
+    """Login request model."""
 
     username: str
     REDACTED_SECRET: str
@@ -67,21 +67,21 @@ class LoginRequest:
 
 @dataclass
 class LoginResponse:
-    """Login response model"""
+    """Login response model."""
 
     success: bool
     access_token: str | None = None
     refresh_token: str | None = None
     expires_at: datetime | None = None
-    user_info: dict[str, Any] | None = None
-    permissions: list[str] | None = None
+    user_info: Dict[str, Any] | None = None
+    permissions: List[str] | None = None
     error: str | None = None
     requires_mfa: bool = False
 
 
 @dataclass
 class UserSession:
-    """Active user session"""
+    """Active user session."""
 
     session_id: str
     tenant_id: str
@@ -97,7 +97,7 @@ class UserSession:
 
 
 class RolePermissionManager:
-    """Role-based permission management"""
+    """Role-based permission management."""
 
     # Default role permissions
     ROLE_PERMISSIONS = {
@@ -145,18 +145,18 @@ class RolePermissionManager:
 
     @classmethod
     def get_role_permissions(cls, role: str) -> set[str]:
-        """Get permissions for a role"""
+        """Get permissions for a role."""
         return cls.ROLE_PERMISSIONS.get(role, cls.ROLE_PERMISSIONS["user"])
 
     @classmethod
     def has_permission(cls, user_role: str, required_permission: str) -> bool:
-        """Check if role has specific permission"""
+        """Check if role has specific permission."""
         user_permissions = cls.get_role_permissions(user_role)
         return required_permission in user_permissions
 
     @classmethod
     def can_access_endpoint(cls, user_role: str, endpoint: str) -> bool:
-        """Check if role can access specific endpoint"""
+        """Check if role can access specific endpoint."""
         # Map endpoints to required permissions
         endpoint_permissions = {
             "/admin/": "admin:access",
@@ -188,19 +188,15 @@ class MultiTenantAuthService:
     - Audit logging
     """
 
-    def __init__(
-        self,
-        db_service: MultiTenantPostgreSQLService,
-        config: AuthConfig | None = None,
-    ):
+    def __init__(self) -> None:
         self.db_service = db_service
         self.config = config or AuthConfig()
         self.REDACTED_SECRET_hasher = PasswordHasher()
 
         # In-memory session storage (would use Redis in production)
         self._active_sessions: dict[str, UserSession] = {}
-        self._failed_attempts: dict[str, dict[str, Any]] = {}
-        self._rate_limits: dict[str, dict[str, Any]] = {}
+        self._failed_attempts: dict[str, Dict[str, Any]] = {}
+        self._rate_limits: dict[str, Dict[str, Any]] = {}
 
         logger.info("Multi-tenant authentication service initialized")
 
@@ -303,10 +299,10 @@ class MultiTenantAuthService:
             permissions = list(RolePermissionManager.get_role_permissions(user["role"]))
 
             # Generate tokens
-            access_token_expires = datetime.utcnow() + timedelta(
+            access_token_expires = datetime.now(UTC) + timedelta(
                 minutes=self.config.access_token_expire_minutes,
             )
-            refresh_token_expires = datetime.utcnow() + timedelta(
+            refresh_token_expires = datetime.now(UTC) + timedelta(
                 days=self.config.refresh_token_expire_days,
             )
 
@@ -347,7 +343,7 @@ class MultiTenantAuthService:
             # Update last login
             await self.db_service.execute_query(
                 "UPDATE users SET last_login = $1 WHERE tenant_id = $2 AND id = $3",
-                datetime.utcnow(),
+                datetime.now(UTC),
                 tenant_id,
                 user["id"],
             )
@@ -366,7 +362,9 @@ class MultiTenantAuthService:
             )
 
             logger.info(
-                f"✅ User authenticated: {user['username']} in tenant {tenant_id}",
+                "✅ User authenticated: %s in tenant %s",
+                user["username"],
+                tenant_id,
             )
 
             return LoginResponse(
@@ -386,11 +384,11 @@ class MultiTenantAuthService:
             )
 
         except Exception as e:
-            logger.error(f"Authentication error: {e}")
+            logger.error("Authentication error: %s", e)
             return LoginResponse(success=False, error="Authentication service error")
 
     async def refresh_token(self, refresh_token: str) -> LoginResponse:
-        """Refresh access token using refresh token"""
+        """Refresh access token using refresh token."""
         try:
             # Decode refresh token
             payload = jwt.decode(
@@ -413,7 +411,7 @@ class MultiTenantAuthService:
 
             # Generate new access token
             permissions = list(RolePermissionManager.get_role_permissions(user["role"]))
-            access_token_expires = datetime.utcnow() + timedelta(
+            access_token_expires = datetime.now(UTC) + timedelta(
                 minutes=self.config.access_token_expire_minutes,
             )
 
@@ -431,7 +429,9 @@ class MultiTenantAuthService:
             await self._update_session_activity(user_id)
 
             logger.info(
-                f"✅ Token refreshed for user: {user['username']} in tenant {tenant_id}",
+                "✅ Token refreshed for user: %s in tenant %s",
+                user["username"],
+                tenant_id,
             )
 
             return LoginResponse(
@@ -453,11 +453,11 @@ class MultiTenantAuthService:
         except InvalidTokenError:
             return LoginResponse(success=False, error="Invalid refresh token")
         except Exception as e:
-            logger.error(f"Token refresh error: {e}")
+            logger.error("Token refresh error: %s", e)
             return LoginResponse(success=False, error="Token refresh service error")
 
-    async def logout_user(self, access_token: str) -> dict[str, Any]:
-        """Logout user and invalidate session"""
+    async def logout_user(self, access_token: str) -> Dict[str, Any]:
+        """Logout user and invalidate session."""
         try:
             # Decode token to get session info
             payload = jwt.decode(
@@ -482,16 +482,16 @@ class MultiTenantAuthService:
                 activity_data={"session_id": session_id},
             )
 
-            logger.info(f"✅ User logged out: {user_id} in tenant {tenant_id}")
+            logger.info("✅ User logged out: %s in tenant %s", user_id, tenant_id)
 
             return {"success": True, "message": "Successfully logged out"}
 
         except Exception as e:
-            logger.error(f"Logout error: {e}")
+            logger.error("Logout error: %s", e)
             return {"success": False, "error": "Logout service error"}
 
-    async def validate_token(self, token: str) -> dict[str, Any]:
-        """Validate JWT token and return user info"""
+    async def validate_token(self, token: str) -> Dict[str, Any]:
+        """Validate JWT token and return user info."""
         try:
             payload = jwt.decode(
                 token,
@@ -511,7 +511,7 @@ class MultiTenantAuthService:
             session = self._active_sessions[session_id]
 
             # Check session expiry
-            if datetime.utcnow() > session.expires_at:
+            if datetime.now(UTC) > session.expires_at:
                 del self._active_sessions[session_id]
                 return {"valid": False, "error": "Session expired"}
 
@@ -533,7 +533,7 @@ class MultiTenantAuthService:
         except InvalidTokenError:
             return {"valid": False, "error": "Invalid token"}
         except Exception as e:
-            logger.error(f"Token validation error: {e}")
+            logger.error("Token validation error: %s", e)
             return {"valid": False, "error": "Token validation service error"}
 
     async def change_REDACTED_SECRET(
@@ -541,8 +541,8 @@ class MultiTenantAuthService:
         user_id: str,
         current_REDACTED_SECRET: str,
         new_REDACTED_SECRET: str,
-    ) -> dict[str, Any]:
-        """Change user REDACTED_SECRET with validation"""
+    ) -> Dict[str, Any]:
+        """Change user REDACTED_SECRET with validation."""
         try:
             tenant_id = get_current_tenant_id()
             if not tenant_id:
@@ -590,21 +590,23 @@ class MultiTenantAuthService:
             )
 
             logger.info(
-                f"✅ Password changed for user: {user['username']} in tenant {tenant_id}",
+                "✅ Password changed for user: %s in tenant %s",
+                user["username"],
+                tenant_id,
             )
 
             return {"success": True, "message": "Password changed successfully"}
 
         except Exception as e:
-            logger.error(f"Password change error: {e}")
+            logger.error("Password change error: %s", e)
             return {"success": False, "error": "Password change service error"}
 
     def check_permission(self, user_role: str, required_permission: str) -> bool:
-        """Check if user role has required permission"""
+        """Check if user role has required permission."""
         return RolePermissionManager.has_permission(user_role, required_permission)
 
     def check_endpoint_access(self, user_role: str, endpoint: str) -> bool:
-        """Check if user role can access endpoint"""
+        """Check if user role can access endpoint."""
         return RolePermissionManager.can_access_endpoint(user_role, endpoint)
 
     # Helper methods
@@ -615,11 +617,11 @@ class MultiTenantAuthService:
         user_id: str,
         username: str,
         role: str,
-        permissions: list[str],
+        permissions: List[str],
         expires_at: datetime,
         token_type: str = "access",
     ) -> str:
-        """Generate JWT token"""
+        """Generate JWT token."""
         payload = {
             "tenant_id": tenant_id,
             "sub": user_id,
@@ -627,7 +629,7 @@ class MultiTenantAuthService:
             "role": role,
             "permissions": permissions,
             "token_type": token_type,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(UTC),
             "exp": expires_at,
         }
 
@@ -641,7 +643,7 @@ class MultiTenantAuthService:
         )
 
     def _generate_session_id(self) -> str:
-        """Generate unique session ID"""
+        """Generate unique session ID."""
         return f"sess_{secrets.token_hex(16)}"
 
     async def _create_session(
@@ -655,7 +657,7 @@ class MultiTenantAuthService:
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> UserSession:
-        """Create user session"""
+        """Create user session."""
         session = UserSession(
             session_id=self._generate_session_id(),
             tenant_id=tenant_id,
@@ -663,8 +665,8 @@ class MultiTenantAuthService:
             username=username,
             role=role,
             permissions=permissions,
-            created_at=datetime.utcnow(),
-            last_activity=datetime.utcnow(),
+            created_at=datetime.now(UTC),
+            last_activity=datetime.now(UTC),
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=expires_at,
@@ -674,14 +676,14 @@ class MultiTenantAuthService:
         return session
 
     async def _update_session_activity(self, user_id: str) -> None:
-        """Update session last activity"""
+        """Update session last activity."""
         for session in self._active_sessions.values():
             if session.user_id == user_id:
-                session.last_activity = datetime.utcnow()
+                session.last_activity = datetime.now(UTC)
                 break
 
     def _check_rate_limit(self, key: str) -> bool:
-        """Check rate limiting"""
+        """Check rate limiting."""
         now = time.time()
         window_start = now - (self.config.rate_limit_window_minutes * 60)
 
@@ -711,9 +713,9 @@ class MultiTenantAuthService:
         username: str,
         reason: str,
     ) -> None:
-        """Record failed authentication attempt"""
+        """Record failed authentication attempt."""
         key = f"{tenant_id}:{username}"
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         if key not in self._failed_attempts:
             self._failed_attempts[key] = {
@@ -744,23 +746,23 @@ class MultiTenantAuthService:
         )
 
     async def _is_account_locked(self, tenant_id: str, user_id: str) -> bool:
-        """Check if account is locked due to failed attempts"""
+        """Check if account is locked due to failed attempts."""
         # Implementation would check database for lockout status
         # For now, return False
         return False
 
     async def _clear_failed_attempts(self, tenant_id: str, user_id: str) -> None:
-        """Clear failed attempts for successful login"""
+        """Clear failed attempts for successful login."""
         # Clear from memory
         key_prefix = f"{tenant_id}:"
         keys_to_remove = [
-            key for key in self._failed_attempts.keys() if key.startswith(key_prefix)
+            key for key in self._failed_attempts if key.startswith(key_prefix)
         ]
         for key in keys_to_remove:
             del self._failed_attempts[key]
 
-    def _validate_REDACTED_SECRET(self, REDACTED_SECRET: str) -> dict[str, Any]:
-        """Validate REDACTED_SECRET against policy"""
+    def _validate_REDACTED_SECRET(self, REDACTED_SECRET: str) -> Dict[str, Any]:
+        """Validate REDACTED_SECRET against policy."""
         errors = []
 
         if len(REDACTED_SECRET) < self.config.REDACTED_SECRET_min_length:
@@ -799,23 +801,23 @@ class MultiTenantAuthService:
         user_id: str,
         REDACTED_SECRET_hash: str,
     ) -> None:
-        """Update user REDACTED_SECRET hash"""
+        """Update user REDACTED_SECRET hash."""
         await self.db_service.execute_query(
             "UPDATE users SET REDACTED_SECRET_hash = $1, updated_at = $2 WHERE tenant_id = $3 AND id = $4",
             REDACTED_SECRET_hash,
-            datetime.utcnow(),
+            datetime.now(UTC),
             tenant_id,
             user_id,
         )
 
     async def _verify_mfa_token(self, user_id: str, mfa_token: str) -> bool:
-        """Verify MFA token (TOTP)"""
+        """Verify MFA token (TOTP)."""
         # Implementation would verify TOTP token
         # For now, return True for valid format
         return len(mfa_token) == 6 and mfa_token.isdigit()
 
-    async def health_check(self) -> dict[str, Any]:
-        """Health check for authentication service"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Health check for authentication service."""
         try:
             # Test database connectivity
             db_health = await self.db_service.health_check()
@@ -825,7 +827,7 @@ class MultiTenantAuthService:
 
             return {
                 "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "database_health": db_health,
                 "active_sessions": active_session_count,
                 "service": "multi_tenant_auth",
@@ -835,7 +837,7 @@ class MultiTenantAuthService:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "service": "multi_tenant_auth",
             }
 
@@ -847,7 +849,7 @@ async def create_multi_tenant_auth_service(
     db_service: MultiTenantPostgreSQLService,
     config: AuthConfig | None = None,
 ) -> MultiTenantAuthService:
-    """Create multi-tenant authentication service"""
+    """Create multi-tenant authentication service."""
     return MultiTenantAuthService(db_service, config)
 
 

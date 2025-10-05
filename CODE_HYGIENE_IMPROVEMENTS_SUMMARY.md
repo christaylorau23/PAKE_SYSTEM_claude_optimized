@@ -167,20 +167,20 @@ def convert_standard_exception(
     context: dict[str, Any] | None = None,
 ) -> PAKEException:
     """Convert standard Python exceptions to appropriate PAKEException subclasses.
-    
+
     This function maps standard Python exceptions to their corresponding PAKEException
     subclasses, providing consistent error handling across the PAKE system. It preserves
     the original exception context while wrapping it in the PAKE exception hierarchy.
-    
+
     Args:
         exception: The standard Python exception to convert.
         context: Optional additional context information for error tracking.
-        
+
     Returns:
         PAKEException: The appropriate PAKEException subclass that corresponds to the
             input exception type. If no specific mapping exists, returns a generic
             PAKEException with UNKNOWN category and MEDIUM severity.
-            
+
     Example:
         >>> try:
         ...     open("nonexistent.txt")
@@ -202,11 +202,11 @@ def convert_standard_exception(
 ```python
 class PAKEException(Exception):
     """Base exception class for the PAKE system.
-    
+
     This exception class provides a standardized way to handle errors across the
     PAKE system. It includes severity levels, error categorization, and rich context
     information for better error tracking and debugging.
-    
+
     Attributes:
         message: The primary error message describing what went wrong.
         severity: The severity level of the error (LOW, MEDIUM, HIGH, CRITICAL).
@@ -215,7 +215,7 @@ class PAKEException(Exception):
             and correlation IDs for debugging.
         original_exception: The original exception that caused this error, if any.
         user_message: A user-friendly error message for display to end users.
-        
+
     Example:
         >>> try:
         ...     risky_operation()
@@ -247,26 +247,26 @@ def with_error_handling(
     reraise: bool = True,
 ):
     """Decorator for automatic error handling.
-    
+
     This decorator wraps functions with automatic error handling, converting
     standard exceptions to PAKEException subclasses and providing structured
     logging and metrics collection.
-    
+
     Args:
         operation_name: The name of the operation for logging and metrics.
         severity: Optional severity level override for errors.
         category: Optional error category override for errors.
         reraise: Whether to re-raise exceptions after handling.
-        
+
     Returns:
         Decorated function with automatic error handling.
-        
+
     Example:
         >>> @with_error_handling("database_query", severity=ErrorSeverity.HIGH)
         ... async def query_database(query: str):
         ...     # Function implementation
         ...     pass
-        >>> 
+        >>>
         >>> # Any exception will be automatically converted to PAKEException
         >>> # and logged with the operation name "database_query"
     """

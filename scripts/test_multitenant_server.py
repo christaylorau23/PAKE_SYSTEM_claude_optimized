@@ -6,12 +6,12 @@ Quick validation script to test multi-tenant server functionality.
 
 import asyncio
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 
 
-async def test_multitenant_server():
+async def test_multitenant_server(self) -> None:
     """Test basic multi-tenant server functionality"""
 
     base_url = "http://localhost:8000"
@@ -159,9 +159,9 @@ async def test_multitenant_server():
     return passed == total
 
 
-async def main():
+async def main(self) -> None:
     """Main execution"""
-    print(f"PAKE Multi-Tenant Server Test - {datetime.now()}")
+    print(f"PAKE Multi-Tenant Server Test - {datetime.now(UTC)}")
     print("Testing basic server functionality...\n")
 
     success = await test_multitenant_server()

@@ -22,8 +22,8 @@ from tests.factories import SearchQueryFactory, SearchResultFactory
 class TestIngestionServiceComprehensive:
     """Comprehensive unit tests for IngestionService"""
 
-    @pytest.fixture()
-    def mock_dependencies(self):
+    @pytest.fixture
+    def mock_dependencies(self) -> None:
         """Create mocked dependencies for IngestionService"""
         return {
             "webScraper": AsyncMock(spec=WebScraper),
@@ -33,20 +33,26 @@ class TestIngestionServiceComprehensive:
             "deduplicationService": AsyncMock(spec=DeduplicationService),
         }
 
-    @pytest.fixture()
-    def ingestion_service(self, mock_dependencies):
+    @pytest.fixture
+    def ingestion_service(self) -> None:
         """Create IngestionService instance with mocked dependencies"""
-        with patch(
-            "src.services.ingestion.ingestion_service.WebScraper"
-        ) as mock_web_class, patch(
-            "src.services.ingestion.ingestion_service.ArxivScraper"
-        ) as mock_arxiv_class, patch(
-            "src.services.ingestion.ingestion_service.PubMedScraper"
-        ) as mock_pubmed_class, patch(
-            "src.services.ingestion.ingestion_service.ContentProcessor"
-        ) as mock_processor_class, patch(
-            "src.services.ingestion.ingestion_service.DeduplicationService"
-        ) as mock_dedup_class:
+        with (
+            patch(
+                "src.services.ingestion.ingestion_service.WebScraper"
+            ) as mock_web_class,
+            patch(
+                "src.services.ingestion.ingestion_service.ArxivScraper"
+            ) as mock_arxiv_class,
+            patch(
+                "src.services.ingestion.ingestion_service.PubMedScraper"
+            ) as mock_pubmed_class,
+            patch(
+                "src.services.ingestion.ingestion_service.ContentProcessor"
+            ) as mock_processor_class,
+            patch(
+                "src.services.ingestion.ingestion_service.DeduplicationService"
+            ) as mock_dedup_class,
+        ):
             # Configure mock classes
             mock_web_class.return_value = mock_dependencies["webScraper"]
             mock_arxiv_class.return_value = mock_dependencies["arxivScraper"]
@@ -66,8 +72,8 @@ class TestIngestionServiceComprehensive:
     # PRIMARY USE CASES - Normal Operation Paths
     # ============================================================================
 
-    @pytest.mark.unit_functional()
-    async def test_ingest_from_web_success(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_ingest_from_web_success(self) -> None:
         """Test successful web content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
@@ -90,10 +96,8 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.assert_called_once()
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_ingest_from_arxiv_success(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_ingest_from_arxiv_success(self) -> None:
         """Test successful ArXiv content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["arxiv"])
@@ -118,10 +122,8 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.assert_called_once()
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_ingest_from_pubmed_success(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_ingest_from_pubmed_success(self) -> None:
         """Test successful PubMed content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["pubmed"])
@@ -146,10 +148,8 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.assert_called_once()
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_ingest_from_multiple_sources_success(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_ingest_from_multiple_sources_success(self) -> None:
         """Test successful ingestion from multiple sources"""
         # Arrange
         query = SearchQueryFactory(sources=["web", "arxiv", "pubmed"])
@@ -180,10 +180,8 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["arxivScraper"].scrape.assert_called_once()
         mock_dependencies["pubmedScraper"].scrape.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_content_processing_success(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_functional
+    async def test_content_processing_success(self) -> None:
         """Test successful content processing"""
         # Arrange
         query = SearchQueryFactory()
@@ -209,8 +207,8 @@ class TestIngestionServiceComprehensive:
         # Verify interactions
         mock_dependencies["contentProcessor"].process.assert_called_once()
 
-    @pytest.mark.unit_functional()
-    async def test_deduplication_success(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_functional
+    async def test_deduplication_success(self) -> None:
         """Test successful content deduplication"""
         # Arrange
         query = SearchQueryFactory()
@@ -237,8 +235,8 @@ class TestIngestionServiceComprehensive:
     # EDGE CASES - Boundary Conditions and Edge Cases
     # ============================================================================
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_empty_query(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_empty_query(self) -> None:
         """Test ingestion with empty query"""
         # Arrange
         query = SearchQueryFactory(query="")
@@ -253,10 +251,8 @@ class TestIngestionServiceComprehensive:
         assert result is not None
         assert len(result) == 0
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_special_characters_query(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_special_characters_query(self) -> None:
         """Test ingestion with special characters in query"""
         # Arrange
         query = SearchQueryFactory(
@@ -275,10 +271,8 @@ class TestIngestionServiceComprehensive:
         assert result is not None
         assert len(result) == 2
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_very_long_query(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_very_long_query(self) -> None:
         """Test ingestion with very long query"""
         # Arrange
         long_query = " ".join(["word"] * 1000)  # Very long query
@@ -296,8 +290,8 @@ class TestIngestionServiceComprehensive:
         assert result is not None
         assert len(result) == 1
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_no_sources(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_no_sources(self) -> None:
         """Test ingestion with no sources specified"""
         # Arrange
         query = SearchQueryFactory(sources=[])
@@ -309,10 +303,8 @@ class TestIngestionServiceComprehensive:
         assert result is not None
         assert len(result) == 0
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_max_results_limit(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_max_results_limit(self) -> None:
         """Test ingestion with maximum results limit"""
         # Arrange
         query = SearchQueryFactory(max_results=5)
@@ -331,10 +323,8 @@ class TestIngestionServiceComprehensive:
         assert result is not None
         assert len(result) <= 5  # Should respect max_results limit
 
-    @pytest.mark.unit_edge_case()
-    async def test_ingest_with_concurrent_requests(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_edge_case
+    async def test_ingest_with_concurrent_requests(self) -> None:
         """Test handling of concurrent ingestion requests"""
         # Arrange
         queries = [SearchQueryFactory(query=f"query_{i}") for i in range(5)]
@@ -344,7 +334,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.return_value = results
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
-        async def ingest_query(query):
+        async def ingest_query(self) -> None:
             return await ingestion_service.ingest_content(query)
 
         # Act
@@ -359,8 +349,8 @@ class TestIngestionServiceComprehensive:
     # ERROR HANDLING - Exception Scenarios and Error Cases
     # ============================================================================
 
-    @pytest.mark.unit_error_handling()
-    async def test_web_scraper_failure(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_web_scraper_failure(self) -> None:
         """Test handling of web scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
@@ -372,8 +362,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="Web scraper failed"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_arxiv_scraper_failure(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_arxiv_scraper_failure(self) -> None:
         """Test handling of ArXiv scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["arxiv"])
@@ -385,8 +375,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="ArXiv scraper failed"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_pubmed_scraper_failure(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_pubmed_scraper_failure(self) -> None:
         """Test handling of PubMed scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["pubmed"])
@@ -398,10 +388,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="PubMed scraper failed"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_content_processor_failure(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_content_processor_failure(self) -> None:
         """Test handling of content processor failures"""
         # Arrange
         query = SearchQueryFactory()
@@ -416,10 +404,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="Content processor failed"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_deduplication_service_failure(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_deduplication_service_failure(self) -> None:
         """Test handling of deduplication service failures"""
         # Arrange
         query = SearchQueryFactory()
@@ -435,12 +421,12 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="Deduplication failed"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_network_timeout_error(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_error_handling
+    async def test_network_timeout_error(self) -> None:
         """Test handling of network timeout errors"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
-        mock_dependencies["webScraper"].scrape.side_effect = asyncio.TimeoutError(
+        mock_dependencies["webScraper"].scrape.side_effect = TimeoutError(
             "Network timeout"
         )
 
@@ -448,10 +434,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(asyncio.TimeoutError, match="Network timeout"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_error_handling()
-    async def test_partial_failure_with_multiple_sources(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_error_handling
+    async def test_partial_failure_with_multiple_sources(self) -> None:
         """Test handling of partial failures with multiple sources"""
         # Arrange
         query = SearchQueryFactory(sources=["web", "arxiv", "pubmed"])
@@ -481,8 +465,8 @@ class TestIngestionServiceComprehensive:
     # PERFORMANCE TESTS - Algorithm Efficiency and Performance
     # ============================================================================
 
-    @pytest.mark.unit_performance()
-    async def test_ingestion_performance(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_performance
+    async def test_ingestion_performance(self) -> None:
         """Test ingestion performance"""
         import time
 
@@ -504,10 +488,8 @@ class TestIngestionServiceComprehensive:
         execution_time = end_time - start_time
         assert execution_time < 5.0  # Should complete within 5 seconds
 
-    @pytest.mark.unit_performance()
-    async def test_concurrent_ingestion_performance(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_performance
+    async def test_concurrent_ingestion_performance(self) -> None:
         """Test concurrent ingestion performance"""
         import time
 
@@ -519,7 +501,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.return_value = results
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
-        async def ingest_query(query):
+        async def ingest_query(self) -> None:
             return await ingestion_service.ingest_content(query)
 
         # Act
@@ -533,10 +515,8 @@ class TestIngestionServiceComprehensive:
         execution_time = end_time - start_time
         assert execution_time < 10.0  # Should complete within 10 seconds
 
-    @pytest.mark.unit_performance()
-    async def test_large_result_set_performance(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_performance
+    async def test_large_result_set_performance(self) -> None:
         """Test performance with large result sets"""
         import time
 
@@ -564,10 +544,8 @@ class TestIngestionServiceComprehensive:
     # SECURITY TESTS - Data Protection and Access Control
     # ============================================================================
 
-    @pytest.mark.unit_security()
-    async def test_sensitive_data_not_exposed(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_security
+    async def test_sensitive_data_not_exposed(self) -> None:
         """Test that sensitive data is not exposed in results"""
         # Arrange
         query = SearchQueryFactory()
@@ -597,8 +575,8 @@ class TestIngestionServiceComprehensive:
         # that the data is processed normally
         assert len(result) == 3
 
-    @pytest.mark.unit_security()
-    async def test_query_sanitization(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_security
+    async def test_query_sanitization(self) -> None:
         """Test that queries are properly sanitized"""
         # Arrange
         malicious_query = SearchQueryFactory(query='<script>alert("xss")</script>')
@@ -616,10 +594,8 @@ class TestIngestionServiceComprehensive:
         # Verify that the query is passed to scrapers as-is (sanitization should happen at higher level)
         mock_dependencies["webScraper"].scrape.assert_called_once()
 
-    @pytest.mark.unit_security()
-    async def test_rate_limiting_integration(
-        self, ingestion_service, mock_dependencies
-    ):
+    @pytest.mark.unit_security
+    async def test_rate_limiting_integration(self) -> None:
         """Test that rate limiting is integrated with ingestion"""
         # Arrange
         query = SearchQueryFactory()
@@ -631,8 +607,8 @@ class TestIngestionServiceComprehensive:
         with pytest.raises(Exception, match="Rate limit exceeded"):
             await ingestion_service.ingest_content(query)
 
-    @pytest.mark.unit_security()
-    async def test_content_validation(self, ingestion_service, mock_dependencies):
+    @pytest.mark.unit_security
+    async def test_content_validation(self) -> None:
         """Test that content is properly validated"""
         # Arrange
         query = SearchQueryFactory()

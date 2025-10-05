@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE+ Enhanced Error Handling Patterns
-Comprehensive error handling, retry mechanisms, and resilience patterns
+Comprehensive error handling, retry mechanisms, and resilience patterns.
 """
 
 import asyncio
@@ -11,7 +11,7 @@ import traceback
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -24,7 +24,7 @@ metrics = MetricsStore(service_name="pake-error-handler")
 
 
 class ErrorSeverity(Enum):
-    """Error severity levels"""
+    """Error severity levels."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -33,7 +33,7 @@ class ErrorSeverity(Enum):
 
 
 class ErrorCategory(Enum):
-    """Error categorization for better handling"""
+    """Error categorization for better handling."""
 
     NETWORK = "network"
     DATABASE = "database"
@@ -47,7 +47,7 @@ class ErrorCategory(Enum):
 
 @dataclass
 class ErrorContext:
-    """Enhanced error context for structured logging"""
+    """Enhanced error context for structured logging."""
 
     error_id: str = field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = field(default_factory=datetime.utcnow)
@@ -56,12 +56,12 @@ class ErrorContext:
     correlation_id: str | None = None
     user_id: str | None = None
     request_id: str | None = None
-    additional_data: dict[str, Any] = field(default_factory=dict)
+    additional_data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class RetryPolicy:
-    """Retry policy configuration"""
+    """Retry policy configuration."""
 
     max_attempts: int = 3
     base_delay: float = 1.0
@@ -101,15 +101,7 @@ class PAKEException(Exception):
         ...     )
     """
 
-    def __init__(
-        self,
-        message: str,
-        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-        category: ErrorCategory = ErrorCategory.SYSTEM,
-        context: ErrorContext | None = None,
-        original_exception: Exception | None = None,
-        user_message: str | None = None,
-    ):
+    def __init__(self) -> None:
         super().__init__(message)
         self.message = message
         self.severity = severity
@@ -118,8 +110,8 @@ class PAKEException(Exception):
         self.original_exception = original_exception
         self.user_message = user_message or "An error occurred. Please try again."
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert exception to dictionary for logging"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert exception to dictionary for logging."""
         return {
             "error_id": self.context.error_id,
             "message": self.message,
@@ -139,30 +131,30 @@ class PAKEException(Exception):
 
 
 class NetworkError(PAKEException):
-    """Network-related errors"""
+    """Network-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.NETWORK, **kwargs)
 
 
 class DatabaseError(PAKEException):
-    """Database-related errors"""
+    """Database-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.DATABASE, **kwargs)
 
 
 class ValidationError(PAKEException):
-    """Validation-related errors"""
+    """Validation-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.VALIDATION, **kwargs)
 
 
 class ExternalAPIError(PAKEException):
-    """External API-related errors"""
+    """External API-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(message, category=ErrorCategory.EXTERNAL_API, **kwargs)
 
 
@@ -187,7 +179,7 @@ class ErrorHandler:
         ...     # Error is logged and metrics are updated
     """
 
-    def __init__(self, service_name: str = "pake-system"):
+    def __init__(self) -> None:
         self.service_name = service_name
         self.logger = get_logger(service_name=service_name)
         self.metrics = MetricsStore(service_name=service_name)
@@ -198,7 +190,7 @@ class ErrorHandler:
         context: ErrorContext | None = None,
         severity: ErrorSeverity | None = None,
     ) -> PAKEException:
-        """Handle and transform exceptions into PAKE exceptions"""
+        """Handle and transform exceptions into PAKE exceptions."""
         if isinstance(exception, PAKEException):
             pake_error = exception
         else:
@@ -224,7 +216,7 @@ class ErrorHandler:
         return pake_error
 
     def _categorize_exception(self, exception: Exception) -> ErrorCategory:
-        """Categorize exception based on type and message"""
+        """Categorize exception based on type and message."""
         exception_name = exception.__class__.__name__.lower()
         exception_message = str(exception).lower()
 
@@ -262,7 +254,7 @@ class ErrorHandler:
         exception: Exception,
         category: ErrorCategory,
     ) -> ErrorSeverity:
-        """Determine error severity based on exception and category"""
+        """Determine error severity based on exception and category."""
         exception_name = exception.__class__.__name__.lower()
 
         # Critical errors
@@ -279,8 +271,8 @@ class ErrorHandler:
 
         return ErrorSeverity.LOW
 
-    def _log_error(self, error: PAKEException):
-        """Log error with structured logging"""
+    def _log_error(self) -> None:
+        """Log error with structured logging."""
         log_data = error.to_dict()
 
         if error.severity == ErrorSeverity.CRITICAL:
@@ -292,8 +284,8 @@ class ErrorHandler:
         else:
             self.logger.info("Low severity error occurred", extra=log_data)
 
-    def _update_metrics(self, error: PAKEException):
-        """Update error metrics"""
+    def _update_metrics(self) -> None:
+        """Update error metrics."""
         tags = {
             "service": self.service_name,
             "severity": error.severity.value,
@@ -305,12 +297,7 @@ class ErrorHandler:
         self.metrics.set_gauge("last_error_timestamp", time.time(), labels=tags)
 
 
-def with_error_handling(
-    operation_name: str,
-    severity: ErrorSeverity | None = None,
-    category: ErrorCategory | None = None,
-    reraise: bool = True,
-):
+def with_error_handling(self) -> None:
     """Decorator for automatic error handling.
 
     This decorator wraps functions with automatic error handling, converting
@@ -328,7 +315,7 @@ def with_error_handling(
 
     Example:
         >>> @with_error_handling("database_query", severity=ErrorSeverity.HIGH)
-        ... async def query_database(query: str):
+        ... async def query_database(self) -> None:
         ...     # Function implementation
         ...     pass
         >>>
@@ -338,7 +325,7 @@ def with_error_handling(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(self) -> None:
             error_handler = ErrorHandler()
             context = ErrorContext(
                 service_name=func.__module__,
@@ -354,7 +341,7 @@ def with_error_handling(
                 return None
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             error_handler = ErrorHandler()
             context = ErrorContext(
                 service_name=func.__module__,
@@ -374,14 +361,14 @@ def with_error_handling(
     return decorator
 
 
-def with_retry(policy: RetryPolicy | None = None):
-    """Decorator for automatic retry with exponential backoff"""
+def with_retry(self) -> None:
+    """Decorator for automatic retry with exponential backoff."""
 
     def decorator(func: Callable) -> Callable:
         retry_policy = policy or RetryPolicy()
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(self) -> None:
             last_exception = None
 
             for attempt in range(retry_policy.max_attempts):
@@ -409,8 +396,10 @@ def with_retry(policy: RetryPolicy | None = None):
                         delay = delay * (0.5 + random.random() * 0.5)
 
                     logger.warning(
-                        f"Retry attempt {attempt + 1}/{retry_policy.max_attempts} "
-                        f"for {func.__name__} after {delay:.2f}s delay",
+                        "Retry attempt %.2f/%s %s",
+                        attempt + 1,
+                        retry_policy.max_attempts,
+                        f"for {func.__name__} after {delay}s delay",
                         extra={
                             "attempt": attempt + 1,
                             "delay": delay,
@@ -423,7 +412,7 @@ def with_retry(policy: RetryPolicy | None = None):
             raise last_exception
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(self) -> None:
             last_exception = None
 
             for attempt in range(retry_policy.max_attempts):
@@ -451,7 +440,9 @@ def with_retry(policy: RetryPolicy | None = None):
                         delay = delay * (0.5 + random.random() * 0.5)
 
                     logger.warning(
-                        f"Retry attempt {attempt + 1}/{retry_policy.max_attempts} "
+                        "Retry attempt %s/%s %s",
+                        attempt + 1,
+                        retry_policy.max_attempts,
                         f"for {func.__name__} after {delay:.2f}s delay",
                         extra={
                             "attempt": attempt + 1,
@@ -470,12 +461,8 @@ def with_retry(policy: RetryPolicy | None = None):
 
 
 @asynccontextmanager
-async def error_boundary(
-    operation_name: str,
-    reraise: bool = True,
-    fallback_value: Any = None,
-):
-    """Async context manager for error boundaries"""
+async def error_boundary(self) -> None:
+    """Async context manager for error boundaries."""
     error_handler = ErrorHandler()
     context = ErrorContext(operation=operation_name)
 
@@ -489,21 +476,21 @@ async def error_boundary(
 
 
 class HealthChecker:
-    """System health monitoring and error detection"""
+    """System health monitoring and error detection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = get_logger(service_name="health-checker")
         self.metrics = MetricsStore(service_name="health-checker")
         self.checks = []
 
-    async def add_health_check(self, name: str, check_func: Callable):
-        """Add a health check function"""
+    async def add_health_check(self) -> None:
+        """Add a health check function."""
         self.checks.append((name, check_func))
 
-    async def run_health_checks(self) -> dict[str, Any]:
-        """Run all health checks and return results"""
+    async def run_health_checks(self) -> Dict[str, Any]:
+        """Run all health checks and return results."""
         results = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "overall_status": "healthy",
             "checks": {},
         }
@@ -546,7 +533,8 @@ class HealthChecker:
                     labels={"check": name, "status": "unhealthy"},
                 )
                 self.logger.error(
-                    f"Health check {name} failed",
+                    "Health check %s failed",
+                    name,
                     extra={"error": str(e), "duration": duration},
                 )
 
@@ -572,19 +560,20 @@ if __name__ == "__main__":
 
     @with_error_handling("test_operation", severity=ErrorSeverity.HIGH)
     @with_retry(RetryPolicy(max_attempts=3, base_delay=0.5))
-    async def test_function():
-        """Test function for error handling"""
+    async def test_function(self) -> None:
+        """Test function for error handling."""
         import random
 
         if random.random() < 0.7:  # 70% chance of failure
-            raise NetworkError("Simulated network failure")
+            msg = "Simulated network failure"
+            raise NetworkError(msg)
         return "Success!"
 
-    async def test_health_check():
-        """Test health check"""
+    async def test_health_check(self) -> None:
+        """Test health check."""
         return {"cpu_usage": 45.2, "memory_usage": 62.1}
 
-    async def main():
+    async def main(self) -> None:
         # Test error handling
         try:
             result = await test_function()

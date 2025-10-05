@@ -1,4 +1,4 @@
-"""Trend Streaming Services
+"""Trend Streaming Services.
 
 Real-time data ingestion from multiple platforms:
 - Google Trends API integration

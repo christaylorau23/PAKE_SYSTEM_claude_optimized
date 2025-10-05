@@ -21,13 +21,13 @@ from tests.factories import UserFactory
 class TestCriticalUserJourneysE2E:
     """Comprehensive E2E tests for critical user journeys"""
 
-    @pytest.fixture()
-    def test_client(self):
+    @pytest.fixture
+    def test_client(self) -> None:
         """Create test client for E2E testing"""
         return TestClient(app)
 
-    @pytest.fixture()
-    async def async_client(self):
+    @pytest.fixture
+    async def async_client(self) -> None:
         """Create async HTTP client for E2E testing"""
         async with httpx.AsyncClient(app=app, base_url="http://test") as client:
             yield client
@@ -36,9 +36,9 @@ class TestCriticalUserJourneysE2E:
     # CRITICAL USER JOURNEY 1: Complete User Onboarding
     # ============================================================================
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_user_journey()
-    async def test_complete_user_onboarding_journey(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_user_journey
+    async def test_complete_user_onboarding_journey(self) -> None:
         """
         Critical User Journey: Complete User Onboarding
 
@@ -129,9 +129,9 @@ class TestCriticalUserJourneysE2E:
     # CRITICAL USER JOURNEY 2: Research Workflow
     # ============================================================================
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_user_journey()
-    async def test_research_workflow_journey(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_user_journey
+    async def test_research_workflow_journey(self) -> None:
         """
         Critical User Journey: Complete Research Workflow
 
@@ -242,9 +242,9 @@ class TestCriticalUserJourneysE2E:
     # PERFORMANCE E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_performance()
-    async def test_system_performance_under_load(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_performance
+    async def test_system_performance_under_load(self) -> None:
         """Test system performance under concurrent load"""
         # Arrange
         login_response = test_client.post(
@@ -257,7 +257,7 @@ class TestCriticalUserJourneysE2E:
         # Act: Concurrent search requests
         start_time = time.time()
 
-        async def perform_search(query: str):
+        async def perform_search(self) -> None:
             async with httpx.AsyncClient(app=app, base_url="http://test") as client:
                 response = await client.post(
                     "/search",
@@ -283,9 +283,9 @@ class TestCriticalUserJourneysE2E:
         assert all(results)  # All searches should succeed
         assert len(results) == 20
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_performance()
-    async def test_response_time_consistency(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_performance
+    async def test_response_time_consistency(self) -> None:
         """Test response time consistency across multiple requests"""
         # Arrange
         login_response = test_client.post(
@@ -297,7 +297,7 @@ class TestCriticalUserJourneysE2E:
 
         # Act: Multiple identical requests
         response_times = []
-        for i in range(10):
+        for _i in range(10):
             start_time = time.time()
 
             response = test_client.get("/auth/me", headers=headers)
@@ -321,11 +321,9 @@ class TestCriticalUserJourneysE2E:
     # RELIABILITY E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_reliability()
-    async def test_system_reliability_under_failure_conditions(
-        self, test_client, async_client
-    ):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_reliability
+    async def test_system_reliability_under_failure_conditions(self) -> None:
         """Test system reliability under failure conditions"""
         # Arrange
         login_response = test_client.post(
@@ -356,9 +354,9 @@ class TestCriticalUserJourneysE2E:
                 422,
             ]  # Appropriate error codes
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_reliability()
-    async def test_data_consistency_across_requests(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_reliability
+    async def test_data_consistency_across_requests(self) -> None:
         """Test data consistency across multiple requests"""
         # Arrange
         login_response = test_client.post(
@@ -385,9 +383,9 @@ class TestCriticalUserJourneysE2E:
     # USER EXPERIENCE E2E TESTS
     # ============================================================================
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_user_experience()
-    async def test_user_experience_workflow_smoothness(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_user_experience
+    async def test_user_experience_workflow_smoothness(self) -> None:
         """Test user experience workflow smoothness"""
         # Arrange
         user_data = UserFactory(
@@ -435,9 +433,9 @@ class TestCriticalUserJourneysE2E:
         # Assert: Smooth user experience
         assert True  # All steps completed without errors
 
-    @pytest.mark.e2e()
-    @pytest.mark.e2e_user_experience()
-    async def test_error_handling_user_friendliness(self, test_client, async_client):
+    @pytest.mark.e2e
+    @pytest.mark.e2e_user_experience
+    async def test_error_handling_user_friendliness(self) -> None:
         """Test error handling user friendliness"""
         # Act: Test various error scenarios
         error_scenarios = [

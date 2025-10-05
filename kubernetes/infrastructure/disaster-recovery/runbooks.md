@@ -124,8 +124,8 @@ kubectl exec -it deployment/pake-postgresql -n database -- psql -U postgres -c "
 
 # 3. Verify data integrity
 kubectl exec -it deployment/pake-postgresql -n database -- psql -U postgres -d pake_production -c "
-SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del 
-FROM pg_stat_user_tables 
+SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del
+FROM pg_stat_user_tables
 ORDER BY n_tup_ins + n_tup_upd + n_tup_del DESC LIMIT 10;
 "
 
@@ -657,12 +657,12 @@ curl http://backup-validation-monitor.backup-validation.svc.cluster.local:8090/a
 # Verify restored data integrity
 kubectl exec -it deployment/postgres-test-restore -n backup-test -- \
   psql -U postgres -d pake_test_restore -c "
-    SELECT 
-      schemaname, 
-      tablename, 
-      n_tup_ins + n_tup_upd + n_tup_del as total_operations 
-    FROM pg_stat_user_tables 
-    ORDER BY total_operations DESC 
+    SELECT
+      schemaname,
+      tablename,
+      n_tup_ins + n_tup_upd + n_tup_del as total_operations
+    FROM pg_stat_user_tables
+    ORDER BY total_operations DESC
     LIMIT 10;"
 ```
 
@@ -892,7 +892,7 @@ curl -X POST http://compliance-audit-collector.compliance-system.svc.cluster.loc
 ### Annual DR Compliance Audit
 
 1. **SOC2 Readiness:** Validate all controls
-2. **GDPR Compliance:** Test data deletion procedures  
+2. **GDPR Compliance:** Test data deletion procedures
 3. **Data Retention:** Verify retention policies enforced
 4. **Backup Validation:** Full backup restoration testing
 5. **Incident Response:** Test complete incident response procedures
@@ -958,7 +958,7 @@ kubectl get events --sort-by='.lastTimestamp' --context=primary | tail -20
 
 **Minute 2-3: Failover Decision**
 - [ ] **P0 Criteria**: Complete region unavailable OR >25% services down
-- [ ] **P1 Criteria**: Critical database failure OR >50% performance degradation  
+- [ ] **P1 Criteria**: Critical database failure OR >50% performance degradation
 - [ ] **Decision**: GO/NO-GO for failover
 - [ ] **Communication**: Update stakeholders via status page
 
@@ -1040,7 +1040,7 @@ aws route53 change-resource-record-sets --hosted-zone-id Z123456789 --change-bat
 # Update AI service endpoint
 aws route53 change-resource-record-sets --hosted-zone-id Z123456789 --change-batch '{
   "Changes": [{
-    "Action": "UPSERT", 
+    "Action": "UPSERT",
     "ResourceRecordSet": {
       "Name": "ai.pake-system.com",
       "Type": "A",
@@ -1118,7 +1118,7 @@ kubectl exec -it redis-master-0 -n database --context=secondary -- \
 ```bash
 # Monitor key metrics every 5 minutes
 watch -n 300 '
-  echo "=== System Health Check ===" 
+  echo "=== System Health Check ==="
   kubectl get pods --all-namespaces --context=secondary | grep -v Running
   echo "=== Error Rates ==="
   curl -s "http://prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=rate(http_requests_total{status=~\"5..\"}[5m])"
@@ -1156,7 +1156,7 @@ echo "Checking PostgreSQL data loss..."
 kubectl exec -it pake-postgresql-replica-eu-0 -n database --context=secondary -- \
   psql -U postgres -d pake_production -c "
     -- Get latest transaction timestamp before incident
-    SELECT 
+    SELECT
       'Last transaction before incident' as event,
       MAX(created_at) as timestamp,
       EXTRACT(EPOCH FROM MAX(created_at)) as epoch_time
@@ -1167,9 +1167,9 @@ kubectl exec -it pake-postgresql-replica-eu-0 -n database --context=secondary --
       UNION ALL
       SELECT created_at FROM background_jobs WHERE created_at < '$INCIDENT_START_TIME'
     ) all_transactions;
-    
+
     -- Get first transaction after failover
-    SELECT 
+    SELECT
       'First transaction after failover' as event,
       MIN(created_at) as timestamp,
       EXTRACT(EPOCH FROM MIN(created_at)) as epoch_time
@@ -1190,17 +1190,17 @@ kubectl exec -it redis-master-0 -n database --context=secondary -- \
     local cursor = 0
     local lost_keys = 0
     local total_keys = 0
-    
+
     repeat
       local result = redis.call('SCAN', cursor, 'MATCH', 'session:*')
       cursor = tonumber(result[1])
       local keys = result[2]
-      
+
       for i, key in ipairs(keys) do
         total_keys = total_keys + 1
         local ttl = redis.call('TTL', key)
         local created = redis.call('HGET', key, 'created_at')
-        
+
         if created then
           -- Check if session was created during incident window
           local created_epoch = tonumber(created)
@@ -1210,7 +1210,7 @@ kubectl exec -it redis-master-0 -n database --context=secondary -- \
         end
       end
     until cursor == 0
-    
+
     return 'Redis Analysis: ' .. lost_keys .. ' lost keys out of ' .. total_keys .. ' total keys'
   " 0
 
@@ -1261,7 +1261,7 @@ LAST_REPLICATION_EPOCH=$(kubectl exec -it pake-postgresql-replica-eu-0 -n databa
 if [[ "$LAST_REPLICATION_EPOCH" =~ ^[0-9]+$ ]]; then
   ACTUAL_RPO=$((INCIDENT_EPOCH - LAST_REPLICATION_EPOCH))
   echo "📊 Actual RPO: $ACTUAL_RPO seconds ($((ACTUAL_RPO / 60)) minutes)"
-  
+
   # Check against target RPO (5 minutes = 300 seconds)
   if [ $ACTUAL_RPO -le 300 ]; then
     echo "✅ RPO Target Met: $ACTUAL_RPO ≤ 300 seconds"
@@ -1276,7 +1276,7 @@ fi
 cat > /tmp/rpo-report-$(date +%Y%m%d-%H%M%S).json << EOF
 {
   "incident_start": "$INCIDENT_START_TIME",
-  "failover_complete": "$FAILOVER_COMPLETE_TIME", 
+  "failover_complete": "$FAILOVER_COMPLETE_TIME",
   "actual_rto_seconds": $TOTAL_RTO,
   "actual_rpo_seconds": ${ACTUAL_RPO:-"unknown"},
   "rto_target_met": $($TOTAL_RTO -le 900 && echo true || echo false),
@@ -1300,25 +1300,25 @@ echo "📋 RPO report saved to: /tmp/rpo-report-$(date +%Y%m%d-%H%M%S).json"
 \c pake_production
 
 -- Check WAL replay status
-SELECT 
+SELECT
   pg_last_wal_receive_lsn() as last_received,
   pg_last_wal_replay_lsn() as last_replayed,
   pg_last_xact_replay_timestamp() as last_replay_time,
   EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) as lag_seconds;
 
 -- Analyze transaction gaps
-SELECT 
-  schemaname, 
+SELECT
+  schemaname,
   tablename,
   n_tup_ins as inserts,
-  n_tup_upd as updates, 
+  n_tup_upd as updates,
   n_tup_del as deletes,
   n_dead_tup as dead_tuples
-FROM pg_stat_user_tables 
+FROM pg_stat_user_tables
 ORDER BY (n_tup_ins + n_tup_upd + n_tup_del) DESC;
 
 -- Check for uncommitted transactions at time of failure
-SELECT 
+SELECT
   datname,
   usename,
   application_name,
@@ -1326,8 +1326,8 @@ SELECT
   query_start,
   state_change,
   query
-FROM pg_stat_activity 
-WHERE state != 'idle' 
+FROM pg_stat_activity
+WHERE state != 'idle'
   AND query_start < '[INCIDENT_TIME]'::timestamp;
 ```
 
@@ -1341,15 +1341,15 @@ kubectl exec -it pake-postgresql-replica-eu-0 -n database --context=secondary --
     FROM user_sessions s
     LEFT JOIN users u ON s.user_id = u.id
     WHERE u.id IS NULL;
-    
+
     -- Check for incomplete background jobs
     SELECT status, COUNT(*) as job_count
     FROM background_jobs
     WHERE created_at >= NOW() - INTERVAL '1 hour'
     GROUP BY status;
-    
+
     -- Verify critical data integrity
-    SELECT 
+    SELECT
       (SELECT COUNT(*) FROM users) as total_users,
       (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 hour') as recent_users,
       (SELECT COUNT(*) FROM user_sessions WHERE created_at >= NOW() - INTERVAL '1 hour') as recent_sessions;
@@ -1365,19 +1365,19 @@ from datetime import datetime, timedelta
 async def check_model_consistency():
     # Check if all models are accessible
     models_dir = '/app/models'
-    
+
     try:
         # List available models
         import os
         models = [f for f in os.listdir(models_dir) if f.endswith('.safetensors')]
         print(f'Available models: {len(models)}')
-        
+
         # Check model timestamps
         for model in models[:5]:  # Check first 5 models
             stat = os.stat(os.path.join(models_dir, model))
             modified_time = datetime.fromtimestamp(stat.st_mtime)
             print(f'{model}: last modified {modified_time}')
-            
+
     except Exception as e:
         print(f'Model check failed: {e}')
 
@@ -1385,7 +1385,7 @@ asyncio.run(check_model_consistency())
 "
 ```
 
-**Step 3: Cache and Session Data Analysis**  
+**Step 3: Cache and Session Data Analysis**
 ```bash
 # Redis data loss assessment
 kubectl exec -it redis-master-0 -n database --context=secondary -- redis-cli << 'EOF'
@@ -1397,7 +1397,7 @@ EVAL "
   local sessions = redis.call('KEYS', 'session:*')
   local active_sessions = 0
   local expired_sessions = 0
-  
+
   for i, session_key in ipairs(sessions) do
     local ttl = redis.call('TTL', session_key)
     if ttl > 0 then
@@ -1406,7 +1406,7 @@ EVAL "
       expired_sessions = expired_sessions + 1
     end
   end
-  
+
   return 'Active sessions: ' .. active_sessions .. ', Expired: ' .. expired_sessions
 " 0
 
@@ -1427,7 +1427,7 @@ EOF
 # Step 1: Check replication status on primary
 kubectl exec -it pake-postgresql-primary-0 -n database -- \
   psql -U postgres -c "
-    SELECT 
+    SELECT
       application_name,
       client_addr,
       state,
@@ -1448,7 +1448,7 @@ kubectl logs pake-postgresql-primary-0 -n database -c wal-g | tail -20
 # Step 3: Check replica status
 kubectl exec -it pake-postgresql-replica-eu-0 -n database -- \
   psql -U postgres -c "
-    SELECT 
+    SELECT
       pg_is_in_recovery() as is_replica,
       pg_last_wal_receive_lsn() as last_received,
       pg_last_wal_replay_lsn() as last_replayed,
@@ -1463,7 +1463,7 @@ kubectl exec -it pake-postgresql-replica-eu-0 -n database -- \
 # Step 5: Check replication slot status on primary
 kubectl exec -it pake-postgresql-primary-0 -n database -- \
   psql -U postgres -c "
-    SELECT 
+    SELECT
       slot_name,
       plugin,
       slot_type,
@@ -1497,7 +1497,7 @@ kubectl exec -it pake-postgresql-replica-eu-0 -n database -- \
 # If lag is due to long-running queries, check and terminate
 kubectl exec -it pake-postgresql-primary-0 -n database -- \
   psql -U postgres -c "
-    SELECT 
+    SELECT
       pid,
       now() - pg_stat_activity.query_start AS duration,
       query,
@@ -1737,7 +1737,7 @@ Reason: Emergency termination of all chaos experiments
 
 Actions Taken:
 - Terminated all chaos jobs
-- Removed all network policies  
+- Removed all network policies
 - Stopped resource exhaustion pods
 - Restored service replica counts
 - Cleaned up chaos labels/annotations
@@ -1765,40 +1765,40 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
 # Pod Kill Rollback
 ./scripts/rollback-pod-kill.sh() {
   echo "Rolling back pod kill experiments..."
-  
+
   # Get list of killed pods from metrics
   KILLED_PODS=$(kubectl get events --all-namespaces | grep "chaos-pod-kill" | grep "Killing" | awk '{print $6}')
-  
+
   # Wait for pods to restart
   for pod in $KILLED_PODS; do
     namespace=$(echo $pod | cut -d'/' -f1)
     pod_name=$(echo $pod | cut -d'/' -f2)
-    
+
     if [ ! -z "$namespace" ] && [ ! -z "$pod_name" ]; then
       echo "Waiting for $pod to restart..."
       kubectl wait --for=condition=ready pod -l app=${pod_name%-*} -n $namespace --timeout=120s
     fi
   done
-  
+
   echo "Pod kill rollback completed"
 }
 
-# Network Partition Rollback  
+# Network Partition Rollback
 ./scripts/rollback-network-partition.sh() {
   echo "Rolling back network partitions..."
-  
+
   # Get all chaos network policies
   CHAOS_POLICIES=$(kubectl get networkpolicies --all-namespaces -l chaos-type=network-partition -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}')
-  
+
   # Delete each policy
   for policy in $CHAOS_POLICIES; do
     namespace=$(echo $policy | cut -d'/' -f1)
     name=$(echo $policy | cut -d'/' -f2)
-    
+
     echo "Removing network policy: $name in $namespace"
     kubectl delete networkpolicy $name -n $namespace --ignore-not-found=true
   done
-  
+
   # Verify connectivity restoration
   echo "Testing service connectivity..."
   kubectl run connectivity-test --image=busybox --rm -it --restart=Never -- \
@@ -1810,45 +1810,45 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
       echo 'Testing Redis connectivity...'
       nc -zv redis-master.database.svc.cluster.local 6379
     "
-  
+
   echo "Network partition rollback completed"
 }
 
 # Resource Exhaustion Rollback
 ./scripts/rollback-resource-exhaustion.sh() {
   echo "Rolling back resource exhaustion..."
-  
+
   # Stop all stress testing pods
   kubectl delete pods -l chaos-type=resource-exhaustion --all-namespaces --force --grace-period=0
-  
+
   # Check for any remaining stress processes
   kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{" "}{.spec.containers[*].image}{"\n"}{end}' | \
     grep stress | while read namespace pod image; do
     echo "Found remaining stress pod: $namespace/$pod"
     kubectl delete pod $pod -n $namespace --force --grace-period=0
   done
-  
+
   # Verify system resources
   kubectl top nodes
   kubectl top pods --all-namespaces | grep -E "(CPU|MEMORY)" | head -20
-  
+
   echo "Resource exhaustion rollback completed"
 }
 
 # Dependency Failure Rollback
 ./scripts/rollback-dependency-failure.sh() {
   echo "Rolling back dependency failures..."
-  
+
   # Remove dependency blocking policies
   kubectl delete networkpolicies -l chaos-type=dependency-failure --all-namespaces --ignore-not-found=true
-  
+
   # Stop fault injection pods
   kubectl delete pods -l chaos-type=dependency-failure --all-namespaces --force --grace-period=0
-  
+
   # Restore service dependencies
   kubectl rollout restart deployment/pake-api -n pake-api
   kubectl rollout restart deployment/pake-ai-worker -n pake-ai
-  
+
   # Verify dependency connectivity
   echo "Testing external dependencies..."
   kubectl run dependency-test --image=busybox --rm -it --restart=Never -- \
@@ -1860,42 +1860,42 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
       echo 'Testing ChromaDB connectivity...'
       nc -zv chromadb.database.svc.cluster.local 8000
     "
-  
+
   echo "Dependency failure rollback completed"
 }
 
 # Region Failover Rollback
 ./scripts/rollback-region-failover.sh() {
   echo "Rolling back region failover..."
-  
+
   # Switch DNS back to primary region
   aws route53 change-resource-record-sets --hosted-zone-id Z123456789 --change-batch '{
     "Changes": [{
       "Action": "UPSERT",
       "ResourceRecordSet": {
         "Name": "api.pake-system.com",
-        "Type": "A", 
+        "Type": "A",
         "SetIdentifier": "primary-region",
         "TTL": 60,
         "ResourceRecords": [{"Value": "PRIMARY_LOAD_BALANCER_IP"}]
       }
     }]
   }'
-  
+
   # Scale down secondary region services
   kubectl scale deployment pake-api --replicas=1 -n pake-api --context=secondary
   kubectl scale deployment pake-ai-worker --replicas=1 -n pake-ai --context=secondary
-  
+
   # Scale up primary region services
   kubectl scale deployment pake-api --replicas=3 -n pake-api --context=primary
   kubectl scale deployment pake-ai-worker --replicas=2 -n pake-ai --context=primary
-  
+
   # Remove promotion labels
   kubectl label services -l chaos-promoted chaos-promoted- --all-namespaces --context=secondary
-  
+
   # Verify primary region health
   curl -f https://api.pake-system.com/health
-  
+
   echo "Region failover rollback completed"
 }
 ```
@@ -1906,7 +1906,7 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
 # Comprehensive system health check after chaos rollback
 ./scripts/post-chaos-health-check.sh() {
   echo "=== POST-CHAOS HEALTH VERIFICATION ==="
-  
+
   # Check all pods are running
   echo "1. Pod Status Check:"
   NON_RUNNING_PODS=$(kubectl get pods --all-namespaces | grep -v Running | grep -v Completed | grep -v Terminating | wc -l)
@@ -1916,17 +1916,17 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
     echo "⚠️  $((NON_RUNNING_PODS - 1)) pods not in running state:"
     kubectl get pods --all-namespaces | grep -v Running | grep -v Completed | grep -v Terminating
   fi
-  
+
   # Check service endpoints
   echo "2. Service Endpoint Check:"
   curl -f -s https://api.pake-system.com/health > /dev/null && echo "✅ API service healthy" || echo "❌ API service unhealthy"
   curl -f -s https://ai.pake-system.com/health > /dev/null && echo "✅ AI service healthy" || echo "❌ AI service unhealthy"
-  
+
   # Check database connectivity
   echo "3. Database Connectivity Check:"
   kubectl exec -it pake-postgresql-primary-0 -n database -- pg_isready -U postgres > /dev/null 2>&1 && echo "✅ PostgreSQL healthy" || echo "❌ PostgreSQL unhealthy"
   kubectl exec -it redis-master-0 -n database -- redis-cli ping > /dev/null 2>&1 && echo "✅ Redis healthy" || echo "❌ Redis unhealthy"
-  
+
   # Check replication status
   echo "4. Replication Status Check:"
   PG_LAG=$(kubectl exec -it pake-postgresql-replica-eu-0 -n database -- psql -U postgres -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()));" 2>/dev/null | tr -d ' ')
@@ -1935,23 +1935,23 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
   else
     echo "⚠️  PostgreSQL replication lag: ${PG_LAG}s (check required)"
   fi
-  
+
   # Check for chaos artifacts
   echo "5. Chaos Artifacts Check:"
   CHAOS_POLICIES=$(kubectl get networkpolicies --all-namespaces -l chaos-experiment --no-headers 2>/dev/null | wc -l)
   CHAOS_PODS=$(kubectl get pods --all-namespaces -l chaos-type --no-headers 2>/dev/null | wc -l)
-  
+
   if [ $CHAOS_POLICIES -eq 0 ] && [ $CHAOS_PODS -eq 0 ]; then
     echo "✅ No chaos artifacts remaining"
   else
     echo "⚠️  Cleanup required: $CHAOS_POLICIES policies, $CHAOS_PODS pods"
   fi
-  
+
   # Check monitoring
   echo "6. Monitoring Status Check:"
   curl -f -s http://prometheus.monitoring.svc.cluster.local:9090/-/healthy > /dev/null && echo "✅ Prometheus healthy" || echo "❌ Prometheus unhealthy"
   curl -f -s http://grafana.monitoring.svc.cluster.local:3000/api/health > /dev/null && echo "✅ Grafana healthy" || echo "❌ Grafana unhealthy"
-  
+
   echo "=== HEALTH CHECK COMPLETED ==="
 }
 ```
@@ -1964,7 +1964,7 @@ echo "📄 Report saved to: /tmp/chaos-rollback-report-$(date +%Y%m%d-%H%M%S).tx
 
 **Incident Detection Template**
 ```markdown
-🟡 **INVESTIGATING** - We are currently investigating reports of connectivity issues affecting our services. 
+🟡 **INVESTIGATING** - We are currently investigating reports of connectivity issues affecting our services.
 - **Detected**: [TIMESTAMP]
 - **Impact**: [BRIEF DESCRIPTION]
 - **Services Affected**: [LIST OF SERVICES]
@@ -2194,17 +2194,17 @@ For questions about this incident, please contact support@pake-system.com
 
 ### Incident Post-Mortem Report
 
-**Incident ID**: INC-2024-[NUMBER]  
-**Date**: [INCIDENT DATE]  
-**Prepared by**: [AUTHOR NAME]  
-**Reviewed by**: [REVIEWER NAMES]  
+**Incident ID**: INC-2024-[NUMBER]
+**Date**: [INCIDENT DATE]
+**Prepared by**: [AUTHOR NAME]
+**Reviewed by**: [REVIEWER NAMES]
 **Published**: [PUBLICATION DATE]
 
 ---
 
 #### Executive Summary
 
-**Incident Overview**  
+**Incident Overview**
 On [DATE] at [TIME] UTC, PAKE experienced [BRIEF DESCRIPTION] lasting [DURATION]. This resulted in [IMPACT DESCRIPTION] affecting approximately [NUMBER] users.
 
 **Key Metrics**
@@ -2235,12 +2235,12 @@ All times in UTC.
 
 #### Root Cause Analysis
 
-**Primary Root Cause**  
+**Primary Root Cause**
 [DETAILED TECHNICAL DESCRIPTION OF THE ROOT CAUSE]
 
 **Contributing Factors**
 1. [FACTOR 1 WITH EXPLANATION]
-2. [FACTOR 2 WITH EXPLANATION]  
+2. [FACTOR 2 WITH EXPLANATION]
 3. [FACTOR 3 WITH EXPLANATION]
 
 **Technical Details**
@@ -2292,7 +2292,7 @@ All times in UTC.
 - **Target RTO**: 15 minutes
 - **Actual RTO**: [ACTUAL TIME]
 - **RTO Met**: [YES/NO]
-- **Target RPO**: 5 minutes  
+- **Target RPO**: 5 minutes
 - **Actual RPO**: [ACTUAL TIME]
 - **RPO Met**: [YES/NO]
 
@@ -2480,14 +2480,14 @@ if [ "$LATEST_ATTESTATION" != "None" ]; then
   echo "Downloading: $LATEST_ATTESTATION"
   aws s3 cp "s3://$ATTESTATION_BUCKET/$LATEST_ATTESTATION" ./monthly-attestation.json.gz
   gunzip monthly-attestation.json.gz
-  
+
   # Download corresponding evidence bundle
   ATTESTATION_ID=$(basename $LATEST_ATTESTATION .json)
   EVIDENCE_KEY="dr-evidence/$MONTH/${ATTESTATION_ID}-evidence.json"
-  
+
   aws s3 cp "s3://$EVIDENCE_BUCKET/$EVIDENCE_KEY" ./monthly-evidence.json.gz
   gunzip monthly-evidence.json.gz
-  
+
   echo "Files downloaded:"
   ls -la monthly-attestation.json monthly-evidence.json
 else
@@ -2623,7 +2623,7 @@ for log_file in glob.glob('./incident-audit-logs/**/*.json', recursive=True):
         with open(log_file, 'r') as f:
             log_data = json.load(f)
             log_time = datetime.fromisoformat(log_data['timestamp'].replace('Z', '+00:00'))
-            
+
             if start_time <= log_time <= end_time:
                 incident_logs.append(log_data)
     except Exception as e:
@@ -2674,14 +2674,14 @@ token = signature_info['signature']
 try:
     header = jwt.get_unverified_header(token)
     payload = jwt.decode(token, options={"verify_signature": False})
-    
+
     print("Signature Algorithm:", signature_info['algorithm'])
     print("Signing Time:", signature_info['signing_timestamp'])
     print("Certificate Fingerprint:", signature_info['certificate_fingerprint'])
     print("Signed By:", signature_info['signed_by'])
     print("Token Header:", json.dumps(header, indent=2))
     print("Token Payload:", json.dumps(payload, indent=2))
-    
+
     # Extract certificate if available
     if 'x5c' in header:
         cert_data = base64.b64decode(header['x5c'][0])
@@ -2689,9 +2689,9 @@ try:
         print("Certificate Subject:", cert.subject)
         print("Certificate Valid From:", cert.not_valid_before)
         print("Certificate Valid Until:", cert.not_valid_after)
-    
+
     print("Signature verification: PASSED (structure valid)")
-    
+
 except Exception as e:
     print(f"ERROR: Signature verification failed: {e}")
     exit(1)
@@ -2724,30 +2724,30 @@ for log_file in log_files:
     try:
         with open(log_file, 'r') as f:
             log_data = json.load(f)
-        
+
         current_hash = log_data.get('log_hash')
         previous_log_hash = log_data.get('previous_log_hash')
         sequence_number = log_data.get('sequence_number', 0)
-        
+
         if previous_hash is not None and previous_log_hash != previous_hash:
             print(f"CHAIN BREAK at {log_file}")
             print(f"  Expected previous hash: {previous_hash}")
             print(f"  Actual previous hash: {previous_log_hash}")
             chain_valid = False
-        
+
         # Verify current log hash
         temp_data = log_data.copy()
         temp_data.pop('log_hash', None)
         calculated_hash = hashlib.sha256(json.dumps(temp_data, sort_keys=True).encode()).hexdigest()
-        
+
         if calculated_hash != current_hash:
             print(f"HASH MISMATCH at {log_file}")
             print(f"  Expected: {current_hash}")
             print(f"  Calculated: {calculated_hash}")
             chain_valid = False
-        
+
         previous_hash = current_hash
-        
+
     except Exception as e:
         print(f"ERROR processing {log_file}: {e}")
         chain_valid = False
@@ -2865,10 +2865,10 @@ for log_file in glob.glob('./search-results/**/*.json', recursive=True):
     try:
         with open(log_file, 'r') as f:
             log_data = json.load(f)
-            
+
         # Convert to searchable text
         log_text = json.dumps(log_data).lower()
-        
+
         if search_term in log_text:
             results.append({
                 'type': 'audit_log',
@@ -2886,9 +2886,9 @@ for attestation_file in glob.glob('./*attestation*.json'):
     try:
         with open(attestation_file, 'r') as f:
             attestation_data = json.load(f)
-            
+
         attestation_text = json.dumps(attestation_data).lower()
-        
+
         if search_term in attestation_text:
             results.append({
                 'type': 'compliance_attestation',
@@ -2961,20 +2961,20 @@ emergency_report = {
     'incident_id': incident_id,
     'incident_start_time': incident_start,
     'report_generation_time': datetime.now().isoformat(),
-    
+
     'compliance_status': {
         'latest_attestation': attestation['metadata'] if attestation else None,
         'incident_audit_coverage': len(incident_logs) > 0,
         'audit_log_integrity': 'verified' if incident_logs else 'unknown'
     },
-    
+
     'incident_compliance_impact': {
         'audit_events_captured': len(incident_logs),
         'operator_actions_logged': len([log for log in incident_logs if 'operator_identity' in log]),
         'sensitive_operations': len([log for log in incident_logs if log.get('severity') in ['high', 'critical']]),
         'compliance_frameworks_affected': attestation['metadata']['frameworks_covered'] if attestation else []
     },
-    
+
     'recommendations': [
         'Ensure incident is documented in post-mortem',
         'Verify audit log chain integrity',

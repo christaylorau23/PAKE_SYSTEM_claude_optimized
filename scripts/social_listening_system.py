@@ -12,7 +12,7 @@ import re
 import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 # NLP and sentiment analysis
 try:
@@ -45,9 +45,9 @@ class SocialMention:
     engagement_metrics: dict  # likes, shares, comments, etc.
     sentiment_score: float
     sentiment_label: str  # positive, negative, neutral
-    keywords: list[str]
-    hashtags: list[str]
-    mentions: list[str]
+    keywords: List[str]
+    hashtags: List[str]
+    mentions: List[str]
     language: str
     location: str = None
     influence_score: float = 0.0  # author's influence score
@@ -65,8 +65,8 @@ class TrendingTopic:
     growth_rate: float
     sentiment_distribution: dict[str, int]
     avg_engagement: float
-    top_keywords: list[str]
-    sample_posts: list[str]
+    top_keywords: List[str]
+    sample_posts: List[str]
     trend_score: float
     category: str = None
 
@@ -81,17 +81,17 @@ class InfluencerProfile:
     engagement_rate: float
     avg_likes: float
     avg_comments: float
-    content_categories: list[str]
+    content_categories: List[str]
     posting_frequency: float
     verified: bool
     influence_score: float
-    recent_topics: list[str]
+    recent_topics: List[str]
 
 
 class SocialListeningSystem:
     """Advanced social media listening and monitoring system"""
 
-    def __init__(self, db_path: str = "social_listening.db"):
+    def __init__(self) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class SocialListeningSystem:
         except BaseException:
             self.sentiment_analyzer = None
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize SQLite database for social listening"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -244,7 +244,7 @@ class SocialListeningSystem:
         conn.commit()
         conn.close()
 
-    def _initialize_clients(self):
+    def _initialize_clients(self) -> None:
         """Initialize social media API clients"""
         # Twitter client
         twitter_config = {
@@ -267,7 +267,7 @@ class SocialListeningSystem:
                 )
                 self.logger.info("Twitter listening client initialized")
             except Exception as e:
-                self.logger.error(f"Failed to initialize Twitter client: {e}")
+                self.logger.error("Failed to initialize Twitter client: %s", e)
 
         # Reddit client
         reddit_config = {
@@ -285,9 +285,9 @@ class SocialListeningSystem:
                 )
                 self.logger.info("Reddit listening client initialized")
             except Exception as e:
-                self.logger.error(f"Failed to initialize Reddit client: {e}")
+                self.logger.error("Failed to initialize Reddit client: %s", e)
 
-    async def add_monitoring_keywords(self, keywords: list[str], category: str = None):
+    async def add_monitoring_keywords(self) -> None:
         """Add keywords to monitoring list"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -305,15 +305,15 @@ class SocialListeningSystem:
         conn.commit()
         conn.close()
 
-        self.logger.info(f"Added {len(keywords)} keywords to monitoring")
+        self.logger.info("Added %s keywords to monitoring", len(keywords))
 
-    async def start_listening(self, duration_hours: int = 24):
+    async def start_listening(self) -> None:
         """Start social media listening for specified duration"""
-        self.logger.info(f"Starting social listening for {duration_hours} hours")
+        self.logger.info("Starting social listening for %s hours", duration_hours)
 
-        end_time = datetime.now() + timedelta(hours=duration_hours)
+        end_time = datetime.now(UTC) + timedelta(hours=duration_hours)
 
-        while datetime.now() < end_time:
+        while datetime.now(UTC) < end_time:
             try:
                 # Listen on all platforms
                 await asyncio.gather(
@@ -327,12 +327,12 @@ class SocialListeningSystem:
                 await asyncio.sleep(300)  # 5 minutes between cycles
 
             except Exception as e:
-                self.logger.error(f"Error in listening cycle: {e}")
+                self.logger.error("Error in listening cycle: %s", e)
                 await asyncio.sleep(60)  # Wait 1 minute before retrying
 
         self.logger.info("Social listening session completed")
 
-    async def _listen_twitter(self):
+    async def _listen_twitter(self) -> None:
         """Listen for mentions and keywords on Twitter"""
         if "twitter" not in self.clients:
             return
@@ -365,7 +365,7 @@ class SocialListeningSystem:
                 await asyncio.sleep(2)
 
         except Exception as e:
-            self.logger.error(f"Twitter listening error: {e}")
+            self.logger.error("Twitter listening error: %s", e)
 
     async def _process_twitter_mention(
         self,
@@ -419,10 +419,10 @@ class SocialListeningSystem:
             )
 
         except Exception as e:
-            self.logger.error(f"Error processing Twitter mention: {e}")
+            self.logger.error("Error processing Twitter mention: %s", e)
             return None
 
-    async def _listen_reddit(self):
+    async def _listen_reddit(self) -> None:
         """Listen for mentions and keywords on Reddit"""
         if "reddit" not in self.clients:
             return
@@ -456,12 +456,14 @@ class SocialListeningSystem:
 
                     except Exception as e:
                         self.logger.warning(
-                            f"Error searching subreddit {subreddit_name}: {e}",
+                            "Error searching subreddit %s: %s",
+                            subreddit_name,
+                            e,
                         )
                         continue
 
         except Exception as e:
-            self.logger.error(f"Reddit listening error: {e}")
+            self.logger.error("Reddit listening error: %s", e)
 
     async def _process_reddit_mention(
         self,
@@ -485,7 +487,7 @@ class SocialListeningSystem:
                 platform="reddit",
                 author=str(submission.author) if submission.author else "deleted",
                 content=content,
-                timestamp=datetime.fromtimestamp(submission.created_utc),
+                timestamp=datetime.fromtimestamp(submission.created_utc, tz=UTC),
                 url=submission.url,
                 engagement_metrics={
                     "score": submission.score,
@@ -503,7 +505,7 @@ class SocialListeningSystem:
             )
 
         except Exception as e:
-            self.logger.error(f"Error processing Reddit mention: {e}")
+            self.logger.error("Error processing Reddit mention: %s", e)
             return None
 
     def _analyze_sentiment(self, text: str) -> tuple[float, str]:
@@ -533,10 +535,10 @@ class SocialListeningSystem:
             return compound_score, label
 
         except Exception as e:
-            self.logger.warning(f"Sentiment analysis failed: {e}")
+            self.logger.warning("Sentiment analysis failed: %s", e)
             return 0.0, "neutral"
 
-    def _extract_keywords(self, text: str) -> list[str]:
+    def _extract_keywords(self, text: str) -> List[str]:
         """Extract relevant keywords from text"""
         try:
             # Simple keyword extraction
@@ -579,10 +581,10 @@ class SocialListeningSystem:
             return [word for word, count in word_freq.most_common(10)]
 
         except Exception as e:
-            self.logger.warning(f"Keyword extraction failed: {e}")
+            self.logger.warning("Keyword extraction failed: %s", e)
             return []
 
-    async def _store_mention(self, mention: SocialMention):
+    async def _store_mention(self) -> None:
         """Store mention in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -620,7 +622,7 @@ class SocialListeningSystem:
         conn.commit()
         conn.close()
 
-    async def _check_alert_conditions(self, mention: SocialMention):
+    async def _check_alert_conditions(self) -> None:
         """Check if mention triggers any alerts"""
         alerts = []
 
@@ -670,7 +672,7 @@ class SocialListeningSystem:
         for alert in alerts:
             await self._store_alert(alert, mention)
 
-    async def _store_alert(self, alert: dict, mention: SocialMention):
+    async def _store_alert(self) -> None:
         """Store alert in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -692,16 +694,18 @@ class SocialListeningSystem:
         conn.commit()
         conn.close()
 
-        self.logger.warning(f"ALERT [{alert['severity'].upper()}]: {alert['content']}")
+        self.logger.warning(
+            "ALERT [%s]: %s", alert["severity"].upper(), alert["content"]
+        )
 
-    async def _detect_trending_topics(self):
+    async def _detect_trending_topics(self) -> None:
         """Detect trending topics across platforms"""
         try:
             # Get recent mentions (last 24 hours)
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            yesterday = datetime.now() - timedelta(days=1)
+            yesterday = datetime.now(UTC) - timedelta(days=1)
             cursor.execute(
                 """
                 SELECT keywords, platform, sentiment_label, engagement_metrics
@@ -766,9 +770,9 @@ class SocialListeningSystem:
                     await self._store_trending_topic(topic)
 
         except Exception as e:
-            self.logger.error(f"Trend detection error: {e}")
+            self.logger.error("Trend detection error: %s", e)
 
-    async def _store_trending_topic(self, topic: TrendingTopic):
+    async def _store_trending_topic(self) -> None:
         """Store trending topic in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -791,14 +795,14 @@ class SocialListeningSystem:
                 json.dumps(topic.sample_posts),
                 topic.trend_score,
                 topic.category,
-                datetime.now().date(),
+                datetime.now(UTC).date(),
             ),
         )
 
         conn.commit()
         conn.close()
 
-    async def _monitor_influencers(self):
+    async def _monitor_influencers(self) -> None:
         """Monitor key influencers and their content"""
         # This would involve tracking specific accounts
         # Implementation would depend on having a list of influencers to monitor
@@ -808,7 +812,7 @@ class SocialListeningSystem:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        start_date = datetime.now() - timedelta(days=days)
+        start_date = datetime.now(UTC) - timedelta(days=days)
 
         query = """
             SELECT sentiment_label, COUNT(*), AVG(sentiment_score), platform
@@ -850,7 +854,7 @@ class SocialListeningSystem:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        start_date = datetime.now().date() - timedelta(days=days)
+        start_date = datetime.now(UTC).date() - timedelta(days=days)
 
         query = """
             SELECT * FROM trending_topics
@@ -959,7 +963,7 @@ class SocialListeningSystem:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        start_date = datetime.now() - timedelta(days=days)
+        start_date = datetime.now(UTC) - timedelta(days=days)
 
         # Total mentions
         cursor.execute(
@@ -1016,7 +1020,7 @@ class SocialListeningSystem:
 # Usage example
 
 
-async def demo_social_listening():
+async def demo_social_listening(self) -> None:
     """Demonstrate social listening functionality"""
 
     # Initialize listening system

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Service Mixins
-Provides reusable functionality components for services
+Provides reusable functionality components for services.
 """
 
 import asyncio
@@ -9,14 +9,14 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.utils.exceptions import ValidationException
 
 
 class LoggingMixin:
-    """Mixin for standardized logging functionality"""
+    """Mixin for standardized logging functionality."""
 
     def setup_logging(
         self,
@@ -24,7 +24,7 @@ class LoggingMixin:
         level: str = "INFO",
         format_string: str | None = None,
     ) -> logging.Logger:
-        """Setup standardized logging"""
+        """Setup standardized logging."""
         logger = logging.getLogger(logger_name)
         logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
@@ -48,7 +48,7 @@ class LoggingMixin:
         level: str = "INFO",
         **context,
     ) -> None:
-        """Log an operation with context"""
+        """Log an operation with context."""
         log_level = getattr(logging, level.upper(), logging.INFO)
         message = f"Operation: {operation}"
 
@@ -65,7 +65,7 @@ class LoggingMixin:
         operation: str,
         **context,
     ) -> None:
-        """Log error with detailed context"""
+        """Log error with detailed context."""
         error_info = {
             "operation": operation,
             "error_type": type(error).__name__,
@@ -73,33 +73,32 @@ class LoggingMixin:
             **context,
         }
 
-        logger.error(f"Error in {operation}: {error}", extra=error_info)
+        logger.error("Error in %s: %s", operation, error, extra=error_info)
 
 
 class CacheMixin:
-    """Mixin for caching functionality"""
+    """Mixin for caching functionality."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self) -> None:
         super().__init__(*args, **kwargs)
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[str, Dict[str, Any]] = {}
         self._cache_ttl: dict[str, datetime] = {}
 
     def _generate_cache_key(self, *args, **kwargs) -> str:
-        """Generate a cache key from arguments"""
+        """Generate a cache key from arguments."""
         key_data = {"args": args, "kwargs": sorted(kwargs.items())}
         key_string = json.dumps(key_data, sort_keys=True, default=str)
         return hashlib.sha256(key_string.encode()).hexdigest()
 
     def cache_get(self, key: str) -> Any | None:
-        """Get value from cache"""
+        """Get value from cache."""
         if key not in self._cache:
             return None
 
         # Check TTL
-        if key in self._cache_ttl:
-            if datetime.now() > self._cache_ttl[key]:
-                self.cache_delete(key)
-                return None
+        if key in self._cache_ttl and datetime.now(UTC) > self._cache_ttl[key]:
+            self.cache_delete(key)
+            return None
 
         return self._cache[key].get("value")
 
@@ -109,27 +108,27 @@ class CacheMixin:
         value: Any,
         ttl_seconds: int | None = None,
     ) -> None:
-        """Set value in cache"""
-        self._cache[key] = {"value": value, "timestamp": datetime.now()}
+        """Set value in cache."""
+        self._cache[key] = {"value": value, "timestamp": datetime.now(UTC)}
 
         if ttl_seconds:
-            self._cache_ttl[key] = datetime.now() + timedelta(seconds=ttl_seconds)
+            self._cache_ttl[key] = datetime.now(UTC) + timedelta(seconds=ttl_seconds)
 
     def cache_delete(self, key: str) -> bool:
-        """Delete value from cache"""
+        """Delete value from cache."""
         deleted = key in self._cache
         self._cache.pop(key, None)
         self._cache_ttl.pop(key, None)
         return deleted
 
     def cache_clear(self) -> None:
-        """Clear all cache entries"""
+        """Clear all cache entries."""
         self._cache.clear()
         self._cache_ttl.clear()
 
-    def cache_stats(self) -> dict[str, Any]:
-        """Get cache statistics"""
-        now = datetime.now()
+    def cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        now = datetime.now(UTC)
         expired_keys = [key for key, ttl in self._cache_ttl.items() if now > ttl]
 
         return {
@@ -141,15 +140,11 @@ class CacheMixin:
             ),
         }
 
-    def cached(
-        self,
-        ttl_seconds: int | None = None,
-        key_func: Callable | None = None,
-    ):
-        """Decorator for caching function results"""
+    def cached(self) -> None:
+        """Decorator for caching function results."""
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(self) -> None:
+            def wrapper(self) -> None:
                 if key_func:
                     cache_key = key_func(*args, **kwargs)
                 else:
@@ -173,11 +168,11 @@ class CacheMixin:
 
 
 class MetricsMixin:
-    """Mixin for metrics collection"""
+    """Mixin for metrics collection."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self) -> None:
         super().__init__(*args, **kwargs)
-        self._metrics: dict[str, dict[str, Any]] = {}
+        self._metrics: dict[str, Dict[str, Any]] = {}
 
     def record_metric(
         self,
@@ -186,19 +181,19 @@ class MetricsMixin:
         metric_type: str = "gauge",
         tags: dict[str, str] | None = None,
     ) -> None:
-        """Record a metric value"""
+        """Record a metric value."""
         if name not in self._metrics:
             self._metrics[name] = {
                 "type": metric_type,
                 "values": [],
                 "tags": tags or {},
-                "last_updated": datetime.now(),
+                "last_updated": datetime.now(UTC),
             }
 
         self._metrics[name]["values"].append(
-            {"value": value, "timestamp": datetime.now()},
+            {"value": value, "timestamp": datetime.now(UTC)},
         )
-        self._metrics[name]["last_updated"] = datetime.now()
+        self._metrics[name]["last_updated"] = datetime.now(UTC)
 
         # Keep only last 1000 values
         if len(self._metrics[name]["values"]) > 1000:
@@ -209,7 +204,7 @@ class MetricsMixin:
         name: str,
         tags: dict[str, str] | None = None,
     ) -> None:
-        """Increment a counter metric"""
+        """Increment a counter metric."""
         current = self.get_metric_value(name, default=0)
         self.record_metric(name, current + 1, "counter", tags)
 
@@ -219,18 +214,18 @@ class MetricsMixin:
         duration: float,
         tags: dict[str, str] | None = None,
     ) -> None:
-        """Record a timing metric"""
+        """Record a timing metric."""
         self.record_metric(name, duration, "timing", tags)
 
     def get_metric_value(self, name: str, default: Any = None) -> Any:
-        """Get the latest value of a metric"""
+        """Get the latest value of a metric."""
         if name not in self._metrics or not self._metrics[name]["values"]:
             return default
 
         return self._metrics[name]["values"][-1]["value"]
 
-    def get_metric_stats(self, name: str) -> dict[str, Any] | None:
-        """Get statistical summary of a metric"""
+    def get_metric_stats(self, name: str) -> Dict[str, Any] | None:
+        """Get statistical summary of a metric."""
         if name not in self._metrics or not self._metrics[name]["values"]:
             return None
 
@@ -246,15 +241,15 @@ class MetricsMixin:
             "tags": self._metrics[name]["tags"],
         }
 
-    def get_all_metrics(self) -> dict[str, dict[str, Any]]:
-        """Get all metrics with statistics"""
+    def get_all_metrics(self) -> dict[str, Dict[str, Any]]:
+        """Get all metrics with statistics."""
         return {name: self.get_metric_stats(name) for name in self._metrics}
 
-    def timed(self, metric_name: str, tags: dict[str, str] | None = None):
-        """Decorator for timing function execution"""
+    def timed(self) -> None:
+        """Decorator for timing function execution."""
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(self) -> None:
+            def wrapper(self) -> None:
                 start_time = time.time()
                 try:
                     return func(*args, **kwargs)
@@ -268,7 +263,7 @@ class MetricsMixin:
 
 
 class RetryMixin:
-    """Mixin for retry functionality"""
+    """Mixin for retry functionality."""
 
     def retry(
         self,
@@ -277,10 +272,10 @@ class RetryMixin:
         backoff_factor: float = 2.0,
         exceptions: tuple = (Exception,),
     ):
-        """Decorator for retrying function execution"""
+        """Decorator for retrying function execution."""
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(self) -> None:
+            def wrapper(self) -> None:
                 last_exception = None
 
                 for attempt in range(max_attempts):
@@ -310,7 +305,7 @@ class RetryMixin:
         exceptions: tuple = (Exception,),
         **kwargs,
     ) -> Any:
-        """Async retry with exponential backoff"""
+        """Async retry with exponential backoff."""
         last_exception = None
 
         for attempt in range(max_attempts):
@@ -330,15 +325,15 @@ class RetryMixin:
 
 
 class ValidationMixin:
-    """Mixin for data validation functionality"""
+    """Mixin for data validation functionality."""
 
     def validate_required_fields(
         self,
-        data: dict[str, Any],
-        required_fields: list[str],
+        data: Dict[str, Any],
+        required_fields: List[str],
         field_name: str = "data",
     ) -> None:
-        """Validate that required fields are present"""
+        """Validate that required fields are present."""
         missing_fields = [
             field
             for field in required_fields
@@ -346,18 +341,21 @@ class ValidationMixin:
         ]
 
         if missing_fields:
+            msg = (
+                f"Missing required fields in {field_name}: {', '.join(missing_fields)}"
+            )
             raise ValidationException(
-                f"Missing required fields in {field_name}: {', '.join(missing_fields)}",
+                msg,
                 context={"missing_fields": missing_fields, "field_name": field_name},
             )
 
     def validate_field_types(
         self,
-        data: dict[str, Any],
+        data: Dict[str, Any],
         field_types: dict[str, type],
         field_name: str = "data",
     ) -> None:
-        """Validate field types"""
+        """Validate field types."""
         type_errors = []
 
         for field, expected_type in field_types.items():
@@ -368,18 +366,19 @@ class ValidationMixin:
                     )
 
         if type_errors:
+            msg = f"Type validation failed for {field_name}: {'; '.join(type_errors)}"
             raise ValidationException(
-                f"Type validation failed for {field_name}: {'; '.join(type_errors)}",
+                msg,
                 context={"type_errors": type_errors, "field_name": field_name},
             )
 
     def validate_field_values(
         self,
-        data: dict[str, Any],
+        data: Dict[str, Any],
         field_validators: dict[str, Callable[[Any], bool]],
         field_name: str = "data",
     ) -> None:
-        """Validate field values using custom validators"""
+        """Validate field values using custom validators."""
         validation_errors = []
 
         for field, validator in field_validators.items():
@@ -391,8 +390,9 @@ class ValidationMixin:
                     validation_errors.append(f"{field} validation error: {str(e)}")
 
         if validation_errors:
+            msg = f"Value validation failed for {field_name}: {'; '.join(validation_errors)}"
             raise ValidationException(
-                f"Value validation failed for {field_name}: {'; '.join(validation_errors)}",
+                msg,
                 context={
                     "validation_errors": validation_errors,
                     "field_name": field_name,
@@ -401,11 +401,11 @@ class ValidationMixin:
 
     def validate_data(
         self,
-        data: dict[str, Any],
-        schema: dict[str, Any],
+        data: Dict[str, Any],
+        schema: Dict[str, Any],
         field_name: str = "data",
     ) -> None:
-        """Validate data against a schema"""
+        """Validate data against a schema."""
         # Validate required fields
         if "required" in schema:
             self.validate_required_fields(data, schema["required"], field_name)
@@ -421,15 +421,15 @@ class ValidationMixin:
 
 # Combined mixin for common service functionality
 class ServiceMixin(LoggingMixin, CacheMixin, MetricsMixin, RetryMixin, ValidationMixin):
-    """Combined mixin providing all common service functionality"""
+    """Combined mixin providing all common service functionality."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self) -> None:
         super().__init__(*args, **kwargs)
 
-    def get_service_info(self) -> dict[str, Any]:
-        """Get comprehensive service information"""
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get comprehensive service information."""
         return {
             "cache_stats": self.cache_stats(),
             "metrics": self.get_all_metrics(),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }

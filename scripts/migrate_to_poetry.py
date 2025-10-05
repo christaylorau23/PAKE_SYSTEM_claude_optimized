@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 
-def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
+def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
     """Run a shell command and return the result."""
     print(f"Running: {' '.join(cmd)}")
     return subprocess.run(cmd, check=check, capture_output=True, text=True)
@@ -169,7 +169,7 @@ def validate_installation() -> bool:
         return False
 
 
-def print_next_steps():
+def print_next_steps(self) -> None:
     """Print guidance for next steps."""
     print("\n" + "=" * 60)
     print("🎉 MIGRATION TO POETRY COMPLETE!")
@@ -221,7 +221,7 @@ def print_next_steps():
     print("    You can safely remove them after confirming Poetry works correctly.")
 
 
-def main():
+def main(self) -> None:
     """Main migration function."""
     print("🚀 PAKE System - Poetry Migration Script")
     print("=" * 50)

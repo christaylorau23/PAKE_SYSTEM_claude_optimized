@@ -345,6 +345,6 @@ python3 validate-signatures.py 2024-01-01 2024-01-31
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0  
+**Last Updated**: December 2024
+**Version**: 1.0
 **Maintainer**: PAKE System SRE Team

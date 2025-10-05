@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Prediction Service
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Provides high-performance prediction services with model ensemble capabilities,
 batch processing, streaming predictions, and comprehensive result management.
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class PredictionType(Enum):
-    """Types of predictions"""
+    """Types of predictions."""
 
     REAL_TIME = "real_time"
     BATCH = "batch"
@@ -32,7 +32,7 @@ class PredictionType(Enum):
 
 
 class PredictionStatus(Enum):
-    """Prediction request status"""
+    """Prediction request status."""
 
     PENDING = "pending"
     PROCESSING = "processing"
@@ -42,7 +42,7 @@ class PredictionStatus(Enum):
 
 
 class EnsembleMethod(Enum):
-    """Ensemble prediction methods"""
+    """Ensemble prediction methods."""
 
     VOTING = "voting"
     AVERAGING = "averaging"
@@ -53,11 +53,11 @@ class EnsembleMethod(Enum):
 
 @dataclass(frozen=True)
 class PredictionRequest:
-    """Immutable prediction request"""
+    """Immutable prediction request."""
 
     request_id: str
-    model_ids: list[str]
-    input_data: dict[str, Any]
+    model_ids: List[str]
+    input_data: Dict[str, Any]
     prediction_type: PredictionType = PredictionType.REAL_TIME
     ensemble_method: EnsembleMethod | None = None
     ensemble_weights: list[float] | None = None
@@ -66,10 +66,10 @@ class PredictionRequest:
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
             "model_ids": self.model_ids,
@@ -88,12 +88,12 @@ class PredictionRequest:
 
 @dataclass(frozen=True)
 class PredictionResult:
-    """Immutable prediction result"""
+    """Immutable prediction result."""
 
     request_id: str
-    model_ids: list[str]
-    predictions: dict[str, Any]
-    ensemble_prediction: dict[str, Any] | None = None
+    model_ids: List[str]
+    predictions: Dict[str, Any]
+    ensemble_prediction: Dict[str, Any] | None = None
     confidence_scores: dict[str, float] = field(default_factory=dict)
     processing_time_ms: float = 0.0
     status: PredictionStatus = PredictionStatus.COMPLETED
@@ -101,10 +101,10 @@ class PredictionResult:
     response_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
             "model_ids": self.model_ids,
@@ -121,11 +121,11 @@ class PredictionResult:
 
 @dataclass(frozen=True)
 class BatchPredictionRequest:
-    """Immutable batch prediction request"""
+    """Immutable batch prediction request."""
 
     batch_id: str
-    model_ids: list[str]
-    input_data_list: list[dict[str, Any]]
+    model_ids: List[str]
+    input_data_list: list[Dict[str, Any]]
     ensemble_method: EnsembleMethod | None = None
     ensemble_weights: list[float] | None = None
     batch_size: int = 100
@@ -134,10 +134,10 @@ class BatchPredictionRequest:
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "batch_id": self.batch_id,
             "model_ids": self.model_ids,
@@ -156,10 +156,10 @@ class BatchPredictionRequest:
 
 @dataclass(frozen=True)
 class BatchPredictionResult:
-    """Immutable batch prediction result"""
+    """Immutable batch prediction result."""
 
     batch_id: str
-    model_ids: list[str]
+    model_ids: List[str]
     results: list[PredictionResult]
     total_processing_time_ms: float = 0.0
     successful_predictions: int = 0
@@ -169,10 +169,10 @@ class BatchPredictionResult:
     completed_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "batch_id": self.batch_id,
             "model_ids": self.model_ids,
@@ -188,41 +188,41 @@ class BatchPredictionResult:
 
 
 class InferenceEngine(ABC):
-    """Abstract base class for inference engines"""
+    """Abstract base class for inference engines."""
 
     @abstractmethod
     async def predict(
         self,
         model_id: str,
-        input_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Run inference on a model"""
+        input_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Run inference on a model."""
 
     @abstractmethod
     async def batch_predict(
         self,
         model_id: str,
-        input_data_list: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Run batch inference on a model"""
+        input_data_list: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
+        """Run batch inference on a model."""
 
     @abstractmethod
-    def get_model_info(self, model_id: str) -> dict[str, Any]:
-        """Get model information"""
+    def get_model_info(self, model_id: str) -> Dict[str, Any]:
+        """Get model information."""
 
 
 class ModelServingInferenceEngine(InferenceEngine):
-    """Inference engine using model serving service"""
+    """Inference engine using model serving service."""
 
-    def __init__(self, model_serving_service):
+    def __init__(self) -> None:
         self.model_serving_service = model_serving_service
 
     async def predict(
         self,
         model_id: str,
-        input_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Run inference using model serving service"""
+        input_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Run inference using model serving service."""
         try:
             from .model_serving import InferenceRequest
 
@@ -236,15 +236,15 @@ class ModelServingInferenceEngine(InferenceEngine):
             return response.predictions
 
         except Exception as e:
-            logger.error(f"Inference failed for model {model_id}: {e}")
+            logger.error("Inference failed for model %s: %s", model_id, e)
             raise
 
     async def batch_predict(
         self,
         model_id: str,
-        input_data_list: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Run batch inference"""
+        input_data_list: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
+        """Run batch inference."""
         try:
             # Process in parallel
             tasks = [
@@ -256,7 +256,7 @@ class ModelServingInferenceEngine(InferenceEngine):
             predictions = []
             for result in results:
                 if isinstance(result, Exception):
-                    logger.error(f"Batch prediction error: {result}")
+                    logger.error("Batch prediction error: %s", result)
                     predictions.append({"error": str(result)})
                 else:
                     predictions.append(result)
@@ -264,11 +264,11 @@ class ModelServingInferenceEngine(InferenceEngine):
             return predictions
 
         except Exception as e:
-            logger.error(f"Batch inference failed for model {model_id}: {e}")
+            logger.error("Batch inference failed for model %s: %s", model_id, e)
             raise
 
-    def get_model_info(self, model_id: str) -> dict[str, Any]:
-        """Get model information"""
+    def get_model_info(self, model_id: str) -> Dict[str, Any]:
+        """Get model information."""
         try:
             health = self.model_serving_service.get_model_status(model_id)
             if health:
@@ -283,14 +283,14 @@ class ModelServingInferenceEngine(InferenceEngine):
             return {"model_id": model_id, "status": "not_found"}
 
         except Exception as e:
-            logger.error(f"Failed to get model info for {model_id}: {e}")
+            logger.error("Failed to get model info for %s: %s", model_id, e)
             return {"model_id": model_id, "status": "error", "error": str(e)}
 
 
 class EnsemblePredictor:
-    """Ensemble prediction coordinator"""
+    """Ensemble prediction coordinator."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ensemble_methods = {
             EnsembleMethod.VOTING: self._voting_ensemble,
             EnsembleMethod.AVERAGING: self._averaging_ensemble,
@@ -300,31 +300,32 @@ class EnsemblePredictor:
 
     async def predict_ensemble(
         self,
-        predictions: dict[str, dict[str, Any]],
+        predictions: dict[str, Dict[str, Any]],
         method: EnsembleMethod,
         weights: list[float] | None = None,
-    ) -> dict[str, Any]:
-        """Create ensemble prediction from individual model predictions"""
+    ) -> Dict[str, Any]:
+        """Create ensemble prediction from individual model predictions."""
         try:
             if method in self.ensemble_methods:
                 ensemble_func = self.ensemble_methods[method]
                 return await ensemble_func(predictions, weights)
-            raise ValueError(f"Unsupported ensemble method: {method}")
+            msg = f"Unsupported ensemble method: {method}"
+            raise ValueError(msg)
 
         except Exception as e:
-            logger.error(f"Ensemble prediction failed: {e}")
+            logger.error("Ensemble prediction failed: %s", e)
             raise
 
     async def _voting_ensemble(
         self,
-        predictions: dict[str, dict[str, Any]],
+        predictions: dict[str, Dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> dict[str, Any]:
-        """Voting ensemble method"""
+    ) -> Dict[str, Any]:
+        """Voting ensemble method."""
         try:
             # Extract prediction values
             pred_values = []
-            for model_id, pred in predictions.items():
+            for _model_id, pred in predictions.items():
                 if "predictions" in pred:
                     pred_values.append(pred["predictions"])
                 else:
@@ -355,19 +356,19 @@ class EnsemblePredictor:
             }
 
         except Exception as e:
-            logger.error(f"Voting ensemble failed: {e}")
+            logger.error("Voting ensemble failed: %s", e)
             raise
 
     async def _averaging_ensemble(
         self,
-        predictions: dict[str, dict[str, Any]],
+        predictions: dict[str, Dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> dict[str, Any]:
-        """Averaging ensemble method"""
+    ) -> Dict[str, Any]:
+        """Averaging ensemble method."""
         try:
             # Extract prediction values
             pred_values = []
-            for model_id, pred in predictions.items():
+            for _model_id, pred in predictions.items():
                 if "predictions" in pred:
                     pred_values.append(pred["predictions"])
                 else:
@@ -391,19 +392,19 @@ class EnsemblePredictor:
             }
 
         except Exception as e:
-            logger.error(f"Averaging ensemble failed: {e}")
+            logger.error("Averaging ensemble failed: %s", e)
             raise
 
     async def _weighted_averaging_ensemble(
         self,
-        predictions: dict[str, dict[str, Any]],
+        predictions: dict[str, Dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> dict[str, Any]:
-        """Weighted averaging ensemble method"""
+    ) -> Dict[str, Any]:
+        """Weighted averaging ensemble method."""
         try:
             # Extract prediction values
             pred_values = []
-            for model_id, pred in predictions.items():
+            for _model_id, pred in predictions.items():
                 if "predictions" in pred:
                     pred_values.append(pred["predictions"])
                 else:
@@ -436,22 +437,22 @@ class EnsemblePredictor:
             }
 
         except Exception as e:
-            logger.error(f"Weighted averaging ensemble failed: {e}")
+            logger.error("Weighted averaging ensemble failed: %s", e)
             raise
 
     async def _stacking_ensemble(
         self,
-        predictions: dict[str, dict[str, Any]],
+        predictions: dict[str, Dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> dict[str, Any]:
-        """Stacking ensemble method (simplified)"""
+    ) -> Dict[str, Any]:
+        """Stacking ensemble method (simplified)."""
         try:
             # For simplicity, use weighted averaging as stacking
             # In production, this would use a meta-learner
             return await self._weighted_averaging_ensemble(predictions, weights)
 
         except Exception as e:
-            logger.error(f"Stacking ensemble failed: {e}")
+            logger.error("Stacking ensemble failed: %s", e)
             raise
 
 
@@ -460,7 +461,7 @@ class PredictionService:
     Provides real-time, batch, and streaming predictions with comprehensive result management.
     """
 
-    def __init__(self, inference_engine: InferenceEngine):
+    def __init__(self) -> None:
         self.inference_engine = inference_engine
         self.ensemble_predictor = EnsemblePredictor()
 
@@ -486,13 +487,14 @@ class PredictionService:
         logger.info("Initialized Prediction Service")
 
     async def predict(self, request: PredictionRequest) -> PredictionResult:
-        """Process a prediction request"""
+        """Process a prediction request."""
         start_time = time.time()
 
         try:
             # Validate request
             if not self._validate_request(request):
-                raise ValueError("Invalid prediction request")
+                msg = "Invalid prediction request"
+                raise ValueError(msg)
 
             # Update statistics
             self.stats["total_requests"] += 1
@@ -510,7 +512,7 @@ class PredictionService:
                     model_predictions[model_id] = prediction
                 except Exception as e:
                     model_errors[model_id] = str(e)
-                    logger.error(f"Prediction failed for model {model_id}: {e}")
+                    logger.error("Prediction failed for model %s: %s", model_id, e)
 
             # Create ensemble prediction if requested
             ensemble_prediction = None
@@ -525,7 +527,7 @@ class PredictionService:
                     )
                     self.stats["ensemble_requests"] += 1
                 except Exception as e:
-                    logger.error(f"Ensemble prediction failed: {e}")
+                    logger.error("Ensemble prediction failed: %s", e)
 
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000
@@ -558,7 +560,7 @@ class PredictionService:
 
             self._update_average_processing_time(processing_time)
 
-            logger.info(f"Prediction completed for request {request.request_id}")
+            logger.info("Prediction completed for request %s", request.request_id)
             return result
 
         except Exception as e:
@@ -576,20 +578,21 @@ class PredictionService:
             self.prediction_results[request.request_id] = result
             self.stats["failed_requests"] += 1
 
-            logger.error(f"Prediction failed for request {request.request_id}: {e}")
+            logger.error("Prediction failed for request %s: %s", request.request_id, e)
             return result
 
     async def batch_predict(
         self,
         request: BatchPredictionRequest,
     ) -> BatchPredictionResult:
-        """Process a batch prediction request"""
+        """Process a batch prediction request."""
         start_time = time.time()
 
         try:
             # Validate request
             if not self._validate_batch_request(request):
-                raise ValueError("Invalid batch prediction request")
+                msg = "Invalid batch prediction request"
+                raise ValueError(msg)
 
             # Update statistics
             self.stats["batch_requests"] += 1
@@ -625,7 +628,7 @@ class PredictionService:
                 for result in batch_results:
                     if isinstance(result, Exception):
                         failed_predictions += 1
-                        logger.error(f"Batch prediction error: {result}")
+                        logger.error("Batch prediction error: %s", result)
                     else:
                         results.append(result)
                         if result.status == PredictionStatus.COMPLETED:
@@ -654,7 +657,7 @@ class PredictionService:
             # Store result
             self.batch_results[request.batch_id] = batch_result
 
-            logger.info(f"Batch prediction completed for batch {request.batch_id}")
+            logger.info("Batch prediction completed for batch %s", request.batch_id)
             return batch_result
 
         except Exception as e:
@@ -673,11 +676,13 @@ class PredictionService:
 
             self.batch_results[request.batch_id] = batch_result
 
-            logger.error(f"Batch prediction failed for batch {request.batch_id}: {e}")
+            logger.error(
+                "Batch prediction failed for batch %s: %s", request.batch_id, e
+            )
             return batch_result
 
     def _validate_request(self, request: PredictionRequest) -> bool:
-        """Validate prediction request"""
+        """Validate prediction request."""
         try:
             # Check required fields
             if (
@@ -698,11 +703,11 @@ class PredictionService:
             return True
 
         except Exception as e:
-            logger.error(f"Request validation error: {e}")
+            logger.error("Request validation error: %s", e)
             return False
 
     def _validate_batch_request(self, request: BatchPredictionRequest) -> bool:
-        """Validate batch prediction request"""
+        """Validate batch prediction request."""
         try:
             # Check required fields
             if (
@@ -717,17 +722,14 @@ class PredictionService:
                 return False
 
             # Check batch size
-            if request.batch_size <= 0:
-                return False
-
-            return True
+            return not request.batch_size <= 0
 
         except Exception as e:
-            logger.error(f"Batch request validation error: {e}")
+            logger.error("Batch request validation error: %s", e)
             return False
 
-    def _update_average_processing_time(self, processing_time: float):
-        """Update average processing time"""
+    def _update_average_processing_time(self) -> None:
+        """Update average processing time."""
         total_requests = (
             self.stats["successful_requests"] + self.stats["failed_requests"]
         )
@@ -738,27 +740,27 @@ class PredictionService:
             )
 
     def get_prediction_result(self, request_id: str) -> PredictionResult | None:
-        """Get prediction result by request ID"""
+        """Get prediction result by request ID."""
         return self.prediction_results.get(request_id)
 
     def get_batch_result(self, batch_id: str) -> BatchPredictionResult | None:
-        """Get batch prediction result by batch ID"""
+        """Get batch prediction result by batch ID."""
         return self.batch_results.get(batch_id)
 
     def list_recent_predictions(self, limit: int = 100) -> list[PredictionResult]:
-        """List recent predictions"""
+        """List recent predictions."""
         results = list(self.prediction_results.values())
         results.sort(key=lambda x: x.response_timestamp, reverse=True)
         return results[:limit]
 
     def list_recent_batches(self, limit: int = 50) -> list[BatchPredictionResult]:
-        """List recent batch predictions"""
+        """List recent batch predictions."""
         results = list(self.batch_results.values())
         results.sort(key=lambda x: x.completed_timestamp, reverse=True)
         return results[:limit]
 
-    def get_service_statistics(self) -> dict[str, Any]:
-        """Get service statistics"""
+    def get_service_statistics(self) -> Dict[str, Any]:
+        """Get service statistics."""
         stats = self.stats.copy()
 
         if stats["total_requests"] > 0:
@@ -776,8 +778,8 @@ class PredictionService:
 
         return stats
 
-    async def cleanup_old_results(self, max_age_hours: int = 24):
-        """Clean up old prediction results"""
+    async def cleanup_old_results(self) -> None:
+        """Clean up old prediction results."""
         try:
             cutoff_time = datetime.now(UTC).timestamp() - (max_age_hours * 3600)
 
@@ -802,45 +804,47 @@ class PredictionService:
                 del self.batch_results[batch_id]
 
             logger.info(
-                f"Cleaned up {len(old_results)} old results and {len(old_batches)} old batches",
+                "Cleaned up %s old results and %s old batches",
+                len(old_results),
+                len(old_batches),
             )
 
         except Exception as e:
-            logger.error(f"Failed to cleanup old results: {e}")
+            logger.error("Failed to cleanup old results: %s", e)
 
 
 # Production-ready factory functions
 def create_production_prediction_service(
     inference_engine: InferenceEngine,
 ) -> PredictionService:
-    """Create production-ready prediction service"""
+    """Create production-ready prediction service."""
     return PredictionService(inference_engine)
 
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         # Create mock inference engine
         class MockInferenceEngine(InferenceEngine):
             async def predict(
                 self,
                 model_id: str,
-                input_data: dict[str, Any],
-            ) -> dict[str, Any]:
+                input_data: Dict[str, Any],
+            ) -> Dict[str, Any]:
                 # Mock prediction
                 return {"prediction": np.random.random(), "confidence": 0.8}
 
             async def batch_predict(
                 self,
                 model_id: str,
-                input_data_list: list[dict[str, Any]],
-            ) -> list[dict[str, Any]]:
+                input_data_list: list[Dict[str, Any]],
+            ) -> list[Dict[str, Any]]:
                 return [
                     {"prediction": np.random.random(), "confidence": 0.8}
                     for _ in input_data_list
                 ]
 
-            def get_model_info(self, model_id: str) -> dict[str, Any]:
+            def get_model_info(self, model_id: str) -> Dict[str, Any]:
                 return {"model_id": model_id, "status": "ready"}
 
         # Create prediction service

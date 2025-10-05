@@ -6,7 +6,7 @@ Tests the automation system without encoding issues
 
 import json
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from watchdog.events import FileSystemEventHandler
@@ -16,12 +16,12 @@ from watchdog.observers import Observer
 class WorkingAutomationHandler(FileSystemEventHandler):
     """Working file handler for automation testing"""
 
-    def __init__(self, vault_path):
+    def __init__(self) -> None:
         self.vault_path = Path(vault_path)
         self.processed = set()
         print(f"Automation handler initialized for: {vault_path}")
 
-    def on_created(self, event):
+    def on_created(self) -> None:
         if event.is_directory:
             return
 
@@ -30,7 +30,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             print(f"DETECTED NEW FILE: {file_path.name}")
             self.process_file(file_path)
 
-    def on_modified(self, event):
+    def on_modified(self) -> None:
         if event.is_directory:
             return
 
@@ -39,7 +39,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             print(f"DETECTED MODIFIED FILE: {file_path.name}")
             self.process_file(file_path)
 
-    def process_file(self, file_path):
+    def process_file(self) -> None:
         """Process and analyze file"""
         try:
             print(f"PROCESSING: {file_path.name}")
@@ -81,7 +81,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             result = {
                 "file": file_path.name,
                 "full_path": str(file_path),
-                "processed_at": datetime.now().isoformat(),
+                "processed_at": datetime.now(UTC).isoformat(),
                 "analysis": {
                     "word_count": word_count,
                     "line_count": line_count,
@@ -117,7 +117,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
         except Exception as e:
             print(f"ERROR processing {file_path.name}: {e}")
 
-    def save_result(self, result):
+    def save_result(self) -> None:
         """Save processing result to file"""
         try:
             results_dir = Path("D:/Projects/PAKE_SYSTEM/data")
@@ -143,7 +143,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             print(f"ERROR saving result: {e}")
 
 
-def test_single_file():
+def test_single_file(self) -> None:
     """Test processing a single file"""
     print("TESTING SINGLE FILE PROCESSING...")
 
@@ -185,7 +185,7 @@ End of test file.
         handler.process_file(test_file)
 
 
-def start_monitoring():
+def start_monitoring(self) -> None:
     """Start continuous file monitoring"""
     vault_path = "D:/Knowledge-Vault"
 

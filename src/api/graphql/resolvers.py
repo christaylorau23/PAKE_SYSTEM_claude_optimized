@@ -1,11 +1,11 @@
-"""GraphQL Resolvers
+"""GraphQL Resolvers.
 
 Implements the business logic for GraphQL queries and mutations,
 connecting the GraphQL schema to the underlying services.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import strawberry
 
@@ -61,12 +61,12 @@ class Query:
                     created_at=entity_data.get("created_at"),
                     additional_data=str(entity_data.get("properties", {})),
                 ),
-                created_at=entity_data.get("created_at", datetime.utcnow()),
+                created_at=entity_data.get("created_at", datetime.now(UTC)),
                 confidence_score=entity_data.get("confidence_score", 1.0),
             )
 
         except Exception as e:
-            logger.error(f"Error fetching entity {id}: {e}")
+            logger.error("Error fetching entity %s: %s", id, e)
             return None
 
     @strawberry.field
@@ -108,7 +108,7 @@ class Query:
                             created_at=entity_data.get("created_at"),
                             additional_data=str(entity_data.get("properties", {})),
                         ),
-                        created_at=entity_data.get("created_at", datetime.utcnow()),
+                        created_at=entity_data.get("created_at", datetime.now(UTC)),
                         confidence_score=entity_data.get("confidence_score", 1.0),
                     ),
                 )
@@ -116,7 +116,7 @@ class Query:
             return entities
 
         except Exception as e:
-            logger.error(f"Error fetching entities: {e}")
+            logger.error("Error fetching entities: %s", e)
             return []
 
     @strawberry.field
@@ -151,7 +151,7 @@ class Query:
                     created_at=center_data.get("created_at"),
                     additional_data=str(center_data.get("properties", {})),
                 ),
-                created_at=center_data.get("created_at", datetime.utcnow()),
+                created_at=center_data.get("created_at", datetime.now(UTC)),
                 confidence_score=center_data.get("confidence_score", 1.0),
             )
 
@@ -166,7 +166,7 @@ class Query:
                         type=RelationshipType(rel_data["type"]),
                         properties=rel_data.get("properties", {}),
                         weight=rel_data.get("weight", 1.0),
-                        created_at=rel_data.get("created_at", datetime.utcnow()),
+                        created_at=rel_data.get("created_at", datetime.now(UTC)),
                     ),
                 )
 
@@ -188,7 +188,7 @@ class Query:
                             created_at=entity_data.get("created_at"),
                             additional_data=str(entity_data.get("properties", {})),
                         ),
-                        created_at=entity_data.get("created_at", datetime.utcnow()),
+                        created_at=entity_data.get("created_at", datetime.now(UTC)),
                         confidence_score=entity_data.get("confidence_score", 1.0),
                     ),
                 )
@@ -201,14 +201,14 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error fetching entity with relationships {id}: {e}")
+            logger.error("Error fetching entity with relationships %s: %s", id, e)
             return None
 
     @strawberry.field
     async def comprehensive_search(self, search_input: SearchInput) -> SearchResult:
         """Perform comprehensive search across semantic and graph data."""
         try:
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
 
             # Semantic search
             semantic_matches = []
@@ -272,12 +272,12 @@ class Query:
                                 created_at=entity_data.get("created_at"),
                                 additional_data=str(entity_data.get("properties", {})),
                             ),
-                            created_at=entity_data.get("created_at", datetime.utcnow()),
+                            created_at=entity_data.get("created_at", datetime.now(UTC)),
                             confidence_score=entity_data.get("confidence_score", 1.0),
                         ),
                     )
 
-            processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             return SearchResult(
                 query=search_input.query,
@@ -289,7 +289,7 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error in comprehensive search: {e}")
+            logger.error("Error in comprehensive search: %s", e)
             return SearchResult(
                 query=search_input.query,
                 semantic_matches=[],
@@ -327,12 +327,12 @@ class Query:
                 AnalyticsMetric(
                     name="neo4j_nodes",
                     value=float(neo4j_health.get("total_nodes", 0)),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(UTC),
                 ),
                 AnalyticsMetric(
                     name="semantic_documents",
                     value=float(semantic_health.get("documents_indexed", 0)),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(UTC),
                 ),
             ]
 
@@ -343,7 +343,7 @@ class Query:
                     else "degraded"
                 ),
                 version="10.2.0",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 components=components,
                 performance_metrics=performance_metrics,
                 capabilities=[
@@ -357,11 +357,11 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error getting system health: {e}")
+            logger.error("Error getting system health: %s", e)
             return SystemHealth(
                 status="error",
                 version="10.2.0",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 components={"system": "error"},
                 performance_metrics=[],
                 capabilities=[],
@@ -418,7 +418,7 @@ class Query:
                                 created_at=node_data.get("created_at"),
                                 additional_data=str(node_data.get("properties", {})),
                             ),
-                            created_at=node_data.get("created_at", datetime.utcnow()),
+                            created_at=node_data.get("created_at", datetime.now(UTC)),
                             confidence_score=node_data.get("confidence_score", 1.0),
                         ),
                     )
@@ -433,7 +433,7 @@ class Query:
                         type=RelationshipType(edge_data["type"]),
                         properties=edge_data.get("properties", {}),
                         weight=edge_data.get("weight", 1.0),
-                        created_at=edge_data.get("created_at", datetime.utcnow()),
+                        created_at=edge_data.get("created_at", datetime.now(UTC)),
                     ),
                 )
 
@@ -450,7 +450,7 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Error getting graph visualization: {e}")
+            logger.error("Error getting graph visualization: %s", e)
             return GraphVisualization(
                 nodes=[],
                 edges=[],
@@ -463,7 +463,7 @@ class Query:
     @strawberry.field
     async def analytics_insights(
         self,
-        metrics: list[str],
+        metrics: List[str],
         days_back: int | None = 30,
     ) -> list[InsightRecommendation]:
         """Generate AI-powered insights from analytics data."""
@@ -480,7 +480,7 @@ class Query:
                 # Create sample data (in production, this would come from actual data
                 # sources)
                 sample_data = []
-                base_date = datetime.now() - timedelta(days=days_back)
+                base_date = datetime.now(UTC) - timedelta(days=days_back)
 
                 for i in range(days_back):
                     # Generate realistic sample data with trends
@@ -515,7 +515,7 @@ class Query:
             return graphql_insights
 
         except Exception as e:
-            logger.error(f"Analytics insights generation failed: {e}")
+            logger.error("Analytics insights generation failed: %s", e)
             return []
 
     @strawberry.field
@@ -561,7 +561,7 @@ class Query:
             )
 
         except Exception as e:
-            logger.error(f"Correlation analysis failed: {e}")
+            logger.error("Correlation analysis failed: %s", e)
             return CorrelationAnalysis(
                 metric_a=metric_a,
                 metric_b=metric_b,
@@ -587,7 +587,7 @@ class Query:
 
             # Generate sample time series data
             sample_data = []
-            base_date = datetime.now() - timedelta(days=days_back)
+            base_date = datetime.now(UTC) - timedelta(days=days_back)
 
             for i in range(days_back):
                 # Generate data with a clear upward trend
@@ -620,14 +620,14 @@ class Query:
                     AnalyticsMetric(
                         name=f"{metric_name}_forecast",
                         value=result.forecast_values[i],
-                        timestamp=datetime.now() + timedelta(days=i + 1),
+                        timestamp=datetime.now(UTC) + timedelta(days=i + 1),
                     )
                     for i in range(len(result.forecast_values))
                 ],
             )
 
         except Exception as e:
-            logger.error(f"Trend analysis failed: {e}")
+            logger.error("Trend analysis failed: %s", e)
             return TrendAnalysis(
                 metric_name=metric_name,
                 trend_direction="unknown",
@@ -671,13 +671,14 @@ class Mutation:
                     created_at=entity_data.get("created_at"),
                     additional_data=str(entity_data.get("properties", {})),
                 ),
-                created_at=entity_data.get("created_at", datetime.utcnow()),
+                created_at=entity_data.get("created_at", datetime.now(UTC)),
                 confidence_score=entity_data.get("confidence_score", 1.0),
             )
 
         except Exception as e:
-            logger.error(f"Error creating entity: {e}")
-            raise Exception(f"Failed to create entity: {str(e)}")
+            logger.error("Error creating entity: %s", e)
+            msg = f"Failed to create entity: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.mutation
     async def create_relationship(
@@ -705,12 +706,13 @@ class Mutation:
                 type=RelationshipType(relationship_data["type"]),
                 properties=relationship_data.get("properties", {}),
                 weight=relationship_data.get("weight", 1.0),
-                created_at=relationship_data.get("created_at", datetime.utcnow()),
+                created_at=relationship_data.get("created_at", datetime.now(UTC)),
             )
 
         except Exception as e:
-            logger.error(f"Error creating relationship: {e}")
-            raise Exception(f"Failed to create relationship: {str(e)}")
+            logger.error("Error creating relationship: %s", e)
+            msg = f"Failed to create relationship: {str(e)}"
+            raise Exception(msg)
 
     @strawberry.mutation
     async def process_document_for_entities(
@@ -753,7 +755,7 @@ class Mutation:
                             created_at=entity_data.get("created_at"),
                             additional_data=str(entity_data.get("properties", {})),
                         ),
-                        created_at=entity_data.get("created_at", datetime.utcnow()),
+                        created_at=entity_data.get("created_at", datetime.now(UTC)),
                         confidence_score=entity_data.get("confidence_score", 1.0),
                     ),
                 )
@@ -761,5 +763,6 @@ class Mutation:
             return entities
 
         except Exception as e:
-            logger.error(f"Error processing document: {e}")
-            raise Exception(f"Failed to process document: {str(e)}")
+            logger.error("Error processing document: %s", e)
+            msg = f"Failed to process document: {str(e)}"
+            raise Exception(msg)

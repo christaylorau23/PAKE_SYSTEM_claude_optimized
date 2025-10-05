@@ -110,7 +110,7 @@ async def scan_dependencies(self) -> Dict[str, Any]:
     ruff check --select=S src/ tests/
     bandit -r src/
     safety check
-    
+
     # Container scanning
     trivy image pake-system:latest
 ```

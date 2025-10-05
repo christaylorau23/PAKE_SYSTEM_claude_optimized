@@ -1,5 +1,5 @@
 """FastAPI authentication dependencies
-Provides reusable dependency functions for protecting endpoints
+Provides reusable dependency functions for protecting endpoints.
 """
 
 from typing import Annotated
@@ -74,7 +74,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Use
 
 
 async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     """FastAPI dependency to get the current active (non-disabled) user.
 

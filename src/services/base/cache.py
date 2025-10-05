@@ -1,5 +1,5 @@
 """Enterprise Caching Service
-Task T046-T049 - Phase 18 Production System Integration
+Task T046-T049 - Phase 18 Production System Integration.
 
 Multi-level caching with Redis for enterprise performance optimization.
 Implements cache-aside, write-through, and cache prefetching patterns.
@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as redis
 from redis.asyncio import ConnectionPool
@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class CacheConfig:
-    """Cache configuration"""
+    """Cache configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
         self.max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "20"))
         self.retry_on_timeout = True
@@ -34,16 +34,16 @@ class CacheConfig:
 
 
 class CacheService:
-    """Enterprise Redis caching service"""
+    """Enterprise Redis caching service."""
 
-    def __init__(self, config: Optional[CacheConfig] = None):
+    def __init__(self) -> None:
         self.config = config or CacheConfig()
-        self.pool: Optional[ConnectionPool] = None
-        self.redis: Optional[redis.Redis] = None
+        self.pool: ConnectionPool | None = None
+        self.redis: redis.Redis | None = None
         self._initialized = False
 
-    async def initialize(self):
-        """Initialize Redis connection pool"""
+    async def initialize(self) -> None:
+        """Initialize Redis connection pool."""
         if self._initialized:
             return
 
@@ -64,11 +64,11 @@ class CacheService:
             logger.info("Redis cache service initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Redis cache: {e}")
+            logger.error("Failed to initialize Redis cache: %s", e)
             raise
 
-    async def close(self):
-        """Close Redis connections"""
+    async def close(self) -> None:
+        """Close Redis connections."""
         if self.redis:
             await self.redis.close()
         if self.pool:
@@ -76,8 +76,8 @@ class CacheService:
         self._initialized = False
         logger.info("Redis cache service closed")
 
-    async def get(self, key: str) -> Optional[Any]:
-        """Get value from cache"""
+    async def get(self, key: str) -> Any | None:
+        """Get value from cache."""
         if not self._initialized:
             await self.initialize()
 
@@ -93,19 +93,19 @@ class CacheService:
                 return value.decode("utf-8") if isinstance(value, bytes) else value
 
         except Exception as e:
-            logger.error(f"Cache get error for key {key}: {e}")
+            logger.error("Cache get error for key %s: %s", key, e)
             return None
 
     async def set(
-        self, key: str, value: Any, ttl: Optional[int] = None, nx: bool = False
+        self, key: str, value: Any, ttl: int | None = None, nx: bool = False
     ) -> bool:
-        """Set value in cache"""
+        """Set value in cache."""
         if not self._initialized:
             await self.initialize()
 
         try:
             # Serialize value
-            if isinstance(value, (dict, list)):
+            if isinstance(value, dict | list):
                 serialized_value = json.dumps(value)
             else:
                 serialized_value = str(value)
@@ -122,11 +122,11 @@ class CacheService:
             return result is not None
 
         except Exception as e:
-            logger.error(f"Cache set error for key {key}: {e}")
+            logger.error("Cache set error for key %s: %s", key, e)
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete key from cache"""
+        """Delete key from cache."""
         if not self._initialized:
             await self.initialize()
 
@@ -134,11 +134,11 @@ class CacheService:
             result = await self.redis.delete(key)
             return result > 0
         except Exception as e:
-            logger.error(f"Cache delete error for key {key}: {e}")
+            logger.error("Cache delete error for key %s: %s", key, e)
             return False
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in cache"""
+        """Check if key exists in cache."""
         if not self._initialized:
             await self.initialize()
 
@@ -146,23 +146,22 @@ class CacheService:
             result = await self.redis.exists(key)
             return result > 0
         except Exception as e:
-            logger.error(f"Cache exists error for key {key}: {e}")
+            logger.error("Cache exists error for key %s: %s", key, e)
             return False
 
     async def expire(self, key: str, ttl: int) -> bool:
-        """Set expiration for key"""
+        """Set expiration for key."""
         if not self._initialized:
             await self.initialize()
 
         try:
-            result = await self.redis.expire(key, ttl)
-            return result
+            return await self.redis.expire(key, ttl)
         except Exception as e:
-            logger.error(f"Cache expire error for key {key}: {e}")
+            logger.error("Cache expire error for key %s: %s", key, e)
             return False
 
-    async def get_many(self, keys: list[str]) -> dict[str, Any]:
-        """Get multiple values from cache"""
+    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+        """Get multiple values from cache."""
         if not self._initialized:
             await self.initialize()
 
@@ -182,13 +181,11 @@ class CacheService:
             return result
 
         except Exception as e:
-            logger.error(f"Cache get_many error: {e}")
+            logger.error("Cache get_many error: %s", e)
             return {}
 
-    async def set_many(
-        self, mapping: dict[str, Any], ttl: Optional[int] = None
-    ) -> bool:
-        """Set multiple values in cache"""
+    async def set_many(self, mapping: Dict[str, Any], ttl: int | None = None) -> bool:
+        """Set multiple values in cache."""
         if not self._initialized:
             await self.initialize()
 
@@ -196,7 +193,7 @@ class CacheService:
             # Serialize values
             serialized_mapping = {}
             for key, value in mapping.items():
-                if isinstance(value, (dict, list)):
+                if isinstance(value, dict | list):
                     serialized_mapping[key] = json.dumps(value)
                 else:
                     serialized_mapping[key] = str(value)
@@ -213,23 +210,22 @@ class CacheService:
             return True
 
         except Exception as e:
-            logger.error(f"Cache set_many error: {e}")
+            logger.error("Cache set_many error: %s", e)
             return False
 
-    async def increment(self, key: str, amount: int = 1) -> Optional[int]:
-        """Increment counter in cache"""
+    async def increment(self, key: str, amount: int = 1) -> int | None:
+        """Increment counter in cache."""
         if not self._initialized:
             await self.initialize()
 
         try:
-            result = await self.redis.incrby(key, amount)
-            return result
+            return await self.redis.incrby(key, amount)
         except Exception as e:
-            logger.error(f"Cache increment error for key {key}: {e}")
+            logger.error("Cache increment error for key %s: %s", key, e)
             return None
 
-    async def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics"""
+    async def get_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
         if not self._initialized:
             await self.initialize()
 
@@ -244,20 +240,20 @@ class CacheService:
                 "uptime_in_seconds": info.get("uptime_in_seconds", 0),
             }
         except Exception as e:
-            logger.error(f"Cache stats error: {e}")
+            logger.error("Cache stats error: %s", e)
             return {}
 
 
 class CachePatterns:
-    """Enterprise caching patterns"""
+    """Enterprise caching patterns."""
 
-    def __init__(self, cache_service: CacheService):
+    def __init__(self) -> None:
         self.cache = cache_service
 
     async def cache_aside(
-        self, key: str, fetch_func, ttl: Optional[int] = None, *args, **kwargs
+        self, key: str, fetch_func, ttl: int | None = None, *args, **kwargs
     ) -> Any:
-        """Cache-aside pattern: Check cache first, fetch from source if miss
+        """Cache-aside pattern: Check cache first, fetch from source if miss.
 
         Args:
             key: Cache key
@@ -283,7 +279,7 @@ class CachePatterns:
             return value
 
         except Exception as e:
-            logger.error(f"Cache-aside fetch error for key {key}: {e}")
+            logger.error("Cache-aside fetch error for key %s: %s", key, e)
             raise
 
     async def write_through(
@@ -291,11 +287,11 @@ class CachePatterns:
         key: str,
         value: Any,
         write_func,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         *args,
         **kwargs,
     ) -> Any:
-        """Write-through pattern: Write to cache and source simultaneously
+        """Write-through pattern: Write to cache and source simultaneously.
 
         Args:
             key: Cache key
@@ -318,13 +314,11 @@ class CachePatterns:
             return result
 
         except Exception as e:
-            logger.error(f"Write-through error for key {key}: {e}")
+            logger.error("Write-through error for key %s: %s", key, e)
             raise
 
-    async def cache_prefetch(
-        self, keys_and_fetch_funcs: dict[str, Any], ttl: Optional[int] = None
-    ):
-        """Cache prefetch pattern: Proactively load data into cache
+    async def cache_prefetch(self) -> None:
+        """Cache prefetch pattern: Proactively load data into cache.
 
         Args:
             keys_and_fetch_funcs: Dict mapping cache keys to fetch functions
@@ -339,10 +333,10 @@ class CachePatterns:
         try:
             await asyncio.gather(*tasks)
             logger.info(
-                f"Cache prefetch completed for {len(keys_and_fetch_funcs)} keys"
+                "Cache prefetch completed for %s keys", len(keys_and_fetch_funcs)
             )
         except Exception as e:
-            logger.error(f"Cache prefetch error: {e}")
+            logger.error("Cache prefetch error: %s", e)
 
 
 # Global cache service instance

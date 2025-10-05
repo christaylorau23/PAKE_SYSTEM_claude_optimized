@@ -2,7 +2,7 @@
 
 ## ✅ **Problem Solved**
 
-The issue was that the original PAKE servers were **HTTP/REST APIs**, but Gemini CLI expects **proper MCP servers** using the **JSON-RPC 2.0 protocol**. 
+The issue was that the original PAKE servers were **HTTP/REST APIs**, but Gemini CLI expects **proper MCP servers** using the **JSON-RPC 2.0 protocol**.
 
 ## 🔧 **What Was Fixed**
 
@@ -33,7 +33,7 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", ...}' | python pake_mc
 
 # Logs:
 2025-08-23 15:56:54,973 - pake-mcp-server - INFO - Starting PAKE MCP Server
-2025-08-23 15:56:54,973 - pake-mcp-server - INFO - Vault path: D:\Knowledge-Vault  
+2025-08-23 15:56:54,973 - pake-mcp-server - INFO - Vault path: D:\Knowledge-Vault
 2025-08-23 15:56:54,983 - pake-mcp-server - INFO - Total notes: 14
 ```
 
@@ -62,7 +62,7 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", ...}' | python pake_mc
 
 ### Available MCP Tools
 1. **`search_notes`** - Search Knowledge Vault with filters
-2. **`get_note_by_id`** - Retrieve specific notes by PAKE ID  
+2. **`get_note_by_id`** - Retrieve specific notes by PAKE ID
 3. **`notes_from_schema`** - Create new structured notes
 
 ## 🎯 **Next Steps**
@@ -82,7 +82,7 @@ Then run:
 @pake-obsidian Create a new project note about MCP integration
 ```
 
-### 3. **Verify Integration**  
+### 3. **Verify Integration**
 The MCP server should now:
 - ✅ Connect without timeout errors
 - ✅ List available tools

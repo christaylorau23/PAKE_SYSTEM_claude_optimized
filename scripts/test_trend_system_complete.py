@@ -7,7 +7,7 @@ Comprehensive test of the live trend data feed system with all components.
 import asyncio
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from services.trends.apis.api_health_monitor import APIHealthMonitor
 from services.trends.apis.rate_limit_controller import RateLimitController
@@ -24,9 +24,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 async def create_demo_trends() -> list[TrendSignal]:
     """Create realistic demo trend data"""
 
-    base_time = datetime.now()
+    base_time = datetime.now(UTC)
 
-    trends = [
+    return [
         # AI/Tech trends
         TrendSignal(
             platform=Platform.GOOGLE_TRENDS,
@@ -116,10 +116,8 @@ async def create_demo_trends() -> list[TrendSignal]:
         ),
     ]
 
-    return trends
 
-
-async def test_complete_system():
+async def test_complete_system(self) -> None:
     """Test the complete trend intelligence system"""
 
     print("🚀 PAKE TREND INTELLIGENCE SYSTEM - COMPLETE TEST")
@@ -141,12 +139,12 @@ async def test_complete_system():
     demo_trends = await create_demo_trends()
     print(
         f"✅ Created {len(demo_trends)} demo trends across {
-            len(set(t.platform for t in demo_trends))
+            len({t.platform for t in demo_trends})
         } platforms",
     )
 
     # Performance timing
-    start_time = datetime.now()
+    start_time = datetime.now(UTC)
 
     # Step 1: Trend Analysis
     print("\n🔍 Step 1: Analyzing Trends...")
@@ -244,7 +242,7 @@ async def test_complete_system():
     # Step 5: Performance Metrics
     print("\n⚡ Step 5: Performance Validation...")
 
-    end_time = datetime.now()
+    end_time = datetime.now(UTC)
     total_time = (end_time - start_time).total_seconds()
 
     print(f"✅ Total Processing Time: {total_time:.3f} seconds")
@@ -334,7 +332,7 @@ async def test_complete_system():
     return True
 
 
-async def main():
+async def main(self) -> None:
     """Main execution function"""
     try:
         success = await test_complete_system()

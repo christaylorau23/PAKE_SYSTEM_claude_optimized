@@ -1,4 +1,4 @@
-"""Predictive Analytics Service
+"""Predictive Analytics Service.
 
 Provides time series forecasting, trend prediction, and pattern analysis
 using statistical models and machine learning algorithms.
@@ -6,7 +6,7 @@ using statistical models and machine learning algorithms.
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import numpy as np
@@ -44,7 +44,7 @@ class TimeSeriesData:
     timestamps: list[datetime]
     values: list[float]
     metric_name: str
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
 
 
 @dataclass
@@ -62,7 +62,7 @@ class PredictiveAnalyticsService:
     trend analysis, and anomaly detection.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the predictive analytics service."""
         self.models_cache = {}
         self.scaler = StandardScaler()
@@ -95,8 +95,9 @@ class PredictiveAnalyticsService:
         """
         try:
             if not time_series.values or len(time_series.values) < 10:
+                msg = "Insufficient data for forecasting (minimum 10 points required)"
                 raise ValueError(
-                    "Insufficient data for forecasting (minimum 10 points required)",
+                    msg,
                 )
 
             horizon = forecast_horizon or self.config["forecast_horizon"]
@@ -125,7 +126,8 @@ class PredictiveAnalyticsService:
             elif model_type == "ml":
                 result = await self._forecast_ml(df, horizon)
             else:
-                raise ValueError(f"Unknown model type: {model_type}")
+                msg = f"Unknown model type: {model_type}"
+                raise ValueError(msg)
 
             # Generate future timestamps
             last_timestamp = time_series.timestamps[-1]
@@ -153,7 +155,7 @@ class PredictiveAnalyticsService:
             )
 
         except Exception as e:
-            logger.error(f"Error in time series forecasting: {e}")
+            logger.error("Error in time series forecasting: %s", e)
             # Return empty result on error
             return PredictionResult(
                 metric_name=time_series.metric_name,
@@ -197,10 +199,10 @@ class PredictiveAnalyticsService:
             return "ml"  # Default to ML for complex patterns
 
         except Exception as e:
-            logger.warning(f"Model selection failed, using default: {e}")
+            logger.warning("Model selection failed, using default: %s", e)
             return "exponential"
 
-    async def _forecast_arima(self, series: pd.Series, horizon: int) -> dict[str, Any]:
+    async def _forecast_arima(self, series: pd.Series, horizon: int) -> Dict[str, Any]:
         """Forecast using ARIMA model."""
         try:
             # Simple ARIMA model selection (1,1,1) for demonstration
@@ -231,7 +233,7 @@ class PredictiveAnalyticsService:
             }
 
         except Exception as e:
-            logger.error(f"ARIMA forecasting failed: {e}")
+            logger.error("ARIMA forecasting failed: %s", e)
             # Fallback to simple linear trend
             return await self._forecast_linear_trend(series, horizon)
 
@@ -239,7 +241,7 @@ class PredictiveAnalyticsService:
         self,
         series: pd.Series,
         horizon: int,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Forecast using Exponential Smoothing."""
         try:
             # Try Holt-Winters if we have enough data
@@ -283,10 +285,10 @@ class PredictiveAnalyticsService:
             }
 
         except Exception as e:
-            logger.error(f"Exponential smoothing failed: {e}")
+            logger.error("Exponential smoothing failed: %s", e)
             return await self._forecast_linear_trend(series, horizon)
 
-    async def _forecast_ml(self, df: pd.DataFrame, horizon: int) -> dict[str, Any]:
+    async def _forecast_ml(self, df: pd.DataFrame, horizon: int) -> Dict[str, Any]:
         """Forecast using machine learning (Random Forest)."""
         try:
             # Create features for ML model
@@ -342,7 +344,7 @@ class PredictiveAnalyticsService:
             }
 
         except Exception as e:
-            logger.error(f"ML forecasting failed: {e}")
+            logger.error("ML forecasting failed: %s", e)
             return await self._forecast_linear_trend(df["value"], horizon)
 
     def _create_ml_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -400,7 +402,7 @@ class PredictiveAnalyticsService:
                 features.append(0.0)
 
         # Time features (simplified - would need actual timestamp)
-        now = datetime.now()
+        now = datetime.now(UTC)
         future_time = now + timedelta(days=step)
         features.extend(
             [
@@ -417,7 +419,7 @@ class PredictiveAnalyticsService:
         self,
         series: pd.Series,
         horizon: int,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Simple linear trend forecast as fallback."""
         try:
             x = np.arange(len(series))
@@ -449,7 +451,7 @@ class PredictiveAnalyticsService:
             }
 
         except Exception as e:
-            logger.error(f"Linear trend forecast failed: {e}")
+            logger.error("Linear trend forecast failed: %s", e)
             # Ultimate fallback - repeat last value
             last_value = series.iloc[-1] if not series.empty else 0.0
             return {
@@ -472,10 +474,7 @@ class PredictiveAnalyticsService:
 
             # Normalize slope by mean value to get relative strength
             mean_value = np.mean(y)
-            if mean_value != 0:
-                relative_slope = abs(slope) / mean_value
-            else:
-                relative_slope = 0
+            relative_slope = abs(slope) / mean_value if mean_value != 0 else 0
 
             # Determine direction
             if slope > 0.01:
@@ -491,7 +490,7 @@ class PredictiveAnalyticsService:
             return direction, strength
 
         except Exception as e:
-            logger.error(f"Trend analysis failed: {e}")
+            logger.error("Trend analysis failed: %s", e)
             return "unknown", 0.0
 
     async def detect_anomalies(self, time_series: TimeSeriesData) -> AnomalyResult:
@@ -525,7 +524,7 @@ class PredictiveAnalyticsService:
             )
 
         except Exception as e:
-            logger.error(f"Anomaly detection failed: {e}")
+            logger.error("Anomaly detection failed: %s", e)
             return AnomalyResult(
                 anomaly_points=[],
                 anomaly_scores=[],
@@ -535,9 +534,9 @@ class PredictiveAnalyticsService:
 
     async def generate_forecast(
         self,
-        metrics: list[str],
+        metrics: List[str],
         forecast_horizon: str = "7d",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Generate forecasts for multiple metrics.
 
         Args:
@@ -599,7 +598,7 @@ class PredictiveAnalyticsService:
                     )
 
                 except Exception as e:
-                    logger.warning(f"Forecast failed for {metric}: {e}")
+                    logger.warning("Forecast failed for %s: %s", metric, e)
                     forecasts[metric] = []
                     confidence_intervals[metric] = []
                     model_accuracy[metric] = 0.0
@@ -612,13 +611,13 @@ class PredictiveAnalyticsService:
                     "forecast_horizon": forecast_horizon,
                     "horizon_days": horizon_days,
                     "metrics_forecasted": metrics,
-                    "generated_at": datetime.now().isoformat(),
+                    "generated_at": datetime.now(UTC).isoformat(),
                     "model_type": "arima",
                 },
             }
 
         except Exception as e:
-            logger.error(f"Forecast generation failed: {e}")
+            logger.error("Forecast generation failed: %s", e)
             return {
                 "forecasts": {},
                 "confidence_intervals": {},
@@ -635,7 +634,7 @@ class PredictiveAnalyticsService:
             # Generate 30 days of daily data
             n_days = 30
             timestamps = [
-                datetime.now() - timedelta(days=i) for i in range(n_days, 0, -1)
+                datetime.now(UTC) - timedelta(days=i) for i in range(n_days, 0, -1)
             ]
 
             # Base values for different metrics
@@ -690,15 +689,15 @@ class PredictiveAnalyticsService:
                     "date_range": (
                         f"{timestamps[0].date()} to {timestamps[-1].date()}"
                     ),
-                    "generated_at": datetime.now().isoformat(),
+                    "generated_at": datetime.now(UTC).isoformat(),
                 },
             )
 
         except Exception as e:
-            logger.error(f"Mock time series generation failed: {e}")
+            logger.error("Mock time series generation failed: %s", e)
             # Return minimal data
             return TimeSeriesData(
-                timestamps=[datetime.now()],
+                timestamps=[datetime.now(UTC)],
                 values=[100.0],
                 metric_name=metric_name,
                 metadata={},
@@ -717,13 +716,13 @@ class PredictiveAnalyticsService:
         except Exception:
             return 7
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check the health of the predictive analytics service."""
         try:
             # Test basic functionality
             test_data = TimeSeriesData(
                 timestamps=[
-                    datetime.now() - timedelta(days=i) for i in range(20, 0, -1)
+                    datetime.now(UTC) - timedelta(days=i) for i in range(20, 0, -1)
                 ],
                 values=[10 + i + np.random.normal(0, 1) for i in range(20)],
                 metric_name="test_metric",

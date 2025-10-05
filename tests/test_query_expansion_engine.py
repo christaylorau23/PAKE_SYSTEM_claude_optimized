@@ -9,6 +9,7 @@ import time
 
 import pytest
 import pytest_asyncio
+
 from services.ai.query_expansion_engine import (
     ContextualExpander,
     ExpandedQuery,
@@ -26,14 +27,14 @@ from services.ai.query_expansion_engine import (
 )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestQueryExpansionEngine:
     """
     Test suite for the main Query Expansion Engine functionality.
     """
 
     @pytest_asyncio.fixture
-    async def expansion_engine(self):
+    async def expansion_engine(self) -> None:
         """Create query expansion engine for testing"""
         config = ExpansionConfig(
             enable_synonym_expansion=True,
@@ -45,8 +46,8 @@ class TestQueryExpansionEngine:
         )
         return QueryExpansionEngine(config)
 
-    @pytest.fixture()
-    def sample_queries(self):
+    @pytest.fixture
+    def sample_queries(self) -> None:
         """Sample queries for testing"""
         return {
             "factual": "what is machine learning",
@@ -63,8 +64,7 @@ class TestQueryExpansionEngine:
 
     async def test_should_initialize_query_expansion_engine_with_configuration(
         self,
-        expansion_engine,
-    ):
+    ) -> None:
         """
         Test: Should initialize query expansion engine with proper
         configuration and component setup.
@@ -79,10 +79,7 @@ class TestQueryExpansionEngine:
         assert expansion_engine.stats["total_expansions"] == 0
         assert expansion_engine.stats["cache_hits"] == 0
 
-    async def test_should_expand_simple_query_with_relevant_terms(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_expand_simple_query_with_relevant_terms(self) -> None:
         """
         Test: Should expand simple query with relevant terms
         and proper confidence scoring.
@@ -120,11 +117,7 @@ class TestQueryExpansionEngine:
         )
         assert ml_related
 
-    async def test_should_handle_different_query_types_appropriately(
-        self,
-        expansion_engine,
-        sample_queries,
-    ):
+    async def test_should_handle_different_query_types_appropriately(self) -> None:
         """
         Test: Should handle different query types (factual, procedural, comparative)
         with appropriate expansion strategies.
@@ -176,10 +169,7 @@ class TestQueryExpansionEngine:
                     QueryType.BROAD,
                 ]
 
-    async def test_should_apply_different_expansion_strategies_correctly(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_apply_different_expansion_strategies_correctly(self) -> None:
         """
         Test: Should apply different expansion strategies (synonym, semantic, contextual)
         with measurable differences in results.
@@ -216,8 +206,7 @@ class TestQueryExpansionEngine:
 
     async def test_should_apply_different_expansion_scopes_with_varying_term_counts(
         self,
-        expansion_engine,
-    ):
+    ) -> None:
         """
         Test: Should apply different expansion scopes (conservative, moderate, aggressive)
         with appropriate term count variations.
@@ -262,10 +251,7 @@ class TestQueryExpansionEngine:
     # Caching and Performance Tests
     # ========================================================================
 
-    async def test_should_utilize_expansion_caching_for_repeated_queries(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_utilize_expansion_caching_for_repeated_queries(self) -> None:
         """
         Test: Should cache expansion results and utilize cache for
         repeated queries with improved performance.
@@ -295,10 +281,7 @@ class TestQueryExpansionEngine:
             # Note: Timing comparison removed due to precision issues with very fast
             # operations
 
-    async def test_should_handle_large_volume_query_expansion_efficiently(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_handle_large_volume_query_expansion_efficiently(self) -> None:
         """
         Test: Should efficiently handle expansion of multiple queries
         with reasonable performance and memory usage.
@@ -335,10 +318,7 @@ class TestQueryExpansionEngine:
         stats = expansion_engine.get_expansion_statistics()
         assert stats["total_expansions"] >= len(test_queries)
 
-    async def test_should_handle_empty_and_invalid_queries_gracefully(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_handle_empty_and_invalid_queries_gracefully(self) -> None:
         """
         Test: Should handle empty, invalid, or malformed queries
         without errors and with appropriate fallback behavior.
@@ -367,10 +347,7 @@ class TestQueryExpansionEngine:
             assert result.expansion_time_ms >= 0
             assert isinstance(result.analysis, QueryAnalysis)
 
-    async def test_should_handle_concurrent_expansion_operations_safely(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_handle_concurrent_expansion_operations_safely(self) -> None:
         """
         Test: Should handle concurrent query expansion operations
         without data corruption or race conditions.
@@ -385,7 +362,7 @@ class TestQueryExpansionEngine:
         ]
 
         # Define concurrent expansion operations
-        async def expand_operation(query):
+        async def expand_operation(self) -> None:
             return await expansion_engine.expand_query(query)
 
         # Run concurrent operations
@@ -405,10 +382,7 @@ class TestQueryExpansionEngine:
         stats = expansion_engine.get_expansion_statistics()
         assert stats["total_expansions"] >= len(concurrent_queries)
 
-    async def test_should_clear_cache_and_reset_statistics_properly(
-        self,
-        expansion_engine,
-    ):
+    async def test_should_clear_cache_and_reset_statistics_properly(self) -> None:
         """
         Test: Should properly clear expansion cache and maintain
         statistics without leaving residual data.
@@ -434,40 +408,37 @@ class TestQueryExpansionEngine:
         assert stats_after["cached_expansions"] == 0
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestExpansionComponents:
     """
     Test suite for individual expansion components.
     """
 
     @pytest_asyncio.fixture
-    def query_analyzer(self):
+    def query_analyzer(self) -> None:
         """Create query analyzer for testing"""
         config = ExpansionConfig()
         return SimpleQueryAnalyzer(config)
 
     @pytest_asyncio.fixture
-    def synonym_expander(self):
+    def synonym_expander(self) -> None:
         """Create synonym expander for testing"""
         config = ExpansionConfig()
         return SynonymExpander(config)
 
     @pytest_asyncio.fixture
-    def semantic_expander(self):
+    def semantic_expander(self) -> None:
         """Create semantic expander for testing"""
         config = ExpansionConfig()
         return SemanticExpander(config)
 
     @pytest_asyncio.fixture
-    def contextual_expander(self):
+    def contextual_expander(self) -> None:
         """Create contextual expander for testing"""
         config = ExpansionConfig()
         return ContextualExpander(config)
 
-    async def test_query_analyzer_should_detect_query_types_accurately(
-        self,
-        query_analyzer,
-    ):
+    async def test_query_analyzer_should_detect_query_types_accurately(self) -> None:
         """
         Test: Query analyzer should detect different query types
         with appropriate confidence scores.
@@ -494,11 +465,7 @@ class TestExpansionComponents:
             assert 0.0 <= analysis.complexity_score <= 1.0
             assert len(analysis.key_entities) >= 0
 
-    async def test_synonym_expander_should_generate_relevant_synonyms(
-        self,
-        synonym_expander,
-        query_analyzer,
-    ):
+    async def test_synonym_expander_should_generate_relevant_synonyms(self) -> None:
         """
         Test: Synonym expander should generate relevant synonym terms
         with appropriate confidence scores.
@@ -527,11 +494,7 @@ class TestExpansionComponents:
             # expansions exist
             assert len(expansion_terms) > 0
 
-    async def test_semantic_expander_should_generate_related_terms(
-        self,
-        semantic_expander,
-        query_analyzer,
-    ):
+    async def test_semantic_expander_should_generate_related_terms(self) -> None:
         """
         Test: Semantic expander should generate semantically related terms
         with cluster-based confidence scoring.
@@ -564,9 +527,7 @@ class TestExpansionComponents:
 
     async def test_contextual_expander_should_provide_context_appropriate_terms(
         self,
-        contextual_expander,
-        query_analyzer,
-    ):
+    ) -> None:
         """
         Test: Contextual expander should provide context-appropriate terms
         based on query type and complexity.
@@ -617,13 +578,13 @@ class TestExpansionComponents:
                     assert len(expansion_terms) > 0
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.
     """
 
-    async def test_should_create_production_query_expansion_engine(self):
+    async def test_should_create_production_query_expansion_engine(self) -> None:
         """
         Test: Should create production-ready query expansion engine
         with optimized configuration and performance settings.
@@ -662,7 +623,7 @@ class TestDataStructures:
     Test suite for query expansion data structures and serialization.
     """
 
-    def test_expansion_term_should_serialize_correctly(self):
+    def test_expansion_term_should_serialize_correctly(self) -> None:
         """
         Test: ExpansionTerm should properly serialize to dictionary
         for JSON export and API responses.
@@ -684,7 +645,7 @@ class TestDataStructures:
         assert term_dict["source"] == "synonym_dict"
         assert term_dict["weight"] == 0.9
 
-    def test_expanded_query_should_serialize_completely(self):
+    def test_expanded_query_should_serialize_completely(self) -> None:
         """
         Test: ExpandedQuery should serialize all components
         correctly for comprehensive API responses.

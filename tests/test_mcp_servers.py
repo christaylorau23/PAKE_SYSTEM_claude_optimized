@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-def test_server(server_command, server_name):
+def test_server(self) -> None:
     """Test an MCP server with basic commands."""
     print(f"\nTesting {server_name}")
     print("=" * 50)
@@ -100,7 +100,7 @@ def test_server(server_command, server_name):
         return False
 
 
-def main():
+def main(self) -> None:
     """Run tests on all MCP servers."""
     print("PAKE MCP Server Testing Suite")
     print("Testing MCP servers for basic functionality")

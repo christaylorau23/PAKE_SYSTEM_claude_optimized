@@ -9,6 +9,7 @@ import time
 
 import pytest
 import pytest_asyncio
+
 from services.ai.cognitive_analysis_engine import CognitiveAnalysisEngine
 from services.ai.realtime_processing_pipeline import (
     CognitiveAnalysisStage,
@@ -29,14 +30,14 @@ from services.ai.realtime_processing_pipeline import (
 from services.ai.semantic_search_engine import SemanticSearchEngine
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestRealTimeProcessingPipeline:
     """
     Test suite for the main Real-time Processing Pipeline functionality.
     """
 
     @pytest_asyncio.fixture
-    async def pipeline(self):
+    async def pipeline(self) -> None:
         """Create real-time processing pipeline for testing"""
         config = PipelineConfig(
             max_concurrent_processing=10,
@@ -56,14 +57,14 @@ class TestRealTimeProcessingPipeline:
             await pipeline.stop_pipeline()
 
     @pytest_asyncio.fixture
-    async def running_pipeline(self, pipeline):
+    async def running_pipeline(self) -> None:
         """Create and start a running pipeline for testing"""
         await pipeline.start_pipeline()
         yield pipeline
         await pipeline.stop_pipeline()
 
-    @pytest.fixture()
-    def sample_content_items(self):
+    @pytest.fixture
+    def sample_content_items(self) -> None:
         """Sample content items for testing"""
         return [
             ContentItem(
@@ -93,7 +94,7 @@ class TestRealTimeProcessingPipeline:
     # Pipeline Lifecycle Tests
     # ========================================================================
 
-    async def test_should_initialize_pipeline_with_configuration(self, pipeline):
+    async def test_should_initialize_pipeline_with_configuration(self) -> None:
         """
         Test: Should initialize real-time processing pipeline with proper
         configuration and component setup.
@@ -118,7 +119,7 @@ class TestRealTimeProcessingPipeline:
         assert len(pipeline.processing_results) == 0
         assert pipeline.get_active_processing_count() == 0
 
-    async def test_should_start_and_stop_pipeline_correctly(self, pipeline):
+    async def test_should_start_and_stop_pipeline_correctly(self) -> None:
         """
         Test: Should start and stop pipeline worker correctly
         with proper state management and cleanup.
@@ -139,7 +140,7 @@ class TestRealTimeProcessingPipeline:
         await pipeline.stop_pipeline()
         assert not pipeline._running
 
-    async def test_should_handle_pipeline_restart_gracefully(self, pipeline):
+    async def test_should_handle_pipeline_restart_gracefully(self) -> None:
         """
         Test: Should handle pipeline restart scenarios gracefully
         without state corruption or resource leaks.
@@ -164,11 +165,7 @@ class TestRealTimeProcessingPipeline:
     # Content Processing Tests
     # ========================================================================
 
-    async def test_should_process_single_content_item_successfully(
-        self,
-        running_pipeline,
-        sample_content_items,
-    ):
+    async def test_should_process_single_content_item_successfully(self) -> None:
         """
         Test: Should process single content item through full pipeline
         with proper stage execution and result generation.
@@ -198,11 +195,7 @@ class TestRealTimeProcessingPipeline:
         if result.quality_score >= running_pipeline.config.min_quality_threshold:
             assert result.semantic_indexed
 
-    async def test_should_handle_different_priority_levels_correctly(
-        self,
-        running_pipeline,
-        sample_content_items,
-    ):
+    async def test_should_handle_different_priority_levels_correctly(self) -> None:
         """
         Test: Should handle different priority levels with appropriate
         processing order and performance characteristics.
@@ -226,7 +219,7 @@ class TestRealTimeProcessingPipeline:
             assert result.status == ProcessingStatus.COMPLETED
             assert result.processing_time_ms > 0
 
-    async def test_should_process_batch_content_efficiently(self, running_pipeline):
+    async def test_should_process_batch_content_efficiently(self) -> None:
         """
         Test: Should efficiently process multiple content items
         with proper concurrency and performance optimization.
@@ -279,8 +272,7 @@ class TestRealTimeProcessingPipeline:
 
     async def test_should_handle_edge_processing_for_high_priority_content(
         self,
-        running_pipeline,
-    ):
+    ) -> None:
         """
         Test: Should utilize edge processing for high-priority content
         when queue thresholds are exceeded.
@@ -329,7 +321,7 @@ class TestRealTimeProcessingPipeline:
     # Quality Filtering and Error Handling Tests
     # ========================================================================
 
-    async def test_should_apply_quality_filtering_appropriately(self, running_pipeline):
+    async def test_should_apply_quality_filtering_appropriately(self) -> None:
         """
         Test: Should apply quality filtering based on configuration
         while respecting priority-based bypass rules.
@@ -389,7 +381,7 @@ class TestRealTimeProcessingPipeline:
         assert critical_result.status == ProcessingStatus.COMPLETED
         # Critical priority should bypass quality filter regardless of score
 
-    async def test_should_handle_processing_errors_gracefully(self, running_pipeline):
+    async def test_should_handle_processing_errors_gracefully(self) -> None:
         """
         Test: Should handle processing errors and edge cases
         without pipeline corruption or crashes.
@@ -431,7 +423,7 @@ class TestRealTimeProcessingPipeline:
             ]
             assert result.processing_time_ms >= 0
 
-    async def test_should_handle_concurrent_processing_safely(self, running_pipeline):
+    async def test_should_handle_concurrent_processing_safely(self) -> None:
         """
         Test: Should handle concurrent processing operations
         without race conditions or data corruption.
@@ -448,7 +440,7 @@ class TestRealTimeProcessingPipeline:
             concurrent_items.append(content)
 
         # Submit items concurrently
-        async def submit_item(item):
+        async def submit_item(self) -> None:
             content_id = await running_pipeline.submit_content(item)
             return await running_pipeline.get_result(content_id, timeout=15.0)
 
@@ -474,10 +466,7 @@ class TestRealTimeProcessingPipeline:
     # Performance and Metrics Tests
     # ========================================================================
 
-    async def test_should_collect_comprehensive_performance_metrics(
-        self,
-        running_pipeline,
-    ):
+    async def test_should_collect_comprehensive_performance_metrics(self) -> None:
         """
         Test: Should collect comprehensive performance metrics
         including throughput, latency, and stage-specific timing.
@@ -511,14 +500,14 @@ class TestRealTimeProcessingPipeline:
         # Check stage-specific metrics
         assert isinstance(metrics.stage_times, dict)
         if metrics.stage_times:
-            for stage, avg_time in metrics.stage_times.items():
+            for _stage, avg_time in metrics.stage_times.items():
                 assert avg_time >= 0
 
         # Check bottleneck detection
         if metrics.bottleneck_stage:
             assert metrics.bottleneck_stage in metrics.stage_times
 
-    async def test_should_provide_queue_status_and_monitoring(self, running_pipeline):
+    async def test_should_provide_queue_status_and_monitoring(self) -> None:
         """
         Test: Should provide accurate queue status and monitoring
         information for operational visibility.
@@ -530,7 +519,7 @@ class TestRealTimeProcessingPipeline:
             ProcessingPriority.LOW,
         ]
 
-        for i, priority in enumerate(priorities):
+        for _i, priority in enumerate(priorities):
             for j in range(3):  # 3 items per priority
                 content = ContentItem(
                     content_id=f"queue_test_{priority.value}_{j}",
@@ -558,7 +547,7 @@ class TestRealTimeProcessingPipeline:
     # Edge Computing Tests
     # ========================================================================
 
-    async def test_edge_processor_should_handle_fast_processing(self):
+    async def test_edge_processor_should_handle_fast_processing(self) -> None:
         """
         Test: Edge processor should handle fast local processing
         with minimal latency and proper statistics tracking.
@@ -592,34 +581,33 @@ class TestRealTimeProcessingPipeline:
         assert stats["average_processing_time"] > 0
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestProcessingStages:
     """
     Test suite for individual processing stage components.
     """
 
     @pytest_asyncio.fixture
-    async def cognitive_stage(self):
+    async def cognitive_stage(self) -> None:
         """Create cognitive analysis stage for testing"""
         cognitive_engine = CognitiveAnalysisEngine()
         return CognitiveAnalysisStage(cognitive_engine)
 
     @pytest_asyncio.fixture
-    async def semantic_stage(self):
+    async def semantic_stage(self) -> None:
         """Create semantic indexing stage for testing"""
         semantic_engine = SemanticSearchEngine()
         return SemanticIndexingStage(semantic_engine)
 
     @pytest_asyncio.fixture
-    def quality_stage(self):
+    def quality_stage(self) -> None:
         """Create quality filtering stage for testing"""
         config = PipelineConfig(min_quality_threshold=0.5)
         return QualityFilteringStage(config)
 
     async def test_cognitive_analysis_stage_should_process_content_correctly(
         self,
-        cognitive_stage,
-    ):
+    ) -> None:
         """
         Test: Cognitive analysis stage should process content
         and return comprehensive analysis results.
@@ -642,10 +630,7 @@ class TestProcessingStages:
             assert result["cognitive_result"] is not None
             assert 0.0 <= result["quality_score"] <= 1.0
 
-    async def test_semantic_indexing_stage_should_create_embeddings(
-        self,
-        semantic_stage,
-    ):
+    async def test_semantic_indexing_stage_should_create_embeddings(self) -> None:
         """
         Test: Semantic indexing stage should create vector embeddings
         and index content for search capabilities.
@@ -669,8 +654,7 @@ class TestProcessingStages:
 
     async def test_quality_filtering_stage_should_filter_based_on_thresholds(
         self,
-        quality_stage,
-    ):
+    ) -> None:
         """
         Test: Quality filtering stage should filter content
         based on quality thresholds and priority rules.
@@ -701,13 +685,13 @@ class TestProcessingStages:
                 assert result["passes_quality_filter"] == test_case["expected_pass"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestProductionConfiguration:
     """
     Test suite for production-ready configuration and deployment scenarios.
     """
 
-    async def test_should_create_production_realtime_pipeline(self):
+    async def test_should_create_production_realtime_pipeline(self) -> None:
         """
         Test: Should create production-ready real-time pipeline
         with optimized configuration and performance settings.
@@ -755,7 +739,7 @@ class TestDataStructures:
     Test suite for real-time processing data structures and serialization.
     """
 
-    def test_content_item_should_serialize_correctly(self):
+    def test_content_item_should_serialize_correctly(self) -> None:
         """
         Test: ContentItem should properly serialize to dictionary
         for JSON export and API responses.
@@ -782,7 +766,7 @@ class TestDataStructures:
         assert content_dict["edge_location"] == "local"
         assert "ingestion_timestamp" in content_dict
 
-    def test_processing_result_should_serialize_completely(self):
+    def test_processing_result_should_serialize_completely(self) -> None:
         """
         Test: ProcessingResult should serialize all components
         correctly for comprehensive API responses.
@@ -813,7 +797,7 @@ class TestDataStructures:
         assert result_dict["edge_processing_time_ms"] == 25.0
         assert "start_timestamp" in result_dict
 
-    def test_pipeline_metrics_should_serialize_comprehensively(self):
+    def test_pipeline_metrics_should_serialize_comprehensively(self) -> None:
         """
         Test: PipelineMetrics should serialize comprehensive metrics
         for monitoring and analytics purposes.

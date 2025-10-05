@@ -8,7 +8,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class PredictionResult:
-    """Result of a prediction operation"""
+    """Result of a prediction operation."""
 
     content_id: str
     user_id: str
@@ -40,7 +40,7 @@ class PredictionResult:
 
 @dataclass(frozen=True)
 class EnsemblePrediction:
-    """Ensemble prediction combining multiple models"""
+    """Ensemble prediction combining multiple models."""
 
     content_id: str
     user_id: str
@@ -52,9 +52,9 @@ class EnsemblePrediction:
 
 
 class PredictionEngine:
-    """Advanced prediction engine for real-time content curation"""
+    """Advanced prediction engine for real-time content curation."""
 
-    def __init__(self, cache_size: int = 10000, cache_ttl_hours: int = 1):
+    def __init__(self) -> None:
         self.cache_size = cache_size
         self.cache_ttl_hours = cache_ttl_hours
         self.prediction_cache: dict[str, PredictionResult] = {}
@@ -100,16 +100,16 @@ class PredictionEngine:
         user_id: str,
         prediction_type: str,
     ) -> str:
-        """Generate cache key for prediction"""
+        """Generate cache key for prediction."""
         return f"{prediction_type}:{content_id}:{user_id}"
 
     def _is_cache_valid(self, cache_key: str) -> bool:
-        """Check if cached prediction is still valid"""
+        """Check if cached prediction is still valid."""
         if cache_key not in self.prediction_cache:
             return False
 
         cached_result = self.prediction_cache[cache_key]
-        age = datetime.now() - cached_result.created_at
+        age = datetime.now(UTC) - cached_result.created_at
         return age.total_seconds() < self.cache_ttl_hours * 3600
 
     async def predict_content_quality(
@@ -117,13 +117,13 @@ class PredictionEngine:
         content: ContentItem,
         use_cache: bool = True,
     ) -> PredictionResult:
-        """Predict content quality score"""
+        """Predict content quality score."""
         cache_key = self._get_cache_key(content.id, "system", "quality")
 
         if use_cache and self._is_cache_valid(cache_key):
             self.cached_predictions += 1
             cached_result = self.prediction_cache[cache_key]
-            logger.debug(f"Using cached quality prediction for content {content.id}")
+            logger.debug("Using cached quality prediction for content %s", content.id)
             return PredictionResult(
                 content_id=content.id,
                 user_id="system",
@@ -179,13 +179,15 @@ class PredictionEngine:
             self.prediction_times.append(prediction_time)
 
             logger.debug(
-                f"Predicted quality for content {content.id}: {score:.3f} (confidence: {
-                    confidence:.3f})",
+                "Predicted quality for content %s: %s (confidence: %s)",
+                content.id,
+                score,
+                confidence,
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error predicting content quality for {content.id}: {e}")
+            logger.error("Error predicting content quality for %s: %s", content.id, e)
             # Use fallback strategy
             return await self._fallback_content_quality(content)
 
@@ -195,14 +197,15 @@ class PredictionEngine:
         interactions: list[UserInteraction],
         use_cache: bool = True,
     ) -> PredictionResult:
-        """Predict user preference category"""
+        """Predict user preference category."""
         cache_key = self._get_cache_key("system", user_profile.user_id, "preference")
 
         if use_cache and self._is_cache_valid(cache_key):
             self.cached_predictions += 1
             cached_result = self.prediction_cache[cache_key]
             logger.debug(
-                f"Using cached preference prediction for user {user_profile.user_id}",
+                "Using cached preference prediction for user %s",
+                user_profile.user_id,
             )
             return PredictionResult(
                 content_id="system",
@@ -266,15 +269,18 @@ class PredictionEngine:
             self.prediction_times.append(prediction_time)
 
             logger.debug(
-                f"Predicted preference for user {user_profile.user_id}: {
-                    preference_category
-                } (confidence: {confidence:.3f})",
+                "Predicted preference for user %s: %s (confidence: %s)",
+                user_profile.user_id,
+                preference_category,
+                confidence,
             )
             return result
 
         except Exception as e:
             logger.error(
-                f"Error predicting user preference for {user_profile.user_id}: {e}",
+                "Error predicting user preference for %s: %s",
+                user_profile.user_id,
+                e,
             )
             # Use fallback strategy
             return await self._fallback_user_preference(user_profile, interactions)
@@ -286,7 +292,7 @@ class PredictionEngine:
         interactions: list[UserInteraction],
         use_cache: bool = True,
     ) -> PredictionResult:
-        """Predict recommendation score for content-user pair"""
+        """Predict recommendation score for content-user pair."""
         cache_key = self._get_cache_key(
             content.id,
             user_profile.user_id,
@@ -297,9 +303,9 @@ class PredictionEngine:
             self.cached_predictions += 1
             cached_result = self.prediction_cache[cache_key]
             logger.debug(
-                f"Using cached recommendation prediction for {content.id}:{
-                    user_profile.user_id
-                }",
+                "Using cached recommendation prediction for %s:%s",
+                content.id,
+                user_profile.user_id,
             )
             return PredictionResult(
                 content_id=content.id,
@@ -365,16 +371,20 @@ class PredictionEngine:
             self.prediction_times.append(prediction_time)
 
             logger.debug(
-                f"Predicted recommendation for {content.id}:{user_profile.user_id}: {
-                    score:.3f} (confidence: {confidence:.3f})",
+                "Predicted recommendation for %s:%s: %s (confidence: %s)",
+                content.id,
+                user_profile.user_id,
+                f"{score:.3f}",
+                confidence,
             )
             return result
 
         except Exception as e:
             logger.error(
-                f"Error predicting recommendation for {content.id}:{
-                    user_profile.user_id
-                }: {e}",
+                "Error predicting recommendation for %s:%s: %s",
+                content.id,
+                user_profile.user_id,
+                e,
             )
             # Use fallback strategy
             return await self._fallback_recommendation(
@@ -390,8 +400,8 @@ class PredictionEngine:
         interactions: list[UserInteraction],
         max_results: int = 100,
     ) -> list[PredictionResult]:
-        """Predict recommendation scores for multiple contents efficiently"""
-        logger.info(f"Batch predicting recommendations for {len(contents)} contents")
+        """Predict recommendation scores for multiple contents efficiently."""
+        logger.info("Batch predicting recommendations for %s contents", len(contents))
 
         # Process in parallel
         tasks = []
@@ -410,7 +420,8 @@ class PredictionEngine:
         valid_results.sort(key=lambda x: x.score, reverse=True)
 
         logger.info(
-            f"Batch prediction completed: {len(valid_results)} valid predictions",
+            "Batch prediction completed: %s valid predictions",
+            len(valid_results),
         )
         return valid_results
 
@@ -420,9 +431,11 @@ class PredictionEngine:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> EnsemblePrediction:
-        """Make ensemble prediction using multiple models"""
+        """Make ensemble prediction using multiple models."""
         logger.debug(
-            f"Making ensemble prediction for {content.id}:{user_profile.user_id}",
+            "Making ensemble prediction for %s:%s",
+            content.id,
+            user_profile.user_id,
         )
 
         # Get individual predictions
@@ -473,7 +486,7 @@ class PredictionEngine:
         content_features: ContentFeatures,
         feature_vector: np.ndarray,
     ) -> float:
-        """Calculate confidence for quality prediction"""
+        """Calculate confidence for quality prediction."""
         confidence = 0.5  # Base confidence
 
         # Increase confidence based on feature completeness
@@ -496,7 +509,7 @@ class PredictionEngine:
         user_features: UserFeatures,
         interaction_count: int,
     ) -> float:
-        """Calculate confidence for preference prediction"""
+        """Calculate confidence for preference prediction."""
         confidence = 0.3  # Base confidence
 
         # Increase confidence based on interaction history
@@ -521,7 +534,7 @@ class PredictionEngine:
         user_features: UserFeatures,
         interaction_count: int,
     ) -> float:
-        """Calculate confidence for recommendation prediction"""
+        """Calculate confidence for recommendation prediction."""
         confidence = 0.4  # Base confidence
 
         # Content feature confidence
@@ -542,8 +555,8 @@ class PredictionEngine:
         return min(1.0, confidence)
 
     async def _fallback_content_quality(self, content: ContentItem) -> PredictionResult:
-        """Fallback strategy for content quality prediction"""
-        logger.warning(f"Using fallback strategy for content quality: {content.id}")
+        """Fallback strategy for content quality prediction."""
+        logger.warning("Using fallback strategy for content quality: %s", content.id)
 
         # Simple heuristic-based quality score
         score = 0.5  # Base score
@@ -572,9 +585,10 @@ class PredictionEngine:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> PredictionResult:
-        """Fallback strategy for user preference prediction"""
+        """Fallback strategy for user preference prediction."""
         logger.warning(
-            f"Using fallback strategy for user preference: {user_profile.user_id}",
+            "Using fallback strategy for user preference: %s",
+            user_profile.user_id,
         )
 
         # Simple heuristic based on interests
@@ -587,7 +601,7 @@ class PredictionEngine:
         if interactions:
             # Recent interactions indicate engagement
             recent_interactions = [
-                i for i in interactions if (datetime.now() - i.timestamp).days < 7
+                i for i in interactions if (datetime.now(UTC) - i.timestamp).days < 7
             ]
             if recent_interactions:
                 score = min(0.9, score + 0.2)
@@ -609,11 +623,11 @@ class PredictionEngine:
         user_profile: UserProfile,
         interactions: list[UserInteraction],
     ) -> PredictionResult:
-        """Fallback strategy for recommendation prediction"""
+        """Fallback strategy for recommendation prediction."""
         logger.warning(
-            f"Using fallback strategy for recommendation: {content.id}:{
-                user_profile.user_id
-            }",
+            "Using fallback strategy for recommendation: %s:%s",
+            content.id,
+            user_profile.user_id,
         )
 
         # Simple heuristic combining content and user factors
@@ -634,7 +648,7 @@ class PredictionEngine:
         # Interaction history
         if interactions:
             recent_interactions = [
-                i for i in interactions if (datetime.now() - i.timestamp).days < 30
+                i for i in interactions if (datetime.now(UTC) - i.timestamp).days < 30
             ]
             if recent_interactions:
                 score += 0.1
@@ -650,8 +664,8 @@ class PredictionEngine:
             prediction_time_ms=1.0,
         )
 
-    async def _manage_cache_size(self):
-        """Manage prediction cache size"""
+    async def _manage_cache_size(self) -> None:
+        """Manage prediction cache size."""
         if len(self.prediction_cache) <= self.cache_size:
             return
 
@@ -665,10 +679,10 @@ class PredictionEngine:
         for key, _ in sorted_items[:items_to_remove]:
             del self.prediction_cache[key]
 
-        logger.debug(f"Cleaned up {items_to_remove} cache entries")
+        logger.debug("Cleaned up %s cache entries", items_to_remove)
 
-    def get_performance_stats(self) -> dict[str, Any]:
-        """Get performance statistics"""
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get performance statistics."""
         if not self.prediction_times:
             return {
                 "total_predictions": self.total_predictions,
@@ -691,18 +705,13 @@ class PredictionEngine:
             "min_prediction_time_ms": min(self.prediction_times),
         }
 
-    async def clear_cache(self):
-        """Clear prediction cache"""
+    async def clear_cache(self) -> None:
+        """Clear prediction cache."""
         self.prediction_cache.clear()
         logger.info("Prediction cache cleared")
 
-    async def warm_cache(
-        self,
-        contents: list[ContentItem],
-        user_profiles: list[UserProfile],
-        interactions: list[UserInteraction],
-    ):
-        """Warm up prediction cache with common predictions"""
+    async def warm_cache(self) -> None:
+        """Warm up prediction cache with common predictions."""
         logger.info("Warming up prediction cache")
 
         # Warm up content quality predictions
@@ -716,4 +725,4 @@ class PredictionEngine:
             ]
             await self.predict_user_preference(user_profile, user_interactions)
 
-        logger.info(f"Cache warmed up with {len(self.prediction_cache)} predictions")
+        logger.info("Cache warmed up with %s predictions", len(self.prediction_cache))

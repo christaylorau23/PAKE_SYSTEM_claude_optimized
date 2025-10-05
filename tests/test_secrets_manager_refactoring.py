@@ -21,29 +21,27 @@ from security.secrets_manager import SecretProvider, SecretsManager
 class TestSecretsManagerRefactoring:
     """Test suite for the refactored SecretsManager class"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment before each test method"""
         self.temp_dir = tempfile.mkdtemp()
         self.original_env = os.environ.copy()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after each test method"""
         os.environ.clear()
         os.environ.update(self.original_env)
 
-    def test_constructor_orchestration(self):
+    def test_constructor_orchestration(self) -> None:
         """Test that constructor properly orchestrates the setup process"""
-        with patch.object(
-            SecretsManager, "_validate_provider_parameter"
-        ) as mock_validate, patch.object(
-            SecretsManager, "_configure_logging"
-        ) as mock_logging, patch.object(
-            SecretsManager, "_initialize_data_structures"
-        ) as mock_data, patch.object(
-            SecretsManager, "_configure_provider"
-        ) as mock_provider, patch.object(
-            SecretsManager, "_initialize_provider_client"
-        ) as mock_client:
+        with (
+            patch.object(
+                SecretsManager, "_validate_provider_parameter"
+            ) as mock_validate,
+            patch.object(SecretsManager, "_configure_logging") as mock_logging,
+            patch.object(SecretsManager, "_initialize_data_structures") as mock_data,
+            patch.object(SecretsManager, "_configure_provider") as mock_provider,
+            patch.object(SecretsManager, "_initialize_provider_client") as mock_client,
+        ):
             # Create instance with local provider (no external dependencies)
             manager = SecretsManager(SecretProvider.LOCAL_FILE)
 
@@ -57,7 +55,7 @@ class TestSecretsManagerRefactoring:
             # Verify provider is set correctly
             assert manager.provider == SecretProvider.LOCAL_FILE
 
-    def test_validate_provider_parameter_valid_provider(self):
+    def test_validate_provider_parameter_valid_provider(self) -> None:
         """Test parameter validation with valid provider"""
         manager = SecretsManager()
         manager.provider = SecretProvider.LOCAL_FILE
@@ -65,7 +63,7 @@ class TestSecretsManagerRefactoring:
         # Should not raise any exception
         manager._validate_provider_parameter()
 
-    def test_validate_provider_parameter_invalid_type(self):
+    def test_validate_provider_parameter_invalid_type(self) -> None:
         """Test parameter validation with invalid provider type"""
         manager = SecretsManager()
         manager.provider = "invalid_provider"  # Not a SecretProvider enum
@@ -75,7 +73,7 @@ class TestSecretsManagerRefactoring:
         ):
             manager._validate_provider_parameter()
 
-    def test_validate_provider_parameter_azure_missing_url(self):
+    def test_validate_provider_parameter_azure_missing_url(self) -> None:
         """Test Azure provider validation with missing URL"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AZURE_KEY_VAULT
@@ -89,7 +87,7 @@ class TestSecretsManagerRefactoring:
         ):
             manager._validate_provider_parameter()
 
-    def test_validate_provider_parameter_google_missing_project(self):
+    def test_validate_provider_parameter_google_missing_project(self) -> None:
         """Test Google provider validation with missing project ID"""
         manager = SecretsManager()
         manager.provider = SecretProvider.GOOGLE_SECRET_MANAGER
@@ -103,7 +101,7 @@ class TestSecretsManagerRefactoring:
         ):
             manager._validate_provider_parameter()
 
-    def test_configure_logging(self):
+    def test_configure_logging(self) -> None:
         """Test logging configuration"""
         manager = SecretsManager()
 
@@ -116,7 +114,7 @@ class TestSecretsManagerRefactoring:
             mock_setup.assert_called_once()
             assert manager.logger == mock_logger
 
-    def test_initialize_data_structures(self):
+    def test_initialize_data_structures(self) -> None:
         """Test data structure initialization"""
         manager = SecretsManager()
 
@@ -132,7 +130,7 @@ class TestSecretsManagerRefactoring:
         assert len(manager.access_logs) == 0
         assert len(manager.metadata_store) == 0
 
-    def test_configure_provider_local(self):
+    def test_configure_provider_local(self) -> None:
         """Test local provider configuration"""
         manager = SecretsManager()
         manager.provider = SecretProvider.LOCAL_FILE
@@ -141,7 +139,7 @@ class TestSecretsManagerRefactoring:
             manager._configure_provider()
             mock_local.assert_called_once()
 
-    def test_configure_provider_aws(self):
+    def test_configure_provider_aws(self) -> None:
         """Test AWS provider configuration"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AWS_SECRETS_MANAGER
@@ -150,7 +148,7 @@ class TestSecretsManagerRefactoring:
             manager._configure_provider()
             mock_aws.assert_called_once()
 
-    def test_configure_provider_azure(self):
+    def test_configure_provider_azure(self) -> None:
         """Test Azure provider configuration"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AZURE_KEY_VAULT
@@ -159,7 +157,7 @@ class TestSecretsManagerRefactoring:
             manager._configure_provider()
             mock_azure.assert_called_once()
 
-    def test_configure_provider_google(self):
+    def test_configure_provider_google(self) -> None:
         """Test Google provider configuration"""
         manager = SecretsManager()
         manager.provider = SecretProvider.GOOGLE_SECRET_MANAGER
@@ -168,7 +166,7 @@ class TestSecretsManagerRefactoring:
             manager._configure_provider()
             mock_google.assert_called_once()
 
-    def test_configure_provider_unsupported(self):
+    def test_configure_provider_unsupported(self) -> None:
         """Test unsupported provider configuration"""
         manager = SecretsManager()
         manager.provider = "unsupported_provider"  # Invalid provider
@@ -176,7 +174,7 @@ class TestSecretsManagerRefactoring:
         with pytest.raises(ValueError, match="Unsupported provider"):
             manager._configure_provider()
 
-    def test_configure_aws_provider(self):
+    def test_configure_aws_provider(self) -> None:
         """Test AWS provider-specific configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -197,7 +195,7 @@ class TestSecretsManagerRefactoring:
             "AWS Secrets Manager provider configured"
         )
 
-    def test_configure_azure_provider(self):
+    def test_configure_azure_provider(self) -> None:
         """Test Azure provider-specific configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -221,7 +219,7 @@ class TestSecretsManagerRefactoring:
 
         manager.logger.info.assert_called_with("Azure Key Vault provider configured")
 
-    def test_configure_google_provider(self):
+    def test_configure_google_provider(self) -> None:
         """Test Google provider-specific configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -244,7 +242,7 @@ class TestSecretsManagerRefactoring:
             "Google Secret Manager provider configured"
         )
 
-    def test_configure_local_provider(self):
+    def test_configure_local_provider(self) -> None:
         """Test local provider-specific configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -262,7 +260,7 @@ class TestSecretsManagerRefactoring:
 
         manager.logger.info.assert_called_with("Local file storage provider configured")
 
-    def test_initialize_provider_client_local(self):
+    def test_initialize_provider_client_local(self) -> None:
         """Test local client initialization"""
         manager = SecretsManager()
         manager.provider = SecretProvider.LOCAL_FILE
@@ -275,7 +273,7 @@ class TestSecretsManagerRefactoring:
                 "✅ local_file client initialized successfully"
             )
 
-    def test_initialize_provider_client_aws(self):
+    def test_initialize_provider_client_aws(self) -> None:
         """Test AWS client initialization"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AWS_SECRETS_MANAGER
@@ -288,7 +286,7 @@ class TestSecretsManagerRefactoring:
                 "✅ aws_secrets_manager client initialized successfully"
             )
 
-    def test_initialize_provider_client_azure(self):
+    def test_initialize_provider_client_azure(self) -> None:
         """Test Azure client initialization"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AZURE_KEY_VAULT
@@ -301,7 +299,7 @@ class TestSecretsManagerRefactoring:
                 "✅ azure_key_vault client initialized successfully"
             )
 
-    def test_initialize_provider_client_google(self):
+    def test_initialize_provider_client_google(self) -> None:
         """Test Google client initialization"""
         manager = SecretsManager()
         manager.provider = SecretProvider.GOOGLE_SECRET_MANAGER
@@ -314,7 +312,7 @@ class TestSecretsManagerRefactoring:
                 "✅ google_secret_manager client initialized successfully"
             )
 
-    def test_initialize_provider_client_failure(self):
+    def test_initialize_provider_client_failure(self) -> None:
         """Test provider client initialization failure"""
         manager = SecretsManager()
         manager.provider = SecretProvider.AWS_SECRETS_MANAGER
@@ -330,7 +328,7 @@ class TestSecretsManagerRefactoring:
                 "Failed to initialize aws_secrets_manager client: AWS initialization failed"
             )
 
-    def test_initialize_aws_client_with_configuration(self):
+    def test_initialize_aws_client_with_configuration(self) -> None:
         """Test AWS client initialization with provider configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -340,9 +338,10 @@ class TestSecretsManagerRefactoring:
             "endpoint_url": "https://test-endpoint.com",
         }
 
-        with patch("boto3.Session") as mock_session_class, patch(
-            "boto3.client"
-        ) as mock_client_class:
+        with (
+            patch("boto3.Session") as mock_session_class,
+            patch("boto3.client") as mock_client_class,
+        ):
             mock_session = Mock()
             mock_session_class.return_value = mock_session
             mock_client = Mock()
@@ -365,17 +364,16 @@ class TestSecretsManagerRefactoring:
                 "AWS Secrets Manager client initialized"
             )
 
-    def test_initialize_azure_client_with_configuration(self):
+    def test_initialize_azure_client_with_configuration(self) -> None:
         """Test Azure client initialization with provider configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
         manager.provider_config = {"vault_url": "https://test-vault.vault.azure.net/"}
 
-        with patch(
-            "azure.identity.DefaultAzureCredential"
-        ) as mock_credential_class, patch(
-            "azure.keyvault.secrets.SecretClient"
-        ) as mock_client_class:
+        with (
+            patch("azure.identity.DefaultAzureCredential") as mock_credential_class,
+            patch("azure.keyvault.secrets.SecretClient") as mock_client_class,
+        ):
             mock_credential = Mock()
             mock_credential_class.return_value = mock_credential
             mock_client = Mock()
@@ -395,7 +393,7 @@ class TestSecretsManagerRefactoring:
             assert manager.azure_client == mock_client
             manager.logger.info.assert_called_with("Azure Key Vault client initialized")
 
-    def test_initialize_google_client_with_configuration(self):
+    def test_initialize_google_client_with_configuration(self) -> None:
         """Test Google client initialization with provider configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -418,7 +416,7 @@ class TestSecretsManagerRefactoring:
                 "Google Secret Manager client initialized"
             )
 
-    def test_initialize_local_client_with_configuration(self):
+    def test_initialize_local_client_with_configuration(self) -> None:
         """Test local client initialization with provider configuration"""
         manager = SecretsManager()
         manager.logger = Mock()
@@ -446,7 +444,7 @@ class TestSecretsManagerRefactoring:
 class TestSecretsManagerIntegration:
     """Integration tests for the refactored SecretsManager"""
 
-    def test_full_initialization_local_provider(self):
+    def test_full_initialization_local_provider(self) -> None:
         """Test complete initialization with local provider"""
         with tempfile.TemporaryDirectory() as temp_dir:
             os.environ["LOCAL_SECRETS_ENCRYPTION_KEY"] = "test-key"
@@ -463,12 +461,13 @@ class TestSecretsManagerIntegration:
             assert manager.provider_config is not None
             assert manager.secrets_dir is not None
 
-    def test_full_initialization_azure_provider_with_env(self):
+    def test_full_initialization_azure_provider_with_env(self) -> None:
         """Test complete initialization with Azure provider when env vars are set"""
         os.environ["AZURE_KEY_VAULT_URL"] = "https://test-vault.vault.azure.net/"
 
-        with patch("azure.identity.DefaultAzureCredential"), patch(
-            "azure.keyvault.secrets.SecretClient"
+        with (
+            patch("azure.identity.DefaultAzureCredential"),
+            patch("azure.keyvault.secrets.SecretClient"),
         ):
             # This should not raise any exceptions
             manager = SecretsManager(SecretProvider.AZURE_KEY_VAULT)

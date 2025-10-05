@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
+
 from services.monitoring.analytics_platform import (
     Alert,
     AlertManager,
@@ -28,8 +29,8 @@ from services.monitoring.analytics_platform import (
 )
 
 
-@pytest.fixture()
-def analytics_config():
+@pytest.fixture
+def analytics_config(self) -> None:
     """Test configuration for analytics platform"""
     return AnalyticsPlatformConfig(
         enable_real_time_monitoring=True,
@@ -52,26 +53,26 @@ def analytics_config():
     )
 
 
-@pytest.fixture()
-def analytics_platform(analytics_config):
+@pytest.fixture
+def analytics_platform(self) -> None:
     """Analytics platform instance for testing"""
     return ComprehensiveAnalyticsPlatform(analytics_config)
 
 
 @pytest_asyncio.fixture
-async def running_platform(analytics_platform):
+async def running_platform(self) -> None:
     """Running analytics platform for testing"""
     await analytics_platform.start()
     yield analytics_platform
     await analytics_platform.stop()
 
 
-@pytest.fixture()
-def sample_metrics():
+@pytest.fixture
+def sample_metrics(self) -> None:
     """Sample metrics for testing"""
     base_time = datetime.now(UTC)
 
-    metrics = [
+    return [
         MetricPoint(
             metric_name="response_time_ms",
             metric_type=MetricType.TIMER,
@@ -113,11 +114,9 @@ def sample_metrics():
         ),
     ]
 
-    return metrics
 
-
-@pytest.fixture()
-def sample_alert_rules():
+@pytest.fixture
+def sample_alert_rules(self) -> None:
     """Sample alert rules for testing"""
     return [
         AlertRule(
@@ -159,11 +158,10 @@ def sample_alert_rules():
 class TestComprehensiveAnalyticsPlatform:
     """Test the main analytics platform functionality"""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_should_initialize_analytics_platform_with_configuration(
         self,
-        analytics_config,
-    ):
+    ) -> None:
         """
         Test: Should initialize analytics platform with proper configuration
         and all components ready for enterprise monitoring operations.
@@ -184,8 +182,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(platform.dashboard_data) == 0
         assert len(platform.scheduled_reports) == 0
 
-    @pytest.mark.asyncio()
-    async def test_should_start_and_stop_platform_correctly(self, analytics_platform):
+    @pytest.mark.asyncio
+    async def test_should_start_and_stop_platform_correctly(self) -> None:
         """
         Test: Should start and stop analytics platform with proper
         background task management and resource cleanup.
@@ -208,12 +206,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert not analytics_platform.is_running
         assert len(analytics_platform.background_tasks) == 0
 
-    @pytest.mark.asyncio()
-    async def test_should_collect_and_store_metrics_efficiently(
-        self,
-        running_platform,
-        sample_metrics,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_collect_and_store_metrics_efficiently(self) -> None:
         """
         Test: Should collect and store metrics efficiently with proper
         aggregation and high-performance storage mechanisms.
@@ -244,12 +238,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(api_metrics) > 0
         assert api_metrics[0].metric_name == "response_time_ms"
 
-    @pytest.mark.asyncio()
-    async def test_should_trigger_alerts_based_on_metric_thresholds(
-        self,
-        running_platform,
-        sample_alert_rules,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_trigger_alerts_based_on_metric_thresholds(self) -> None:
         """
         Test: Should trigger alerts when metrics exceed defined thresholds
         and manage alert lifecycle with proper cooldown periods.
@@ -287,12 +277,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert len(active_alerts) > 0
         assert active_alerts[0].alert_id == triggered_alert.alert_id
 
-    @pytest.mark.asyncio()
-    async def test_should_generate_comprehensive_performance_reports(
-        self,
-        running_platform,
-        sample_metrics,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_generate_comprehensive_performance_reports(self) -> None:
         """
         Test: Should generate comprehensive performance reports with
         insights, recommendations, and trend analysis.
@@ -324,12 +310,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert isinstance(report.trends, dict)
         assert isinstance(report.generated_timestamp, datetime)
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_comprehensive_system_health_status(
-        self,
-        running_platform,
-        sample_metrics,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_provide_comprehensive_system_health_status(self) -> None:
         """
         Test: Should provide comprehensive system health status including
         component health, performance scores, and alert summaries.
@@ -372,11 +354,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert "active_alerts" in summary
         assert "system_components" in summary
 
-    @pytest.mark.asyncio()
-    async def test_should_handle_concurrent_metric_collection_safely(
-        self,
-        running_platform,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_handle_concurrent_metric_collection_safely(self) -> None:
         """
         Test: Should handle concurrent metric collection safely without
         race conditions and maintain data consistency.
@@ -411,12 +390,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert stats["total_metrics_collected"] >= 100
         assert stats["buffer_size"] >= 100
 
-    @pytest.mark.asyncio()
-    async def test_should_resolve_alerts_and_track_resolution_times(
-        self,
-        running_platform,
-        sample_alert_rules,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_resolve_alerts_and_track_resolution_times(self) -> None:
         """
         Test: Should allow manual alert resolution and track resolution
         times for performance analysis and SLA monitoring.
@@ -458,8 +433,8 @@ class TestComprehensiveAnalyticsPlatform:
         assert alert_stats["alerts_resolved"] > 0
         assert alert_stats["avg_resolution_time_minutes"] >= 0
 
-    @pytest.mark.asyncio()
-    async def test_should_respect_alert_cooldown_periods(self, running_platform):
+    @pytest.mark.asyncio
+    async def test_should_respect_alert_cooldown_periods(self) -> None:
         """
         Test: Should respect alert cooldown periods to prevent
         alert spam and maintain system stability.
@@ -507,12 +482,8 @@ class TestComprehensiveAnalyticsPlatform:
         )
         assert len(alerts3) == 1
 
-    @pytest.mark.asyncio()
-    async def test_should_provide_dashboard_data_and_metrics(
-        self,
-        running_platform,
-        sample_metrics,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_provide_dashboard_data_and_metrics(self) -> None:
         """
         Test: Should provide dashboard data and comprehensive metrics
         for monitoring and operational visibility.
@@ -555,11 +526,8 @@ class TestComprehensiveAnalyticsPlatform:
 class TestMetricsCollector:
     """Test metrics collection functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_collect_metrics_with_high_performance_buffer(
-        self,
-        analytics_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_collect_metrics_with_high_performance_buffer(self) -> None:
         """
         Test: Should collect metrics using high-performance buffer
         with proper aggregation and time-series storage.
@@ -597,8 +565,8 @@ class TestMetricsCollector:
         assert batch_count == 10
         assert collector.collection_stats["total_metrics_collected"] == 11
 
-    @pytest.mark.asyncio()
-    async def test_should_aggregate_metrics_by_time_windows(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_aggregate_metrics_by_time_windows(self) -> None:
         """
         Test: Should aggregate metrics by configurable time windows
         for efficient storage and querying capabilities.
@@ -631,8 +599,8 @@ class TestMetricsCollector:
                 assert agg_data["min"] >= 0
                 assert agg_data["max"] >= 0
 
-    @pytest.mark.asyncio()
-    async def test_should_retrieve_metrics_by_timeframe(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_retrieve_metrics_by_timeframe(self) -> None:
         """
         Test: Should retrieve metrics by component and timeframe
         with proper filtering and sorting capabilities.
@@ -688,12 +656,8 @@ class TestMetricsCollector:
 class TestAlertManager:
     """Test alerting and notification functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_evaluate_alert_conditions_accurately(
-        self,
-        analytics_config,
-        sample_alert_rules,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_evaluate_alert_conditions_accurately(self) -> None:
         """
         Test: Should evaluate alert conditions accurately using various
         comparison operators and threshold values.
@@ -742,8 +706,8 @@ class TestAlertManager:
                     rule_id
                 } should not trigger for value {metric_value}"
 
-    @pytest.mark.asyncio()
-    async def test_should_manage_alert_lifecycle_correctly(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_manage_alert_lifecycle_correctly(self) -> None:
         """
         Test: Should manage alert lifecycle from trigger through resolution
         with proper state transitions and statistics tracking.
@@ -797,8 +761,8 @@ class TestAlertManager:
         assert stats["total_alerts_triggered"] >= 1
         assert stats["alerts_resolved"] >= 1
 
-    @pytest.mark.asyncio()
-    async def test_should_filter_alerts_by_severity(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_filter_alerts_by_severity(self) -> None:
         """
         Test: Should filter and retrieve alerts by severity level
         for priority-based alert management.
@@ -881,11 +845,8 @@ class TestAlertManager:
 class TestPerformanceAnalyzer:
     """Test performance analysis functionality"""
 
-    @pytest.mark.asyncio()
-    async def test_should_generate_performance_insights_from_metrics(
-        self,
-        analytics_config,
-    ):
+    @pytest.mark.asyncio
+    async def test_should_generate_performance_insights_from_metrics(self) -> None:
         """
         Test: Should generate meaningful performance insights from
         collected metrics data with statistical analysis.
@@ -933,8 +894,8 @@ class TestPerformanceAnalyzer:
             assert "p99" in rt_summary
             assert rt_summary["min"] <= rt_summary["avg"] <= rt_summary["max"]
 
-    @pytest.mark.asyncio()
-    async def test_should_detect_performance_anomalies(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_detect_performance_anomalies(self) -> None:
         """
         Test: Should detect performance anomalies using statistical
         methods and generate appropriate alerts and insights.
@@ -973,8 +934,8 @@ class TestPerformanceAnalyzer:
         )
         # Note: Anomaly detection might be triggered by other patterns too
 
-    @pytest.mark.asyncio()
-    async def test_should_calculate_percentiles_correctly(self, analytics_config):
+    @pytest.mark.asyncio
+    async def test_should_calculate_percentiles_correctly(self) -> None:
         """
         Test: Should calculate percentiles correctly for performance
         analysis and SLA monitoring.
@@ -1011,8 +972,8 @@ class TestPerformanceAnalyzer:
 class TestProductionConfiguration:
     """Test production-ready configuration and setup"""
 
-    @pytest.mark.asyncio()
-    async def test_should_create_production_analytics_platform(self):
+    @pytest.mark.asyncio
+    async def test_should_create_production_analytics_platform(self) -> None:
         """
         Test: Should create production-ready analytics platform with
         appropriate configuration for enterprise scale monitoring.
@@ -1044,7 +1005,7 @@ class TestProductionConfiguration:
 class TestDataStructures:
     """Test data structure serialization and immutability"""
 
-    def test_metric_point_should_be_immutable_and_serializable(self):
+    def test_metric_point_should_be_immutable_and_serializable(self) -> None:
         """
         Test: MetricPoint should be immutable and properly serializable
         for storage and transmission across monitoring infrastructure.
@@ -1071,7 +1032,7 @@ class TestDataStructures:
         assert metric.metadata["request_id"] == "req_123"
         assert isinstance(metric.timestamp, datetime)
 
-    def test_alert_should_serialize_with_comprehensive_metadata(self):
+    def test_alert_should_serialize_with_comprehensive_metadata(self) -> None:
         """
         Test: Alert should serialize with comprehensive metadata
         including trigger conditions and resolution tracking.
@@ -1103,7 +1064,7 @@ class TestDataStructures:
         assert alert.metadata["correlation_id"] == "corr_123"
         assert isinstance(alert.triggered_timestamp, datetime)
 
-    def test_performance_report_should_contain_complete_analysis(self):
+    def test_performance_report_should_contain_complete_analysis(self) -> None:
         """
         Test: PerformanceReport should contain complete performance analysis
         with metrics, insights, recommendations, and trends.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """🔐 Enterprise Security Hardening for Personal Wealth Generation Platform
-World-Class Security Implementation
+World-Class Security Implementation.
 
 This module implements military-grade security hardening optimized for personal use,
 providing comprehensive protection for the wealth generation platform including
@@ -32,7 +32,7 @@ import re
 import secrets
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityLevel(Enum):
-    """Security threat levels"""
+    """Security threat levels."""
 
     MINIMAL = 1
     LOW = 2
@@ -66,7 +66,7 @@ class SecurityLevel(Enum):
 
 
 class ThreatType(Enum):
-    """Types of security threats"""
+    """Types of security threats."""
 
     BRUTE_FORCE = "brute_force"
     SQL_INJECTION = "sql_injection"
@@ -82,7 +82,7 @@ class ThreatType(Enum):
 
 
 class AuthenticationMethod(Enum):
-    """Authentication methods"""
+    """Authentication methods."""
 
     PASSWORD = "REDACTED_SECRET"
     MFA_TOTP = "mfa_totp"
@@ -94,7 +94,7 @@ class AuthenticationMethod(Enum):
 
 @dataclass
 class SecurityEvent:
-    """Security event data structure"""
+    """Security event data structure."""
 
     event_id: str
     timestamp: datetime
@@ -104,11 +104,11 @@ class SecurityEvent:
     user_agent: str | None
     user_id: str | None
     description: str
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
     blocked: bool = False
     response_action: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "event_id": self.event_id,
             "timestamp": self.timestamp.isoformat(),
@@ -126,19 +126,19 @@ class SecurityEvent:
 
 @dataclass
 class SecurityPolicy:
-    """Security policy configuration"""
+    """Security policy configuration."""
 
     policy_id: str
     name: str
     description: str
     enabled: bool
     severity: SecurityLevel
-    conditions: dict[str, Any]
-    actions: list[str]
+    conditions: Dict[str, Any]
+    actions: List[str]
     created_at: datetime
     updated_at: datetime
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "policy_id": self.policy_id,
             "name": self.name,
@@ -153,9 +153,9 @@ class SecurityPolicy:
 
 
 class AdvancedEncryptionService:
-    """Advanced encryption service with multiple layers"""
+    """Advanced encryption service with multiple layers."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.master_key = self._derive_master_key()
         self.fernet = Fernet(self.master_key)
@@ -168,7 +168,7 @@ class AdvancedEncryptionService:
         self.rsa_public_key = self.rsa_private_key.public_key()
 
     def _derive_master_key(self) -> bytes:
-        """Derive master key from configuration"""
+        """Derive master key from configuration."""
         try:
             # In production, this should be from HSM or secure key management
             REDACTED_SECRET = os.environ.get(
@@ -186,11 +186,10 @@ class AdvancedEncryptionService:
                 salt=salt,
                 iterations=100000,
             )
-            key = base64.urlsafe_b64encode(kdf.derive(REDACTED_SECRET))
-            return key
+            return base64.urlsafe_b64encode(kdf.derive(REDACTED_SECRET))
 
         except Exception as e:
-            logger.error(f"Error deriving master key: {e}")
+            logger.error("Error deriving master key: %s", e)
             # Fallback to a secure random key
             return Fernet.generate_key()
 
@@ -199,7 +198,7 @@ class AdvancedEncryptionService:
         data: str,
         metadata: dict | None = None,
     ) -> dict[str, str]:
-        """Encrypt sensitive data with multi-layer protection"""
+        """Encrypt sensitive data with multi-layer protection."""
         try:
             # Layer 1: Fernet encryption
             encrypted_data = self.fernet.encrypt(data.encode())
@@ -232,11 +231,11 @@ class AdvancedEncryptionService:
             }
 
         except Exception as e:
-            logger.error(f"Error encrypting data: {e}")
+            logger.error("Error encrypting data: %s", e)
             raise
 
     def decrypt_sensitive_data(self, encrypted_package: dict[str, str]) -> str:
-        """Decrypt multi-layer encrypted data"""
+        """Decrypt multi-layer encrypted data."""
         try:
             # Decrypt AES key with RSA
             encrypted_key = base64.b64decode(encrypted_package["encrypted_key"])
@@ -259,19 +258,17 @@ class AdvancedEncryptionService:
             fernet_encrypted = decryptor.update(ciphertext) + decryptor.finalize()
 
             # Decrypt with Fernet
-            plaintext = self.fernet.decrypt(fernet_encrypted).decode()
-
-            return plaintext
+            return self.fernet.decrypt(fernet_encrypted).decode()
 
         except Exception as e:
-            logger.error(f"Error decrypting data: {e}")
+            logger.error("Error decrypting data: %s", e)
             raise
 
 
 class ThreatDetectionEngine:
-    """Advanced threat detection and response engine"""
+    """Advanced threat detection and response engine."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.blocked_ips = set()
         self.rate_limits = {}
@@ -284,8 +281,8 @@ class ThreatDetectionEngine:
 
         logger.info("Threat Detection Engine initialized")
 
-    def _load_threat_patterns(self) -> dict[str, list[str]]:
-        """Load threat detection patterns"""
+    def _load_threat_patterns(self) -> dict[str, List[str]]:
+        """Load threat detection patterns."""
         return {
             "sql_injection": [
                 r"(\%27)|(\')|(\-\-)|(\%23)|(#)",
@@ -326,9 +323,9 @@ class ThreatDetectionEngine:
 
     async def analyze_request(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Analyze incoming request for security threats"""
+        """Analyze incoming request for security threats."""
         try:
             source_ip = request_data.get("source_ip")
             user_agent = request_data.get("user_agent", "")
@@ -342,7 +339,7 @@ class ThreatDetectionEngine:
             if source_ip in self.blocked_ips:
                 return SecurityEvent(
                     event_id=self._generate_event_id(),
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     event_type=ThreatType.UNAUTHORIZED_ACCESS,
                     severity=SecurityLevel.HIGH,
                     source_ip=source_ip,
@@ -392,15 +389,15 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error analyzing request: {e}")
+            logger.error("Error analyzing request: %s", e)
             return None
 
     async def _check_rate_limiting(
         self,
         source_ip: str,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Check for rate limiting violations"""
+        """Check for rate limiting violations."""
         try:
             current_time = time.time()
             window_start = current_time - self.rate_limit_window
@@ -423,7 +420,7 @@ class ThreatDetectionEngine:
             if len(self.rate_limits[source_ip]) > self.max_requests_per_window:
                 return SecurityEvent(
                     event_id=self._generate_event_id(),
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     event_type=ThreatType.API_ABUSE,
                     severity=SecurityLevel.MEDIUM,
                     source_ip=source_ip,
@@ -444,14 +441,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error checking rate limiting: {e}")
+            logger.error("Error checking rate limiting: %s", e)
             return None
 
     def _detect_sql_injection(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect SQL injection attempts"""
+        """Detect SQL injection attempts."""
         try:
             content_to_check = [
                 request_data.get("path", ""),
@@ -464,7 +461,7 @@ class ThreatDetectionEngine:
                     if re.search(pattern, content, re.IGNORECASE):
                         return SecurityEvent(
                             event_id=self._generate_event_id(),
-                            timestamp=datetime.now(),
+                            timestamp=datetime.now(UTC),
                             event_type=ThreatType.SQL_INJECTION,
                             severity=SecurityLevel.HIGH,
                             source_ip=request_data.get("source_ip"),
@@ -484,14 +481,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting SQL injection: {e}")
+            logger.error("Error detecting SQL injection: %s", e)
             return None
 
     def _detect_xss_attack(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect XSS attack attempts"""
+        """Detect XSS attack attempts."""
         try:
             content_to_check = [
                 request_data.get("path", ""),
@@ -504,7 +501,7 @@ class ThreatDetectionEngine:
                     if re.search(pattern, content, re.IGNORECASE):
                         return SecurityEvent(
                             event_id=self._generate_event_id(),
-                            timestamp=datetime.now(),
+                            timestamp=datetime.now(UTC),
                             event_type=ThreatType.XSS_ATTACK,
                             severity=SecurityLevel.HIGH,
                             source_ip=request_data.get("source_ip"),
@@ -523,14 +520,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting XSS attack: {e}")
+            logger.error("Error detecting XSS attack: %s", e)
             return None
 
     def _detect_directory_traversal(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect directory traversal attempts"""
+        """Detect directory traversal attempts."""
         try:
             path = request_data.get("path", "")
 
@@ -538,7 +535,7 @@ class ThreatDetectionEngine:
                 if re.search(pattern, path, re.IGNORECASE):
                     return SecurityEvent(
                         event_id=self._generate_event_id(),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(UTC),
                         event_type=ThreatType.UNAUTHORIZED_ACCESS,
                         severity=SecurityLevel.HIGH,
                         source_ip=request_data.get("source_ip"),
@@ -553,14 +550,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting directory traversal: {e}")
+            logger.error("Error detecting directory traversal: %s", e)
             return None
 
     def _detect_command_injection(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect command injection attempts"""
+        """Detect command injection attempts."""
         try:
             content_to_check = [
                 str(request_data.get("params", {})),
@@ -572,7 +569,7 @@ class ThreatDetectionEngine:
                     if re.search(pattern, content, re.IGNORECASE):
                         return SecurityEvent(
                             event_id=self._generate_event_id(),
-                            timestamp=datetime.now(),
+                            timestamp=datetime.now(UTC),
                             event_type=ThreatType.UNAUTHORIZED_ACCESS,
                             severity=SecurityLevel.CRITICAL,
                             source_ip=request_data.get("source_ip"),
@@ -590,14 +587,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting command injection: {e}")
+            logger.error("Error detecting command injection: %s", e)
             return None
 
     def _detect_suspicious_user_agent(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect suspicious user agents"""
+        """Detect suspicious user agents."""
         try:
             user_agent = request_data.get("user_agent", "").lower()
 
@@ -624,7 +621,7 @@ class ThreatDetectionEngine:
                 if suspicious in user_agent:
                     return SecurityEvent(
                         event_id=self._generate_event_id(),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(UTC),
                         event_type=ThreatType.UNAUTHORIZED_ACCESS,
                         severity=SecurityLevel.HIGH,
                         source_ip=request_data.get("source_ip"),
@@ -642,14 +639,14 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting suspicious user agent: {e}")
+            logger.error("Error detecting suspicious user agent: %s", e)
             return None
 
     async def _detect_api_abuse(
         self,
-        request_data: dict[str, Any],
+        request_data: Dict[str, Any],
     ) -> SecurityEvent | None:
-        """Detect API abuse patterns"""
+        """Detect API abuse patterns."""
         try:
             path = request_data.get("path", "")
             method = request_data.get("method", "GET")
@@ -669,7 +666,7 @@ class ThreatDetectionEngine:
                     if re.search(pattern, path, re.IGNORECASE):
                         return SecurityEvent(
                             event_id=self._generate_event_id(),
-                            timestamp=datetime.now(),
+                            timestamp=datetime.now(UTC),
                             event_type=ThreatType.API_ABUSE,
                             severity=SecurityLevel.MEDIUM,
                             source_ip=request_data.get("source_ip"),
@@ -688,28 +685,28 @@ class ThreatDetectionEngine:
             return None
 
         except Exception as e:
-            logger.error(f"Error detecting API abuse: {e}")
+            logger.error("Error detecting API abuse: %s", e)
             return None
 
     def _generate_event_id(self) -> str:
-        """Generate unique event ID"""
+        """Generate unique event ID."""
         return f"sec_{int(time.time())}_{secrets.token_hex(8)}"
 
-    def block_ip(self, ip_address: str, duration_hours: int = 24):
-        """Block an IP address"""
+    def block_ip(self) -> None:
+        """Block an IP address."""
         self.blocked_ips.add(ip_address)
-        logger.warning(f"IP {ip_address} blocked for {duration_hours} hours")
+        logger.warning("IP %s blocked for %s hours", ip_address, duration_hours)
 
-    def unblock_ip(self, ip_address: str):
-        """Unblock an IP address"""
+    def unblock_ip(self) -> None:
+        """Unblock an IP address."""
         self.blocked_ips.discard(ip_address)
-        logger.info(f"IP {ip_address} unblocked")
+        logger.info("IP %s unblocked", ip_address)
 
 
 class SystemMonitoringService:
-    """Advanced system monitoring and intrusion detection"""
+    """Advanced system monitoring and intrusion detection."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.monitoring_interval = config.get("monitoring_interval", 30)  # seconds
         self.alert_thresholds = config.get(
@@ -727,8 +724,8 @@ class SystemMonitoringService:
 
         logger.info("System Monitoring Service initialized")
 
-    async def start_monitoring(self):
-        """Start continuous system monitoring"""
+    async def start_monitoring(self) -> None:
+        """Start continuous system monitoring."""
         while True:
             try:
                 await self._monitor_system_resources()
@@ -739,11 +736,11 @@ class SystemMonitoringService:
                 await asyncio.sleep(self.monitoring_interval)
 
             except Exception as e:
-                logger.error(f"Error in system monitoring: {e}")
+                logger.error("Error in system monitoring: %s", e)
                 await asyncio.sleep(self.monitoring_interval)
 
-    async def _monitor_system_resources(self):
-        """Monitor system resource usage"""
+    async def _monitor_system_resources(self) -> None:
+        """Monitor system resource usage."""
         try:
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=1)
@@ -797,10 +794,10 @@ class SystemMonitoringService:
                 pass  # GPU monitoring not available
 
         except Exception as e:
-            logger.error(f"Error monitoring system resources: {e}")
+            logger.error("Error monitoring system resources: %s", e)
 
-    async def _monitor_network_connections(self):
-        """Monitor network connections for suspicious activity"""
+    async def _monitor_network_connections(self) -> None:
+        """Monitor network connections for suspicious activity."""
         try:
             connections = psutil.net_connections(kind="inet")
             active_connections = len(
@@ -837,10 +834,10 @@ class SystemMonitoringService:
                     )
 
         except Exception as e:
-            logger.error(f"Error monitoring network connections: {e}")
+            logger.error("Error monitoring network connections: %s", e)
 
-    async def _monitor_file_integrity(self):
-        """Monitor critical file integrity"""
+    async def _monitor_file_integrity(self) -> None:
+        """Monitor critical file integrity."""
         try:
             critical_files = [
                 "/etc/passwd",
@@ -865,10 +862,10 @@ class SystemMonitoringService:
                         self.baseline_metrics[file_path] = file_hash
 
         except Exception as e:
-            logger.error(f"Error monitoring file integrity: {e}")
+            logger.error("Error monitoring file integrity: %s", e)
 
     async def _calculate_file_hash(self, file_path: str) -> str:
-        """Calculate SHA-256 hash of a file"""
+        """Calculate SHA-256 hash of a file."""
         try:
             sha256_hash = hashlib.sha256()
             async with aiofiles.open(file_path, "rb") as f:
@@ -878,8 +875,8 @@ class SystemMonitoringService:
         except BaseException:
             return ""
 
-    async def _detect_anomalies(self):
-        """Detect system anomalies using basic behavioral analysis"""
+    async def _detect_anomalies(self) -> None:
+        """Detect system anomalies using basic behavioral analysis."""
         try:
             if not self.anomaly_detection_enabled:
                 return
@@ -923,16 +920,11 @@ class SystemMonitoringService:
                 self.baseline_metrics["baseline_state"] = current_state
 
         except Exception as e:
-            logger.error(f"Error in anomaly detection: {e}")
+            logger.error("Error in anomaly detection: %s", e)
 
-    async def _generate_system_alert(
-        self,
-        alert_type: str,
-        message: str,
-        metadata: dict[str, Any],
-    ):
-        """Generate system security alert"""
-        logger.warning(f"SECURITY ALERT [{alert_type}]: {message}")
+    async def _generate_system_alert(self) -> None:
+        """Generate system security alert."""
+        logger.warning("SECURITY ALERT [%s]: %s", alert_type, message)
 
         # In production, integrate with alerting systems
         alert_data = {
@@ -940,18 +932,18 @@ class SystemMonitoringService:
             "type": alert_type,
             "message": message,
             "metadata": metadata,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "severity": "HIGH",
         }
 
         # Store alert (implement alert storage/forwarding)
-        logger.info(f"System alert generated: {json.dumps(alert_data, indent=2)}")
+        logger.info("System alert generated: %s", json.dumps(alert_data, indent=2))
 
 
 class EnterpriseSecurityHardening:
-    """Main enterprise security hardening service"""
+    """Main enterprise security hardening service."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.encryption_service = AdvancedEncryptionService(
             config.get("encryption", {}),
@@ -972,8 +964,8 @@ class EnterpriseSecurityHardening:
 
         logger.info("Enterprise Security Hardening initialized")
 
-    async def _init_security_database(self):
-        """Initialize security database"""
+    async def _init_security_database(self) -> None:
+        """Initialize security database."""
         try:
             # Ensure data directory exists
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -1051,10 +1043,10 @@ class EnterpriseSecurityHardening:
             logger.info("Security database initialized")
 
         except Exception as e:
-            logger.error(f"Error initializing security database: {e}")
+            logger.error("Error initializing security database: %s", e)
 
-    async def _load_default_policies(self):
-        """Load default security policies"""
+    async def _load_default_policies(self) -> None:
+        """Load default security policies."""
         try:
             default_policies = [
                 SecurityPolicy(
@@ -1065,8 +1057,8 @@ class EnterpriseSecurityHardening:
                     severity=SecurityLevel.HIGH,
                     conditions={"failed_attempts": {">=": 5}},
                     actions=["block_ip", "alert_admin"],
-                    created_at=datetime.now(),
-                    updated_at=datetime.now(),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 ),
                 SecurityPolicy(
                     policy_id="pol_sql_injection_protection",
@@ -1076,8 +1068,8 @@ class EnterpriseSecurityHardening:
                     severity=SecurityLevel.CRITICAL,
                     conditions={"sql_patterns": True},
                     actions=["block_request", "alert_admin", "log_incident"],
-                    created_at=datetime.now(),
-                    updated_at=datetime.now(),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 ),
                 SecurityPolicy(
                     policy_id="pol_rate_limiting",
@@ -1087,8 +1079,8 @@ class EnterpriseSecurityHardening:
                     severity=SecurityLevel.MEDIUM,
                     conditions={"requests_per_minute": {">=": 100}},
                     actions=["rate_limit", "temporary_block"],
-                    created_at=datetime.now(),
-                    updated_at=datetime.now(),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 ),
             ]
 
@@ -1113,13 +1105,13 @@ class EnterpriseSecurityHardening:
                 await db.commit()
 
         except Exception as e:
-            logger.error(f"Error loading default policies: {e}")
+            logger.error("Error loading default policies: %s", e)
 
     async def analyze_security_event(
         self,
-        request_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Analyze request for security threats"""
+        request_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Analyze request for security threats."""
         try:
             # Run threat detection
             security_event = await self.threat_detection.analyze_request(request_data)
@@ -1143,11 +1135,11 @@ class EnterpriseSecurityHardening:
             return {"threat_detected": False}
 
         except Exception as e:
-            logger.error(f"Error analyzing security event: {e}")
+            logger.error("Error analyzing security event: %s", e)
             return {"threat_detected": False, "error": str(e)}
 
-    async def _store_security_event(self, event: SecurityEvent):
-        """Store security event in database"""
+    async def _store_security_event(self) -> None:
+        """Store security event in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -1174,10 +1166,10 @@ class EnterpriseSecurityHardening:
                 await db.commit()
 
         except Exception as e:
-            logger.error(f"Error storing security event: {e}")
+            logger.error("Error storing security event: %s", e)
 
-    async def _execute_response_actions(self, event: SecurityEvent):
-        """Execute automated response actions"""
+    async def _execute_response_actions(self) -> None:
+        """Execute automated response actions."""
         try:
             if event.blocked:
                 # Block IP if critical threat
@@ -1193,14 +1185,14 @@ class EnterpriseSecurityHardening:
                     await self._send_security_alert(event)
 
         except Exception as e:
-            logger.error(f"Error executing response actions: {e}")
+            logger.error("Error executing response actions: %s", e)
 
-    async def _block_ip_address(self, ip_address: str, reason: str, hours: int = 24):
-        """Block IP address in database and threat detection"""
+    async def _block_ip_address(self) -> None:
+        """Block IP address in database and threat detection."""
         try:
             self.threat_detection.block_ip(ip_address, hours)
 
-            expires_at = datetime.now() + timedelta(hours=hours)
+            expires_at = datetime.now(UTC) + timedelta(hours=hours)
 
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -1213,13 +1205,13 @@ class EnterpriseSecurityHardening:
                 )
                 await db.commit()
 
-            logger.warning(f"IP {ip_address} blocked for {hours} hours: {reason}")
+            logger.warning("IP %s blocked for %s hours: %s", ip_address, hours, reason)
 
         except Exception as e:
-            logger.error(f"Error blocking IP address {ip_address}: {e}")
+            logger.error("Error blocking IP address %s: %s", ip_address, e)
 
-    async def _send_security_alert(self, event: SecurityEvent):
-        """Send security alert notification"""
+    async def _send_security_alert(self) -> None:
+        """Send security alert notification."""
         try:
             alert_message = f"""
 🚨 CRITICAL SECURITY ALERT
@@ -1244,10 +1236,10 @@ This is an automated security alert from the Personal Wealth Generation Platform
             # await notification_service.send_security_alert(alert_message)
 
         except Exception as e:
-            logger.error(f"Error sending security alert: {e}")
+            logger.error("Error sending security alert: %s", e)
 
-    async def get_security_dashboard(self) -> dict[str, Any]:
-        """Get security dashboard data"""
+    async def get_security_dashboard(self) -> Dict[str, Any]:
+        """Get security dashboard data."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 # Recent security events
@@ -1294,15 +1286,15 @@ This is an automated security alert from the Personal Wealth Generation Platform
                         {"ip": row[0], "threat_count": row[1]} for row in top_threats
                     ],
                     "security_status": "ACTIVE",
-                    "last_updated": datetime.now().isoformat(),
+                    "last_updated": datetime.now(UTC).isoformat(),
                 }
 
         except Exception as e:
-            logger.error(f"Error getting security dashboard: {e}")
+            logger.error("Error getting security dashboard: %s", e)
             return {"error": str(e)}
 
-    async def start_monitoring(self):
-        """Start security monitoring services"""
+    async def start_monitoring(self) -> None:
+        """Start security monitoring services."""
         try:
             # Start system monitoring
             monitoring_task = asyncio.create_task(
@@ -1315,12 +1307,12 @@ This is an automated security alert from the Personal Wealth Generation Platform
             await monitoring_task
 
         except Exception as e:
-            logger.error(f"Error starting security monitoring: {e}")
+            logger.error("Error starting security monitoring: %s", e)
 
 
 # Demo and testing
-async def demo_enterprise_security():
-    """Demonstrate enterprise security capabilities"""
+async def demo_enterprise_security(self) -> None:
+    """Demonstrate enterprise security capabilities."""
     print("🔐 Enterprise Security Hardening Demo - Personal Wealth Generation")
     print("=" * 80)
 

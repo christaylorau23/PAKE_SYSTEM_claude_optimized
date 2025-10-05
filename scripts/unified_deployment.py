@@ -14,7 +14,7 @@ import shutil
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 
@@ -64,7 +64,7 @@ class DeploymentConfig:
 class PAKEUnifiedDeployment:
     """Unified deployment system addressing all PAKE+ system issues"""
 
-    def __init__(self, config: DeploymentConfig = None):
+    def __init__(self) -> None:
         self.config = config or DeploymentConfig()
         self.base_dir = Path(__file__).parent.parent
         self.logs_dir = self.base_dir / "logs"
@@ -80,7 +80,7 @@ class PAKEUnifiedDeployment:
         self.setup_comprehensive_logging()
 
         # Deployment state
-        self.deployment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.deployment_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         self.phase_results = {}
         self.deployment_start_time = None
         self.deployment_errors = []
@@ -91,10 +91,11 @@ class PAKEUnifiedDeployment:
         self.health_monitor = None
 
         self.logger.info(
-            f"PAKE+ Unified Deployment initialized (ID: {self.deployment_id})",
+            "PAKE+ Unified Deployment initialized (ID: %s)",
+            self.deployment_id,
         )
 
-    def setup_comprehensive_logging(self):
+    def setup_comprehensive_logging(self) -> None:
         """Setup comprehensive logging with multiple handlers"""
         # Create deployment-specific log file
         log_file = self.logs_dir / f"unified_deployment_{self.deployment_id}.log"
@@ -131,7 +132,7 @@ class PAKEUnifiedDeployment:
         self.logger.addHandler(console_handler)
         self.logger.addHandler(error_handler)
 
-        self.logger.info(f"Logging initialized - Log file: {log_file}")
+        self.logger.info("Logging initialized - Log file: %s", log_file)
 
     async def execute_full_deployment(self) -> bool:
         """Execute complete PAKE+ system deployment"""
@@ -139,9 +140,9 @@ class PAKEUnifiedDeployment:
 
         self.logger.info("🚀 Starting PAKE+ Unified Deployment")
         self.logger.info("=" * 80)
-        self.logger.info(f"Deployment ID: {self.deployment_id}")
-        self.logger.info(f"Mode: {self.config.mode.value}")
-        self.logger.info(f"Platform: {platform.system()} {platform.release()}")
+        self.logger.info("Deployment ID: %s", self.deployment_id)
+        self.logger.info("Mode: %s", self.config.mode.value)
+        self.logger.info("Platform: %s %s", platform.system(), platform.release())
         self.logger.info("=" * 80)
 
         # Define deployment phases
@@ -174,7 +175,7 @@ class PAKEUnifiedDeployment:
 
         try:
             for phase_enum, phase_name, phase_function in phases:
-                self.logger.info(f"\n📋 Phase: {phase_name}")
+                self.logger.info("\n📋 Phase: %s", phase_name)
                 self.logger.info("-" * 50)
 
                 phase_start = time.time()
@@ -186,17 +187,20 @@ class PAKEUnifiedDeployment:
                     self.phase_results[phase_enum.value] = {
                         "success": phase_success,
                         "duration": phase_duration,
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     }
 
                     if phase_success:
                         self.logger.info(
-                            f"✅ {phase_name} completed successfully ({
-                                phase_duration:.1f}s)",
+                            "✅ %.1f completed successfully (%ss)",
+                            phase_name,
+                            phase_duration,
                         )
                     else:
                         self.logger.error(
-                            f"❌ {phase_name} failed ({phase_duration:.1f}s)",
+                            "❌ %s failed (%ss)",
+                            phase_name,
+                            phase_duration,
                         )
                         success = False
 
@@ -206,21 +210,22 @@ class PAKEUnifiedDeployment:
                             DeploymentPhase.INFRASTRUCTURE,
                         ]:
                             self.logger.critical(
-                                f"Critical phase {phase_name} failed - stopping deployment",
+                                "Critical phase %s failed - stopping deployment",
+                                phase_name,
                             )
                             break
 
                 except Exception as e:
                     phase_duration = time.time() - phase_start
 
-                    self.logger.error(f"💥 {phase_name} failed with exception: {e}")
+                    self.logger.error("💥 %s failed with exception: %s", phase_name, e)
                     self.deployment_errors.append(f"{phase_name}: {str(e)}")
 
                     self.phase_results[phase_enum.value] = {
                         "success": False,
                         "duration": phase_duration,
                         "error": str(e),
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     }
 
                     success = False
@@ -241,16 +246,16 @@ class PAKEUnifiedDeployment:
 
             if success:
                 self.logger.info("\n🎉 PAKE+ deployment completed successfully!")
-                self.logger.info(f"⏱️  Total time: {total_duration:.1f} seconds")
+                self.logger.info("⏱️  Total time: %.1f%% seconds", total_duration)
             else:
                 self.logger.error("\n❌ PAKE+ deployment failed")
-                self.logger.error(f"⏱️  Total time: {total_duration:.1f} seconds")
+                self.logger.error("⏱️  Total time: %.1f%% seconds", total_duration)
                 self.logger.error("Check logs for detailed error information")
 
             return success
 
         except Exception as e:
-            self.logger.critical(f"💥 Fatal deployment error: {e}")
+            self.logger.critical("💥 Fatal deployment error: %s", e)
             self.deployment_errors.append(f"Fatal: {str(e)}")
             await self._generate_deployment_report(False)
             return False
@@ -271,26 +276,28 @@ class PAKEUnifiedDeployment:
         results = []
 
         for task_name, task_function in validation_tasks:
-            self.logger.info(f"  Checking {task_name}...")
+            self.logger.info("  Checking %s...", task_name)
 
             try:
                 result = await task_function()
                 results.append(result)
 
                 if result:
-                    self.logger.info(f"  ✅ {task_name}: OK")
+                    self.logger.info("  ✅ %s: OK", task_name)
                 else:
-                    self.logger.error(f"  ❌ {task_name}: FAILED")
+                    self.logger.error("  ❌ %s: FAILED", task_name)
 
             except Exception as e:
-                self.logger.error(f"  💥 {task_name}: ERROR - {e}")
+                self.logger.error("  💥 %s: ERROR - %s", task_name, e)
                 results.append(False)
 
         success_count = sum(results)
         total_count = len(results)
 
         self.logger.info(
-            f"Validation summary: {success_count}/{total_count} checks passed",
+            "Validation summary: %s/%s checks passed",
+            success_count,
+            total_count,
         )
 
         # Require all critical validations to pass
@@ -300,15 +307,12 @@ class PAKEUnifiedDeployment:
         """Validate system requirements"""
         try:
             # Check Python version
-            if sys.version_info < (3, 8):
-                self.logger.error("Python 3.8+ required")
-                return False
 
             # Check available disk space (minimum 10GB)
             disk_usage = shutil.disk_usage(self.base_dir)
             free_gb = disk_usage.free / (1024**3)
             if free_gb < 10:
-                self.logger.warning(f"Low disk space: {free_gb:.1f}GB available")
+                self.logger.warning("Low disk space: %.1f%%GB available", free_gb)
 
             # Check memory (minimum 4GB)
             try:
@@ -316,14 +320,14 @@ class PAKEUnifiedDeployment:
 
                 memory_gb = psutil.virtual_memory().total / (1024**3)
                 if memory_gb < 4:
-                    self.logger.warning(f"Low memory: {memory_gb:.1f}GB available")
+                    self.logger.warning("Low memory: %.1f%%GB available", memory_gb)
             except ImportError:
                 pass
 
             return True
 
         except Exception as e:
-            self.logger.error(f"System requirements validation failed: {e}")
+            self.logger.error("System requirements validation failed: %s", e)
             return False
 
     async def _validate_prerequisites(self) -> bool:
@@ -353,7 +357,7 @@ class PAKEUnifiedDeployment:
 
                 if process.returncode == 0:
                     version = stdout.decode().strip().split("\n")[0]
-                    self.logger.debug(f"  {name}: {version}")
+                    self.logger.debug("  %s: %s", name, version)
                 else:
                     missing_prereqs.append(name)
 
@@ -361,7 +365,7 @@ class PAKEUnifiedDeployment:
                 missing_prereqs.append(name)
 
         if missing_prereqs:
-            self.logger.error(f"Missing prerequisites: {', '.join(missing_prereqs)}")
+            self.logger.error("Missing prerequisites: %s", ", ".join(missing_prereqs))
             self._show_installation_instructions(missing_prereqs)
             return False
 
@@ -376,7 +380,7 @@ class PAKEUnifiedDeployment:
         for dir_name in required_dirs:
             dir_path = self.base_dir / dir_name
             if not dir_path.exists():
-                self.logger.warning(f"Creating missing directory: {dir_path}")
+                self.logger.warning("Creating missing directory: %s", dir_path)
                 dir_path.mkdir(exist_ok=True)
 
         # Check for required files
@@ -395,7 +399,7 @@ class PAKEUnifiedDeployment:
                 missing_files.append(file_path)
 
         if missing_files:
-            self.logger.error(f"Missing required files: {missing_files}")
+            self.logger.error("Missing required files: %s", missing_files)
             return False
 
         return True
@@ -423,7 +427,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"Configuration validation failed: {e}")
+            self.logger.error("Configuration validation failed: %s", e)
             return False
 
     async def _validate_network_ports(self) -> bool:
@@ -440,7 +444,7 @@ class PAKEUnifiedDeployment:
                 busy_ports.append(port)
 
         if busy_ports:
-            self.logger.warning(f"Ports in use: {busy_ports}")
+            self.logger.warning("Ports in use: %s", busy_ports)
             # Don't fail validation - Docker will handle port conflicts
 
         return True
@@ -478,7 +482,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"Permission validation failed: {e}")
+            self.logger.error("Permission validation failed: %s", e)
             return False
 
     async def _phase_preparation(self) -> bool:
@@ -493,17 +497,17 @@ class PAKEUnifiedDeployment:
         ]
 
         for task_name, task_function in preparation_tasks:
-            self.logger.info(f"  {task_name}...")
+            self.logger.info("  %s...", task_name)
 
             try:
                 success = await task_function()
                 if not success:
-                    self.logger.error(f"  ❌ {task_name} failed")
+                    self.logger.error("  ❌ %s failed", task_name)
                     return False
-                self.logger.info(f"  ✅ {task_name} completed")
+                self.logger.info("  ✅ %s completed", task_name)
 
             except Exception as e:
-                self.logger.error(f"  💥 {task_name} error: {e}")
+                self.logger.error("  💥 %s error: %s", task_name, e)
                 return False
 
         return True
@@ -542,11 +546,13 @@ class PAKEUnifiedDeployment:
 
                 env_file.write_text(content)
 
-            self.logger.debug(f"Environment prepared with {len(env_updates)} variables")
+            self.logger.debug(
+                "Environment prepared with %s variables", len(env_updates)
+            )
             return True
 
         except Exception as e:
-            self.logger.error(f"Environment preparation failed: {e}")
+            self.logger.error("Environment preparation failed: %s", e)
             return False
 
     async def _prepare_directories(self) -> bool:
@@ -580,11 +586,11 @@ class PAKEUnifiedDeployment:
                 # Update environment
                 os.environ["VAULT_PATH"] = str(vault_path)
 
-            self.logger.debug(f"Created {len(directories)} directories")
+            self.logger.debug("Created %s directories", len(directories))
             return True
 
         except Exception as e:
-            self.logger.error(f"Directory preparation failed: {e}")
+            self.logger.error("Directory preparation failed: %s", e)
             return False
 
     async def _prepare_configurations(self) -> bool:
@@ -593,7 +599,7 @@ class PAKEUnifiedDeployment:
             # Generate deployment configuration
             deployment_config = {
                 "deployment_id": self.deployment_id,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "mode": self.config.mode.value,
                 "config": {
                     "skip_docker": self.config.skip_docker,
@@ -611,7 +617,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"Configuration preparation failed: {e}")
+            self.logger.error("Configuration preparation failed: %s", e)
             return False
 
     async def _prepare_dependencies(self) -> bool:
@@ -632,7 +638,7 @@ class PAKEUnifiedDeployment:
             return python_success and node_success
 
         except Exception as e:
-            self.logger.error(f"Dependency preparation failed: {e}")
+            self.logger.error("Dependency preparation failed: %s", e)
             return False
 
     async def _install_python_dependencies(self) -> bool:
@@ -649,7 +655,7 @@ class PAKEUnifiedDeployment:
 
             for req_file in requirements_files:
                 if req_file.exists():
-                    self.logger.debug(f"    Installing from {req_file}")
+                    self.logger.debug("    Installing from %s", req_file)
 
                     process = await asyncio.create_subprocess_exec(
                         sys.executable,
@@ -669,7 +675,9 @@ class PAKEUnifiedDeployment:
 
                     if process.returncode != 0:
                         self.logger.error(
-                            f"    Failed to install from {req_file}: {stderr.decode()}",
+                            "    Failed to install from %s: %s",
+                            req_file,
+                            stderr.decode(),
                         )
                         return False
 
@@ -704,7 +712,7 @@ class PAKEUnifiedDeployment:
             self.logger.error("    Python dependency installation timed out")
             return False
         except Exception as e:
-            self.logger.error(f"    Python dependency installation failed: {e}")
+            self.logger.error("    Python dependency installation failed: %s", e)
             return False
 
     async def _install_node_dependencies(self) -> bool:
@@ -732,7 +740,8 @@ class PAKEUnifiedDeployment:
 
                 if process.returncode != 0:
                     self.logger.error(
-                        f"    Scripts npm install failed: {stderr.decode()}",
+                        "    Scripts npm install failed: %s",
+                        stderr.decode(),
                     )
                     return False
 
@@ -757,7 +766,8 @@ class PAKEUnifiedDeployment:
 
                     if process.returncode != 0:
                         self.logger.error(
-                            f"    Frontend npm install failed: {stderr.decode()}",
+                            "    Frontend npm install failed: %s",
+                            stderr.decode(),
                         )
                         return False
 
@@ -768,7 +778,7 @@ class PAKEUnifiedDeployment:
             self.logger.error("    Node.js dependency installation timed out")
             return False
         except Exception as e:
-            self.logger.error(f"    Node.js dependency installation failed: {e}")
+            self.logger.error("    Node.js dependency installation failed: %s", e)
             return False
 
     async def _phase_infrastructure(self) -> bool:
@@ -799,7 +809,7 @@ class PAKEUnifiedDeployment:
             return False
 
         except Exception as e:
-            self.logger.error(f"Infrastructure deployment failed: {e}")
+            self.logger.error("Infrastructure deployment failed: %s", e)
             return False
 
     async def _phase_services(self) -> bool:
@@ -828,13 +838,13 @@ class PAKEUnifiedDeployment:
             ]
 
             if failed_services:
-                self.logger.error(f"  Critical services failed: {failed_services}")
+                self.logger.error("  Critical services failed: %s", failed_services)
                 return False
             self.logger.warning("  Only non-critical services failed")
             return True
 
         except Exception as e:
-            self.logger.error(f"Service deployment failed: {e}")
+            self.logger.error("Service deployment failed: %s", e)
             return False
 
     async def _phase_verification(self) -> bool:
@@ -852,26 +862,28 @@ class PAKEUnifiedDeployment:
         results = []
 
         for task_name, task_function in verification_tasks:
-            self.logger.info(f"  {task_name}...")
+            self.logger.info("  %s...", task_name)
 
             try:
                 result = await task_function()
                 results.append(result)
 
                 if result:
-                    self.logger.info(f"  ✅ {task_name}: PASSED")
+                    self.logger.info("  ✅ %s: PASSED", task_name)
                 else:
-                    self.logger.warning(f"  ⚠️  {task_name}: FAILED")
+                    self.logger.warning("  ⚠️  %s: FAILED", task_name)
 
             except Exception as e:
-                self.logger.error(f"  💥 {task_name}: ERROR - {e}")
+                self.logger.error("  💥 %s: ERROR - %s", task_name, e)
                 results.append(False)
 
         success_count = sum(results)
         total_count = len(results)
 
         self.logger.info(
-            f"Verification summary: {success_count}/{total_count} checks passed",
+            "Verification summary: %s/%s checks passed",
+            success_count,
+            total_count,
         )
 
         # Allow some non-critical verifications to fail
@@ -895,14 +907,15 @@ class PAKEUnifiedDeployment:
 
             if critical_failures:
                 self.logger.error(
-                    f"    Critical services unhealthy: {critical_failures}",
+                    "    Critical services unhealthy: %s",
+                    critical_failures,
                 )
                 return False
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Service health verification failed: {e}")
+            self.logger.error("Service health verification failed: %s", e)
             return False
 
     async def _verify_database_connectivity(self) -> bool:
@@ -931,7 +944,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"Database connectivity verification failed: {e}")
+            self.logger.error("Database connectivity verification failed: %s", e)
             return False
 
     async def _verify_api_endpoints(self) -> bool:
@@ -953,11 +966,13 @@ class PAKEUnifiedDeployment:
                         ) as response:
                             if response.status >= 400:
                                 self.logger.warning(
-                                    f"    {endpoint}: HTTP {response.status}",
+                                    "    %s: HTTP %s",
+                                    endpoint,
+                                    response.status,
                                 )
                                 return False
                     except Exception as e:
-                        self.logger.warning(f"    {endpoint}: {e}")
+                        self.logger.warning("    %s: %s", endpoint, e)
                         return False
 
             return True
@@ -986,7 +1001,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"API endpoint verification failed: {e}")
+            self.logger.error("API endpoint verification failed: %s", e)
             return False
 
     async def _verify_file_system(self) -> bool:
@@ -1008,7 +1023,7 @@ class PAKEUnifiedDeployment:
             for dir_name in vault_dirs:
                 dir_path = vault_path / dir_name
                 if not dir_path.exists():
-                    self.logger.warning(f"    Missing vault directory: {dir_path}")
+                    self.logger.warning("    Missing vault directory: %s", dir_path)
                     return False
 
             # Test write permissions
@@ -1023,7 +1038,7 @@ class PAKEUnifiedDeployment:
             return True
 
         except Exception as e:
-            self.logger.error(f"File system verification failed: {e}")
+            self.logger.error("File system verification failed: %s", e)
             return False
 
     async def _verify_integration(self) -> bool:
@@ -1039,8 +1054,8 @@ class PAKEUnifiedDeployment:
 
             test_content = f"""---
 pake_id: "deployment-test-{self.deployment_id}"
-created: "{datetime.now().isoformat()}"
-modified: "{datetime.now().isoformat()}"
+created: "{datetime.now(UTC).isoformat()}"
+modified: "{datetime.now(UTC).isoformat()}"
 type: "test_note"
 status: "verified"
 confidence_score: 1.0
@@ -1057,7 +1072,7 @@ This note was generated during PAKE+ deployment verification.
 
 ## Test Details
 - Deployment ID: {self.deployment_id}
-- Timestamp: {datetime.now().isoformat()}
+- Timestamp: {datetime.now(UTC).isoformat()}
 - Mode: {self.config.mode.value}
 
 ## System Status
@@ -1074,7 +1089,7 @@ Deployment verification in progress...
             return False
 
         except Exception as e:
-            self.logger.error(f"Integration verification failed: {e}")
+            self.logger.error("Integration verification failed: %s", e)
             return False
 
     async def _phase_finalization(self) -> bool:
@@ -1093,7 +1108,7 @@ Deployment verification in progress...
             )
             success_data = {
                 "deployment_id": self.deployment_id,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "mode": self.config.mode.value,
                 "duration": time.time() - self.deployment_start_time,
                 "phase_results": self.phase_results,
@@ -1114,10 +1129,10 @@ Deployment verification in progress...
             return True
 
         except Exception as e:
-            self.logger.error(f"Deployment finalization failed: {e}")
+            self.logger.error("Deployment finalization failed: %s", e)
             return False
 
-    async def _generate_deployment_report(self, success: bool):
+    async def _generate_deployment_report(self) -> None:
         """Generate comprehensive deployment report"""
         try:
             duration = (
@@ -1128,7 +1143,7 @@ Deployment verification in progress...
 
             report = f"""# PAKE+ Deployment Report
 Deployment ID: {self.deployment_id}
-Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
 ## Summary
 - **Status**: {"✅ SUCCESS" if success else "❌ FAILED"}
@@ -1210,12 +1225,12 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             with open(report_file, "w") as f:
                 f.write(report)
 
-            self.logger.info(f"📊 Deployment report saved: {report_file}")
+            self.logger.info("📊 Deployment report saved: %s", report_file)
 
         except Exception as e:
-            self.logger.error(f"Failed to generate deployment report: {e}")
+            self.logger.error("Failed to generate deployment report: %s", e)
 
-    def _show_installation_instructions(self, missing_prereqs: list[str]):
+    def _show_installation_instructions(self) -> None:
         """Show installation instructions for missing prerequisites"""
         instructions = {
             "docker": "Install Docker Desktop from: https://docs.docker.com/get-docker/",
@@ -1228,7 +1243,7 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         self.logger.info("Installation instructions:")
         for prereq in missing_prereqs:
             if prereq in instructions:
-                self.logger.info(f"  {prereq}: {instructions[prereq]}")
+                self.logger.info("  %s: %s", prereq, instructions[prereq])
 
     async def _is_port_in_use(self, host: str, port: int) -> bool:
         """Check if a port is in use"""
@@ -1244,7 +1259,7 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             return False
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     import argparse
 

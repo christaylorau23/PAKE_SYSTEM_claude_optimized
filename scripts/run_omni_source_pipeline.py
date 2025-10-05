@@ -15,7 +15,7 @@ import json
 # Add services to path
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,11 +25,7 @@ project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 
 
-async def run_omni_source_research(
-    topic: str,
-    context: dict[str, Any] = None,
-    save_to_vault: bool = False,
-):
+async def run_omni_source_research(self) -> None:
     """
     Execute comprehensive omni-source research ingestion
 
@@ -130,13 +126,13 @@ async def run_omni_source_research(
 
     # Save results to JSON for further processing
     results_file = (
-        f"omni_source_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        f"omni_source_results_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
     )
 
     # Convert result to serializable format
     results_data = {
         "topic": topic,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "success": result.success,
         "total_items": len(result.content_items),
         "processing_time": result.processing_time_seconds,
@@ -171,14 +167,14 @@ async def run_omni_source_research(
     return result
 
 
-async def save_results_to_vault(topic: str, result):
+async def save_results_to_vault(self) -> None:
     """Save research results to Obsidian vault"""
 
     print("💾 Saving results to Obsidian vault...")
 
     # Create note content
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    filename = f"omni-source-research-{datetime.now().strftime('%Y-%m-%d')}-{
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
+    filename = f"omni-source-research-{datetime.now(UTC).strftime('%Y-%m-%d')}-{
         topic.replace(' ', '-')[:30]
     }.md"
 
@@ -256,7 +252,7 @@ This research was automatically generated using the PAKE+ omni-source ingestion 
     print(f"✅ Research note saved to: {note_path}")
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE+ Omni-Source Research Pipeline")
     parser.add_argument("topic", help="Research topic to investigate")

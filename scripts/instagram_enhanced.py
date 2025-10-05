@@ -29,7 +29,7 @@ class InstagramMedia:
 class InstagramEnhanced:
     """Enhanced Instagram posting with full feature support"""
 
-    def __init__(self, access_token: str, business_account_id: str):
+    def __init__(self) -> None:
         self.access_token = access_token
         self.business_account_id = business_account_id
         self.base_url = "https://graph.facebook.com/v18.0"
@@ -57,7 +57,7 @@ class InstagramEnhanced:
             }
 
         except Exception as e:
-            self.logger.error(f"Single media post failed: {e}")
+            self.logger.error("Single media post failed: %s", e)
             return {"success": False, "error": str(e)}
 
     async def post_carousel(
@@ -68,7 +68,8 @@ class InstagramEnhanced:
         """Post carousel (multiple images/videos)"""
         try:
             if len(media_list) < 2 or len(media_list) > 10:
-                raise ValueError("Carousel must have 2-10 media items")
+                msg = "Carousel must have 2-10 media items"
+                raise ValueError(msg)
 
             # Create containers for each media item
             child_containers = []
@@ -97,7 +98,7 @@ class InstagramEnhanced:
             }
 
         except Exception as e:
-            self.logger.error(f"Carousel post failed: {e}")
+            self.logger.error("Carousel post failed: %s", e)
             return {"success": False, "error": str(e)}
 
     async def post_reel(
@@ -111,7 +112,8 @@ class InstagramEnhanced:
         try:
             # Validate video format and duration
             if not await self._validate_reel_video(video_url):
-                raise ValueError("Invalid video format or duration for Reels")
+                msg = "Invalid video format or duration for Reels"
+                raise ValueError(msg)
 
             # Create Reel container
             container_params = {
@@ -135,7 +137,8 @@ class InstagramEnhanced:
             container_data = response.json()
 
             if "id" not in container_data:
-                raise Exception(f"Reel container creation failed: {container_data}")
+                msg = f"Reel container creation failed: {container_data}"
+                raise Exception(msg)
 
             # Wait for video processing
             await self._wait_for_video_processing(container_data["id"])
@@ -150,7 +153,7 @@ class InstagramEnhanced:
             }
 
         except Exception as e:
-            self.logger.error(f"Reel post failed: {e}")
+            self.logger.error("Reel post failed: %s", e)
             return {"success": False, "error": str(e)}
 
     async def post_story(self, media: InstagramMedia) -> dict:
@@ -170,7 +173,8 @@ class InstagramEnhanced:
             elif media.media_url.lower().endswith(tuple(self.supported_video_formats)):
                 container_params["video_url"] = media.media_url
             else:
-                raise ValueError("Unsupported media format for Stories")
+                msg = "Unsupported media format for Stories"
+                raise ValueError(msg)
 
             # Stories don't support captions, but support text overlays
             # This would require additional Story-specific parameters
@@ -180,7 +184,8 @@ class InstagramEnhanced:
             container_data = response.json()
 
             if "id" not in container_data:
-                raise Exception(f"Story container creation failed: {container_data}")
+                msg = f"Story container creation failed: {container_data}"
+                raise Exception(msg)
 
             # Publish story
             result = await self._publish_media(container_data["id"])
@@ -192,7 +197,7 @@ class InstagramEnhanced:
             }
 
         except Exception as e:
-            self.logger.error(f"Story post failed: {e}")
+            self.logger.error("Story post failed: %s", e)
             return {"success": False, "error": str(e)}
 
     async def _create_media_container(
@@ -211,7 +216,8 @@ class InstagramEnhanced:
             if media.thumbnail_url:
                 params["thumb_offset"] = 0  # Or specific timestamp
         else:
-            raise ValueError(f"Unsupported media format: {media.media_url}")
+            msg = f"Unsupported media format: {media.media_url}"
+            raise ValueError(msg)
 
         # Add caption (not for carousel items)
         if media.caption and not is_carousel_item:
@@ -235,13 +241,14 @@ class InstagramEnhanced:
         data = response.json()
 
         if "id" not in data:
-            raise Exception(f"Container creation failed: {data}")
+            msg = f"Container creation failed: {data}"
+            raise Exception(msg)
 
         return data["id"]
 
     async def _create_carousel_container(
         self,
-        child_containers: list[str],
+        child_containers: List[str],
         caption: str,
     ) -> str:
         """Create carousel album container"""
@@ -257,7 +264,8 @@ class InstagramEnhanced:
         data = response.json()
 
         if "id" not in data:
-            raise Exception(f"Carousel container creation failed: {data}")
+            msg = f"Carousel container creation failed: {data}"
+            raise Exception(msg)
 
         return data["id"]
 
@@ -270,11 +278,12 @@ class InstagramEnhanced:
         data = response.json()
 
         if "id" not in data:
-            raise Exception(f"Media publishing failed: {data}")
+            msg = f"Media publishing failed: {data}"
+            raise Exception(msg)
 
         return data
 
-    async def _wait_for_video_processing(self, container_id: str, timeout: int = 300):
+    async def _wait_for_video_processing(self) -> None:
         """Wait for video processing to complete"""
         start_time = time.time()
 
@@ -284,11 +293,13 @@ class InstagramEnhanced:
             if status == "FINISHED":
                 return True
             if status in ["ERROR", "CANCELED"]:
-                raise Exception(f"Video processing failed with status: {status}")
+                msg = f"Video processing failed with status: {status}"
+                raise Exception(msg)
 
             await asyncio.sleep(10)  # Wait 10 seconds before checking again
 
-        raise Exception("Video processing timeout")
+        msg = "Video processing timeout"
+        raise Exception(msg)
 
     async def _get_container_status(self, container_id: str) -> str:
         """Get media container processing status"""
@@ -328,7 +339,7 @@ class InstagramEnhanced:
 
         return caption
 
-    def _extract_hashtags(self, caption: str) -> tuple[str, list[str]]:
+    def _extract_hashtags(self, caption: str) -> tuple[str, List[str]]:
         """Extract hashtags from caption"""
         import re
 
@@ -388,7 +399,7 @@ class InstagramEnhanced:
 # Usage example
 
 
-async def demo_instagram_features():
+async def demo_instagram_features(self) -> None:
     """Demonstrate Instagram enhanced features"""
 
     # Initialize client

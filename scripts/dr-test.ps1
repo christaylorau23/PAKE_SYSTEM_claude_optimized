@@ -137,4 +137,3 @@ if ($errors -gt 0) {
     Write-Host "✅ PASSED - DR infrastructure ready" -ForegroundColor Green
     exit 0
 }
-

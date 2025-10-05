@@ -9,7 +9,7 @@ import json
 import logging
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -57,12 +57,12 @@ class MultiTenantSecurityTester:
     8. Database Security Tests
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.db_service: MultiTenantPostgreSQLService | None = None
         self.tenant_service: TenantManagementService | None = None
         self.auth_service: MultiTenantAuthService | None = None
-        self.test_tenants: list[dict[str, Any]] = []
-        self.test_users: list[dict[str, Any]] = []
+        self.test_tenants: list[Dict[str, Any]] = []
+        self.test_users: list[Dict[str, Any]] = []
         self.test_results = {
             "tenant_isolation": [],
             "data_leakage": [],
@@ -74,7 +74,7 @@ class MultiTenantSecurityTester:
             "database_security": [],
         }
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Initialize test environment"""
         # Initialize database service
         db_config = MultiTenantDatabaseConfig(
@@ -93,7 +93,7 @@ class MultiTenantSecurityTester:
 
         logger.info("✅ Multi-tenant security test environment initialized")
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """Cleanup test environment"""
         # Clean up test data
         await self._cleanup_test_data()
@@ -104,7 +104,7 @@ class MultiTenantSecurityTester:
 
         logger.info("🧹 Test environment cleaned up")
 
-    async def run_all_tests(self) -> dict[str, Any]:
+    async def run_all_tests(self) -> Dict[str, Any]:
         """Run all security tests"""
         try:
             await self.setup()
@@ -127,7 +127,7 @@ class MultiTenantSecurityTester:
 
     # Tenant Isolation Tests
 
-    async def _test_tenant_isolation(self):
+    async def _test_tenant_isolation(self) -> None:
         """Test tenant isolation at database level"""
         logger.info("🔒 Testing tenant isolation...")
 
@@ -156,7 +156,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         other_tenant_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test that tenant cannot access another tenant's data"""
         try:
             # Set context to first tenant
@@ -204,7 +204,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         other_tenant_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test that tenant cannot modify another tenant's data"""
         try:
             # Set context to first tenant
@@ -251,7 +251,7 @@ class MultiTenantSecurityTester:
 
     # Data Leakage Prevention Tests
 
-    async def _test_data_leakage_prevention(self):
+    async def _test_data_leakage_prevention(self) -> None:
         """Test comprehensive data leakage prevention"""
         logger.info("🔍 Testing data leakage prevention...")
 
@@ -269,7 +269,7 @@ class MultiTenantSecurityTester:
 
         logger.info("✅ Data leakage prevention tests completed")
 
-    async def _test_jwt_token_isolation(self):
+    async def _test_jwt_token_isolation(self) -> None:
         """Test JWT token cannot access other tenants"""
         for tenant in self.test_tenants:
             tenant_id = tenant["tenant"]["id"]
@@ -298,7 +298,7 @@ class MultiTenantSecurityTester:
         token: str,
         original_tenant: str,
         target_tenant: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test if token can be used to access other tenant's data"""
         try:
             # Validate token
@@ -341,7 +341,7 @@ class MultiTenantSecurityTester:
                 "message": f"Test error: {str(e)}",
             }
 
-    async def _test_sql_injection_protection(self):
+    async def _test_sql_injection_protection(self) -> None:
         """Test SQL injection protection in tenant context"""
         malicious_inputs = [
             "'; DROP TABLE users; --",
@@ -364,7 +364,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         malicious_input: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test protection against malicious input"""
         try:
             # Set tenant context
@@ -409,7 +409,7 @@ class MultiTenantSecurityTester:
 
     # Authentication Security Tests
 
-    async def _test_authentication_security(self):
+    async def _test_authentication_security(self) -> None:
         """Test authentication security measures"""
         logger.info("🔐 Testing authentication security...")
 
@@ -424,7 +424,7 @@ class MultiTenantSecurityTester:
 
         logger.info("✅ Authentication security tests completed")
 
-    async def _test_REDACTED_SECRET_policies(self):
+    async def _test_REDACTED_SECRET_policies(self) -> None:
         """Test REDACTED_SECRET policy enforcement"""
         weak_REDACTED_SECRETs = [
             "123",
@@ -440,14 +440,16 @@ class MultiTenantSecurityTester:
         tenant_id = self.test_tenants[0]["tenant"]["id"]
 
         for weak_REDACTED_SECRET in weak_REDACTED_SECRETs:
-            result = await self._test_weak_REDACTED_SECRET_rejection(tenant_id, weak_REDACTED_SECRET)
+            result = await self._test_weak_REDACTED_SECRET_rejection(
+                tenant_id, weak_REDACTED_SECRET
+            )
             self.test_results["authentication"].append(result)
 
     async def _test_weak_REDACTED_SECRET_rejection(
         self,
         tenant_id: str,
         weak_REDACTED_SECRET: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Test that weak REDACTED_SECRETs are rejected"""
         try:
             # Try to create user with weak REDACTED_SECRET
@@ -490,7 +492,7 @@ class MultiTenantSecurityTester:
                 "message": f"Weak REDACTED_SECRET rejected: {str(e)}",
             }
 
-    async def _test_account_lockouts(self):
+    async def _test_account_lockouts(self) -> None:
         """Test account lockout after failed attempts"""
         tenant = self.test_tenants[0]
         tenant_id = tenant["tenant"]["id"]
@@ -543,7 +545,7 @@ class MultiTenantSecurityTester:
 
     # Authorization Boundary Tests
 
-    async def _test_authorization_boundaries(self):
+    async def _test_authorization_boundaries(self) -> None:
         """Test authorization boundary enforcement"""
         logger.info("🛡️ Testing authorization boundaries...")
 
@@ -555,7 +557,7 @@ class MultiTenantSecurityTester:
 
         logger.info("✅ Authorization boundary tests completed")
 
-    async def _test_role_permissions(self):
+    async def _test_role_permissions(self) -> None:
         """Test role-based permission enforcement"""
         test_cases = [
             {"role": "user", "permission": "admin:access", "should_have": False},
@@ -587,7 +589,7 @@ class MultiTenantSecurityTester:
 
             self.test_results["authorization"].append(test_result)
 
-    async def _test_privilege_escalation(self):
+    async def _test_privilege_escalation(self) -> None:
         """Test prevention of privilege escalation"""
         # Test that regular user cannot escalate to admin
         tenant = self.test_tenants[0]
@@ -624,7 +626,7 @@ class MultiTenantSecurityTester:
 
     # Cross-Tenant Access Prevention Tests
 
-    async def _test_cross_tenant_access_prevention(self):
+    async def _test_cross_tenant_access_prevention(self) -> None:
         """Test prevention of cross-tenant access"""
         logger.info("🚫 Testing cross-tenant access prevention...")
 
@@ -636,7 +638,7 @@ class MultiTenantSecurityTester:
 
         logger.info("✅ Cross-tenant access prevention tests completed")
 
-    async def _test_api_cross_tenant_access(self):
+    async def _test_api_cross_tenant_access(self) -> None:
         """Test API endpoints prevent cross-tenant access"""
         # This would test API endpoints with different tenant contexts
         for i, tenant in enumerate(self.test_tenants):
@@ -651,7 +653,7 @@ class MultiTenantSecurityTester:
                     }
                     self.test_results["cross_tenant_access"].append(result)
 
-    async def _test_database_cross_tenant_queries(self):
+    async def _test_database_cross_tenant_queries(self) -> None:
         """Test database queries prevent cross-tenant data access"""
         for tenant in self.test_tenants:
             result = {
@@ -664,24 +666,24 @@ class MultiTenantSecurityTester:
 
     # Remaining test methods (shortened for space)
 
-    async def _test_resource_isolation(self):
+    async def _test_resource_isolation(self) -> None:
         """Test resource isolation between tenants"""
         logger.info("💾 Testing resource isolation...")
         # Implementation would test CPU, memory, storage isolation
 
-    async def _test_api_security(self):
+    async def _test_api_security(self) -> None:
         """Test API security measures"""
         logger.info("🌐 Testing API security...")
         # Implementation would test rate limiting, input validation, etc.
 
-    async def _test_database_security(self):
+    async def _test_database_security(self) -> None:
         """Test database security measures"""
         logger.info("🗄️ Testing database security...")
         # Implementation would test database-level security
 
     # Helper methods
 
-    async def _create_test_tenants(self):
+    async def _create_test_tenants(self) -> None:
         """Create test tenants for security testing"""
         for i in range(3):
             request = TenantCreationRequest(
@@ -695,7 +697,7 @@ class MultiTenantSecurityTester:
             tenant = await self.tenant_service.create_tenant(request)
             self.test_tenants.append(tenant)
 
-    async def _cleanup_test_data(self):
+    async def _cleanup_test_data(self) -> None:
         """Clean up test data"""
         for tenant in self.test_tenants:
             try:
@@ -704,9 +706,9 @@ class MultiTenantSecurityTester:
                     force=True,
                 )
             except Exception as e:
-                logger.warning(f"Error cleaning up tenant: {e}")
+                logger.warning("Error cleaning up tenant: %s", e)
 
-    def _generate_security_report(self) -> dict[str, Any]:
+    def _generate_security_report(self) -> Dict[str, Any]:
         """Generate comprehensive security test report"""
         total_tests = sum(len(tests) for tests in self.test_results.values())
         passed_tests = sum(
@@ -741,7 +743,7 @@ class MultiTenantSecurityTester:
             },
             "test_results": self.test_results,
             "recommendations": self._generate_security_recommendations(),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "status": (
                 "SECURE"
                 if critical_issues == 0 and high_issues == 0
@@ -749,7 +751,7 @@ class MultiTenantSecurityTester:
             ),
         }
 
-    def _generate_security_recommendations(self) -> list[str]:
+    def _generate_security_recommendations(self) -> List[str]:
         """Generate security recommendations based on test results"""
         recommendations = []
 
@@ -778,8 +780,8 @@ class MultiTenantSecurityTester:
 # Test execution
 
 
-@pytest.mark.asyncio()
-async def test_multi_tenant_security():
+@pytest.mark.asyncio
+async def test_multi_tenant_security(self) -> None:
     """Main test function for multi-tenant security"""
     tester = MultiTenantSecurityTester()
     report = await tester.run_all_tests()
@@ -799,7 +801,7 @@ async def test_multi_tenant_security():
 
 if __name__ == "__main__":
     # Run security tests
-    async def main():
+    async def main(self) -> None:
         tester = MultiTenantSecurityTester()
         report = await tester.run_all_tests()
 

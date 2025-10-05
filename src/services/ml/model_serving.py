@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """PAKE System - Model Serving Service
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Provides enterprise-grade model serving infrastructure with Kubernetes integration,
 load balancing, health checks, and high-performance inference capabilities.
 """
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class ModelStatus(Enum):
-    """Model deployment status"""
+    """Model deployment status."""
 
     LOADING = "loading"
     READY = "ready"
@@ -37,7 +38,7 @@ class ModelStatus(Enum):
 
 
 class ModelFramework(Enum):
-    """Supported ML frameworks"""
+    """Supported ML frameworks."""
 
     TENSORFLOW = "tensorflow"
     PYTORCH = "pytorch"
@@ -47,7 +48,7 @@ class ModelFramework(Enum):
 
 
 class InferenceType(Enum):
-    """Types of inference requests"""
+    """Types of inference requests."""
 
     REAL_TIME = "real_time"
     BATCH = "batch"
@@ -56,21 +57,21 @@ class InferenceType(Enum):
 
 @dataclass(frozen=True)
 class ModelMetadata:
-    """Immutable model metadata"""
+    """Immutable model metadata."""
 
     model_id: str
     model_name: str
     version: str
     framework: ModelFramework
-    input_schema: dict[str, Any]
-    output_schema: dict[str, Any]
+    input_schema: Dict[str, Any]
+    output_schema: Dict[str, Any]
     model_size_mb: float
     created_at: datetime
     last_updated: datetime
     performance_metrics: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
             "model_name": self.model_name,
@@ -87,21 +88,21 @@ class ModelMetadata:
 
 @dataclass(frozen=True)
 class InferenceRequest:
-    """Immutable inference request"""
+    """Immutable inference request."""
 
     request_id: str
     model_id: str
-    input_data: dict[str, Any]
+    input_data: Dict[str, Any]
     inference_type: InferenceType = InferenceType.REAL_TIME
     priority: int = 0  # Higher number = higher priority
     timeout_seconds: float = 30.0
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
             "model_id": self.model_id,
@@ -116,21 +117,21 @@ class InferenceRequest:
 
 @dataclass(frozen=True)
 class InferenceResponse:
-    """Immutable inference response"""
+    """Immutable inference response."""
 
     request_id: str
     model_id: str
-    predictions: dict[str, Any]
+    predictions: Dict[str, Any]
     confidence_scores: dict[str, float] = field(default_factory=dict)
     processing_time_ms: float = 0.0
     model_version: str = ""
     response_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
             "model_id": self.model_id,
@@ -145,7 +146,7 @@ class InferenceResponse:
 
 @dataclass(frozen=True)
 class ModelHealth:
-    """Immutable model health status"""
+    """Immutable model health status."""
 
     model_id: str
     status: ModelStatus
@@ -160,8 +161,8 @@ class ModelHealth:
         default_factory=lambda: datetime.now(UTC),
     )
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
             "status": self.status.value,
@@ -182,7 +183,7 @@ class ModelHealth:
 
 @dataclass
 class ModelServingConfig:
-    """Configuration for model serving service"""
+    """Configuration for model serving service."""
 
     # Model management
     max_models_per_node: int = 10
@@ -216,36 +217,36 @@ class ModelServingConfig:
 
 
 class ModelInterface(ABC):
-    """Abstract interface for ML models"""
+    """Abstract interface for ML models."""
 
     @abstractmethod
     async def load_model(self, model_path: str) -> bool:
-        """Load model from path"""
+        """Load model from path."""
 
     @abstractmethod
-    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        """Run inference on input data"""
+    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run inference on input data."""
 
     @abstractmethod
     async def unload_model(self) -> bool:
-        """Unload model from memory"""
+        """Unload model from memory."""
 
     @abstractmethod
-    def get_model_info(self) -> dict[str, Any]:
-        """Get model information"""
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get model information."""
 
 
 class TensorFlowModel(ModelInterface):
-    """TensorFlow model implementation"""
+    """TensorFlow model implementation."""
 
-    def __init__(self, model_id: str):
+    def __init__(self) -> None:
         self.model_id = model_id
         self.model = None
         self.model_path = None
         self.loaded = False
 
     async def load_model(self, model_path: str) -> bool:
-        """Load TensorFlow model"""
+        """Load TensorFlow model."""
         try:
             import tensorflow as tf
 
@@ -253,17 +254,18 @@ class TensorFlowModel(ModelInterface):
             self.model = tf.keras.models.load_model(model_path)
             self.loaded = True
 
-            logger.info(f"Loaded TensorFlow model {self.model_id} from {model_path}")
+            logger.info("Loaded TensorFlow model %s from %s", self.model_id, model_path)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to load TensorFlow model {self.model_id}: {e}")
+            logger.error("Failed to load TensorFlow model %s: %s", self.model_id, e)
             return False
 
-    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        """Run TensorFlow inference"""
+    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run TensorFlow inference."""
         if not self.loaded or not self.model:
-            raise RuntimeError(f"Model {self.model_id} not loaded")
+            msg = f"Model {self.model_id} not loaded"
+            raise RuntimeError(msg)
 
         try:
             # Convert input data to appropriate format
@@ -276,24 +278,24 @@ class TensorFlowModel(ModelInterface):
             return self._format_predictions(predictions)
 
         except Exception as e:
-            logger.error(f"TensorFlow inference failed for {self.model_id}: {e}")
+            logger.error("TensorFlow inference failed for %s: %s", self.model_id, e)
             raise
 
     async def unload_model(self) -> bool:
-        """Unload TensorFlow model"""
+        """Unload TensorFlow model."""
         try:
             self.model = None
             self.loaded = False
 
-            logger.info(f"Unloaded TensorFlow model {self.model_id}")
+            logger.info("Unloaded TensorFlow model %s", self.model_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to unload TensorFlow model {self.model_id}: {e}")
+            logger.error("Failed to unload TensorFlow model %s: %s", self.model_id, e)
             return False
 
-    def get_model_info(self) -> dict[str, Any]:
-        """Get TensorFlow model information"""
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get TensorFlow model information."""
         if not self.model:
             return {"status": "not_loaded"}
 
@@ -313,8 +315,8 @@ class TensorFlowModel(ModelInterface):
             "loaded": self.loaded,
         }
 
-    def _prepare_inputs(self, input_data: dict[str, Any]) -> np.ndarray:
-        """Prepare input data for TensorFlow model"""
+    def _prepare_inputs(self, input_data: Dict[str, Any]) -> np.ndarray:
+        """Prepare input data for TensorFlow model."""
         # Convert input data to numpy arrays
         # This is a simplified implementation
         if isinstance(input_data, dict):
@@ -323,22 +325,22 @@ class TensorFlowModel(ModelInterface):
             return np.array(input_data[key])
         return np.array(input_data)
 
-    def _format_predictions(self, predictions: np.ndarray) -> dict[str, Any]:
-        """Format TensorFlow predictions"""
+    def _format_predictions(self, predictions: np.ndarray) -> Dict[str, Any]:
+        """Format TensorFlow predictions."""
         return {"predictions": predictions.tolist(), "shape": predictions.shape}
 
 
 class ONNXModel(ModelInterface):
-    """ONNX model implementation"""
+    """ONNX model implementation."""
 
-    def __init__(self, model_id: str):
+    def __init__(self) -> None:
         self.model_id = model_id
         self.model = None
         self.model_path = None
         self.loaded = False
 
     async def load_model(self, model_path: str) -> bool:
-        """Load ONNX model"""
+        """Load ONNX model."""
         try:
             import onnxruntime as ort
 
@@ -346,17 +348,18 @@ class ONNXModel(ModelInterface):
             self.model = ort.InferenceSession(model_path)
             self.loaded = True
 
-            logger.info(f"Loaded ONNX model {self.model_id} from {model_path}")
+            logger.info("Loaded ONNX model %s from %s", self.model_id, model_path)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to load ONNX model {self.model_id}: {e}")
+            logger.error("Failed to load ONNX model %s: %s", self.model_id, e)
             return False
 
-    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        """Run ONNX inference"""
+    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run ONNX inference."""
         if not self.loaded or not self.model:
-            raise RuntimeError(f"Model {self.model_id} not loaded")
+            msg = f"Model {self.model_id} not loaded"
+            raise RuntimeError(msg)
 
         try:
             # Prepare inputs for ONNX
@@ -369,29 +372,29 @@ class ONNXModel(ModelInterface):
             return self._format_predictions(outputs)
 
         except Exception as e:
-            logger.error(f"ONNX inference failed for {self.model_id}: {e}")
+            logger.error("ONNX inference failed for %s: %s", self.model_id, e)
             raise
 
     async def unload_model(self) -> bool:
-        """Unload ONNX model"""
+        """Unload ONNX model."""
         try:
             self.model = None
             self.loaded = False
 
-            logger.info(f"Unloaded ONNX model {self.model_id}")
+            logger.info("Unloaded ONNX model %s", self.model_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to unload ONNX model {self.model_id}: {e}")
+            logger.error("Failed to unload ONNX model %s: %s", self.model_id, e)
             return False
 
-    def get_model_info(self) -> dict[str, Any]:
-        """Get ONNX model information"""
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get ONNX model information."""
         if not self.model:
             return {"status": "not_loaded"}
 
-        input_info = {name: info for name, info in self.model.get_inputs()}
-        output_info = {name: info for name, info in self.model.get_outputs()}
+        input_info = dict(self.model.get_inputs())
+        output_info = dict(self.model.get_outputs())
 
         return {
             "framework": "onnx",
@@ -400,15 +403,15 @@ class ONNXModel(ModelInterface):
             "loaded": self.loaded,
         }
 
-    def _prepare_inputs(self, input_data: dict[str, Any]) -> dict[str, np.ndarray]:
-        """Prepare input data for ONNX model"""
+    def _prepare_inputs(self, input_data: Dict[str, Any]) -> dict[str, np.ndarray]:
+        """Prepare input data for ONNX model."""
         inputs = {}
         for name, data in input_data.items():
             inputs[name] = np.array(data)
         return inputs
 
-    def _format_predictions(self, outputs: list[np.ndarray]) -> dict[str, Any]:
-        """Format ONNX predictions"""
+    def _format_predictions(self, outputs: list[np.ndarray]) -> Dict[str, Any]:
+        """Format ONNX predictions."""
         result = {}
         for i, output in enumerate(outputs):
             result[f"output_{i}"] = output.tolist()
@@ -416,15 +419,15 @@ class ONNXModel(ModelInterface):
 
 
 class ModelRegistry:
-    """Model registry for managing model metadata and versions"""
+    """Model registry for managing model metadata and versions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.models: dict[str, ModelMetadata] = {}
-        self.model_versions: dict[str, list[str]] = {}
+        self.model_versions: dict[str, List[str]] = {}
         self.model_paths: dict[str, str] = {}
 
     def register_model(self, metadata: ModelMetadata, model_path: str) -> bool:
-        """Register a new model"""
+        """Register a new model."""
         try:
             self.models[metadata.model_id] = metadata
             self.model_paths[metadata.model_id] = model_path
@@ -435,32 +438,34 @@ class ModelRegistry:
             self.model_versions[metadata.model_name].append(metadata.version)
 
             logger.info(
-                f"Registered model {metadata.model_id} version {metadata.version}",
+                "Registered model %s version %s",
+                metadata.model_id,
+                metadata.version,
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to register model {metadata.model_id}: {e}")
+            logger.error("Failed to register model %s: %s", metadata.model_id, e)
             return False
 
     def get_model(self, model_id: str) -> ModelMetadata | None:
-        """Get model metadata by ID"""
+        """Get model metadata by ID."""
         return self.models.get(model_id)
 
     def get_model_path(self, model_id: str) -> str | None:
-        """Get model file path by ID"""
+        """Get model file path by ID."""
         return self.model_paths.get(model_id)
 
     def list_models(self) -> list[ModelMetadata]:
-        """List all registered models"""
+        """List all registered models."""
         return list(self.models.values())
 
-    def get_model_versions(self, model_name: str) -> list[str]:
-        """Get all versions of a model"""
+    def get_model_versions(self, model_name: str) -> List[str]:
+        """Get all versions of a model."""
         return self.model_versions.get(model_name, [])
 
     def unregister_model(self, model_id: str) -> bool:
-        """Unregister a model"""
+        """Unregister a model."""
         try:
             if model_id in self.models:
                 metadata = self.models[model_id]
@@ -473,13 +478,13 @@ class ModelRegistry:
                     if metadata.version in versions:
                         versions.remove(metadata.version)
 
-                logger.info(f"Unregistered model {model_id}")
+                logger.info("Unregistered model %s", model_id)
                 return True
 
             return False
 
         except Exception as e:
-            logger.error(f"Failed to unregister model {model_id}: {e}")
+            logger.error("Failed to unregister model %s: %s", model_id, e)
             return False
 
 
@@ -488,7 +493,7 @@ class ModelServingService:
     Provides high-performance inference, load balancing, and health monitoring.
     """
 
-    def __init__(self, config: ModelServingConfig = None):
+    def __init__(self) -> None:
         self.config = config or ModelServingConfig()
 
         # Model management
@@ -523,8 +528,8 @@ class ModelServingService:
 
         logger.info("Initialized Model Serving Service")
 
-    def _init_kubernetes(self):
-        """Initialize Kubernetes client"""
+    def _init_kubernetes(self) -> None:
+        """Initialize Kubernetes client."""
         try:
             if self.config.kubernetes_config_path:
                 config.load_kube_config(config_file=self.config.kubernetes_config_path)
@@ -537,12 +542,12 @@ class ModelServingService:
             logger.info("Kubernetes client initialized")
 
         except Exception as e:
-            logger.warning(f"Kubernetes initialization failed: {e}")
+            logger.warning("Kubernetes initialization failed: %s", e)
             self.k8s_client = None
             self.k8s_apps_client = None
 
-    async def start(self):
-        """Start the model serving service"""
+    async def start(self) -> None:
+        """Start the model serving service."""
         try:
             # Start health check task
             self.health_check_task = asyncio.create_task(self._health_check_loop())
@@ -550,19 +555,17 @@ class ModelServingService:
             logger.info("Model Serving Service started")
 
         except Exception as e:
-            logger.error(f"Failed to start Model Serving Service: {e}")
+            logger.error("Failed to start Model Serving Service: %s", e)
             raise
 
-    async def stop(self):
-        """Stop the model serving service"""
+    async def stop(self) -> None:
+        """Stop the model serving service."""
         try:
             # Cancel health check task
             if self.health_check_task:
                 self.health_check_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self.health_check_task
-                except asyncio.CancelledError:
-                    pass
 
             # Unload all models
             for model_id in list(self.loaded_models.keys()):
@@ -574,7 +577,7 @@ class ModelServingService:
             logger.info("Model Serving Service stopped")
 
         except Exception as e:
-            logger.error(f"Error stopping Model Serving Service: {e}")
+            logger.error("Error stopping Model Serving Service: %s", e)
 
     async def register_model(
         self,
@@ -582,10 +585,10 @@ class ModelServingService:
         model_name: str,
         version: str,
         framework: ModelFramework,
-        input_schema: dict[str, Any],
-        output_schema: dict[str, Any],
+        input_schema: Dict[str, Any],
+        output_schema: Dict[str, Any],
     ) -> str:
-        """Register a new model"""
+        """Register a new model."""
         try:
             # Generate model ID
             model_id = f"{model_name}_{version}_{int(time.time())}"
@@ -608,19 +611,20 @@ class ModelServingService:
 
             # Register in registry
             if self.registry.register_model(metadata, model_path):
-                logger.info(f"Registered model {model_id}")
+                logger.info("Registered model %s", model_id)
                 return model_id
-            raise RuntimeError("Failed to register model in registry")
+            msg = "Failed to register model in registry"
+            raise RuntimeError(msg)
 
         except Exception as e:
-            logger.error(f"Failed to register model: {e}")
+            logger.error("Failed to register model: %s", e)
             raise
 
     async def load_model(self, model_id: str) -> bool:
-        """Load a model for serving"""
+        """Load a model for serving."""
         try:
             if model_id in self.loaded_models:
-                logger.warning(f"Model {model_id} already loaded")
+                logger.warning("Model %s already loaded", model_id)
                 return True
 
             # Get model metadata and path
@@ -628,7 +632,8 @@ class ModelServingService:
             model_path = self.registry.get_model_path(model_id)
 
             if not metadata or not model_path:
-                raise ValueError(f"Model {model_id} not found in registry")
+                msg = f"Model {model_id} not found in registry"
+                raise ValueError(msg)
 
             # Create model instance based on framework
             if metadata.framework == ModelFramework.TENSORFLOW:
@@ -636,7 +641,8 @@ class ModelServingService:
             elif metadata.framework == ModelFramework.ONNX:
                 model = ONNXModel(model_id)
             else:
-                raise ValueError(f"Unsupported framework: {metadata.framework}")
+                msg = f"Unsupported framework: {metadata.framework}"
+                raise ValueError(msg)
 
             # Load model
             if await model.load_model(model_path):
@@ -654,19 +660,20 @@ class ModelServingService:
                     await self._warmup_model(model_id)
 
                 self.stats["models_loaded"] += 1
-                logger.info(f"Loaded model {model_id}")
+                logger.info("Loaded model %s", model_id)
                 return True
-            raise RuntimeError(f"Failed to load model {model_id}")
+            msg = f"Failed to load model {model_id}"
+            raise RuntimeError(msg)
 
         except Exception as e:
-            logger.error(f"Failed to load model {model_id}: {e}")
+            logger.error("Failed to load model %s: %s", model_id, e)
             return False
 
     async def unload_model(self, model_id: str) -> bool:
-        """Unload a model from serving"""
+        """Unload a model from serving."""
         try:
             if model_id not in self.loaded_models:
-                logger.warning(f"Model {model_id} not loaded")
+                logger.warning("Model %s not loaded", model_id)
                 return True
 
             model = self.loaded_models[model_id]
@@ -690,16 +697,17 @@ class ModelServingService:
                     )
 
                 self.stats["models_unloaded"] += 1
-                logger.info(f"Unloaded model {model_id}")
+                logger.info("Unloaded model %s", model_id)
                 return True
-            raise RuntimeError(f"Failed to unload model {model_id}")
+            msg = f"Failed to unload model {model_id}"
+            raise RuntimeError(msg)
 
         except Exception as e:
-            logger.error(f"Failed to unload model {model_id}: {e}")
+            logger.error("Failed to unload model %s: %s", model_id, e)
             return False
 
     async def predict(self, request: InferenceRequest) -> InferenceResponse:
-        """Run inference on a model"""
+        """Run inference on a model."""
         start_time = time.time()
 
         try:
@@ -715,7 +723,8 @@ class ModelServingService:
 
             # Validate request
             if request.model_id not in self.loaded_models:
-                raise ValueError(f"Model {request.model_id} not loaded")
+                msg = f"Model {request.model_id} not loaded"
+                raise ValueError(msg)
 
             # Get model
             model = self.loaded_models[request.model_id]
@@ -761,11 +770,11 @@ class ModelServingService:
             # Update model health
             await self._update_model_health(request.model_id, False, 0.0)
 
-            logger.error(f"Inference failed for request {request.request_id}: {e}")
+            logger.error("Inference failed for request %s: %s", request.request_id, e)
             raise
 
-    async def _warmup_model(self, model_id: str):
-        """Warm up model with sample requests"""
+    async def _warmup_model(self) -> None:
+        """Warm up model with sample requests."""
         try:
             metadata = self.registry.get_model(model_id)
             if not metadata:
@@ -785,15 +794,15 @@ class ModelServingService:
                 try:
                     await self.predict(request)
                 except Exception as e:
-                    logger.warning(f"Warmup request {i} failed: {e}")
+                    logger.warning("Warmup request %s failed: %s", i, e)
 
-            logger.info(f"Warmed up model {model_id}")
+            logger.info("Warmed up model %s", model_id)
 
         except Exception as e:
-            logger.error(f"Model warmup failed for {model_id}: {e}")
+            logger.error("Model warmup failed for %s: %s", model_id, e)
 
-    def _create_sample_input(self, input_schema: dict[str, Any]) -> dict[str, Any]:
-        """Create sample input based on schema"""
+    def _create_sample_input(self, input_schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Create sample input based on schema."""
         sample_input = {}
 
         for field, schema in input_schema.items():
@@ -808,18 +817,13 @@ class ModelServingService:
         return sample_input
 
     def _generate_cache_key(self, request: InferenceRequest) -> str:
-        """Generate cache key for request"""
+        """Generate cache key for request."""
         request_data = {"model_id": request.model_id, "input_data": request.input_data}
         request_str = json.dumps(request_data, sort_keys=True)
         return hashlib.sha256(request_str.encode()).hexdigest()[:16]
 
-    async def _update_model_health(
-        self,
-        model_id: str,
-        success: bool,
-        latency_ms: float,
-    ):
-        """Update model health metrics"""
+    async def _update_model_health(self) -> None:
+        """Update model health metrics."""
         if model_id not in self.model_health:
             return
 
@@ -855,8 +859,8 @@ class ModelServingService:
             cpu_usage_percent=health.cpu_usage_percent,
         )
 
-    async def _health_check_loop(self):
-        """Background health check loop"""
+    async def _health_check_loop(self) -> None:
+        """Background health check loop."""
         while True:
             try:
                 await asyncio.sleep(self.config.health_check_interval_seconds)
@@ -864,10 +868,10 @@ class ModelServingService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health check loop error: {e}")
+                logger.error("Health check loop error: %s", e)
 
-    async def _perform_health_checks(self):
-        """Perform health checks on all loaded models"""
+    async def _perform_health_checks(self) -> None:
+        """Perform health checks on all loaded models."""
         for model_id in list(self.loaded_models.keys()):
             try:
                 # Simple health check - try a minimal prediction
@@ -883,18 +887,18 @@ class ModelServingService:
                     await self.predict(request)
 
             except Exception as e:
-                logger.warning(f"Health check failed for model {model_id}: {e}")
+                logger.warning("Health check failed for model %s: %s", model_id, e)
 
     def get_model_status(self, model_id: str) -> ModelHealth | None:
-        """Get model health status"""
+        """Get model health status."""
         return self.model_health.get(model_id)
 
-    def list_loaded_models(self) -> list[str]:
-        """List all loaded model IDs"""
+    def list_loaded_models(self) -> List[str]:
+        """List all loaded model IDs."""
         return list(self.loaded_models.keys())
 
-    def get_service_statistics(self) -> dict[str, Any]:
-        """Get service statistics"""
+    def get_service_statistics(self) -> Dict[str, Any]:
+        """Get service statistics."""
         stats = self.stats.copy()
         stats["loaded_models_count"] = len(self.loaded_models)
         stats["registered_models_count"] = len(self.registry.models)
@@ -914,7 +918,7 @@ class ModelServingService:
 
 # Production-ready factory functions
 async def create_production_model_serving_service() -> ModelServingService:
-    """Create production-ready model serving service"""
+    """Create production-ready model serving service."""
     config = ModelServingConfig(
         max_models_per_node=20,
         model_cache_size_mb=4096,
@@ -944,7 +948,7 @@ async def create_production_model_serving_service() -> ModelServingService:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         service = ModelServingService()
         await service.start()
 

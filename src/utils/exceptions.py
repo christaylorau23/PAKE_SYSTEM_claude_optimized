@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """PAKE System - Centralized Exception Hierarchy
-Provides consistent error handling patterns across the entire system
+Provides consistent error handling patterns across the entire system.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 
 class ErrorSeverity(Enum):
-    """Error severity levels for classification"""
+    """Error severity levels for classification."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -19,7 +19,7 @@ class ErrorSeverity(Enum):
 
 
 class ErrorCategory(Enum):
-    """Error categories for better organization"""
+    """Error categories for better organization."""
 
     CONFIGURATION = "configuration"
     AUTHENTICATION = "authentication"
@@ -37,20 +37,12 @@ class ErrorCategory(Enum):
 
 
 class PAKEException(Exception):
-    """Base exception class for all PAKE system errors
+    """Base exception class for all PAKE system errors.
 
     Provides structured error information for consistent handling
     """
 
-    def __init__(
-        self,
-        message: str,
-        error_code: str | None = None,
-        category: ErrorCategory = ErrorCategory.UNKNOWN,
-        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-        context: dict[str, Any] | None = None,
-        original_exception: Exception | None = None,
-    ):
+    def __init__(self) -> None:
         super().__init__(message)
         self.message = message
         self.error_code = error_code or self._generate_error_code()
@@ -58,16 +50,16 @@ class PAKEException(Exception):
         self.severity = severity
         self.context = context or {}
         self.original_exception = original_exception
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def _generate_error_code(self) -> str:
-        """Generate a unique error code based on class name"""
+        """Generate a unique error code based on class name."""
         class_name = self.__class__.__name__
         timestamp = self.timestamp.strftime("%Y%m%d%H%M%S")
         return f"{class_name}_{timestamp}"
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert exception to dictionary for logging/serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert exception to dictionary for logging/serialization."""
         return {
             "error_code": self.error_code,
             "message": self.message,
@@ -81,37 +73,45 @@ class PAKEException(Exception):
             ),
         }
 
-    def log_error(self, logger: logging.Logger):
-        """Log the error with appropriate level based on severity"""
+    def log_error(self) -> None:
+        """Log the error with appropriate level based on severity."""
         error_dict = self.to_dict()
 
         if self.severity == ErrorSeverity.CRITICAL:
             logger.critical(
-                f"Critical error [{self.error_code}]: {self.message}",
+                "Critical error [%s]: %s",
+                self.error_code,
+                self.message,
                 extra=error_dict,
             )
         elif self.severity == ErrorSeverity.HIGH:
             logger.error(
-                f"High severity error [{self.error_code}]: {self.message}",
+                "High severity error [%s]: %s",
+                self.error_code,
+                self.message,
                 extra=error_dict,
             )
         elif self.severity == ErrorSeverity.MEDIUM:
             logger.warning(
-                f"Medium severity error [{self.error_code}]: {self.message}",
+                "Medium severity error [%s]: %s",
+                self.error_code,
+                self.message,
                 extra=error_dict,
             )
         else:
             logger.info(
-                f"Low severity error [{self.error_code}]: {self.message}",
+                "Low severity error [%s]: %s",
+                self.error_code,
+                self.message,
                 extra=error_dict,
             )
 
 
 # Configuration Exceptions
 class ConfigurationException(PAKEException):
-    """Configuration-related errors"""
+    """Configuration-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.CONFIGURATION,
@@ -121,17 +121,17 @@ class ConfigurationException(PAKEException):
 
 
 class MissingConfigurationException(ConfigurationException):
-    """Missing required configuration"""
+    """Missing required configuration."""
 
-    def __init__(self, config_key: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Missing required configuration: {config_key}"
         super().__init__(message, context={"config_key": config_key}, **kwargs)
 
 
 class InvalidConfigurationException(ConfigurationException):
-    """Invalid configuration value"""
+    """Invalid configuration value."""
 
-    def __init__(self, config_key: str, value: Any, expected: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Invalid configuration value for {config_key}: {value} (expected {expected})"
         super().__init__(
             message,
@@ -142,9 +142,9 @@ class InvalidConfigurationException(ConfigurationException):
 
 # Authentication & Authorization Exceptions
 class AuthenticationException(PAKEException):
-    """Authentication-related errors"""
+    """Authentication-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHENTICATION,
@@ -154,9 +154,9 @@ class AuthenticationException(PAKEException):
 
 
 class AuthorizationException(PAKEException):
-    """Authorization-related errors"""
+    """Authorization-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHORIZATION,
@@ -166,21 +166,21 @@ class AuthorizationException(PAKEException):
 
 
 class InvalidCredentialsException(AuthenticationException):
-    """Invalid authentication credentials"""
+    """Invalid authentication credentials."""
 
 
 class TokenExpiredException(AuthenticationException):
-    """Authentication token has expired"""
+    """Authentication token has expired."""
 
 
 class InsufficientPermissionsException(AuthorizationException):
-    """User lacks required permissions"""
+    """User lacks required permissions."""
 
 
 class SecurityException(PAKEException):
-    """Security-related errors"""
+    """Security-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHENTICATION,
@@ -191,9 +191,9 @@ class SecurityException(PAKEException):
 
 # Validation Exceptions
 class ValidationException(PAKEException):
-    """Data validation errors"""
+    """Data validation errors."""
 
-    def __init__(self, message: str, field: str | None = None, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.VALIDATION,
@@ -204,17 +204,17 @@ class ValidationException(PAKEException):
 
 
 class RequiredFieldException(ValidationException):
-    """Required field is missing"""
+    """Required field is missing."""
 
-    def __init__(self, field: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Required field is missing: {field}"
         super().__init__(message, field=field, **kwargs)
 
 
 class InvalidFormatException(ValidationException):
-    """Invalid data format"""
+    """Invalid data format."""
 
-    def __init__(self, field: str, value: Any, expected_format: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Invalid format for {field}: {value} (expected {expected_format})"
         super().__init__(
             message,
@@ -226,9 +226,9 @@ class InvalidFormatException(ValidationException):
 
 # Network & External API Exceptions
 class NetworkException(PAKEException):
-    """Network-related errors"""
+    """Network-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.NETWORK,
@@ -238,15 +238,9 @@ class NetworkException(PAKEException):
 
 
 class ExternalAPIException(PAKEException):
-    """External API errors"""
+    """External API errors."""
 
-    def __init__(
-        self,
-        message: str,
-        api_name: str,
-        status_code: int | None = None,
-        **kwargs,
-    ):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.EXTERNAL_API,
@@ -257,9 +251,9 @@ class ExternalAPIException(PAKEException):
 
 
 class APIRateLimitException(ExternalAPIException):
-    """API rate limit exceeded"""
+    """API rate limit exceeded."""
 
-    def __init__(self, api_name: str, retry_after: int | None = None, **kwargs):
+    def __init__(self) -> None:
         message = f"Rate limit exceeded for {api_name}"
         if retry_after:
             message += f" (retry after {retry_after} seconds)"
@@ -272,9 +266,9 @@ class APIRateLimitException(ExternalAPIException):
 
 
 class APITimeoutException(ExternalAPIException):
-    """API request timeout"""
+    """API request timeout."""
 
-    def __init__(self, api_name: str, timeout: float, **kwargs):
+    def __init__(self) -> None:
         message = f"Timeout after {timeout}s calling {api_name}"
         super().__init__(
             message,
@@ -286,9 +280,9 @@ class APITimeoutException(ExternalAPIException):
 
 # Database Exceptions
 class DatabaseException(PAKEException):
-    """Database-related errors"""
+    """Database-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.DATABASE,
@@ -298,26 +292,26 @@ class DatabaseException(PAKEException):
 
 
 class DatabaseConnectionException(DatabaseException):
-    """Database connection error"""
+    """Database connection error."""
 
-    def __init__(self, database: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Failed to connect to database: {database}"
         super().__init__(message, context={"database": database}, **kwargs)
 
 
 class DatabaseQueryException(DatabaseException):
-    """Database query error"""
+    """Database query error."""
 
-    def __init__(self, query: str, error: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Database query failed: {error}"
         super().__init__(message, context={"query": query, "error": error}, **kwargs)
 
 
 # Cache Exceptions
 class CacheException(PAKEException):
-    """Cache-related errors"""
+    """Cache-related errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.CACHE,
@@ -327,18 +321,18 @@ class CacheException(PAKEException):
 
 
 class CacheConnectionException(CacheException):
-    """Cache connection error"""
+    """Cache connection error."""
 
 
 class CacheKeyException(CacheException):
-    """Invalid cache key"""
+    """Invalid cache key."""
 
 
 # Service Exceptions
 class ServiceException(PAKEException):
-    """Service-related errors"""
+    """Service-related errors."""
 
-    def __init__(self, message: str, service_name: str | None = None, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.SERVICE,
@@ -349,17 +343,17 @@ class ServiceException(PAKEException):
 
 
 class ServiceUnavailableException(ServiceException):
-    """Service is temporarily unavailable"""
+    """Service is temporarily unavailable."""
 
-    def __init__(self, service_name: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Service unavailable: {service_name}"
         super().__init__(message, service_name=service_name, **kwargs)
 
 
 class ServiceInitializationException(ServiceException):
-    """Service initialization failed"""
+    """Service initialization failed."""
 
-    def __init__(self, service_name: str, reason: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Failed to initialize service {service_name}: {reason}"
         super().__init__(
             message,
@@ -371,9 +365,9 @@ class ServiceInitializationException(ServiceException):
 
 # Processing Exceptions
 class ProcessingException(PAKEException):
-    """Data processing errors"""
+    """Data processing errors."""
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.PROCESSING,
@@ -383,18 +377,18 @@ class ProcessingException(PAKEException):
 
 
 class DataProcessingException(ProcessingException):
-    """Data processing failed"""
+    """Data processing failed."""
 
 
 class ModelProcessingException(ProcessingException):
-    """ML model processing failed"""
+    """ML model processing failed."""
 
 
 # Filesystem Exceptions
 class FilesystemException(PAKEException):
-    """Filesystem-related errors"""
+    """Filesystem-related errors."""
 
-    def __init__(self, message: str, file_path: str | None = None, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.FILESYSTEM,
@@ -405,17 +399,17 @@ class FilesystemException(PAKEException):
 
 
 class FileNotFoundException(FilesystemException):
-    """File not found"""
+    """File not found."""
 
-    def __init__(self, file_path: str, **kwargs):
+    def __init__(self) -> None:
         message = f"File not found: {file_path}"
         super().__init__(message, file_path=file_path, **kwargs)
 
 
 class FilePermissionException(FilesystemException):
-    """File permission denied"""
+    """File permission denied."""
 
-    def __init__(self, file_path: str, operation: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Permission denied for {operation} on {file_path}"
         super().__init__(
             message,
@@ -427,9 +421,9 @@ class FilePermissionException(FilesystemException):
 
 # Import Exceptions
 class ImportException(PAKEException):
-    """Import-related errors"""
+    """Import-related errors."""
 
-    def __init__(self, message: str, module_name: str | None = None, **kwargs):
+    def __init__(self) -> None:
         super().__init__(
             message,
             category=ErrorCategory.IMPORT,
@@ -440,22 +434,17 @@ class ImportException(PAKEException):
 
 
 class ModuleNotFoundError(ImportException):
-    """Module could not be imported"""
+    """Module could not be imported."""
 
-    def __init__(self, module_name: str, **kwargs):
+    def __init__(self) -> None:
         message = f"Module not found: {module_name}"
         super().__init__(message, module_name=module_name, **kwargs)
 
 
 class DependencyException(ImportException):
-    """Missing dependency"""
+    """Missing dependency."""
 
-    def __init__(
-        self,
-        dependency: str,
-        install_command: str | None = None,
-        **kwargs,
-    ):
+    def __init__(self) -> None:
         message = f"Missing dependency: {dependency}"
         if install_command:
             message += f" (install with: {install_command})"
@@ -470,7 +459,7 @@ class DependencyException(ImportException):
 def handle_exception(
     exception: Exception,
     logger: logging.Logger,
-    context: dict[str, Any] | None = None,
+    context: Dict[str, Any] | None = None,
     reraise: bool = True,
 ) -> PAKEException | None:
     """Handle any exception by converting it to a PAKEException if needed.
@@ -518,7 +507,7 @@ def handle_exception(
 
 def convert_standard_exception(
     exception: Exception,
-    context: dict[str, Any] | None = None,
+    context: Dict[str, Any] | None = None,
 ) -> PAKEException:
     """Convert standard Python exceptions to appropriate PAKEException subclasses.
 
@@ -592,8 +581,8 @@ def convert_standard_exception(
 def create_error_response(
     exception: PAKEException,
     include_details: bool = False,
-) -> dict[str, Any]:
-    """Create a standardized error response dictionary
+) -> Dict[str, Any]:
+    """Create a standardized error response dictionary.
 
     Args:
         exception: PAKEException instance

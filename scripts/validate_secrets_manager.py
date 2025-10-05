@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def validate_secrets_manager_usage():
+def validate_secrets_manager_usage(self) -> None:
     """Validate that secrets manager is used instead of hardcoded fallbacks"""
 
     # Patterns that indicate improper secret handling
@@ -116,7 +116,7 @@ def validate_secrets_manager_usage():
     return True
 
 
-def get_staged_python_files():
+def get_staged_python_files(self) -> None:
     """Get list of staged Python files"""
     import subprocess
 

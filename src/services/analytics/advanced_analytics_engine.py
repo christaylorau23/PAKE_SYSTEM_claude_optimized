@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Advanced Analytics Engine
-Phase 13: Advanced Analytics Deep Dive
+Phase 13: Advanced Analytics Deep Dive.
 
 Comprehensive analytics engine that provides sophisticated insights by combining
 multiple analytics services, ML models, and data sources for enterprise-level
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AdvancedInsight:
-    """Represents a comprehensive insight with multiple dimensions"""
+    """Represents a comprehensive insight with multiple dimensions."""
 
     insight_id: str
     title: str
@@ -55,36 +55,36 @@ class AdvancedInsight:
     priority: str  # "critical", "high", "medium", "low"
     severity: str  # "urgent", "warning", "info", "success"
     timestamp: datetime
-    data_sources: list[str] = field(default_factory=list)
-    metrics_involved: list[str] = field(default_factory=list)
-    supporting_evidence: dict[str, Any] = field(default_factory=dict)
-    recommended_actions: list[str] = field(default_factory=list)
+    data_sources: List[str] = field(default_factory=list)
+    metrics_involved: List[str] = field(default_factory=list)
+    supporting_evidence: Dict[str, Any] = field(default_factory=dict)
+    recommended_actions: List[str] = field(default_factory=list)
     predicted_impact: str | None = None
     time_sensitivity: str | None = None  # "immediate", "daily", "weekly", "monthly"
 
 
 @dataclass
 class SystemHealthScore:
-    """Comprehensive system health assessment"""
+    """Comprehensive system health assessment."""
 
     overall_score: float  # 0-100
     component_scores: dict[str, float]
     health_trends: dict[str, str]  # "improving", "declining", "stable"
-    critical_issues: list[str]
-    recommendations: list[str]
+    critical_issues: List[str]
+    recommendations: List[str]
     timestamp: datetime
 
 
 @dataclass
 class PredictiveReport:
-    """Predictive analytics report"""
+    """Predictive analytics report."""
 
     forecast_horizon: str
     predicted_metrics: dict[str, list[float]]
     confidence_intervals: dict[str, tuple[float, float]]
-    risk_factors: list[str]
-    opportunities: list[str]
-    scenario_analysis: dict[str, dict[str, Any]]
+    risk_factors: List[str]
+    opportunities: List[str]
+    scenario_analysis: dict[str, Dict[str, Any]]
 
 
 class AdvancedAnalyticsEngine:
@@ -92,8 +92,8 @@ class AdvancedAnalyticsEngine:
     to provide comprehensive system intelligence and actionable insights.
     """
 
-    def __init__(self):
-        """Initialize the advanced analytics engine"""
+    def __init__(self) -> None:
+        """Initialize the advanced analytics engine."""
         self.trend_service = TrendAnalysisService()
         self.correlation_engine = CorrelationEngine()
         self.predictive_service = PredictiveAnalyticsService()
@@ -104,7 +104,7 @@ class AdvancedAnalyticsEngine:
             self.ml_aggregation = AnalyticsAggregationService()
             self.semantic_search = get_semantic_search_service()
         except Exception as e:
-            logger.warning(f"ML services not fully available: {e}")
+            logger.warning("ML services not fully available: %s", e)
             self.ml_aggregation = None
             self.semantic_search = None
 
@@ -118,10 +118,10 @@ class AdvancedAnalyticsEngine:
         time_range: str = "24h",
         include_predictions: bool = True,
         include_recommendations: bool = True,
-    ) -> dict[str, Any]:
-        """Generate a comprehensive analytics report"""
+    ) -> Dict[str, Any]:
+        """Generate a comprehensive analytics report."""
         try:
-            logger.info(f"Generating comprehensive analytics report for {time_range}")
+            logger.info("Generating comprehensive analytics report for %s", time_range)
 
             # Run multiple analyses in parallel
             analyses = await asyncio.gather(
@@ -162,7 +162,7 @@ class AdvancedAnalyticsEngine:
 
             report = {
                 "report_id": hashlib.sha256(
-                    f"{datetime.now().isoformat()}{time_range}".encode(),
+                    f"{datetime.now(UTC).isoformat()}{time_range}".encode(),
                 ).hexdigest()[:12],
                 "generated_at": datetime.now(UTC).isoformat(),
                 "time_range": time_range,
@@ -193,19 +193,20 @@ class AdvancedAnalyticsEngine:
             }
 
             logger.info(
-                f"Comprehensive report generated with {len(insights) if insights else 0} insights",
+                "Comprehensive report generated with %s insights",
+                len(insights) if insights else 0,
             )
             return report
 
         except Exception as e:
-            logger.error(f"Failed to generate comprehensive report: {e}")
+            logger.error("Failed to generate comprehensive report: %s", e)
             return {
                 "error": str(e),
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
     async def _analyze_system_health(self, time_range: str) -> SystemHealthScore:
-        """Analyze overall system health"""
+        """Analyze overall system health."""
         try:
             # Simulate system health analysis
             # In production, this would integrate with monitoring systems
@@ -249,7 +250,7 @@ class AdvancedAnalyticsEngine:
             )
 
         except Exception as e:
-            logger.error(f"System health analysis failed: {e}")
+            logger.error("System health analysis failed: %s", e)
             return SystemHealthScore(
                 overall_score=50.0,
                 component_scores={},
@@ -259,8 +260,8 @@ class AdvancedAnalyticsEngine:
                 timestamp=datetime.now(UTC),
             )
 
-    async def _analyze_performance_trends(self, time_range: str) -> dict[str, Any]:
-        """Analyze performance trends using trend analysis service"""
+    async def _analyze_performance_trends(self, time_range: str) -> Dict[str, Any]:
+        """Analyze performance trends using trend analysis service."""
         try:
             # Get trend data for key performance metrics
             metrics = ["response_time", "throughput", "error_rate", "cache_hit_rate"]
@@ -274,7 +275,7 @@ class AdvancedAnalyticsEngine:
                     )
                     trends[metric] = trend_data
                 except Exception as e:
-                    logger.warning(f"Failed to analyze trend for {metric}: {e}")
+                    logger.warning("Failed to analyze trend for %s: %s", metric, e)
                     trends[metric] = {"error": str(e)}
 
             # Analyze overall performance trend
@@ -290,11 +291,11 @@ class AdvancedAnalyticsEngine:
             }
 
         except Exception as e:
-            logger.error(f"Performance trend analysis failed: {e}")
+            logger.error("Performance trend analysis failed: %s", e)
             return {"error": str(e)}
 
-    async def _analyze_usage_patterns(self, time_range: str) -> dict[str, Any]:
-        """Analyze user usage patterns"""
+    async def _analyze_usage_patterns(self, time_range: str) -> Dict[str, Any]:
+        """Analyze user usage patterns."""
         try:
             # Simulate usage pattern analysis
             # In production, this would analyze real user data
@@ -326,11 +327,11 @@ class AdvancedAnalyticsEngine:
             }
 
         except Exception as e:
-            logger.error(f"Usage pattern analysis failed: {e}")
+            logger.error("Usage pattern analysis failed: %s", e)
             return {"error": str(e)}
 
-    async def _detect_anomalies(self, time_range: str) -> dict[str, Any]:
-        """Detect anomalies in system behavior"""
+    async def _detect_anomalies(self, time_range: str) -> Dict[str, Any]:
+        """Detect anomalies in system behavior."""
         try:
             # Simulate anomaly detection
             # In production, this would use statistical methods and ML models
@@ -344,7 +345,9 @@ class AdvancedAnalyticsEngine:
                         "type": "performance_spike",
                         "metric": "response_time",
                         "severity": "medium",
-                        "timestamp": (datetime.now() - timedelta(hours=2)).isoformat(),
+                        "timestamp": (
+                            datetime.now(UTC) - timedelta(hours=2)
+                        ).isoformat(),
                         "description": "Response time increased by 40% above baseline",
                         "confidence": 0.85,
                     },
@@ -356,7 +359,9 @@ class AdvancedAnalyticsEngine:
                         "type": "usage_drop",
                         "metric": "query_rate",
                         "severity": "high",
-                        "timestamp": (datetime.now() - timedelta(hours=4)).isoformat(),
+                        "timestamp": (
+                            datetime.now(UTC) - timedelta(hours=4)
+                        ).isoformat(),
                         "description": "Query rate dropped by 25% below expected range",
                         "confidence": 0.92,
                     },
@@ -375,11 +380,11 @@ class AdvancedAnalyticsEngine:
             }
 
         except Exception as e:
-            logger.error(f"Anomaly detection failed: {e}")
+            logger.error("Anomaly detection failed: %s", e)
             return {"error": str(e)}
 
-    async def _generate_correlations(self, time_range: str) -> dict[str, Any]:
-        """Generate correlation analysis between metrics"""
+    async def _generate_correlations(self, time_range: str) -> Dict[str, Any]:
+        """Generate correlation analysis between metrics."""
         try:
             # Use correlation engine if available
             correlations = await self.correlation_engine.analyze_correlations(
@@ -394,11 +399,11 @@ class AdvancedAnalyticsEngine:
             }
 
         except Exception as e:
-            logger.error(f"Correlation analysis failed: {e}")
+            logger.error("Correlation analysis failed: %s", e)
             return {"error": str(e)}
 
     async def _generate_predictions(self, time_range: str) -> PredictiveReport:
-        """Generate predictive analytics report"""
+        """Generate predictive analytics report."""
         try:
             # Use predictive service if available
             predictions = await self.predictive_service.generate_forecast(
@@ -423,7 +428,7 @@ class AdvancedAnalyticsEngine:
             )
 
         except Exception as e:
-            logger.error(f"Prediction generation failed: {e}")
+            logger.error("Prediction generation failed: %s", e)
             return PredictiveReport(
                 forecast_horizon="7d",
                 predicted_metrics={},
@@ -434,7 +439,7 @@ class AdvancedAnalyticsEngine:
             )
 
     async def _synthesize_insights(self, *analyses) -> list[AdvancedInsight]:
-        """Synthesize insights from multiple analyses"""
+        """Synthesize insights from multiple analyses."""
         try:
             insights = []
 
@@ -452,7 +457,7 @@ class AdvancedAnalyticsEngine:
                 if health_analysis.overall_score < 80:
                     insights.append(
                         AdvancedInsight(
-                            insight_id=f"health_{int(datetime.now().timestamp())}",
+                            insight_id=f"health_{int(datetime.now(UTC).timestamp())}",
                             title="System Health Below Optimal",
                             description=f"Overall system health score is {health_analysis.overall_score:.1f}, below the 80-point threshold",
                             category="performance",
@@ -485,7 +490,7 @@ class AdvancedAnalyticsEngine:
                 for anomaly in anomaly_analysis["anomalies"]:
                     insights.append(
                         AdvancedInsight(
-                            insight_id=f"anomaly_{int(datetime.now().timestamp())}_{anomaly['type']}",
+                            insight_id=f"anomaly_{int(datetime.now(UTC).timestamp())}_{anomaly['type']}",
                             title=f"Anomaly Detected: {anomaly['type'].replace('_', ' ').title()}",
                             description=anomaly["description"],
                             category="anomaly",
@@ -519,7 +524,7 @@ class AdvancedAnalyticsEngine:
                     if dau > 100:
                         insights.append(
                             AdvancedInsight(
-                                insight_id=f"usage_{int(datetime.now().timestamp())}",
+                                insight_id=f"usage_{int(datetime.now(UTC).timestamp())}",
                                 title="High User Engagement",
                                 description=f"Daily active users ({dau}) exceeding capacity planning threshold",
                                 category="usage",
@@ -539,18 +544,18 @@ class AdvancedAnalyticsEngine:
                             ),
                         )
 
-            logger.info(f"Synthesized {len(insights)} insights from analyses")
+            logger.info("Synthesized %s insights from analyses", len(insights))
             return insights
 
         except Exception as e:
-            logger.error(f"Insight synthesis failed: {e}")
+            logger.error("Insight synthesis failed: %s", e)
             return []
 
     async def _generate_recommendations(
         self,
         insights: list[AdvancedInsight],
-    ) -> list[dict[str, Any]]:
-        """Generate actionable recommendations based on insights"""
+    ) -> list[Dict[str, Any]]:
+        """Generate actionable recommendations based on insights."""
         try:
             recommendations = []
 
@@ -619,14 +624,14 @@ class AdvancedAnalyticsEngine:
             return recommendations
 
         except Exception as e:
-            logger.error(f"Recommendation generation failed: {e}")
+            logger.error("Recommendation generation failed: %s", e)
             return []
 
     def _create_executive_summary(
         self,
         insights: list[AdvancedInsight],
-    ) -> dict[str, Any]:
-        """Create executive summary of key findings"""
+    ) -> Dict[str, Any]:
+        """Create executive summary of key findings."""
         if not insights:
             return {
                 "overall_status": "healthy",
@@ -659,7 +664,7 @@ class AdvancedAnalyticsEngine:
         }
 
     def _calculate_report_confidence(self, insights: list[AdvancedInsight]) -> float:
-        """Calculate overall confidence score for the report"""
+        """Calculate overall confidence score for the report."""
         if not insights:
             return 0.5
 
@@ -672,7 +677,7 @@ _advanced_analytics_engine = None
 
 
 def get_advanced_analytics_engine() -> AdvancedAnalyticsEngine:
-    """Get the singleton advanced analytics engine instance"""
+    """Get the singleton advanced analytics engine instance."""
     global _advanced_analytics_engine
     if _advanced_analytics_engine is None:
         _advanced_analytics_engine = AdvancedAnalyticsEngine()
@@ -681,7 +686,7 @@ def get_advanced_analytics_engine() -> AdvancedAnalyticsEngine:
 
 if __name__ == "__main__":
     # Demo usage
-    async def demo():
+    async def demo(self) -> None:
         engine = get_advanced_analytics_engine()
         report = await engine.generate_comprehensive_report(
             time_range="24h",

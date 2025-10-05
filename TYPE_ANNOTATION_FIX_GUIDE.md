@@ -242,4 +242,3 @@ OptionalStr = Optional[str]  # Older Python
 ```
 
 This guide should help resolve the majority of type annotation issues in your PAKE system.
-

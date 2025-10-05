@@ -2,7 +2,7 @@ from src.utils.secure_network_config import Environment, SecureNetworkConfig
 
 
 class TestNetworkConfig:
-    def test_development_config(self):
+    def test_development_config(self) -> None:
         """Test development network configuration."""
         config = SecureNetworkConfig(Environment.DEVELOPMENT)
 
@@ -10,7 +10,7 @@ class TestNetworkConfig:
         assert config.config.port == 8000
         assert not config.config.enable_ssl
 
-    def test_production_config(self):
+    def test_production_config(self) -> None:
         """Test production network configuration."""
         config = SecureNetworkConfig(Environment.PRODUCTION)
 
@@ -18,7 +18,7 @@ class TestNetworkConfig:
         assert config.config.enable_ssl
         assert config.config.enable_rate_limiting
 
-    def test_config_validation(self):
+    def test_config_validation(self) -> None:
         """Test configuration validation."""
         config = SecureNetworkConfig(Environment.PRODUCTION)
         warnings = config.validate_configuration()

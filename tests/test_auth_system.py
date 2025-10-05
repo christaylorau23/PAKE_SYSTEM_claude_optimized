@@ -34,20 +34,20 @@ settings = get_settings()
 # Fixtures
 
 
-@pytest.fixture()
-def client():
+@pytest.fixture
+def client(self) -> None:
     """Create a test client for the FastAPI app"""
     return TestClient(app)
 
 
-@pytest.fixture()
-def test_password():
+@pytest.fixture
+def test_password(self) -> None:
     """Test password"""
     return "TestPassword123!"
 
 
-@pytest.fixture()
-def test_hashed_password(test_password):
+@pytest.fixture
+def test_hashed_password(self) -> None:
     """Hashed test password"""
     return create_password_hash(test_password)
 
@@ -55,11 +55,11 @@ def test_hashed_password(test_password):
 # Unit Tests - Password Hashing
 
 
-@pytest.mark.unit()
+@pytest.mark.unit
 class TestPasswordHashing:
     """Test password hashing functionality"""
 
-    def test_create_password_hash(self, test_password):
+    def test_create_password_hash(self) -> None:
         """Test that password hashing generates a valid hash"""
         hashed = create_password_hash(test_password)
 
@@ -73,15 +73,15 @@ class TestPasswordHashing:
         hashed2 = create_password_hash(test_password)
         assert hashed != hashed2
 
-    def test_verify_password_correct(self, test_password, test_hashed_password):
+    def test_verify_password_correct(self) -> None:
         """Test password verification with correct password"""
         assert verify_password(test_password, test_hashed_password) is True
 
-    def test_verify_password_incorrect(self, test_hashed_password):
+    def test_verify_password_incorrect(self) -> None:
         """Test password verification with incorrect password"""
         assert verify_password("WrongPassword", test_hashed_password) is False
 
-    def test_verify_password_empty_string(self, test_hashed_password):
+    def test_verify_password_empty_string(self) -> None:
         """Test password verification with empty password"""
         assert verify_password("", test_hashed_password) is False
 
@@ -89,11 +89,11 @@ class TestPasswordHashing:
 # Unit Tests - JWT Tokens
 
 
-@pytest.mark.unit()
+@pytest.mark.unit
 class TestJWTTokens:
     """Test JWT token generation and validation"""
 
-    def test_create_access_token(self):
+    def test_create_access_token(self) -> None:
         """Test JWT token creation"""
         data = {"sub": "testuser"}
         token = create_access_token(data)
@@ -104,7 +104,7 @@ class TestJWTTokens:
         # Token should have three parts (header.payload.signature)
         assert len(token.split(".")) == 3
 
-    def test_create_access_token_with_expiration(self):
+    def test_create_access_token_with_expiration(self) -> None:
         """Test JWT token with custom expiration"""
         data = {"sub": "testuser"}
         expires = timedelta(minutes=15)
@@ -116,7 +116,7 @@ class TestJWTTokens:
         assert "iat" in payload
         assert payload["sub"] == "testuser"
 
-    def test_decode_token_valid(self):
+    def test_decode_token_valid(self) -> None:
         """Test decoding a valid token"""
         data = {"sub": "testuser", "role": "admin"}
         token = create_access_token(data)
@@ -130,14 +130,14 @@ class TestJWTTokens:
         assert "exp" in payload
         assert "iat" in payload
 
-    def test_decode_token_invalid(self):
+    def test_decode_token_invalid(self) -> None:
         """Test decoding an invalid token"""
         from jose import JWTError
 
         with pytest.raises(JWTError):
             decode_token("invalid.token.here")
 
-    def test_decode_token_wrong_signature(self):
+    def test_decode_token_wrong_signature(self) -> None:
         """Test decoding token with wrong signature"""
         from jose import JWTError
 
@@ -153,12 +153,12 @@ class TestJWTTokens:
 # Integration Tests - User Authentication
 
 
-@pytest.mark.integration_auth()
+@pytest.mark.integration_auth
 class TestUserAuthentication:
     """Test user authentication flow"""
 
-    @pytest.mark.asyncio()
-    async def test_get_user_exists(self):
+    @pytest.mark.asyncio
+    async def test_get_user_exists(self) -> None:
         """Test retrieving an existing user"""
         user = await get_user("admin")
 
@@ -167,14 +167,14 @@ class TestUserAuthentication:
         assert user.email == "admin@example.com"
         assert hasattr(user, "hashed_password")
 
-    @pytest.mark.asyncio()
-    async def test_get_user_not_exists(self):
+    @pytest.mark.asyncio
+    async def test_get_user_not_exists(self) -> None:
         """Test retrieving a non-existent user"""
         user = await get_user("nonexistent")
         assert user is None
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_success(self):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_success(self) -> None:
         """Test successful user authentication"""
         user = await authenticate_user("admin", "secret")
 
@@ -182,14 +182,14 @@ class TestUserAuthentication:
         assert user.username == "admin"
         assert user.disabled is False
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_wrong_password(self):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_wrong_password(self) -> None:
         """Test authentication with wrong password"""
         user = await authenticate_user("admin", "wrongpassword")
         assert user is None
 
-    @pytest.mark.asyncio()
-    async def test_authenticate_user_not_exists(self):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_not_exists(self) -> None:
         """Test authentication with non-existent user"""
         user = await authenticate_user("nonexistent", "password")
         assert user is None
@@ -198,11 +198,11 @@ class TestUserAuthentication:
 # Integration Tests - API Endpoints
 
 
-@pytest.mark.integration_api()
+@pytest.mark.integration_api
 class TestAuthenticationEndpoints:
     """Test authentication API endpoints"""
 
-    def test_root_endpoint(self, client):
+    def test_root_endpoint(self) -> None:
         """Test public root endpoint"""
         response = client.get("/")
 
@@ -211,7 +211,7 @@ class TestAuthenticationEndpoints:
         assert "message" in data
         assert "authentication" in data
 
-    def test_login_success(self, client):
+    def test_login_success(self) -> None:
         """Test successful login via /token endpoint"""
         response = client.post(
             "/token", data={"username": "admin", "password": "secret"}
@@ -230,7 +230,7 @@ class TestAuthenticationEndpoints:
         payload = decode_token(token)
         assert payload["sub"] == "admin"
 
-    def test_login_wrong_password(self, client):
+    def test_login_wrong_password(self) -> None:
         """Test login with wrong password"""
         response = client.post(
             "/token", data={"username": "admin", "password": "wrongpassword"}
@@ -240,7 +240,7 @@ class TestAuthenticationEndpoints:
         data = response.json()
         assert "detail" in data
 
-    def test_login_nonexistent_user(self, client):
+    def test_login_nonexistent_user(self) -> None:
         """Test login with non-existent user"""
         response = client.post(
             "/token", data={"username": "nonexistent", "password": "password"}
@@ -248,7 +248,7 @@ class TestAuthenticationEndpoints:
 
         assert response.status_code == 401
 
-    def test_get_current_user_authenticated(self, client):
+    def test_get_current_user_authenticated(self) -> None:
         """Test /auth/me endpoint with valid token"""
         # First, login to get token
         login_response = client.post(
@@ -267,13 +267,13 @@ class TestAuthenticationEndpoints:
         assert data["email"] == "admin@example.com"
         assert data["disabled"] is False
 
-    def test_get_current_user_no_token(self, client):
+    def test_get_current_user_no_token(self) -> None:
         """Test /auth/me endpoint without token"""
         response = client.get("/auth/me")
 
         assert response.status_code == 401
 
-    def test_get_current_user_invalid_token(self, client):
+    def test_get_current_user_invalid_token(self) -> None:
         """Test /auth/me endpoint with invalid token"""
         response = client.get(
             "/auth/me", headers={"Authorization": "Bearer invalid.token.here"}
@@ -281,7 +281,7 @@ class TestAuthenticationEndpoints:
 
         assert response.status_code == 401
 
-    def test_protected_endpoint_authenticated(self, client):
+    def test_protected_endpoint_authenticated(self) -> None:
         """Test protected endpoint with valid token"""
         # Login
         login_response = client.post(
@@ -299,13 +299,13 @@ class TestAuthenticationEndpoints:
         assert "message" in data
         assert "admin" in data["message"]
 
-    def test_protected_endpoint_unauthenticated(self, client):
+    def test_protected_endpoint_unauthenticated(self) -> None:
         """Test protected endpoint without authentication"""
         response = client.get("/protected")
 
         assert response.status_code == 401
 
-    def test_logout_endpoint(self, client):
+    def test_logout_endpoint(self) -> None:
         """Test logout endpoint"""
         # Login
         login_response = client.post(
@@ -326,11 +326,11 @@ class TestAuthenticationEndpoints:
 # End-to-End Tests
 
 
-@pytest.mark.e2e()
+@pytest.mark.e2e
 class TestAuthenticationE2E:
     """End-to-end authentication flow tests"""
 
-    def test_complete_authentication_flow(self, client):
+    def test_complete_authentication_flow(self) -> None:
         """Test complete authentication workflow"""
         # Step 1: Access public endpoint (no auth required)
         response = client.get("/")
@@ -368,28 +368,26 @@ class TestAuthenticationE2E:
 # Performance Tests
 
 
-@pytest.mark.performance()
+@pytest.mark.performance
 class TestAuthenticationPerformance:
     """Test authentication performance"""
 
-    def test_password_hashing_performance(self, benchmark):
+    def test_password_hashing_performance(self) -> None:
         """Benchmark password hashing"""
         result = benchmark(create_password_hash, "password123")
         assert result.startswith("$2b$")
 
-    def test_password_verification_performance(
-        self, benchmark, test_password, test_hashed_password
-    ):
+    def test_password_verification_performance(self) -> None:
         """Benchmark password verification"""
         result = benchmark(verify_password, test_password, test_hashed_password)
         assert result is True
 
-    def test_token_generation_performance(self, benchmark):
+    def test_token_generation_performance(self) -> None:
         """Benchmark token generation"""
         result = benchmark(create_access_token, {"sub": "testuser"})
         assert isinstance(result, str)
 
-    def test_token_decoding_performance(self, benchmark):
+    def test_token_decoding_performance(self) -> None:
         """Benchmark token decoding"""
         token = create_access_token({"sub": "testuser"})
         result = benchmark(decode_token, token)

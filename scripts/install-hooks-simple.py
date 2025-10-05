@@ -9,7 +9,7 @@ import stat
 from pathlib import Path
 
 
-def install_git_hooks():
+def install_git_hooks(self) -> None:
     """Install Git hooks for PAKE+ validation"""
 
     project_root = Path(__file__).parent.parent

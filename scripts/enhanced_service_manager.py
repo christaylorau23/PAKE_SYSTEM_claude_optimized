@@ -10,17 +10,19 @@ import json
 import logging
 import os
 import signal
-import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import psutil
 import yaml
+
+if TYPE_CHECKING:
+    import subprocess
 
 
 class ServiceState(Enum):
@@ -47,7 +49,7 @@ class ServiceConfig:
     name: str
     display_name: str
     type: ServiceType
-    dependencies: list[str] = field(default_factory=list)
+    dependencies: List[str] = field(default_factory=list)
 
     # Commands
     start_command: str | None = None
@@ -88,7 +90,7 @@ class ServiceConfig:
 class PAKEServiceManager:
     """Enhanced service manager with dependency resolution and recovery"""
 
-    def __init__(self, config_file: str | None = None):
+    def __init__(self) -> None:
         self.base_dir = Path(__file__).parent.parent
         self.config_dir = self.base_dir / "configs"
         self.logs_dir = self.base_dir / "logs"
@@ -110,8 +112,8 @@ class PAKEServiceManager:
         self.service_processes: dict[str, subprocess.Popen] = {}
         self.restart_attempts: dict[str, int] = {}
         self.last_restart_time: dict[str, datetime] = {}
-        self.startup_order: list[str] = []
-        self.shutdown_order: list[str] = []
+        self.startup_order: List[str] = []
+        self.shutdown_order: List[str] = []
 
         # Control flags
         self.running = False
@@ -127,10 +129,11 @@ class PAKEServiceManager:
 
         self.logger.info("PAKE+ Service Manager initialized")
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """Setup comprehensive logging system"""
         log_file = (
-            self.logs_dir / f"service_manager_{datetime.now().strftime('%Y%m%d')}.log"
+            self.logs_dir
+            / f"service_manager_{datetime.now(UTC).strftime('%Y%m%d')}.log"
         )
 
         # Create formatter
@@ -298,10 +301,10 @@ class PAKEServiceManager:
         # Load custom configurations if provided
         if config_file and Path(config_file).exists():
             try:
-                self.logger.info(f"Loading custom service config from {config_file}")
+                self.logger.info("Loading custom service config from %s", config_file)
 
                 with open(config_file) as f:
-                    if config_file.endswith(".yaml") or config_file.endswith(".yml"):
+                    if config_file.endswith((".yaml", ".yml")):
                         custom_config = yaml.safe_load(f)
                     else:
                         custom_config = json.load(f)
@@ -329,15 +332,16 @@ class PAKEServiceManager:
                         default_services[service_name] = ServiceConfig(**config_data)
 
                 self.logger.info(
-                    f"Loaded {len(custom_config.get('services', {}))} custom service configs",
+                    "Loaded %s custom service configs",
+                    len(custom_config.get("services", {})),
                 )
 
             except Exception as e:
-                self.logger.error(f"Failed to load custom config: {e}")
+                self.logger.error("Failed to load custom config: %s", e)
 
         return default_services
 
-    def calculate_service_orders(self):
+    def calculate_service_orders(self) -> None:
         """Calculate startup and shutdown orders based on dependencies"""
         # Calculate startup order using topological sort
         self.startup_order = self._topological_sort()
@@ -345,10 +349,10 @@ class PAKEServiceManager:
         # Shutdown order is reverse of startup
         self.shutdown_order = list(reversed(self.startup_order))
 
-        self.logger.info(f"Startup order: {' -> '.join(self.startup_order)}")
-        self.logger.info(f"Shutdown order: {' -> '.join(self.shutdown_order)}")
+        self.logger.info("Startup order: %s", " -> ".join(self.startup_order))
+        self.logger.info("Shutdown order: %s", " -> ".join(self.shutdown_order))
 
-    def _topological_sort(self) -> list[str]:
+    def _topological_sort(self) -> List[str]:
         """Perform topological sort to determine service startup order"""
         # Create adjacency list and in-degree count
         graph = {service: set() for service in self.services}
@@ -362,7 +366,9 @@ class PAKEServiceManager:
                     in_degree[service_name] += 1
                 else:
                     self.logger.warning(
-                        f"Service {service_name} depends on unknown service: {dep}",
+                        "Service %s depends on unknown service: %s",
+                        service_name,
+                        dep,
                     )
 
         # Kahn's algorithm
@@ -381,7 +387,7 @@ class PAKEServiceManager:
         # Check for circular dependencies
         if len(result) != len(self.services):
             remaining = [s for s in self.services if s not in result]
-            self.logger.error(f"Circular dependencies detected involving: {remaining}")
+            self.logger.error("Circular dependencies detected involving: %s", remaining)
             # Add remaining services to avoid blocking
             result.extend(remaining)
 
@@ -390,18 +396,18 @@ class PAKEServiceManager:
     async def start_service(self, service_name: str, force: bool = False) -> bool:
         """Start a specific service"""
         if service_name not in self.services:
-            self.logger.error(f"Unknown service: {service_name}")
+            self.logger.error("Unknown service: %s", service_name)
             return False
 
         config = self.services[service_name]
         current_state = await self.get_service_state(service_name)
 
         if current_state == ServiceState.RUNNING and not force:
-            self.logger.info(f"Service {config.display_name} is already running")
+            self.logger.info("Service %s is already running", config.display_name)
             return True
 
         if current_state == ServiceState.STARTING:
-            self.logger.info(f"Service {config.display_name} is already starting")
+            self.logger.info("Service %s is already starting", config.display_name)
             return await self._wait_for_service_start(service_name)
 
         # Check dependencies
@@ -409,7 +415,7 @@ class PAKEServiceManager:
             return False
 
         # Start the service
-        self.logger.info(f"🚀 Starting {config.display_name}...")
+        self.logger.info("🚀 Starting %s...", config.display_name)
         self.service_states[service_name] = ServiceState.STARTING
 
         try:
@@ -423,19 +429,20 @@ class PAKEServiceManager:
                 self.service_states[service_name] = ServiceState.RUNNING
                 self.restart_attempts[service_name] = 0
                 self.logger.info(
-                    f"✅ Service {config.display_name} started successfully",
+                    "✅ Service %s started successfully",
+                    config.display_name,
                 )
 
                 # Save state
                 self.save_service_state()
                 return True
             self.service_states[service_name] = ServiceState.FAILED
-            self.logger.error(f"❌ Service {config.display_name} failed to start")
+            self.logger.error("❌ Service %s failed to start", config.display_name)
             return False
 
         except Exception as e:
             self.service_states[service_name] = ServiceState.FAILED
-            self.logger.error(f"❌ Exception starting {config.display_name}: {e}")
+            self.logger.error("❌ Exception starting %s: %s", config.display_name, e)
             return False
 
     async def _check_dependencies(self, service_name: str) -> bool:
@@ -446,9 +453,10 @@ class PAKEServiceManager:
             dep_state = await self.get_service_state(dep)
             if dep_state != ServiceState.RUNNING:
                 self.logger.error(
-                    f"Cannot start {config.display_name}: dependency {dep} is {
-                        dep_state.value
-                    }",
+                    "Cannot start %s: dependency %s is %s",
+                    config.display_name,
+                    dep,
+                    dep_state.value,
                 )
                 return False
 
@@ -461,7 +469,7 @@ class PAKEServiceManager:
     ) -> bool:
         """Execute the start command for a service"""
         if not config.start_command:
-            self.logger.error(f"No start command configured for {config.display_name}")
+            self.logger.error("No start command configured for %s", config.display_name)
             return False
 
         try:
@@ -472,8 +480,8 @@ class PAKEServiceManager:
             # Determine working directory
             cwd = config.working_directory or str(self.base_dir)
 
-            self.logger.debug(f"Executing: {config.start_command}")
-            self.logger.debug(f"Working directory: {cwd}")
+            self.logger.debug("Executing: %s", config.start_command)
+            self.logger.debug("Working directory: %s", cwd)
 
             if config.type in [
                 ServiceType.NODE_JS,
@@ -497,10 +505,10 @@ class PAKEServiceManager:
 
                 # Check if process is still running
                 if process.returncode is None:
-                    self.logger.debug(f"Process started with PID: {process.pid}")
+                    self.logger.debug("Process started with PID: %s", process.pid)
                     return True
                 stdout, stderr = await process.communicate()
-                self.logger.error(f"Process failed immediately: {stderr.decode()}")
+                self.logger.error("Process failed immediately: %s", stderr.decode())
                 return False
 
             # For Docker/systemd services, run command and wait
@@ -520,16 +528,17 @@ class PAKEServiceManager:
             if process.returncode == 0:
                 self.logger.debug("Start command completed successfully")
                 return True
-            self.logger.error(f"Start command failed: {stderr.decode()}")
+            self.logger.error("Start command failed: %s", stderr.decode())
             return False
 
         except TimeoutError:
             self.logger.error(
-                f"Start command timed out after {config.startup_timeout}s",
+                "Start command timed out after %ss",
+                config.startup_timeout,
             )
             return False
         except Exception as e:
-            self.logger.error(f"Error executing start command: {e}")
+            self.logger.error("Error executing start command: %s", e)
             return False
 
     async def _wait_for_service_health(
@@ -606,7 +615,7 @@ class PAKEServiceManager:
     async def stop_service(self, service_name: str, force: bool = False) -> bool:
         """Stop a specific service"""
         if service_name not in self.services:
-            self.logger.error(f"Unknown service: {service_name}")
+            self.logger.error("Unknown service: %s", service_name)
             return False
 
         config = self.services[service_name]
@@ -614,11 +623,12 @@ class PAKEServiceManager:
 
         if current_state in [ServiceState.STOPPED, ServiceState.STOPPING]:
             self.logger.info(
-                f"Service {config.display_name} is already stopped/stopping",
+                "Service %s is already stopped/stopping",
+                config.display_name,
             )
             return True
 
-        self.logger.info(f"🛑 Stopping {config.display_name}...")
+        self.logger.info("🛑 Stopping %s...", config.display_name)
         self.service_states[service_name] = ServiceState.STOPPING
 
         try:
@@ -627,11 +637,12 @@ class PAKEServiceManager:
             if success:
                 self.service_states[service_name] = ServiceState.STOPPED
                 self.logger.info(
-                    f"✅ Service {config.display_name} stopped successfully",
+                    "✅ Service %s stopped successfully",
+                    config.display_name,
                 )
             else:
                 self.service_states[service_name] = ServiceState.FAILED
-                self.logger.error(f"❌ Failed to stop {config.display_name}")
+                self.logger.error("❌ Failed to stop %s", config.display_name)
 
             # Clean up process reference
             if service_name in self.service_processes:
@@ -642,7 +653,7 @@ class PAKEServiceManager:
 
         except Exception as e:
             self.service_states[service_name] = ServiceState.FAILED
-            self.logger.error(f"❌ Exception stopping {config.display_name}: {e}")
+            self.logger.error("❌ Exception stopping %s: %s", config.display_name, e)
             return False
 
     async def _execute_stop_command(
@@ -671,11 +682,14 @@ class PAKEServiceManager:
 
             except TimeoutError:
                 self.logger.warning(
-                    f"Graceful shutdown timed out for {config.display_name}",
+                    "Graceful shutdown timed out for %s",
+                    config.display_name,
                 )
             except Exception as e:
                 self.logger.warning(
-                    f"Graceful shutdown failed for {config.display_name}: {e}",
+                    "Graceful shutdown failed for %s: %s",
+                    config.display_name,
+                    e,
                 )
 
         # Force kill if graceful shutdown failed or force requested
@@ -698,7 +712,7 @@ class PAKEServiceManager:
                 return True
 
             except Exception as e:
-                self.logger.error(f"Failed to kill process: {e}")
+                self.logger.error("Failed to kill process: %s", e)
                 return False
 
         return True
@@ -706,7 +720,7 @@ class PAKEServiceManager:
     async def restart_service(self, service_name: str) -> bool:
         """Restart a specific service"""
         config = self.services[service_name]
-        self.logger.info(f"🔄 Restarting {config.display_name}...")
+        self.logger.info("🔄 Restarting %s...", config.display_name)
 
         # Use restart command if available
         if config.restart_command:
@@ -728,7 +742,7 @@ class PAKEServiceManager:
                     return True
 
             except Exception as e:
-                self.logger.error(f"Restart command failed: {e}")
+                self.logger.error("Restart command failed: %s", e)
 
         # Fallback to stop + start
         stop_success = await self.stop_service(service_name)
@@ -893,10 +907,10 @@ class PAKEServiceManager:
             config = self.services[service_name]
 
             if not config.required_for_startup:
-                self.logger.info(f"Skipping optional service: {config.display_name}")
+                self.logger.info("Skipping optional service: %s", config.display_name)
                 continue
 
-            self.logger.info(f"Starting {config.display_name}...")
+            self.logger.info("Starting %s...", config.display_name)
             success = await self.start_service(service_name)
 
             if not success:
@@ -904,18 +918,20 @@ class PAKEServiceManager:
 
                 if config.critical:
                     self.logger.critical(
-                        f"Critical service {config.display_name} failed to start",
+                        "Critical service %s failed to start",
+                        config.display_name,
                     )
                     return False
                 self.logger.warning(
-                    f"Non-critical service {config.display_name} failed to start",
+                    "Non-critical service %s failed to start",
+                    config.display_name,
                 )
 
             # Brief delay between services
             await asyncio.sleep(2)
 
         if failed_services:
-            self.logger.warning(f"Some services failed to start: {failed_services}")
+            self.logger.warning("Some services failed to start: %s", failed_services)
         else:
             self.logger.info("✅ All services started successfully")
 
@@ -934,29 +950,30 @@ class PAKEServiceManager:
             if current_state not in [ServiceState.RUNNING, ServiceState.STARTING]:
                 continue
 
-            self.logger.info(f"Stopping {config.display_name}...")
+            self.logger.info("Stopping %s...", config.display_name)
             success = await self.stop_service(service_name)
 
             if not success:
                 failed_services.append(service_name)
-                self.logger.error(f"Failed to stop {config.display_name}")
+                self.logger.error("Failed to stop %s", config.display_name)
 
             # Brief delay between services
             await asyncio.sleep(1)
 
         if failed_services:
             self.logger.warning(
-                f"Some services failed to stop cleanly: {failed_services}",
+                "Some services failed to stop cleanly: %s",
+                failed_services,
             )
         else:
             self.logger.info("✅ All services stopped successfully")
 
         return len(failed_services) == 0
 
-    async def get_system_status(self) -> dict[str, Any]:
+    async def get_system_status(self) -> Dict[str, Any]:
         """Get comprehensive system status"""
         status = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "overall_status": "unknown",
             "services": {},
             "summary": {
@@ -1009,11 +1026,11 @@ class PAKEServiceManager:
 
         return status
 
-    def save_service_state(self):
+    def save_service_state(self) -> None:
         """Save current service states to disk"""
         try:
             state_data = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "service_states": {k: v.value for k, v in self.service_states.items()},
                 "restart_attempts": self.restart_attempts,
                 "last_restart_time": {
@@ -1025,9 +1042,9 @@ class PAKEServiceManager:
                 json.dump(state_data, f, indent=2)
 
         except Exception as e:
-            self.logger.error(f"Failed to save service state: {e}")
+            self.logger.error("Failed to save service state: %s", e)
 
-    def load_service_state(self):
+    def load_service_state(self) -> None:
         """Load service states from disk"""
         try:
             if self.state_file.exists():
@@ -1062,18 +1079,19 @@ class PAKEServiceManager:
                 self.logger.info("Service state loaded from disk")
 
         except Exception as e:
-            self.logger.warning(f"Failed to load service state: {e}")
+            self.logger.warning("Failed to load service state: %s", e)
 
-    def handle_shutdown_signal(self, signum, frame):
+    def handle_shutdown_signal(self) -> None:
         """Handle shutdown signals"""
-        self.logger.info(f"Received signal {signum}, shutting down...")
+        self.logger.info("Received signal %s, shutting down...", signum)
         self.shutdown_requested = True
 
-    async def run_service_loop(self, monitor_interval: int = 30):
+    async def run_service_loop(self) -> None:
         """Run main service monitoring loop"""
         self.running = True
         self.logger.info(
-            f"Starting service monitoring loop (interval: {monitor_interval}s)",
+            "Starting service monitoring loop (interval: %ss)",
+            monitor_interval,
         )
 
         while self.running and not self.shutdown_requested:
@@ -1088,7 +1106,7 @@ class PAKEServiceManager:
                     await asyncio.sleep(1)
 
             except Exception as e:
-                self.logger.error(f"Error in service monitoring loop: {e}")
+                self.logger.error("Error in service monitoring loop: %s", e)
                 await asyncio.sleep(10)
 
         # Graceful shutdown
@@ -1096,7 +1114,7 @@ class PAKEServiceManager:
         self.running = False
         self.logger.info("Service manager stopped")
 
-    async def _monitor_service_health(self):
+    async def _monitor_service_health(self) -> None:
         """Monitor health of all services and restart failed ones"""
         for service_name, config in self.services.items():
             if not config.auto_restart:
@@ -1107,15 +1125,15 @@ class PAKEServiceManager:
             if current_state == ServiceState.FAILED:
                 await self._handle_service_failure(service_name, config)
 
-    async def _handle_service_failure(self, service_name: str, config: ServiceConfig):
+    async def _handle_service_failure(self) -> None:
         """Handle service failure with restart logic"""
         attempts = self.restart_attempts.get(service_name, 0)
 
         if attempts >= config.max_restart_attempts:
             self.logger.critical(
-                f"Service {config.display_name} has exceeded max restart attempts ({
-                    attempts
-                })",
+                "Service %s has exceeded max restart attempts (%s)",
+                config.display_name,
+                attempts,
             )
             return
 
@@ -1125,32 +1143,33 @@ class PAKEServiceManager:
         # Check if enough time has passed since last restart
         last_restart = self.last_restart_time.get(service_name)
         if last_restart:
-            time_since_restart = datetime.now() - last_restart
+            time_since_restart = datetime.now(UTC) - last_restart
             if time_since_restart.total_seconds() < delay:
                 return
 
         # Attempt restart
         self.logger.warning(
-            f"Attempting to restart failed service {config.display_name} "
+            "Attempting to restart failed service %s %s",
+            config.display_name,
             f"(attempt {attempts + 1}/{config.max_restart_attempts})",
         )
 
         self.restart_attempts[service_name] = attempts + 1
-        self.last_restart_time[service_name] = datetime.now()
+        self.last_restart_time[service_name] = datetime.now(UTC)
 
         success = await self.restart_service(service_name)
 
         if success:
-            self.logger.info(f"Successfully restarted {config.display_name}")
+            self.logger.info("Successfully restarted %s", config.display_name)
             # Reset attempt counter on successful restart
             self.restart_attempts[service_name] = 0
         else:
-            self.logger.error(f"Failed to restart {config.display_name}")
+            self.logger.error("Failed to restart %s", config.display_name)
 
         self.save_service_state()
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     import argparse
 

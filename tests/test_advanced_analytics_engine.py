@@ -26,18 +26,18 @@ from src.services.analytics.advanced_analytics_engine import (
 class TestAdvancedAnalyticsEngine:
     """Test suite for AdvancedAnalyticsEngine following TDD principles."""
 
-    @pytest.fixture()
-    def analytics_engine(self):
+    @pytest.fixture
+    def analytics_engine(self) -> None:
         """Create a fresh analytics engine instance for each test."""
         return AdvancedAnalyticsEngine()
 
-    @pytest.fixture()
-    def mock_time_range(self):
+    @pytest.fixture
+    def mock_time_range(self) -> None:
         """Standard time range for testing."""
         return "24h"
 
-    @pytest.fixture()
-    def sample_health_data(self):
+    @pytest.fixture
+    def sample_health_data(self) -> None:
         """Sample health data for testing."""
         return {
             "overall_score": 85.5,
@@ -59,8 +59,8 @@ class TestAdvancedAnalyticsEngine:
             "recommendations": ["Monitor ml_services performance"],
         }
 
-    @pytest.fixture()
-    def sample_anomaly_data(self):
+    @pytest.fixture
+    def sample_anomaly_data(self) -> None:
         """Sample anomaly data for testing."""
         return {
             "anomalies_detected": 2,
@@ -85,7 +85,7 @@ class TestAdvancedAnalyticsEngine:
         }
 
     # Test 1: Engine Initialization
-    def test_analytics_engine_initialization(self, analytics_engine):
+    def test_analytics_engine_initialization(self) -> None:
         """Test that the analytics engine initializes correctly."""
         assert analytics_engine is not None
         assert analytics_engine.trend_service is not None
@@ -96,19 +96,15 @@ class TestAdvancedAnalyticsEngine:
         assert analytics_engine._cache_ttl == timedelta(minutes=5)
 
     # Test 2: Singleton Pattern
-    def test_singleton_pattern(self):
+    def test_singleton_pattern(self) -> None:
         """Test that get_advanced_analytics_engine returns singleton instance."""
         engine1 = get_advanced_analytics_engine()
         engine2 = get_advanced_analytics_engine()
         assert engine1 is engine2
 
     # Test 3: Comprehensive Report Generation
-    @pytest.mark.asyncio()
-    async def test_generate_comprehensive_report_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_generate_comprehensive_report_success(self) -> None:
         """Test successful comprehensive report generation."""
         with (
             patch.object(analytics_engine, "_analyze_system_health") as mock_health,
@@ -177,12 +173,8 @@ class TestAdvancedAnalyticsEngine:
             assert "metadata" in report
 
     # Test 4: System Health Analysis
-    @pytest.mark.asyncio()
-    async def test_analyze_system_health_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_analyze_system_health_success(self) -> None:
         """Test successful system health analysis."""
         health_score = await analytics_engine._analyze_system_health(mock_time_range)
 
@@ -195,21 +187,17 @@ class TestAdvancedAnalyticsEngine:
         assert isinstance(health_score.timestamp, datetime)
 
         # Verify component scores are within valid range
-        for component, score in health_score.component_scores.items():
+        for _component, score in health_score.component_scores.items():
             assert 0 <= score <= 100
 
         # Verify health trends are valid
         valid_trends = ["improving", "declining", "stable"]
-        for component, trend in health_score.health_trends.items():
+        for _component, trend in health_score.health_trends.items():
             assert trend in valid_trends
 
     # Test 5: Performance Trends Analysis
-    @pytest.mark.asyncio()
-    async def test_analyze_performance_trends_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_analyze_performance_trends_success(self) -> None:
         """Test successful performance trends analysis."""
         with patch.object(
             analytics_engine.trend_service,
@@ -234,12 +222,8 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= trends["performance_score"] <= 100
 
     # Test 6: Usage Patterns Analysis
-    @pytest.mark.asyncio()
-    async def test_analyze_usage_patterns_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_analyze_usage_patterns_success(self) -> None:
         """Test successful usage patterns analysis."""
         patterns = await analytics_engine._analyze_usage_patterns(mock_time_range)
 
@@ -259,8 +243,8 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= hour <= 23
 
     # Test 7: Anomaly Detection
-    @pytest.mark.asyncio()
-    async def test_detect_anomalies_success(self, analytics_engine, mock_time_range):
+    @pytest.mark.asyncio
+    async def test_detect_anomalies_success(self) -> None:
         """Test successful anomaly detection."""
         anomalies = await analytics_engine._detect_anomalies(mock_time_range)
 
@@ -292,12 +276,8 @@ class TestAdvancedAnalyticsEngine:
             assert 0 <= anomaly["confidence"] <= 1
 
     # Test 8: Correlation Analysis
-    @pytest.mark.asyncio()
-    async def test_generate_correlations_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_generate_correlations_success(self) -> None:
         """Test successful correlation analysis."""
         with patch.object(
             analytics_engine.correlation_engine,
@@ -321,12 +301,8 @@ class TestAdvancedAnalyticsEngine:
             assert "analysis_timestamp" in correlations
 
     # Test 9: Predictive Analytics
-    @pytest.mark.asyncio()
-    async def test_generate_predictions_success(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_generate_predictions_success(self) -> None:
         """Test successful predictive analytics generation."""
         with patch.object(
             analytics_engine.predictive_service,
@@ -354,13 +330,8 @@ class TestAdvancedAnalyticsEngine:
             assert isinstance(predictions.scenario_analysis, dict)
 
     # Test 10: Insight Synthesis
-    @pytest.mark.asyncio()
-    async def test_synthesize_insights_success(
-        self,
-        analytics_engine,
-        sample_health_data,
-        sample_anomaly_data,
-    ):
+    @pytest.mark.asyncio
+    async def test_synthesize_insights_success(self) -> None:
         """Test successful insight synthesis."""
         health_analysis = SystemHealthScore(
             overall_score=sample_health_data["overall_score"],
@@ -414,8 +385,8 @@ class TestAdvancedAnalyticsEngine:
             assert isinstance(insight.recommended_actions, list)
 
     # Test 11: Recommendation Generation
-    @pytest.mark.asyncio()
-    async def test_generate_recommendations_success(self, analytics_engine):
+    @pytest.mark.asyncio
+    async def test_generate_recommendations_success(self) -> None:
         """Test successful recommendation generation."""
         # Create sample insights
         insights = [
@@ -482,7 +453,7 @@ class TestAdvancedAnalyticsEngine:
             assert recommendation["effort"] in valid_efforts
 
     # Test 12: Executive Summary Creation
-    def test_create_executive_summary_success(self, analytics_engine):
+    def test_create_executive_summary_success(self) -> None:
         """Test successful executive summary creation."""
         insights = [
             AdvancedInsight(
@@ -535,7 +506,7 @@ class TestAdvancedAnalyticsEngine:
         assert summary["total_insights"] == 2
 
     # Test 13: Report Confidence Calculation
-    def test_calculate_report_confidence_success(self, analytics_engine):
+    def test_calculate_report_confidence_success(self) -> None:
         """Test successful report confidence calculation."""
         insights = [
             AdvancedInsight(
@@ -575,7 +546,7 @@ class TestAdvancedAnalyticsEngine:
         assert confidence == 0.85  # Average of 0.9 and 0.8
 
     # Test 14: Empty Insights Handling
-    def test_create_executive_summary_empty_insights(self, analytics_engine):
+    def test_create_executive_summary_empty_insights(self) -> None:
         """Test executive summary creation with empty insights."""
         summary = analytics_engine._create_executive_summary([])
 
@@ -586,12 +557,8 @@ class TestAdvancedAnalyticsEngine:
         assert summary["recommendations_count"] == 0
 
     # Test 15: Error Handling
-    @pytest.mark.asyncio()
-    async def test_generate_comprehensive_report_error_handling(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_generate_comprehensive_report_error_handling(self) -> None:
         """Test error handling in comprehensive report generation."""
         with patch.object(analytics_engine, "_analyze_system_health") as mock_health:
             mock_health.side_effect = Exception("Test error")
@@ -606,22 +573,22 @@ class TestAdvancedAnalyticsEngine:
             assert report["error"] == "Test error"
 
     # Test 16: Cache Functionality
-    def test_insight_cache_functionality(self, analytics_engine):
+    def test_insight_cache_functionality(self) -> None:
         """Test insight cache functionality."""
         # Test cache initialization
         assert analytics_engine._insight_cache == {}
         assert analytics_engine._cache_ttl == timedelta(minutes=5)
 
         # Test cache key generation
-        cache_key = f"test_key_{datetime.now().timestamp()}"
+        cache_key = f"test_key_{datetime.now(UTC).timestamp()}"
         analytics_engine._insight_cache[cache_key] = {"test": "data"}
 
         assert cache_key in analytics_engine._insight_cache
         assert analytics_engine._insight_cache[cache_key] == {"test": "data"}
 
     # Test 17: Data Validation
-    @pytest.mark.asyncio()
-    async def test_data_validation_in_insights(self, analytics_engine):
+    @pytest.mark.asyncio
+    async def test_data_validation_in_insights(self) -> None:
         """Test data validation in insight generation."""
         # Test with invalid confidence score
         with pytest.raises(ValueError):
@@ -641,8 +608,8 @@ class TestAdvancedAnalyticsEngine:
             )
 
     # Test 18: Performance Metrics
-    @pytest.mark.asyncio()
-    async def test_performance_metrics(self, analytics_engine, mock_time_range):
+    @pytest.mark.asyncio
+    async def test_performance_metrics(self) -> None:
         """Test performance metrics in analytics generation."""
         import time
 
@@ -661,12 +628,8 @@ class TestAdvancedAnalyticsEngine:
         assert "confidence_score" in report["metadata"]
 
     # Test 19: Concurrent Execution
-    @pytest.mark.asyncio()
-    async def test_concurrent_report_generation(
-        self,
-        analytics_engine,
-        mock_time_range,
-    ):
+    @pytest.mark.asyncio
+    async def test_concurrent_report_generation(self) -> None:
         """Test concurrent report generation."""
         # Generate multiple reports concurrently
         tasks = [
@@ -684,8 +647,8 @@ class TestAdvancedAnalyticsEngine:
             assert "generated_at" in report
 
     # Test 20: Integration Test
-    @pytest.mark.asyncio()
-    async def test_full_integration(self, analytics_engine):
+    @pytest.mark.asyncio
+    async def test_full_integration(self) -> None:
         """Test full integration of all analytics components."""
         # Test with different time ranges
         time_ranges = ["1h", "6h", "24h", "7d"]
@@ -714,7 +677,7 @@ class TestAdvancedAnalyticsEngine:
 class TestAdvancedInsight:
     """Test suite for AdvancedInsight data class."""
 
-    def test_advanced_insight_creation(self):
+    def test_advanced_insight_creation(self) -> None:
         """Test AdvancedInsight creation with valid data."""
         insight = AdvancedInsight(
             insight_id="test_123",
@@ -748,7 +711,7 @@ class TestAdvancedInsight:
         assert insight.predicted_impact == "Medium impact expected"
         assert insight.time_sensitivity == "daily"
 
-    def test_advanced_insight_default_values(self):
+    def test_advanced_insight_default_values(self) -> None:
         """Test AdvancedInsight creation with default values."""
         insight = AdvancedInsight(
             insight_id="test_456",
@@ -772,7 +735,7 @@ class TestAdvancedInsight:
 class TestSystemHealthScore:
     """Test suite for SystemHealthScore data class."""
 
-    def test_system_health_score_creation(self):
+    def test_system_health_score_creation(self) -> None:
         """Test SystemHealthScore creation with valid data."""
         health_score = SystemHealthScore(
             overall_score=85.5,
@@ -802,7 +765,7 @@ class TestSystemHealthScore:
 class TestPredictiveReport:
     """Test suite for PredictiveReport data class."""
 
-    def test_predictive_report_creation(self):
+    def test_predictive_report_creation(self) -> None:
         """Test PredictiveReport creation with valid data."""
         report = PredictiveReport(
             forecast_horizon="7d",

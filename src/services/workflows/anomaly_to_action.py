@@ -1,4 +1,4 @@
-"""Proactive Anomaly-to-Action Workflow Engine
+"""Proactive Anomaly-to-Action Workflow Engine.
 
 Automatically converts security anomalies into actionable tasks with
 comprehensive context, priority assignment, and incident response workflows.
@@ -10,13 +10,12 @@ import uuid
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 from .task_management import (
     Task,
-    TaskManagementSystem,
     TaskPriority,
     TaskStatus,
     TaskType,
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class IncidentPriority(Enum):
-    """Incident priority levels that map to task priorities"""
+    """Incident priority levels that map to task priorities."""
 
     LOW = "low"
     MEDIUM = "medium"
@@ -36,7 +35,7 @@ class IncidentPriority(Enum):
 
 
 class WorkflowAction(Enum):
-    """Actions that can be taken by workflow rules"""
+    """Actions that can be taken by workflow rules."""
 
     CREATE_IMMEDIATE_TASK = "create_immediate_task"
     CREATE_STANDARD_TASK = "create_standard_task"
@@ -48,7 +47,7 @@ class WorkflowAction(Enum):
 
 @dataclass
 class WorkflowRule:
-    """Rules that determine how alerts are processed into tasks"""
+    """Rules that determine how alerts are processed into tasks."""
 
     name: str
     condition: Callable[[Any], bool]
@@ -60,11 +59,11 @@ class WorkflowRule:
     correlation_key: str | None = None
     batch_size: int | None = None
     batch_timeout: str | None = None
-    escalation_rules: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    escalation_rules: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def execute(self, alert: Any) -> "TaskProperties":
-        """Execute the rule and return task properties"""
+        """Execute the rule and return task properties."""
         return TaskProperties(
             priority=self.priority,
             assignee=self.assignee,
@@ -75,51 +74,51 @@ class WorkflowRule:
 
 @dataclass
 class TaskProperties:
-    """Properties for task creation from workflow rules"""
+    """Properties for task creation from workflow rules."""
 
     priority: IncidentPriority
     assignee: str | None = None
     response_time: str | None = None
     action: WorkflowAction | None = None
     escalated: bool = False
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SecurityIncident:
-    """Security incident tracking"""
+    """Security incident tracking."""
 
     id: str
-    alert_ids: list[str]
+    alert_ids: List[str]
     incident_type: str
     severity: str
     created_at: datetime
     status: str = "open"
     assigned_task_id: str | None = None
     correlation_key: str | None = None
-    merged_incidents: list[str] = field(default_factory=list)
+    merged_incidents: List[str] = field(default_factory=list)
 
 
 @dataclass
 class IncidentTask:
-    """Enhanced task specifically for security incidents"""
+    """Enhanced task specifically for security incidents."""
 
     title: str
     description: str
     priority: TaskPriority
     security_alert_id: str
     incident_type: str
-    investigation_checklist: list[str] = field(default_factory=list)
-    recommended_actions: list[str] = field(default_factory=list)
+    investigation_checklist: List[str] = field(default_factory=list)
+    recommended_actions: List[str] = field(default_factory=list)
     attached_logs: str | None = None
-    network_context: dict[str, Any] | None = None
-    user_context: dict[str, Any] | None = None
-    system_context: dict[str, Any] | None = None
-    timeline: list[dict[str, Any]] | None = None
+    network_context: Dict[str, Any] | None = None
+    user_context: Dict[str, Any] | None = None
+    system_context: Dict[str, Any] | None = None
+    timeline: list[Dict[str, Any]] | None = None
 
     @classmethod
     def from_security_alert(cls, alert: Any) -> "IncidentTask":
-        """Create an incident task from a security alert"""
+        """Create an incident task from a security alert."""
         # Map alert severity to task priority
         priority_mapping = {
             "LOW": TaskPriority.LOW,
@@ -165,7 +164,7 @@ class IncidentTask:
 
     @staticmethod
     def _generate_task_title(alert: Any) -> str:
-        """Generate descriptive task title"""
+        """Generate descriptive task title."""
         pattern_titles = {
             "failed_login": "Investigate Failed Login Attempts",
             "sql_injection": "Critical: SQL Injection Attack Detected",
@@ -188,7 +187,7 @@ class IncidentTask:
 
     @staticmethod
     def _generate_task_description(alert: Any) -> str:
-        """Generate comprehensive task description"""
+        """Generate comprehensive task description."""
         description = f"""
 SECURITY INCIDENT DETECTED
 
@@ -218,8 +217,8 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return description.strip()
 
     @staticmethod
-    def _generate_investigation_checklist(alert: Any) -> list[str]:
-        """Generate investigation checklist based on alert type"""
+    def _generate_investigation_checklist(alert: Any) -> List[str]:
+        """Generate investigation checklist based on alert type."""
         base_checklist = [
             "Validate alert accuracy and eliminate false positives",
             "Review system logs for the timeframe of incident",
@@ -262,8 +261,8 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return base_checklist + specific_checks
 
     @staticmethod
-    def _generate_recommended_actions(alert: Any) -> list[str]:
-        """Generate recommended actions based on alert"""
+    def _generate_recommended_actions(alert: Any) -> List[str]:
+        """Generate recommended actions based on alert."""
         base_actions = [
             "Review and analyze security alert details",
             "Collect additional forensic evidence",
@@ -298,13 +297,13 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
 
     @staticmethod
     def _collect_logs(alert: Any) -> str:
-        """Collect relevant logs for the incident"""
+        """Collect relevant logs for the incident."""
         # This would integrate with log aggregation systems
         return f"Logs automatically collected for alert {alert.id}"
 
     @staticmethod
-    def _collect_network_context(alert: Any) -> dict[str, Any]:
-        """Collect network-related context"""
+    def _collect_network_context(alert: Any) -> Dict[str, Any]:
+        """Collect network-related context."""
         context = {}
 
         if hasattr(alert, "source_ip"):
@@ -324,8 +323,8 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _collect_user_context(alert: Any) -> dict[str, Any]:
-        """Collect user-related context"""
+    def _collect_user_context(alert: Any) -> Dict[str, Any]:
+        """Collect user-related context."""
         context = {}
 
         # This would integrate with user directory services
@@ -336,8 +335,8 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _collect_system_context(alert: Any) -> dict[str, Any]:
-        """Collect system-related context"""
+    def _collect_system_context(alert: Any) -> Dict[str, Any]:
+        """Collect system-related context."""
         context = {}
 
         context["system_status"] = "Operational"
@@ -347,9 +346,9 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _generate_timeline(alert: Any) -> list[dict[str, Any]]:
-        """Generate incident timeline"""
-        timeline = [
+    def _generate_timeline(alert: Any) -> list[Dict[str, Any]]:
+        """Generate incident timeline."""
+        return [
             {
                 "timestamp": alert.timestamp,
                 "event": "Security alert detected",
@@ -357,19 +356,17 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
                 "source": "AI Security Monitor",
             },
             {
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(UTC),
                 "event": "Incident task created",
                 "details": "Automated task creation by Anomaly-to-Action system",
                 "source": "Workflow Engine",
             },
         ]
 
-        return timeline
-
 
 @dataclass
 class IncidentAssignment:
-    """Assignment information for incidents"""
+    """Assignment information for incidents."""
 
     assignee_id: str
     assignee_name: str
@@ -380,7 +377,7 @@ class IncidentAssignment:
 
 @dataclass
 class AnomalyProcessingResult:
-    """Result of processing a security anomaly"""
+    """Result of processing a security anomaly."""
 
     task_created: bool
     task_id: str | None = None
@@ -402,14 +399,14 @@ class AnomalyProcessingResult:
 
 
 class AnomalyToActionEngine:
-    """Main engine for converting anomalies to actionable tasks"""
+    """Main engine for converting anomalies to actionable tasks."""
 
-    def __init__(self, task_manager: TaskManagementSystem):
+    def __init__(self) -> None:
         self.task_manager = task_manager
         self.workflow_rules: list[WorkflowRule] = []
         self.incident_counter = 0
         self.active_incidents: dict[str, SecurityIncident] = {}
-        self.correlation_cache: dict[str, list[str]] = defaultdict(
+        self.correlation_cache: dict[str, List[str]] = defaultdict(
             list,
         )  # correlation_key -> incident_ids
         self.alert_deduplication: dict[str, str] = {}  # alert_hash -> incident_id
@@ -417,8 +414,8 @@ class AnomalyToActionEngine:
         # Initialize default workflow rules
         self._setup_default_workflow_rules()
 
-    def _setup_default_workflow_rules(self):
-        """Setup default workflow rules for common security patterns"""
+    def _setup_default_workflow_rules(self) -> None:
+        """Setup default workflow rules for common security patterns."""
         # Critical alerts get immediate response
         critical_rule = WorkflowRule(
             name="critical_immediate_response",
@@ -490,7 +487,7 @@ class AnomalyToActionEngine:
         ]
 
     async def process_security_alert(self, alert: Any) -> AnomalyProcessingResult:
-        """Process a security alert and create appropriate tasks/incidents"""
+        """Process a security alert and create appropriate tasks/incidents."""
         # Check for duplicates
         alert_hash = self._generate_alert_hash(alert)
         if alert_hash in self.alert_deduplication:
@@ -521,7 +518,7 @@ class AnomalyToActionEngine:
         return await self._create_standard_task(alert, matching_rule)
 
     def _generate_alert_hash(self, alert: Any) -> str:
-        """Generate hash for alert deduplication"""
+        """Generate hash for alert deduplication."""
         # Create hash based on key alert characteristics
         hash_data = (
             f"{alert.pattern_type}|{getattr(alert, 'source_ip', '')}|{alert.message}"
@@ -529,13 +526,13 @@ class AnomalyToActionEngine:
         return hashlib.sha256(hash_data.encode()).hexdigest()
 
     def _find_matching_rule(self, alert: Any) -> WorkflowRule | None:
-        """Find the first matching workflow rule for an alert"""
+        """Find the first matching workflow rule for an alert."""
         for rule in self.workflow_rules:
             try:
                 if rule.condition(alert):
                     return rule
             except Exception as e:
-                logger.error(f"Error evaluating rule {rule.name}: {e}")
+                logger.error("Error evaluating rule %s: %s", rule.name, e)
         return None
 
     async def _create_immediate_task(
@@ -543,7 +540,7 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> AnomalyProcessingResult:
-        """Create immediate high-priority task"""
+        """Create immediate high-priority task."""
         # Create incident
         incident = await self._create_incident(alert, rule)
 
@@ -558,7 +555,7 @@ class AnomalyToActionEngine:
             task_type=TaskType.SECURITY_INCIDENT,
             priority=self._map_incident_to_task_priority(rule.priority),
             status=TaskStatus.CREATED,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             created_by="anomaly_to_action_system",
             security_alert_id=alert.id,
             incident_type=alert.pattern_type,
@@ -610,7 +607,7 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> AnomalyProcessingResult:
-        """Correlate with existing incidents or create new task"""
+        """Correlate with existing incidents or create new task."""
         # Generate correlation key
         correlation_key = self._generate_correlation_key(alert, rule)
 
@@ -622,7 +619,7 @@ class AnomalyToActionEngine:
         correlation_window = self._parse_time_window(
             rule.correlation_window or "5 minutes",
         )
-        cutoff_time = datetime.now() - correlation_window
+        cutoff_time = datetime.now(UTC) - correlation_window
 
         for incident_id in existing_incidents:
             if incident_id in self.active_incidents:
@@ -659,11 +656,11 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> AnomalyProcessingResult:
-        """Batch alert for later processing"""
+        """Batch alert for later processing."""
         # This is a simplified implementation
         # In production, would implement proper batching with timeouts
 
-        batch_id = f"batch_{rule.name}_{datetime.now().strftime('%Y%m%d_%H')}"
+        batch_id = f"batch_{rule.name}_{datetime.now(UTC).strftime('%Y%m%d_%H')}"
 
         return AnomalyProcessingResult(
             task_created=False,
@@ -677,7 +674,7 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> AnomalyProcessingResult:
-        """Escalate alert immediately with emergency response"""
+        """Escalate alert immediately with emergency response."""
         result = await self._create_immediate_task(alert, rule)
         result.escalated = True
 
@@ -691,11 +688,11 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> AnomalyProcessingResult:
-        """Create standard priority task"""
+        """Create standard priority task."""
         return await self._create_immediate_task(alert, rule)
 
     async def _create_default_task(self, alert: Any) -> AnomalyProcessingResult:
-        """Create default task when no rules match"""
+        """Create default task when no rules match."""
         default_rule = WorkflowRule(
             name="default",
             condition=lambda x: True,
@@ -711,10 +708,10 @@ class AnomalyToActionEngine:
         alert: Any,
         rule: WorkflowRule,
     ) -> SecurityIncident:
-        """Create a security incident"""
+        """Create a security incident."""
         self.incident_counter += 1
         incident_id = (
-            f"INC-{datetime.now().strftime('%Y%m%d')}-{self.incident_counter:04d}"
+            f"INC-{datetime.now(UTC).strftime('%Y%m%d')}-{self.incident_counter:04d}"
         )
 
         incident = SecurityIncident(
@@ -722,7 +719,7 @@ class AnomalyToActionEngine:
             alert_ids=[alert.id],
             incident_type=alert.pattern_type,
             severity=alert.severity,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             status="open",
         )
 
@@ -730,7 +727,7 @@ class AnomalyToActionEngine:
         return incident
 
     def _generate_correlation_key(self, alert: Any, rule: WorkflowRule) -> str:
-        """Generate correlation key for alert"""
+        """Generate correlation key for alert."""
         if rule.correlation_key == "source_ip":
             return f"{alert.pattern_type}|{getattr(alert, 'source_ip', 'unknown')}"
         if rule.correlation_key == "user":
@@ -738,7 +735,7 @@ class AnomalyToActionEngine:
         return f"{alert.pattern_type}|general"
 
     def _parse_time_window(self, window_str: str) -> timedelta:
-        """Parse time window string to timedelta"""
+        """Parse time window string to timedelta."""
         # Simplified parser - "5 minutes", "1 hour", etc.
         try:
             parts = window_str.lower().split()
@@ -759,7 +756,7 @@ class AnomalyToActionEngine:
         self,
         incident_priority: IncidentPriority,
     ) -> TaskPriority:
-        """Map incident priority to task priority"""
+        """Map incident priority to task priority."""
         mapping = {
             IncidentPriority.LOW: TaskPriority.LOW,
             IncidentPriority.MEDIUM: TaskPriority.MEDIUM,
@@ -770,7 +767,7 @@ class AnomalyToActionEngine:
         return mapping.get(incident_priority, TaskPriority.MEDIUM)
 
     def _estimate_resolution_time(self, priority: IncidentPriority) -> str:
-        """Estimate resolution time based on priority"""
+        """Estimate resolution time based on priority."""
         estimates = {
             IncidentPriority.EMERGENCY: "1 hour",
             IncidentPriority.CRITICAL: "4 hours",
@@ -782,13 +779,13 @@ class AnomalyToActionEngine:
 
 
 class IncidentResponseWorkflow:
-    """Orchestrates incident response workflows"""
+    """Orchestrates incident response workflows."""
 
-    def __init__(self):
-        self.active_workflows: dict[str, dict[str, Any]] = {}
+    def __init__(self) -> None:
+        self.active_workflows: dict[str, Dict[str, Any]] = {}
 
     async def initiate_response(self, alert: Any) -> "IncidentResponseResult":
-        """Initiate incident response based on alert"""
+        """Initiate incident response based on alert."""
         # Determine response level based on alert severity
         response_level = self._determine_response_level(alert)
 
@@ -810,7 +807,7 @@ class IncidentResponseWorkflow:
         )
 
     def _determine_response_level(self, alert: Any) -> int:
-        """Determine response level (1-5 scale)"""
+        """Determine response level (1-5 scale)."""
         severity_levels = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
         base_level = severity_levels.get(alert.severity, 2)
@@ -821,8 +818,8 @@ class IncidentResponseWorkflow:
 
         return min(base_level, 5)
 
-    def _create_response_plan(self, alert: Any, response_level: int) -> dict[str, Any]:
-        """Create incident response plan"""
+    def _create_response_plan(self, alert: Any, response_level: int) -> Dict[str, Any]:
+        """Create incident response plan."""
         return {
             "response_level": response_level,
             "containment_required": response_level >= 3,
@@ -834,9 +831,9 @@ class IncidentResponseWorkflow:
     async def _execute_immediate_actions(
         self,
         alert: Any,
-        plan: dict[str, Any],
-    ) -> list[str]:
-        """Execute immediate response actions"""
+        plan: Dict[str, Any],
+    ) -> List[str]:
+        """Execute immediate response actions."""
         actions = [
             "Security alert validated and processed",
             "Incident response team notified",
@@ -852,19 +849,19 @@ class IncidentResponseWorkflow:
         return actions
 
     def _calculate_team_size(self, response_level: int) -> int:
-        """Calculate response team size based on level"""
+        """Calculate response team size based on level."""
         return min(response_level + 1, 6)
 
 
 @dataclass
 class IncidentResponseResult:
-    """Result of incident response initiation"""
+    """Result of incident response initiation."""
 
     incident_declared: bool
     response_team_notified: bool
     containment_initiated: bool
     investigation_started: bool
-    immediate_actions_taken: list[str]
+    immediate_actions_taken: List[str]
     escalation_level: int
     response_team_size: int
     executive_notification: bool

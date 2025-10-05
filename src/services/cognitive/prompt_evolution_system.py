@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Prompt Evolution System - Advanced Autonomous Cognitive Evolution
-Part of the Cosmic Calibration Protocol
+Part of the Cosmic Calibration Protocol.
 
 AI system that analyzes its own performance and recursively improves prompts
 through evolutionary algorithms, A/B testing, and success/failure pattern analysis.
@@ -12,7 +12,7 @@ import json
 import logging
 import random
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -38,7 +38,7 @@ class PromptCategory(Enum):
 
 @dataclass
 class PromptGene:
-    """A genetic component of a prompt that can be evolved"""
+    """A genetic component of a prompt that can be evolved."""
 
     gene_id: str
     category: str
@@ -51,7 +51,7 @@ class PromptGene:
 
 @dataclass
 class PromptOrganism:
-    """A complete prompt as an organism with genetic components"""
+    """A complete prompt as an organism with genetic components."""
 
     organism_id: str
     category: PromptCategory
@@ -60,8 +60,8 @@ class PromptOrganism:
     full_prompt: str
     fitness_score: float
     performance_metrics: dict[str, float]
-    parent_ids: list[str]
-    mutation_history: list[str]
+    parent_ids: List[str]
+    mutation_history: List[str]
     created_at: datetime
     last_tested: datetime | None
     test_count: int
@@ -70,11 +70,11 @@ class PromptOrganism:
 
 @dataclass
 class EvolutionExperiment:
-    """A/B testing experiment for prompt evolution"""
+    """A/B testing experiment for prompt evolution."""
 
     experiment_id: str
     prompt_variants: list[PromptOrganism]
-    test_results: dict[str, Any]
+    test_results: Dict[str, Any]
     winner_id: str | None
     confidence_level: float
     sample_size: int
@@ -94,7 +94,7 @@ class PromptEvolutionSystem:
     - Multi-model validation of improvements
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.evolution_stage = EvolutionStage.OBSERVATION
 
@@ -112,9 +112,9 @@ class PromptEvolutionSystem:
 
         # Evolution storage
         self.prompt_populations: dict[PromptCategory, list[PromptOrganism]] = {}
-        self.evolution_history: list[dict[str, Any]] = []
+        self.evolution_history: list[Dict[str, Any]] = []
         self.active_experiments: list[EvolutionExperiment] = []
-        self.performance_database: dict[str, list[dict[str, Any]]] = {}
+        self.performance_database: dict[str, list[Dict[str, Any]]] = {}
 
         # Genetic building blocks for prompt construction
         self.genetic_library = self._initialize_genetic_library()
@@ -130,7 +130,7 @@ class PromptEvolutionSystem:
         self.logger.info("Prompt Evolution System initialized")
 
     def _setup_logging(self) -> logging.Logger:
-        """Setup dedicated logging for prompt evolution"""
+        """Setup dedicated logging for prompt evolution."""
         logger = logging.getLogger("PromptEvolution")
         logger.setLevel(logging.INFO)
 
@@ -151,7 +151,7 @@ class PromptEvolutionSystem:
         return logger
 
     def _initialize_genetic_library(self) -> dict[str, list[PromptGene]]:
-        """Initialize library of genetic components for prompt building"""
+        """Initialize library of genetic components for prompt building."""
         return {
             "reasoning_strategies": [
                 PromptGene(
@@ -364,7 +364,7 @@ class PromptEvolutionSystem:
         }
 
     def _initialize_base_prompts(self) -> dict[PromptCategory, PromptOrganism]:
-        """Initialize base prompt templates for each category"""
+        """Initialize base prompt templates for each category."""
         base_prompts = {}
 
         # Analysis prompt
@@ -427,7 +427,7 @@ class PromptEvolutionSystem:
         return base_prompts
 
     async def initialize(self) -> bool:
-        """Initialize the prompt evolution system"""
+        """Initialize the prompt evolution system."""
         try:
             self.logger.info("Initializing Prompt Evolution System...")
 
@@ -464,14 +464,14 @@ class PromptEvolutionSystem:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize prompt evolution system: {e}")
+            self.logger.error("Failed to initialize prompt evolution system: %s", e)
             return False
 
-    async def _initialize_evolution_log(self):
-        """Initialize the Prompt Evolution Log"""
+    async def _initialize_evolution_log(self) -> None:
+        """Initialize the Prompt Evolution Log."""
         log_header = f"""# Prompt Evolution Log - Advanced Autonomous Cognitive Evolution
 
-**Initialization Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Initialization Date:** {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 **Evolution Protocol:** Genetic Algorithm + A/B Testing
 **System Status:** Active Evolution
 
@@ -502,7 +502,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         genes: list[PromptGene],
         category: PromptCategory,
     ) -> str:
-        """Construct a complete prompt from genetic components"""
+        """Construct a complete prompt from genetic components."""
         prompt_parts = []
 
         # Category-specific introduction
@@ -535,9 +535,9 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         genes: list[PromptGene],
         prompt: str,
         generation: int,
-        parent_ids: list[str] = None,
+        parent_ids: List[str] = None,
     ) -> PromptOrganism:
-        """Create a new prompt organism"""
+        """Create a new prompt organism."""
         organism_id = hashlib.sha256(prompt.encode()).hexdigest()[:12]
 
         return PromptOrganism(
@@ -550,14 +550,14 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
             performance_metrics={},
             parent_ids=parent_ids or [],
             mutation_history=[],
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             last_tested=None,
             test_count=0,
             success_count=0,
         )
 
-    async def _continuous_evolution_loop(self):
-        """Main evolution loop - continuous genetic improvement"""
+    async def _continuous_evolution_loop(self) -> None:
+        """Main evolution loop - continuous genetic improvement."""
         self.logger.info("Starting continuous prompt evolution loop")
 
         while True:
@@ -576,7 +576,8 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
                     # Check if evolution is needed
                     if self._should_evolve(performance_analysis):
                         self.logger.info(
-                            f"Starting evolution cycle for {category.value} prompts",
+                            "Starting evolution cycle for %s prompts",
+                            category.value,
                         )
 
                         # Generate new generation
@@ -600,14 +601,14 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
                 self.evolution_stage = EvolutionStage.OBSERVATION
 
             except Exception as e:
-                self.logger.error(f"Error in evolution loop: {e}")
+                self.logger.error("Error in evolution loop: %s", e)
 
     async def _evolve_population(
         self,
         population: list[PromptOrganism],
         category: PromptCategory,
     ) -> list[PromptOrganism]:
-        """Evolve a population to create new generation"""
+        """Evolve a population to create new generation."""
         new_generation = []
 
         # Selection phase
@@ -635,7 +636,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         self,
         population: list[PromptOrganism],
     ) -> list[PromptOrganism]:
-        """Select parents for breeding using tournament selection"""
+        """Select parents for breeding using tournament selection."""
         tournament_size = max(2, int(len(population) * 0.1))
         parents = []
 
@@ -655,7 +656,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         parent2: PromptOrganism,
         category: PromptCategory,
     ) -> tuple[PromptOrganism, PromptOrganism]:
-        """Create two children through crossover of parent genes"""
+        """Create two children through crossover of parent genes."""
         # Combine and select genes from both parents
         all_genes = parent1.genes + parent2.genes
         gene_pool = list(set(all_genes))  # Remove duplicates
@@ -689,12 +690,8 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
 
         return child1, child2
 
-    async def _mutate_organism(
-        self,
-        organism: PromptOrganism,
-        category: PromptCategory,
-    ):
-        """Mutate an organism by modifying its genes"""
+    async def _mutate_organism(self) -> None:
+        """Mutate an organism by modifying its genes."""
         mutation_type = random.choice(["add", "remove", "modify"])
 
         if mutation_type == "add" and len(organism.genes) < 6:
@@ -730,11 +727,11 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
             category,
         )
         organism.mutation_history.append(
-            f"{mutation_type}_{datetime.now().isoformat()}",
+            f"{mutation_type}_{datetime.now(UTC).isoformat()}",
         )
 
-    async def evolve_prompts(self) -> dict[str, Any]:
-        """Manually trigger prompt evolution cycle"""
+    async def evolve_prompts(self) -> Dict[str, Any]:
+        """Manually trigger prompt evolution cycle."""
         self.logger.info("Manual prompt evolution triggered")
 
         evolution_results = {}
@@ -759,12 +756,12 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         return evolution_results
 
     def get_best_prompt(self, category: PromptCategory) -> PromptOrganism:
-        """Get the best performing prompt for a category"""
+        """Get the best performing prompt for a category."""
         population = self.prompt_populations[category]
         return max(population, key=lambda x: x.fitness_score)
 
-    def get_status(self) -> dict[str, Any]:
-        """Get current status of prompt evolution system"""
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status of prompt evolution system."""
         return {
             "evolution_stage": self.evolution_stage.value,
             "population_sizes": {
@@ -782,8 +779,8 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
             },
         }
 
-    async def shutdown(self):
-        """Gracefully shutdown the prompt evolution system"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the prompt evolution system."""
         self.logger.info("Shutting down Prompt Evolution System...")
 
         # Save evolution state
@@ -792,7 +789,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         # Log shutdown
         with open(self.evolution_log_path, "a", encoding="utf-8") as f:
             f.write(
-                f"\n\n## System Shutdown - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
+                f"\n\n## System Shutdown - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}\n\n",
             )
             f.write(f"Final Status: {json.dumps(final_status, indent=2)}\n\n")
 

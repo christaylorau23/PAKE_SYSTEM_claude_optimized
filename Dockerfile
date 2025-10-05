@@ -1,4 +1,6 @@
-# PAKE System Production Dockerfile
+# PAKE System Production Dockerfile - Optimized Layer Caching
+# Single-stage build with optimized dependency installation order
+
 FROM python:3.12.8-slim
 
 # Set environment variables for security and performance
@@ -12,6 +14,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies with security updates
+# This layer changes infrequently, so it's cached well
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -22,21 +25,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy unified requirements file for better caching
+# Copy dependency files first for optimal layer caching
+# This layer only changes when dependencies change
 COPY requirements.txt .
 
 # Install Python dependencies
+# This layer is cached unless requirements.txt changes
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
-
 # Create non-root user
-RUN useradd -m -u 1000 pake && chown -R pake:pake /app
-USER pake
+# This layer changes infrequently
+RUN useradd -m -u 1000 pake
 
-# Create necessary directories
-RUN mkdir -p /app/vault /app/logs
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/vault /app/logs && \
+    chown -R pake:pake /app && \
+    chmod 700 /app/vault
+
+# Copy application code last
+# This layer changes most frequently but doesn't invalidate dependency layers
+COPY --chown=pake:pake . .
+
+# Switch to non-root user
+USER pake
 
 # Expose port
 EXPOSE 8000

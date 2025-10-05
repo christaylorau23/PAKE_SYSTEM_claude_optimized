@@ -1,4 +1,4 @@
-"""Demonstration of Proactive Anomaly-to-Action Workflows
+"""Demonstration of Proactive Anomaly-to-Action Workflows.
 
 This script demonstrates the complete workflow from security alert detection
 to automated task creation and incident response.
@@ -6,7 +6,7 @@ to automated task creation and incident response.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from .security_monitor_integration import ProactiveSecurityMonitor
 
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityAlertSimulator:
-    """Simulates security alerts from ai-security-monitor.py"""
+    """Simulates security alerts from ai-security-monitor.py."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.alert_counter = 0
 
     def create_mock_alert(
@@ -31,13 +31,13 @@ class SecurityAlertSimulator:
         message: str,
         **kwargs,
     ) -> "MockSecurityAlert":
-        """Create a mock security alert"""
+        """Create a mock security alert."""
         self.alert_counter += 1
 
         class MockSecurityAlert:
-            def __init__(self, id, severity, pattern_type, message, **kwargs):
+            def __init__(self) -> None:
                 self.id = id
-                self.timestamp = datetime.now()
+                self.timestamp = datetime.now(UTC)
                 self.severity = severity
                 self.pattern_type = pattern_type
                 self.message = message
@@ -61,8 +61,8 @@ class SecurityAlertSimulator:
         )
 
 
-async def demonstrate_proactive_workflows():
-    """Main demonstration of proactive anomaly-to-action workflows"""
+async def demonstrate_proactive_workflows(self) -> None:
+    """Main demonstration of proactive anomaly-to-action workflows."""
     print("🚀 PROACTIVE ANOMALY-TO-ACTION WORKFLOWS DEMONSTRATION")
     print("=" * 70)
 
@@ -140,9 +140,9 @@ async def demonstrate_proactive_workflows():
         print(f"      Pattern: {alert.pattern_type}")
 
         # Process through proactive workflow system
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         result = await monitor.process_security_alert(alert)
-        processing_time = (datetime.now() - start_time).total_seconds()
+        processing_time = (datetime.now(UTC) - start_time).total_seconds()
 
         results.append(
             {
@@ -207,14 +207,14 @@ async def demonstrate_proactive_workflows():
         )
         load_test_alerts.append(alert)
 
-    load_test_start = datetime.now()
+    load_test_start = datetime.now(UTC)
     load_test_results = []
 
     # Process alerts concurrently
     tasks = [monitor.process_security_alert(alert) for alert in load_test_alerts]
     load_test_results = await asyncio.gather(*tasks)
 
-    load_test_time = (datetime.now() - load_test_start).total_seconds()
+    load_test_time = (datetime.now(UTC) - load_test_start).total_seconds()
 
     tasks_created = sum(1 for result in load_test_results if result["task_created"])
     print(

@@ -1,5 +1,5 @@
 """Minimal Monitoring Service Implementation
-Task T050 - Phase 18 Production System Integration
+Task T050 - Phase 18 Production System Integration.
 
 This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
@@ -7,8 +7,8 @@ Following TDD Green Phase - just enough to pass tests, then refactor.
 
 import time
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import PlainTextResponse
@@ -21,12 +21,12 @@ class AlertRule(BaseModel):
     expression: str
     severity: str
     duration: str = "5m"
-    description: Optional[str] = None
+    description: str | None = None
 
 
 # In-memory storage for TDD
-active_alerts: list[dict[str, Any]] = []
-alert_rules: dict[str, dict[str, Any]] = {}
+active_alerts: list[Dict[str, Any]] = []
+alert_rules: dict[str, Dict[str, Any]] = {}
 
 
 app = FastAPI(
@@ -37,8 +37,8 @@ app = FastAPI(
 
 
 @app.get("/api/v1/metrics", response_class=PlainTextResponse)
-async def get_prometheus_metrics():
-    """Minimal Prometheus metrics exposition to satisfy test_monitoring_metrics.py
+async def get_prometheus_metrics(self) -> None:
+    """Minimal Prometheus metrics exposition to satisfy test_monitoring_metrics.py.
 
     This implements just enough to pass the contract tests:
     - Returns text/plain content type
@@ -47,7 +47,7 @@ async def get_prometheus_metrics():
     """
     current_time = int(time.time())
 
-    metrics = f"""# HELP pake_research_requests_total Total number of research requests
+    return f"""# HELP pake_research_requests_total Total number of research requests
 # TYPE pake_research_requests_total counter
 pake_research_requests_total{{service="orchestrator",source="web"}} 1542 {current_time}
 pake_research_requests_total{{service="orchestrator",source="arxiv"}} 892 {current_time}
@@ -84,15 +84,13 @@ pake_service_health_status{{service="monitoring"}} 1 {current_time}
 pake_system_uptime_seconds 86400 {current_time}
 """
 
-    return metrics
-
 
 @app.get("/api/v1/metrics/custom")
 async def get_custom_metrics(
-    service: Optional[str] = Query(None), timeframe: str = Query("1h")
+    service: str | None = Query(None), timeframe: str = Query("1h")
 ):
-    """Custom business metrics endpoint to satisfy monitoring tests"""
-    current_time = datetime.utcnow().isoformat()
+    """Custom business metrics endpoint to satisfy monitoring tests."""
+    current_time = datetime.now(UTC).isoformat()
 
     service_metrics = {}
 
@@ -148,22 +146,22 @@ async def get_custom_metrics(
 
 @app.get("/api/v1/health")
 async def get_monitoring_health(level: str = Query("shallow")):
-    """Monitoring service health check"""
+    """Monitoring service health check."""
     services = {
         "prometheus": {
             "status": "healthy",
-            "last_check": datetime.utcnow().isoformat(),
+            "last_check": datetime.now(UTC).isoformat(),
         },
-        "grafana": {"status": "healthy", "last_check": datetime.utcnow().isoformat()},
+        "grafana": {"status": "healthy", "last_check": datetime.now(UTC).isoformat()},
         "alertmanager": {
             "status": "healthy",
-            "last_check": datetime.utcnow().isoformat(),
+            "last_check": datetime.now(UTC).isoformat(),
         },
     }
 
     health_response = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "services": services,
     }
 
@@ -186,13 +184,13 @@ async def get_monitoring_health(level: str = Query("shallow")):
 
 @app.get("/api/v1/health/{service}")
 async def get_service_health(service: str, include_metrics: bool = Query(False)):
-    """Individual service health check"""
+    """Individual service health check."""
     # Mock service health data
     known_services = {
         "orchestrator": {
             "service_name": "orchestrator",
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": "18.0.0",
             "uptime_seconds": 3600,
             "response_time_ms": 5.5,
@@ -200,7 +198,7 @@ async def get_service_health(service: str, include_metrics: bool = Query(False))
         "api-gateway": {
             "service_name": "api-gateway",
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": "18.0.0",
             "uptime_seconds": 3600,
             "response_time_ms": 3.2,
@@ -208,7 +206,7 @@ async def get_service_health(service: str, include_metrics: bool = Query(False))
         "cache-service": {
             "service_name": "cache-service",
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": "18.0.0",
             "uptime_seconds": 3600,
             "response_time_ms": 1.8,
@@ -233,11 +231,11 @@ async def get_service_health(service: str, include_metrics: bool = Query(False))
 
 @app.get("/api/v1/alerts")
 async def get_active_alerts(
-    status: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
-    service: Optional[str] = Query(None),
+    status: str | None = Query(None),
+    severity: str | None = Query(None),
+    service: str | None = Query(None),
 ):
-    """Query active alerts"""
+    """Query active alerts."""
     # Mock active alerts
     mock_alerts = [
         {
@@ -248,7 +246,7 @@ async def get_active_alerts(
             "service": "api_gateway",
             "message": "Response time exceeds threshold",
             "description": "API Gateway P95 response time is above 500ms",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "labels": {"service": "api_gateway", "severity": "high"},
         },
         {
@@ -259,8 +257,8 @@ async def get_active_alerts(
             "service": "cache",
             "message": "Cache hit rate below threshold",
             "description": "Cache hit rate dropped below 95%",
-            "created_at": datetime.utcnow().isoformat(),
-            "acknowledged_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "acknowledged_at": datetime.now(UTC).isoformat(),
             "labels": {"service": "cache", "severity": "medium"},
         },
     ]
@@ -287,15 +285,15 @@ async def get_active_alerts(
 
 
 @app.post("/api/v1/alerts", status_code=201)
-async def create_alert_rule(alert_rule: AlertRule):
-    """Create custom alert rule"""
+async def create_alert_rule(self) -> None:
+    """Create custom alert rule."""
     rule_id = str(uuid.uuid4())
 
     rule_data = alert_rule.dict()
     rule_data.update(
         {
             "rule_id": rule_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "enabled": True,
             "current_state": "normal",
         }
@@ -307,14 +305,14 @@ async def create_alert_rule(alert_rule: AlertRule):
 
 
 @app.post("/api/v1/alerts/{alert_id}/acknowledge")
-async def acknowledge_alert(alert_id: str, acknowledgment: dict[str, Any]):
-    """Acknowledge an alert"""
+async def acknowledge_alert(self) -> None:
+    """Acknowledge an alert."""
     # Mock acknowledgment
     return {
         "alert_id": alert_id,
         "status": "acknowledged",
         "acknowledged_by": acknowledgment.get("acknowledged_by", "system"),
-        "acknowledged_at": datetime.utcnow().isoformat(),
+        "acknowledged_at": datetime.now(UTC).isoformat(),
     }
 
 

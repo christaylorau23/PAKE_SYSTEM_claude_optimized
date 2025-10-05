@@ -1,4 +1,4 @@
-"""Advanced NLP Service
+"""Advanced NLP Service.
 
 Provides sophisticated natural language processing capabilities using lightweight,
 production-ready implementations that avoid heavy dependencies.
@@ -61,7 +61,7 @@ class AdvancedNLPService:
     and information processing using lightweight methods.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the NLP service and download required NLTK data."""
         self.stemmer = PorterStemmer()
         self.lemmatizer = WordNetLemmatizer()
@@ -71,29 +71,27 @@ class AdvancedNLPService:
         try:
             self.stop_words = set(stopwords.words("english"))
         except BaseException:
-            self.stop_words = set(
-                [
-                    "the",
-                    "a",
-                    "an",
-                    "and",
-                    "or",
-                    "but",
-                    "in",
-                    "on",
-                    "at",
-                    "to",
-                    "for",
-                    "of",
-                    "with",
-                    "by",
-                ],
-            )
+            self.stop_words = {
+                "the",
+                "a",
+                "an",
+                "and",
+                "or",
+                "but",
+                "in",
+                "on",
+                "at",
+                "to",
+                "for",
+                "of",
+                "with",
+                "by",
+            }
 
         # Initialize patterns for entity recognition
         self._init_patterns()
 
-    def _ensure_nltk_data(self):
+    def _ensure_nltk_data(self) -> None:
         """Download required NLTK data if not present."""
         try:
             nltk.data.find("tokenizers/punkt")
@@ -128,7 +126,7 @@ class AdvancedNLPService:
             except BaseException:
                 logger.warning("Could not download NLTK NE chunker")
 
-    def _init_patterns(self):
+    def _init_patterns(self) -> None:
         """Initialize regex patterns for entity recognition."""
         self.patterns = {
             "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),
@@ -184,11 +182,11 @@ class AdvancedNLPService:
             # Deduplicate and merge similar entities
             entities = self._deduplicate_entities(entities)
 
-            logger.info(f"Extracted {len(entities)} entities from text")
+            logger.info("Extracted %s entities from text", len(entities))
             return entities
 
         except Exception as e:
-            logger.error(f"Error extracting entities: {e}")
+            logger.error("Error extracting entities: %s", e)
             return []
 
     async def _extract_pattern_entities(self, text: str) -> list[ExtractedEntity]:
@@ -269,7 +267,7 @@ class AdvancedNLPService:
                     )
 
         except Exception as e:
-            logger.warning(f"NLTK entity extraction failed: {e}")
+            logger.warning("NLTK entity extraction failed: %s", e)
 
         return entities
 
@@ -447,7 +445,7 @@ class AdvancedNLPService:
             )
 
         except Exception as e:
-            logger.error(f"Error analyzing text: {e}")
+            logger.error("Error analyzing text: %s", e)
             return TextAnalytics(
                 word_count=0,
                 sentence_count=0,
@@ -476,7 +474,7 @@ class AdvancedNLPService:
     async def _extract_key_phrases(
         self,
         text: str,
-        words: list[str],
+        words: List[str],
     ) -> list[tuple[str, float]]:
         """Extract key phrases using frequency and linguistic patterns."""
         try:
@@ -501,7 +499,7 @@ class AdvancedNLPService:
             current_phrase = []
 
             for word, pos in pos_tags:
-                if pos.startswith("NN") or pos.startswith("JJ"):  # Nouns and adjectives
+                if pos.startswith(("NN", "JJ")):  # Nouns and adjectives
                     current_phrase.append(word.lower())
                 else:
                     if len(current_phrase) >= 2:  # Multi-word noun phrases
@@ -526,10 +524,10 @@ class AdvancedNLPService:
             return key_terms[:10]
 
         except Exception as e:
-            logger.warning(f"Key phrase extraction failed: {e}")
+            logger.warning("Key phrase extraction failed: %s", e)
             return []
 
-    def _analyze_sentiment_indicators(self, words: list[str]) -> dict[str, int]:
+    def _analyze_sentiment_indicators(self, words: List[str]) -> dict[str, int]:
         """Analyze basic sentiment indicators."""
         positive_words = {
             "good",
@@ -606,7 +604,7 @@ class AdvancedNLPService:
             "neutral": neutral_count,
         }
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check NLP service health."""
         try:
             # Test basic functionality

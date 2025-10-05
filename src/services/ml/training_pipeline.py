@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Training Pipeline Orchestrator
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Provides automated ML training pipelines with Kubeflow integration,
 experiment tracking, model versioning, and automated retraining capabilities.
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 class TrainingStatus(Enum):
-    """Training job status"""
+    """Training job status."""
 
     PENDING = "pending"
     RUNNING = "running"
@@ -59,7 +59,7 @@ class TrainingStatus(Enum):
 
 
 class ModelType(Enum):
-    """Types of ML models"""
+    """Types of ML models."""
 
     CLASSIFICATION = "classification"
     REGRESSION = "regression"
@@ -71,7 +71,7 @@ class ModelType(Enum):
 
 
 class TrainingTrigger(Enum):
-    """Triggers for training jobs"""
+    """Triggers for training jobs."""
 
     MANUAL = "manual"
     SCHEDULED = "scheduled"
@@ -83,7 +83,7 @@ class TrainingTrigger(Enum):
 
 @dataclass(frozen=True)
 class TrainingJob:
-    """Immutable training job specification"""
+    """Immutable training job specification."""
 
     job_id: str
     model_name: str
@@ -91,16 +91,16 @@ class TrainingJob:
     training_data_path: str
     validation_data_path: str | None = None
     test_data_path: str | None = None
-    hyperparameters: dict[str, Any] = field(default_factory=dict)
-    training_config: dict[str, Any] = field(default_factory=dict)
+    hyperparameters: Dict[str, Any] = field(default_factory=dict)
+    training_config: Dict[str, Any] = field(default_factory=dict)
     trigger: TrainingTrigger = TrainingTrigger.MANUAL
     priority: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     created_by: str = "system"
-    tags: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "job_id": self.job_id,
             "model_name": self.model_name,
@@ -120,7 +120,7 @@ class TrainingJob:
 
 @dataclass(frozen=True)
 class TrainingResult:
-    """Immutable training result"""
+    """Immutable training result."""
 
     job_id: str
     model_name: str
@@ -135,8 +135,8 @@ class TrainingResult:
     error_message: str | None = None
     mlflow_run_id: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "job_id": self.job_id,
             "model_name": self.model_name,
@@ -157,16 +157,16 @@ class TrainingResult:
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    """Immutable experiment configuration"""
+    """Immutable experiment configuration."""
 
     experiment_name: str
     description: str = ""
-    tags: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
     artifact_location: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "experiment_name": experiment_name,
             "description": self.description,
@@ -178,7 +178,7 @@ class ExperimentConfig:
 
 @dataclass
 class TrainingPipelineConfig:
-    """Configuration for training pipeline"""
+    """Configuration for training pipeline."""
 
     # MLflow settings
     mlflow_tracking_uri: str = "http://mlflow:5000"
@@ -214,7 +214,7 @@ class TrainingPipelineConfig:
 
 
 class ModelTrainer(ABC):
-    """Abstract base class for model trainers"""
+    """Abstract base class for model trainers."""
 
     @abstractmethod
     async def train_model(
@@ -222,21 +222,21 @@ class ModelTrainer(ABC):
         job: TrainingJob,
         data: Any,
     ) -> tuple[Any, dict[str, float]]:
-        """Train a model and return model and metrics"""
+        """Train a model and return model and metrics."""
 
     @abstractmethod
     def save_model(self, model: Any, path: str) -> bool:
-        """Save model to path"""
+        """Save model to path."""
 
     @abstractmethod
     def load_model(self, path: str) -> Any:
-        """Load model from path"""
+        """Load model from path."""
 
 
 class SklearnTrainer(ModelTrainer):
-    """Scikit-learn model trainer"""
+    """Scikit-learn model trainer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.supported_models = {
             ModelType.CLASSIFICATION: [
                 "RandomForestClassifier",
@@ -258,12 +258,13 @@ class SklearnTrainer(ModelTrainer):
         job: TrainingJob,
         data: Any,
     ) -> tuple[Any, dict[str, float]]:
-        """Train scikit-learn model"""
+        """Train scikit-learn model."""
         try:
             # Get model class
             model_class = self._get_model_class(job)
             if not model_class:
-                raise ValueError(f"Unsupported model type: {job.model_type}")
+                msg = f"Unsupported model type: {job.model_type}"
+                raise ValueError(msg)
 
             # Create model instance
             model = model_class(**job.hyperparameters)
@@ -283,11 +284,11 @@ class SklearnTrainer(ModelTrainer):
             return model, metrics
 
         except Exception as e:
-            logger.error(f"Sklearn training failed: {e}")
+            logger.error("Sklearn training failed: %s", e)
             raise
 
     def save_model(self, model: Any, path: str) -> bool:
-        """Save scikit-learn model"""
+        """Save scikit-learn model."""
         try:
             import joblib
 
@@ -295,21 +296,21 @@ class SklearnTrainer(ModelTrainer):
             joblib.dump(model, path)
             return True
         except Exception as e:
-            logger.error(f"Failed to save sklearn model: {e}")
+            logger.error("Failed to save sklearn model: %s", e)
             return False
 
     def load_model(self, path: str) -> Any:
-        """Load scikit-learn model"""
+        """Load scikit-learn model."""
         try:
             import joblib
 
             return joblib.load(path)
         except Exception as e:
-            logger.error(f"Failed to load sklearn model: {e}")
+            logger.error("Failed to load sklearn model: %s", e)
             raise
 
-    def _get_model_class(self, job: TrainingJob):
-        """Get model class based on job configuration"""
+    def _get_model_class(self) -> None:
+        """Get model class based on job configuration."""
         model_name = job.training_config.get("model_name", "RandomForestClassifier")
 
         if job.model_type == ModelType.CLASSIFICATION:
@@ -365,7 +366,7 @@ class SklearnTrainer(ModelTrainer):
         data: Any,
         job: TrainingJob,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Prepare data for training"""
+        """Prepare data for training."""
         # This is a simplified implementation
         # In production, this would handle various data formats
         if isinstance(data, dict):
@@ -386,7 +387,7 @@ class SklearnTrainer(ModelTrainer):
         y_val: np.ndarray,
         model_type: ModelType,
     ) -> dict[str, float]:
-        """Calculate model metrics"""
+        """Calculate model metrics."""
         metrics = {}
 
         try:
@@ -425,15 +426,15 @@ class SklearnTrainer(ModelTrainer):
                     metrics["silhouette_score"] = 0.0
 
         except Exception as e:
-            logger.warning(f"Failed to calculate some metrics: {e}")
+            logger.warning("Failed to calculate some metrics: %s", e)
 
         return metrics
 
 
 class TensorFlowTrainer(ModelTrainer):
-    """TensorFlow model trainer"""
+    """TensorFlow model trainer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.supported_models = {
             ModelType.CLASSIFICATION: ["DenseClassifier", "CNNClassifier"],
             ModelType.REGRESSION: ["DenseRegressor", "CNNRegressor"],
@@ -446,7 +447,7 @@ class TensorFlowTrainer(ModelTrainer):
         job: TrainingJob,
         data: Any,
     ) -> tuple[Any, dict[str, float]]:
-        """Train TensorFlow model"""
+        """Train TensorFlow model."""
         try:
             import tensorflow as tf
 
@@ -484,31 +485,31 @@ class TensorFlowTrainer(ModelTrainer):
             return model, metrics
 
         except Exception as e:
-            logger.error(f"TensorFlow training failed: {e}")
+            logger.error("TensorFlow training failed: %s", e)
             raise
 
     def save_model(self, model: Any, path: str) -> bool:
-        """Save TensorFlow model"""
+        """Save TensorFlow model."""
         try:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             model.save(path)
             return True
         except Exception as e:
-            logger.error(f"Failed to save TensorFlow model: {e}")
+            logger.error("Failed to save TensorFlow model: %s", e)
             return False
 
     def load_model(self, path: str) -> Any:
-        """Load TensorFlow model"""
+        """Load TensorFlow model."""
         try:
             import tensorflow as tf
 
             return tf.keras.models.load_model(path)
         except Exception as e:
-            logger.error(f"Failed to load TensorFlow model: {e}")
+            logger.error("Failed to load TensorFlow model: %s", e)
             raise
 
-    def _create_model(self, job: TrainingJob):
-        """Create TensorFlow model based on job configuration"""
+    def _create_model(self) -> None:
+        """Create TensorFlow model based on job configuration."""
         import tensorflow as tf
 
         model_name = job.training_config.get("model_name", "DenseClassifier")
@@ -570,8 +571,8 @@ class TensorFlowTrainer(ModelTrainer):
 
         return model
 
-    def _prepare_data(self, data: Any, job: TrainingJob):
-        """Prepare data for TensorFlow training"""
+    def _prepare_data(self) -> None:
+        """Prepare data for TensorFlow training."""
         import tensorflow as tf
 
         # This is a simplified implementation
@@ -594,7 +595,7 @@ class TensorFlowTrainer(ModelTrainer):
         return train_dataset, val_dataset
 
     def _extract_metrics(self, history) -> dict[str, float]:
-        """Extract metrics from training history"""
+        """Extract metrics from training history."""
         metrics = {}
 
         try:
@@ -611,7 +612,7 @@ class TensorFlowTrainer(ModelTrainer):
                         metrics[f"{metric_name}_improvement"] = float(improvement)
 
         except Exception as e:
-            logger.warning(f"Failed to extract some metrics: {e}")
+            logger.warning("Failed to extract some metrics: %s", e)
 
         return metrics
 
@@ -621,7 +622,7 @@ class TrainingOrchestrator:
     Manages training jobs, experiments, and model lifecycle.
     """
 
-    def __init__(self, config: TrainingPipelineConfig = None):
+    def __init__(self) -> None:
         self.config = config or TrainingPipelineConfig()
 
         # Job management
@@ -656,8 +657,8 @@ class TrainingOrchestrator:
 
         logger.info("Initialized Training Orchestrator")
 
-    def _init_mlflow(self):
-        """Initialize MLflow client"""
+    def _init_mlflow(self) -> None:
+        """Initialize MLflow client."""
         if not MLFLOW_AVAILABLE:
             logger.warning("MLflow not available, skipping MLflow initialization")
             self.mlflow_client = None
@@ -680,14 +681,14 @@ class TrainingOrchestrator:
                 self.experiment_id = experiment.experiment_id
 
             self.mlflow_client = mlflow.tracking.MlflowClient()
-            logger.info(f"MLflow initialized with experiment ID: {self.experiment_id}")
+            logger.info("MLflow initialized with experiment ID: %s", self.experiment_id)
 
         except Exception as e:
-            logger.warning(f"MLflow initialization failed: {e}")
+            logger.warning("MLflow initialization failed: %s", e)
             self.mlflow_client = None
 
-    def _init_kubernetes(self):
-        """Initialize Kubernetes client"""
+    def _init_kubernetes(self) -> None:
+        """Initialize Kubernetes client."""
         try:
             if self.config.kubernetes_config_path:
                 config.load_kube_config(config_file=self.config.kubernetes_config_path)
@@ -698,15 +699,16 @@ class TrainingOrchestrator:
             logger.info("Kubernetes client initialized")
 
         except Exception as e:
-            logger.warning(f"Kubernetes initialization failed: {e}")
+            logger.warning("Kubernetes initialization failed: %s", e)
             self.k8s_client = None
 
     async def submit_training_job(self, job: TrainingJob) -> str:
-        """Submit a training job"""
+        """Submit a training job."""
         try:
             # Validate job
             if not self._validate_job(job):
-                raise ValueError("Invalid training job")
+                msg = "Invalid training job"
+                raise ValueError(msg)
 
             # Store job
             self.training_jobs[job.job_id] = job
@@ -716,15 +718,15 @@ class TrainingOrchestrator:
             training_task = asyncio.create_task(self._execute_training_job(job))
             self.active_jobs[job.job_id] = training_task
 
-            logger.info(f"Submitted training job {job.job_id}")
+            logger.info("Submitted training job %s", job.job_id)
             return job.job_id
 
         except Exception as e:
-            logger.error(f"Failed to submit training job: {e}")
+            logger.error("Failed to submit training job: %s", e)
             raise
 
-    async def _execute_training_job(self, job: TrainingJob):
-        """Execute a training job"""
+    async def _execute_training_job(self) -> None:
+        """Execute a training job."""
         start_time = time.time()
 
         try:
@@ -795,10 +797,11 @@ class TrainingOrchestrator:
                 self.stats["completed_jobs"] += 1
                 self._update_average_training_time(result.training_time_seconds)
 
-                logger.info(f"Training job {job.job_id} completed successfully")
+                logger.info("Training job %s completed successfully", job.job_id)
 
             else:
-                raise RuntimeError("Failed to save trained model")
+                msg = "Failed to save trained model"
+                raise RuntimeError(msg)
 
         except Exception as e:
             # Create failed result
@@ -824,7 +827,7 @@ class TrainingOrchestrator:
                     mlflow.set_tag("status", "failed")
                     mlflow.log_param("error_message", str(e))
 
-            logger.error(f"Training job {job.job_id} failed: {e}")
+            logger.error("Training job %s failed: %s", job.job_id, e)
 
         finally:
             # Clean up
@@ -833,7 +836,7 @@ class TrainingOrchestrator:
             self.stats["active_jobs"] = len(self.active_jobs)
 
     def _validate_job(self, job: TrainingJob) -> bool:
-        """Validate training job"""
+        """Validate training job."""
         try:
             # Check required fields
             if not job.job_id or not job.model_name or not job.training_data_path:
@@ -846,18 +849,19 @@ class TrainingOrchestrator:
             # Check data path exists
             if not Path(job.training_data_path).exists():
                 logger.warning(
-                    f"Training data path does not exist: {job.training_data_path}",
+                    "Training data path does not exist: %s",
+                    job.training_data_path,
                 )
                 # Don't fail validation for missing data path in development
 
             return True
 
         except Exception as e:
-            logger.error(f"Job validation error: {e}")
+            logger.error("Job validation error: %s", e)
             return False
 
     async def _load_training_data(self, job: TrainingJob) -> Any:
-        """Load training data"""
+        """Load training data."""
         try:
             # This is a simplified implementation
             # In production, this would handle various data formats
@@ -878,11 +882,11 @@ class TrainingOrchestrator:
                 return deserialize_from_file(str(data_path))
 
         except Exception as e:
-            logger.error(f"Failed to load training data: {e}")
+            logger.error("Failed to load training data: %s", e)
             raise
 
     def _select_trainer(self, job: TrainingJob) -> ModelTrainer:
-        """Select appropriate trainer based on job configuration"""
+        """Select appropriate trainer based on job configuration."""
         framework = job.training_config.get("framework", "sklearn")
 
         if framework in self.trainers:
@@ -890,13 +894,13 @@ class TrainingOrchestrator:
         # Default to sklearn trainer
         return self.trainers["sklearn"]
 
-    def _update_job_status(self, job_id: str, status: TrainingStatus):
-        """Update job status"""
+    def _update_job_status(self) -> None:
+        """Update job status."""
         # This would update the job status in a database in production
-        logger.info(f"Job {job_id} status: {status.value}")
+        logger.info("Job %s status: %s", job_id, status.value)
 
-    def _update_average_training_time(self, training_time: float):
-        """Update average training time"""
+    def _update_average_training_time(self) -> None:
+        """Update average training time."""
         total_completed = self.stats["completed_jobs"]
         if total_completed > 0:
             current_avg = self.stats["average_training_time"]
@@ -905,7 +909,7 @@ class TrainingOrchestrator:
             ) / total_completed
 
     async def cancel_training_job(self, job_id: str) -> bool:
-        """Cancel a training job"""
+        """Cancel a training job."""
         try:
             if job_id in self.active_jobs:
                 task = self.active_jobs[job_id]
@@ -922,24 +926,24 @@ class TrainingOrchestrator:
                 self.training_results[job_id] = result
                 self.stats["cancelled_jobs"] += 1
 
-                logger.info(f"Cancelled training job {job_id}")
+                logger.info("Cancelled training job %s", job_id)
                 return True
 
             return False
 
         except Exception as e:
-            logger.error(f"Failed to cancel training job {job_id}: {e}")
+            logger.error("Failed to cancel training job %s: %s", job_id, e)
             return False
 
     def get_job_status(self, job_id: str) -> TrainingResult | None:
-        """Get training job status"""
+        """Get training job status."""
         return self.training_results.get(job_id)
 
     def list_jobs(
         self,
         status: TrainingStatus | None = None,
     ) -> list[TrainingResult]:
-        """List training jobs"""
+        """List training jobs."""
         results = list(self.training_results.values())
 
         if status:
@@ -951,8 +955,8 @@ class TrainingOrchestrator:
             reverse=True,
         )
 
-    def get_training_statistics(self) -> dict[str, Any]:
-        """Get training statistics"""
+    def get_training_statistics(self) -> Dict[str, Any]:
+        """Get training statistics."""
         stats = self.stats.copy()
         stats["total_jobs"] = len(self.training_jobs)
         stats["active_jobs"] = len(self.active_jobs)
@@ -969,7 +973,7 @@ class TrainingOrchestrator:
 
 # Production-ready factory functions
 def create_production_training_orchestrator() -> TrainingOrchestrator:
-    """Create production-ready training orchestrator"""
+    """Create production-ready training orchestrator."""
     config = TrainingPipelineConfig(
         mlflow_tracking_uri="http://mlflow-service:5000",
         mlflow_experiment_name="pake-production-ml",
@@ -997,7 +1001,7 @@ def create_production_training_orchestrator() -> TrainingOrchestrator:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         orchestrator = TrainingOrchestrator()
 
         # Create training job

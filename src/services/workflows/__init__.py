@@ -1,4 +1,4 @@
-"""Proactive Anomaly-to-Action Workflows
+"""Proactive Anomaly-to-Action Workflows.
 
 This module provides automated incident response workflows that convert
 security anomalies into actionable tasks with comprehensive context.

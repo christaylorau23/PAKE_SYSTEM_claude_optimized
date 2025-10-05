@@ -11,7 +11,7 @@ import aiohttp
 from dotenv import load_dotenv
 
 
-def print_status(status, message):
+def print_status(self) -> None:
     """Print status without Unicode characters"""
     if status == "SUCCESS":
         print(f"[OK] {message}")
@@ -23,7 +23,7 @@ def print_status(status, message):
         print(f"[INFO] {message}")
 
 
-async def test_firecrawl_api(api_key):
+async def test_firecrawl_api(self) -> None:
     """Test Firecrawl API"""
     try:
         async with aiohttp.ClientSession() as session:
@@ -55,7 +55,7 @@ async def test_firecrawl_api(api_key):
         return False, f"Connection error: {str(e)}"
 
 
-async def test_arxiv_api():
+async def test_arxiv_api(self) -> None:
     """Test ArXiv API"""
     try:
         async with aiohttp.ClientSession() as session:
@@ -77,7 +77,7 @@ async def test_arxiv_api():
         return False, f"Connection error: {str(e)}"
 
 
-async def main():
+async def main(self) -> None:
     print("PAKE+ Production API Test - Phase 2B")
     print("=" * 50)
 

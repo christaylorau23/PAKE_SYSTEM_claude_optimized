@@ -14,20 +14,20 @@ from pathlib import Path
 class LintValidator:
     """Lint validation runner"""
 
-    def __init__(self, verbose: bool = False, fix: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.fix = fix
         self.project_root = Path(__file__).parent.parent
         self.results: list[tuple[str, bool, str]] = []
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
             print(f"[{timestamp}] [{level}] {message}")
 
     def run_command(
-        self, name: str, command: list[str], description: str
+        self, name: str, command: List[str], description: str
     ) -> tuple[str, bool, str]:
         """Run a command and return results"""
         self.log(f"Running {name}: {description}")
@@ -47,11 +47,10 @@ class LintValidator:
             if result.returncode == 0:
                 self.log(f"✅ {name} passed ({duration:.2f}s)", "INFO")
                 return name, True, result.stdout
-            else:
-                self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
-                if self.verbose:
-                    self.log(f"Error: {result.stderr}", "ERROR")
-                return name, False, result.stderr
+            self.log(f"❌ {name} failed ({duration:.2f}s)", "ERROR")
+            if self.verbose:
+                self.log(f"Error: {result.stderr}", "ERROR")
+            return name, False, result.stderr
 
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
@@ -163,7 +162,7 @@ class LintValidator:
         # Return success if all checks passed
         return all(result[1] for result in checks)
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print validation summary"""
         print("\n" + "=" * 60)
         print("🎨 LINT VALIDATION SUMMARY")
@@ -175,7 +174,7 @@ class LintValidator:
         print(f"📊 Total Checks: {total}")
         print(f"✅ Passed: {passed}")
         print(f"❌ Failed: {total - passed}")
-        print(f"📈 Success Rate: {(passed/total*100):.1f}%")
+        print(f"📈 Success Rate: {(passed / total * 100):.1f}%")
 
         print("\n📋 Results by Tool:")
         for name, success, output in self.results:
@@ -199,7 +198,7 @@ class LintValidator:
                 print("💡 Run with --fix to automatically fix issues.")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Lint Validation")
     parser.add_argument(

@@ -1,4 +1,4 @@
-"""Advanced Analytics Services Package
+"""Advanced Analytics Services Package.
 
 Provides predictive analytics, trend analysis, correlation analysis,
 and AI-powered insights for the PAKE System.

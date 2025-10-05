@@ -32,15 +32,15 @@
 Intelligent content curation system that automatically discovers, analyzes, and recommends relevant content to users based on their interests, behavior patterns, and preferences. The system uses ML-powered content analysis, user preference learning, and real-time recommendation generation with sub-second response times.
 
 ## Technical Context
-**Language/Version**: Python 3.12+ with async/await patterns  
-**Primary Dependencies**: scikit-learn, FastAPI, NLTK, NumPy, Pandas, Redis, PostgreSQL  
-**Storage**: PostgreSQL for persistent data, Redis for caching, in-memory for L1 cache  
-**Testing**: pytest with comprehensive coverage, integration tests with real dependencies  
-**Target Platform**: Linux server with Docker containerization  
-**Project Type**: web (backend API + frontend dashboard)  
-**Performance Goals**: Sub-second recommendation generation, <100ms cached responses, 1000+ concurrent users  
-**Constraints**: <200ms p95 response time, <500MB memory per service, enterprise security standards  
-**Scale/Scope**: 10k+ users, 1M+ content items, 50+ concurrent recommendations per second  
+**Language/Version**: Python 3.12+ with async/await patterns
+**Primary Dependencies**: scikit-learn, FastAPI, NLTK, NumPy, Pandas, Redis, PostgreSQL
+**Storage**: PostgreSQL for persistent data, Redis for caching, in-memory for L1 cache
+**Testing**: pytest with comprehensive coverage, integration tests with real dependencies
+**Target Platform**: Linux server with Docker containerization
+**Project Type**: web (backend API + frontend dashboard)
+**Performance Goals**: Sub-second recommendation generation, <100ms cached responses, 1000+ concurrent users
+**Constraints**: <200ms p95 response time, <500MB memory per service, enterprise security standards
+**Scale/Scope**: 10k+ users, 1M+ content items, 50+ concurrent recommendations per second
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -53,7 +53,7 @@ Intelligent content curation system that automatically discovers, analyzes, and 
 
 **Architecture**:
 - EVERY feature as library? Yes (curation service library)
-- Libraries listed: 
+- Libraries listed:
   - curation-core: ML models and feature extraction
   - curation-api: REST API endpoints
   - curation-dashboard: Web interface
@@ -195,12 +195,12 @@ frontend/
 - Load `/templates/tasks-template.md` as base
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
 - Each contract → contract test task [P]
-- Each entity → model creation task [P] 
+- Each entity → model creation task [P]
 - Each user story → integration test task
 - Implementation tasks to make tests pass
 
 **Ordering Strategy**:
-- TDD order: Tests before implementation 
+- TDD order: Tests before implementation
 - Dependency order: Models before services before UI
 - Mark [P] for parallel execution (independent files)
 
@@ -211,8 +211,8 @@ frontend/
 ## Phase 3+: Future Implementation
 *These phases are beyond the scope of the /plan command*
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)  
-**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+**Phase 3**: Task execution (/tasks command creates tasks.md)
+**Phase 4**: Implementation (execute tasks.md following constitutional principles)
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking

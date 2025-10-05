@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Structured Logger for PAKE System
-Structlog-based JSON logger with timestamp, level, service name, and correlation IDs
+Structlog-based JSON logger with timestamp, level, service name, and correlation IDs.
 """
 
 import logging
@@ -37,24 +37,24 @@ except ImportError:
 
 
 class TimestampProcessor:
-    """Add ISO8601 timestamp to log entries"""
+    """Add ISO8601 timestamp to log entries."""
 
-    def __call__(self, logger, method_name, event_dict):
+    def __call__(self) -> None:
         event_dict["timestamp"] = datetime.now(UTC).isoformat()
         return event_dict
 
 
 class ServiceInfoProcessor:
-    """Add service information to log entries"""
+    """Add service information to log entries."""
 
-    def __init__(self, service_name: str = "pake-system"):
+    def __init__(self) -> None:
         self.service_name = service_name
         self.version = os.getenv("PAKE_VERSION", "1.0.0")
         self.environment = os.getenv("ENVIRONMENT", "development")
         self.hostname = platform.node()
         self.pid = os.getpid()
 
-    def __call__(self, logger, method_name, event_dict):
+    def __call__(self) -> None:
         event_dict.update(
             {
                 "service": self.service_name,
@@ -68,9 +68,9 @@ class ServiceInfoProcessor:
 
 
 class LevelNormalizer:
-    """Normalize log level to uppercase"""
+    """Normalize log level to uppercase."""
 
-    def __call__(self, logger, method_name, event_dict):
+    def __call__(self) -> None:
         if "level" in event_dict:
             event_dict["level"] = event_dict["level"].upper()
         else:
@@ -89,9 +89,9 @@ class LevelNormalizer:
 
 
 class ErrorProcessor:
-    """Process exception information"""
+    """Process exception information."""
 
-    def __call__(self, logger, method_name, event_dict):
+    def __call__(self) -> None:
         exc_info = event_dict.pop("exc_info", None)
         if exc_info:
             if exc_info is True:
@@ -114,7 +114,7 @@ def setup_structured_logging(
     json_format: bool = None,
     file_logging: bool = None,
 ) -> structlog.BoundLogger:
-    """Setup structured logging with consistent format
+    """Setup structured logging with consistent format.
 
     Args:
         service_name: Name of the service
@@ -197,7 +197,7 @@ def setup_structured_logging(
 
 
 def _parse_size(size_str: str) -> int:
-    """Parse file size string (e.g., '10MB', '1GB')"""
+    """Parse file size string (e.g., '10MB', '1GB')."""
     units = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
     size_str = size_str.upper().strip()
 
@@ -213,29 +213,25 @@ def _parse_size(size_str: str) -> int:
 
 
 class StructuredLogger:
-    """Enhanced logger with context support and structured methods"""
+    """Enhanced logger with context support and structured methods."""
 
-    def __init__(
-        self,
-        logger: structlog.BoundLogger = None,
-        service_name: str = "pake-system",
-    ):
+    def __init__(self) -> None:
         self.logger = logger or setup_structured_logging(service_name)
         self.context = {}
 
     def bind(self, **kwargs) -> "StructuredLogger":
-        """Create child logger with additional context"""
+        """Create child logger with additional context."""
         bound_logger = self.logger.bind(**kwargs)
         child = StructuredLogger(bound_logger)
         child.context = {**self.context, **kwargs}
         return child
 
     def with_correlation_id(self, correlation_id: str) -> "StructuredLogger":
-        """Add correlation ID for request tracking"""
+        """Add correlation ID for request tracking."""
         return self.bind(correlation_id=correlation_id)
 
     def with_user(self, user_id: str, username: str = None) -> "StructuredLogger":
-        """Add user context for audit logging"""
+        """Add user context for audit logging."""
         context = {"user_id": user_id}
         if username:
             context["username"] = username
@@ -249,7 +245,7 @@ class StructuredLogger:
         ip: str = None,
         user_agent: str = None,
     ) -> "StructuredLogger":
-        """Add request context for API logging"""
+        """Add request context for API logging."""
         context = {}
         if request_id:
             context["request_id"] = request_id
@@ -264,49 +260,39 @@ class StructuredLogger:
         return self.bind(**context)
 
     # Basic logging methods
-    def debug(self, message: str, **kwargs):
-        """Log debug message"""
+    def debug(self) -> None:
+        """Log debug message."""
         self.logger.debug(message, **kwargs)
 
-    def info(self, message: str, **kwargs):
-        """Log info message"""
+    def info(self) -> None:
+        """Log info message."""
         self.logger.info(message, **kwargs)
 
-    def warn(self, message: str, **kwargs):
-        """Log warning message"""
+    def warn(self) -> None:
+        """Log warning message."""
         self.logger.warning(message, **kwargs)
 
-    def warning(self, message: str, **kwargs):
-        """Log warning message (alias)"""
+    def warning(self) -> None:
+        """Log warning message (alias)."""
         self.logger.warning(message, **kwargs)
 
-    def error(self, message: str, error: Exception = None, **kwargs):
-        """Log error message with optional exception"""
+    def error(self) -> None:
+        """Log error message with optional exception."""
         if error:
             kwargs["exc_info"] = error
         self.logger.error(message, **kwargs)
 
-    def critical(self, message: str, **kwargs):
-        """Log critical message"""
+    def critical(self) -> None:
+        """Log critical message."""
         self.logger.critical(message, **kwargs)
 
-    def exception(self, message: str, **kwargs):
-        """Log exception with traceback"""
+    def exception(self) -> None:
+        """Log exception with traceback."""
         self.logger.exception(message, **kwargs)
 
     # Structured logging methods for specific use cases
-    def http(
-        self,
-        message: str,
-        method: str = None,
-        path: str = None,
-        status_code: int = None,
-        duration: float = None,
-        user_id: str = None,
-        error: Exception = None,
-        **kwargs,
-    ):
-        """Log HTTP request/response"""
+    def http(self) -> None:
+        """Log HTTP request/response."""
         level = self._get_http_log_level(status_code, error)
 
         http_data = {
@@ -324,17 +310,8 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **http_data, **kwargs)
 
-    def database(
-        self,
-        message: str,
-        operation: str = None,
-        table: str = None,
-        duration: float = None,
-        row_count: int = None,
-        error: Exception = None,
-        **kwargs,
-    ):
-        """Log database operations"""
+    def database(self) -> None:
+        """Log database operations."""
         level = "error" if error else "debug"
 
         db_data = {
@@ -350,18 +327,8 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **db_data, **kwargs)
 
-    def security(
-        self,
-        message: str,
-        event: str = None,
-        user_id: str = None,
-        ip: str = None,
-        user_agent: str = None,
-        success: bool = None,
-        reason: str = None,
-        **kwargs,
-    ):
-        """Log security events"""
+    def security(self) -> None:
+        """Log security events."""
         level = "info" if success else "warning"
 
         security_data = {
@@ -376,18 +343,8 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **security_data, **kwargs)
 
-    def business(
-        self,
-        message: str,
-        event: str = None,
-        user_id: str = None,
-        entity_type: str = None,
-        entity_id: str = None,
-        action: str = None,
-        metadata: dict = None,
-        **kwargs,
-    ):
-        """Log business events"""
+    def business(self) -> None:
+        """Log business events."""
         business_data = {
             "business": {
                 "event": event,
@@ -402,16 +359,8 @@ class StructuredLogger:
 
         self.logger.info(message, **business_data, **kwargs)
 
-    def performance(
-        self,
-        message: str,
-        operation: str = None,
-        duration: float = None,
-        memory_mb: float = None,
-        cpu_percent: float = None,
-        **kwargs,
-    ):
-        """Log performance metrics"""
+    def performance(self) -> None:
+        """Log performance metrics."""
         perf_data = {
             "performance": {
                 "operation": operation,
@@ -424,7 +373,7 @@ class StructuredLogger:
         self.logger.info(message, **perf_data, **kwargs)
 
     def _get_http_log_level(self, status_code: int, error: Exception) -> str:
-        """Get appropriate log level for HTTP status codes"""
+        """Get appropriate log level for HTTP status codes."""
         if error:
             return "error"
         if status_code and status_code >= 500:
@@ -433,38 +382,40 @@ class StructuredLogger:
             return "warning"
         return "info"
 
-    def timer(self, operation: str = None):
-        """Context manager for timing operations"""
+    def timer(self) -> None:
+        """Context manager for timing operations."""
         return TimerContext(self, operation)
 
 
 class TimerContext:
-    """Context manager for timing operations"""
+    """Context manager for timing operations."""
 
-    def __init__(self, logger: StructuredLogger, operation: str = None):
+    def __init__(self) -> None:
         self.logger = logger
         self.operation = operation
         self.start_time = None
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.start_time = time.time()
         if self.operation:
-            self.logger.debug(f"Starting {self.operation}")
+            self.logger.debug("Starting %s", self.operation)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self) -> None:
         if self.start_time:
             duration = (time.time() - self.start_time) * 1000  # Convert to milliseconds
 
             if exc_type:
                 self.logger.error(
-                    f"Operation {self.operation or 'timer'} failed",
+                    "Operation %s failed",
+                    self.operation or "timer",
                     error=exc_val,
                     duration_ms=duration,
                 )
             else:
                 self.logger.info(
-                    f"Completed {self.operation or 'timer'}",
+                    "Completed %s",
+                    self.operation or "timer",
                     duration_ms=duration,
                 )
 
@@ -474,7 +425,7 @@ _default_logger = None
 
 
 def get_logger(service_name: str = "pake-system") -> StructuredLogger:
-    """Get or create default logger instance"""
+    """Get or create default logger instance."""
     global _default_logger
     if _default_logger is None:
         _default_logger = StructuredLogger(service_name=service_name)
@@ -487,8 +438,8 @@ logger = get_logger()
 # FastAPI/Starlette middleware integration
 
 
-def setup_request_logging():
-    """Setup request logging for web frameworks"""
+def setup_request_logging(self) -> None:
+    """Setup request logging for web frameworks."""
     try:
         import uuid
 
@@ -497,11 +448,11 @@ def setup_request_logging():
         from starlette.responses import Response
 
         class LoggingMiddleware(BaseHTTPMiddleware):
-            def __init__(self, app, logger: StructuredLogger = None):
+            def __init__(self) -> None:
                 super().__init__(app)
                 self.logger = logger or get_logger()
 
-            async def dispatch(self, request: Request, call_next):
+            async def dispatch(self) -> None:
                 start_time = time.time()
                 request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
 
@@ -551,7 +502,7 @@ def setup_request_logging():
     except ImportError:
         # Return a no-op class if starlette is not available
         class NoOpMiddleware:
-            def __init__(self, app, logger=None):
+            def __init__(self) -> None:
                 pass
 
         return NoOpMiddleware

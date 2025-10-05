@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "mcp-serv
 class TestPathTraversalSecurity:
     """Test path traversal prevention mechanisms"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment for each test"""
         # Create temporary vault directory
         self.temp_vault = Path(tempfile.mkdtemp(prefix="test_vault_"))
@@ -35,14 +35,14 @@ class TestPathTraversalSecurity:
         # Create external directory to test escape attempts
         self.external_dir = Path(tempfile.mkdtemp(prefix="external_"))
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after each test"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
         if self.external_dir.exists():
             shutil.rmtree(str(self.external_dir))
 
-    def test_path_traversal_prevention_basic(self):
+    def test_path_traversal_prevention_basic(self) -> None:
         """Test basic path traversal prevention with ../../../etc/passwd"""
         malicious_title = "../../../etc/passwd"
 
@@ -57,10 +57,10 @@ class TestPathTraversalSecurity:
         assert not (self.external_dir / "passwd").exists()
 
         # Verify no passwd file exists anywhere in the filesystem tree
-        for root, dirs, files in os.walk(str(self.temp_vault.parent)):
+        for _root, _dirs, files in os.walk(str(self.temp_vault.parent)):
             assert "passwd" not in files
 
-    def test_path_traversal_prevention_windows_style(self):
+    def test_path_traversal_prevention_windows_style(self) -> None:
         """Test path traversal prevention with Windows-style paths"""
         malicious_titles = [
             "..\\..\\..\\Windows\\System32\\config\\sam",
@@ -76,7 +76,7 @@ class TestPathTraversalSecurity:
                     note_type="SourceNote",
                 )
 
-    def test_path_traversal_prevention_absolute_paths(self):
+    def test_path_traversal_prevention_absolute_paths(self) -> None:
         """Test prevention of absolute path attacks"""
         malicious_titles = [
             "/etc/passwd",
@@ -93,7 +93,7 @@ class TestPathTraversalSecurity:
                     note_type="SourceNote",
                 )
 
-    def test_path_traversal_prevention_null_bytes(self):
+    def test_path_traversal_prevention_null_bytes(self) -> None:
         """Test prevention of null byte injection attacks"""
         malicious_titles = [
             "../../../etc/passwd\x00.md",
@@ -109,7 +109,7 @@ class TestPathTraversalSecurity:
                     note_type="SourceNote",
                 )
 
-    def test_path_traversal_prevention_encoded_attacks(self):
+    def test_path_traversal_prevention_encoded_attacks(self) -> None:
         """Test prevention of URL-encoded and other encoded path traversal attempts"""
         malicious_titles = [
             "%2e%2e/%2e%2e/%2e%2e/etc/passwd",  # URL encoded ../../../
@@ -126,7 +126,7 @@ class TestPathTraversalSecurity:
                     note_type="SourceNote",
                 )
 
-    def test_dot_and_dotdot_filenames(self):
+    def test_dot_and_dotdot_filenames(self) -> None:
         """Test handling of dot and double-dot filenames"""
         malicious_titles = [".", "..", "..."]
 
@@ -144,7 +144,7 @@ class TestPathTraversalSecurity:
             assert file_path.name.startswith("note_")
             assert file_path.exists()
 
-    def test_empty_title_handling(self):
+    def test_empty_title_handling(self) -> None:
         """Test handling of empty or whitespace-only titles"""
         empty_titles = ["", "   ", "\t\n\r", "!@#$%^&*()", "||||"]
 
@@ -161,7 +161,7 @@ class TestPathTraversalSecurity:
             assert file_path.name.startswith("note_")
             assert file_path.exists()
 
-    def test_valid_titles_work_correctly(self):
+    def test_valid_titles_work_correctly(self) -> None:
         """Test that valid titles still work correctly after security fixes"""
         valid_titles = [
             "Project Plan",
@@ -201,7 +201,7 @@ class TestPathTraversalSecurity:
                 assert f"Content for {title}" in content
                 assert f'title: "{title}"' in content
 
-    def test_long_title_truncation(self):
+    def test_long_title_truncation(self) -> None:
         """Test that very long titles are properly truncated"""
         long_title = "A" * 100 + "../../../etc/passwd"
 
@@ -212,7 +212,7 @@ class TestPathTraversalSecurity:
                 note_type="SourceNote",
             )
 
-    def test_symbolic_link_attacks(self):
+    def test_symbolic_link_attacks(self) -> None:
         """Test prevention of symbolic link attacks"""
         # Create a symbolic link pointing outside the vault
         if hasattr(os, "symlink"):  # Only run on systems that support symlinks
@@ -239,7 +239,7 @@ class TestPathTraversalSecurity:
                 # Skip if symlinks not supported (e.g., Windows without admin)
                 pytest.skip("Symbolic links not supported on this system")
 
-    def test_different_note_types_security(self):
+    def test_different_note_types_security(self) -> None:
         """Test that path traversal prevention works for all note types"""
         note_types = ["SourceNote", "DailyNote", "ProjectNote", "InsightNote"]
         malicious_title = "../../../etc/passwd"
@@ -252,7 +252,7 @@ class TestPathTraversalSecurity:
                     note_type=note_type,
                 )
 
-    def test_basename_stripping_effectiveness(self):
+    def test_basename_stripping_effectiveness(self) -> None:
         """Test that os.path.basename effectively strips directory components"""
         test_cases = [
             ("../../../malicious", "malicious"),
@@ -267,7 +267,7 @@ class TestPathTraversalSecurity:
             result = os.path.basename(input_path)
             assert result == expected_basename
 
-    def test_path_resolution_security(self):
+    def test_path_resolution_security(self) -> None:
         """Test that path resolution correctly identifies escapes"""
         # Test that resolve() correctly identifies attempts to escape vault
         vault_root = self.temp_vault.resolve()
@@ -309,17 +309,17 @@ class TestPathTraversalSecurity:
 class TestSecurityIntegration:
     """Integration tests for security features"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment"""
         self.temp_vault = Path(tempfile.mkdtemp(prefix="integration_test_"))
         self.vault_manager = VaultManager(self.temp_vault)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after tests"""
         if self.temp_vault.exists():
             shutil.rmtree(str(self.temp_vault))
 
-    def test_comprehensive_attack_scenarios(self):
+    def test_comprehensive_attack_scenarios(self) -> None:
         """Test comprehensive real-world attack scenarios"""
         attack_scenarios = [
             # Classic path traversal
@@ -372,20 +372,20 @@ class TestSecurityIntegration:
                 )
 
             # Verify no files were created with suspicious names
-            for root, dirs, files in os.walk(str(self.temp_vault)):
+            for _root, _dirs, files in os.walk(str(self.temp_vault)):
                 for file in files:
                     assert "passwd" not in file
                     assert "shadow" not in file
                     assert "System32" not in file
 
-    def test_security_with_concurrent_operations(self):
+    def test_security_with_concurrent_operations(self) -> None:
         """Test security under concurrent operations"""
         import threading
 
         results = []
         errors = []
 
-        def create_malicious_note(thread_id):
+        def create_malicious_note(self) -> None:
             try:
                 self.vault_manager.create_note(
                     title=f"../../../tmp/malicious_{thread_id}",

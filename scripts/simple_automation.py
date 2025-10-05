@@ -10,7 +10,7 @@ import logging
 import os
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import frontmatter
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleAutomation:
-    def __init__(self, vault_path: str):
+    def __init__(self) -> None:
         self.vault_path = Path(vault_path)
         self.processed_files = {}  # file -> hash mapping
         self.state_file = Path("data/simple_automation_state.json")
@@ -36,23 +36,23 @@ class SimpleAutomation:
 
         self.load_state()
 
-    def load_state(self):
+    def load_state(self) -> None:
         """Load processed files state"""
         if self.state_file.exists():
             try:
                 with open(self.state_file) as f:
                     self.processed_files = json.load(f)
-                logger.info(f"Loaded {len(self.processed_files)} processed files")
+                logger.info("Loaded %s processed files", len(self.processed_files))
             except Exception as e:
-                logger.error(f"Error loading state: {e}")
+                logger.error("Error loading state: %s", e)
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Save processed files state"""
         try:
             with open(self.state_file, "w") as f:
                 json.dump(self.processed_files, f, indent=2)
         except Exception as e:
-            logger.error(f"Error saving state: {e}")
+            logger.error("Error saving state: %s", e)
 
     def get_file_hash(self, file_path: Path) -> str:
         """Get hash of file content"""
@@ -162,7 +162,7 @@ class SimpleAutomation:
     def process_file(self, file_path: Path) -> bool:
         """Process a single markdown file"""
         try:
-            logger.info(f"Processing: {file_path}")
+            logger.info("Processing: %s", file_path)
 
             # Read file
             with open(file_path, encoding="utf-8") as f:
@@ -190,7 +190,7 @@ class SimpleAutomation:
                     "pake_id": pake_id,
                     "confidence_score": confidence_score,
                     "ai_summary": ai_summary,
-                    "last_processed": datetime.now().isoformat(),
+                    "last_processed": datetime.now(UTC).isoformat(),
                     "vector_dimensions": len(embedding),
                     "automated_processing": True,
                 },
@@ -211,7 +211,7 @@ class SimpleAutomation:
                     {
                         "pake_id": pake_id,
                         "embedding": embedding,
-                        "created_at": datetime.now().isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
                         "file_path": str(file_path),
                     },
                     f,
@@ -221,14 +221,16 @@ class SimpleAutomation:
             new_hash = self.get_file_hash(file_path)
             self.processed_files[str(file_path)] = new_hash
 
-            logger.info(f"[SUCCESS] {file_path}: confidence={confidence_score:.2f}")
+            logger.info(
+                "[SUCCESS] %.2f%%: confidence=%.2f%%", file_path, confidence_score
+            )
             return True
 
         except Exception as e:
-            logger.error(f"[ERROR] Processing {file_path}: {e}")
+            logger.error("[ERROR] Processing %s: %s", file_path, e)
             return False
 
-    def scan_and_process(self):
+    def scan_and_process(self) -> None:
         """Scan vault and process all changed files"""
         processed = 0
         skipped = 0
@@ -246,36 +248,36 @@ class SimpleAutomation:
                 if self.process_file(file_path):
                     processed += 1
                 else:
-                    logger.error(f"Failed to process: {file_path}")
+                    logger.error("Failed to process: %s", file_path)
             else:
                 skipped += 1
 
         self.save_state()
-        logger.info(f"Scan complete: {processed} processed, {skipped} skipped")
+        logger.info("Scan complete: %s processed, %s skipped", processed, skipped)
         return processed
 
-    def run_continuous(self, interval: int = 5):
+    def run_continuous(self) -> None:
         """Run continuous monitoring"""
         logger.info("Starting PAKE+ Simple Automation System")
-        logger.info(f"Vault: {self.vault_path}")
-        logger.info(f"Scan interval: {interval} seconds")
+        logger.info("Vault: %s", self.vault_path)
+        logger.info("Scan interval: %s seconds", interval)
         logger.info("Monitoring for changes...")
 
         try:
             while True:
                 processed = self.scan_and_process()
                 if processed > 0:
-                    logger.info(f"Processed {processed} files")
+                    logger.info("Processed %s files", processed)
                 time.sleep(interval)
 
         except KeyboardInterrupt:
             logger.info("Stopping automation...")
 
-    def run_once(self):
+    def run_once(self) -> None:
         """Run one-time processing of all files"""
         logger.info("Running one-time vault processing...")
         processed = self.scan_and_process()
-        logger.info(f"One-time processing complete: {processed} files processed")
+        logger.info("One-time processing complete: %s files processed", processed)
 
 
 if __name__ == "__main__":

@@ -10,13 +10,10 @@ This service demonstrates the refactored architecture by:
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ..domain.interfaces import (
-    AbstractAuthenticationService,
-    AbstractNotificationService,
-    AbstractUserRepository,
     ServiceResult,
     ServiceStatus,
 )
@@ -32,21 +29,16 @@ class UserService:
     Dependencies: Injected through constructor (Dependency Injection)
     """
 
-    def __init__(
-        self,
-        user_repository: AbstractUserRepository[User],
-        auth_service: AbstractAuthenticationService,
-        notification_service: AbstractNotificationService,
-    ):
-        """Initialize UserService with injected dependencies"""
+    def __init__(self) -> None:
+        """Initialize UserService with injected dependencies."""
         self.user_repository = user_repository
         self.auth_service = auth_service
         self.notification_service = notification_service
         logger.info("UserService initialized with dependency injection")
 
     async def create_user(
-        self, email: str, password: str, user_data: dict[str, Any]
-    ) -> ServiceResult[dict[str, Any]]:
+        self, email: str, password: str, user_data: Dict[str, Any]
+    ) -> ServiceResult[Dict[str, Any]]:
         """Create new user with authentication and notification.
 
         This method orchestrates the user creation process by delegating
@@ -98,7 +90,9 @@ class UserService:
 
             if notification_result.status != ServiceStatus.SUCCESS:
                 logger.warning(
-                    f"Welcome email failed for user {persisted_user.id}: {notification_result.error}"
+                    "Welcome email failed for user %s: %s",
+                    persisted_user.id,
+                    notification_result.error,
                 )
 
             # 6. Return success result
@@ -120,12 +114,12 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to create user {email}: {e}")
+            logger.error("Failed to create user %s: %s", email, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"User creation failed: {str(e)}"
             )
 
-    async def get_user_profile(self, user_id: str) -> ServiceResult[dict[str, Any]]:
+    async def get_user_profile(self, user_id: str) -> ServiceResult[Dict[str, Any]]:
         """Get user profile information.
 
         Single responsibility: Retrieving user profile data
@@ -161,14 +155,14 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get user profile {user_id}: {e}")
+            logger.error("Failed to get user profile %s: %s", user_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"Profile retrieval failed: {str(e)}"
             )
 
     async def update_user_profile(
-        self, user_id: str, updates: dict[str, Any]
-    ) -> ServiceResult[dict[str, Any]]:
+        self, user_id: str, updates: Dict[str, Any]
+    ) -> ServiceResult[Dict[str, Any]]:
         """Update user profile information.
 
         Single responsibility: Updating user profile data
@@ -193,7 +187,7 @@ class UserService:
                 role=UserRole(updates.get("role", user.role.value)),
                 status=UserStatus(updates.get("status", user.status.value)),
                 created_at=user.created_at,
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(UTC),
                 last_login_at=user.last_login_at,
                 metadata=updates.get("metadata", user.metadata),
             )
@@ -212,14 +206,14 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to update user profile {user_id}: {e}")
+            logger.error("Failed to update user profile %s: %s", user_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"Profile update failed: {str(e)}"
             )
 
     async def get_users_by_tenant(
         self, tenant_id: str
-    ) -> ServiceResult[list[dict[str, Any]]]:
+    ) -> ServiceResult[list[Dict[str, Any]]]:
         """Get all users for a specific tenant.
 
         Single responsibility: Retrieving tenant users
@@ -251,14 +245,14 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get users for tenant {tenant_id}: {e}")
+            logger.error("Failed to get users for tenant %s: %s", tenant_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED,
                 error=f"Tenant users retrieval failed: {str(e)}",
             )
 
     def _validate_user_data(
-        self, email: str, password: str, user_data: dict[str, Any]
+        self, email: str, password: str, user_data: Dict[str, Any]
     ) -> "ValidationResult":
         """Validate user input data.
 
@@ -289,8 +283,8 @@ class UserService:
 
 
 class ValidationResult:
-    """Simple validation result container"""
+    """Simple validation result container."""
 
-    def __init__(self, is_valid: bool, error: str = None):
+    def __init__(self) -> None:
         self.is_valid = is_valid
         self.error = error

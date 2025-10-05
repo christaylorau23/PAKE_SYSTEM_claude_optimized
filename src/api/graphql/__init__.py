@@ -1,4 +1,4 @@
-"""GraphQL API Package
+"""GraphQL API Package.
 
 Provides sophisticated GraphQL API layer for complex data querying across
 the PAKE System's knowledge graph, semantic search, and analytics systems.

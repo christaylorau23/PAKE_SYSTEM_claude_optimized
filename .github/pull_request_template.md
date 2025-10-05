@@ -33,7 +33,7 @@ Related to #
 
 ### Test Coverage
 - [ ] Unit tests added/updated
-- [ ] Integration tests added/updated  
+- [ ] Integration tests added/updated
 - [ ] Manual testing completed
 - [ ] Performance tests run (if applicable)
 

@@ -71,17 +71,17 @@ jobs:
         run: |
           if [ -f "tests/test_ml_services.py" ]; then
             if [ -f "pyproject.toml" ]; then
-              poetry run python -m pytest tests/test_ml_services.py -v --cov=src/services/ml --cov-report=xml
+              poetry run python -m pytest tests/test_ml_services.py -vv -rA --showlocals --tb=native --cov=src/services/ml --cov-report=xml
             else
-              python -m pytest tests/test_ml_services.py -v --cov=src/services/ml --cov-report=xml
+              python -m pytest tests/test_ml_services.py -vv -rA --showlocals --tb=native --cov=src/services/ml --cov-report=xml
             fi
           else
             echo "ML unit tests not found, running general tests"
             if [ -d "tests/" ]; then
               if [ -f "pyproject.toml" ]; then
-                poetry run python -m pytest tests/ -v -k "ml" --cov=src --cov-report=xml || true
+                poetry run python -m pytest tests/ -vv -rA --showlocals --tb=native -k "ml" --cov=src --cov-report=xml || true
               else
-                python -m pytest tests/ -v -k "ml" --cov=src --cov-report=xml || true
+                python -m pytest tests/ -vv -rA --showlocals --tb=native -k "ml" --cov=src --cov-report=xml || true
               fi
             fi
           fi

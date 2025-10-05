@@ -12,13 +12,13 @@ import pytest
 class TestServiceIntegrationTDD:
     """Test-Driven Development for service components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.service_template_dir = self.project_root / "pkgs" / "service-template"
         self.src_dir = self.project_root / "src"
 
-    def test_service_template_structure(self):
+    def test_service_template_structure(self) -> None:
         """TDD: Test service template has proper structure"""
         # Arrange
         required_files = [
@@ -33,7 +33,7 @@ class TestServiceIntegrationTDD:
             file_path = self.service_template_dir / file_name
             assert file_path.exists(), f"Service template should have {file_name}"
 
-    def test_service_template_pyproject_config(self):
+    def test_service_template_pyproject_config(self) -> None:
         """TDD: Test service template pyproject.toml configuration"""
         # Arrange
         pyproject_path = self.service_template_dir / "pyproject.toml"
@@ -56,7 +56,7 @@ class TestServiceIntegrationTDD:
         assert "mypy" in content, "Should include MyPy for type checking"
         assert "bandit" in content, "Should include Bandit for security"
 
-    def test_service_template_dockerfile(self):
+    def test_service_template_dockerfile(self) -> None:
         """TDD: Test service template Dockerfile configuration"""
         # Arrange
         dockerfile_path = self.service_template_dir / "Dockerfile"
@@ -72,7 +72,7 @@ class TestServiceIntegrationTDD:
         assert "USER pake" in content, "Should use non-root user"
         assert "HEALTHCHECK" in content, "Should have health check"
 
-    def test_service_template_precommit_config(self):
+    def test_service_template_precommit_config(self) -> None:
         """TDD: Test service template pre-commit configuration"""
         # Arrange
         precommit_path = self.service_template_dir / ".pre-commit-config.yaml"
@@ -86,7 +86,7 @@ class TestServiceIntegrationTDD:
         for hook in required_hooks:
             assert hook in content, f"Should configure {hook} hook"
 
-    def test_service_template_app_structure(self):
+    def test_service_template_app_structure(self) -> None:
         """TDD: Test service template app structure"""
         # Arrange
         app_dir = self.service_template_dir / "app"
@@ -100,7 +100,7 @@ class TestServiceIntegrationTDD:
             file_path = app_dir / file_name
             assert file_path.exists(), f"Should have {file_name}"
 
-    def test_service_template_main_py(self):
+    def test_service_template_main_py(self) -> None:
         """TDD: Test service template main.py configuration"""
         # Arrange
         main_py_path = self.service_template_dir / "app" / "main.py"
@@ -116,7 +116,7 @@ class TestServiceIntegrationTDD:
         assert '@app.get("/metrics")' in content, "Should have metrics endpoint"
         assert "lifespan" in content, "Should have lifespan manager"
 
-    def test_service_template_config_py(self):
+    def test_service_template_config_py(self) -> None:
         """TDD: Test service template config.py configuration"""
         # Arrange
         config_py_path = self.service_template_dir / "app" / "core" / "config.py"
@@ -135,7 +135,7 @@ class TestServiceIntegrationTDD:
         assert "REDIS_URL" in content, "Should have REDIS_URL configuration"
         assert "@validator" in content, "Should have validation methods"
 
-    def test_service_template_readme(self):
+    def test_service_template_readme(self) -> None:
         """TDD: Test service template README completeness"""
         # Arrange
         readme_path = self.service_template_dir / "README.md"
@@ -159,7 +159,7 @@ class TestServiceIntegrationTDD:
         for section in required_sections:
             assert section in content, f"README should have {section} section"
 
-    def test_existing_services_structure(self):
+    def test_existing_services_structure(self) -> None:
         """TDD: Test existing services have proper structure"""
         # Arrange
         services_dir = self.src_dir
@@ -171,7 +171,7 @@ class TestServiceIntegrationTDD:
         service_dirs = [d for d in services_dir.iterdir() if d.is_dir()]
         assert len(service_dirs) > 0, "Should have service directories"
 
-    def test_service_template_poetry_validation(self):
+    def test_service_template_poetry_validation(self) -> None:
         """TDD: Test service template Poetry configuration validation"""
         # Arrange
         pyproject_path = self.service_template_dir / "pyproject.toml"
@@ -204,7 +204,7 @@ class TestServiceIntegrationTDD:
             assert "name =" in content, "Should have package name"
             assert "version =" in content, "Should have version"
 
-    def test_service_template_dockerfile_validation(self):
+    def test_service_template_dockerfile_validation(self) -> None:
         """TDD: Test service template Dockerfile validation"""
         # Arrange
         dockerfile_path = self.service_template_dir / "Dockerfile"
@@ -226,7 +226,7 @@ class TestServiceIntegrationTDD:
         has_cmd = any("CMD" in line for line in lines)
         assert has_cmd, "Should have CMD instruction"
 
-    def test_service_template_integration_readiness(self):
+    def test_service_template_integration_readiness(self) -> None:
         """TDD: Test service template is ready for integration"""
         # Arrange
         template_files = [
@@ -248,7 +248,7 @@ class TestServiceIntegrationTDD:
                 file_path.stat().st_size > 100
             ), f"{file_name} should have substantial content"
 
-    def test_service_template_security_features(self):
+    def test_service_template_security_features(self) -> None:
         """TDD: Test service template has security features"""
         # Arrange
         dockerfile_path = self.service_template_dir / "Dockerfile"

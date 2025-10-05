@@ -6,7 +6,7 @@ Comprehensive end-to-end testing suite for multi-tenant API endpoints.
 
 import asyncio
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,11 +33,11 @@ class MultiTenantAPITester:
     6. Performance and load testing
     """
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url
         self.api_prefix = "/api/v1"
-        self.test_tenants: list[dict[str, Any]] = []
-        self.test_users: list[dict[str, Any]] = []
+        self.test_tenants: list[Dict[str, Any]] = []
+        self.test_users: list[Dict[str, Any]] = []
         self.auth_tokens: dict[str, str] = {}
 
     async def setup_test_environment(self) -> None:
@@ -55,7 +55,7 @@ class MultiTenantAPITester:
 
         print("✅ Test environment ready")
 
-    async def run_comprehensive_tests(self) -> dict[str, Any]:
+    async def run_comprehensive_tests(self) -> Dict[str, Any]:
         """Run all multi-tenant API tests"""
         try:
             await self.setup_test_environment()
@@ -76,7 +76,7 @@ class MultiTenantAPITester:
             return {
                 "summary": summary,
                 "detailed_results": test_results,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         finally:
@@ -84,7 +84,7 @@ class MultiTenantAPITester:
 
     # Tenant Management Tests
 
-    async def _test_tenant_management(self) -> dict[str, Any]:
+    async def _test_tenant_management(self) -> Dict[str, Any]:
         """Test tenant management endpoints"""
         print("🏢 Testing tenant management...")
 
@@ -139,7 +139,7 @@ class MultiTenantAPITester:
             "details": results,
         }
 
-    async def _create_tenant(self, tenant_data: dict[str, Any]) -> dict[str, Any]:
+    async def _create_tenant(self, tenant_data: Dict[str, Any]) -> Dict[str, Any]:
         """Test tenant creation"""
         try:
             async with httpx.AsyncClient() as client:
@@ -162,7 +162,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "create_tenant", "success": False, "error": str(e)}
 
-    async def _get_tenant(self, tenant_id: str) -> dict[str, Any]:
+    async def _get_tenant(self, tenant_id: str) -> Dict[str, Any]:
         """Test tenant retrieval"""
         try:
             async with httpx.AsyncClient() as client:
@@ -186,8 +186,8 @@ class MultiTenantAPITester:
     async def _update_tenant(
         self,
         tenant_id: str,
-        update_data: dict[str, Any],
-    ) -> dict[str, Any]:
+        update_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Test tenant update"""
         try:
             async with httpx.AsyncClient() as client:
@@ -209,7 +209,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "update_tenant", "success": False, "error": str(e)}
 
-    async def _list_tenants(self) -> dict[str, Any]:
+    async def _list_tenants(self) -> Dict[str, Any]:
         """Test tenant listing"""
         try:
             async with httpx.AsyncClient() as client:
@@ -232,7 +232,7 @@ class MultiTenantAPITester:
 
     # User Management Tests
 
-    async def _test_user_management(self) -> dict[str, Any]:
+    async def _test_user_management(self) -> Dict[str, Any]:
         """Test user management within tenants"""
         print("👥 Testing user management...")
 
@@ -284,8 +284,8 @@ class MultiTenantAPITester:
     async def _create_user(
         self,
         tenant_id: str,
-        user_data: dict[str, Any],
-    ) -> dict[str, Any]:
+        user_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Test user creation"""
         try:
             async with httpx.AsyncClient() as client:
@@ -309,7 +309,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "create_user", "success": False, "error": str(e)}
 
-    async def _list_tenant_users(self, tenant_id: str) -> dict[str, Any]:
+    async def _list_tenant_users(self, tenant_id: str) -> Dict[str, Any]:
         """Test user listing within tenant"""
         try:
             async with httpx.AsyncClient() as client:
@@ -333,7 +333,7 @@ class MultiTenantAPITester:
 
     # Authentication Tests
 
-    async def _test_authentication(self) -> dict[str, Any]:
+    async def _test_authentication(self) -> Dict[str, Any]:
         """Test authentication and authorization flows"""
         print("🔐 Testing authentication...")
 
@@ -383,8 +383,8 @@ class MultiTenantAPITester:
     async def _test_user_login(
         self,
         tenant_id: str,
-        credentials: dict[str, Any],
-    ) -> dict[str, Any]:
+        credentials: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """Test user login functionality"""
         try:
             async with httpx.AsyncClient() as client:
@@ -416,7 +416,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "user_login", "success": False, "error": str(e)}
 
-    async def _test_token_validation(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_token_validation(self, tenant_id: str) -> Dict[str, Any]:
         """Test JWT token validation"""
         try:
             token = self.auth_tokens.get(tenant_id)
@@ -446,7 +446,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "token_validation", "success": False, "error": str(e)}
 
-    async def _test_cross_tenant_access(self) -> dict[str, Any]:
+    async def _test_cross_tenant_access(self) -> Dict[str, Any]:
         """Test that users cannot access other tenants' data"""
         try:
             if len(self.test_tenants) < 2:
@@ -497,7 +497,7 @@ class MultiTenantAPITester:
 
     # Tenant Isolation Tests
 
-    async def _test_tenant_isolation(self) -> dict[str, Any]:
+    async def _test_tenant_isolation(self) -> Dict[str, Any]:
         """Test comprehensive tenant data isolation"""
         print("🔒 Testing tenant isolation...")
 
@@ -525,7 +525,7 @@ class MultiTenantAPITester:
             "details": results,
         }
 
-    async def _test_search_isolation(self) -> dict[str, Any]:
+    async def _test_search_isolation(self) -> Dict[str, Any]:
         """Test that search results are isolated per tenant"""
         try:
             tenant1_id = self.test_tenants[0]["id"]
@@ -569,7 +569,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "search_isolation", "success": False, "error": str(e)}
 
-    async def _test_user_isolation(self) -> dict[str, Any]:
+    async def _test_user_isolation(self) -> Dict[str, Any]:
         """Test that users cannot see other tenants' users"""
         try:
             tenant1_id = self.test_tenants[0]["id"]
@@ -605,8 +605,7 @@ class MultiTenantAPITester:
                     users1 = response1.json().get("users", [])
                     users2 = response2.json().get("users", [])
                     isolation_verified = (
-                        len(set(u["id"] for u in users1) & set(u["id"] for u in users2))
-                        == 0
+                        len({u["id"] for u in users1} & {u["id"] for u in users2}) == 0
                     )
                 else:
                     isolation_verified = False
@@ -630,7 +629,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "user_isolation", "success": False, "error": str(e)}
 
-    async def _test_analytics_isolation(self) -> dict[str, Any]:
+    async def _test_analytics_isolation(self) -> Dict[str, Any]:
         """Test that analytics are isolated per tenant"""
         try:
             tenant1_id = self.test_tenants[0]["id"]
@@ -672,7 +671,7 @@ class MultiTenantAPITester:
 
     # Search Functionality Tests
 
-    async def _test_search_functionality(self) -> dict[str, Any]:
+    async def _test_search_functionality(self) -> Dict[str, Any]:
         """Test multi-source search functionality with tenant context"""
         print("🔍 Testing search functionality...")
 
@@ -706,7 +705,7 @@ class MultiTenantAPITester:
             "details": results,
         }
 
-    async def _test_basic_search(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_basic_search(self, tenant_id: str) -> Dict[str, Any]:
         """Test basic search functionality"""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -734,7 +733,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "basic_search", "success": False, "error": str(e)}
 
-    async def _test_search_with_sources(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_search_with_sources(self, tenant_id: str) -> Dict[str, Any]:
         """Test search with specific sources"""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -761,7 +760,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "search_with_sources", "success": False, "error": str(e)}
 
-    async def _test_search_history(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_search_history(self, tenant_id: str) -> Dict[str, Any]:
         """Test search history functionality"""
         try:
             async with httpx.AsyncClient() as client:
@@ -783,7 +782,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "search_history", "success": False, "error": str(e)}
 
-    async def _test_saved_searches(self, tenant_id: str) -> dict[str, Any]:
+    async def _test_saved_searches(self, tenant_id: str) -> Dict[str, Any]:
         """Test saved search functionality"""
         try:
             async with httpx.AsyncClient() as client:
@@ -834,7 +833,7 @@ class MultiTenantAPITester:
 
     # Security Enforcement Tests
 
-    async def _test_security_enforcement(self) -> dict[str, Any]:
+    async def _test_security_enforcement(self) -> Dict[str, Any]:
         """Test security enforcement mechanisms"""
         print("🛡️ Testing security enforcement...")
 
@@ -863,7 +862,7 @@ class MultiTenantAPITester:
             "details": results,
         }
 
-    async def _test_rate_limiting(self) -> dict[str, Any]:
+    async def _test_rate_limiting(self) -> Dict[str, Any]:
         """Test API rate limiting"""
         try:
             if not self.test_tenants:
@@ -878,7 +877,7 @@ class MultiTenantAPITester:
             # Make rapid requests to trigger rate limiting
             responses = []
             async with httpx.AsyncClient() as client:
-                for i in range(10):  # Make 10 rapid requests
+                for _i in range(10):  # Make 10 rapid requests
                     try:
                         response = await client.get(
                             f"{self.base_url}{self.api_prefix}/tenants/{tenant_id}",
@@ -909,7 +908,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "rate_limiting", "success": False, "error": str(e)}
 
-    async def _test_input_validation(self) -> dict[str, Any]:
+    async def _test_input_validation(self) -> Dict[str, Any]:
         """Test input validation and sanitization"""
         try:
             malicious_payloads = [
@@ -953,7 +952,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "input_validation", "success": False, "error": str(e)}
 
-    async def _test_authentication_bypass(self) -> dict[str, Any]:
+    async def _test_authentication_bypass(self) -> Dict[str, Any]:
         """Test authentication bypass attempts"""
         try:
             bypass_attempts = [
@@ -993,7 +992,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "authentication_bypass", "success": False, "error": str(e)}
 
-    async def _test_sql_injection_protection(self) -> dict[str, Any]:
+    async def _test_sql_injection_protection(self) -> Dict[str, Any]:
         """Test SQL injection protection"""
         try:
             if not self.test_tenants:
@@ -1047,7 +1046,7 @@ class MultiTenantAPITester:
 
     # Performance Tests
 
-    async def _test_performance(self) -> dict[str, Any]:
+    async def _test_performance(self) -> Dict[str, Any]:
         """Test system performance under various conditions"""
         print("⚡ Testing performance...")
 
@@ -1072,7 +1071,7 @@ class MultiTenantAPITester:
             "details": results,
         }
 
-    async def _test_response_times(self) -> dict[str, Any]:
+    async def _test_response_times(self) -> Dict[str, Any]:
         """Test API response times"""
         try:
             if not self.test_tenants:
@@ -1089,7 +1088,7 @@ class MultiTenantAPITester:
             times = []
             async with httpx.AsyncClient() as client:
                 for endpoint in endpoints:
-                    start_time = datetime.utcnow()
+                    start_time = datetime.now(UTC)
                     try:
                         response = await client.get(
                             f"{self.base_url}{self.api_prefix}{endpoint}",
@@ -1098,7 +1097,7 @@ class MultiTenantAPITester:
                                 "X-Tenant-ID": tenant_id,
                             },
                         )
-                        end_time = datetime.utcnow()
+                        end_time = datetime.now(UTC)
                         response_time = (end_time - start_time).total_seconds()
                         times.append(response_time)
                     except Exception:
@@ -1126,7 +1125,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "response_times", "success": False, "error": str(e)}
 
-    async def _test_concurrent_requests(self) -> dict[str, Any]:
+    async def _test_concurrent_requests(self) -> Dict[str, Any]:
         """Test handling of concurrent requests"""
         try:
             if not self.test_tenants:
@@ -1138,7 +1137,7 @@ class MultiTenantAPITester:
 
             tenant_id = self.test_tenants[0]["id"]
 
-            async def make_request():
+            async def make_request(self) -> None:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(
                         f"{self.base_url}{self.api_prefix}/tenants/{tenant_id}",
@@ -1151,9 +1150,9 @@ class MultiTenantAPITester:
 
             # Make 10 concurrent requests
             tasks = [make_request() for _ in range(10)]
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
             status_codes = await asyncio.gather(*tasks, return_exceptions=True)
-            end_time = datetime.utcnow()
+            end_time = datetime.now(UTC)
 
             successful_requests = len([s for s in status_codes if s == 200])
             total_time = (end_time - start_time).total_seconds()
@@ -1172,7 +1171,7 @@ class MultiTenantAPITester:
         except Exception as e:
             return {"test": "concurrent_requests", "success": False, "error": str(e)}
 
-    async def _test_large_payload(self) -> dict[str, Any]:
+    async def _test_large_payload(self) -> Dict[str, Any]:
         """Test handling of large payloads"""
         try:
             if not self.test_tenants:
@@ -1245,13 +1244,13 @@ class MultiTenantAPITester:
         except Exception as e:
             print(f"⚠️ Cleanup error: {e}")
 
-    def _generate_test_summary(self, test_results: dict[str, Any]) -> dict[str, Any]:
+    def _generate_test_summary(self, test_results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate comprehensive test summary"""
         total_tests = 0
         total_passed = 0
         total_failed = 0
 
-        for category, results in test_results.items():
+        for _category, results in test_results.items():
             if isinstance(results, dict) and "test_count" in results:
                 total_tests += results["test_count"]
                 total_passed += results["passed"]
@@ -1266,12 +1265,12 @@ class MultiTenantAPITester:
             "success_rate": round(success_rate, 2),
             "status": "PASS" if success_rate >= 80 else "FAIL",
             "categories_tested": len(test_results),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 
 # Async test runner function
-async def run_multitenant_api_tests():
+async def run_multitenant_api_tests(self) -> None:
     """Run the comprehensive multi-tenant API tests"""
     print("🚀 Starting PAKE Multi-Tenant API Test Suite...")
     print("=" * 60)

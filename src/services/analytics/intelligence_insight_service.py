@@ -1,4 +1,4 @@
-"""Intelligence Insight Service
+"""Intelligence Insight Service.
 
 Multi-stage insight generation pipeline implementing Stage 4 of the Personal Intelligence Engine
 blueprint. Provides:
@@ -106,11 +106,11 @@ class CommunityInsight:
 
     community_id: str
     community_description: str
-    member_entities: list[str]
+    member_entities: List[str]
     community_size: int
     modularity_score: float
     central_entities: list[tuple[str, float]]  # entity, centrality score
-    community_topics: list[str]
+    community_topics: List[str]
     growth_pattern: str
     significance: SignificanceLevel
 
@@ -124,11 +124,11 @@ class SynthesisInsight:
     description: str
     confidence_score: float
     significance: SignificanceLevel
-    supporting_evidence: list[str]
-    component_insights: list[str]  # IDs of contributing insights
-    actionable_recommendations: list[str]
+    supporting_evidence: List[str]
+    component_insights: List[str]  # IDs of contributing insights
+    actionable_recommendations: List[str]
     time_horizon: str  # "immediate", "short_term", "medium_term", "long_term"
-    categories: list[str]
+    categories: List[str]
     created_at: datetime
 
 
@@ -141,8 +141,8 @@ class InsightAlert:
     title: str
     message: str
     urgency: SignificanceLevel
-    data_summary: dict[str, Any]
-    recommended_actions: list[str]
+    data_summary: Dict[str, Any]
+    recommended_actions: List[str]
     expires_at: datetime
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -158,13 +158,7 @@ class IntelligenceInsightService:
     - Automated alerting for significant patterns
     """
 
-    def __init__(
-        self,
-        intelligence_core: IntelligenceCoreService,
-        nlp_service: IntelligenceNLPService,
-        vector_db: VectorDatabaseService,
-        cache_service: CacheService | None = None,
-    ):
+    def __init__(self) -> None:
         """Initialize the Intelligence Insight Service.
 
         Args:
@@ -256,7 +250,7 @@ class IntelligenceInsightService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize Intelligence Insight Service: {e}")
+            logger.error("Failed to initialize Intelligence Insight Service: %s", e)
             return False
 
     async def _build_knowledge_graph(self) -> None:
@@ -273,7 +267,7 @@ class IntelligenceInsightService:
             logger.info("Knowledge graph constructed for analysis")
 
         except Exception as e:
-            logger.error(f"Error building knowledge graph: {e}")
+            logger.error("Error building knowledge graph: %s", e)
             raise
 
     async def _initialize_topic_tracking(self) -> None:
@@ -284,7 +278,7 @@ class IntelligenceInsightService:
             logger.info("Topic tracking initialized")
 
         except Exception as e:
-            logger.error(f"Error initializing topic tracking: {e}")
+            logger.error("Error initializing topic tracking: %s", e)
             raise
 
     async def _setup_periodic_analysis(self) -> None:
@@ -295,12 +289,12 @@ class IntelligenceInsightService:
             logger.info("Periodic analysis tasks configured")
 
         except Exception as e:
-            logger.error(f"Error setting up periodic analysis: {e}")
+            logger.error("Error setting up periodic analysis: %s", e)
             raise
 
     async def detect_emerging_topics(
         self,
-        documents: list[str],
+        documents: List[str],
         time_period: str = "current",
         num_topics: int | None = None,
     ) -> list[TopicEvolution]:
@@ -319,7 +313,7 @@ class IntelligenceInsightService:
                 logger.warning("No documents provided for topic detection")
                 return []
 
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             num_topics = num_topics or self.config["topic_modeling"]["num_topics"]
 
             # Process documents through NLP
@@ -419,18 +413,18 @@ class IntelligenceInsightService:
             self.topic_models[time_period] = lda_model
             self.topic_dictionaries[time_period] = dictionary
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._stats["topics_tracked"] += len(topic_evolutions)
             self._stats["processing_time_total_ms"] += processing_time
 
             logger.info(
-                f"Detected {len(topic_evolutions)} topics with coherence {
-                    coherence_score:.3f}",
+                "Detected %s topics with coherence %s", len(topic_evolutions),
+                coherence_score,
             )
             return topic_evolutions
 
         except Exception as e:
-            logger.error(f"Error detecting emerging topics: {e}")
+            logger.error("Error detecting emerging topics: %s", e)
             return []
 
     async def analyze_correlations(
@@ -452,7 +446,7 @@ class IntelligenceInsightService:
                 logger.warning("Need at least 2 metrics for correlation analysis")
                 return []
 
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             max_lag = max_lag or self.config["correlation_analysis"]["max_lag_periods"]
             min_corr = self.config["correlation_analysis"]["min_correlation"]
             alpha = self.config["correlation_analysis"]["significance_level"]
@@ -541,15 +535,15 @@ class IntelligenceInsightService:
 
                         correlations.append(correlation_insight)
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._stats["correlations_discovered"] += len(correlations)
             self._stats["processing_time_total_ms"] += processing_time
 
-            logger.info(f"Discovered {len(correlations)} significant correlations")
+            logger.info("Discovered %s significant correlations", len(correlations))
             return correlations
 
         except Exception as e:
-            logger.error(f"Error analyzing correlations: {e}")
+            logger.error("Error analyzing correlations: %s", e)
             return []
 
     async def detect_communities(
@@ -576,7 +570,7 @@ class IntelligenceInsightService:
                 logger.warning("Insufficient graph data for community detection")
                 return []
 
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             min_size = self.config["community_detection"]["min_community_size"]
             resolution = self.config["community_detection"]["resolution"]
 
@@ -629,7 +623,7 @@ class IntelligenceInsightService:
                     significance = SignificanceLevel.LOW
 
                 community_insight = CommunityInsight(
-                    community_id=f"community_{i}_{datetime.now().strftime('%Y%m%d')}",
+                    community_id=f"community_{i}_{datetime.now(UTC).strftime('%Y%m%d')}",
                     community_description=description,
                     member_entities=list(comm),
                     community_size=len(comm),
@@ -642,20 +636,20 @@ class IntelligenceInsightService:
 
                 community_insights.append(community_insight)
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._stats["communities_detected"] += len(community_insights)
             self._stats["processing_time_total_ms"] += processing_time
 
             self.community_history.extend(community_insights)
 
             logger.info(
-                f"Detected {len(community_insights)} communities with modularity {
-                    modularity_score:.3f}",
+                "Detected %s communities with modularity %.3f", len(community_insights),
+                    modularity_score,
             )
             return community_insights
 
         except Exception as e:
-            logger.error(f"Error detecting communities: {e}")
+            logger.error("Error detecting communities: %s", e)
             return []
 
     async def generate_synthesis_insights(
@@ -675,7 +669,7 @@ class IntelligenceInsightService:
             List[SynthesisInsight]: Generated synthesis insights
         """
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             synthesis_insights = []
             min_confidence = self.config["insight_synthesis"]["min_confidence"]
             min_evidence = self.config["insight_synthesis"]["evidence_threshold"]
@@ -868,15 +862,15 @@ class IntelligenceInsightService:
             for insight in synthesis_insights:
                 self.generated_insights[insight.insight_id] = insight
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._stats["insights_generated"] += len(synthesis_insights)
             self._stats["processing_time_total_ms"] += processing_time
 
-            logger.info(f"Generated {len(synthesis_insights)} synthesis insights")
+            logger.info("Generated %s synthesis insights", len(synthesis_insights))
             return synthesis_insights
 
         except Exception as e:
-            logger.error(f"Error generating synthesis insights: {e}")
+            logger.error("Error generating synthesis insights: %s", e)
             return []
 
     async def create_alerts(
@@ -956,18 +950,18 @@ class IntelligenceInsightService:
 
             self._stats["alerts_sent"] += len(alerts)
 
-            logger.info(f"Created {len(alerts)} insight alerts")
+            logger.info("Created %s insight alerts", len(alerts))
             return alerts
 
         except Exception as e:
-            logger.error(f"Error creating alerts: {e}")
+            logger.error("Error creating alerts: %s", e)
             return []
 
     async def run_comprehensive_analysis(
         self,
-        documents: list[str] | None = None,
+        documents: List[str] | None = None,
         time_series_data: dict[str, pd.Series] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Run comprehensive insight analysis across all systems.
 
         Args:
@@ -978,7 +972,7 @@ class IntelligenceInsightService:
             Dict[str, Any]: Comprehensive analysis results
         """
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             results = {
                 "analysis_timestamp": start_time.isoformat(),
                 "topic_evolutions": [],
@@ -1049,30 +1043,30 @@ class IntelligenceInsightService:
                 alerts = await self.create_alerts(synthesis_insights)
                 results["alerts"] = alerts
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             results["processing_time_ms"] = processing_time
 
-            logger.info(f"Comprehensive analysis completed in {processing_time:.2f}ms")
+            logger.info("Comprehensive analysis completed in %.2f%%ms", processing_time)
             logger.info(
-                f"Results: {len(results['topic_evolutions'])} topics, {
-                    len(results['correlations'])
-                } correlations, {len(results['communities'])} communities, {
-                    len(results['synthesis_insights'])
-                } insights, {len(results['alerts'])} alerts",
+                "Results: %s topics, %s correlations, %s communities, %s insights, %s alerts", len(results["topic_evolutions"]),
+                    len(results["correlations"])
+                , len(results["communities"]),
+                    len(results["synthesis_insights"])
+                , len(results["alerts"]),
             )
 
             return results
 
         except Exception as e:
-            logger.error(f"Error in comprehensive analysis: {e}")
+            logger.error("Error in comprehensive analysis: %s", e)
             return {
                 "error": str(e),
-                "analysis_timestamp": datetime.now().isoformat(),
-                "processing_time_ms": (datetime.now() - start_time).total_seconds()
+                "analysis_timestamp": datetime.now(UTC).isoformat(),
+                "processing_time_ms": (datetime.now(UTC) - start_time).total_seconds()
                 * 1000,
             }
 
-    async def get_service_stats(self) -> dict[str, Any]:
+    async def get_service_stats(self) -> Dict[str, Any]:
         """Get comprehensive service statistics."""
         return {
             "performance_stats": self._stats,
@@ -1090,7 +1084,7 @@ class IntelligenceInsightService:
             "configuration": self.config,
         }
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for the insight service."""
         try:
             # Check dependencies

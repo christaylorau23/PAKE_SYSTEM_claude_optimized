@@ -13,7 +13,7 @@ import yaml
 class TestMonitoringIntegrationTDD:
     """Test-Driven Development for monitoring components"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
         self.monitoring_dir = self.project_root / "monitoring"
@@ -21,7 +21,7 @@ class TestMonitoringIntegrationTDD:
         self.grafana_dir = self.monitoring_dir / "grafana"
         self.jaeger_dir = self.monitoring_dir / "jaeger"
 
-    def test_prometheus_configuration_structure(self):
+    def test_prometheus_configuration_structure(self) -> None:
         """TDD: Test Prometheus configuration has proper structure"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -36,7 +36,7 @@ class TestMonitoringIntegrationTDD:
 
         assert len(content) > 1000, "Prometheus config should be comprehensive"
 
-    def test_prometheus_global_configuration(self):
+    def test_prometheus_global_configuration(self) -> None:
         """TDD: Test Prometheus global configuration"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -51,7 +51,7 @@ class TestMonitoringIntegrationTDD:
         assert "evaluation_interval:" in content, "Should define evaluation interval"
         assert "external_labels:" in content, "Should have external labels"
 
-    def test_prometheus_scrape_configs(self):
+    def test_prometheus_scrape_configs(self) -> None:
         """TDD: Test Prometheus scrape configurations"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -77,7 +77,7 @@ class TestMonitoringIntegrationTDD:
         for job in required_jobs:
             assert job in content, f"Should have {job} configuration"
 
-    def test_prometheus_kubernetes_integration(self):
+    def test_prometheus_kubernetes_integration(self) -> None:
         """TDD: Test Prometheus Kubernetes integration"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -94,7 +94,7 @@ class TestMonitoringIntegrationTDD:
         assert "role: node" in content, "Should discover nodes"
         assert "relabel_configs:" in content, "Should have relabeling configuration"
 
-    def test_prometheus_alerting_configuration(self):
+    def test_prometheus_alerting_configuration(self) -> None:
         """TDD: Test Prometheus alerting configuration"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -108,7 +108,7 @@ class TestMonitoringIntegrationTDD:
         assert "alertmanagers:" in content, "Should configure Alertmanager"
         assert "rule_files:" in content, "Should have rule files configuration"
 
-    def test_prometheus_alerting_rules(self):
+    def test_prometheus_alerting_rules(self) -> None:
         """TDD: Test Prometheus alerting rules"""
         # Arrange
         rules_dir = self.prometheus_dir / "rules"
@@ -133,7 +133,7 @@ class TestMonitoringIntegrationTDD:
         ), "Should have response time alert"
         assert "alert: PAKESystemPodDown" in rules_content, "Should have pod down alert"
 
-    def test_grafana_dashboard_structure(self):
+    def test_grafana_dashboard_structure(self) -> None:
         """TDD: Test Grafana dashboard structure"""
         # Arrange
         dashboards_dir = self.grafana_dir / "dashboards"
@@ -148,7 +148,7 @@ class TestMonitoringIntegrationTDD:
 
         assert "dashboard" in dashboard_data, "Should have dashboard structure"
 
-    def test_grafana_dashboard_metadata(self):
+    def test_grafana_dashboard_metadata(self) -> None:
         """TDD: Test Grafana dashboard metadata"""
         # Arrange
         overview_dashboard_path = (
@@ -166,7 +166,7 @@ class TestMonitoringIntegrationTDD:
         assert "pake-system" in dashboard["tags"], "Should have correct tags"
         assert dashboard["style"] == "dark", "Should use dark theme"
 
-    def test_grafana_dashboard_panels(self):
+    def test_grafana_dashboard_panels(self) -> None:
         """TDD: Test Grafana dashboard panels"""
         # Arrange
         overview_dashboard_path = (
@@ -197,7 +197,7 @@ class TestMonitoringIntegrationTDD:
                 panel_title in title for title in panel_titles
             ), f"Should have {panel_title} panel"
 
-    def test_grafana_dashboard_queries(self):
+    def test_grafana_dashboard_queries(self) -> None:
         """TDD: Test Grafana dashboard queries"""
         # Arrange
         overview_dashboard_path = (
@@ -222,7 +222,7 @@ class TestMonitoringIntegrationTDD:
 
         assert has_prometheus_queries, "Should have Prometheus queries"
 
-    def test_jaeger_configuration_structure(self):
+    def test_jaeger_configuration_structure(self) -> None:
         """TDD: Test Jaeger configuration structure"""
         # Arrange
         jaeger_config_path = self.jaeger_dir / "jaeger-config.yaml"
@@ -237,7 +237,7 @@ class TestMonitoringIntegrationTDD:
         assert jaeger_data["kind"] == "ConfigMap", "Should be ConfigMap resource"
         assert "data" in jaeger_data, "Should have data section"
 
-    def test_jaeger_yaml_configuration(self):
+    def test_jaeger_yaml_configuration(self) -> None:
         """TDD: Test Jaeger YAML configuration"""
         # Arrange
         jaeger_config_path = self.jaeger_dir / "jaeger-config.yaml"
@@ -254,7 +254,7 @@ class TestMonitoringIntegrationTDD:
         assert "storage:" in jaeger_yaml, "Should have storage configuration"
         assert "query:" in jaeger_yaml, "Should have query configuration"
 
-    def test_jaeger_storage_configuration(self):
+    def test_jaeger_storage_configuration(self) -> None:
         """TDD: Test Jaeger storage configuration"""
         # Arrange
         jaeger_config_path = self.jaeger_dir / "jaeger-config.yaml"
@@ -272,7 +272,7 @@ class TestMonitoringIntegrationTDD:
         ), "Should have Elasticsearch configuration"
         assert "serverURLs:" in jaeger_yaml, "Should have server URLs"
 
-    def test_jaeger_sampling_configuration(self):
+    def test_jaeger_sampling_configuration(self) -> None:
         """TDD: Test Jaeger sampling configuration"""
         # Arrange
         jaeger_config_path = self.jaeger_dir / "jaeger-config.yaml"
@@ -287,7 +287,7 @@ class TestMonitoringIntegrationTDD:
         assert "type: const" in jaeger_yaml, "Should use constant sampling"
         assert "param: 1" in jaeger_yaml, "Should sample 100% of traces"
 
-    def test_monitoring_integration_completeness(self):
+    def test_monitoring_integration_completeness(self) -> None:
         """TDD: Test monitoring integration completeness"""
         # Arrange
         required_files = [
@@ -307,7 +307,7 @@ class TestMonitoringIntegrationTDD:
                 full_path.stat().st_size > 100
             ), f"{file_path} should have substantial content"
 
-    def test_monitoring_kubernetes_integration(self):
+    def test_monitoring_kubernetes_integration(self) -> None:
         """TDD: Test monitoring Kubernetes integration"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -329,7 +329,7 @@ class TestMonitoringIntegrationTDD:
         for config in kubernetes_configs:
             assert config in content, f"Should have {config} configuration"
 
-    def test_monitoring_application_integration(self):
+    def test_monitoring_application_integration(self) -> None:
         """TDD: Test monitoring application integration"""
         # Arrange
         prometheus_config_path = self.prometheus_dir / "prometheus.yml"
@@ -351,7 +351,7 @@ class TestMonitoringIntegrationTDD:
         for config in app_configs:
             assert config in content, f"Should have {config} configuration"
 
-    def test_monitoring_alerting_integration(self):
+    def test_monitoring_alerting_integration(self) -> None:
         """TDD: Test monitoring alerting integration"""
         # Arrange
         rules_path = self.prometheus_dir / "rules" / "pake-system.yml"
@@ -376,7 +376,7 @@ class TestMonitoringIntegrationTDD:
         for alert in alert_categories:
             assert f"alert: {alert}" in content, f"Should have {alert} alert"
 
-    def test_monitoring_dashboard_integration(self):
+    def test_monitoring_dashboard_integration(self) -> None:
         """TDD: Test monitoring dashboard integration"""
         # Arrange
         dashboard_path = self.grafana_dir / "dashboards" / "pake-system-overview.json"

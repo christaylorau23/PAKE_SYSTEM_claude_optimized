@@ -21,12 +21,12 @@ import pytest
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
 class TestUserRegistrationJourney:
     """Test complete user registration and first login journey"""
 
-    def test_new_user_registration_and_login_flow(self, test_client):
+    def test_new_user_registration_and_login_flow(self) -> None:
         """
         User Journey: New user registers and logs in for the first time
 
@@ -85,12 +85,12 @@ class TestUserRegistrationJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
 class TestLoginAccessLogoutJourney:
     """Test complete login, access, and logout journey"""
 
-    def test_login_access_multiple_resources_logout(self, test_client):
+    def test_login_access_multiple_resources_logout(self) -> None:
         """
         User Journey: User logs in, accesses multiple resources, then logs out
 
@@ -139,12 +139,12 @@ class TestLoginAccessLogoutJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
 class TestTokenRefreshJourney:
     """Test token refresh workflow"""
 
-    def test_token_refresh_flow(self, test_client):
+    def test_token_refresh_flow(self) -> None:
         """
         User Journey: User gets access token, then refreshes it
 
@@ -178,12 +178,12 @@ class TestTokenRefreshJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
 class TestPasswordChangeJourney:
     """Test password change workflow"""
 
-    def test_password_change_flow(self, test_client):
+    def test_password_change_flow(self) -> None:
         """
         User Journey: User changes their password
 
@@ -208,12 +208,12 @@ class TestPasswordChangeJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
 class TestFailedAuthenticationJourneys:
     """Test various failure scenarios in authentication"""
 
-    def test_login_with_invalid_credentials(self, test_client):
+    def test_login_with_invalid_credentials(self) -> None:
         """
         User Journey: User attempts login with wrong password
 
@@ -237,7 +237,7 @@ class TestFailedAuthenticationJourneys:
         protected_response = test_client.get("/protected")
         assert protected_response.status_code == 401
 
-    def test_access_protected_resource_without_token(self, test_client):
+    def test_access_protected_resource_without_token(self) -> None:
         """
         User Journey: User attempts to access protected resource without auth
 
@@ -255,7 +255,7 @@ class TestFailedAuthenticationJourneys:
         # Step 3: Verify error details
         assert "detail" in response.json()
 
-    def test_access_with_invalid_token(self, test_client):
+    def test_access_with_invalid_token(self) -> None:
         """
         User Journey: User attempts to access with invalid token
 
@@ -275,7 +275,7 @@ class TestFailedAuthenticationJourneys:
         # Step 3: Verify 401 response
         assert response.status_code == 401
 
-    def test_access_with_expired_token(self, test_client):
+    def test_access_with_expired_token(self) -> None:
         """
         User Journey: User attempts to use expired token
 
@@ -294,13 +294,13 @@ class TestFailedAuthenticationJourneys:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_user_journey()
-@pytest.mark.slow()
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
+@pytest.mark.slow
 class TestCompleteApplicationFlow:
     """Test complete application workflows end-to-end"""
 
-    def test_complete_user_session_lifecycle(self, test_client):
+    def test_complete_user_session_lifecycle(self) -> None:
         """
         Complete User Journey: Full session from start to finish
 
@@ -366,13 +366,13 @@ class TestCompleteApplicationFlow:
 # ============================================================================
 
 
-@pytest.mark.e2e()
-@pytest.mark.e2e_performance()
-@pytest.mark.slow()
+@pytest.mark.e2e
+@pytest.mark.e2e_performance
+@pytest.mark.slow
 class TestAuthPerformanceAndReliability:
     """Test authentication performance and reliability"""
 
-    def test_concurrent_login_requests(self, test_client):
+    def test_concurrent_login_requests(self) -> None:
         """
         Test system handles multiple concurrent login requests
 
@@ -393,7 +393,7 @@ class TestAuthPerformanceAndReliability:
         assert all(r.status_code == 200 for r in responses)
         assert all("access_token" in r.json() for r in responses)
 
-    def test_authentication_response_time(self, test_client, benchmark):
+    def test_authentication_response_time(self) -> None:
         """
         Test authentication response time meets SLA
 
@@ -402,7 +402,7 @@ class TestAuthPerformanceAndReliability:
         2. Verify response time < 500ms
         """
 
-        def login():
+        def login(self) -> None:
             return test_client.post(
                 "/token", data={"username": "admin", "password": "secret"}
             )

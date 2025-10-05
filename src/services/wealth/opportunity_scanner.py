@@ -14,7 +14,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from enum import Enum
 from typing import Any
 
@@ -57,7 +57,7 @@ class OpportunityType(Enum):
 
 @dataclass
 class MarketOpportunity:
-    """Represents a detected market opportunity with all relevant metadata"""
+    """Represents a detected market opportunity with all relevant metadata."""
 
     symbol: str
     market_type: MarketType
@@ -75,9 +75,9 @@ class MarketOpportunity:
     volume_spike: float = 0.0
 
     # Analysis details
-    technical_indicators: dict[str, Any] = field(default_factory=dict)
-    fundamental_data: dict[str, Any] = field(default_factory=dict)
-    sentiment_data: dict[str, Any] = field(default_factory=dict)
+    technical_indicators: Dict[str, Any] = field(default_factory=dict)
+    fundamental_data: Dict[str, Any] = field(default_factory=dict)
+    sentiment_data: Dict[str, Any] = field(default_factory=dict)
     catalyst: str | None = None
 
     # Metadata
@@ -85,8 +85,8 @@ class MarketOpportunity:
     expires_at: datetime | None = None
     alert_sent: bool = False
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "symbol": self.symbol,
             "market_type": self.market_type.value,
@@ -111,26 +111,26 @@ class MarketOpportunity:
 
 
 class MarketDataSource(ABC):
-    """Abstract base class for market data sources"""
+    """Abstract base class for market data sources."""
 
     @abstractmethod
-    async def get_real_time_data(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
-        """Get real-time market data for symbols"""
+    async def get_real_time_data(self, symbols: List[str]) -> dict[str, Dict[str, Any]]:
+        """Get real-time market data for symbols."""
 
     @abstractmethod
     async def get_historical_data(self, symbol: str, period: str) -> pd.DataFrame:
-        """Get historical data for technical analysis"""
+        """Get historical data for technical analysis."""
 
 
 class AlphaVantageDataSource(MarketDataSource):
-    """Alpha Vantage API integration for stock data"""
+    """Alpha Vantage API integration for stock data."""
 
-    def __init__(self, api_key: str):
+    def __init__(self) -> None:
         self.api_key = api_key
         self.base_url = "https://www.alphavantage.co/query"
 
-    async def get_real_time_data(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
-        """Get real-time stock data"""
+    async def get_real_time_data(self, symbols: List[str]) -> dict[str, Dict[str, Any]]:
+        """Get real-time stock data."""
         results = {}
 
         async with aiohttp.ClientSession() as session:
@@ -161,7 +161,7 @@ class AlphaVantageDataSource(MarketDataSource):
                             }
 
                 except Exception as e:
-                    logger.error(f"Error fetching data for {symbol}: {e}")
+                    logger.error("Error fetching data for %s: %s", symbol, e)
                     results[symbol] = {}
 
         return results
@@ -171,24 +171,24 @@ class AlphaVantageDataSource(MarketDataSource):
         symbol: str,
         period: str = "1y",
     ) -> pd.DataFrame:
-        """Get historical data using yfinance (faster for historical data)"""
+        """Get historical data using yfinance (faster for historical data)."""
         try:
             ticker = yf.Ticker(symbol)
             data = ticker.history(period=period)
             return data
         except Exception as e:
-            logger.error(f"Error fetching historical data for {symbol}: {e}")
+            logger.error("Error fetching historical data for %s: %s", symbol, e)
             return pd.DataFrame()
 
 
 class CryptocurrencyDataSource(MarketDataSource):
-    """Cryptocurrency data source using CoinGecko API"""
+    """Cryptocurrency data source using CoinGecko API."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_url = "https://api.coingecko.com/api/v3"
 
-    async def get_real_time_data(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
-        """Get real-time crypto data"""
+    async def get_real_time_data(self, symbols: List[str]) -> dict[str, Dict[str, Any]]:
+        """Get real-time crypto data."""
         results = {}
 
         # Convert symbols to CoinGecko format (e.g., BTC -> bitcoin)
@@ -230,7 +230,7 @@ class CryptocurrencyDataSource(MarketDataSource):
                             results[symbol] = {}
 
         except Exception as e:
-            logger.error(f"Error fetching crypto data: {e}")
+            logger.error("Error fetching crypto data: %s", e)
             results = {symbol: {} for symbol in symbols}
 
         return results
@@ -240,7 +240,7 @@ class CryptocurrencyDataSource(MarketDataSource):
         symbol: str,
         period: str = "365",
     ) -> pd.DataFrame:
-        """Get historical crypto data"""
+        """Get historical crypto data."""
         symbol_map = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana"}
 
         coingecko_id = symbol_map.get(symbol.upper(), symbol.lower())
@@ -261,17 +261,17 @@ class CryptocurrencyDataSource(MarketDataSource):
                         return df
 
         except Exception as e:
-            logger.error(f"Error fetching historical crypto data for {symbol}: {e}")
+            logger.error("Error fetching historical crypto data for %s: %s", symbol, e)
 
         return pd.DataFrame()
 
 
 class TechnicalAnalyzer:
-    """Advanced technical analysis for opportunity detection"""
+    """Advanced technical analysis for opportunity detection."""
 
     @staticmethod
     def calculate_rsi(data: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate Relative Strength Index"""
+        """Calculate Relative Strength Index."""
         delta = data.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
@@ -286,7 +286,7 @@ class TechnicalAnalyzer:
         slow: int = 26,
         signal: int = 9,
     ) -> dict[str, pd.Series]:
-        """Calculate MACD indicators"""
+        """Calculate MACD indicators."""
         ema_fast = data.ewm(span=fast).mean()
         ema_slow = data.ewm(span=slow).mean()
         macd = ema_fast - ema_slow
@@ -301,7 +301,7 @@ class TechnicalAnalyzer:
         period: int = 20,
         std: float = 2.0,
     ) -> dict[str, pd.Series]:
-        """Calculate Bollinger Bands"""
+        """Calculate Bollinger Bands."""
         sma = data.rolling(window=period).mean()
         std_dev = data.rolling(window=period).std()
 
@@ -312,8 +312,8 @@ class TechnicalAnalyzer:
         }
 
     @staticmethod
-    def detect_breakout(data: pd.DataFrame, current_price: float) -> dict[str, Any]:
-        """Detect technical breakout patterns"""
+    def detect_breakout(data: pd.DataFrame, current_price: float) -> Dict[str, Any]:
+        """Detect technical breakout patterns."""
         if len(data) < 50:
             return {"breakout_detected": False}
 
@@ -350,10 +350,10 @@ class TechnicalAnalyzer:
 
 
 class SentimentAnalyzer:
-    """Market sentiment analysis for opportunity detection"""
+    """Market sentiment analysis for opportunity detection."""
 
-    async def analyze_news_sentiment(self, symbol: str) -> dict[str, Any]:
-        """Analyze news sentiment for a symbol"""
+    async def analyze_news_sentiment(self, symbol: str) -> Dict[str, Any]:
+        """Analyze news sentiment for a symbol."""
         # Placeholder implementation - would integrate with news APIs
         # like NewsAPI, Alpha Vantage News, or social media APIs
 
@@ -370,8 +370,8 @@ class SentimentAnalyzer:
             "neutral_articles": sum(1 for s in sentiment_scores if -0.1 <= s <= 0.1),
         }
 
-    async def analyze_social_sentiment(self, symbol: str) -> dict[str, Any]:
-        """Analyze social media sentiment"""
+    async def analyze_social_sentiment(self, symbol: str) -> Dict[str, Any]:
+        """Analyze social media sentiment."""
         # Placeholder implementation - would integrate with Twitter API, Reddit
         # API, etc.
 
@@ -386,9 +386,9 @@ class SentimentAnalyzer:
 
 
 class OpportunityScanner:
-    """Main opportunity scanning engine that orchestrates all analysis components"""
+    """Main opportunity scanning engine that orchestrates all analysis components."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
 
         # Initialize data sources
@@ -427,11 +427,11 @@ class OpportunityScanner:
         )
 
         logger.info(
-            f"OpportunityScanner initialized with {len(self.stock_watchlist)} stocks and {len(self.crypto_watchlist)} cryptos",
+            "OpportunityScanner initialized with %s stocks and %s cryptos", len(self.stock_watchlist), len(self.crypto_watchlist),
         )
 
     async def scan_all_opportunities(self) -> list[MarketOpportunity]:
-        """Main scanning method - scans all markets for opportunities"""
+        """Main scanning method - scans all markets for opportunities."""
         logger.info("🔍 Starting comprehensive opportunity scan...")
 
         new_opportunities = []
@@ -451,13 +451,13 @@ class OpportunityScanner:
         self._update_active_opportunities(filtered_opportunities)
 
         logger.info(
-            f"✅ Scan complete: {len(filtered_opportunities)} high-quality opportunities detected",
+            "✅ Scan complete: %s high-quality opportunities detected", len(filtered_opportunities),
         )
 
         return filtered_opportunities
 
     async def _scan_stock_opportunities(self) -> list[MarketOpportunity]:
-        """Scan stock market for opportunities"""
+        """Scan stock market for opportunities."""
         opportunities = []
 
         try:
@@ -522,23 +522,24 @@ class OpportunityScanner:
                     ):  # Minimum confidence threshold
                         opportunities.append(opportunity)
                         logger.info(
-                            f"📈 Stock opportunity detected: {symbol} ({opportunity.confidence_score:.2f} confidence)",
+                            "📈 Stock opportunity detected: %s (%s confidence)", symbol, opportunity.confidence_score:.2f,
                         )
 
                 except Exception as e:
-                    logger.error(f"Error analyzing stock {symbol}: {e}")
+                    logger.error("Error analyzing stock %s: %s", symbol, e)
                     continue
 
         except Exception as e:
-            logger.error(f"Error in stock opportunity scanning: {e}")
+            logger.error("Error in stock opportunity scanning: %s", e)
 
         return opportunities
 
     async def _scan_crypto_opportunities(self) -> list[MarketOpportunity]:
-        """Scan cryptocurrency market for opportunities"""
+        """Scan cryptocurrency market for opportunities."""
         opportunities = []
 
         try:
+                pass
             # Get real-time crypto data
             crypto_data = await self.crypto_data_source.get_real_time_data(
                 self.crypto_watchlist,
@@ -607,30 +608,30 @@ class OpportunityScanner:
 
                         opportunities.append(opportunity)
                         logger.info(
-                            f"🚀 Crypto opportunity detected: {symbol} ({
-                                confidence:.2f} confidence)",
+                            "🚀 Crypto opportunity detected: %s (%s confidence)", symbol,
+                                confidence:.2f,
                         )
 
                 except Exception as e:
-                    logger.error(f"Error analyzing crypto {symbol}: {e}")
+                    logger.error("Error analyzing crypto %s: %s", symbol, e)
                     continue
 
         except Exception as e:
-            logger.error(f"Error in crypto opportunity scanning: {e}")
+            logger.error("Error in crypto opportunity scanning: %s", e)
 
         return opportunities
 
     def _analyze_stock_opportunity(
         self,
         symbol: str,
-        real_time_data: dict[str, Any],
+        real_time_data: Dict[str, Any],
         historical_data: pd.DataFrame,
-        breakout_analysis: dict[str, Any],
-        news_sentiment: dict[str, Any],
-        social_sentiment: dict[str, Any],
+        breakout_analysis: Dict[str, Any],
+        news_sentiment: Dict[str, Any],
+        social_sentiment: Dict[str, Any],
         volume_spike: float,
     ) -> MarketOpportunity | None:
-        """Analyze individual stock for opportunities"""
+        """Analyze individual stock for opportunities."""
         current_price = real_time_data.get("price", 0)
         change_percent = float(real_time_data.get("change_percent", "0").strip("%"))
 
@@ -730,11 +731,11 @@ class OpportunityScanner:
 
     def _generate_catalyst_description(
         self,
-        breakout_analysis: dict[str, Any],
-        news_sentiment: dict[str, Any],
+        breakout_analysis: Dict[str, Any],
+        news_sentiment: Dict[str, Any],
         volume_spike: float,
     ) -> str:
-        """Generate human-readable catalyst description"""
+        """Generate human-readable catalyst description."""
         catalysts = []
 
         if breakout_analysis.get("breakout_detected"):
@@ -755,7 +756,7 @@ class OpportunityScanner:
         self,
         opportunities: list[MarketOpportunity],
     ) -> list[MarketOpportunity]:
-        """Filter and rank opportunities by quality"""
+        """Filter and rank opportunities by quality."""
         # Filter out low-quality opportunities
         filtered = [op for op in opportunities if op.confidence_score >= 0.6]
 
@@ -778,10 +779,10 @@ class OpportunityScanner:
         # Return top opportunities (max 20)
         return filtered[:20]
 
-    def _update_active_opportunities(self, new_opportunities: list[MarketOpportunity]):
-        """Update the list of active opportunities"""
+    def _update_active_opportunities(self) -> None:
+        """Update the list of active opportunities."""
         # Remove expired opportunities
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC)
         self.active_opportunities = [
             op
             for op in self.active_opportunities
@@ -809,18 +810,18 @@ class OpportunityScanner:
         self.active_opportunities.sort(key=lambda x: x.confidence_score, reverse=True)
 
     def get_active_opportunities(self) -> list[MarketOpportunity]:
-        """Get current active opportunities"""
+        """Get current active opportunities."""
         return self.active_opportunities.copy()
 
     def get_top_opportunities(self, limit: int = 10) -> list[MarketOpportunity]:
-        """Get top opportunities by confidence score"""
+        """Get top opportunities by confidence score."""
         return self.active_opportunities[:limit]
 
     async def generate_opportunity_alert(
         self,
         opportunity: MarketOpportunity,
-    ) -> dict[str, Any]:
-        """Generate formatted alert for an opportunity"""
+    ) -> Dict[str, Any]:
+        """Generate formatted alert for an opportunity."""
         # Calculate potential profit for a $10,000 investment
         investment_amount = 10000
         potential_profit = investment_amount * (opportunity.expected_return / 100)
@@ -853,8 +854,8 @@ class OpportunityScanner:
 # Example usage and configuration
 
 
-async def main_scanner_demo():
-    """Demo of the opportunity scanner"""
+async def main_scanner_demo(self) -> None:
+    """Demo of the opportunity scanner."""
     # Configuration
     config = {
         "alpha_vantage_api_key": "demo",  # Replace with real API key

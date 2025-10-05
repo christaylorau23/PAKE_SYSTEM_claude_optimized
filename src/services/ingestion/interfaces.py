@@ -15,7 +15,7 @@ from typing import Any
 
 
 class SourceType(Enum):
-    """Supported ingestion source types"""
+    """Supported ingestion source types."""
 
     WEB = "web"
     ARXIV = "arxiv"
@@ -26,7 +26,7 @@ class SourceType(Enum):
 
 
 class IngestionStatus(Enum):
-    """Ingestion execution status"""
+    """Ingestion execution status."""
 
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
@@ -37,11 +37,11 @@ class IngestionStatus(Enum):
 
 @dataclass(frozen=True)
 class IngestionSource:
-    """Configuration for a single ingestion source"""
+    """Configuration for a single ingestion source."""
 
     source_type: str
     priority: int
-    query_parameters: dict[str, Any]
+    query_parameters: Dict[str, Any]
     estimated_results: int
     timeout: int
     source_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -52,7 +52,7 @@ class IngestionSource:
 
 @dataclass(frozen=True)
 class IngestionPlan:
-    """Comprehensive ingestion plan for multi-source content retrieval"""
+    """Comprehensive ingestion plan for multi-source content retrieval."""
 
     topic: str
     sources: list[IngestionSource]
@@ -61,29 +61,29 @@ class IngestionPlan:
     estimated_duration: int
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    context: dict[str, Any] = field(default_factory=dict)
+    context: Dict[str, Any] = field(default_factory=dict)
     enable_cross_source_workflows: bool = False
     enable_deduplication: bool = True
 
 
 @dataclass(frozen=True)
 class ContentItem:
-    """Standard content item structure"""
+    """Standard content item structure."""
 
     title: str
     content: str
     url: str
     source_type: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     source_name: str = ""
     published: datetime | None = None
     author: str = ""
-    tags: list[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
 
 
 @dataclass
 class IngestionResult:
-    """Comprehensive results from ingestion plan execution"""
+    """Comprehensive results from ingestion plan execution."""
 
     success: bool
     plan_id: str
@@ -94,10 +94,10 @@ class IngestionResult:
     sources_failed: int = 0
     execution_time: float = 0.0
     execution_time_ms: float = 0.0
-    error_details: list[dict[str, Any]] = field(default_factory=list)
-    errors: list[str] = field(default_factory=list)
+    error_details: list[Dict[str, Any]] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
     error: str | None = None
-    metrics: dict[str, Any] = field(default_factory=dict)
+    metrics: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # Additional fields for compatibility
@@ -108,48 +108,48 @@ class IngestionResult:
 
 
 class IngestionPlanBuilderInterface(ABC):
-    """Abstract interface for ingestion plan builders"""
+    """Abstract interface for ingestion plan builders."""
 
     @abstractmethod
     def build_plan(
         self,
         topic: str,
-        source_configs: list[dict[str, Any]],
-        user_preferences: dict[str, Any] | None = None,
+        source_configs: list[Dict[str, Any]],
+        user_preferences: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
-        """Build a comprehensive ingestion plan from source configurations"""
+        """Build a comprehensive ingestion plan from source configurations."""
 
     @abstractmethod
     def optimize_plan(self, plan: IngestionPlan) -> IngestionPlan:
-        """Optimize the ingestion plan for better performance"""
+        """Optimize the ingestion plan for better performance."""
 
 
 class SourceExecutorInterface(ABC):
-    """Abstract interface for source executors"""
+    """Abstract interface for source executors."""
 
     @abstractmethod
     async def execute_source(
         self,
         source: IngestionSource,
         plan: IngestionPlan,
-    ) -> tuple[list[ContentItem], dict[str, Any]]:
-        """Execute ingestion for a single source"""
+    ) -> tuple[list[ContentItem], Dict[str, Any]]:
+        """Execute ingestion for a single source."""
 
     @abstractmethod
     def get_source_cache_key(self, source: IngestionSource) -> str:
-        """Generate cache key for source execution"""
+        """Generate cache key for source execution."""
 
 
 class IngestionOrchestratorInterface(ABC):
-    """Abstract interface for ingestion orchestrators"""
+    """Abstract interface for ingestion orchestrators."""
 
     @abstractmethod
     async def create_ingestion_plan(
         self,
         topic: str,
-        context: dict[str, Any] | None = None,
+        context: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
-        """Create comprehensive ingestion plan based on research topic and context"""
+        """Create comprehensive ingestion plan based on research topic and context."""
 
     @abstractmethod
     async def execute_ingestion_plan(
@@ -157,15 +157,15 @@ class IngestionOrchestratorInterface(ABC):
         plan: IngestionPlan,
         user_id: str | None = None,
     ) -> IngestionResult:
-        """Execute comprehensive ingestion plan with full orchestration"""
+        """Execute comprehensive ingestion plan with full orchestration."""
 
     @abstractmethod
-    async def health_check(self) -> dict[str, Any]:
-        """Perform comprehensive orchestrator health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform comprehensive orchestrator health check."""
 
 
 class NotificationServiceInterface(ABC):
-    """Abstract interface for notification services"""
+    """Abstract interface for notification services."""
 
     @abstractmethod
     async def send_notification(
@@ -174,15 +174,15 @@ class NotificationServiceInterface(ABC):
         recipient: str,
         notification_type: str = "info",
     ) -> bool:
-        """Send a notification to a recipient"""
+        """Send a notification to a recipient."""
 
 
 class CacheServiceInterface(ABC):
-    """Abstract interface for cache services"""
+    """Abstract interface for cache services."""
 
     @abstractmethod
     async def get(self, namespace: str, key: str) -> Any:
-        """Get value from cache"""
+        """Get value from cache."""
 
     @abstractmethod
     async def set(
@@ -192,15 +192,15 @@ class CacheServiceInterface(ABC):
         value: Any,
         ttl_seconds: int | None = None,
     ) -> bool:
-        """Set value in cache"""
+        """Set value in cache."""
 
     @abstractmethod
     async def delete(self, namespace: str, key: str) -> bool:
-        """Delete value from cache"""
+        """Delete value from cache."""
 
 
 class MetricsCollectorInterface(ABC):
-    """Abstract interface for metrics collection"""
+    """Abstract interface for metrics collection."""
 
     @abstractmethod
     def record_metric(
@@ -209,7 +209,7 @@ class MetricsCollectorInterface(ABC):
         value: float,
         tags: dict[str, str] | None = None,
     ) -> None:
-        """Record a metric value"""
+        """Record a metric value."""
 
     @abstractmethod
     def increment_counter(
@@ -217,8 +217,8 @@ class MetricsCollectorInterface(ABC):
         counter_name: str,
         tags: dict[str, str] | None = None,
     ) -> None:
-        """Increment a counter metric"""
+        """Increment a counter metric."""
 
     @abstractmethod
-    def get_metrics(self) -> dict[str, Any]:
-        """Get current metrics"""
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current metrics."""

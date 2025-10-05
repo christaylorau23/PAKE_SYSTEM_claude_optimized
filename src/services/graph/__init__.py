@@ -1,4 +1,4 @@
-"""Graph Database Services Package
+"""Graph Database Services Package.
 
 This package provides graph database functionality for the PAKE System,
 including Neo4j integration, entity management, and knowledge graph operations.

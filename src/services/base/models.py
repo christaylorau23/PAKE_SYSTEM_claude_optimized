@@ -1,12 +1,12 @@
 """Enterprise Data Models
-Task T025-T034 - Phase 18 Production System Integration
+Task T025-T034 - Phase 18 Production System Integration.
 
 Production-grade data models with comprehensive type annotations,
 relationships, and enterprise patterns.
 """
 
 from datetime import UTC, datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -29,7 +29,7 @@ from .database import Base
 
 
 class ServiceRegistry(Base):
-    """Service registry for microservice discovery and management"""
+    """Service registry for microservice discovery and management."""
 
     __tablename__ = "service_registry"
 
@@ -53,12 +53,12 @@ class ServiceRegistry(Base):
     health_timeout_seconds: Mapped[int] = mapped_column(Integer, default=5)
 
     # Resource requirements
-    resource_requirements: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON)
+    resource_requirements: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
 
     # Service metadata
-    endpoints: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSON)
-    dependencies: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSON)
-    labels: Mapped[Optional[dict[str, str]]] = mapped_column(JSON)
+    endpoints: Mapped[list[Dict[str, Any]] | None] = mapped_column(JSON)
+    dependencies: Mapped[list[Dict[str, Any]] | None] = mapped_column(JSON)
+    labels: Mapped[dict[str, str] | None] = mapped_column(JSON)
 
     # Status and timestamps
     status: Mapped[str] = mapped_column(String(50), default="HEALTHY")
@@ -70,7 +70,7 @@ class ServiceRegistry(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-    deployed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    deployed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relationships
     health_checks = relationship(
@@ -90,7 +90,7 @@ class ServiceRegistry(Base):
 
 
 class ServiceHealthCheck(Base):
-    """Service health check history and status"""
+    """Service health check history and status."""
 
     __tablename__ = "service_health_checks"
 
@@ -109,7 +109,7 @@ class ServiceHealthCheck(Base):
     # Health check results
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     response_time_ms: Mapped[float] = mapped_column(Float, nullable=False)
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
 
     # Check metadata
     check_type: Mapped[str] = mapped_column(String(50), default="HTTP")
@@ -129,7 +129,7 @@ class ServiceHealthCheck(Base):
 
 
 class ServiceMetrics(Base):
-    """Service performance metrics"""
+    """Service performance metrics."""
 
     __tablename__ = "service_metrics"
 
@@ -148,7 +148,7 @@ class ServiceMetrics(Base):
     # Metric data
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
     metric_value: Mapped[float] = mapped_column(Float, nullable=False)
-    metric_labels: Mapped[Optional[dict[str, str]]] = mapped_column(JSON)
+    metric_labels: Mapped[dict[str, str] | None] = mapped_column(JSON)
 
     # Timestamp
     timestamp: Mapped[datetime] = mapped_column(
@@ -172,7 +172,7 @@ class ServiceMetrics(Base):
 
 
 class APIGatewayRoute(Base):
-    """API Gateway routing configuration"""
+    """API Gateway routing configuration."""
 
     __tablename__ = "api_gateway_routes"
 
@@ -188,9 +188,9 @@ class APIGatewayRoute(Base):
     target_path: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # Route metadata
-    description: Mapped[Optional[str]] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     authentication_required: Mapped[bool] = mapped_column(Boolean, default=True)
-    rate_limit: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON)
+    rate_limit: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
 
     # Status and timestamps
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -213,7 +213,7 @@ class APIGatewayRoute(Base):
 
 
 class SystemAlert(Base):
-    """System alerts and notifications"""
+    """System alerts and notifications."""
 
     __tablename__ = "system_alerts"
 
@@ -229,19 +229,19 @@ class SystemAlert(Base):
 
     # Alert details
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    service_name: Mapped[Optional[str]] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text)
+    service_name: Mapped[str | None] = mapped_column(String(255))
 
     # Alert metadata
-    labels: Mapped[Optional[dict[str, str]]] = mapped_column(JSON)
-    acknowledged_by: Mapped[Optional[str]] = mapped_column(String(255))
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    labels: Mapped[dict[str, str] | None] = mapped_column(JSON)
+    acknowledged_by: Mapped[str | None] = mapped_column(String(255))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Indexes for performance
     __table_args__ = (

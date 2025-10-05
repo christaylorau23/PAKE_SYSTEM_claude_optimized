@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Import all social media components
@@ -33,7 +33,7 @@ except ImportError as e:
 class SocialMediaMaster:
     """Master controller for the complete social media distribution network"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self) -> None:
         """Initialize the master social media system"""
         self.logger = self._setup_logging()
         self.config = self._load_configuration(config_path)
@@ -108,7 +108,7 @@ class SocialMediaMaster:
 
         return default_config
 
-    def _initialize_enhanced_platforms(self):
+    def _initialize_enhanced_platforms(self) -> None:
         """Initialize enhanced platform integrations"""
         # Instagram Enhanced
         instagram_token = os.getenv("INSTAGRAM_ACCESS_TOKEN")
@@ -134,7 +134,7 @@ class SocialMediaMaster:
             )
             self.logger.info("TikTok Enhanced initialized")
 
-    async def start_system(self):
+    async def start_system(self) -> None:
         """Start the complete social media automation system"""
         self.logger.info("Starting Social Media Master System...")
 
@@ -164,7 +164,7 @@ class SocialMediaMaster:
 
         self.logger.info("Social Media Master System started successfully")
 
-    async def stop_system(self):
+    async def stop_system(self) -> None:
         """Stop the social media automation system"""
         self.logger.info("Stopping Social Media Master System...")
 
@@ -188,8 +188,8 @@ class SocialMediaMaster:
     async def create_and_optimize_post(
         self,
         content: str,
-        platforms: list[str] = None,
-        media_files: list[str] = None,
+        platforms: List[str] = None,
+        media_files: List[str] = None,
         schedule_time: datetime = None,
         campaign_id: str = None,
     ) -> dict:
@@ -216,7 +216,8 @@ class SocialMediaMaster:
                 recommended_hashtags = optimization.recommended_hashtags
 
                 self.logger.info(
-                    f"Content optimized. Score: {optimization.content_score}",
+                    "Content optimized. Score: %s",
+                    optimization.content_score,
                 )
             else:
                 optimized_content = content
@@ -256,7 +257,9 @@ class SocialMediaMaster:
                 result["scheduled_time"] = schedule_time
 
                 self.logger.info(
-                    f"Post scheduled for {schedule_time} with ID: {post_id}",
+                    "Post scheduled for %s with ID: %s",
+                    schedule_time,
+                    post_id,
                 )
 
             else:
@@ -275,12 +278,12 @@ class SocialMediaMaster:
                     result["partial_failure"] = True
                     result["failed_platforms"] = failed_platforms
 
-                self.logger.info(f"Post published to {len(platforms)} platforms")
+                self.logger.info("Post published to %s platforms", len(platforms))
 
             return result
 
         except Exception as e:
-            self.logger.error(f"Failed to create and optimize post: {e}")
+            self.logger.error("Failed to create and optimize post: %s", e)
             return {"success": False, "error": str(e)}
 
     async def post_instagram_reel(
@@ -306,16 +309,14 @@ class SocialMediaMaster:
             final_caption = f"{optimized_caption}\n\n{hashtags}"
 
             # Post Reel
-            result = await self.instagram_enhanced.post_reel(
+            return await self.instagram_enhanced.post_reel(
                 video_url=video_path,
                 caption=final_caption,
                 cover_url=cover_url,
             )
 
-            return result
-
         except Exception as e:
-            self.logger.error(f"Failed to post Instagram Reel: {e}")
+            self.logger.error("Failed to post Instagram Reel: %s", e)
             return {"success": False, "error": str(e)}
 
     async def post_tiktok_video(
@@ -350,12 +351,10 @@ class SocialMediaMaster:
             )
 
             # Upload video
-            result = await self.tiktok_enhanced.upload_video(tiktok_video)
-
-            return result
+            return await self.tiktok_enhanced.upload_video(tiktok_video)
 
         except Exception as e:
-            self.logger.error(f"Failed to post TikTok video: {e}")
+            self.logger.error("Failed to post TikTok video: %s", e)
             return {"success": False, "error": str(e)}
 
     async def get_comprehensive_analytics(self, days: int = 30) -> dict:
@@ -378,14 +377,14 @@ class SocialMediaMaster:
                 "performance_report": report,
                 "social_listening": listening_report,
                 "scheduling_stats": scheduling_analytics,
-                "generated_at": datetime.now().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to generate comprehensive analytics: {e}")
+            self.logger.error("Failed to generate comprehensive analytics: %s", e)
             return {"error": str(e)}
 
-    async def _run_analytics_collection(self):
+    async def _run_analytics_collection(self) -> None:
         """Background task for analytics collection"""
         while self.is_running:
             try:
@@ -396,10 +395,10 @@ class SocialMediaMaster:
                 await asyncio.sleep(3600)
 
             except Exception as e:
-                self.logger.error(f"Analytics collection error: {e}")
+                self.logger.error("Analytics collection error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
-    async def _run_content_monitoring(self):
+    async def _run_content_monitoring(self) -> None:
         """Background task for content monitoring and alerts"""
         while self.is_running:
             try:
@@ -407,7 +406,7 @@ class SocialMediaMaster:
                 alerts = await self.listener.get_alerts(acknowledged=False)
 
                 for alert in alerts:
-                    self.logger.warning(f"SOCIAL ALERT: {alert['content']}")
+                    self.logger.warning("SOCIAL ALERT: %s", alert["content"])
 
                     # Auto-acknowledge low severity alerts
                     if alert["severity"] == "low":
@@ -417,7 +416,7 @@ class SocialMediaMaster:
                 await asyncio.sleep(900)
 
             except Exception as e:
-                self.logger.error(f"Content monitoring error: {e}")
+                self.logger.error("Content monitoring error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
     async def get_system_status(self) -> dict:
@@ -442,11 +441,11 @@ class SocialMediaMaster:
                 "unacknowledged_alerts": len(alerts),
                 "weekly_posts": analytics_summary.get("total_posts", 0),
                 "success_rate": analytics_summary.get("success_rate", 0),
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to get system status: {e}")
+            self.logger.error("Failed to get system status: %s", e)
             return {"error": str(e)}
 
     async def bulk_schedule_posts(self, posts_data: list[dict]) -> dict:
@@ -475,9 +474,9 @@ class SocialMediaMaster:
                 results["errors"].append(str(e))
 
         self.logger.info(
-            f"Bulk scheduling completed: {results['successful']} successful, {
-                results['failed']
-            } failed",
+            "Bulk scheduling completed: %s successful, %s failed",
+            results["successful"],
+            results["failed"],
         )
         return results
 
@@ -485,7 +484,7 @@ class SocialMediaMaster:
 # CLI Interface for easy usage
 
 
-async def main():
+async def main(self) -> None:
     """Main CLI interface"""
     import argparse
 

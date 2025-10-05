@@ -1,33 +1,33 @@
-"""
-PAKE System - HashiCorp Vault Client
-Centralized secrets management with secure credential handling
+"""PAKE System - HashiCorp Vault Client
+Centralized secrets management with secure credential handling.
 """
 
-import os
 import asyncio
+import json
 import logging
-from typing import Dict, Any, Optional
+import os
 from dataclasses import dataclass
+from typing import Any, List
+
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from cryptography.fernet import Fernet
-import base64
-import json
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class VaultConfig:
-    """Vault configuration settings"""
+    """Vault configuration settings."""
+
     url: str = "http://localhost:8200"
-    token: Optional[str] = None
+    token: str | None = None
     timeout: int = 10
     max_retries: int = 3
     retry_delay: float = 1.0
 
 
 class VaultClient:
-    """
-    HashiCorp Vault client for secure secrets management
+    """HashiCorp Vault client for secure secrets management.
 
     Features:
     - Automatic token refresh
@@ -37,57 +37,56 @@ class VaultClient:
     - Audit logging
     """
 
-    def __init__(self, config: VaultConfig):
-        self.config = config
-        self._session: Optional[ClientSession] = None
-        self._token = config.token or os.getenv('VAULT_TOKEN')
-        self._cache: Dict[str, Any] = {}
+    def __init__(self, config: VaultConfig | None = None) -> None:
+        self.config = config or VaultConfig()
+        self._session: ClientSession | None = None
+        self._token = self.config.token or os.getenv("VAULT_TOKEN")
+        self._cache: dict[str, Any] = {}
         self._encryption_key = self._get_or_create_encryption_key()
         self._fernet = Fernet(self._encryption_key)
 
     def _get_or_create_encryption_key(self) -> bytes:
-        """Get or create encryption key for local caching"""
-        key_path = os.path.expanduser('~/.pake/vault_cache.key')
+        """Get or create encryption key for local caching."""
+        key_path = os.path.expanduser("~/.pake/vault_cache.key")
         os.makedirs(os.path.dirname(key_path), exist_ok=True)
 
         if os.path.exists(key_path):
-            with open(key_path, 'rb') as f:
+            with open(key_path, "rb") as f:
                 return f.read()
         else:
             key = Fernet.generate_key()
-            with open(key_path, 'wb') as f:
+            with open(key_path, "wb") as f:
                 f.write(key)
             os.chmod(key_path, 0o600)  # Secure file permissions
             return key
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         await self._ensure_session()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         await self.close()
 
-    async def _ensure_session(self):
-        """Ensure HTTP session is available"""
+    async def _ensure_session(self) -> None:
+        """Ensure HTTP session is available."""
         if self._session is None or self._session.closed:
             timeout = ClientTimeout(total=self.config.timeout)
             connector = TCPConnector(limit=10, limit_per_host=5)
             self._session = ClientSession(
                 timeout=timeout,
                 connector=connector,
-                headers={'X-Vault-Token': self._token} if self._token else {}
+                headers={"X-Vault-Token": self._token} if self._token else {},
             )
 
-    async def close(self):
-        """Close HTTP session"""
+    async def close(self) -> None:
+        """Close HTTP session."""
         if self._session and not self._session.closed:
             await self._session.close()
 
-    async def get_secret(self, path: str, use_cache: bool = True) -> Dict[str, Any]:
-        """
-        Retrieve secret from Vault with caching support
+    async def get_secret(self, path: str, use_cache: bool = True) -> dict[str, Any]:
+        """Retrieve secret from Vault with caching support.
 
         Args:
             path: Secret path in Vault (e.g., 'pake-system/database')
@@ -104,7 +103,7 @@ class VaultClient:
                 decrypted_data = self._fernet.decrypt(encrypted_data.encode())
                 return json.loads(decrypted_data.decode())
             except Exception as e:
-                logger.warning(f"Cache decryption failed for {path}: {e}")
+                logger.warning("Cache decryption failed for %s: %s", path, e)
 
         await self._ensure_session()
 
@@ -115,7 +114,7 @@ class VaultClient:
                 async with self._session.get(url) as response:
                     if response.status == 200:
                         data = await response.json()
-                        secret_data = data.get('data', {}).get('data', {})
+                        secret_data = data.get("data", {}).get("data", {})
 
                         # Cache encrypted secret
                         if use_cache:
@@ -124,32 +123,41 @@ class VaultClient:
                             )
                             self._cache[cache_key] = encrypted_data.decode()
 
-                        logger.info(f"Successfully retrieved secret: {path}")
+                        logger.info("Successfully retrieved secret: %s", path)
                         return secret_data
 
-                    elif response.status == 404:
-                        raise VaultSecretNotFound(f"Secret not found: {path}")
+                    if response.status == 404:
+                        msg = f"Secret not found: {path}"
+                        raise VaultSecretNotFound(msg)
 
-                    elif response.status == 403:
-                        raise VaultPermissionDenied(f"Access denied to secret: {path}")
+                    if response.status == 403:
+                        msg = f"Access denied to secret: {path}"
+                        raise VaultPermissionDenied(msg)
 
-                    else:
-                        error_data = await response.text()
-                        raise VaultAPIError(f"API error {response.status}: {error_data}")
+                    error_data = await response.text()
+                    msg = f"API error {response.status}: {error_data}"
+                    raise VaultAPIError(msg)
 
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
-                    logger.error(f"Failed to retrieve secret {path} after {self.config.max_retries} attempts: {e}")
+                    logger.error(
+                        "Failed to retrieve secret %s after %s attempts: %s",
+                        path,
+                        self.config.max_retries,
+                        e,
+                    )
                     raise
 
-                logger.warning(f"Attempt {attempt + 1} failed for secret {path}: {e}")
-                await asyncio.sleep(self.config.retry_delay * (2 ** attempt))
+                logger.warning(
+                    "Attempt %s failed for secret %s: %s", attempt + 1, path, e
+                )
+                await asyncio.sleep(self.config.retry_delay * (2**attempt))
 
-        raise VaultAPIError(f"Max retries exceeded for secret: {path}")
+        msg = f"Max retries exceeded for secret: {path}"
+        raise VaultAPIError(msg)
 
-    async def put_secret(self, path: str, data: Dict[str, Any]) -> bool:
-        """
-        Store secret in Vault
+    async def put_secret(self, path: str, data: dict[str, Any]) -> bool:
+        """Store secret in Vault.
 
         Args:
             path: Secret path in Vault
@@ -170,15 +178,14 @@ class VaultClient:
                 if cache_key in self._cache:
                     del self._cache[cache_key]
 
-                logger.info(f"Successfully stored secret: {path}")
+                logger.info("Successfully stored secret: %s", path)
                 return True
-            else:
-                error_data = await response.text()
-                raise VaultAPIError(f"Failed to store secret {path}: {error_data}")
+            error_data = await response.text()
+            msg = f"Failed to store secret {path}: {error_data}"
+            raise VaultAPIError(msg)
 
     async def list_secrets(self, path: str) -> list[str]:
-        """
-        List secrets at path
+        """List secrets at path.
 
         Args:
             path: Path to list
@@ -190,17 +197,16 @@ class VaultClient:
 
         url = f"{self.config.url}/v1/kv/metadata/{path}"
 
-        async with self._session.request('LIST', url) as response:
+        async with self._session.request("LIST", url) as response:
             if response.status == 200:
                 data = await response.json()
-                return data.get('data', {}).get('keys', [])
-            else:
-                error_data = await response.text()
-                raise VaultAPIError(f"Failed to list secrets at {path}: {error_data}")
+                return data.get("data", {}).get("keys", [])
+            error_data = await response.text()
+            msg = f"Failed to list secrets at {path}: {error_data}"
+            raise VaultAPIError(msg)
 
     async def delete_secret(self, path: str) -> bool:
-        """
-        Delete secret from Vault
+        """Delete secret from Vault.
 
         Args:
             path: Secret path to delete
@@ -219,54 +225,59 @@ class VaultClient:
                 if cache_key in self._cache:
                     del self._cache[cache_key]
 
-                logger.info(f"Successfully deleted secret: {path}")
+                logger.info("Successfully deleted secret: %s", path)
                 return True
-            else:
-                error_data = await response.text()
-                raise VaultAPIError(f"Failed to delete secret {path}: {error_data}")
+            error_data = await response.text()
+            msg = f"Failed to delete secret {path}: {error_data}"
+            raise VaultAPIError(msg)
 
-    def clear_cache(self):
-        """Clear local encrypted cache"""
+    def clear_cache(self) -> None:
+        """Clear local encrypted cache."""
         self._cache.clear()
         logger.info("Vault cache cleared")
 
 
 class VaultSecretManager:
-    """
-    High-level interface for PAKE System secrets management
-    """
+    """High-level interface for PAKE System secrets management."""
 
-    def __init__(self, vault_client: VaultClient):
-        self.vault = vault_client
+    def __init__(self, vault_client: VaultClient | None = None) -> None:
+        self.vault = vault_client or VaultClient()
         self.service_prefix = "pake-system"
 
-    async def get_database_config(self) -> Dict[str, str]:
-        """Get database configuration"""
+    async def get_database_config(self) -> dict[str, str]:
+        """Get database configuration."""
         return await self.vault.get_secret(f"{self.service_prefix}/database")
 
-    async def get_redis_config(self) -> Dict[str, str]:
-        """Get Redis configuration"""
+    async def get_redis_config(self) -> dict[str, str]:
+        """Get Redis configuration."""
         return await self.vault.get_secret(f"{self.service_prefix}/redis")
 
-    async def get_jwt_config(self) -> Dict[str, str]:
-        """Get JWT configuration"""
+    async def get_jwt_config(self) -> dict[str, str]:
+        """Get JWT configuration."""
         return await self.vault.get_secret(f"{self.service_prefix}/jwt")
 
-    async def get_vapi_config(self) -> Dict[str, str]:
-        """Get Vapi.ai configuration"""
+    async def get_vapi_config(self) -> dict[str, str]:
+        """Get Vapi.ai configuration."""
         return await self.vault.get_secret(f"{self.service_prefix}/voice-agents/vapi")
 
-    async def get_video_generation_config(self, provider: str = "d-id") -> Dict[str, str]:
-        """Get video generation configuration"""
-        return await self.vault.get_secret(f"{self.service_prefix}/video-generation/{provider}")
+    async def get_video_generation_config(
+        self, provider: str = "d-id"
+    ) -> dict[str, str]:
+        """Get video generation configuration."""
+        return await self.vault.get_secret(
+            f"{self.service_prefix}/video-generation/{provider}"
+        )
 
-    async def get_social_media_config(self, platform: str) -> Dict[str, str]:
-        """Get social media platform configuration"""
-        return await self.vault.get_secret(f"{self.service_prefix}/social-media/{platform}")
+    async def get_social_media_config(self, platform: str) -> dict[str, str]:
+        """Get social media platform configuration."""
+        return await self.vault.get_secret(
+            f"{self.service_prefix}/social-media/{platform}"
+        )
 
-    async def rotate_secret(self, path: str, new_value: str, key: str = "REDACTED_SECRET") -> bool:
-        """
-        Rotate a secret value
+    async def rotate_secret(
+        self, path: str, new_value: str, key: str = "REDACTED_SECRET"
+    ) -> bool:
+        """Rotate a secret value.
 
         Args:
             path: Secret path
@@ -287,35 +298,32 @@ class VaultSecretManager:
             return await self.vault.put_secret(path, existing)
 
         except Exception as e:
-            logger.error(f"Failed to rotate secret {path}.{key}: {e}")
+            logger.error("Failed to rotate secret %s.%s: %s", path, key, e)
             return False
 
 
 # Custom exceptions
 class VaultError(Exception):
-    """Base Vault exception"""
-    pass
+    """Base Vault exception."""
+
 
 class VaultAPIError(VaultError):
-    """Vault API error"""
-    pass
+    """Vault API error."""
+
 
 class VaultSecretNotFound(VaultError):
-    """Secret not found in Vault"""
-    pass
+    """Secret not found in Vault."""
+
 
 class VaultPermissionDenied(VaultError):
-    """Permission denied for Vault operation"""
-    pass
+    """Permission denied for Vault operation."""
 
 
 # Factory function for easy initialization
 async def create_vault_client(
-    vault_url: str = None,
-    vault_token: str = None
+    vault_url: str = None, vault_token: str = None
 ) -> VaultClient:
-    """
-    Create and initialize a Vault client
+    """Create and initialize a Vault client.
 
     Args:
         vault_url: Vault URL (defaults to VAULT_ADDR env var or localhost)
@@ -325,8 +333,8 @@ async def create_vault_client(
         Initialized VaultClient
     """
     config = VaultConfig(
-        url=vault_url or os.getenv('VAULT_ADDR', 'http://localhost:8200'),
-        token=vault_token or os.getenv('VAULT_TOKEN')
+        url=vault_url or os.getenv("VAULT_ADDR", "http://localhost:8200"),
+        token=vault_token or os.getenv("VAULT_TOKEN"),
     )
 
     client = VaultClient(config)
@@ -336,8 +344,8 @@ async def create_vault_client(
 
 
 # Example usage and testing
-async def main():
-    """Example usage of the Vault client"""
+async def main(self) -> None:
+    """Example usage of the Vault client."""
     async with await create_vault_client() as vault:
         secrets_manager = VaultSecretManager(vault)
 

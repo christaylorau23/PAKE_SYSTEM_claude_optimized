@@ -28,14 +28,14 @@ from configs.service_config import (
 class TestServiceConfig:
     """Test ServiceConfig class functionality"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment"""
         # Clear any existing global config
         from configs import service_config
 
         service_config._config_instance = None
 
-    def test_default_configuration_values(self):
+    def test_default_configuration_values(self) -> None:
         """Test that default configuration values are loaded correctly"""
         config = ServiceConfig()
 
@@ -60,7 +60,7 @@ class TestServiceConfig:
         assert config.server.server_version == "1.0.0"
         assert config.server.mcp_server_port == 8000
 
-    def test_config_file_loading(self):
+    def test_config_file_loading(self) -> None:
         """Test loading configuration from JSON file"""
         config_data = {
             "vault": {"max_filename_length": 75, "default_confidence_score": 0.8},
@@ -87,7 +87,7 @@ class TestServiceConfig:
         finally:
             os.unlink(config_file)
 
-    def test_environment_variable_overrides(self):
+    def test_environment_variable_overrides(self) -> None:
         """Test environment variable overrides"""
         env_vars = {
             "PAKE_MAX_FILENAME_LENGTH": "100",
@@ -104,9 +104,9 @@ class TestServiceConfig:
             assert config.search.default_search_limit == 25
             assert config.cache.default_ttl_seconds == 600
             assert config.logging.default_level == "DEBUG"
-            assert config.logging.json_formatting == False
+            assert config.logging.json_formatting is False
 
-    def test_hierarchical_configuration_loading(self):
+    def test_hierarchical_configuration_loading(self) -> None:
         """Test that configuration is loaded in correct priority order"""
         # Create config file
         config_data = {
@@ -143,7 +143,7 @@ class TestServiceConfig:
         finally:
             os.unlink(config_file)
 
-    def test_platform_independent_vault_path(self):
+    def test_platform_independent_vault_path(self) -> None:
         """Test that vault path is platform independent"""
         config = ServiceConfig()
 
@@ -162,7 +162,7 @@ class TestServiceConfig:
             vault_path = config.get_vault_path()
             assert str(vault_path) == str(Path(test_path).resolve())
 
-    def test_folder_structure_mapping(self):
+    def test_folder_structure_mapping(self) -> None:
         """Test note type to folder mapping"""
         config = ServiceConfig()
 
@@ -174,7 +174,7 @@ class TestServiceConfig:
         # Test unknown note type defaults to SourceNote folder
         assert config.get_folder_for_note_type("UnknownType") == "00-Inbox"
 
-    def test_cache_ttl_environment_dependent(self):
+    def test_cache_ttl_environment_dependent(self) -> None:
         """Test cache TTL varies by environment"""
         config = ServiceConfig()
 
@@ -191,7 +191,7 @@ class TestServiceConfig:
             auto_ttl = config.get_cache_ttl()
             assert auto_ttl == config.cache.production_ttl_seconds
 
-    def test_configuration_validation(self):
+    def test_configuration_validation(self) -> None:
         """Test configuration validation catches invalid values"""
         config = ServiceConfig()
 
@@ -201,20 +201,20 @@ class TestServiceConfig:
         # Test invalid search limits
         config.search.default_search_limit = 200
         config.search.max_search_limit = 100
-        assert config.validate_configuration() == False
+        assert config.validate_configuration() is False
 
         # Reset and test invalid confidence score
         config.search.default_search_limit = 10
         config.search.max_search_limit = 100
         config.vault.default_confidence_score = 1.5
-        assert config.validate_configuration() == False
+        assert config.validate_configuration() is False
 
         # Reset and test negative cache TTL
         config.vault.default_confidence_score = 0.7
         config.cache.default_ttl_seconds = -100
-        assert config.validate_configuration() == False
+        assert config.validate_configuration() is False
 
-    def test_config_export_to_dict(self):
+    def test_config_export_to_dict(self) -> None:
         """Test configuration can be exported as dictionary"""
         config = ServiceConfig()
         config_dict = config.to_dict()
@@ -233,7 +233,7 @@ class TestServiceConfig:
         assert config_dict["search"]["default_search_limit"] == 10
         assert config_dict["_metadata"]["vault_path"] == str(config.get_vault_path())
 
-    def test_invalid_config_file_handling(self):
+    def test_invalid_config_file_handling(self) -> None:
         """Test handling of invalid or missing config files"""
 
         # Test missing file - use explicit non-existent path and patch to prevent
@@ -266,7 +266,7 @@ class TestServiceConfig:
         finally:
             os.unlink(invalid_config_file)
 
-    def test_type_validation_in_config_overrides(self):
+    def test_type_validation_in_config_overrides(self) -> None:
         """Test that config overrides validate types"""
         config_data = {
             "vault": {
@@ -299,27 +299,27 @@ class TestServiceConfig:
 class TestGlobalConfigSingleton:
     """Test global configuration singleton functionality"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Clear global config before each test"""
         from configs import service_config
 
         service_config._config_instance = None
 
-    def test_singleton_pattern(self):
+    def test_singleton_pattern(self) -> None:
         """Test that get_config returns same instance"""
         config1 = get_config()
         config2 = get_config()
 
         assert config1 is config2
 
-    def test_force_reload_option(self):
+    def test_force_reload_option(self) -> None:
         """Test that force_reload creates new instance"""
         config1 = get_config()
         config2 = get_config(force_reload=True)
 
         assert config1 is not config2
 
-    def test_config_file_parameter_in_singleton(self):
+    def test_config_file_parameter_in_singleton(self) -> None:
         """Test that config file parameter works with singleton"""
         config_data = {"vault": {"max_filename_length": 99}}
 
@@ -343,7 +343,7 @@ class TestGlobalConfigSingleton:
 class TestConfigurationDataClasses:
     """Test individual configuration dataclasses"""
 
-    def test_vault_config_defaults(self):
+    def test_vault_config_defaults(self) -> None:
         """Test VaultConfig defaults"""
         vault_config = VaultConfig()
 
@@ -357,7 +357,7 @@ class TestConfigurationDataClasses:
         assert "SourceNote" in vault_config.folder_structure
         assert vault_config.folder_structure["SourceNote"] == "00-Inbox"
 
-    def test_search_config_defaults(self):
+    def test_search_config_defaults(self) -> None:
         """Test SearchConfig defaults"""
         search_config = SearchConfig()
 
@@ -366,7 +366,7 @@ class TestConfigurationDataClasses:
         assert search_config.min_confidence_threshold == 0.0
         assert search_config.max_confidence_threshold == 1.0
 
-    def test_cache_config_defaults(self):
+    def test_cache_config_defaults(self) -> None:
         """Test CacheConfig defaults"""
         cache_config = CacheConfig()
 
@@ -379,7 +379,7 @@ class TestConfigurationDataClasses:
 class TestPlatformIndependence:
     """Test platform-independent functionality"""
 
-    def test_path_handling_windows(self):
+    def test_path_handling_windows(self) -> None:
         """Test path handling on Windows-style paths"""
         config = ServiceConfig()
 
@@ -394,7 +394,7 @@ class TestPlatformIndependence:
             # Should resolve to proper Path object regardless of platform
             assert str(vault_path) == str(Path(windows_path).resolve())
 
-    def test_path_handling_unix(self):
+    def test_path_handling_unix(self) -> None:
         """Test path handling on Unix-style paths"""
         config = ServiceConfig()
 
@@ -408,7 +408,7 @@ class TestPlatformIndependence:
             assert vault_path.is_absolute()
             assert str(vault_path) == str(Path(unix_path).resolve())
 
-    def test_home_directory_resolution(self):
+    def test_home_directory_resolution(self) -> None:
         """Test that home directory resolution works across platforms"""
         config = ServiceConfig()
 

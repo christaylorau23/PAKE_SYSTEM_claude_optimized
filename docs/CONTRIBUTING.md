@@ -166,13 +166,13 @@ pre-commit run --all-files
 # Use type hints
 def process_data(input_data: List[Dict[str, Any]]) -> ProcessResult:
     """Process input data and return structured result.
-    
+
     Args:
         input_data: List of data dictionaries to process
-        
+
     Returns:
         ProcessResult containing processed data and metadata
-        
+
     Raises:
         ValidationError: If input data is invalid
     """
@@ -203,11 +203,11 @@ async def safe_operation(data: Any) -> Optional[Result]:
         result = await risky_operation(data)
         logger.info("Operation completed successfully", extra={"data_size": len(data)})
         return result
-        
+
     except ValidationError as e:
         logger.error("Validation failed", exc_info=True, extra={"data": data})
         raise
-        
+
     except Exception as e:
         logger.error("Unexpected error in safe_operation", exc_info=True)
         return None
@@ -245,25 +245,25 @@ from unittest.mock import Mock, AsyncMock, patch
 
 class TestFeatureName:
     """Test suite for FeatureName functionality."""
-    
+
     @pytest.fixture
     async def sample_data(self):
         """Provide test data."""
         return {"key": "value"}
-    
+
     @pytest.mark.asyncio
     async def test_happy_path(self, sample_data):
         """Test normal operation."""
         result = await feature_function(sample_data)
         assert result.success is True
         assert result.data == expected_data
-    
+
     @pytest.mark.asyncio
     async def test_error_handling(self):
         """Test error conditions."""
         with pytest.raises(ValidationError):
             await feature_function(invalid_data)
-    
+
     @pytest.mark.parametrize("input_val,expected", [
         ("input1", "output1"),
         ("input2", "output2"),
@@ -281,19 +281,19 @@ class TestFeatureName:
 @pytest.mark.integration
 class TestEndToEndWorkflow:
     """Test complete system workflows."""
-    
+
     async def test_complete_feature_workflow(self):
         """Test entire feature from input to output."""
         # Setup system
         system = await initialize_test_system()
-        
+
         # Execute workflow
         result = await system.process_complete_workflow(test_input)
-        
+
         # Verify results
         assert result.success
         assert len(result.outputs) > 0
-        
+
         # Cleanup
         await system.cleanup()
 ```
@@ -319,17 +319,17 @@ async def test_performance_requirements():
     """Test that feature meets performance requirements."""
     start_time = time.time()
     start_memory = psutil.Process().memory_info().rss
-    
+
     # Execute performance-critical code
     result = await performance_critical_function(large_dataset)
-    
+
     end_time = time.time()
     end_memory = psutil.Process().memory_info().rss
-    
+
     # Assert performance requirements
     execution_time = end_time - start_time
     memory_increase = end_memory - start_memory
-    
+
     assert execution_time < 0.5  # 500ms limit
     assert memory_increase < 100 * 1024 * 1024  # 100MB limit
     assert result.success
@@ -425,28 +425,28 @@ We use [Semantic Versioning](https://semver.org/):
 def complex_function(param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
     """
     Perform complex operation with detailed documentation.
-    
+
     This function demonstrates the required documentation standard for
     all public functions in the PAKE system.
-    
+
     Args:
         param1: Description of the first parameter
         param2: Optional second parameter with default behavior
-        
+
     Returns:
         Dictionary containing operation results with keys:
         - success: Boolean indicating operation success
         - data: Processed data or None if failed
         - timestamp: Operation completion time
-        
+
     Raises:
         ValidationError: If param1 is invalid format
         ProcessingError: If operation cannot be completed
-        
+
     Examples:
         >>> result = complex_function("test_input")
         >>> assert result["success"] is True
-        
+
         >>> result = complex_function("test", 42)
         >>> assert result["data"] is not None
     """
@@ -470,7 +470,7 @@ def complex_function(param1: str, param2: Optional[int] = None) -> Dict[str, Any
 def test_sql_injection_protection():
     """Test that SQL injection is prevented."""
     malicious_input = "'; DROP TABLE users; --"
-    
+
     with pytest.raises(ValidationError):
         query_database(malicious_input)
 ```

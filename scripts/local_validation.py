@@ -30,11 +30,11 @@ class ValidationStep:
     """Individual validation step"""
 
     name: str
-    command: list[str]
+    command: List[str]
     description: str
     timeout: int = 300
     required: bool = True
-    cwd: Optional[Path] = None
+    cwd: Path | None = None
 
 
 @dataclass
@@ -45,14 +45,14 @@ class ValidationResult:
     result: ValidationResult
     duration: float
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     exit_code: int = 0
 
 
 class LocalValidator:
     """Local validation runner for PAKE System"""
 
-    def __init__(self, verbose: bool = False, parallel: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.project_root = Path(__file__).parent.parent
@@ -250,7 +250,7 @@ class LocalValidator:
             ),
         ]
 
-    def log(self, message: str, level: str = "INFO"):
+    def log(self) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
@@ -444,7 +444,7 @@ class LocalValidator:
             )
 
     def run_validation_suite(
-        self, categories: list[str] = None, skip_tests: bool = False
+        self, categories: List[str] = None, skip_tests: bool = False
     ) -> list[ValidationResult]:
         """Run validation suite"""
         self.log("Starting local validation suite...")
@@ -504,7 +504,7 @@ class LocalValidator:
         # Calculate success rate
         success_rate = (passed_steps / total_steps * 100) if total_steps > 0 else 0
 
-        report = {
+        return {
             "summary": {
                 "total_steps": total_steps,
                 "passed_steps": passed_steps,
@@ -529,9 +529,7 @@ class LocalValidator:
             else "FAILED",
         }
 
-        return report
-
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print validation summary"""
         report = self.generate_report()
 
@@ -584,7 +582,7 @@ class LocalValidator:
             print("\n🎉 All validations passed! Ready to push to GitHub.")
 
 
-def main():
+def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Local Validation")
     parser.add_argument(
@@ -610,10 +608,7 @@ def main():
     args = parser.parse_args()
 
     # Determine categories
-    if args.quick:
-        categories = ["lint", "format", "type-check"]
-    else:
-        categories = args.categories
+    categories = ["lint", "format", "type-check"] if args.quick else args.categories
 
     # Create validator
     validator = LocalValidator(verbose=args.verbose)

@@ -22,7 +22,7 @@ try:
     import tweepy
     from PIL import Image
 except ImportError as e:
-    logging.warning(f"Some dependencies not installed: {e}")
+    logging.warning("Some dependencies not installed: %s", e)
     logging.info("Run: pip install -r requirements_social.txt")
 
 
@@ -31,18 +31,18 @@ class SocialPost:
     """Data class for social media posts"""
 
     content: str
-    media_paths: list[str] = None
-    platforms: list[str] = None
+    media_paths: List[str] = None
+    platforms: List[str] = None
     scheduled_time: datetime = None
-    hashtags: list[str] = None
-    mentions: list[str] = None
+    hashtags: List[str] = None
+    mentions: List[str] = None
     metadata: dict = None
 
 
 class SocialMediaDistributor:
     """Main class for multi-platform social media distribution"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self) -> None:
         """Initialize with configuration"""
         self.config = self._load_config(config_path)
         self.platforms = {}
@@ -100,7 +100,7 @@ class SocialMediaDistributor:
             },
         }
 
-    def _initialize_platforms(self):
+    def _initialize_platforms(self) -> None:
         """Initialize all configured social media platform clients"""
 
         # Twitter/X initialization
@@ -117,7 +117,7 @@ class SocialMediaDistributor:
                 )
                 self.logger.info("Twitter/X client initialized")
             except Exception as e:
-                self.logger.error(f"Twitter initialization failed: {e}")
+                self.logger.error("Twitter initialization failed: %s", e)
 
         # Reddit initialization
         if all(self.config.get("reddit", {}).values()):
@@ -131,7 +131,7 @@ class SocialMediaDistributor:
                 )
                 self.logger.info("Reddit client initialized")
             except Exception as e:
-                self.logger.error(f"Reddit initialization failed: {e}")
+                self.logger.error("Reddit initialization failed: %s", e)
 
         # Instagram Graph API initialization
         if self.config.get("instagram", {}).get("access_token"):
@@ -149,7 +149,7 @@ class SocialMediaDistributor:
             }
             self.logger.info("LinkedIn client initialized")
 
-    def _generate_optimal_schedule(self) -> dict[str, list[str]]:
+    def _generate_optimal_schedule(self) -> dict[str, List[str]]:
         """Generate optimal posting times based on platform best practices"""
         return {
             "twitter": ["09:00", "12:00", "15:00", "17:00", "20:00"],
@@ -185,10 +185,10 @@ class SocialMediaDistributor:
             try:
                 result = await task
                 results[platform_name] = result
-                self.logger.info(f"Successfully posted to {platform_name}")
+                self.logger.info("Successfully posted to %s", platform_name)
             except Exception as e:
                 results[platform_name] = {"error": str(e)}
-                self.logger.error(f"Failed to post to {platform_name}: {e}")
+                self.logger.error("Failed to post to %s: %s", platform_name, e)
 
             # Rate limiting delay
             await asyncio.sleep(2)
@@ -205,7 +205,8 @@ class SocialMediaDistributor:
             return await self._post_to_instagram(post)
         if platform == "linkedin":
             return await self._post_to_linkedin(post)
-        raise ValueError(f"Unsupported platform: {platform}")
+        msg = f"Unsupported platform: {platform}"
+        raise ValueError(msg)
 
     async def _post_to_twitter(self, post: SocialPost) -> dict:
         """Post to Twitter with thread support"""
@@ -269,7 +270,8 @@ class SocialMediaDistributor:
             }
 
         except Exception as e:
-            raise Exception(f"Twitter posting failed: {e}")
+            msg = f"Twitter posting failed: {e}"
+            raise Exception(msg)
 
     async def _post_to_reddit(self, post: SocialPost) -> dict:
         """Post to relevant subreddits"""
@@ -308,7 +310,8 @@ class SocialMediaDistributor:
             return {"success": True, "submissions": results}
 
         except Exception as e:
-            raise Exception(f"Reddit posting failed: {e}")
+            msg = f"Reddit posting failed: {e}"
+            raise Exception(msg)
 
     async def _post_to_instagram(self, post: SocialPost) -> dict:
         """Post to Instagram using Graph API"""
@@ -316,7 +319,8 @@ class SocialMediaDistributor:
 
         try:
             if not post.media_paths:
-                raise ValueError("Instagram requires at least one image or video")
+                msg = "Instagram requires at least one image or video"
+                raise ValueError(msg)
 
             media_path = post.media_paths[0]
             caption = self._format_content_for_platform(post.content, "instagram")
@@ -343,7 +347,8 @@ class SocialMediaDistributor:
             container_data = container_response.json()
 
             if "id" not in container_data:
-                raise Exception(f"Container creation failed: {container_data}")
+                msg = f"Container creation failed: {container_data}"
+                raise Exception(msg)
 
             # Publish container
             publish_url = f"https://graph.facebook.com/v18.0/{
@@ -364,7 +369,8 @@ class SocialMediaDistributor:
             }
 
         except Exception as e:
-            raise Exception(f"Instagram posting failed: {e}")
+            msg = f"Instagram posting failed: {e}"
+            raise Exception(msg)
 
     async def _post_to_linkedin(self, post: SocialPost) -> dict:
         """Post to LinkedIn using LinkedIn API"""
@@ -414,12 +420,14 @@ class SocialMediaDistributor:
                     "post_id": response.json().get("id"),
                     "url": "https://linkedin.com",  # LinkedIn doesn't provide direct URLs
                 }
+            msg = f"LinkedIn API error: {response.status_code} - {response.text}"
             raise Exception(
-                f"LinkedIn API error: {response.status_code} - {response.text}",
+                msg,
             )
 
         except Exception as e:
-            raise Exception(f"LinkedIn posting failed: {e}")
+            msg = f"LinkedIn posting failed: {e}"
+            raise Exception(msg)
 
     def _format_content_for_platform(self, content: str, platform: str) -> str:
         """Format content according to platform-specific requirements"""
@@ -447,7 +455,7 @@ class SocialMediaDistributor:
 
         return content
 
-    def _split_into_tweets(self, content: str) -> list[str]:
+    def _split_into_tweets(self, content: str) -> List[str]:
         """Split long content into tweet-sized chunks"""
         tweets = []
         words = content.split()
@@ -471,7 +479,7 @@ class SocialMediaDistributor:
 
         return tweets
 
-    def schedule_post(self, post: SocialPost, scheduled_time: datetime = None):
+    def schedule_post(self) -> None:
         """Schedule a post for later publication"""
         if scheduled_time:
             post.scheduled_time = scheduled_time
@@ -481,7 +489,7 @@ class SocialMediaDistributor:
             post,
         ).tag(f"scheduled_post_{int(time.time())}")
 
-    def _execute_scheduled_post(self, post: SocialPost):
+    def _execute_scheduled_post(self) -> None:
         """Execute a scheduled post"""
         asyncio.run(self.post_to_all_platforms(post))
 
@@ -502,7 +510,7 @@ class SocialMediaDistributor:
                 [p for p in self.analytics.values() if not p.get("success")],
             ),
             "platforms_used": list(
-                set([p.get("platform") for p in self.analytics.values()]),
+                {p.get("platform") for p in self.analytics.values()},
             ),
             "last_post_time": (
                 max([p.get("timestamp") for p in self.analytics.values()])
@@ -511,7 +519,7 @@ class SocialMediaDistributor:
             ),
         }
 
-    def run_scheduler(self):
+    def run_scheduler(self) -> None:
         """Run the post scheduler"""
         self.logger.info("Starting social media scheduler...")
         while True:
@@ -535,7 +543,7 @@ def create_sample_post() -> SocialPost:
     )
 
 
-def main():
+def main(self) -> None:
     """Main function for testing"""
     distributor = SocialMediaDistributor()
 

@@ -1,4 +1,4 @@
-"""Intelligence Engine NLP Service
+"""Intelligence Engine NLP Service.
 
 Advanced NLP service implementing the Personal Intelligence Engine blueprint with:
 - spaCy for advanced NER and linguistic processing
@@ -14,7 +14,7 @@ async/await patterns, and production-ready performance.
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -85,7 +85,7 @@ class EntityMention:
     context_window: str
     normalized_text: str = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         object.__setattr__(self, "normalized_text", self.text.lower().strip())
 
 
@@ -98,8 +98,8 @@ class ExtractedEntity:
     confidence: float
     mentions: list[EntityMention]
     semantic_embedding: np.ndarray | None = None
-    linked_entities: list[str] = field(default_factory=list)
-    properties: dict[str, Any] = field(default_factory=dict)
+    linked_entities: List[str] = field(default_factory=list)
+    properties: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -112,7 +112,7 @@ class ExtractedRelationship:
     confidence: float
     source_sentence: str
     context: str
-    supporting_evidence: list[str] = field(default_factory=list)
+    supporting_evidence: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -147,7 +147,7 @@ class DocumentAnalysis:
     topics: list[TopicResult]
     semantic_embedding: np.ndarray
     key_phrases: list[tuple[str, float]]
-    text_statistics: dict[str, Any]
+    text_statistics: Dict[str, Any]
     processing_time_ms: float
 
 
@@ -163,13 +163,7 @@ class IntelligenceNLPService:
     - Async processing with caching
     """
 
-    def __init__(
-        self,
-        model_name: str = "en_core_web_sm",
-        embedding_model: str = "all-MiniLM-L6-v2",
-        sentiment_model: str = "cardiffnlp/twitter-roberta-base-sentiment-latest",
-        cache_service: CacheService | None = None,
-    ):
+    def __init__(self) -> None:
         """Initialize the Intelligence NLP Service.
 
         Args:
@@ -231,7 +225,7 @@ class IntelligenceNLPService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize NLP service: {e}")
+            logger.error("Failed to initialize NLP service: %s", e)
             return False
 
     async def _initialize_spacy(self) -> None:
@@ -248,10 +242,10 @@ class IntelligenceNLPService:
             # Initialize matcher for relationship extraction
             self.matcher = Matcher(self.nlp.vocab)
 
-            logger.info(f"spaCy model '{self.model_name}' loaded successfully")
+            logger.info("spaCy model '%s' loaded successfully", self.model_name)
 
         except Exception as e:
-            logger.error(f"Failed to initialize spaCy: {e}")
+            logger.error("Failed to initialize spaCy: %s", e)
             raise
 
     async def _initialize_embeddings(self) -> None:
@@ -264,10 +258,12 @@ class IntelligenceNLPService:
             )
 
             if cache_path.exists():
-                logger.info(f"Loading cached embedding model from {cache_path}")
+                logger.info("Loading cached embedding model from %s", cache_path)
                 self.embedding_model = SentenceTransformer(str(cache_path))
             else:
-                logger.info(f"Downloading embedding model: {self.embedding_model_name}")
+                logger.info(
+                    "Downloading embedding model: %s", self.embedding_model_name
+                )
                 self.embedding_model = SentenceTransformer(self.embedding_model_name)
                 # Cache the model
                 self.embedding_model.save(str(cache_path))
@@ -275,13 +271,13 @@ class IntelligenceNLPService:
             logger.info("Sentence transformer model loaded successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize embeddings: {e}")
+            logger.error("Failed to initialize embeddings: %s", e)
             raise
 
     async def _initialize_sentiment(self) -> None:
         """Initialize sentiment analysis pipeline."""
         try:
-            logger.info(f"Loading sentiment model: {self.sentiment_model_name}")
+            logger.info("Loading sentiment model: %s", self.sentiment_model_name)
 
             # Initialize with specific model for social media text
             self.sentiment_pipeline = pipeline(
@@ -293,7 +289,7 @@ class IntelligenceNLPService:
             logger.info("Sentiment analysis pipeline loaded successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize sentiment analysis: {e}")
+            logger.error("Failed to initialize sentiment analysis: %s", e)
             raise
 
     async def _add_custom_patterns(self, ruler) -> None:
@@ -399,7 +395,7 @@ class IntelligenceNLPService:
         Returns:
             DocumentAnalysis: Comprehensive analysis results
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         try:
             # Check cache first
@@ -455,7 +451,7 @@ class IntelligenceNLPService:
                 topics = await self.extract_topics([text])
 
             # Calculate processing time
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             # Create analysis result
             analysis = DocumentAnalysis(
@@ -495,7 +491,7 @@ class IntelligenceNLPService:
             return analysis
 
         except Exception as e:
-            logger.error(f"Error analyzing document: {e}")
+            logger.error("Error analyzing document: %s", e)
             raise
 
     async def extract_entities(self, text: str) -> list[ExtractedEntity]:
@@ -509,7 +505,8 @@ class IntelligenceNLPService:
         """
         try:
             if not self.nlp:
-                raise ValueError("spaCy model not initialized")
+                msg = "spaCy model not initialized"
+                raise ValueError(msg)
 
             # Process text
             doc = await run_in_executor(self.nlp, text)
@@ -549,9 +546,9 @@ class IntelligenceNLPService:
                         semantic_embedding = embedding[0]
                     except Exception as e:
                         logger.warning(
-                            f"Failed to generate embedding for entity '{ent.text}': {
-                                e
-                            }",
+                            "Failed to generate embedding for entity '%s': %s",
+                            ent.text,
+                            e,
                         )
 
                 # Create entity
@@ -571,11 +568,11 @@ class IntelligenceNLPService:
 
                 entities.append(entity)
 
-            logger.debug(f"Extracted {len(entities)} entities from text")
+            logger.debug("Extracted %s entities from text", len(entities))
             return entities
 
         except Exception as e:
-            logger.error(f"Error extracting entities: {e}")
+            logger.error("Error extracting entities: %s", e)
             return []
 
     async def extract_relationships(self, text: str) -> list[ExtractedRelationship]:
@@ -589,7 +586,8 @@ class IntelligenceNLPService:
         """
         try:
             if not self.nlp or not self.matcher:
-                raise ValueError("spaCy model or matcher not initialized")
+                msg = "spaCy model or matcher not initialized"
+                raise ValueError(msg)
 
             doc = await run_in_executor(self.nlp, text)
             matches = self.matcher(doc)
@@ -600,7 +598,7 @@ class IntelligenceNLPService:
                 pattern_name = self.nlp.vocab.strings[match_id]
 
                 # Extract entities from the matched span
-                entities_in_span = [ent for ent in span.ents]
+                entities_in_span = list(span.ents)
 
                 if len(entities_in_span) >= 2:
                     # Create relationship based on pattern
@@ -618,11 +616,11 @@ class IntelligenceNLPService:
 
                     relationships.append(relationship)
 
-            logger.debug(f"Extracted {len(relationships)} relationships from text")
+            logger.debug("Extracted %s relationships from text", len(relationships))
             return relationships
 
         except Exception as e:
-            logger.error(f"Error extracting relationships: {e}")
+            logger.error("Error extracting relationships: %s", e)
             return []
 
     def _map_pattern_to_relation(self, pattern_name: str) -> RelationType:
@@ -646,7 +644,8 @@ class IntelligenceNLPService:
         """
         try:
             if not self.sentiment_pipeline:
-                raise ValueError("Sentiment pipeline not initialized")
+                msg = "Sentiment pipeline not initialized"
+                raise ValueError(msg)
 
             # Run sentiment analysis
             results = await run_in_executor(self.sentiment_pipeline, text)
@@ -683,10 +682,10 @@ class IntelligenceNLPService:
             return SentimentResult(0.0, 0.0, 0.0, "NEUTRAL")
 
         except Exception as e:
-            logger.error(f"Error analyzing sentiment: {e}")
+            logger.error("Error analyzing sentiment: %s", e)
             return SentimentResult(0.0, 0.0, 0.0, "NEUTRAL")
 
-    async def generate_embeddings(self, texts: list[str]) -> np.ndarray:
+    async def generate_embeddings(self, texts: List[str]) -> np.ndarray:
         """Generate semantic embeddings for texts.
 
         Args:
@@ -697,21 +696,22 @@ class IntelligenceNLPService:
         """
         try:
             if not self.embedding_model:
-                raise ValueError("Embedding model not initialized")
+                msg = "Embedding model not initialized"
+                raise ValueError(msg)
 
             # Generate embeddings
             embeddings = await run_in_executor(self.embedding_model.encode, texts)
 
-            logger.debug(f"Generated embeddings for {len(texts)} texts")
+            logger.debug("Generated embeddings for %s texts", len(texts))
             return embeddings
 
         except Exception as e:
-            logger.error(f"Error generating embeddings: {e}")
+            logger.error("Error generating embeddings: %s", e)
             return np.array([])
 
     async def extract_topics(
         self,
-        documents: list[str],
+        documents: List[str],
         num_topics: int = 5,
     ) -> list[TopicResult]:
         """Extract topics using LDA topic modeling.
@@ -788,12 +788,14 @@ class IntelligenceNLPService:
                 topics.append(topic_result)
 
             logger.debug(
-                f"Extracted {len(topics)} topics with coherence {coherence_score:.3f}",
+                "Extracted %s topics with coherence %s",
+                len(topics),
+                f"{coherence_score:.3f}",
             )
             return topics
 
         except Exception as e:
-            logger.error(f"Error extracting topics: {e}")
+            logger.error("Error extracting topics: %s", e)
             return []
 
     async def extract_key_phrases(
@@ -812,7 +814,8 @@ class IntelligenceNLPService:
         """
         try:
             if not self.nlp:
-                raise ValueError("spaCy model not initialized")
+                msg = "spaCy model not initialized"
+                raise ValueError(msg)
 
             doc = await run_in_executor(self.nlp, text)
 
@@ -842,10 +845,10 @@ class IntelligenceNLPService:
             return scored_phrases[:max_phrases]
 
         except Exception as e:
-            logger.error(f"Error extracting key phrases: {e}")
+            logger.error("Error extracting key phrases: %s", e)
             return []
 
-    async def _compute_text_statistics(self, text: str) -> dict[str, Any]:
+    async def _compute_text_statistics(self, text: str) -> Dict[str, Any]:
         """Compute basic text statistics."""
         try:
             if not self.nlp:
@@ -881,10 +884,10 @@ class IntelligenceNLPService:
             return stats
 
         except Exception as e:
-            logger.error(f"Error computing text statistics: {e}")
+            logger.error("Error computing text statistics: %s", e)
             return {}
 
-    async def get_service_stats(self) -> dict[str, Any]:
+    async def get_service_stats(self) -> Dict[str, Any]:
         """Get service performance statistics."""
         return {
             **self._stats,
@@ -900,7 +903,7 @@ class IntelligenceNLPService:
             ),
         }
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for the service."""
         try:
             # Test basic functionality

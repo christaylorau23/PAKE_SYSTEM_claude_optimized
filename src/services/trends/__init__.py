@@ -1,4 +1,4 @@
-"""Live Trend Data Feed System
+"""Live Trend Data Feed System.
 
 This module provides real-time trend intelligence from multiple platforms
 for investment analysis and opportunity detection.

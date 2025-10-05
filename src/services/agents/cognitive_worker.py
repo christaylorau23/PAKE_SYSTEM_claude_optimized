@@ -27,8 +27,8 @@ class CognitiveWorker(BaseWorkerAgent):
     content quality, relevance, and extract actionable insights.
     """
 
-    def __init__(self, message_bus: MessageBus, worker_id: str = None):
-        """Initialize Cognitive Engine worker"""
+    def __init__(self) -> None:
+        """Initialize Cognitive Engine worker."""
         # Define worker capabilities
         capabilities = [
             WorkerCapabilityBuilder("content_quality_assessment")
@@ -118,9 +118,9 @@ class CognitiveWorker(BaseWorkerAgent):
             "poor": 0.4,
         }
 
-        logger.info(f"CognitiveWorker {self.worker_id} initialized")
+        logger.info("CognitiveWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process cognitive assessment task.
 
         Handles various cognitive processing tasks including quality assessment,
@@ -145,7 +145,7 @@ class CognitiveWorker(BaseWorkerAgent):
             }
 
         except Exception as e:
-            logger.error(f"Cognitive worker task processing error: {e}")
+            logger.error("Cognitive worker task processing error: %s", e)
             return {
                 "success": False,
                 "error": f"Task processing failed: {str(e)}",
@@ -154,9 +154,9 @@ class CognitiveWorker(BaseWorkerAgent):
 
     async def _process_quality_assessment(
         self,
-        task_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Process content quality assessment"""
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Process content quality assessment."""
         content_items_data = task_data.get("content_items", [])
         assessment_type = task_data.get("assessment_type", "quality_and_relevance")
         context = task_data.get("context", {})
@@ -208,7 +208,7 @@ class CognitiveWorker(BaseWorkerAgent):
                 processed_items += 1
 
             except Exception as e:
-                logger.warning(f"Failed to assess content item: {e}")
+                logger.warning("Failed to assess content item: %s", e)
                 assessments.append(
                     {
                         "error": str(e),
@@ -247,9 +247,9 @@ class CognitiveWorker(BaseWorkerAgent):
 
     async def _process_relevance_analysis(
         self,
-        task_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Process content relevance analysis"""
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Process content relevance analysis."""
         content = task_data.get("content", "")
         topic = task_data.get("topic", "")
         context = task_data.get("context", {})
@@ -279,9 +279,9 @@ class CognitiveWorker(BaseWorkerAgent):
 
     async def _process_knowledge_extraction(
         self,
-        task_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Process knowledge extraction from content"""
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Process knowledge extraction from content."""
         content = task_data.get("content", "")
         domain_context = task_data.get("domain_context", {})
 
@@ -308,9 +308,9 @@ class CognitiveWorker(BaseWorkerAgent):
 
     async def _process_optimization_recommendations(
         self,
-        task_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Process optimization recommendations"""
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Process optimization recommendations."""
         assessment_results = task_data.get("assessment_results", [])
         processing_context = task_data.get("processing_context", {})
 
@@ -348,10 +348,10 @@ class CognitiveWorker(BaseWorkerAgent):
     async def _assess_content_quality(
         self,
         content: str,
-        metadata: dict[str, Any],
-        context: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Assess content quality across multiple dimensions"""
+        metadata: Dict[str, Any],
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Assess content quality across multiple dimensions."""
         # Basic content metrics
         word_count = len(content.split())
         char_count = len(content)
@@ -444,9 +444,9 @@ class CognitiveWorker(BaseWorkerAgent):
     async def _assess_content_relevance(
         self,
         content: str,
-        context: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Assess content relevance to topic and context"""
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Assess content relevance to topic and context."""
         topic = context.get("topic", "").lower()
         content_lower = content.lower()
 
@@ -498,9 +498,9 @@ class CognitiveWorker(BaseWorkerAgent):
     async def _extract_knowledge(
         self,
         content: str,
-        domain_context: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Extract structured knowledge from content"""
+        domain_context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Extract structured knowledge from content."""
         # Simple knowledge extraction (would use NLP models in production)
         words = content.split()
 
@@ -538,10 +538,10 @@ class CognitiveWorker(BaseWorkerAgent):
 
     async def _generate_optimization_recommendations(
         self,
-        assessment_results: list[dict[str, Any]],
-        processing_context: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Generate optimization recommendations based on assessments"""
+        assessment_results: list[Dict[str, Any]],
+        processing_context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Generate optimization recommendations based on assessments."""
         # Analyze assessment results
         quality_scores = [r.get("overall_quality", 0) for r in assessment_results]
         avg_quality = sum(quality_scores) / max(len(quality_scores), 1)
@@ -584,9 +584,7 @@ class CognitiveWorker(BaseWorkerAgent):
                 )
 
         # Content diversity recommendations
-        source_types = set(
-            r.get("item_id", "").split("_")[0] for r in assessment_results
-        )
+        source_types = {r.get("item_id", "").split("_")[0] for r in assessment_results}
         if len(source_types) < 3:
             recommendations.append(
                 {
@@ -644,9 +642,9 @@ class CognitiveWorker(BaseWorkerAgent):
 
     def _calculate_quality_distribution(
         self,
-        assessments: list[dict[str, Any]],
+        assessments: list[Dict[str, Any]],
     ) -> dict[str, int]:
-        """Calculate distribution of quality levels"""
+        """Calculate distribution of quality levels."""
         distribution = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
 
         for assessment in assessments:
@@ -656,18 +654,19 @@ class CognitiveWorker(BaseWorkerAgent):
 
         return distribution
 
-    async def _on_start(self):
-        """Cognitive worker specific startup logic"""
+    async def _on_start(self) -> None:
+        """Cognitive worker specific startup logic."""
         logger.info(
-            f"CognitiveWorker {self.worker_id} cognitive processing engine ready",
+            "CognitiveWorker %s cognitive processing engine ready",
+            self.worker_id,
         )
 
-    async def _on_stop(self):
-        """Cognitive worker specific cleanup logic"""
-        logger.info(f"CognitiveWorker {self.worker_id} cleanup completed")
+    async def _on_stop(self) -> None:
+        """Cognitive worker specific cleanup logic."""
+        logger.info("CognitiveWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> dict[str, Any]:
-        """Get cognitive worker specific health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get cognitive worker specific health status."""
         base_health = await super().get_health_status()
 
         # Add cognitive-specific health information
@@ -706,10 +705,10 @@ async def create_cognitive_worker(
 
 # Task creation helpers
 def create_quality_assessment_task_data(
-    content_items: list[dict[str, Any]],
-    context: dict[str, Any] = None,
-) -> dict[str, Any]:
-    """Create task data for content quality assessment"""
+    content_items: list[Dict[str, Any]],
+    context: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Create task data for content quality assessment."""
     return {
         "task_type": "cognitive_assessment",
         "content_items": content_items,
@@ -721,9 +720,9 @@ def create_quality_assessment_task_data(
 def create_relevance_analysis_task_data(
     content: str,
     topic: str,
-    context: dict[str, Any] = None,
-) -> dict[str, Any]:
-    """Create task data for relevance analysis"""
+    context: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Create task data for relevance analysis."""
     return {
         "task_type": "relevance_analysis",
         "content": content,
@@ -734,9 +733,9 @@ def create_relevance_analysis_task_data(
 
 def create_knowledge_extraction_task_data(
     content: str,
-    domain_context: dict[str, Any] = None,
-) -> dict[str, Any]:
-    """Create task data for knowledge extraction"""
+    domain_context: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Create task data for knowledge extraction."""
     return {
         "task_type": "knowledge_extraction",
         "content": content,

@@ -1,8 +1,6 @@
 """Pydantic models for authentication
-Defines the data structures for users, tokens, and authentication
+Defines the data structures for users, tokens, and authentication.
 """
-
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -17,7 +15,7 @@ class Token(BaseModel):
     token_type: str = Field(
         default="bearer", description="Token type (always 'bearer')"
     )
-    refresh_token: Optional[str] = Field(
+    refresh_token: str | None = Field(
         None, description="JWT refresh token for token renewal"
     )
 
@@ -28,7 +26,7 @@ class TokenData(BaseModel):
     Contains the user identifier extracted from a validated JWT token.
     """
 
-    username: Optional[str] = None
+    username: str | None = None
 
 
 class User(BaseModel):
@@ -40,14 +38,14 @@ class User(BaseModel):
     username: str = Field(
         ..., description="Unique username", min_length=3, max_length=50
     )
-    email: Optional[EmailStr] = Field(None, description="User email address")
-    full_name: Optional[str] = Field(None, description="User's full name")
-    disabled: Optional[bool] = Field(
+    email: EmailStr | None = Field(None, description="User email address")
+    full_name: str | None = Field(None, description="User's full name")
+    disabled: bool | None = Field(
         default=False, description="Whether the user account is disabled"
     )
 
     class Config:
-        """Pydantic configuration"""
+        """Pydantic configuration."""
 
         json_schema_extra = {
             "example": {
@@ -81,10 +79,10 @@ class UserCreate(BaseModel):
     )
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password", min_length=8)
-    full_name: Optional[str] = Field(None, description="User's full name")
+    full_name: str | None = Field(None, description="User's full name")
 
     class Config:
-        """Pydantic configuration"""
+        """Pydantic configuration."""
 
         json_schema_extra = {
             "example": {

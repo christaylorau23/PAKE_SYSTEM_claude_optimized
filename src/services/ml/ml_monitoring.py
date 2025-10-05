@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """PAKE System - ML Monitoring Service
-Phase 9B: Advanced AI/ML Pipeline Integration
+Phase 9B: Advanced AI/ML Pipeline Integration.
 
 Provides comprehensive ML model monitoring, drift detection, performance tracking,
 A/B testing, and alerting capabilities for production ML systems.
 """
 
 import asyncio
+import contextlib
 import logging
 import statistics
 import time
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class AlertLevel(Enum):
-    """Alert severity levels"""
+    """Alert severity levels."""
 
     INFO = "info"
     WARNING = "warning"
@@ -33,7 +34,7 @@ class AlertLevel(Enum):
 
 
 class DriftType(Enum):
-    """Types of data drift"""
+    """Types of data drift."""
 
     CONCEPT_DRIFT = "concept_drift"
     DATA_DRIFT = "data_drift"
@@ -43,7 +44,7 @@ class DriftType(Enum):
 
 
 class MetricType(Enum):
-    """Types of monitoring metrics"""
+    """Types of monitoring metrics."""
 
     ACCURACY = "accuracy"
     PRECISION = "precision"
@@ -60,16 +61,16 @@ class MetricType(Enum):
 
 @dataclass(frozen=True)
 class ModelMetric:
-    """Immutable model metric"""
+    """Immutable model metric."""
 
     model_id: str
     metric_type: MetricType
     value: float
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
             "metric_type": metric_type.value,
@@ -81,7 +82,7 @@ class ModelMetric:
 
 @dataclass(frozen=True)
 class DriftAlert:
-    """Immutable drift detection alert"""
+    """Immutable drift detection alert."""
 
     alert_id: str
     model_id: str
@@ -89,15 +90,15 @@ class DriftAlert:
     severity: AlertLevel
     drift_score: float
     threshold: float
-    affected_features: list[str] = field(default_factory=list)
+    affected_features: List[str] = field(default_factory=list)
     detection_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
     description: str = ""
-    recommendations: list[str] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "alert_id": self.alert_id,
             "model_id": self.model_id,
@@ -114,7 +115,7 @@ class DriftAlert:
 
 @dataclass(frozen=True)
 class PerformanceAlert:
-    """Immutable performance alert"""
+    """Immutable performance alert."""
 
     alert_id: str
     model_id: str
@@ -127,10 +128,10 @@ class PerformanceAlert:
         default_factory=lambda: datetime.now(UTC),
     )
     description: str = ""
-    recommendations: list[str] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "alert_id": self.alert_id,
             "model_id": self.model_id,
@@ -147,7 +148,7 @@ class PerformanceAlert:
 
 @dataclass(frozen=True)
 class ABTestResult:
-    """Immutable A/B test result"""
+    """Immutable A/B test result."""
 
     test_id: str
     model_a_id: str
@@ -165,8 +166,8 @@ class ABTestResult:
         default_factory=lambda: datetime.now(UTC),
     )
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "test_id": self.test_id,
             "model_a_id": self.model_a_id,
@@ -186,7 +187,7 @@ class ABTestResult:
 
 @dataclass
 class MLMonitoringConfig:
-    """Configuration for ML monitoring service"""
+    """Configuration for ML monitoring service."""
 
     # Monitoring intervals
     metric_collection_interval_seconds: int = 60
@@ -221,7 +222,7 @@ class MLMonitoringConfig:
 
 
 class DriftDetector(ABC):
-    """Abstract base class for drift detectors"""
+    """Abstract base class for drift detectors."""
 
     @abstractmethod
     async def detect_drift(
@@ -229,14 +230,14 @@ class DriftDetector(ABC):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, list[str]]:
-        """Detect drift between reference and current data"""
+    ) -> tuple[bool, float, List[str]]:
+        """Detect drift between reference and current data."""
 
 
 class StatisticalDriftDetector(DriftDetector):
-    """Statistical drift detector using KS test and other statistical tests"""
+    """Statistical drift detector using KS test and other statistical tests."""
 
-    def __init__(self, threshold: float = 0.05):
+    def __init__(self) -> None:
         self.threshold = threshold
 
     async def detect_drift(
@@ -244,8 +245,8 @@ class StatisticalDriftDetector(DriftDetector):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, list[str]]:
-        """Detect drift using statistical tests"""
+    ) -> tuple[bool, float, List[str]]:
+        """Detect drift using statistical tests."""
         try:
             from scipy import stats
 
@@ -286,14 +287,14 @@ class StatisticalDriftDetector(DriftDetector):
             return drift_detected, max_drift_score, affected_features
 
         except Exception as e:
-            logger.error(f"Statistical drift detection failed: {e}")
+            logger.error("Statistical drift detection failed: %s", e)
             return False, 0.0, []
 
 
 class PerformanceDriftDetector(DriftDetector):
-    """Performance-based drift detector"""
+    """Performance-based drift detector."""
 
-    def __init__(self, threshold: float = 0.05):
+    def __init__(self) -> None:
         self.threshold = threshold
 
     async def detect_drift(
@@ -301,8 +302,8 @@ class PerformanceDriftDetector(DriftDetector):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, list[str]]:
-        """Detect performance drift"""
+    ) -> tuple[bool, float, List[str]]:
+        """Detect performance drift."""
         try:
             # This is a simplified implementation
             # In production, this would compare model performance metrics
@@ -320,14 +321,14 @@ class PerformanceDriftDetector(DriftDetector):
             return drift_detected, drift_score, affected_features
 
         except Exception as e:
-            logger.error(f"Performance drift detection failed: {e}")
+            logger.error("Performance drift detection failed: %s", e)
             return False, 0.0, []
 
 
 class ModelDriftDetector:
-    """Comprehensive model drift detector"""
+    """Comprehensive model drift detector."""
 
-    def __init__(self, config: MLMonitoringConfig):
+    def __init__(self) -> None:
         self.config = config
         self.drift_detectors = {
             DriftType.DATA_DRIFT: StatisticalDriftDetector(config.data_drift_threshold),
@@ -340,26 +341,26 @@ class ModelDriftDetector:
         self.reference_data: dict[str, pd.DataFrame] = {}
         self.reference_timestamps: dict[str, datetime] = {}
 
-    async def set_reference_data(self, model_id: str, reference_data: pd.DataFrame):
-        """Set reference data for drift detection"""
+    async def set_reference_data(self) -> None:
+        """Set reference data for drift detection."""
         try:
             self.reference_data[model_id] = reference_data.copy()
             self.reference_timestamps[model_id] = datetime.now(UTC)
-            logger.info(f"Set reference data for model {model_id}")
+            logger.info("Set reference data for model %s", model_id)
         except Exception as e:
-            logger.error(f"Failed to set reference data for model {model_id}: {e}")
+            logger.error("Failed to set reference data for model %s: %s", model_id, e)
 
     async def detect_drift(
         self,
         model_id: str,
         current_data: pd.DataFrame,
     ) -> list[DriftAlert]:
-        """Detect drift for a model"""
+        """Detect drift for a model."""
         alerts = []
 
         try:
             if model_id not in self.reference_data:
-                logger.warning(f"No reference data found for model {model_id}")
+                logger.warning("No reference data found for model %s", model_id)
                 return alerts
 
             reference_data = self.reference_data[model_id]
@@ -403,11 +404,11 @@ class ModelDriftDetector:
             return alerts
 
         except Exception as e:
-            logger.error(f"Drift detection failed for model {model_id}: {e}")
+            logger.error("Drift detection failed for model %s: %s", model_id, e)
             return alerts
 
     def _get_threshold_for_drift_type(self, drift_type: DriftType) -> float:
-        """Get threshold for drift type"""
+        """Get threshold for drift type."""
         thresholds = {
             DriftType.CONCEPT_DRIFT: self.config.concept_drift_threshold,
             DriftType.DATA_DRIFT: self.config.data_drift_threshold,
@@ -419,8 +420,8 @@ class ModelDriftDetector:
         self,
         drift_type: DriftType,
         drift_score: float,
-    ) -> list[str]:
-        """Get recommendations for drift type"""
+    ) -> List[str]:
+        """Get recommendations for drift type."""
         recommendations = []
 
         if drift_type == DriftType.DATA_DRIFT:
@@ -451,7 +452,7 @@ class MLMonitor:
     Provides model monitoring, drift detection, performance tracking, and alerting.
     """
 
-    def __init__(self, config: MLMonitoringConfig = None):
+    def __init__(self) -> None:
         self.config = config or MLMonitoringConfig()
 
         # Monitoring components
@@ -459,10 +460,10 @@ class MLMonitor:
 
         # Data storage
         self.model_metrics: dict[str, deque] = defaultdict(lambda: deque(maxlen=10000))
-        self.active_alerts: dict[
-            str, list[DriftAlert | PerformanceAlert]
-        ] = defaultdict(list)
-        self.ab_tests: dict[str, dict[str, Any]] = {}
+        self.active_alerts: dict[str, list[DriftAlert | PerformanceAlert]] = (
+            defaultdict(list)
+        )
+        self.ab_tests: dict[str, Dict[str, Any]] = {}
         self.ab_test_results: dict[str, ABTestResult] = {}
 
         # Monitoring tasks
@@ -479,11 +480,11 @@ class MLMonitor:
 
         logger.info("Initialized ML Monitor")
 
-    async def start_monitoring(self, model_id: str):
-        """Start monitoring for a model"""
+    async def start_monitoring(self) -> None:
+        """Start monitoring for a model."""
         try:
             if model_id in self.monitoring_tasks:
-                logger.warning(f"Monitoring already active for model {model_id}")
+                logger.warning("Monitoring already active for model %s", model_id)
                 return
 
             # Start monitoring tasks
@@ -491,30 +492,28 @@ class MLMonitor:
                 self._monitoring_loop(model_id),
             )
 
-            logger.info(f"Started monitoring for model {model_id}")
+            logger.info("Started monitoring for model %s", model_id)
 
         except Exception as e:
-            logger.error(f"Failed to start monitoring for model {model_id}: {e}")
+            logger.error("Failed to start monitoring for model %s: %s", model_id, e)
 
-    async def stop_monitoring(self, model_id: str):
-        """Stop monitoring for a model"""
+    async def stop_monitoring(self) -> None:
+        """Stop monitoring for a model."""
         try:
             if model_id in self.monitoring_tasks:
                 task = self.monitoring_tasks[model_id]
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
                 del self.monitoring_tasks[model_id]
-                logger.info(f"Stopped monitoring for model {model_id}")
+                logger.info("Stopped monitoring for model %s", model_id)
 
         except Exception as e:
-            logger.error(f"Failed to stop monitoring for model {model_id}: {e}")
+            logger.error("Failed to stop monitoring for model %s: %s", model_id, e)
 
-    async def _monitoring_loop(self, model_id: str):
-        """Main monitoring loop for a model"""
+    async def _monitoring_loop(self) -> None:
+        """Main monitoring loop for a model."""
         while True:
             try:
                 await asyncio.sleep(self.config.metric_collection_interval_seconds)
@@ -528,10 +527,10 @@ class MLMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring loop error for model {model_id}: {e}")
+                logger.error("Monitoring loop error for model %s: %s", model_id, e)
 
-    async def _collect_model_metrics(self, model_id: str):
-        """Collect metrics for a model"""
+    async def _collect_model_metrics(self) -> None:
+        """Collect metrics for a model."""
         try:
             # This is a simplified implementation
             # In production, this would collect real metrics from the model serving
@@ -557,10 +556,10 @@ class MLMonitor:
                 self.stats["total_metrics_collected"] += 1
 
         except Exception as e:
-            logger.error(f"Failed to collect metrics for model {model_id}: {e}")
+            logger.error("Failed to collect metrics for model %s: %s", model_id, e)
 
-    async def _check_performance_alerts(self, model_id: str):
-        """Check for performance alerts"""
+    async def _check_performance_alerts(self) -> None:
+        """Check for performance alerts."""
         try:
             if model_id not in self.model_metrics:
                 return
@@ -618,10 +617,10 @@ class MLMonitor:
                     await self._process_alert(alert)
 
         except Exception as e:
-            logger.error(f"Performance alert check failed for model {model_id}: {e}")
+            logger.error("Performance alert check failed for model %s: %s", model_id, e)
 
     def _get_threshold_for_metric(self, metric_type: MetricType) -> float:
-        """Get threshold for metric type"""
+        """Get threshold for metric type."""
         thresholds = {
             MetricType.ACCURACY: self.config.accuracy_threshold,
             MetricType.LATENCY: self.config.latency_threshold_ms,
@@ -635,7 +634,7 @@ class MLMonitor:
         value: float,
         threshold: float,
     ) -> bool:
-        """Check if threshold is exceeded"""
+        """Check if threshold is exceeded."""
         if metric_type in [MetricType.ACCURACY]:
             return value < threshold  # Lower is worse
         return value > threshold  # Higher is worse
@@ -646,7 +645,7 @@ class MLMonitor:
         value: float,
         threshold: float,
     ) -> AlertLevel:
-        """Determine alert severity"""
+        """Determine alert severity."""
         if metric_type == MetricType.ACCURACY:
             if value < threshold * 0.7:
                 return AlertLevel.CRITICAL
@@ -664,7 +663,7 @@ class MLMonitor:
         return AlertLevel.INFO
 
     def _calculate_trend(self, values: list[float]) -> str:
-        """Calculate trend from values"""
+        """Calculate trend from values."""
         if len(values) < 3:
             return "stable"
 
@@ -683,8 +682,8 @@ class MLMonitor:
         metric_type: MetricType,
         value: float,
         threshold: float,
-    ) -> list[str]:
-        """Get performance recommendations"""
+    ) -> List[str]:
+        """Get performance recommendations."""
         recommendations = []
 
         if metric_type == MetricType.ACCURACY:
@@ -714,8 +713,8 @@ class MLMonitor:
 
         return recommendations
 
-    async def _process_alert(self, alert: DriftAlert | PerformanceAlert):
-        """Process and store alert"""
+    async def _process_alert(self) -> None:
+        """Process and store alert."""
         try:
             # Store alert
             self.active_alerts[alert.model_id].append(alert)
@@ -723,17 +722,20 @@ class MLMonitor:
 
             # Send alert (simplified)
             logger.warning(
-                f"ALERT [{alert.severity.value.upper()}] {alert.model_id}: {alert.description}",
+                "ALERT [%s] %s: %s",
+                alert.severity.value.upper(),
+                alert.model_id,
+                alert.description,
             )
 
             # Clean up old alerts
             await self._cleanup_old_alerts(alert.model_id)
 
         except Exception as e:
-            logger.error(f"Failed to process alert: {e}")
+            logger.error("Failed to process alert: %s", e)
 
-    async def _cleanup_old_alerts(self, model_id: str):
-        """Clean up old alerts"""
+    async def _cleanup_old_alerts(self) -> None:
+        """Clean up old alerts."""
         try:
             cutoff_time = datetime.now(UTC) - timedelta(
                 days=self.config.alerts_retention_days,
@@ -745,7 +747,7 @@ class MLMonitor:
             ]
 
         except Exception as e:
-            logger.error(f"Failed to cleanup old alerts: {e}")
+            logger.error("Failed to cleanup old alerts: %s", e)
 
     async def start_ab_test(
         self,
@@ -755,10 +757,10 @@ class MLMonitor:
         metric_type: MetricType,
         traffic_split: float = 0.5,
     ) -> bool:
-        """Start A/B test between two models"""
+        """Start A/B test between two models."""
         try:
             if test_id in self.ab_tests:
-                logger.warning(f"A/B test {test_id} already exists")
+                logger.warning("A/B test %s already exists", test_id)
                 return False
 
             # Create A/B test
@@ -777,23 +779,18 @@ class MLMonitor:
             self.ab_tests[test_id] = ab_test
             self.stats["active_ab_tests"] += 1
 
-            logger.info(f"Started A/B test {test_id}")
+            logger.info("Started A/B test %s", test_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to start A/B test {test_id}: {e}")
+            logger.error("Failed to start A/B test %s: %s", test_id, e)
             return False
 
-    async def record_ab_test_metric(
-        self,
-        test_id: str,
-        model_id: str,
-        metric_value: float,
-    ):
-        """Record metric for A/B test"""
+    async def record_ab_test_metric(self) -> None:
+        """Record metric for A/B test."""
         try:
             if test_id not in self.ab_tests:
-                logger.warning(f"A/B test {test_id} not found")
+                logger.warning("A/B test %s not found", test_id)
                 return
 
             ab_test = self.ab_tests[test_id]
@@ -807,10 +804,10 @@ class MLMonitor:
             await self._check_ab_test_completion(test_id)
 
         except Exception as e:
-            logger.error(f"Failed to record A/B test metric: {e}")
+            logger.error("Failed to record A/B test metric: %s", e)
 
-    async def _check_ab_test_completion(self, test_id: str):
-        """Check if A/B test should be completed"""
+    async def _check_ab_test_completion(self) -> None:
+        """Check if A/B test should be completed."""
         try:
             ab_test = self.ab_tests[test_id]
 
@@ -827,10 +824,10 @@ class MLMonitor:
                 await self._complete_ab_test(test_id)
 
         except Exception as e:
-            logger.error(f"Failed to check A/B test completion: {e}")
+            logger.error("Failed to check A/B test completion: %s", e)
 
-    async def _complete_ab_test(self, test_id: str):
-        """Complete A/B test and generate results"""
+    async def _complete_ab_test(self) -> None:
+        """Complete A/B test and generate results."""
         try:
             ab_test = self.ab_tests[test_id]
 
@@ -838,7 +835,7 @@ class MLMonitor:
             model_b_metrics = ab_test["model_b_metrics"]
 
             if len(model_a_metrics) == 0 or len(model_b_metrics) == 0:
-                logger.warning(f"Insufficient data for A/B test {test_id}")
+                logger.warning("Insufficient data for A/B test %s", test_id)
                 return
 
             # Calculate statistics
@@ -895,13 +892,13 @@ class MLMonitor:
             self.stats["active_ab_tests"] -= 1
             self.stats["completed_ab_tests"] += 1
 
-            logger.info(f"Completed A/B test {test_id}: {conclusion}")
+            logger.info("Completed A/B test %s: %s", test_id, conclusion)
 
         except Exception as e:
-            logger.error(f"Failed to complete A/B test {test_id}: {e}")
+            logger.error("Failed to complete A/B test %s: %s", test_id, e)
 
     def get_model_metrics(self, model_id: str, limit: int = 100) -> list[ModelMetric]:
-        """Get recent metrics for a model"""
+        """Get recent metrics for a model."""
         if model_id not in self.model_metrics:
             return []
 
@@ -912,15 +909,15 @@ class MLMonitor:
         self,
         model_id: str,
     ) -> list[DriftAlert | PerformanceAlert]:
-        """Get active alerts for a model"""
+        """Get active alerts for a model."""
         return self.active_alerts.get(model_id, [])
 
     def get_ab_test_result(self, test_id: str) -> ABTestResult | None:
-        """Get A/B test result"""
+        """Get A/B test result."""
         return self.ab_test_results.get(test_id)
 
-    def get_monitoring_statistics(self) -> dict[str, Any]:
-        """Get monitoring statistics"""
+    def get_monitoring_statistics(self) -> Dict[str, Any]:
+        """Get monitoring statistics."""
         stats = self.stats.copy()
         stats["monitored_models"] = len(self.monitoring_tasks)
         stats["active_alerts_total"] = sum(
@@ -935,7 +932,7 @@ class MLMonitor:
 
 # Production-ready factory functions
 def create_production_ml_monitor() -> MLMonitor:
-    """Create production-ready ML monitor"""
+    """Create production-ready ML monitor."""
     config = MLMonitoringConfig(
         metric_collection_interval_seconds=30,
         drift_detection_interval_hours=12,
@@ -963,14 +960,14 @@ def create_production_ml_monitor() -> MLMonitor:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         monitor = MLMonitor()
 
         # Start monitoring a model
         await monitor.start_monitoring("test_model_1")
 
         # Simulate some metrics
-        for i in range(20):
+        for _i in range(20):
             await monitor._collect_model_metrics("test_model_1")
             await asyncio.sleep(1)
 
@@ -984,7 +981,7 @@ if __name__ == "__main__":
         )
 
         # Record some A/B test metrics
-        for i in range(100):
+        for _i in range(100):
             await monitor.record_ab_test_metric(
                 "test_ab_001",
                 "model_a",

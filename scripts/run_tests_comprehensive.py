@@ -18,7 +18,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -31,7 +31,7 @@ console = Console()
 class TestRunner:
     """Comprehensive test runner for PAKE System"""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self) -> None:
         self.verbose = verbose
         self.project_root = Path(__file__).parent.parent
         self.test_results = {}
@@ -80,7 +80,7 @@ class TestRunner:
             return False
 
     def run_unit_tests(
-        self, categories: list[str] = None, coverage: bool = False
+        self, categories: List[str] = None, coverage: bool = False
     ) -> dict:
         """Run unit tests with optional coverage"""
         console.print("\n🧪 Running Unit Tests", style="bold blue")
@@ -119,7 +119,7 @@ class TestRunner:
         }
 
     def run_integration_tests(
-        self, categories: list[str] = None, coverage: bool = False
+        self, categories: List[str] = None, coverage: bool = False
     ) -> dict:
         """Run integration tests with optional coverage"""
         console.print("\n🔗 Running Integration Tests", style="bold blue")
@@ -158,7 +158,7 @@ class TestRunner:
         }
 
     def run_e2e_tests(
-        self, categories: list[str] = None, coverage: bool = False
+        self, categories: List[str] = None, coverage: bool = False
     ) -> dict:
         """Run end-to-end tests with optional coverage"""
         console.print("\n🌐 Running End-to-End Tests", style="bold blue")
@@ -253,8 +253,7 @@ class TestRunner:
                 "report": report_result.stdout,
                 "error": report_result.stderr,
             }
-        else:
-            return {"success": False, "error": result.stderr}
+        return {"success": False, "error": result.stderr}
 
     def generate_test_report(self, results: dict) -> None:
         """Generate comprehensive test report"""
@@ -288,11 +287,11 @@ class TestRunner:
         console.print(f"  • Passed: {success_count}")
         console.print(f"  • Failed: {len(results) - success_count}")
         console.print(f"  • Total Duration: {total_duration:.2f}s")
-        console.print(f"  • Success Rate: {(success_count/len(results)*100):.1f}%")
+        console.print(f"  • Success Rate: {(success_count / len(results) * 100):.1f}%")
 
         # Save report to file
         report_data = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "summary": {
                 "total_tests": len(results),
                 "passed": success_count,
@@ -310,7 +309,7 @@ class TestRunner:
         console.print(f"\n💾 Report saved to: {report_file}", style="green")
 
     def run_all_tests(
-        self, coverage: bool = False, categories: list[str] = None
+        self, coverage: bool = False, categories: List[str] = None
     ) -> dict:
         """Run all test types"""
         console.print("🚀 Running All Tests", style="bold green")
@@ -347,7 +346,7 @@ class TestRunner:
 @click.option("--report", is_flag=True, help="Generate detailed test report")
 @click.option("--categories", help="Comma-separated list of test categories to run")
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def main(unit, integration, e2e, security, all, coverage, report, categories, verbose):
+def main(self) -> None:
     """Comprehensive Test Runner for PAKE System"""
 
     runner = TestRunner(verbose=verbose)

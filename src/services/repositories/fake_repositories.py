@@ -7,8 +7,8 @@ as the real repositories, allowing for easy unit testing without database depend
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 from ..domain.models import (
@@ -24,25 +24,25 @@ logger = logging.getLogger(__name__)
 
 
 class FakeUserRepository(AbstractUserRepository):
-    """Fake implementation of User repository for testing"""
+    """Fake implementation of User repository for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._users: dict[str, User] = {}
         self._next_id = 1
 
-    async def get_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
+    async def get_by_id(self, user_id: str) -> User | None:
+        """Get user by ID."""
         return self._users.get(user_id)
 
-    async def get_by_email(self, email: str) -> Optional[User]:
-        """Get user by email address"""
+    async def get_by_email(self, email: str) -> User | None:
+        """Get user by email address."""
         for user in self._users.values():
             if user.email == email:
                 return user
         return None
 
-    async def get_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
+    async def get_by_username(self, username: str) -> User | None:
+        """Get user by username."""
         for user in self._users.values():
             if user.username == username:
                 return user
@@ -52,10 +52,10 @@ class FakeUserRepository(AbstractUserRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-        order_by: Optional[str] = None,
-        filters: Optional[dict[str, Any]] = None,
+        order_by: str | None = None,
+        filters: Dict[str, Any] | None = None,
     ) -> list[User]:
-        """Get all users with optional filtering and pagination"""
+        """Get all users with optional filtering and pagination."""
         users = list(self._users.values())
 
         # Apply filters
@@ -79,33 +79,36 @@ class FakeUserRepository(AbstractUserRepository):
         return users[offset : offset + limit]
 
     async def get_active_users(self, limit: int = 100, offset: int = 0) -> list[User]:
-        """Get all active users"""
+        """Get all active users."""
         return await self.get_all(
             limit=limit, offset=offset, filters={"is_active": True}
         )
 
     async def create(self, user: User) -> User:
-        """Create new user"""
+        """Create new user."""
         # Generate ID if not provided
         if not user.id:
             user.id = str(uuid4())
 
         # Check for duplicates
         if user.id in self._users:
-            raise ValueError(f"User with ID {user.id} already exists")
+            msg = f"User with ID {user.id} already exists"
+            raise ValueError(msg)
 
         if await self.get_by_email(user.email):
-            raise ValueError(f"User with email {user.email} already exists")
+            msg = f"User with email {user.email} already exists"
+            raise ValueError(msg)
 
         if await self.get_by_username(user.username):
-            raise ValueError(f"User with username {user.username} already exists")
+            msg = f"User with username {user.username} already exists"
+            raise ValueError(msg)
 
         self._users[user.id] = user
-        logger.info(f"Created fake user: {user.id}")
+        logger.info("Created fake user: %s", user.id)
         return user
 
-    async def update(self, user_id: str, **kwargs) -> Optional[User]:
-        """Update user by ID"""
+    async def update(self, user_id: str, **kwargs) -> User | None:
+        """Update user by ID."""
         user = self._users.get(user_id)
         if not user:
             return None
@@ -115,42 +118,42 @@ class FakeUserRepository(AbstractUserRepository):
             if hasattr(user, key):
                 setattr(user, key, value)
 
-        user.updated_at = datetime.utcnow()
-        logger.info(f"Updated fake user: {user_id}")
+        user.updated_at = datetime.now(UTC)
+        logger.info("Updated fake user: %s", user_id)
         return user
 
     async def update_last_login(self, user_id: str, login_time: datetime) -> bool:
-        """Update user's last login time"""
+        """Update user's last login time."""
         user = self._users.get(user_id)
         if not user:
             return False
 
         user.last_login = login_time
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(UTC)
         return True
 
     async def deactivate_user(self, user_id: str) -> bool:
-        """Deactivate user account"""
+        """Deactivate user account."""
         return await self.update(user_id, is_active=False) is not None
 
     async def activate_user(self, user_id: str) -> bool:
-        """Activate user account"""
+        """Activate user account."""
         return await self.update(user_id, is_active=True) is not None
 
     async def delete(self, user_id: str) -> bool:
-        """Delete user by ID"""
+        """Delete user by ID."""
         if user_id in self._users:
             del self._users[user_id]
-            logger.info(f"Deleted fake user: {user_id}")
+            logger.info("Deleted fake user: %s", user_id)
             return True
         return False
 
     async def exists(self, user_id: str) -> bool:
-        """Check if user exists"""
+        """Check if user exists."""
         return user_id in self._users
 
-    async def count(self, filters: Optional[dict[str, Any]] = None) -> int:
-        """Count users matching filters"""
+    async def count(self, filters: Dict[str, Any] | None = None) -> int:
+        """Count users matching filters."""
         users = list(self._users.values())
 
         if filters:
@@ -168,20 +171,20 @@ class FakeUserRepository(AbstractUserRepository):
         return len(users)
 
     def clear(self) -> None:
-        """Clear all users (for testing)"""
+        """Clear all users (for testing)."""
         self._users.clear()
         logger.info("Cleared all fake users")
 
 
 class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
-    """Fake implementation of SearchHistory repository for testing"""
+    """Fake implementation of SearchHistory repository for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._searches: dict[str, SearchHistory] = {}
         self._next_id = 1
 
-    async def get_by_id(self, search_id: str) -> Optional[SearchHistory]:
-        """Get search history by ID"""
+    async def get_by_id(self, search_id: str) -> SearchHistory | None:
+        """Get search history by ID."""
         return self._searches.get(search_id)
 
     async def get_by_user_id(
@@ -190,7 +193,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         limit: int = 100,
         offset: int = 0,
     ) -> list[SearchHistory]:
-        """Get search history for a specific user"""
+        """Get search history for a specific user."""
         user_searches = [
             search for search in self._searches.values() if search.user_id == user_id
         ]
@@ -205,7 +208,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         limit: int = 100,
         offset: int = 0,
     ) -> list[SearchHistory]:
-        """Get anonymous search history"""
+        """Get anonymous search history."""
         anonymous_searches = [
             search for search in self._searches.values() if search.user_id is None
         ]
@@ -221,7 +224,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         limit: int = 100,
         offset: int = 0,
     ) -> list[SearchHistory]:
-        """Get searches matching query pattern"""
+        """Get searches matching query pattern."""
         matching_searches = [
             search
             for search in self._searches.values()
@@ -238,8 +241,8 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         hours: int = 24,
         limit: int = 100,
     ) -> list[SearchHistory]:
-        """Get recent searches within specified hours"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        """Get recent searches within specified hours."""
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
 
         recent_searches = [
             search
@@ -257,7 +260,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         limit: int = 100,
         offset: int = 0,
     ) -> list[SearchHistory]:
-        """Get searches that resulted in cache hits"""
+        """Get searches that resulted in cache hits."""
         cached_searches = [
             search for search in self._searches.values() if search.cache_hit
         ]
@@ -271,10 +274,10 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-        order_by: Optional[str] = None,
-        filters: Optional[dict[str, Any]] = None,
+        order_by: str | None = None,
+        filters: Dict[str, Any] | None = None,
     ) -> list[SearchHistory]:
-        """Get all search history with optional filtering and pagination"""
+        """Get all search history with optional filtering and pagination."""
         searches = list(self._searches.values())
 
         # Apply filters
@@ -300,23 +303,22 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         return searches[offset : offset + limit]
 
     async def create(self, search_history: SearchHistory) -> SearchHistory:
-        """Create new search history entry"""
+        """Create new search history entry."""
         # Generate ID if not provided
         if not search_history.id:
             search_history.id = str(uuid4())
 
         # Check for duplicates
         if search_history.id in self._searches:
-            raise ValueError(
-                f"Search history with ID {search_history.id} already exists"
-            )
+            msg = f"Search history with ID {search_history.id} already exists"
+            raise ValueError(msg)
 
         self._searches[search_history.id] = search_history
-        logger.info(f"Created fake search history: {search_history.id}")
+        logger.info("Created fake search history: %s", search_history.id)
         return search_history
 
-    async def update(self, search_id: str, **kwargs) -> Optional[SearchHistory]:
-        """Update search history by ID"""
+    async def update(self, search_id: str, **kwargs) -> SearchHistory | None:
+        """Update search history by ID."""
         search = self._searches.get(search_id)
         if not search:
             return None
@@ -326,20 +328,20 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
             if hasattr(search, key):
                 setattr(search, key, value)
 
-        logger.info(f"Updated fake search history: {search_id}")
+        logger.info("Updated fake search history: %s", search_id)
         return search
 
     async def delete(self, search_id: str) -> bool:
-        """Delete search history by ID"""
+        """Delete search history by ID."""
         if search_id in self._searches:
             del self._searches[search_id]
-            logger.info(f"Deleted fake search history: {search_id}")
+            logger.info("Deleted fake search history: %s", search_id)
             return True
         return False
 
     async def delete_old_searches(self, days: int = 30) -> int:
-        """Delete searches older than specified days"""
-        cutoff_time = datetime.utcnow() - timedelta(days=days)
+        """Delete searches older than specified days."""
+        cutoff_time = datetime.now(UTC) - timedelta(days=days)
 
         old_search_ids = [
             search_id
@@ -350,15 +352,15 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         for search_id in old_search_ids:
             del self._searches[search_id]
 
-        logger.info(f"Deleted {len(old_search_ids)} old fake search history entries")
+        logger.info("Deleted %s old fake search history entries", len(old_search_ids))
         return len(old_search_ids)
 
     async def exists(self, search_id: str) -> bool:
-        """Check if search history exists"""
+        """Check if search history exists."""
         return search_id in self._searches
 
-    async def count(self, filters: Optional[dict[str, Any]] = None) -> int:
-        """Count search history entries matching filters"""
+    async def count(self, filters: Dict[str, Any] | None = None) -> int:
+        """Count search history entries matching filters."""
         searches = list(self._searches.values())
 
         if filters:
@@ -376,7 +378,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         return len(searches)
 
     def clear(self) -> None:
-        """Clear all search history (for testing)"""
+        """Clear all search history (for testing)."""
         self._searches.clear()
         logger.info("Cleared all fake search history")
 

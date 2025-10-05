@@ -31,11 +31,11 @@ class ContentOptimization:
     optimized_content: str
     confidence_score: float
     platform_adaptations: dict[str, str]
-    recommended_hashtags: list[str]
+    recommended_hashtags: List[str]
     optimal_posting_time: str
     expected_engagement_rate: float
     content_score: float
-    optimization_suggestions: list[str]
+    optimization_suggestions: List[str]
 
 
 @dataclass
@@ -53,7 +53,7 @@ class HashtagAnalysis:
 class ContentOptimizationEngine:
     """AI-powered content optimization engine"""
 
-    def __init__(self, openai_api_key: str = None):
+    def __init__(self) -> None:
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ class ContentOptimizationEngine:
     async def optimize_content(
         self,
         content: str,
-        target_platforms: list[str] = None,
+        target_platforms: List[str] = None,
         content_category: str = "general",
     ) -> ContentOptimization:
         """Optimize content for maximum engagement"""
@@ -222,7 +222,7 @@ class ContentOptimizationEngine:
             )
 
         except Exception as e:
-            self.logger.error(f"Content optimization failed: {e}")
+            self.logger.error("Content optimization failed: %s", e)
             return ContentOptimization(
                 original_content=content,
                 optimized_content=content,
@@ -331,7 +331,7 @@ class ContentOptimizationEngine:
             return optimized
 
         except Exception as e:
-            self.logger.warning(f"AI optimization failed, using fallback: {e}")
+            self.logger.warning("AI optimization failed, using fallback: %s", e)
             return self._simple_optimization(content, primary_platform)
 
     def _simple_optimization(self, content: str, platform: str) -> str:
@@ -401,7 +401,7 @@ class ContentOptimizationEngine:
         content: str,
         category: str,
         platform: str,
-    ) -> list[str]:
+    ) -> List[str]:
         """Recommend relevant hashtags"""
         platform_config = self.platform_configs[platform]
         max_hashtags = platform_config["hashtag_limit"]
@@ -440,7 +440,7 @@ class ContentOptimizationEngine:
         unique_hashtags = list(dict.fromkeys(recommended))
         return unique_hashtags[: min(optimal_count, max_hashtags)]
 
-    def _extract_keywords(self, content: str) -> list[str]:
+    def _extract_keywords(self, content: str) -> List[str]:
         """Extract relevant keywords from content"""
         # Simple keyword extraction
         words = re.findall(r"\b[a-zA-Z]{4,}\b", content)
@@ -478,7 +478,7 @@ class ContentOptimizationEngine:
         self,
         content: str,
         platform: str,
-        hashtags: list[str],
+        hashtags: List[str],
     ) -> float:
         """Predict expected engagement rate"""
         # This is a simplified prediction model
@@ -585,7 +585,7 @@ class ContentOptimizationEngine:
         original: str,
         optimized: str,
         analysis: dict,
-    ) -> list[str]:
+    ) -> List[str]:
         """Generate actionable optimization suggestions"""
         suggestions = []
 
@@ -627,7 +627,7 @@ class ContentOptimizationEngine:
 
     async def analyze_hashtag_performance(
         self,
-        hashtags: list[str],
+        hashtags: List[str],
         platform: str,
     ) -> list[HashtagAnalysis]:
         """Analyze hashtag performance and potential"""
@@ -724,7 +724,7 @@ class ContentOptimizationEngine:
 # Usage example and testing
 
 
-async def demo_content_optimization():
+async def demo_content_optimization(self) -> None:
     """Demonstrate content optimization features"""
 
     # Initialize engine

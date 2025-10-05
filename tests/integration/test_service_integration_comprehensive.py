@@ -32,7 +32,7 @@ class TestServiceIntegrationComprehensive:
     """Comprehensive integration tests for service interactions"""
 
     @pytest.fixture(scope="session")
-    async def test_database(self):
+    async def test_database(self) -> None:
         """Create ephemeral test database"""
         # This would typically use testcontainers or similar
         # For now, we'll mock the database connection
@@ -42,7 +42,7 @@ class TestServiceIntegrationComprehensive:
         }
 
     @pytest.fixture(scope="session")
-    async def test_redis(self):
+    async def test_redis(self) -> None:
         """Create ephemeral test Redis instance"""
         # This would typically use testcontainers or similar
         # For now, we'll mock the Redis connection
@@ -51,8 +51,8 @@ class TestServiceIntegrationComprehensive:
             "connection": None,  # Would be actual connection in real implementation
         }
 
-    @pytest.fixture()
-    async def redis_service(self, test_redis):
+    @pytest.fixture
+    async def redis_service(self) -> None:
         """Create Redis service with test connection"""
         config = CacheConfig(
             redis_url=test_redis["url"], default_ttl=3600, max_memory_cache_size=1000
@@ -61,8 +61,8 @@ class TestServiceIntegrationComprehensive:
         await service.initialize()
         return service
 
-    @pytest.fixture()
-    async def user_service(self, redis_service):
+    @pytest.fixture
+    async def user_service(self) -> None:
         """Create UserService with real Redis integration"""
         # Create mocked dependencies
         token_service = TokenService()
@@ -82,8 +82,8 @@ class TestServiceIntegrationComprehensive:
             emailService=email_service,
         )
 
-    @pytest.fixture()
-    async def ingestion_orchestrator(self, redis_service):
+    @pytest.fixture
+    async def ingestion_orchestrator(self) -> None:
         """Create IngestionOrchestrator with real Redis integration"""
         config = IngestionConfig(
             max_concurrent_requests=5,
@@ -98,8 +98,8 @@ class TestServiceIntegrationComprehensive:
         orchestrator.cache_service = redis_service
         return orchestrator
 
-    @pytest.fixture()
-    async def analytics_engine(self, redis_service):
+    @pytest.fixture
+    async def analytics_engine(self) -> None:
         """Create AdvancedAnalyticsEngine with real Redis integration"""
         engine = AdvancedAnalyticsEngine()
         # Inject Redis service for caching
@@ -110,9 +110,9 @@ class TestServiceIntegrationComprehensive:
     # AUTHENTICATION SERVICE INTEGRATION TESTS
     # ============================================================================
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_auth()
-    async def test_user_registration_and_login_flow(self, user_service, redis_service):
+    @pytest.mark.integration
+    @pytest.mark.integration_auth
+    async def test_user_registration_and_login_flow(self) -> None:
         """Test complete user registration and login flow with real Redis"""
         # Arrange
         user_data = UserFactory(
@@ -150,9 +150,9 @@ class TestServiceIntegrationComprehensive:
         assert auth_result.refreshToken is not None
         assert auth_result.user.username == user_data["username"]
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_auth()
-    async def test_session_management_integration(self, user_service, redis_service):
+    @pytest.mark.integration
+    @pytest.mark.integration_auth
+    async def test_session_management_integration(self) -> None:
         """Test session management with real Redis integration"""
         # Arrange
         user_data = UserInDBFactory()
@@ -179,9 +179,9 @@ class TestServiceIntegrationComprehensive:
         deleted_session = await redis_service.get(f"session:{session_id}")
         assert deleted_session is None
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_auth()
-    async def test_multi_tenant_user_isolation(self, user_service, redis_service):
+    @pytest.mark.integration
+    @pytest.mark.integration_auth
+    async def test_multi_tenant_user_isolation(self) -> None:
         """Test multi-tenant user isolation with real Redis"""
         # Arrange
         tenant1_user = UserFactory(tenant_id="tenant_1")
@@ -225,11 +225,9 @@ class TestServiceIntegrationComprehensive:
     # INGESTION SERVICE INTEGRATION TESTS
     # ============================================================================
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_cache()
-    async def test_ingestion_with_caching_integration(
-        self, ingestion_orchestrator, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_cache
+    async def test_ingestion_with_caching_integration(self) -> None:
         """Test ingestion service with real Redis caching"""
         # Arrange
         topic = "machine learning integration test"
@@ -255,11 +253,9 @@ class TestServiceIntegrationComprehensive:
         assert result2.from_cache is True
         assert result2.execution_time < result1.execution_time
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_cache()
-    async def test_ingestion_cache_invalidation(
-        self, ingestion_orchestrator, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_cache
+    async def test_ingestion_cache_invalidation(self) -> None:
         """Test ingestion cache invalidation with real Redis"""
         # Arrange
         topic = "cache invalidation test"
@@ -280,11 +276,9 @@ class TestServiceIntegrationComprehensive:
         assert result2.success is True
         assert result2.from_cache is False
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_database()
-    async def test_ingestion_with_database_persistence(
-        self, ingestion_orchestrator, test_database
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_database
+    async def test_ingestion_with_database_persistence(self) -> None:
         """Test ingestion with database persistence"""
         # Arrange
         topic = "database persistence test"
@@ -305,11 +299,9 @@ class TestServiceIntegrationComprehensive:
     # ANALYTICS SERVICE INTEGRATION TESTS
     # ============================================================================
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_cache()
-    async def test_analytics_with_caching_integration(
-        self, analytics_engine, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_cache
+    async def test_analytics_with_caching_integration(self) -> None:
         """Test analytics service with real Redis caching"""
         # Arrange
         time_range = "24h"
@@ -334,11 +326,9 @@ class TestServiceIntegrationComprehensive:
         assert report2 is not None
         assert report2.get("from_cache") is True
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_database()
-    async def test_analytics_with_database_integration(
-        self, analytics_engine, test_database
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_database
+    async def test_analytics_with_database_integration(self) -> None:
         """Test analytics service with database integration"""
         # Arrange
         # Simulate some data in the database
@@ -368,12 +358,10 @@ class TestServiceIntegrationComprehensive:
     # CROSS-SERVICE INTEGRATION TESTS
     # ============================================================================
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_auth()
-    @pytest.mark.integration_cache()
-    async def test_user_ingestion_workflow_integration(
-        self, user_service, ingestion_orchestrator, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_auth
+    @pytest.mark.integration_cache
+    async def test_user_ingestion_workflow_integration(self) -> None:
         """Test complete user workflow: login -> ingest content -> cache results"""
         # Arrange
         user_data = UserFactory()
@@ -413,12 +401,10 @@ class TestServiceIntegrationComprehensive:
         cached_content = await redis_service.get(cache_key)
         assert cached_content is not None
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_auth()
-    @pytest.mark.integration_cache()
-    async def test_analytics_user_behavior_integration(
-        self, user_service, analytics_engine, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_auth
+    @pytest.mark.integration_cache
+    async def test_analytics_user_behavior_integration(self) -> None:
         """Test analytics tracking user behavior with real services"""
         # Arrange
         user_data = UserFactory()
@@ -451,12 +437,10 @@ class TestServiceIntegrationComprehensive:
         cached_report = await redis_service.get(cache_key)
         assert cached_report is not None
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_database()
-    @pytest.mark.integration_cache()
-    async def test_multi_tenant_data_isolation_integration(
-        self, user_service, ingestion_orchestrator, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_database
+    @pytest.mark.integration_cache
+    async def test_multi_tenant_data_isolation_integration(self) -> None:
         """Test multi-tenant data isolation across services"""
         # Arrange
         tenant1_user = UserFactory(tenant_id="tenant_1")
@@ -507,11 +491,9 @@ class TestServiceIntegrationComprehensive:
     # PERFORMANCE INTEGRATION TESTS
     # ============================================================================
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_performance()
-    async def test_concurrent_service_operations(
-        self, user_service, ingestion_orchestrator, redis_service
-    ):
+    @pytest.mark.integration
+    @pytest.mark.integration_performance
+    async def test_concurrent_service_operations(self) -> None:
         """Test concurrent operations across services"""
         # Arrange
         users = [UserFactory() for _ in range(5)]
@@ -553,9 +535,9 @@ class TestServiceIntegrationComprehensive:
         stats = await redis_service.get_stats()
         assert stats["sets"] >= 10  # At least 5 users + 5 ingestion results
 
-    @pytest.mark.integration()
-    @pytest.mark.integration_performance()
-    async def test_cache_performance_under_load(self, redis_service):
+    @pytest.mark.integration
+    @pytest.mark.integration_performance
+    async def test_cache_performance_under_load(self) -> None:
         """Test cache performance under load"""
         import time
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Base Service Classes
-Provides common functionality and patterns for all PAKE services
+Provides common functionality and patterns for all PAKE services.
 """
 
 import asyncio
@@ -22,7 +22,7 @@ from src.utils.exceptions import (
 
 
 class ServiceStatus(Enum):
-    """Service status enumeration"""
+    """Service status enumeration."""
 
     INITIALIZING = "initializing"
     HEALTHY = "healthy"
@@ -33,7 +33,7 @@ class ServiceStatus(Enum):
 
 
 class HealthStatus(Enum):
-    """Health check status"""
+    """Health check status."""
 
     PASS = "pass"
     WARN = "warn"
@@ -42,7 +42,7 @@ class HealthStatus(Enum):
 
 @dataclass
 class ServiceMetrics:
-    """Service performance metrics"""
+    """Service performance metrics."""
 
     requests_total: int = 0
     requests_successful: int = 0
@@ -55,14 +55,14 @@ class ServiceMetrics:
 
     @property
     def success_rate(self) -> float:
-        """Calculate success rate percentage"""
+        """Calculate success rate percentage."""
         if self.requests_total == 0:
             return 0.0
         return (self.requests_successful / self.requests_total) * 100
 
     @property
     def error_rate(self) -> float:
-        """Calculate error rate percentage"""
+        """Calculate error rate percentage."""
         if self.requests_total == 0:
             return 0.0
         return (self.requests_failed / self.requests_total) * 100
@@ -70,19 +70,19 @@ class ServiceMetrics:
 
 @dataclass
 class HealthCheck:
-    """Health check result"""
+    """Health check result."""
 
     name: str
     status: HealthStatus
     message: str
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     duration_ms: float | None = None
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ServiceConfig:
-    """Base service configuration"""
+    """Base service configuration."""
 
     name: str
     version: str = "1.0.0"
@@ -96,8 +96,8 @@ class ServiceConfig:
     log_level: str = "INFO"
     environment: str = "development"
 
-    def validate(self) -> list[str]:
-        """Validate configuration and return list of errors"""
+    def validate(self) -> List[str]:
+        """Validate configuration and return list of errors."""
         errors = []
 
         if not self.name:
@@ -119,7 +119,7 @@ class ServiceConfig:
 
 
 class BaseService(ABC):
-    """Base class for all PAKE services
+    """Base class for all PAKE services.
 
     Provides common functionality:
     - Configuration management
@@ -130,8 +130,8 @@ class BaseService(ABC):
     - Lifecycle management
     """
 
-    def __init__(self, config: ServiceConfig):
-        """Initialize base service
+    def __init__(self) -> None:
+        """Initialize base service.
 
         Args:
             config: Service configuration
@@ -139,8 +139,9 @@ class BaseService(ABC):
         # Validate configuration
         config_errors = config.validate()
         if config_errors:
+            msg = f"Invalid service configuration: {', '.join(config_errors)}"
             raise ConfigurationException(
-                f"Invalid service configuration: {', '.join(config_errors)}",
+                msg,
             )
 
         self.config = config
@@ -159,7 +160,7 @@ class BaseService(ABC):
         try:
             self._initialize()
             self.status = ServiceStatus.HEALTHY
-            self.logger.info(f"Service {self.config.name} initialized successfully")
+            self.logger.info("Service %s initialized successfully", self.config.name)
         except Exception as e:
             self.status = ServiceStatus.ERROR
             error_msg = f"Failed to initialize service {self.config.name}: {str(e)}"
@@ -172,18 +173,18 @@ class BaseService(ABC):
 
     @abstractmethod
     def _initialize(self) -> None:
-        """Initialize service-specific components"""
+        """Initialize service-specific components."""
 
     @abstractmethod
     def health_check(self) -> HealthCheck:
-        """Perform health check"""
+        """Perform health check."""
 
     def get_status(self) -> ServiceStatus:
-        """Get current service status"""
+        """Get current service status."""
         return self.status
 
     def get_metrics(self) -> ServiceMetrics:
-        """Get current service metrics"""
+        """Get current service metrics."""
         self.metrics.uptime_seconds = time.time() - self._start_time
         return self.metrics
 
@@ -192,11 +193,11 @@ class BaseService(ABC):
         name: str,
         check_func: Callable[[], HealthCheck],
     ) -> None:
-        """Add a custom health check"""
+        """Add a custom health check."""
         self._health_checks[name] = check_func
 
     def run_health_checks(self) -> list[HealthCheck]:
-        """Run all health checks"""
+        """Run all health checks."""
         results = [self.health_check()]
 
         for name, check_func in self._health_checks.items():
@@ -215,7 +216,7 @@ class BaseService(ABC):
         return results
 
     def _record_request(self, success: bool, duration: float) -> None:
-        """Record request metrics"""
+        """Record request metrics."""
         if not self.config.metrics_enabled:
             return
 
@@ -240,7 +241,7 @@ class BaseService(ABC):
             ) / self.metrics.requests_total
 
     def execute_with_metrics(self, func: Callable, *args, **kwargs) -> Any:
-        """Execute function with automatic metrics recording"""
+        """Execute function with automatic metrics recording."""
         start_time = time.time()
         success = False
 
@@ -249,51 +250,51 @@ class BaseService(ABC):
             success = True
             return result
         except Exception as e:
-            self.logger.error(f"Error executing {func.__name__}: {str(e)}")
+            self.logger.error("Error executing %s: %s", func.__name__, str(e))
             raise
         finally:
             duration = time.time() - start_time
             self._record_request(success, duration)
 
     def shutdown(self) -> None:
-        """Shutdown the service gracefully"""
+        """Shutdown the service gracefully."""
         try:
             self._cleanup()
             self.status = ServiceStatus.STOPPED
-            self.logger.info(f"Service {self.config.name} shutdown completed")
+            self.logger.info("Service %s shutdown completed", self.config.name)
         except Exception as e:
-            self.logger.error(f"Error during service shutdown: {str(e)}")
+            self.logger.error("Error during service shutdown: %s", str(e))
             self.status = ServiceStatus.ERROR
 
     def _cleanup(self) -> None:
-        """Cleanup service resources (override in subclasses)"""
+        """Cleanup service resources (override in subclasses)."""
 
 
 class AsyncBaseService(BaseService):
-    """Async base class for PAKE services
+    """Async base class for PAKE services.
 
     Extends BaseService with async capabilities
     """
 
-    def __init__(self, config: ServiceConfig):
+    def __init__(self) -> None:
         super().__init__(config)
         self._shutdown_event = asyncio.Event()
         self._background_tasks: list[asyncio.Task] = []
 
     @abstractmethod
     async def _async_initialize(self) -> None:
-        """Async initialization (override in subclasses)"""
+        """Async initialization (override in subclasses)."""
 
     @abstractmethod
     async def async_health_check(self) -> HealthCheck:
-        """Async health check"""
+        """Async health check."""
 
     async def start(self) -> None:
-        """Start the async service"""
+        """Start the async service."""
         try:
             await self._async_initialize()
             self.status = ServiceStatus.HEALTHY
-            self.logger.info(f"Async service {self.config.name} started successfully")
+            self.logger.info("Async service %s started successfully", self.config.name)
         except Exception as e:
             self.status = ServiceStatus.ERROR
             error_msg = f"Failed to start async service {self.config.name}: {str(e)}"
@@ -305,7 +306,7 @@ class AsyncBaseService(BaseService):
             )
 
     async def stop(self) -> None:
-        """Stop the async service gracefully"""
+        """Stop the async service gracefully."""
         self._shutdown_event.set()
 
         # Cancel background tasks
@@ -319,19 +320,19 @@ class AsyncBaseService(BaseService):
 
         await self._async_cleanup()
         self.status = ServiceStatus.STOPPED
-        self.logger.info(f"Async service {self.config.name} stopped")
+        self.logger.info("Async service %s stopped", self.config.name)
 
     async def _async_cleanup(self) -> None:
-        """Async cleanup (override in subclasses)"""
+        """Async cleanup (override in subclasses)."""
 
     def add_background_task(self, coro: Awaitable) -> asyncio.Task:
-        """Add a background task"""
+        """Add a background task."""
         task = asyncio.create_task(coro)
         self._background_tasks.append(task)
         return task
 
     async def execute_async_with_metrics(self, func: Callable, *args, **kwargs) -> Any:
-        """Execute async function with automatic metrics recording"""
+        """Execute async function with automatic metrics recording."""
         start_time = time.time()
         success = False
 
@@ -343,24 +344,25 @@ class AsyncBaseService(BaseService):
             success = True
             return result
         except Exception as e:
-            self.logger.error(f"Error executing async {func.__name__}: {str(e)}")
+            self.logger.error("Error executing async %s: %s", func.__name__, str(e))
             raise
         finally:
             duration = time.time() - start_time
             self._record_request(success, duration)
 
     @asynccontextmanager
-    async def timeout_context(self, timeout: float | None = None):
-        """Context manager for timeout handling"""
+    async def timeout_context(self) -> None:
+        """Context manager for timeout handling."""
         timeout = timeout or self.config.timeout_seconds
 
         try:
             async with asyncio.timeout(timeout):
                 yield
         except TimeoutError:
-            self.logger.warning(f"Operation timed out after {timeout}s")
+            self.logger.warning("Operation timed out after %ss", timeout)
+            msg = f"Operation timed out after {timeout}s"
             raise ServiceException(
-                f"Operation timed out after {timeout}s",
+                msg,
                 service_name=self.config.name,
             )
 
@@ -372,7 +374,7 @@ class AsyncBaseService(BaseService):
         delay: float | None = None,
         **kwargs,
     ) -> Any:
-        """Retry async function with exponential backoff"""
+        """Retry async function with exponential backoff."""
         max_attempts = max_attempts or self.config.retry_attempts
         delay = delay or self.config.retry_delay_seconds
 
@@ -390,19 +392,23 @@ class AsyncBaseService(BaseService):
 
                 wait_time = delay * (2**attempt)
                 self.logger.warning(
-                    f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {str(e)}",
+                    "Attempt %s failed, retrying in %ss: %s",
+                    attempt + 1,
+                    wait_time,
+                    str(e),
                 )
                 await asyncio.sleep(wait_time)
 
         # All attempts failed
+        msg = f"All {max_attempts} attempts failed"
         raise ServiceException(
-            f"All {max_attempts} attempts failed",
+            msg,
             service_name=self.config.name,
             original_exception=last_exception,
         )
 
     async def run_async_health_checks(self) -> list[HealthCheck]:
-        """Run all async health checks"""
+        """Run all async health checks."""
         results = [await self.async_health_check()]
 
         for name, check_func in self._health_checks.items():
@@ -425,25 +431,25 @@ class AsyncBaseService(BaseService):
 
     @property
     def is_shutdown_requested(self) -> bool:
-        """Check if shutdown has been requested"""
+        """Check if shutdown has been requested."""
         return self._shutdown_event.is_set()
 
     async def wait_for_shutdown(self) -> None:
-        """Wait for shutdown signal"""
+        """Wait for shutdown signal."""
         await self._shutdown_event.wait()
 
 
 # Utility functions for service management
 def create_service_config(name: str, **kwargs) -> ServiceConfig:
-    """Create a service configuration with defaults"""
+    """Create a service configuration with defaults."""
     return ServiceConfig(name=name, **kwargs)
 
 
 def validate_service_dependencies(
-    dependencies: list[str],
+    dependencies: List[str],
     logger: logging.Logger | None = None,
-) -> list[str]:
-    """Validate that required service dependencies are available
+) -> List[str]:
+    """Validate that required service dependencies are available.
 
     Args:
         dependencies: List of module names to check
@@ -460,6 +466,6 @@ def validate_service_dependencies(
         except ImportError:
             missing.append(dep)
             if logger:
-                logger.warning(f"Missing dependency: {dep}")
+                logger.warning("Missing dependency: %s", dep)
 
     return missing

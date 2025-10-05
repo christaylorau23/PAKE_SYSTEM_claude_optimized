@@ -8,7 +8,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import asyncpg
@@ -25,7 +25,7 @@ Base = declarative_base()
 
 
 class User(Base):
-    """User account model"""
+    """User account model."""
 
     __tablename__ = "users"
 
@@ -40,7 +40,7 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    preferences: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    preferences: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -51,7 +51,7 @@ class User(Base):
 
 
 class SearchHistory(Base):
-    """Search history tracking model"""
+    """Search history tracking model."""
 
     __tablename__ = "search_history"
 
@@ -65,17 +65,17 @@ class SearchHistory(Base):
         nullable=True,
     )  # Nullable for anonymous searches
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
     results_count: Mapped[int] = mapped_column(Integer, default=0)
     execution_time_ms: Mapped[float] = mapped_column(sa.Float)
     cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
     quality_score: Mapped[float | None] = mapped_column(sa.Float)
-    query_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    query_metadata: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class SavedSearch(Base):
-    """Saved search queries model"""
+    """Saved search queries model."""
 
     __tablename__ = "saved_searches"
 
@@ -87,10 +87,10 @@ class SavedSearch(Base):
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    filters: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    filters: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
-    tags: Mapped[list[str] | None] = mapped_column(JSON)
+    tags: Mapped[List[str] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -100,7 +100,7 @@ class SavedSearch(Base):
 
 
 class SystemMetrics(Base):
-    """System performance metrics model"""
+    """System performance metrics model."""
 
     __tablename__ = "system_metrics"
 
@@ -111,13 +111,13 @@ class SystemMetrics(Base):
     )
     # 'search_performance', 'cache_stats', etc.
     metric_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    metric_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metric_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 @dataclass
 class DatabaseConfig:
-    """Database configuration"""
+    """Database configuration."""
 
     host: str = "localhost"
     port: int = 5432
@@ -143,16 +143,16 @@ class PostgreSQLService:
     - System metrics storage
     """
 
-    def __init__(self, config: DatabaseConfig):
+    def __init__(self) -> None:
         self.config = config
         self._pool: Pool | None = None
         self._engine = None
         self._session_maker = None
 
         # Build connection strings
-        self._async_url = f"postgresql+asyncpg://{config.username}:{config.REDACTED_SECRET}@{
-            config.host
-        }:{config.port}/{config.database}"
+        self._async_url = f"postgresql+asyncpg://{config.username}:{
+            config.REDACTED_SECRET
+        }@{config.host}:{config.port}/{config.database}"
         self._sync_url = f"postgresql://{config.username}:{config.REDACTED_SECRET}@{
             config.host
         }:{config.port}/{config.database}"
@@ -160,7 +160,7 @@ class PostgreSQLService:
         logger.info("PostgreSQL service initialized")
 
     async def initialize(self) -> None:
-        """Initialize database connections and run migrations"""
+        """Initialize database connections and run migrations."""
         try:
             # Create asyncpg connection pool
             self._pool = await asyncpg.create_pool(
@@ -196,11 +196,11 @@ class PostgreSQLService:
             logger.info("✅ PostgreSQL service initialized successfully")
 
         except Exception as e:
-            logger.error(f"❌ Failed to initialize PostgreSQL service: {e}")
+            logger.error("❌ Failed to initialize PostgreSQL service: %s", e)
             raise
 
     async def close(self) -> None:
-        """Close database connections"""
+        """Close database connections."""
         if self._pool:
             await self._pool.close()
         if self._engine:
@@ -208,7 +208,7 @@ class PostgreSQLService:
         logger.info("PostgreSQL service closed")
 
     async def _run_migrations(self) -> None:
-        """Run Alembic migrations"""
+        """Run Alembic migrations."""
         try:
             # Create tables if they don't exist
             async with self._engine.begin() as conn:
@@ -216,7 +216,7 @@ class PostgreSQLService:
 
             logger.info("Database migrations completed successfully")
         except Exception as e:
-            logger.error(f"Migration error: {e}")
+            logger.error("Migration error: %s", e)
             raise
 
     # User Management Methods
@@ -228,8 +228,8 @@ class PostgreSQLService:
         REDACTED_SECRET_hash: str,
         full_name: str | None = None,
         is_admin: bool = False,
-    ) -> dict[str, Any]:
-        """Create a new user"""
+    ) -> Dict[str, Any]:
+        """Create a new user."""
         async with self._session_maker() as session:
             user = User(
                 username=username,
@@ -242,11 +242,11 @@ class PostgreSQLService:
             await session.commit()
             await session.refresh(user)
 
-            logger.info(f"Created user: {username}")
+            logger.info("Created user: %s", username)
             return self._user_to_dict(user)
 
-    async def get_user_by_username(self, username: str) -> dict[str, Any] | None:
-        """Get user by username"""
+    async def get_user_by_username(self, username: str) -> Dict[str, Any] | None:
+        """Get user by username."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(User).where(User.username == username),
@@ -254,20 +254,20 @@ class PostgreSQLService:
             user = result.scalar_one_or_none()
             return self._user_to_dict(user) if user else None
 
-    async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
-        """Get user by ID"""
+    async def get_user_by_id(self, user_id: str) -> Dict[str, Any] | None:
+        """Get user by ID."""
         async with self._session_maker() as session:
             result = await session.execute(sa.select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             return self._user_to_dict(user) if user else None
 
     async def update_user_login(self, user_id: str) -> None:
-        """Update user last login timestamp"""
+        """Update user last login timestamp."""
         async with self._session_maker() as session:
             await session.execute(
                 sa.update(User)
                 .where(User.id == user_id)
-                .values(last_login=datetime.utcnow()),
+                .values(last_login=datetime.now(UTC)),
             )
             await session.commit()
 
@@ -276,15 +276,15 @@ class PostgreSQLService:
     async def save_search_history(
         self,
         query: str,
-        sources: list[str],
+        sources: List[str],
         results_count: int,
         execution_time_ms: float,
         user_id: str | None = None,
         cache_hit: bool = False,
         quality_score: float | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> str:
-        """Save search to history"""
+        """Save search to history."""
         async with self._session_maker() as session:
             search = SearchHistory(
                 user_id=user_id,
@@ -300,7 +300,7 @@ class PostgreSQLService:
             await session.commit()
             await session.refresh(search)
 
-            logger.debug(f"Saved search history: {search.id}")
+            logger.debug("Saved search history: %s", search.id)
             return search.id
 
     async def get_user_search_history(
@@ -308,8 +308,8 @@ class PostgreSQLService:
         user_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Get user's search history"""
+    ) -> list[Dict[str, Any]]:
+        """Get user's search history."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(SearchHistory)
@@ -325,9 +325,9 @@ class PostgreSQLService:
         self,
         limit: int = 10,
         days: int = 7,
-    ) -> list[dict[str, Any]]:
-        """Get most popular search queries"""
-        since = datetime.utcnow() - timedelta(days=days)
+    ) -> list[Dict[str, Any]]:
+        """Get most popular search queries."""
+        since = datetime.now(UTC) - timedelta(days=days)
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
@@ -354,12 +354,12 @@ class PostgreSQLService:
         user_id: str,
         name: str,
         query: str,
-        sources: list[str],
-        filters: dict[str, Any] | None = None,
+        sources: List[str],
+        filters: Dict[str, Any] | None = None,
         is_public: bool = False,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
     ) -> str:
-        """Save a search query"""
+        """Save a search query."""
         async with self._session_maker() as session:
             saved_search = SavedSearch(
                 user_id=user_id,
@@ -374,11 +374,11 @@ class PostgreSQLService:
             await session.commit()
             await session.refresh(saved_search)
 
-            logger.info(f"Saved search: {name} for user {user_id}")
+            logger.info("Saved search: %s for user %s", name, user_id)
             return saved_search.id
 
-    async def get_user_saved_searches(self, user_id: str) -> list[dict[str, Any]]:
-        """Get user's saved searches"""
+    async def get_user_saved_searches(self, user_id: str) -> list[Dict[str, Any]]:
+        """Get user's saved searches."""
         async with self._session_maker() as session:
             result = await session.execute(
                 sa.select(SavedSearch)
@@ -393,9 +393,9 @@ class PostgreSQLService:
     async def save_system_metrics(
         self,
         metric_type: str,
-        metric_data: dict[str, Any],
+        metric_data: Dict[str, Any],
     ) -> None:
-        """Save system performance metrics"""
+        """Save system performance metrics."""
         async with self._session_maker() as session:
             metrics = SystemMetrics(metric_type=metric_type, metric_data=metric_data)
             session.add(metrics)
@@ -405,9 +405,9 @@ class PostgreSQLService:
         self,
         metric_type: str,
         hours: int = 24,
-    ) -> list[dict[str, Any]]:
-        """Get system metrics for analysis"""
-        since = datetime.utcnow() - timedelta(hours=hours)
+    ) -> list[Dict[str, Any]]:
+        """Get system metrics for analysis."""
+        since = datetime.now(UTC) - timedelta(hours=hours)
 
         async with self._session_maker() as session:
             result = await session.execute(
@@ -421,9 +421,9 @@ class PostgreSQLService:
 
     # Analytics Methods
 
-    async def get_search_analytics(self, days: int = 30) -> dict[str, Any]:
-        """Get comprehensive search analytics"""
-        since = datetime.utcnow() - timedelta(days=days)
+    async def get_search_analytics(self, days: int = 30) -> Dict[str, Any]:
+        """Get comprehensive search analytics."""
+        since = datetime.now(UTC) - timedelta(days=days)
 
         async with self._pool.acquire() as conn:
             # Total searches
@@ -477,10 +477,10 @@ class PostgreSQLService:
         REDACTED_SECRET_hash: str,
         full_name: str | None = None,
     ) -> str | None:
-        """Create new user account"""
+        """Create new user account."""
         try:
             async with self._pool.acquire() as conn:
-                user_id = await conn.fetchval(
+                return await conn.fetchval(
                     """
                     INSERT INTO users (username, email, REDACTED_SECRET_hash, full_name)
                     VALUES ($1, $2, $3, $4)
@@ -491,13 +491,12 @@ class PostgreSQLService:
                     REDACTED_SECRET_hash,
                     full_name,
                 )
-                return user_id
         except Exception as e:
-            logger.error(f"Failed to create user: {e}")
+            logger.error("Failed to create user: %s", e)
             return None
 
-    async def get_user_by_username(self, username: str) -> dict[str, Any] | None:
-        """Get user by username"""
+    async def get_user_by_username(self, username: str) -> Dict[str, Any] | None:
+        """Get user by username."""
         try:
             async with self._pool.acquire() as conn:
                 row = await conn.fetchrow(
@@ -510,11 +509,11 @@ class PostgreSQLService:
                 )
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"Failed to get user by username: {e}")
+            logger.error("Failed to get user by username: %s", e)
             return None
 
-    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
-        """Get user by email"""
+    async def get_user_by_email(self, email: str) -> Dict[str, Any] | None:
+        """Get user by email."""
         try:
             async with self._pool.acquire() as conn:
                 row = await conn.fetchrow(
@@ -527,11 +526,11 @@ class PostgreSQLService:
                 )
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"Failed to get user by email: {e}")
+            logger.error("Failed to get user by email: %s", e)
             return None
 
-    async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
-        """Get user by ID"""
+    async def get_user_by_id(self, user_id: str) -> Dict[str, Any] | None:
+        """Get user by ID."""
         try:
             async with self._pool.acquire() as conn:
                 row = await conn.fetchrow(
@@ -544,11 +543,11 @@ class PostgreSQLService:
                 )
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"Failed to get user by ID: {e}")
+            logger.error("Failed to get user by ID: %s", e)
             return None
 
     async def update_user_last_login(self, user_id: str) -> bool:
-        """Update user's last login timestamp"""
+        """Update user's last login timestamp."""
         try:
             async with self._pool.acquire() as conn:
                 result = await conn.execute(
@@ -561,11 +560,13 @@ class PostgreSQLService:
                 )
                 return result != "UPDATE 0"
         except Exception as e:
-            logger.error(f"Failed to update last login: {e}")
+            logger.error("Failed to update last login: %s", e)
             return False
 
-    async def update_user_REDACTED_SECRET(self, user_id: str, REDACTED_SECRET_hash: str) -> bool:
-        """Update user REDACTED_SECRET"""
+    async def update_user_REDACTED_SECRET(
+        self, user_id: str, REDACTED_SECRET_hash: str
+    ) -> bool:
+        """Update user REDACTED_SECRET."""
         try:
             async with self._pool.acquire() as conn:
                 result = await conn.execute(
@@ -579,11 +580,11 @@ class PostgreSQLService:
                 )
                 return result != "UPDATE 0"
         except Exception as e:
-            logger.error(f"Failed to update REDACTED_SECRET: {e}")
+            logger.error("Failed to update REDACTED_SECRET: %s", e)
             return False
 
     async def deactivate_user(self, user_id: str) -> bool:
-        """Deactivate user account"""
+        """Deactivate user account."""
         try:
             async with self._pool.acquire() as conn:
                 result = await conn.execute(
@@ -596,11 +597,11 @@ class PostgreSQLService:
                 )
                 return result != "UPDATE 0"
         except Exception as e:
-            logger.error(f"Failed to deactivate user: {e}")
+            logger.error("Failed to deactivate user: %s", e)
             return False
 
     async def activate_user(self, user_id: str) -> bool:
-        """Activate user account"""
+        """Activate user account."""
         try:
             async with self._pool.acquire() as conn:
                 result = await conn.execute(
@@ -613,13 +614,13 @@ class PostgreSQLService:
                 )
                 return result != "UPDATE 0"
         except Exception as e:
-            logger.error(f"Failed to activate user: {e}")
+            logger.error("Failed to activate user: %s", e)
             return False
 
     # Health Check
 
-    async def health_check(self) -> dict[str, Any]:
-        """Database health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Database health check."""
         try:
             async with self._pool.acquire() as conn:
                 # Test basic connectivity
@@ -648,8 +649,8 @@ class PostgreSQLService:
 
     # Helper Methods
 
-    def _user_to_dict(self, user: User) -> dict[str, Any]:
-        """Convert User model to dictionary"""
+    def _user_to_dict(self, user: User) -> Dict[str, Any]:
+        """Convert User model to dictionary."""
         return {
             "id": user.id,
             "username": user.username,
@@ -663,8 +664,8 @@ class PostgreSQLService:
             "last_login": user.last_login.isoformat() if user.last_login else None,
         }
 
-    def _search_history_to_dict(self, search: SearchHistory) -> dict[str, Any]:
-        """Convert SearchHistory model to dictionary"""
+    def _search_history_to_dict(self, search: SearchHistory) -> Dict[str, Any]:
+        """Convert SearchHistory model to dictionary."""
         return {
             "id": search.id,
             "user_id": search.user_id,
@@ -678,8 +679,8 @@ class PostgreSQLService:
             "created_at": search.created_at.isoformat(),
         }
 
-    def _saved_search_to_dict(self, search: SavedSearch) -> dict[str, Any]:
-        """Convert SavedSearch model to dictionary"""
+    def _saved_search_to_dict(self, search: SavedSearch) -> Dict[str, Any]:
+        """Convert SavedSearch model to dictionary."""
         return {
             "id": search.id,
             "user_id": search.user_id,
@@ -693,8 +694,8 @@ class PostgreSQLService:
             "updated_at": search.updated_at.isoformat(),
         }
 
-    def _system_metrics_to_dict(self, metrics: SystemMetrics) -> dict[str, Any]:
-        """Convert SystemMetrics model to dictionary"""
+    def _system_metrics_to_dict(self, metrics: SystemMetrics) -> Dict[str, Any]:
+        """Convert SystemMetrics model to dictionary."""
         return {
             "id": metrics.id,
             "metric_type": metrics.metric_type,
@@ -709,7 +710,7 @@ class PostgreSQLService:
 async def create_database_service(
     config: DatabaseConfig | None = None,
 ) -> PostgreSQLService:
-    """Create and initialize database service"""
+    """Create and initialize database service."""
     if config is None:
         config = DatabaseConfig()
 
@@ -719,8 +720,8 @@ async def create_database_service(
 
 
 @asynccontextmanager
-async def get_database_service(config: DatabaseConfig | None = None):
-    """Context manager for database service"""
+async def get_database_service(self) -> None:
+    """Context manager for database service."""
     service = await create_database_service(config)
     try:
         yield service
@@ -733,7 +734,7 @@ _db_service: PostgreSQLService | None = None
 
 
 async def get_database() -> PostgreSQLService:
-    """Get global database service instance"""
+    """Get global database service instance."""
     global _db_service
     if _db_service is None:
         _db_service = await create_database_service()
@@ -742,7 +743,7 @@ async def get_database() -> PostgreSQLService:
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         async with get_database_service() as db:
             # Health check
             health = await db.health_check()

@@ -6,6 +6,8 @@ Performance testing for CI/CD pipeline validation
 
 import argparse
 import asyncio
+import builtins
+import contextlib
 import json
 import statistics
 import sys
@@ -18,7 +20,7 @@ import httpx
 class PerformanceTestSuite:
     """Performance test suite for PAKE System"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self) -> None:
         self.base_url = base_url.rstrip("/")
         self.results = {
             "timestamp": time.time(),
@@ -27,7 +29,7 @@ class PerformanceTestSuite:
             "summary": {"total": 0, "passed": 0, "failed": 0, "performance_issues": 0},
         }
 
-    async def run_test(self, test_name: str, test_func) -> dict[str, Any]:
+    async def run_test(self, test_name: str, test_func) -> Dict[str, Any]:
         """Run a single performance test"""
         print(f"⚡ Running performance test: {test_name}")
 
@@ -68,7 +70,7 @@ class PerformanceTestSuite:
         self.results["summary"]["total"] += 1
         return {"status": "completed"}
 
-    async def test_response_time(self) -> dict[str, Any]:
+    async def test_response_time(self) -> Dict[str, Any]:
         """Test response times for critical endpoints"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             endpoints = [
@@ -124,13 +126,13 @@ class PerformanceTestSuite:
                 },
             }
 
-    async def test_concurrent_requests(self) -> dict[str, Any]:
+    async def test_concurrent_requests(self) -> Dict[str, Any]:
         """Test system performance under concurrent load"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             concurrent_requests = 50
             endpoint = "/api/v1/data"
 
-            async def make_request():
+            async def make_request(self) -> None:
                 try:
                     start_time = time.time()
                     response = await client.get(f"{self.base_url}{endpoint}")
@@ -189,7 +191,7 @@ class PerformanceTestSuite:
                 },
             }
 
-    async def test_memory_usage(self) -> dict[str, Any]:
+    async def test_memory_usage(self) -> Dict[str, Any]:
         """Test memory usage patterns"""
         # This is a simplified test - in production you'd use more sophisticated monitoring
         import psutil
@@ -201,10 +203,8 @@ class PerformanceTestSuite:
             # Make some requests to potentially increase memory usage
             async with httpx.AsyncClient() as client:
                 for _ in range(100):
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         await client.get(f"{self.base_url}/api/v1/data")
-                    except:
-                        pass
 
             # Get final memory usage
             final_memory = psutil.virtual_memory().percent
@@ -237,7 +237,7 @@ class PerformanceTestSuite:
                 "metrics": {},
             }
 
-    async def test_database_performance(self) -> dict[str, Any]:
+    async def test_database_performance(self) -> Dict[str, Any]:
         """Test database query performance"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Test database-heavy endpoints
@@ -292,7 +292,7 @@ class PerformanceTestSuite:
                 },
             }
 
-    async def run_all_tests(self):
+    async def run_all_tests(self) -> None:
         """Run all performance tests"""
         print("⚡ Starting PAKE System Performance Test Suite")
         print(f"Target URL: {self.base_url}")
@@ -319,18 +319,17 @@ class PerformanceTestSuite:
         if self.results["summary"]["performance_issues"] > 0:
             print("⚠️ Performance issues detected!")
             return False
-        else:
-            print("✅ All performance tests passed!")
-            return True
+        print("✅ All performance tests passed!")
+        return True
 
-    def save_report(self, filename: str = "performance_test_report.json"):
+    def save_report(self) -> None:
         """Save test results to file"""
         with open(filename, "w") as f:
             json.dump(self.results, f, indent=2)
         print(f"📄 Performance test report saved to {filename}")
 
 
-async def main():
+async def main(self) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="PAKE System Performance Test Suite")
     parser.add_argument(

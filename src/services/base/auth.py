@@ -1,5 +1,5 @@
 """Enterprise Authentication and Security
-Task T039-T045 - Phase 18 Production System Integration
+Task T039-T045 - Phase 18 Production System Integration.
 
 Production-grade JWT authentication, security middleware, and
 enterprise security patterns.
@@ -7,7 +7,7 @@ enterprise security patterns.
 
 import os
 from datetime import UTC, datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import Depends, HTTPException, status
@@ -18,6 +18,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from utils.logger import get_logger
 
 # Security configuration with enterprise secrets management
@@ -34,20 +35,23 @@ import asyncio
 try:
     SECRET_KEY = asyncio.run(get_jwt_secret())
 except (ImportError, ModuleNotFoundError) as e:
-    raise ImportError(
+    msg = (
         f"Failed to import secrets manager: {e}. "
         "Please ensure enterprise_secrets_manager is properly installed."
-    ) from e
+    )
+    raise ImportError(msg) from e
 except (ValueError, RuntimeError) as e:
-    raise ValueError(
+    msg = (
         f"Failed to initialize JWT secret: {e}. "
         "Please configure Azure Key Vault or SECRET_KEY environment variable."
-    ) from e
+    )
+    raise ValueError(msg) from e
 except Exception as e:
-    raise RuntimeError(
+    msg = (
         f"Unexpected error initializing authentication: {e}. "
         "Please check your secrets configuration."
-    ) from e
+    )
+    raise RuntimeError(msg) from e
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
@@ -60,7 +64,7 @@ security = HTTPBearer()
 
 
 class User(Base):
-    """User model for authentication"""
+    """User model for authentication."""
 
     __tablename__ = "users"
 
@@ -82,7 +86,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relationships
     sessions = relationship(
@@ -91,7 +95,7 @@ class User(Base):
 
 
 class UserSession(Base):
-    """User session tracking"""
+    """User session tracking."""
 
     __tablename__ = "user_sessions"
 
@@ -107,8 +111,8 @@ class UserSession(Base):
 
     # Session information
     refresh_token: Mapped[str] = mapped_column(String(500), nullable=False)
-    user_agent: Mapped[Optional[str]] = mapped_column(String(500))
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
 
     # Session status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -124,25 +128,25 @@ class UserSession(Base):
 
 
 class AuthService:
-    """Enterprise authentication service"""
+    """Enterprise authentication service."""
 
     @staticmethod
     def verify_REDACTED_SECRET(
         plain_REDACTED_SECRET: str, hashed_REDACTED_SECRET: str
     ) -> bool:
-        """Verify a REDACTED_SECRET against its hash"""
+        """Verify a REDACTED_SECRET against its hash."""
         return pwd_context.verify(plain_REDACTED_SECRET, hashed_REDACTED_SECRET)
 
     @staticmethod
     def get_REDACTED_SECRET_hash(REDACTED_SECRET: str) -> str:
-        """Hash a REDACTED_SECRET"""
+        """Hash a REDACTED_SECRET."""
         return pwd_context.hash(REDACTED_SECRET)
 
     @staticmethod
     def create_access_token(
-        data: dict[str, Any], expires_delta: Optional[timedelta] = None
+        data: Dict[str, Any], expires_delta: timedelta | None = None
     ) -> str:
-        """Create JWT access token"""
+        """Create JWT access token."""
         to_encode = data.copy()
         if expires_delta:
             expire = datetime.now(UTC) + expires_delta
@@ -150,24 +154,21 @@ class AuthService:
             expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
         to_encode.update({"exp": expire, "type": "access"})
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     @staticmethod
-    def create_refresh_token(data: dict[str, Any]) -> str:
-        """Create JWT refresh token"""
+    def create_refresh_token(data: Dict[str, Any]) -> str:
+        """Create JWT refresh token."""
         to_encode = data.copy()
         expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh"})
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     @staticmethod
-    def verify_token(token: str) -> dict[str, Any]:
-        """Verify and decode JWT token"""
+    def verify_token(token: str) -> Dict[str, Any]:
+        """Verify and decode JWT token."""
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload
+            return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -180,7 +181,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Get current authenticated user"""
+    """Get current authenticated user."""
     token = credentials.credentials
     payload = AuthService.verify_token(token)
 
@@ -216,38 +217,36 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """Get current active user"""
+    """Get current active user."""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
 class SecurityMiddleware:
-    """Enterprise security middleware"""
+    """Enterprise security middleware."""
 
     @staticmethod
     async def validate_api_key(api_key: str) -> bool:
-        """Validate API key with enterprise secrets management"""
+        """Validate API key with enterprise secrets management."""
         try:
             expected_api_key = await get_api_key()
             # In production, this would validate against a database of API keys
             # For now, we'll use a simple check with proper secrets management
             return api_key == expected_api_key
         except Exception as e:
-            logger.error(f"Failed to validate API key: {e}")
+            logger.error("Failed to validate API key: %s", e)
             return False
 
     @staticmethod
     async def check_rate_limit(user_id: str, endpoint: str) -> bool:
-        """Check rate limiting (placeholder for enterprise implementation)"""
+        """Check rate limiting (placeholder for enterprise implementation)."""
         # In production, this would check against Redis or similar
         # For now, we'll allow all requests
         return True
 
     @staticmethod
-    async def log_security_event(
-        event_type: str, user_id: Optional[str], details: dict[str, Any]
-    ):
-        """Log security events"""
+    async def log_security_event(self) -> None:
+        """Log security events."""
         # In production, this would log to a security monitoring system
         print(f"Security Event: {event_type} - User: {user_id} - Details: {details}")

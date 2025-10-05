@@ -1,0 +1,21 @@
+# Python Version Management Configuration
+# This file ensures consistent Python version across all environments
+
+# Required Python version for PAKE System
+python_version=3.12.8
+
+# Poetry configuration
+poetry_version=1.8.3
+
+# Node.js version for TypeScript bridge
+node_version=22.18.0
+
+# Environment validation
+validate_python_version=true
+validate_poetry_version=true
+validate_node_version=true
+
+# Development tools
+enable_pyenv=true
+enable_poetry=true
+enable_pre_commit=true

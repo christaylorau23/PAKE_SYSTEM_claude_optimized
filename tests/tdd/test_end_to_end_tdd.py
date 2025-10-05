@@ -12,11 +12,11 @@ import yaml
 class TestEndToEndIntegrationTDD:
     """Test-Driven Development for end-to-end system integration"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test environment"""
         self.project_root = Path(__file__).parent.parent.parent
 
-    def test_complete_workflow_integration(self):
+    def test_complete_workflow_integration(self) -> None:
         """TDD: Test complete workflow integration from code to production"""
         # Arrange
         workflow_files = [
@@ -39,7 +39,7 @@ class TestEndToEndIntegrationTDD:
                 len(workflow_data["jobs"]) > 0
             ), f"{workflow_file} should have at least one job"
 
-    def test_infrastructure_to_application_pipeline(self):
+    def test_infrastructure_to_application_pipeline(self) -> None:
         """TDD: Test infrastructure to application deployment pipeline"""
         # Arrange
         infra_files = [
@@ -63,7 +63,7 @@ class TestEndToEndIntegrationTDD:
                 full_path = self.project_root / file_path
                 assert full_path.exists(), f"Should have {file_group} file {file_path}"
 
-    def test_service_template_to_production_pipeline(self):
+    def test_service_template_to_production_pipeline(self) -> None:
         """TDD: Test service template to production deployment pipeline"""
         # Arrange
         template_files = [
@@ -86,7 +86,7 @@ class TestEndToEndIntegrationTDD:
                 full_path = self.project_root / file_path
                 assert full_path.exists(), f"Should have {file_group} file {file_path}"
 
-    def test_monitoring_stack_integration(self):
+    def test_monitoring_stack_integration(self) -> None:
         """TDD: Test monitoring stack integration"""
         # Arrange
         monitoring_files = [
@@ -106,7 +106,7 @@ class TestEndToEndIntegrationTDD:
                 full_path.stat().st_size > 500
             ), f"{file_path} should have substantial content"
 
-    def test_security_integration_completeness(self):
+    def test_security_integration_completeness(self) -> None:
         """TDD: Test security integration completeness"""
         # Arrange
         security_components = [
@@ -122,7 +122,7 @@ class TestEndToEndIntegrationTDD:
                 component_path.exists()
             ), f"Should have security component {component}"
 
-    def test_documentation_integration(self):
+    def test_documentation_integration(self) -> None:
         """TDD: Test documentation integration"""
         # Arrange
         doc_files = [
@@ -145,7 +145,7 @@ class TestEndToEndIntegrationTDD:
 
             assert len(content) > 1000, f"{doc_file} should be comprehensive"
 
-    def test_environment_configuration_consistency(self):
+    def test_environment_configuration_consistency(self) -> None:
         """TDD: Test environment configuration consistency"""
         # Arrange
         env_configs = [
@@ -173,7 +173,7 @@ class TestEndToEndIntegrationTDD:
                     section in config_data
                 ), f"{config_file} should have {section} section"
 
-    def test_ci_cd_pipeline_dependencies(self):
+    def test_ci_cd_pipeline_dependencies(self) -> None:
         """TDD: Test CI/CD pipeline job dependencies"""
         # Arrange
         ci_workflow_path = self.project_root / ".github/workflows/ci.yml"
@@ -195,7 +195,7 @@ class TestEndToEndIntegrationTDD:
             assert "lint" in needs, "Build should depend on lint"
             assert "security" in needs, "Build should depend on security"
 
-    def test_gitops_deployment_workflow(self):
+    def test_gitops_deployment_workflow(self) -> None:
         """TDD: Test GitOps deployment workflow"""
         # Arrange
         gitops_workflow_path = self.project_root / ".github/workflows/gitops.yml"
@@ -217,7 +217,7 @@ class TestEndToEndIntegrationTDD:
             staging_job = jobs["deploy-staging"]
             assert "needs" in staging_job, "Staging deployment should have dependencies"
 
-    def test_monitoring_alerting_integration(self):
+    def test_monitoring_alerting_integration(self) -> None:
         """TDD: Test monitoring and alerting integration"""
         # Arrange
         prometheus_config_path = (
@@ -245,7 +245,7 @@ class TestEndToEndIntegrationTDD:
             "PAKESystemHighErrorRate" in rules_content
         ), "Should have error rate alert"
 
-    def test_security_scanning_integration(self):
+    def test_security_scanning_integration(self) -> None:
         """TDD: Test security scanning integration"""
         # Arrange
         security_workflow_path = (
@@ -271,7 +271,7 @@ class TestEndToEndIntegrationTDD:
         for job in security_jobs:
             assert job in jobs, f"Should have {job} security job"
 
-    def test_kubernetes_helm_integration(self):
+    def test_kubernetes_helm_integration(self) -> None:
         """TDD: Test Kubernetes Helm chart integration"""
         # Arrange
         helm_chart_path = self.project_root / "k8s/helm/pake-system/Chart.yaml"
@@ -292,7 +292,7 @@ class TestEndToEndIntegrationTDD:
             dep_found = any(d["name"] == dep for d in dependencies)
             assert dep_found, f"Should have {dep} dependency"
 
-    def test_argocd_application_integration(self):
+    def test_argocd_application_integration(self) -> None:
         """TDD: Test ArgoCD application integration"""
         # Arrange
         staging_app_path = (
@@ -315,7 +315,7 @@ class TestEndToEndIntegrationTDD:
             assert "destination" in spec, "Should have destination configuration"
             assert "syncPolicy" in spec, "Should have sync policy"
 
-    def test_complete_system_readiness(self):
+    def test_complete_system_readiness(self) -> None:
         """TDD: Test complete system readiness for production"""
         # Arrange
         system_components = {
@@ -357,7 +357,7 @@ class TestEndToEndIntegrationTDD:
         total_components = 0
         existing_components = 0
 
-        for category, components in system_components.items():
+        for _category, components in system_components.items():
             for component in components:
                 total_components += 1
                 component_path = self.project_root / component
@@ -379,7 +379,7 @@ class TestEndToEndIntegrationTDD:
             readiness_percentage >= 95
         ), f"System should be 95%+ ready, currently {readiness_percentage:.1f}%"
 
-    def test_workflow_integration_flow(self):
+    def test_workflow_integration_flow(self) -> None:
         """TDD: Test workflow integration flow"""
         # Arrange
         workflow_sequence = [

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Ingestion Services Package
-Phase 2A: Enhanced omni-source ingestion capabilities
+Phase 2A: Enhanced omni-source ingestion capabilities.
 """
 
 from .arxiv_enhanced_service import (

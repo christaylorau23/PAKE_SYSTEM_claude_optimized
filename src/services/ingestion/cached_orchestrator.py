@@ -8,7 +8,7 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from scripts.ingestion_pipeline import ContentItem
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class CachedIngestionConfig(IngestionConfig):
-    """Extended configuration with caching parameters"""
+    """Extended configuration with caching parameters."""
 
     redis_url: str = "redis://localhost:6379/0"
     enable_redis_cache: bool = True
@@ -51,7 +51,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
     - Async cache operations
     """
 
-    def __init__(self, config: CachedIngestionConfig, **kwargs):
+    def __init__(self, config=None, **kwargs) -> None:
         # Initialize base orchestrator
         super().__init__(config, **kwargs)
 
@@ -72,7 +72,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         )
 
     async def initialize_cache(self) -> None:
-        """Initialize Redis cache service"""
+        """Initialize Redis cache service."""
         if self.cache_config.enable_redis_cache:
             try:
                 self.cache_service = RedisCacheService(
@@ -88,21 +88,22 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
 
             except Exception as e:
                 logger.warning(
-                    f"⚠️ Failed to initialize Redis cache, using memory-only: {e}",
+                    "⚠️ Failed to initialize Redis cache, using memory-only: %s",
+                    e,
                 )
                 self.cache_service = None
 
     async def close(self) -> None:
-        """Clean up cache service"""
+        """Clean up cache service."""
         if self.cache_service:
             await self.cache_service.close()
 
     async def create_ingestion_plan(
         self,
         topic: str,
-        context: dict[str, Any] | None = None,
+        context: Dict[str, Any] | None = None,
     ) -> IngestionPlan:
-        """Create ingestion plan with caching support"""
+        """Create ingestion plan with caching support."""
         # Generate cache key for plan
         context = context or {}
         cache_key_data = f"{topic}:{str(sorted(context.items()))}"
@@ -113,16 +114,18 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
 
         # Try to get plan from cache
         if self.cache_service:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             cached_plan = await self.cache_service.get(plan_cache_key)
 
             if cached_plan:
-                cache_time = (datetime.now() - start_time).total_seconds() * 1000
+                cache_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 self.cache_metrics["plan_cache_hits"] += 1
                 self.cache_metrics["cache_time_saved_ms"] += cache_time
 
                 logger.info(
-                    f"🚀 Plan cache hit for topic: {topic} (saved {cache_time:.1f}ms)",
+                    "🚀 Plan cache hit for topic: %s (saved %.1fms)",
+                    topic,
+                    cache_time,
                 )
                 return cached_plan
 
@@ -143,19 +146,19 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
                 ttl=self.cache_config.plan_cache_ttl,
                 tags=tags,
             )
-            logger.debug(f"Cached ingestion plan for topic: {topic}")
+            logger.debug("Cached ingestion plan for topic: %s", topic)
 
         return plan
 
     async def execute_ingestion_plan(self, plan: IngestionPlan) -> IngestionResult:
-        """Execute ingestion plan with intelligent caching"""
+        """Execute ingestion plan with intelligent caching."""
         # Check for cached results of the entire plan
         plan_result_key = CacheKey("plan_result", plan.plan_id)
 
         if self.cache_service:
             cached_result = await self.cache_service.get(plan_result_key)
             if cached_result:
-                logger.info(f"🚀 Full plan result cache hit: {plan.plan_id}")
+                logger.info("🚀 Full plan result cache hit: %s", plan.plan_id)
                 return cached_result
 
         # Execute plan with source-level caching
@@ -164,7 +167,9 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         sources_completed = 0
         sources_failed = 0
 
-        logger.info(f"Executing ingestion plan {plan.plan_id} for topic: {plan.topic}")
+        logger.info(
+            "Executing ingestion plan %s for topic: %s", plan.plan_id, plan.topic
+        )
 
         # Execute sources concurrently with individual caching
         source_tasks = []
@@ -179,7 +184,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
             source = plan.sources[i]
 
             if isinstance(result, Exception):
-                logger.error(f"Source {source.source_type} failed: {result}")
+                logger.error("Source %s failed: %s", source.source_type, result)
                 sources_failed += 1
                 continue
 
@@ -187,7 +192,9 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
                 content_items.extend(result)
                 sources_completed += 1
                 logger.info(
-                    f"Successfully retrieved {len(result)} items from {source.source_type}",
+                    "Successfully retrieved %s items from %s",
+                    len(result),
+                    source.source_type,
                 )
             else:
                 sources_failed += 1
@@ -195,13 +202,15 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         # Apply intelligent deduplication
         if content_items and self.config.deduplication_enabled:
             logger.info(
-                f"Applying intelligent deduplication to {len(content_items)} items",
+                "Applying intelligent deduplication to %s items",
+                len(content_items),
             )
             content_items = await self.performance_optimizer.deduplicate_content(
                 content_items,
             )
             logger.info(
-                f"Intelligent deduplication complete: {len(content_items)} unique items",
+                "Intelligent deduplication complete: %s unique items",
+                len(content_items),
             )
 
         # Create result
@@ -252,13 +261,18 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         self.execution_metrics["total_content_retrieved"] += len(content_items)
 
         logger.info(
-            f"Completed ingestion plan {plan.plan_id}: {len(content_items)} items from {sources_completed}/{len(plan.sources)} sources in {execution_time:.2f}s",
+            "Completed ingestion plan %s: %d items from %d/%d sources in %.2fs",
+            plan.plan_id,
+            len(content_items),
+            sources_completed,
+            len(plan.sources),
+            execution_time,
         )
 
         return result
 
     async def _execute_cached_source(self, source, topic: str) -> list[ContentItem]:
-        """Execute individual source with caching"""
+        """Execute individual source with caching."""
         # Generate source-specific cache key
         query_str = str(source.query_parameters.get("query", topic))
         source_cache_key = CacheKey(
@@ -268,16 +282,18 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
 
         # Check cache first
         if self.cache_service:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
             cached_items = await self.cache_service.get(source_cache_key)
 
             if cached_items:
-                cache_time = (datetime.now() - start_time).total_seconds() * 1000
+                cache_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 self.cache_metrics["search_cache_hits"] += 1
                 self.cache_metrics["cache_time_saved_ms"] += cache_time
 
                 logger.info(
-                    f"🚀 Source cache hit: {source.source_type} (saved {cache_time:.1f}ms)",
+                    "🚀 Source cache hit: %s (saved %.1fms)",
+                    source.source_type,
+                    cache_time,
                 )
                 return cached_items
 
@@ -292,7 +308,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
             elif source.source_type == SourceType.PUBMED:
                 items = await self._execute_pubmed_source(source)
             else:
-                logger.warning(f"Unknown source type: {source.source_type}")
+                logger.warning("Unknown source type: %s", source.source_type)
                 return []
 
             # Cache successful results
@@ -309,34 +325,34 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
                     ttl=self.cache_config.search_cache_ttl,
                     tags=cache_tags,
                 )
-                logger.debug(f"Cached {len(items)} items from {source.source_type}")
+                logger.debug("Cached %s items from %s", len(items), source.source_type)
 
             return items
 
         except Exception as e:
-            logger.error(f"Error executing {source.source_type} source: {e}")
+            logger.error("Error executing %s source: %s", source.source_type, e)
             return []
 
     async def invalidate_topic_cache(self, topic: str) -> int:
-        """Invalidate all cache entries for a specific topic"""
+        """Invalidate all cache entries for a specific topic."""
         if not self.cache_service:
             return 0
 
         count = await self.cache_service.invalidate_by_tag(f"topic:{topic}")
-        logger.info(f"Invalidated {count} cache entries for topic: {topic}")
+        logger.info("Invalidated %s cache entries for topic: %s", count, topic)
         return count
 
     async def invalidate_source_cache(self, source_type: SourceType) -> int:
-        """Invalidate all cache entries for a specific source"""
+        """Invalidate all cache entries for a specific source."""
         if not self.cache_service:
             return 0
 
         count = await self.cache_service.invalidate_by_tag(f"source:{source_type}")
-        logger.info(f"Invalidated {count} cache entries for source: {source_type}")
+        logger.info("Invalidated %s cache entries for source: %s", count, source_type)
         return count
 
-    async def get_cache_statistics(self) -> dict[str, Any]:
-        """Get comprehensive cache performance statistics"""
+    async def get_cache_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive cache performance statistics."""
         base_stats = {}
         if self.cache_service:
             base_stats = self.cache_service.get_stats()
@@ -349,7 +365,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         }
 
     async def _warm_cache(self) -> None:
-        """Warm cache with popular/common queries"""
+        """Warm cache with popular/common queries."""
         popular_queries = [
             "machine learning",
             "artificial intelligence",
@@ -363,7 +379,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
             "cloud computing",
         ]
 
-        logger.info(f"🔥 Warming cache with {len(popular_queries)} popular queries")
+        logger.info("🔥 Warming cache with %s popular queries", len(popular_queries))
 
         warming_tasks = []
         for query in popular_queries:
@@ -375,24 +391,24 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         asyncio.create_task(self._complete_cache_warming(warming_tasks))
 
     async def _warm_query_cache(self, query: str) -> None:
-        """Warm cache for a specific query"""
+        """Warm cache for a specific query."""
         try:
             context = {"domain": "research", "cache_warming": True}
             plan = await self.create_ingestion_plan(query, context)
 
             # Don't execute the full plan during warming, just cache the plan
-            logger.debug(f"Warmed plan cache for query: {query}")
+            logger.debug("Warmed plan cache for query: %s", query)
 
         except Exception as e:
-            logger.debug(f"Cache warming failed for query '{query}': {e}")
+            logger.debug("Cache warming failed for query '%s': %s", query, e)
 
     async def _complete_cache_warming(self, warming_tasks: list[asyncio.Task]) -> None:
-        """Complete cache warming in background"""
+        """Complete cache warming in background."""
         try:
             await asyncio.gather(*warming_tasks, return_exceptions=True)
             logger.info("🔥 Cache warming completed")
         except Exception as e:
-            logger.warning(f"Cache warming partially failed: {e}")
+            logger.warning("Cache warming partially failed: %s", e)
 
 
 # Factory function for easy instantiation
@@ -402,7 +418,7 @@ async def create_cached_orchestrator(
     redis_url: str = "redis://localhost:6379/0",
     **config_kwargs,
 ) -> CachedIngestionOrchestrator:
-    """Create and initialize a cached ingestion orchestrator"""
+    """Create and initialize a cached ingestion orchestrator."""
     config = CachedIngestionConfig(redis_url=redis_url, **config_kwargs)
 
     orchestrator = CachedIngestionOrchestrator(config)
@@ -413,7 +429,7 @@ async def create_cached_orchestrator(
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main():
+    async def main(self) -> None:
         # Create cached orchestrator
         orchestrator = await create_cached_orchestrator()
 

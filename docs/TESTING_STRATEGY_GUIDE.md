@@ -42,7 +42,7 @@ Test the smallest individual units of code (functions, methods, classes) in comp
 def test_firecrawl_service_should_extract_content_successfully(self):
     """
     Test: FirecrawlService should extract content successfully from valid URL
-    
+
     AAA Pattern:
     - Arrange: Set up mock response and service instance
     - Act: Call the extract_content method
@@ -57,7 +57,7 @@ def test_firecrawl_service_should_extract_content_successfully(self):
         "published_date": "2024-01-15",
         "word_count": 150
     }
-    
+
     # Mock the HTTP client response
     mock_response = Mock()
     mock_response.status_code = 200
@@ -66,18 +66,18 @@ def test_firecrawl_service_should_extract_content_successfully(self):
         "metadata": expected_metadata,
         "success": True
     }
-    
+
     # Create service instance with mocked dependencies
     with patch('services.ingestion.firecrawl_service.httpx.AsyncClient') as mock_client:
         mock_client_instance = AsyncMock()
         mock_client_instance.get.return_value = mock_response
         mock_client.return_value.__aenter__.return_value = mock_client_instance
-        
+
         service = FirecrawlService(api_key="test_key")
-        
+
         # ACT: Execute the method under test
         result = asyncio.run(service.extract_content(test_url))
-        
+
         # ASSERT: Verify the expected outcomes
         assert result.success is True
         assert result.content == expected_content
@@ -97,17 +97,17 @@ with patch('services.ingestion.firecrawl_service.httpx.AsyncClient') as mock_cli
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "content": "Mocked content"}
     mock_client.get.return_value = mock_response
-    
+
     # Configure the mock client class
     mock_client_class.return_value.__aenter__.return_value = mock_client
-    
+
     service = FirecrawlService(api_key="test_key")
     result = asyncio.run(service.extract_content("https://example.com"))
-    
+
     # Verify API call and response handling
     assert result.success is True
     assert result.content == "Mocked content"
-    
+
     # Verify the HTTP client was called correctly
     mock_client.get.assert_called_once()
 ```
@@ -159,7 +159,7 @@ Verify that different modules, components, or services work together correctly. 
 async def test_database_cache_integration(self, test_database, test_cache):
     """
     Test: Database and cache should work together seamlessly
-    
+
     Integration Test:
     - Store data in database
     - Cache the data for performance
@@ -176,7 +176,7 @@ async def test_database_cache_integration(self, test_database, test_cache):
         },
         "created_at": datetime.now(UTC).isoformat()
     }
-    
+
     # Store in database
     await test_database.execute_query(
         "INSERT INTO users (user_id, email, profile_data) VALUES ($1, $2, $3)",
@@ -184,7 +184,7 @@ async def test_database_cache_integration(self, test_database, test_cache):
         user_data["email"],
         json.dumps(user_data["profile"])
     )
-    
+
     # Cache the data
     cache_success = await test_cache.set(
         "users",
@@ -193,7 +193,7 @@ async def test_database_cache_integration(self, test_database, test_cache):
         ttl=3600
     )
     assert cache_success is True
-    
+
     # Retrieve from cache (should be fast)
     cached_data = await test_cache.get("users", user_data["user_id"])
     assert cached_data is not None
@@ -207,7 +207,7 @@ async def test_database_cache_integration(self, test_database, test_cache):
 async def test_message_bus_integration(self, test_message_bus, test_services):
     """
     Test: Message bus should enable reliable service communication
-    
+
     Integration Test:
     - Publish messages from one service
     - Subscribe and process messages in another service
@@ -216,17 +216,17 @@ async def test_message_bus_integration(self, test_message_bus, test_services):
     """
     # Set up message handlers
     received_messages = []
-    
+
     async def message_handler(message):
         received_messages.append(message)
         return {"status": "processed", "message_id": message.message_id}
-    
+
     # Subscribe to test stream
     subscription_id = await test_message_bus.subscribe("test:integration", message_handler)
-    
+
     # Wait for subscription to be ready
     await asyncio.sleep(0.1)
-    
+
     # Publish test messages
     test_messages = [
         {
@@ -236,13 +236,13 @@ async def test_message_bus_integration(self, test_message_bus, test_services):
             "data": {"action": "process_data", "payload": "test_payload_1"}
         }
     ]
-    
+
     for msg_data in test_messages:
         await test_message_bus.publish("test:integration", msg_data)
-    
+
     # Wait for message processing
     await asyncio.sleep(0.5)
-    
+
     # Verify messages were received and processed
     assert len(received_messages) == 1
     assert received_messages[0]["message_id"] == "msg_001"
@@ -285,7 +285,7 @@ Test complete user workflows from start to finish, simulating real user journeys
 async def test_complete_knowledge_ingestion_workflow(self, full_system_setup):
     """
     Test: Complete knowledge ingestion workflow from user request to stored knowledge
-    
+
     E2E Test Scenario:
     1. User submits research topic
     2. System creates ingestion plan
@@ -305,7 +305,7 @@ async def test_complete_knowledge_ingestion_workflow(self, full_system_setup):
             "quality_threshold": 0.7
         }
     }
-    
+
     # Create comprehensive ingestion plan
     ingestion_plan = {
         "topic": user_request["topic"],
@@ -325,10 +325,10 @@ async def test_complete_knowledge_ingestion_workflow(self, full_system_setup):
             }
         ]
     }
-    
+
     # Execute complete workflow
     result = await orchestrator.execute_plan(ingestion_plan)
-    
+
     # Verify complete workflow success
     assert result.success is True
     assert result.total_sources_processed == 2
@@ -376,7 +376,7 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5433:5432"
-  
+
   redis-test:
     image: redis:7
     ports:
@@ -396,7 +396,7 @@ async def test_database(self):
         user="postgres",
         REDACTED_SECRET="postgres"
     )
-    
+
     await db_manager.connect()
     yield db_manager
     await db_manager.disconnect()

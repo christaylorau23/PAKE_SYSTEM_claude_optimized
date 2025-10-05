@@ -11,7 +11,7 @@ import os
 # Import our core models
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.services.curation.models.content_item import ContentItem, ContentType
 from src.services.curation.models.content_source import ContentSource, SourceType
@@ -29,7 +29,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 class IntelligentCurationDemo:
     """Final deployment demonstration"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.content_database = []
         self.content_sources = []
         self.topic_categories = []
@@ -37,7 +37,7 @@ class IntelligentCurationDemo:
         self.user_feedback = []
         self.recommendations = []
 
-    def create_demo_content(self):
+    def create_demo_content(self) -> None:
         """Create comprehensive demo content"""
         print("📚 Creating intelligent content database...")
 
@@ -127,7 +127,7 @@ class IntelligentCurationDemo:
 
         print(f"  ✅ Created {len(self.content_database)} high-quality content items")
 
-    def create_content_sources(self):
+    def create_content_sources(self) -> None:
         """Create intelligent content sources"""
         print("📡 Creating intelligent content sources...")
 
@@ -168,7 +168,7 @@ class IntelligentCurationDemo:
 
         print(f"  ✅ Created {len(self.content_sources)} reliable content sources")
 
-    def create_topic_categories(self):
+    def create_topic_categories(self) -> None:
         """Create intelligent topic categories"""
         print("🗂️  Creating intelligent topic categories...")
 
@@ -225,7 +225,7 @@ class IntelligentCurationDemo:
 
         print(f"  ✅ Created {len(self.topic_categories)} intelligent topic categories")
 
-    def simulate_user_interactions(self):
+    def simulate_user_interactions(self) -> None:
         """Simulate intelligent user interactions"""
         print("🔄 Simulating intelligent user interactions...")
 
@@ -240,12 +240,12 @@ class IntelligentCurationDemo:
 
         # Simulate interactions with top 3 items
         for content in self.content_database[:3]:
-            for interaction_type, duration, description in interaction_patterns:
+            for interaction_type, duration, _description in interaction_patterns:
                 interaction = UserInteraction(
                     user_id=user_id,
                     content_id=content.id,
                     interaction_type=interaction_type,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(UTC),
                     duration=duration,
                 )
                 self.user_interactions.append(interaction)
@@ -256,7 +256,7 @@ class IntelligentCurationDemo:
             } intelligent user interactions",
         )
 
-    def simulate_user_feedback(self):
+    def simulate_user_feedback(self) -> None:
         """Simulate intelligent user feedback"""
         print("⭐ Simulating intelligent user feedback...")
 
@@ -269,13 +269,13 @@ class IntelligentCurationDemo:
                 content_id=content.id,
                 feedback_type=FeedbackType.RATING,
                 feedback_value=score,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(UTC),
             )
             self.user_feedback.append(feedback)
 
         print(f"  ✅ Generated {len(self.user_feedback)} high-quality feedback items")
 
-    def generate_intelligent_recommendations(self):
+    def generate_intelligent_recommendations(self) -> None:
         """Generate intelligent recommendations"""
         print("🎯 Generating intelligent recommendations...")
 
@@ -307,7 +307,7 @@ class IntelligentCurationDemo:
 
         print(f"  ✅ Generated {len(self.recommendations)} intelligent recommendations")
 
-    def calculate_system_metrics(self):
+    def calculate_system_metrics(self) -> None:
         """Calculate comprehensive system metrics"""
         print("📊 Calculating system intelligence metrics...")
 
@@ -329,11 +329,11 @@ class IntelligentCurationDemo:
             "total_interactions": len(self.user_interactions),
             "total_feedback": len(self.user_feedback),
             "content_diversity": len(
-                set(
+                {
                     tag
                     for content in self.content_database
                     for tag in content.topic_tags
-                ),
+                },
             ),
         }
 
@@ -356,7 +356,7 @@ class IntelligentCurationDemo:
 
         return metrics
 
-    def demonstrate_advanced_features(self):
+    def demonstrate_advanced_features(self) -> None:
         """Demonstrate advanced curation features"""
         print("🧠 Demonstrating advanced intelligent features...")
 
@@ -400,7 +400,7 @@ class IntelligentCurationDemo:
             engagement_rate = len(save_interactions) / len(self.user_interactions)
             print(f"  📊 User Engagement Rate (saves): {engagement_rate:.1%}")
 
-    async def run_complete_demonstration(self):
+    async def run_complete_demonstration(self) -> None:
         """Run complete system demonstration"""
         print("🚀 INTELLIGENT CONTENT CURATION SYSTEM - FINAL DEPLOYMENT DEMO")
         print("=" * 80)
@@ -461,7 +461,7 @@ class IntelligentCurationDemo:
         return True
 
 
-async def main():
+async def main(self) -> None:
     """Main demonstration runner"""
     demo = IntelligentCurationDemo()
     await demo.run_complete_demonstration()

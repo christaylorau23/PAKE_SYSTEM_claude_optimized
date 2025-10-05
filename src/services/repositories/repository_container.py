@@ -30,15 +30,15 @@ T = TypeVar("T")
 
 
 class RepositoryContainer:
-    """Dependency injection container for repositories"""
+    """Dependency injection container for repositories."""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self) -> None:
         self.session = session
-        self._repositories: dict[str, Any] = {}
+        self._repositories: Dict[str, Any] = {}
         self._initialize_repositories()
 
-    def _initialize_repositories(self):
-        """Initialize all repository instances"""
+    def _initialize_repositories(self) -> None:
+        """Initialize all repository instances."""
         try:
             # Initialize SQLAlchemy repositories
             self._repositories["user"] = SQLAlchemyUserRepository(self.session)
@@ -57,62 +57,69 @@ class RepositoryContainer:
             logger.info("Repository container initialized successfully")
 
         except Exception as e:
-            logger.error(f"Error initializing repository container: {e}")
+            logger.error("Error initializing repository container: %s", e)
             raise
 
     def get_user_repository(self) -> AbstractUserRepository:
-        """Get user repository instance"""
+        """Get user repository instance."""
         return self._repositories["user"]
 
     def get_search_history_repository(self) -> AbstractSearchHistoryRepository:
-        """Get search history repository instance"""
+        """Get search history repository instance."""
         return self._repositories["search_history"]
 
     def get_saved_search_repository(self) -> AbstractSavedSearchRepository:
-        """Get saved search repository instance"""
+        """Get saved search repository instance."""
         # TODO: Implement when SQLAlchemySavedSearchRepository is created
-        raise NotImplementedError("SavedSearch repository not yet implemented")
+        msg = "SavedSearch repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_service_registry_repository(self) -> AbstractServiceRegistryRepository:
-        """Get service registry repository instance"""
+        """Get service registry repository instance."""
         # TODO: Implement when SQLAlchemyServiceRegistryRepository is created
-        raise NotImplementedError("ServiceRegistry repository not yet implemented")
+        msg = "ServiceRegistry repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_service_health_check_repository(
         self,
     ) -> AbstractServiceHealthCheckRepository:
-        """Get service health check repository instance"""
+        """Get service health check repository instance."""
         # TODO: Implement when SQLAlchemyServiceHealthCheckRepository is created
-        raise NotImplementedError("ServiceHealthCheck repository not yet implemented")
+        msg = "ServiceHealthCheck repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_service_metrics_repository(self) -> AbstractServiceMetricsRepository:
-        """Get service metrics repository instance"""
+        """Get service metrics repository instance."""
         # TODO: Implement when SQLAlchemyServiceMetricsRepository is created
-        raise NotImplementedError("ServiceMetrics repository not yet implemented")
+        msg = "ServiceMetrics repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_api_gateway_route_repository(self) -> AbstractAPIGatewayRouteRepository:
-        """Get API gateway route repository instance"""
+        """Get API gateway route repository instance."""
         # TODO: Implement when SQLAlchemyAPIGatewayRouteRepository is created
-        raise NotImplementedError("APIGatewayRoute repository not yet implemented")
+        msg = "APIGatewayRoute repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_system_alert_repository(self) -> AbstractSystemAlertRepository:
-        """Get system alert repository instance"""
+        """Get system alert repository instance."""
         # TODO: Implement when SQLAlchemySystemAlertRepository is created
-        raise NotImplementedError("SystemAlert repository not yet implemented")
+        msg = "SystemAlert repository not yet implemented"
+        raise NotImplementedError(msg)
 
     def get_repository(self, repository_name: str) -> Any:
-        """Get repository by name"""
+        """Get repository by name."""
         if repository_name not in self._repositories:
-            raise ValueError(f"Repository '{repository_name}' not found")
+            msg = f"Repository '{repository_name}' not found"
+            raise ValueError(msg)
         return self._repositories[repository_name]
 
     def register_repository(self, name: str, repository: Any) -> None:
-        """Register a custom repository"""
+        """Register a custom repository."""
         self._repositories[name] = repository
-        logger.info(f"Registered custom repository: {name}")
+        logger.info("Registered custom repository: %s", name)
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform health check on all repositories"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on all repositories."""
         health_status = {
             "status": "healthy",
             "repositories": {},
@@ -138,28 +145,28 @@ class RepositoryContainer:
 
 
 class RepositoryFactory:
-    """Factory for creating repository containers with different configurations"""
+    """Factory for creating repository containers with different configurations."""
 
     @staticmethod
     def create_container(session: AsyncSession) -> RepositoryContainer:
-        """Create a new repository container with the given session"""
+        """Create a new repository container with the given session."""
         return RepositoryContainer(session)
 
     @staticmethod
     def create_with_fake_repositories() -> "FakeRepositoryContainer":
-        """Create a container with fake repositories for testing"""
+        """Create a container with fake repositories for testing."""
         return FakeRepositoryContainer()
 
 
 class FakeRepositoryContainer:
-    """Container with fake repositories for unit testing"""
+    """Container with fake repositories for unit testing."""
 
-    def __init__(self):
-        self._repositories: dict[str, Any] = {}
+    def __init__(self) -> None:
+        self._repositories: Dict[str, Any] = {}
         self._initialize_fake_repositories()
 
-    def _initialize_fake_repositories(self):
-        """Initialize fake repositories for testing"""
+    def _initialize_fake_repositories(self) -> None:
+        """Initialize fake repositories for testing."""
         from .fake_repositories import (
             FakeSearchHistoryRepository,
             FakeUserRepository,
@@ -171,24 +178,25 @@ class FakeRepositoryContainer:
         logger.info("Fake repository container initialized for testing")
 
     def get_user_repository(self) -> AbstractUserRepository:
-        """Get fake user repository instance"""
+        """Get fake user repository instance."""
         return self._repositories["user"]
 
     def get_search_history_repository(self) -> AbstractSearchHistoryRepository:
-        """Get fake search history repository instance"""
+        """Get fake search history repository instance."""
         return self._repositories["search_history"]
 
     def get_repository(self, repository_name: str) -> Any:
-        """Get fake repository by name"""
+        """Get fake repository by name."""
         if repository_name not in self._repositories:
-            raise ValueError(f"Fake repository '{repository_name}' not found")
+            msg = f"Fake repository '{repository_name}' not found"
+            raise ValueError(msg)
         return self._repositories[repository_name]
 
-    async def health_check(self) -> dict[str, Any]:
-        """Fake health check always returns healthy"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Fake health check always returns healthy."""
         return {
             "status": "healthy",
-            "repositories": {name: "healthy" for name in self._repositories.keys()},
+            "repositories": dict.fromkeys(self._repositories, "healthy"),
             "session_active": True,
             "fake_mode": True,
         }

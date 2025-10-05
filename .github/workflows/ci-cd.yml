@@ -8,8 +8,36 @@ on:
     branches: [ main, develop ]
 
 env:
+  # Non-sensitive configuration
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '22.18.0'
+  REGISTRY_URL: 'ghcr.io'
+  IMAGE_NAME: 'pake-system'
+
+  # Sensitive secrets (from GitHub repository secrets)
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  API_KEY: ${{ secrets.API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+
+  # API Keys
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+  # Optional API Keys
+  DID_API_KEY: ${{ secrets.DID_API_KEY }}
+  HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+
+  # Webhook Security
+  WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+  # HashiCorp Vault Configuration
+  VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+  VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+  VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
 
 jobs:
   # Security scanning job (runs first)
@@ -54,13 +82,31 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
 
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-
+
     - name: Install Python dependencies
       run: |
-        poetry install --no-interaction --only=main
+        poetry install --no-interaction --no-root
 
     - name: Install Node.js dependencies
       run: |
         npm ci
+
+    - name: Capture environment snapshot
+      run: |
+        mkdir -p reports logs
+        echo "--- Environment Variables ---" > environment.log
+        env >> environment.log
+        echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+        pip freeze >> requirements.ci.log
+        echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+        poetry show --tree >> poetry.tree.log
 
     - name: Run Python linting
       run: |
@@ -74,12 +120,25 @@ jobs:
 
     - name: Run tests
       run: |
-        poetry run pytest tests/ -v --cov=src --cov-report=xml
+        poetry run pytest tests/ -vv -rA --showlocals --tb=native --cov=src --cov-report=xml --junitxml=reports/junit.xml
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
+
+    - name: Upload diagnostic artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-diagnostic-artifacts
+        path: |
+          reports/
+          logs/
+          environment.log
+          requirements.ci.log
+          poetry.tree.log
+          coverage.xml
 
   # Build and test
   build:
@@ -109,10 +168,28 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
 
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-
+
     - name: Install dependencies
       run: |
-        poetry install --no-interaction
+        poetry install --no-interaction --no-root
         npm ci
+
+    - name: Capture environment snapshot
+      run: |
+        mkdir -p reports logs
+        echo "--- Environment Variables ---" > environment.log
+        env >> environment.log
+        echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+        pip freeze >> requirements.ci.log
+        echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+        poetry show --tree >> poetry.tree.log
 
     - name: Build Python package
       run: |
@@ -124,7 +201,19 @@ jobs:
 
     - name: Run integration tests
       run: |
-        poetry run pytest tests/integration/ -v
+        poetry run pytest tests/integration/ -vv -rA --showlocals --tb=native --junitxml=reports/integration-junit.xml
+
+    - name: Upload integration test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-integration-artifacts
+        path: |
+          reports/
+          logs/
+          environment.log
+          requirements.ci.log
+          poetry.tree.log
 
     - name: Build Docker image
       run: |

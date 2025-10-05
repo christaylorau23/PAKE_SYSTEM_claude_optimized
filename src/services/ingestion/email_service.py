@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Email Integration Service
-Phase 2B Sprint 3: Advanced email ingestion with intelligent filtering
+Phase 2B Sprint 3: Advanced email ingestion with intelligent filtering.
 
 Provides enterprise email integration with IMAP/Exchange support,
 intelligent content filtering, and cognitive quality assessment.
@@ -23,23 +23,23 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class EmailSearchQuery:
-    """Immutable email search query configuration"""
+    """Immutable email search query configuration."""
 
-    folders: list[str] = field(default_factory=lambda: ["INBOX"])
-    sender_filters: list[str] = field(default_factory=list)
-    subject_keywords: list[str] = field(default_factory=list)
-    content_keywords: list[str] = field(default_factory=list)
+    folders: List[str] = field(default_factory=lambda: ["INBOX"])
+    sender_filters: List[str] = field(default_factory=list)
+    subject_keywords: List[str] = field(default_factory=list)
+    content_keywords: List[str] = field(default_factory=list)
     date_range: dict[str, datetime] | None = None
     max_results: int = 50
     exclude_spam: bool = True
     exclude_promotional: bool = True
     min_content_length: int = 100
-    attachment_types: list[str] = field(default_factory=list)  # ["pdf", "doc", "txt"]
+    attachment_types: List[str] = field(default_factory=list)  # ["pdf", "doc", "txt"]
 
 
 @dataclass(frozen=True)
 class EmailConnectionConfig:
-    """Immutable email server connection configuration"""
+    """Immutable email server connection configuration."""
 
     server_type: str  # "imap", "exchange"
     hostname: str
@@ -53,17 +53,17 @@ class EmailConnectionConfig:
 
 @dataclass(frozen=True)
 class EmailMessage:
-    """Immutable email message representation"""
+    """Immutable email message representation."""
 
     message_id: str
     sender: str
-    recipients: list[str]
+    recipients: List[str]
     subject: str
     content: str
     html_content: str | None
     timestamp: datetime
     folder: str
-    attachments: list[dict[str, Any]] = field(default_factory=list)
+    attachments: list[Dict[str, Any]] = field(default_factory=list)
     headers: dict[str, str] = field(default_factory=dict)
     thread_id: str | None = None
     importance: str = "normal"  # "low", "normal", "high"
@@ -73,7 +73,7 @@ class EmailMessage:
 
 @dataclass(frozen=True)
 class EmailIngestionResult:
-    """Immutable result from email ingestion operation"""
+    """Immutable result from email ingestion operation."""
 
     success: bool
     query: EmailSearchQuery
@@ -83,9 +83,9 @@ class EmailIngestionResult:
     filtered_messages: int = 0
     error_details: str | None = None
     execution_time: float = 0.0
-    folders_searched: list[str] = field(default_factory=list)
+    folders_searched: List[str] = field(default_factory=list)
     cognitive_assessments_applied: int = 0
-    intelligent_filters_applied: list[str] = field(default_factory=list)
+    intelligent_filters_applied: List[str] = field(default_factory=list)
 
 
 class EmailIngestionService:
@@ -100,22 +100,22 @@ class EmailIngestionService:
     - Advanced search and filtering capabilities
     """
 
-    def __init__(self, config: EmailConnectionConfig, cognitive_engine=None):
-        """Initialize email service with connection configuration"""
+    def __init__(self) -> None:
+        """Initialize email service with connection configuration."""
         self.config = config
         self.cognitive_engine = cognitive_engine
-        self.connection_pool: dict[str, Any] = {}
+        self.connection_pool: Dict[str, Any] = {}
         self._message_cache: dict[str, EmailMessage] = {}
         self._filter_patterns = self._initialize_filter_patterns()
 
         logger.info(
-            f"Initialized EmailIngestionService for {config.server_type}://{
-                config.hostname
-            }",
+            "Initialized EmailIngestionService for %s://%s",
+            config.server_type,
+            config.hostname,
         )
 
-    def _initialize_filter_patterns(self) -> dict[str, list[str]]:
-        """Initialize intelligent filtering patterns"""
+    def _initialize_filter_patterns(self) -> dict[str, List[str]]:
+        """Initialize intelligent filtering patterns."""
         return {
             "spam_indicators": [
                 r"\b(?:viagra|lottery|winner|congratulations|urgent|act now)\b",
@@ -143,7 +143,7 @@ class EmailIngestionService:
         Applies intelligent filtering for spam, promotional content,
         and content quality assessment.
         """
-        logger.info(f"Starting email search in folders: {query.folders}")
+        logger.info("Starting email search in folders: %s", query.folders)
         start_time = asyncio.get_event_loop().time()
 
         try:
@@ -159,7 +159,7 @@ class EmailIngestionService:
                 all_messages.extend(folder_messages)
                 folders_searched.append(folder)
 
-                logger.info(f"Found {len(folder_messages)} messages in {folder}")
+                logger.info("Found %s messages in %s", len(folder_messages), folder)
 
             # Apply intelligent filtering
             filtered_messages, filter_stats = await self._apply_intelligent_filters(
@@ -200,7 +200,8 @@ class EmailIngestionService:
             )
 
             logger.info(
-                f"Email search completed: {len(final_messages)} messages retrieved",
+                "Email search completed: %s messages retrieved",
+                len(final_messages),
             )
             return result
 
@@ -208,7 +209,7 @@ class EmailIngestionService:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001  # Ensure non-zero execution time
-            logger.error(f"Email search failed: {e}")
+            logger.error("Email search failed: %s", e)
 
             return EmailIngestionResult(
                 success=False,
@@ -217,15 +218,16 @@ class EmailIngestionService:
                 execution_time=execution_time,
             )
 
-    async def _get_connection(self):
-        """Get or create connection to email server"""
+    async def _get_connection(self) -> None:
+        """Get or create connection to email server."""
         connection_key = f"{self.config.hostname}:{self.config.port}"
 
         if connection_key not in self.connection_pool:
             logger.info(
-                f"Creating {self.config.server_type} connection to {
-                    self.config.hostname
-                }:{self.config.port}",
+                "Creating %s connection to %s:%s",
+                self.config.server_type,
+                self.config.hostname,
+                self.config.port,
             )
 
             try:
@@ -234,18 +236,22 @@ class EmailIngestionService:
                 elif self.config.server_type.lower() == "exchange":
                     connection = await self._create_exchange_connection()
                 else:
+                    msg = f"Unsupported server type: {self.config.server_type}"
                     raise ValueError(
-                        f"Unsupported server type: {self.config.server_type}",
+                        msg,
                     )
 
                 self.connection_pool[connection_key] = connection
                 logger.info(
-                    f"Successfully connected to {self.config.server_type} server",
+                    "Successfully connected to %s server",
+                    self.config.server_type,
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Failed to connect to {self.config.server_type} server: {e}",
+                    "Failed to connect to %s server: %s",
+                    self.config.server_type,
+                    e,
                 )
                 # Return mock connection for testing when real connection fails
                 self.connection_pool[connection_key] = {
@@ -258,8 +264,8 @@ class EmailIngestionService:
 
         return self.connection_pool[connection_key]
 
-    async def _create_imap_connection(self):
-        """Create real IMAP connection"""
+    async def _create_imap_connection(self) -> None:
+        """Create real IMAP connection."""
         try:
             # Create IMAP connection
             if self.config.use_ssl:
@@ -289,11 +295,12 @@ class EmailIngestionService:
             }
 
         except Exception as e:
-            logger.error(f"IMAP connection failed: {e}")
-            raise ConnectionError(f"Failed to connect to IMAP server: {e}")
+            logger.error("IMAP connection failed: %s", e)
+            msg = f"Failed to connect to IMAP server: {e}"
+            raise ConnectionError(msg)
 
-    async def _create_exchange_connection(self):
-        """Create Exchange connection (placeholder for exchangelib)"""
+    async def _create_exchange_connection(self) -> None:
+        """Create Exchange connection (placeholder for exchangelib)."""
         # For now, return mock since exchangelib requires additional setup
         logger.warning(
             "Exchange support requires exchangelib package. Using mock connection.",
@@ -312,7 +319,7 @@ class EmailIngestionService:
         folder: str,
         query: EmailSearchQuery,
     ) -> list[EmailMessage]:
-        """Search for messages in a specific folder"""
+        """Search for messages in a specific folder."""
         # Mock implementation - replace with actual IMAP/Exchange search
         mock_messages = self._generate_mock_messages(folder, query)
 
@@ -326,7 +333,7 @@ class EmailIngestionService:
         folder: str,
         query: EmailSearchQuery,
     ) -> list[EmailMessage]:
-        """Generate realistic mock email messages for testing"""
+        """Generate realistic mock email messages for testing."""
         base_messages = [
             {
                 "sender": "john.smith@company.com",
@@ -398,18 +405,16 @@ Send us your bank details to receive your winnings.""",
         messages = []
         for i, msg_template in enumerate(base_messages):
             # Apply query filtering
-            if query.subject_keywords:
-                if not any(
-                    keyword.lower() in msg_template["subject"].lower()
-                    for keyword in query.subject_keywords
-                ):
-                    continue
+            if query.subject_keywords and not any(
+                keyword.lower() in msg_template["subject"].lower()
+                for keyword in query.subject_keywords
+            ):
+                continue
 
-            if query.sender_filters:
-                if not any(
-                    sender in msg_template["sender"] for sender in query.sender_filters
-                ):
-                    continue
+            if query.sender_filters and not any(
+                sender in msg_template["sender"] for sender in query.sender_filters
+            ):
+                continue
 
             message_id = f"msg_{folder}_{i}_{
                 hashlib.sha256(msg_template['subject'].encode()).hexdigest()[:8]
@@ -441,8 +446,8 @@ Send us your bank details to receive your winnings.""",
         self,
         messages: list[EmailMessage],
         query: EmailSearchQuery,
-    ) -> tuple[list[EmailMessage], list[str]]:
-        """Apply intelligent filtering to remove spam and promotional content"""
+    ) -> tuple[list[EmailMessage], List[str]]:
+        """Apply intelligent filtering to remove spam and promotional content."""
         filtered_messages = []
         applied_filters = []
 
@@ -463,13 +468,12 @@ Send us your bank details to receive your winnings.""",
                 continue
 
             # Apply content keyword filtering
-            if query.content_keywords:
-                if not any(
-                    keyword.lower() in message.content.lower()
-                    for keyword in query.content_keywords
-                ):
-                    applied_filters.append("keyword_filter")
-                    continue
+            if query.content_keywords and not any(
+                keyword.lower() in message.content.lower()
+                for keyword in query.content_keywords
+            ):
+                applied_filters.append("keyword_filter")
+                continue
 
             filtered_messages.append(message)
 
@@ -479,7 +483,7 @@ Send us your bank details to receive your winnings.""",
         return filtered_messages, unique_filters
 
     def _is_spam(self, message: EmailMessage) -> bool:
-        """Detect spam messages using pattern matching"""
+        """Detect spam messages using pattern matching."""
         text_to_check = f"{message.subject} {message.content}".lower()
 
         for pattern in self._filter_patterns["spam_indicators"]:
@@ -487,13 +491,10 @@ Send us your bank details to receive your winnings.""",
                 return True
 
         # Check spam score from headers
-        if message.spam_score > 5.0:
-            return True
-
-        return False
+        return message.spam_score > 5.0
 
     def _is_promotional(self, message: EmailMessage) -> bool:
-        """Detect promotional messages using pattern matching"""
+        """Detect promotional messages using pattern matching."""
         text_to_check = f"{message.subject} {message.content} {message.sender}".lower()
 
         for pattern in self._filter_patterns["promotional_indicators"]:
@@ -506,7 +507,7 @@ Send us your bank details to receive your winnings.""",
         self,
         messages: list[EmailMessage],
     ) -> list[EmailMessage]:
-        """Apply cognitive quality assessment to messages"""
+        """Apply cognitive quality assessment to messages."""
         assessed_messages = []
 
         for message in messages:
@@ -538,7 +539,7 @@ Send us your bank details to receive your winnings.""",
                 assessed_messages.append(assessed_message)
 
             except Exception as e:
-                logger.warning(f"Failed to assess message {message.message_id}: {e}")
+                logger.warning("Failed to assess message %s: %s", message.message_id, e)
                 assessed_messages.append(message)  # Keep original
 
         return assessed_messages
@@ -548,7 +549,7 @@ Send us your bank details to receive your winnings.""",
         messages: list[EmailMessage],
         query: EmailSearchQuery,
     ) -> list[EmailMessage]:
-        """Sort messages by relevance and recency"""
+        """Sort messages by relevance and recency."""
 
         def relevance_score(message: EmailMessage) -> float:
             score = 0.0
@@ -586,7 +587,7 @@ Send us your bank details to receive your winnings.""",
         result: EmailIngestionResult,
         source_name: str,
     ) -> list[ContentItem]:
-        """Convert email messages to ContentItem format"""
+        """Convert email messages to ContentItem format."""
         content_items = []
 
         for message in result.messages:
@@ -616,11 +617,11 @@ Send us your bank details to receive your winnings.""",
 
             content_items.append(content_item)
 
-        logger.info(f"Converted {len(content_items)} emails to content items")
+        logger.info("Converted %s emails to content items", len(content_items))
         return content_items
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform email service health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform email service health check."""
         try:
             connection = await self._get_connection()
 
@@ -636,8 +637,8 @@ Send us your bank details to receive your winnings.""",
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}
 
-    async def close(self):
-        """Clean up connections and resources"""
+    async def close(self) -> None:
+        """Clean up connections and resources."""
         for connection in self.connection_pool.values():
             # In real implementation: close IMAP/Exchange connections
             connection["connected"] = False

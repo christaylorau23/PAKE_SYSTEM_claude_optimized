@@ -8,7 +8,7 @@
 
 ### Phase 1: Immediate Actions (Execute Now)
 - [ ] **Stop all running services** to prevent unauthorized access
-- [ ] **Generate new strong REDACTED_SECRETs** for all services  
+- [ ] **Generate new strong REDACTED_SECRETs** for all services
 - [ ] **Rotate database credentials**
 - [ ] **Invalidate and regenerate API keys**
 - [ ] **Update service configurations**
@@ -45,7 +45,7 @@ pkill -f "node.*bridge"
 ```powershell
 # PowerShell REDACTED_SECRET generation
 -join ((33..126) | Get-Random -Count 16 | % {[char]$_})
--join ((33..126) | Get-Random -Count 16 | % {[char]$_})  
+-join ((33..126) | Get-Random -Count 16 | % {[char]$_})
 -join ((33..126) | Get-Random -Count 16 | % {[char]$_})
 -join ((33..126) | Get-Random -Count 16 | % {[char]$_})
 ```
@@ -57,7 +57,7 @@ python -c "import secrets, string; chars=string.ascii_letters+string.digits+'!@#
 
 **Record new REDACTED_SECRETs:**
 - NEW_POSTGRES_PASSWORD: `________________________`
-- NEW_REDIS_PASSWORD: `________________________`  
+- NEW_REDIS_PASSWORD: `________________________`
 - NEW_N8N_PASSWORD: `________________________`
 - NEW_DB_PASSWORD: `________________________`
 
@@ -98,7 +98,7 @@ mv .env .env.compromised.backup
 cat > .env << 'EOF'
 # PAKE+ System Environment Variables - ROTATED $(date +%Y-%m-%d)
 
-# Database Configuration  
+# Database Configuration
 POSTGRES_PASSWORD=YOUR_NEW_POSTGRES_PASSWORD_HERE
 POSTGRES_PORT=5432
 
@@ -120,7 +120,7 @@ N8N_PORT=5678
 NGINX_PORT=80
 NGINX_HTTPS_PORT=443
 
-# Ollama Configuration  
+# Ollama Configuration
 OLLAMA_PORT=11434
 
 # External API Keys - ROTATE IMMEDIATELY
@@ -148,7 +148,7 @@ EOF
 ```
 
 **ElevenLabs API Key:**
-```bash  
+```bash
 # 1. Go to https://elevenlabs.io/api-keys
 # 2. Delete compromised key
 # 3. Create new key with minimal permissions
@@ -197,7 +197,7 @@ docker-compose up -d
 # Verify all services are healthy
 docker-compose ps
 
-# Check logs for any credential errors  
+# Check logs for any credential errors
 docker-compose logs postgres | head -20
 docker-compose logs redis | head -20
 docker-compose logs n8n | head -20
@@ -208,7 +208,7 @@ docker-compose logs n8n | head -20
 # Test PostgreSQL connection
 docker-compose exec postgres psql -U pake_user -d pake_system -c "SELECT version();"
 
-# Test Redis connection  
+# Test Redis connection
 docker-compose exec redis redis-cli -a YOUR_NEW_REDIS_PASSWORD_HERE ping
 
 # Test n8n login at http://localhost:5678
@@ -223,7 +223,7 @@ docker-compose exec redis redis-cli -a YOUR_NEW_REDIS_PASSWORD_HERE ping
 # Search for old REDACTED_SECRETs in source code
 cd D:\Projects\PAKE_SYSTEM
 grep -r "process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'" . --exclude-dir=.git
-grep -r "process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'" . --exclude-dir=.git  
+grep -r "process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'" . --exclude-dir=.git
 grep -r "n8n_secure_2024" . --exclude-dir=.git
 
 # Replace any found instances with environment variable references
@@ -232,7 +232,7 @@ grep -r "n8n_secure_2024" . --exclude-dir=.git
 **Restart application services:**
 ```bash
 # If running Python MCP servers
-cd mcp-servers  
+cd mcp-servers
 # Stop existing processes first
 pkill -f "python.*base_server"
 
@@ -277,7 +277,7 @@ git bundle create ../PAKE_SYSTEM-backup.bundle --all
 # Purge all .env files from history
 git filter-repo --path .env --invert-paths
 
-# Purge docker/.env files  
+# Purge docker/.env files
 git filter-repo --path docker/.env --invert-paths
 
 # Purge any other environment files
@@ -292,7 +292,7 @@ git filter-repo --replace-text ../secrets-to-remove.txt
 ```bash
 cat > ../secrets-to-remove.txt << 'EOF'
 process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'=***REMOVED***
-process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'=***REMOVED***  
+process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'=***REMOVED***
 n8n_secure_2024=***REMOVED***
 your_REDACTED_SECRET_here=***REMOVED***
 your_openai_key_here=***REMOVED***
@@ -337,7 +337,7 @@ git add .env.example .gitignore README.md rotate-secrets.md
 git commit -m "security: implement secure environment configuration
 
 - Add comprehensive .env.example template
-- Update .gitignore to block all secret files  
+- Update .gitignore to block all secret files
 - Document secret rotation procedures
 - Remove exposed credentials from codebase
 
@@ -355,7 +355,7 @@ git push origin --force --tags
 ### **Post-Rotation Verification**
 
 - [ ] **All services start successfully** with new credentials
-- [ ] **Database connections work** with new REDACTED_SECRETs  
+- [ ] **Database connections work** with new REDACTED_SECRETs
 - [ ] **API endpoints respond** correctly
 - [ ] **No old REDACTED_SECRETs** found in git history
 - [ ] **All team members notified** of new credentials
@@ -405,7 +405,7 @@ vault kv put secret/pake-system/redis REDACTED_SECRET="YOUR_NEW_REDIS_PASSWORD_H
 
 **Option 3: Azure Key Vault**
 ```bash
-# Store in Azure Key Vault  
+# Store in Azure Key Vault
 az keyvault secret set --vault-name "pake-keyvault" --name "db-REDACTED_SECRET" --value "YOUR_NEW_DB_PASSWORD_HERE"
 az keyvault secret set --vault-name "pake-keyvault" --name "redis-REDACTED_SECRET" --value "YOUR_NEW_REDIS_PASSWORD_HERE"
 ```
@@ -425,7 +425,7 @@ echo "*.env" >> .git/hooks/pre-commit-secrets-check
 
 - [ ] **Set calendar reminder** for quarterly secret rotation
 - [ ] **Document all rotated credentials** in secure REDACTED_SECRET manager
-- [ ] **Review access logs** monthly for suspicious activity  
+- [ ] **Review access logs** monthly for suspicious activity
 - [ ] **Audit permissions** on all external API keys
 - [ ] **Update incident response plan** based on lessons learned
 
@@ -439,14 +439,14 @@ echo "*.env" >> .git/hooks/pre-commit-secrets-check
 
 **Exposed Secrets:**
 - [x] PostgreSQL database REDACTED_SECRET (`process.env.SERVICE_PASSWORD || 'SECURE_PASSWORD_REQUIRED'`)
-- [x] Redis REDACTED_SECRET (`process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'`)  
+- [x] Redis REDACTED_SECRET (`process.env.REDIS_PASSWORD || 'SECURE_PASSWORD_REQUIRED'`)
 - [x] n8n admin REDACTED_SECRET (`n8n_secure_2024`)
 - [x] API key placeholders (may contain real keys)
 
 **Actions Taken:**
 - [x] Immediate service shutdown
 - [x] Password rotation for all services
-- [x] API key regeneration  
+- [x] API key regeneration
 - [x] Git history purged with git-filter-repo
 - [x] Enhanced .gitignore and security documentation
 - [x] Services restarted with new credentials
@@ -466,7 +466,7 @@ echo "*.env" >> .git/hooks/pre-commit-secrets-check
 If you encounter issues during rotation:
 
 1. **Stop all services immediately** to prevent further exposure
-2. **Contact system administrator** 
+2. **Contact system administrator**
 3. **Escalate to security team** if compromise suspected
 4. **Document all actions taken** for incident response
 
@@ -476,7 +476,7 @@ If you encounter issues during rotation:
 
 ✅ **ROTATION COMPLETE CHECKLIST:**
 - [ ] All REDACTED_SECRETs rotated and tested
-- [ ] API keys regenerated and configured  
+- [ ] API keys regenerated and configured
 - [ ] Git history cleaned and verified
 - [ ] Services running with new credentials
 - [ ] Team notified of changes

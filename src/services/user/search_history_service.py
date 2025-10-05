@@ -6,7 +6,7 @@ Comprehensive search history tracking with analytics and user preferences.
 import logging
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class SearchFilter(Enum):
-    """Search filter options"""
+    """Search filter options."""
 
     RECENT = "recent"
     POPULAR = "popular"
@@ -29,25 +29,25 @@ class SearchFilter(Enum):
 
 @dataclass
 class SearchHistoryEntry:
-    """Individual search history entry"""
+    """Individual search history entry."""
 
     id: str
     user_id: str | None
     query: str
-    sources: list[str]
+    sources: List[str]
     results_count: int
     execution_time_ms: float
     cache_hit: bool
     quality_score: float | None
-    query_metadata: dict[str, Any] | None
+    query_metadata: Dict[str, Any] | None
     created_at: datetime
     is_favorite: bool = False
-    tags: list[str] | None = None
+    tags: List[str] | None = None
 
 
 @dataclass
 class SearchAnalytics:
-    """Search analytics data"""
+    """Search analytics data."""
 
     total_searches: int
     unique_queries: int
@@ -61,10 +61,10 @@ class SearchAnalytics:
 
 @dataclass
 class UserSearchPreferences:
-    """User search preferences and settings"""
+    """User search preferences and settings."""
 
     user_id: str
-    default_sources: list[str]
+    default_sources: List[str]
     auto_save_searches: bool
     search_history_retention_days: int
     preferred_result_format: str
@@ -85,11 +85,7 @@ class SearchHistoryService:
     - Export/import functionality
     """
 
-    def __init__(
-        self,
-        database_service: PostgreSQLService,
-        cache_service: RedisCacheService | None = None,
-    ):
+    def __init__(self) -> None:
         self.database_service = database_service
         self.cache_service = cache_service
         self.logger = logger
@@ -107,14 +103,14 @@ class SearchHistoryService:
         self,
         user_id: str | None,
         query: str,
-        sources: list[str],
+        sources: List[str],
         results_count: int,
         execution_time_ms: float,
         cache_hit: bool = False,
         quality_score: float | None = None,
-        query_metadata: dict[str, Any] | None = None,
+        query_metadata: Dict[str, Any] | None = None,
     ) -> str:
-        """Record a new search in history"""
+        """Record a new search in history."""
         try:
             search_id = str(uuid.uuid4())
 
@@ -135,12 +131,14 @@ class SearchHistoryService:
                 await self._invalidate_user_caches(user_id)
 
             logger.info(
-                f"📝 Recorded search: {query[:50]}... for user {user_id or 'anonymous'}",
+                "📝 Recorded search: %s... for user %s",
+                query[:50],
+                user_id or "anonymous",
             )
             return search_id
 
         except Exception as e:
-            logger.error(f"Failed to record search: {e}")
+            logger.error("Failed to record search: %s", e)
             raise
 
     async def get_user_search_history(
@@ -151,9 +149,9 @@ class SearchHistoryService:
         filter_type: SearchFilter | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        sources: list[str] | None = None,
+        sources: List[str] | None = None,
     ) -> list[SearchHistoryEntry]:
-        """Get user's search history with advanced filtering"""
+        """Get user's search history with advanced filtering."""
         try:
             # Check cache first
             cache_key = f"{self.CACHE_PREFIX}:user:{user_id}:history:{limit}:{offset}"
@@ -163,7 +161,7 @@ class SearchHistoryService:
                     return [SearchHistoryEntry(**entry) for entry in cached_result]
 
             # Build query filters
-            filters: dict[str, Any] = {"user_id": user_id}
+            filters: Dict[str, Any] = {"user_id": user_id}
 
             if start_date is not None:
                 filters["start_date"] = start_date.isoformat()
@@ -219,7 +217,7 @@ class SearchHistoryService:
             return history_entries
 
         except Exception as e:
-            logger.error(f"Failed to get search history: {e}")
+            logger.error("Failed to get search history: %s", e)
             raise
 
     async def search_history(
@@ -228,7 +226,7 @@ class SearchHistoryService:
         search_query: str,
         limit: int = 20,
     ) -> list[SearchHistoryEntry]:
-        """Search through user's search history"""
+        """Search through user's search history."""
         try:
             # Use full-text search on query and metadata
             search_filters = {"user_id": user_id, "query_search": search_query}
@@ -260,11 +258,11 @@ class SearchHistoryService:
             return history_entries
 
         except Exception as e:
-            logger.error(f"Failed to search history: {e}")
+            logger.error("Failed to search history: %s", e)
             raise
 
     async def toggle_favorite_search(self, user_id: str, search_id: str) -> bool:
-        """Toggle favorite status of a search"""
+        """Toggle favorite status of a search."""
         try:
             is_favorite = await self._is_search_favorite(user_id, search_id)
 
@@ -280,23 +278,23 @@ class SearchHistoryService:
                 await self._invalidate_user_caches(user_id)
 
             logger.info(
-                f"💫 {'Added to' if new_status else 'Removed from'} favorites: {
-                    search_id
-                }",
+                "💫 %s favorites: %s",
+                "Added to" if new_status else "Removed from",
+                search_id,
             )
             return new_status
 
         except Exception as e:
-            logger.error(f"Failed to toggle favorite: {e}")
+            logger.error("Failed to toggle favorite: %s", e)
             raise
 
     async def add_search_tags(
         self,
         user_id: str,
         search_id: str,
-        tags: list[str],
+        tags: List[str],
     ) -> bool:
-        """Add tags to a search entry"""
+        """Add tags to a search entry."""
         try:
             # Verify user owns the search
             search = await self.database_service.get_search_by_id(search_id)
@@ -309,15 +307,15 @@ class SearchHistoryService:
             if self.cache_service:
                 await self._invalidate_user_caches(user_id)
 
-            logger.info(f"🏷️ Added tags {tags} to search {search_id}")
+            logger.info("🏷️ Added tags %s to search %s", tags, search_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to add tags: {e}")
+            logger.error("Failed to add tags: %s", e)
             raise
 
     async def delete_search(self, user_id: str, search_id: str) -> bool:
-        """Delete a search from history"""
+        """Delete a search from history."""
         try:
             # Verify user owns the search
             search = await self.database_service.get_search_by_id(search_id)
@@ -330,11 +328,11 @@ class SearchHistoryService:
             if self.cache_service:
                 await self._invalidate_user_caches(user_id)
 
-            logger.info(f"🗑️ Deleted search {search_id}")
+            logger.info("🗑️ Deleted search %s", search_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete search: {e}")
+            logger.error("Failed to delete search: %s", e)
             raise
 
     async def clear_user_history(
@@ -342,7 +340,7 @@ class SearchHistoryService:
         user_id: str,
         before_date: datetime | None = None,
     ) -> int:
-        """Clear user's search history"""
+        """Clear user's search history."""
         try:
             deleted_count = await self.database_service.clear_user_search_history(
                 user_id,
@@ -353,17 +351,19 @@ class SearchHistoryService:
             if self.cache_service:
                 await self._invalidate_user_caches(user_id)
 
-            logger.info(f"🧹 Cleared {deleted_count} search records for user {user_id}")
+            logger.info(
+                "🧹 Cleared %s search records for user %s", deleted_count, user_id
+            )
             return deleted_count
 
         except Exception as e:
-            logger.error(f"Failed to clear history: {e}")
+            logger.error("Failed to clear history: %s", e)
             raise
 
     # Analytics and Insights
 
     async def get_user_analytics(self, user_id: str, days: int = 30) -> SearchAnalytics:
-        """Get comprehensive search analytics for user"""
+        """Get comprehensive search analytics for user."""
         try:
             # Check cache first
             cache_key = f"{self.CACHE_PREFIX}:analytics:user:{user_id}:{days}"
@@ -373,7 +373,7 @@ class SearchHistoryService:
                     return SearchAnalytics(**cached_result)
 
             # Calculate date range
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
 
             # Get analytics data from database
             analytics_data = await self.database_service.get_user_search_analytics(
@@ -403,7 +403,7 @@ class SearchHistoryService:
             return analytics
 
         except Exception as e:
-            logger.error(f"Failed to get analytics: {e}")
+            logger.error("Failed to get analytics: %s", e)
             raise
 
     async def get_popular_queries(
@@ -411,7 +411,7 @@ class SearchHistoryService:
         limit: int = 10,
         days: int = 7,
     ) -> list[tuple[str, int]]:
-        """Get most popular queries across all users"""
+        """Get most popular queries across all users."""
         try:
             # Check cache first
             cache_key = f"{self.CACHE_PREFIX}:popular:{limit}:{days}"
@@ -420,7 +420,7 @@ class SearchHistoryService:
                 if cached_result:
                     return cached_result
 
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
             popular_queries = await self.database_service.get_popular_queries(
                 start_date,
                 limit,
@@ -437,13 +437,13 @@ class SearchHistoryService:
             return popular_queries
 
         except Exception as e:
-            logger.error(f"Failed to get popular queries: {e}")
+            logger.error("Failed to get popular queries: %s", e)
             raise
 
     # User Preferences Management
 
     async def get_user_preferences(self, user_id: str) -> UserSearchPreferences:
-        """Get user's search preferences"""
+        """Get user's search preferences."""
         try:
             # Check cache first
             cache_key = f"{self.CACHE_PREFIX}:prefs:{user_id}"
@@ -473,7 +473,7 @@ class SearchHistoryService:
                         "share_popular_searches": True,
                         "retention_opt_out": False,
                     },
-                    updated_at=datetime.utcnow(),
+                    updated_at=datetime.now(UTC),
                 )
 
                 # Save defaults to database
@@ -495,15 +495,15 @@ class SearchHistoryService:
             return prefs
 
         except Exception as e:
-            logger.error(f"Failed to get user preferences: {e}")
+            logger.error("Failed to get user preferences: %s", e)
             raise
 
     async def update_user_preferences(
         self,
         user_id: str,
-        preferences: dict[str, Any],
+        preferences: Dict[str, Any],
     ) -> bool:
-        """Update user's search preferences"""
+        """Update user's search preferences."""
         try:
             # Get current preferences
             current_prefs = await self.get_user_preferences(user_id)
@@ -511,7 +511,7 @@ class SearchHistoryService:
             # Update specific fields
             updated_prefs = asdict(current_prefs)
             updated_prefs.update(preferences)
-            updated_prefs["updated_at"] = datetime.utcnow()
+            updated_prefs["updated_at"] = datetime.now(UTC)
 
             # Save to database
             await self.database_service.save_user_preferences(user_id, updated_prefs)
@@ -521,17 +521,17 @@ class SearchHistoryService:
                 cache_key = f"{self.CACHE_PREFIX}:prefs:{user_id}"
                 await self.cache_service.delete(cache_key)
 
-            logger.info(f"⚙️ Updated preferences for user {user_id}")
+            logger.info("⚙️ Updated preferences for user %s", user_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to update preferences: {e}")
+            logger.error("Failed to update preferences: %s", e)
             raise
 
     # Export/Import Functionality
 
-    async def export_user_data(self, user_id: str) -> dict[str, Any]:
-        """Export all user search data"""
+    async def export_user_data(self, user_id: str) -> Dict[str, Any]:
+        """Export all user search data."""
         try:
             # Get all search history
             all_searches = await self.get_user_search_history(
@@ -547,7 +547,7 @@ class SearchHistoryService:
             analytics = await self.get_user_analytics(user_id, days=365)
 
             export_data = {
-                "export_date": datetime.utcnow().isoformat(),
+                "export_date": datetime.now(UTC).isoformat(),
                 "user_id": user_id,
                 "search_history": [asdict(search) for search in all_searches],
                 "preferences": asdict(preferences),
@@ -559,32 +559,34 @@ class SearchHistoryService:
             }
 
             logger.info(
-                f"📤 Exported data for user {user_id}: {len(all_searches)} searches",
+                "📤 Exported data for user %s: %s searches",
+                user_id,
+                len(all_searches),
             )
             return export_data
 
         except Exception as e:
-            logger.error(f"Failed to export user data: {e}")
+            logger.error("Failed to export user data: %s", e)
             raise
 
     # Helper Methods
 
     async def _is_search_favorite(self, user_id: str, search_id: str) -> bool:
-        """Check if search is marked as favorite"""
+        """Check if search is marked as favorite."""
         try:
             return await self.database_service.is_search_favorite(user_id, search_id)
         except BaseException:
             return False
 
-    async def _get_search_tags(self, search_id: str) -> list[str]:
-        """Get tags for a search"""
+    async def _get_search_tags(self, search_id: str) -> List[str]:
+        """Get tags for a search."""
         try:
             return await self.database_service.get_search_tags(search_id)
         except BaseException:
             return []
 
     async def _invalidate_user_caches(self, user_id: str) -> None:
-        """Invalidate all caches for a user"""
+        """Invalidate all caches for a user."""
         if not self.cache_service:
             return
 
@@ -605,7 +607,7 @@ async def create_search_history_service(
     database_service: PostgreSQLService,
     cache_service: RedisCacheService | None = None,
 ) -> SearchHistoryService:
-    """Create and initialize search history service"""
+    """Create and initialize search history service."""
     service = SearchHistoryService(database_service, cache_service)
     logger.info("✅ Search History Service created successfully")
     return service

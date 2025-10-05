@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class RoutingStrategy(Enum):
-    """Content routing strategies"""
+    """Content routing strategies."""
 
     PRIORITY_BASED = "priority_based"
     USER_PREFERENCE = "user_preference"
@@ -27,7 +27,7 @@ class RoutingStrategy(Enum):
 
 
 class ContentDestination(Enum):
-    """Content delivery destinations"""
+    """Content delivery destinations."""
 
     USER_FEED = "user_feed"
     NOTIFICATION_SYSTEM = "notification_system"
@@ -39,7 +39,7 @@ class ContentDestination(Enum):
 
 
 class RoutingPriority(Enum):
-    """Content routing priority levels"""
+    """Content routing priority levels."""
 
     URGENT = "urgent"
     HIGH = "high"
@@ -49,7 +49,7 @@ class RoutingPriority(Enum):
 
 
 class ContentCategory(Enum):
-    """Content categories for routing decisions"""
+    """Content categories for routing decisions."""
 
     BREAKING_NEWS = "breaking_news"
     RESEARCH_PAPER = "research_paper"
@@ -62,12 +62,12 @@ class ContentCategory(Enum):
 
 @dataclass(frozen=True)
 class RoutingContent:
-    """Immutable content item for routing decisions"""
+    """Immutable content item for routing decisions."""
 
     content_id: str
     content_type: str
     category: ContentCategory
-    topics: list[str] = field(default_factory=list)
+    topics: List[str] = field(default_factory=list)
     quality_score: float = 0.0
     urgency_score: float = 0.0
     user_relevance_scores: dict[str, float] = field(default_factory=dict)
@@ -77,17 +77,17 @@ class RoutingContent:
         default_factory=lambda: datetime.now(UTC),
     )
     expiry_timestamp: datetime | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class RoutingRule:
-    """Immutable routing rule definition"""
+    """Immutable routing rule definition."""
 
     rule_id: str
     name: str
-    conditions: dict[str, Any] = field(default_factory=dict)
-    actions: dict[str, Any] = field(default_factory=dict)
+    conditions: Dict[str, Any] = field(default_factory=dict)
+    actions: Dict[str, Any] = field(default_factory=dict)
     priority: int = 0
     is_active: bool = True
     created_by: str = "system"
@@ -98,15 +98,15 @@ class RoutingRule:
 
 @dataclass(frozen=True)
 class RoutingDecision:
-    """Immutable routing decision result"""
+    """Immutable routing decision result."""
 
     content_id: str
     destination: ContentDestination
     routing_priority: RoutingPriority
-    reasoning: list[str] = field(default_factory=list)
+    reasoning: List[str] = field(default_factory=list)
     confidence_score: float = 0.0
     processing_delay_ms: int = 0  # Suggested delay before delivery
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     decision_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -114,7 +114,7 @@ class RoutingDecision:
 
 @dataclass(frozen=True)
 class RoutingResult:
-    """Immutable complete routing operation result"""
+    """Immutable complete routing operation result."""
 
     content_id: str
     routing_decisions: list[RoutingDecision] = field(default_factory=list)
@@ -131,7 +131,7 @@ class RoutingResult:
 
 @dataclass(frozen=True)
 class UserContext:
-    """User context for personalized routing"""
+    """User context for personalized routing."""
 
     user_id: str
     preferences: dict[str, float] = field(default_factory=dict)
@@ -144,7 +144,7 @@ class UserContext:
 
 @dataclass
 class ContentRoutingConfig:
-    """Configuration for content routing engine"""
+    """Configuration for content routing engine."""
 
     default_routing_strategy: RoutingStrategy = RoutingStrategy.INTELLIGENT_HYBRID
     max_routing_destinations: int = 3
@@ -164,9 +164,9 @@ class ContentRoutingConfig:
 
 
 class PriorityCalculator:
-    """Calculates content priority based on multiple factors"""
+    """Calculates content priority based on multiple factors."""
 
-    def __init__(self, config: ContentRoutingConfig):
+    def __init__(self) -> None:
         self.config = config
         self.priority_weights = {
             "quality_score": 0.25,
@@ -180,7 +180,7 @@ class PriorityCalculator:
         content: RoutingContent,
         user_context: UserContext | None = None,
     ) -> tuple[RoutingPriority, float]:
-        """Calculate overall priority and confidence score"""
+        """Calculate overall priority and confidence score."""
         priority_score = 0.0
 
         # Quality factor
@@ -219,15 +219,15 @@ class PriorityCalculator:
 
 
 class LoadBalancer:
-    """Manages content load balancing across users and destinations"""
+    """Manages content load balancing across users and destinations."""
 
-    def __init__(self, config: ContentRoutingConfig):
+    def __init__(self) -> None:
         self.config = config
         self.user_loads: dict[str, list[datetime]] = defaultdict(list)
         self.destination_loads: dict[ContentDestination, int] = defaultdict(int)
 
     def check_user_capacity(self, user_id: str) -> bool:
-        """Check if user can receive more content"""
+        """Check if user can receive more content."""
         now = datetime.now(UTC)
         one_hour_ago = now - timedelta(hours=1)
 
@@ -242,15 +242,15 @@ class LoadBalancer:
         current_load = len(self.user_loads[user_id])
         return current_load < self.config.max_user_content_per_hour
 
-    def record_user_delivery(self, user_id: str):
-        """Record content delivery to user"""
+    def record_user_delivery(self) -> None:
+        """Record content delivery to user."""
         self.user_loads[user_id].append(datetime.now(UTC))
 
     def get_optimal_destination(
         self,
         preferred_destinations: list[ContentDestination],
     ) -> ContentDestination:
-        """Get destination with lowest current load"""
+        """Get destination with lowest current load."""
         if not preferred_destinations:
             return ContentDestination.USER_FEED
 
@@ -266,15 +266,15 @@ class LoadBalancer:
 
         return optimal_destination
 
-    def update_destination_load(self, destination: ContentDestination, delta: int = 1):
-        """Update destination load"""
+    def update_destination_load(self) -> None:
+        """Update destination load."""
         self.destination_loads[destination] += delta
 
 
 class IntelligentRouter:
-    """Core intelligent routing logic with AI-driven decisions"""
+    """Core intelligent routing logic with AI-driven decisions."""
 
-    def __init__(self, config: ContentRoutingConfig):
+    def __init__(self) -> None:
         self.config = config
         self.routing_rules: list[RoutingRule] = []
         self.topic_specialists: dict[str, list[ContentDestination]] = {}
@@ -282,14 +282,14 @@ class IntelligentRouter:
             lambda: defaultdict(float),
         )
 
-    def add_routing_rule(self, rule: RoutingRule):
-        """Add new routing rule"""
+    def add_routing_rule(self) -> None:
+        """Add new routing rule."""
         self.routing_rules.append(rule)
         # Sort by priority (higher priority first)
         self.routing_rules.sort(key=lambda x: x.priority, reverse=True)
 
-    def setup_topic_specialists(self, topic_mappings: dict[str, list[str]]):
-        """Setup topic-specific routing destinations"""
+    def setup_topic_specialists(self) -> None:
+        """Setup topic-specific routing destinations."""
         for topic, destinations in topic_mappings.items():
             self.topic_specialists[topic] = [
                 ContentDestination(dest) for dest in destinations
@@ -300,7 +300,7 @@ class IntelligentRouter:
         content: RoutingContent,
         user_context: UserContext | None = None,
     ) -> list[RoutingDecision]:
-        """Make intelligent routing decisions"""
+        """Make intelligent routing decisions."""
         decisions = []
 
         # Apply routing rules in priority order
@@ -329,7 +329,7 @@ class IntelligentRouter:
         content: RoutingContent,
         user_context: UserContext | None,
     ) -> bool:
-        """Evaluate if routing rule conditions are met"""
+        """Evaluate if routing rule conditions are met."""
         conditions = rule.conditions
 
         # Category condition
@@ -375,7 +375,7 @@ class IntelligentRouter:
         rule: RoutingRule,
         content: RoutingContent,
     ) -> RoutingDecision | None:
-        """Create routing decision from matched rule"""
+        """Create routing decision from matched rule."""
         actions = rule.actions
 
         if "destination" not in actions:
@@ -400,7 +400,7 @@ class IntelligentRouter:
         content: RoutingContent,
         user_context: UserContext | None,
     ) -> list[RoutingDecision]:
-        """Apply default routing logic when no rules match"""
+        """Apply default routing logic when no rules match."""
         decisions = []
 
         # Default routing based on content category
@@ -444,7 +444,7 @@ class ContentRoutingEngine:
     Orchestrates intelligent content flow with AI-driven routing decisions.
     """
 
-    def __init__(self, config: ContentRoutingConfig = None):
+    def __init__(self) -> None:
         self.config = config or ContentRoutingConfig()
         self.priority_calculator = PriorityCalculator(self.config)
         self.load_balancer = LoadBalancer(self.config)
@@ -468,8 +468,8 @@ class ContentRoutingEngine:
             "intelligent_delays_applied": 0,
         }
 
-    def _setup_default_routing_rules(self):
-        """Setup default intelligent routing rules"""
+    def _setup_default_routing_rules(self) -> None:
+        """Setup default intelligent routing rules."""
         # Breaking news rule
         breaking_news_rule = RoutingRule(
             rule_id="breaking_news",
@@ -535,8 +535,8 @@ class ContentRoutingEngine:
         )
         self.intelligent_router.add_routing_rule(low_quality_rule)
 
-    def set_user_context(self, user_context: UserContext):
-        """Set or update user context for routing decisions"""
+    def set_user_context(self) -> None:
+        """Set or update user context for routing decisions."""
         self.user_contexts[user_context.user_id] = user_context
 
     async def route_content(
@@ -544,7 +544,7 @@ class ContentRoutingEngine:
         content: RoutingContent,
         user_id: str | None = None,
     ) -> RoutingResult:
-        """Route content with intelligent prioritization and destination selection"""
+        """Route content with intelligent prioritization and destination selection."""
         start_time = time.time()
 
         try:
@@ -571,9 +571,10 @@ class ContentRoutingEngine:
                 user_context = self.user_contexts.get(user_id) if user_id else None
 
                 # Calculate content priority
-                routing_priority, confidence = (
-                    self.priority_calculator.calculate_priority(content, user_context)
-                )
+                (
+                    routing_priority,
+                    confidence,
+                ) = self.priority_calculator.calculate_priority(content, user_context)
 
                 # Make intelligent routing decisions
                 routing_decisions = self.intelligent_router.route_content(
@@ -636,7 +637,7 @@ class ContentRoutingEngine:
                 return result
 
         except Exception as e:
-            logger.error(f"Content routing failed: {e}")
+            logger.error("Content routing failed: %s", e)
             processing_time = max((time.time() - start_time) * 1000, 0.1)
             return RoutingResult(
                 content_id=content.content_id,
@@ -650,7 +651,7 @@ class ContentRoutingEngine:
         content: RoutingContent,
         user_id: str | None,
     ) -> str:
-        """Generate cache key for routing decision"""
+        """Generate cache key for routing decision."""
         key_data = f"{content.content_id}_{content.quality_score}_{
             content.urgency_score
         }_{user_id or 'anonymous'}"
@@ -661,7 +662,7 @@ class ContentRoutingEngine:
         decisions: list[RoutingDecision],
         user_context: UserContext,
     ) -> list[RoutingDecision]:
-        """Apply load balancing to routing decisions"""
+        """Apply load balancing to routing decisions."""
         if not self.load_balancer.check_user_capacity(user_context.user_id):
             # User at capacity, defer or archive content
             for decision in decisions:
@@ -692,7 +693,7 @@ class ContentRoutingEngine:
         decisions: list[RoutingDecision],
         content: RoutingContent,
     ) -> list[RoutingDecision]:
-        """Apply intelligent delays based on content characteristics"""
+        """Apply intelligent delays based on content characteristics."""
         modified_decisions = []
 
         for decision in decisions:
@@ -722,7 +723,7 @@ class ContentRoutingEngine:
         content: RoutingContent,
         destination: ContentDestination,
     ) -> int:
-        """Calculate optimal delivery delay"""
+        """Calculate optimal delivery delay."""
         base_delay = 0
 
         # Email digest gets longer delays for batching
@@ -746,7 +747,7 @@ class ContentRoutingEngine:
         content_items: list[RoutingContent],
         user_id: str | None = None,
     ) -> list[RoutingResult]:
-        """Route multiple content items efficiently"""
+        """Route multiple content items efficiently."""
         if len(content_items) >= self.config.batch_processing_threshold:
             # Use batch processing for large volumes
             return await self._batch_process_routing(content_items, user_id)
@@ -759,7 +760,7 @@ class ContentRoutingEngine:
         content_items: list[RoutingContent],
         user_id: str | None,
     ) -> list[RoutingResult]:
-        """Optimized batch processing for large content volumes"""
+        """Optimized batch processing for large content volumes."""
         results = []
 
         # Group content by category for optimized processing
@@ -768,7 +769,7 @@ class ContentRoutingEngine:
             categorized_content[content.category].append(content)
 
         # Process each category efficiently
-        for category, category_content in categorized_content.items():
+        for _category, category_content in categorized_content.items():
             batch_results = await asyncio.gather(
                 *[self.route_content(content, user_id) for content in category_content],
             )
@@ -776,8 +777,8 @@ class ContentRoutingEngine:
 
         return results
 
-    def get_metrics(self) -> dict[str, Any]:
-        """Get routing engine metrics"""
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get routing engine metrics."""
         return {
             **self.metrics,
             "cached_routing_decisions": len(self.routing_cache),
@@ -789,7 +790,7 @@ class ContentRoutingEngine:
         }
 
     def _calculate_average_processing_time(self) -> float:
-        """Calculate average processing time from cached results"""
+        """Calculate average processing time from cached results."""
         if not self.routing_cache:
             return 0.0
 
@@ -800,7 +801,7 @@ class ContentRoutingEngine:
 
 
 def create_production_content_routing_engine() -> ContentRoutingEngine:
-    """Factory function to create production-optimized content routing engine"""
+    """Factory function to create production-optimized content routing engine."""
     config = ContentRoutingConfig(
         default_routing_strategy=RoutingStrategy.INTELLIGENT_HYBRID,
         max_routing_destinations=5,  # More routing options

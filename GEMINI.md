@@ -127,16 +127,16 @@ Every request flows through our system with complete traceability:
 with logger.with_correlation_id("req-12345"):
     # Request received
     logger.api("Request started", method="POST", path="/api/v1/users")
-    
+
     # Authentication
     logger.security("User authenticated", user_id="user123")
-    
+
     # Business logic
     logger.business("User creation initiated", entity_type="user")
-    
+
     # Database operation
     logger.database("User record created", operation="INSERT", table="users")
-    
+
     # Response
     logger.api("Request completed", status_code=201, duration_ms=250.0)
 ```
@@ -237,7 +237,7 @@ class LoggingConfig:
     service_name: str = "pake-system"
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     log_level: LogLevel = LogLevel.INFO
-    
+
     def __post_init__(self):
         """Comprehensive validation"""
         if self.log_level not in LogLevel:
@@ -251,16 +251,16 @@ class LoggingConfig:
 async def process_payment(payment_data: dict):
     try:
         result = await payment_service.process(payment_data)
-        
+
         logger.business(
             "Payment processed successfully",
             event="payment_processed",
             entity_id=result["payment_id"],
             metadata={"amount": payment_data["amount"]}
         )
-        
+
         return result
-        
+
     except ValidationError as e:
         logger.error(
             "Payment validation failed",
@@ -268,17 +268,17 @@ async def process_payment(payment_data: dict):
             error_code="PAYMENT_VALIDATION_ERROR",
             payment_data=payment_data  # Automatically masked
         )
-        
+
         monitor.record_error("payment_validation_error")
         raise
-        
+
     except PaymentServiceError as e:
         logger.critical(
             "Payment service unavailable",
             error=e,
             error_code="PAYMENT_SERVICE_ERROR"
         )
-        
+
         # Automatic incident creation
         monitor.create_alert(
             title="Payment Service Down",
@@ -296,10 +296,10 @@ class EnterpriseLoggingService:
     def __init__(self, config: LoggingConfig):
         self.config = config
         self.metrics_buffer: List[Metric] = []
-        
+
         # Background processing for non-blocking operations
         self._start_background_tasks()
-    
+
     async def _collect_metrics_loop(self):
         """Non-blocking metrics collection"""
         while True:
@@ -331,14 +331,14 @@ class LoggingCircuitBreaker:
         self.timeout = timeout
         self.last_failure_time = None
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
-    
+
     async def execute(self, operation):
         if self.state == "OPEN":
             if time.time() - self.last_failure_time > self.timeout:
                 self.state = "HALF_OPEN"
             else:
                 raise CircuitBreakerOpenError()
-        
+
         try:
             result = await operation()
             self._on_success()

@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-"""
-PAKE Knowledge Vault Auto-Processing Service
+"""PAKE Knowledge Vault Auto-Processing Service
 Windows Service that automatically monitors and processes vault changes
-Runs continuously in background without user intervention
+Runs continuously in background without user intervention.
 """
 
 import asyncio
+import json
 import logging
 import os
 import sys
-import time
 import threading
-from pathlib import Path
-import json
+import time
 import traceback
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
+
+import servicemanager
+import win32event
+import win32service
 
 # Service-specific imports
 import win32serviceutil
-import win32service
-import win32event
-import servicemanager
 
 # Add PAKE system to path
 pake_path = Path("D:/Projects/PAKE_SYSTEM/scripts")
@@ -28,19 +28,23 @@ if str(pake_path) not in sys.path:
     sys.path.insert(0, str(pake_path))
 
 # Set service environment variable
-os.environ['RUNNING_AS_SERVICE'] = 'true'
+os.environ["RUNNING_AS_SERVICE"] = "true"
+
+import builtins
+import contextlib
 
 from service_enhanced_vault_watcher import ServiceEnhancedVaultWatcher as VaultWatcher
 
+
 class PAKEService(win32serviceutil.ServiceFramework):
-    """Windows Service for PAKE Knowledge Vault Automation"""
+    """Windows Service for PAKE Knowledge Vault Automation."""
 
     _svc_name_ = "PAKEKnowledgeService"
     _svc_display_name_ = "PAKE Knowledge Vault Auto-Processor"
     _svc_description_ = "Automatically processes and enhances knowledge vault content with AI analysis, vector embeddings, and knowledge graph updates"
     _svc_deps_ = None  # No dependencies
 
-    def __init__(self, args):
+    def __init__(self) -> None:
         win32serviceutil.ServiceFramework.__init__(self, args)
         self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
         self.is_running = False
@@ -52,12 +56,12 @@ class PAKEService(win32serviceutil.ServiceFramework):
 
         # Configuration
         self.config = {
-            'vault_path': 'D:/Knowledge-Vault',
-            'pake_system_path': 'D:/Projects/PAKE_SYSTEM',
-            'check_interval': 2,  # seconds
-            'health_check_interval': 30,  # seconds
-            'max_restart_attempts': 5,
-            'restart_delay': 10  # seconds
+            "vault_path": "D:/Knowledge-Vault",
+            "pake_system_path": "D:/Projects/PAKE_SYSTEM",
+            "check_interval": 2,  # seconds
+            "health_check_interval": 30,  # seconds
+            "max_restart_attempts": 5,
+            "restart_delay": 10,  # seconds
         }
 
         self.restart_attempts = 0
@@ -66,11 +70,14 @@ class PAKEService(win32serviceutil.ServiceFramework):
         servicemanager.LogMsg(
             servicemanager.EVENTLOG_INFORMATION_TYPE,
             servicemanager.PYS_SERVICE_STARTING,
-            (self._svc_name_, f"PAKE Service initialized - Monitoring {self.config['vault_path']}")
+            (
+                self._svc_name_,
+                f"PAKE Service initialized - Monitoring {self.config['vault_path']}",
+            ),
         )
 
-    def setup_service_logging(self):
-        """Setup comprehensive logging for the service"""
+    def setup_service_logging(self) -> None:
+        """Setup comprehensive logging for the service."""
         log_dir = Path("D:/Projects/PAKE_SYSTEM/logs")
         log_dir.mkdir(exist_ok=True)
 
@@ -80,23 +87,20 @@ class PAKEService(win32serviceutil.ServiceFramework):
         # Configure logging
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
         )
 
-        self.logger = logging.getLogger('PAKEService')
+        self.logger = logging.getLogger("PAKEService")
         self.logger.info("Service logging initialized")
 
-    def SvcStop(self):
-        """Stop the service"""
+    def SvcStop(self) -> None:
+        """Stop the service."""
         self.logger.info("Service stop requested")
         servicemanager.LogMsg(
             servicemanager.EVENTLOG_INFORMATION_TYPE,
             servicemanager.PYS_SERVICE_STOPPING,
-            (self._svc_name_, "PAKE Service stopping...")
+            (self._svc_name_, "PAKE Service stopping..."),
         )
 
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
@@ -109,52 +113,56 @@ class PAKEService(win32serviceutil.ServiceFramework):
                 self.vault_watcher.stop()
                 self.logger.info("Vault watcher stopped")
             except Exception as e:
-                self.logger.error(f"Error stopping vault watcher: {e}")
+                self.logger.error("Error stopping vault watcher: %s", e)
 
         self.logger.info("Service stopped successfully")
 
-    def SvcDoRun(self):
-        """Main service execution"""
+    def SvcDoRun(self) -> None:
+        """Main service execution."""
         self.logger.info("Starting PAKE Knowledge Vault Service")
         servicemanager.LogMsg(
             servicemanager.EVENTLOG_INFORMATION_TYPE,
             servicemanager.PYS_SERVICE_STARTED,
-            (self._svc_name_, "PAKE Service started successfully")
+            (self._svc_name_, "PAKE Service started successfully"),
         )
 
         self.is_running = True
 
         try:
             # Initialize monitoring in separate thread
-            self.monitoring_thread = threading.Thread(target=self.run_monitoring, daemon=True)
+            self.monitoring_thread = threading.Thread(
+                target=self.run_monitoring, daemon=True
+            )
             self.monitoring_thread.start()
 
             # Service main loop - wait for stop signal
             while self.is_running:
                 # Wait for stop event with timeout for health checks
-                rc = win32event.WaitForSingleObject(self.hWaitStop, self.config['health_check_interval'] * 1000)
+                rc = win32event.WaitForSingleObject(
+                    self.hWaitStop, self.config["health_check_interval"] * 1000
+                )
 
                 if rc == win32event.WAIT_OBJECT_0:
                     # Stop event signaled
                     break
-                elif rc == win32event.WAIT_TIMEOUT:
+                if rc == win32event.WAIT_TIMEOUT:
                     # Timeout - perform health check
                     self.perform_health_check()
 
         except Exception as e:
-            self.logger.error(f"Service execution error: {e}")
+            self.logger.error("Service execution error: %s", e)
             self.logger.error(traceback.format_exc())
             servicemanager.LogMsg(
                 servicemanager.EVENTLOG_ERROR_TYPE,
                 servicemanager.PYS_SERVICE_STOPPING,
-                (self._svc_name_, f"Service error: {str(e)}")
+                (self._svc_name_, f"Service error: {str(e)}"),
             )
         finally:
             self.is_running = False
             self.logger.info("Service execution completed")
 
-    def run_monitoring(self):
-        """Run the vault monitoring in async context"""
+    def run_monitoring(self) -> None:
+        """Run the vault monitoring in async context."""
         self.logger.info("Starting vault monitoring thread")
 
         try:
@@ -166,25 +174,23 @@ class PAKEService(win32serviceutil.ServiceFramework):
             loop.run_until_complete(self.async_monitoring())
 
         except Exception as e:
-            self.logger.error(f"Monitoring thread error: {e}")
+            self.logger.error("Monitoring thread error: %s", e)
             self.logger.error(traceback.format_exc())
 
             # Attempt restart if within limits
             if self.should_attempt_restart():
                 self.restart_monitoring()
         finally:
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 loop.close()
-            except:
-                pass
 
-    async def async_monitoring(self):
-        """Async vault monitoring and processing"""
-        self.logger.info(f"Initializing vault watcher for {self.config['vault_path']}")
+    async def async_monitoring(self) -> None:
+        """Async vault monitoring and processing."""
+        self.logger.info("Initializing vault watcher for %s", self.config["vault_path"])
 
         try:
             # Initialize vault watcher
-            self.vault_watcher = VaultWatcher(self.config['vault_path'])
+            self.vault_watcher = VaultWatcher(self.config["vault_path"])
 
             # Start continuous monitoring
             self.logger.info("Starting continuous vault monitoring...")
@@ -195,89 +201,101 @@ class PAKEService(win32serviceutil.ServiceFramework):
                     await self.vault_watcher.run_monitoring_cycle()
 
                     # Wait before next cycle
-                    await asyncio.sleep(self.config['check_interval'])
+                    await asyncio.sleep(self.config["check_interval"])
 
                 except Exception as e:
-                    self.logger.error(f"Monitoring cycle error: {e}")
+                    self.logger.error("Monitoring cycle error: %s", e)
                     await asyncio.sleep(5)  # Brief pause before retry
 
         except Exception as e:
-            self.logger.error(f"Vault monitoring initialization error: {e}")
+            self.logger.error("Vault monitoring initialization error: %s", e)
             raise
 
-    def should_attempt_restart(self):
-        """Check if we should attempt to restart monitoring"""
-        now = datetime.now()
+    def should_attempt_restart(self) -> None:
+        """Check if we should attempt to restart monitoring."""
+        now = datetime.now(UTC)
 
         # Reset counter if enough time has passed
-        if self.last_restart and (now - self.last_restart).total_seconds() > 300:  # 5 minutes
+        if (
+            self.last_restart and (now - self.last_restart).total_seconds() > 300
+        ):  # 5 minutes
             self.restart_attempts = 0
 
         # Check if we're within restart limits
-        if self.restart_attempts < self.config['max_restart_attempts']:
+        if self.restart_attempts < self.config["max_restart_attempts"]:
             self.restart_attempts += 1
             self.last_restart = now
             return True
 
-        self.logger.error(f"Maximum restart attempts ({self.config['max_restart_attempts']}) reached")
+        self.logger.error(
+            "Maximum restart attempts (%s) reached", self.config["max_restart_attempts"]
+        )
         return False
 
-    def restart_monitoring(self):
-        """Restart the monitoring thread"""
-        self.logger.info(f"Attempting to restart monitoring (attempt {self.restart_attempts})")
+    def restart_monitoring(self) -> None:
+        """Restart the monitoring thread."""
+        self.logger.info(
+            "Attempting to restart monitoring (attempt %s)", self.restart_attempts
+        )
 
         try:
             # Wait before restart
-            time.sleep(self.config['restart_delay'])
+            time.sleep(self.config["restart_delay"])
 
             # Start new monitoring thread
             if self.monitoring_thread and self.monitoring_thread.is_alive():
                 self.logger.info("Previous monitoring thread still running, waiting...")
                 time.sleep(5)
 
-            self.monitoring_thread = threading.Thread(target=self.run_monitoring, daemon=True)
+            self.monitoring_thread = threading.Thread(
+                target=self.run_monitoring, daemon=True
+            )
             self.monitoring_thread.start()
 
             self.logger.info("Monitoring thread restarted successfully")
 
         except Exception as e:
-            self.logger.error(f"Failed to restart monitoring: {e}")
+            self.logger.error("Failed to restart monitoring: %s", e)
 
-    def perform_health_check(self):
-        """Perform periodic health checks"""
+    def perform_health_check(self) -> None:
+        """Perform periodic health checks."""
         try:
             # Check if monitoring thread is alive
             if not self.monitoring_thread or not self.monitoring_thread.is_alive():
-                self.logger.warning("Monitoring thread is not running, attempting restart...")
+                self.logger.warning(
+                    "Monitoring thread is not running, attempting restart..."
+                )
                 if self.should_attempt_restart():
                     self.restart_monitoring()
 
             # Check vault path accessibility
-            vault_path = Path(self.config['vault_path'])
+            vault_path = Path(self.config["vault_path"])
             if not vault_path.exists():
-                self.logger.error(f"Vault path not accessible: {vault_path}")
+                self.logger.error("Vault path not accessible: %s", vault_path)
 
             # Log health status
             status = {
-                'timestamp': datetime.now().isoformat(),
-                'monitoring_thread_alive': self.monitoring_thread and self.monitoring_thread.is_alive(),
-                'vault_accessible': vault_path.exists(),
-                'restart_attempts': self.restart_attempts,
-                'service_running': self.is_running
+                "timestamp": datetime.now(UTC).isoformat(),
+                "monitoring_thread_alive": self.monitoring_thread
+                and self.monitoring_thread.is_alive(),
+                "vault_accessible": vault_path.exists(),
+                "restart_attempts": self.restart_attempts,
+                "service_running": self.is_running,
             }
 
-            self.logger.debug(f"Health check: {status}")
+            self.logger.debug("Health check: %s", status)
 
             # Write health status to file
             health_file = Path("D:/Projects/PAKE_SYSTEM/logs/service_health.json")
-            with open(health_file, 'w') as f:
+            with open(health_file, "w") as f:
                 json.dump(status, f, indent=2)
 
         except Exception as e:
-            self.logger.error(f"Health check error: {e}")
+            self.logger.error("Health check error: %s", e)
 
-def main():
-    """Main service entry point"""
+
+def main(self) -> None:
+    """Main service entry point."""
     if len(sys.argv) == 1:
         # Service is starting via Windows Service Manager
         servicemanager.Initialize()
@@ -287,5 +305,6 @@ def main():
         # Command line - handle install/remove/debug
         win32serviceutil.HandleCommandLine(PAKEService)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

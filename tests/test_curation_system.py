@@ -3,7 +3,7 @@ Comprehensive test suite for the intelligent content curation system.
 Tests all components including models, services, ML pipeline, and API endpoints.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pytest
@@ -33,7 +33,7 @@ from src.services.curation.services.user_preference_service import UserPreferenc
 class TestContentItem:
     """Test ContentItem model"""
 
-    def test_content_item_creation(self):
+    def test_content_item_creation(self) -> None:
         """Test basic content item creation"""
         content = ContentItem(
             id="test-1",
@@ -41,7 +41,7 @@ class TestContentItem:
             content_text="This is a test article with some content.",
             author="Test Author",
             source_url="https://example.com/article",
-            published_date=datetime.now(),
+            published_date=datetime.now(UTC),
             content_type="article",
             tags=["test", "example"],
             quality_score=0.8,
@@ -57,7 +57,7 @@ class TestContentItem:
         assert "test" in content.tags
         assert "example" in content.tags
 
-    def test_content_item_validation(self):
+    def test_content_item_validation(self) -> None:
         """Test content item validation"""
         # Test with minimal required fields
         content = ContentItem(
@@ -76,7 +76,7 @@ class TestContentItem:
 class TestUserProfile:
     """Test UserProfile model"""
 
-    def test_user_profile_creation(self):
+    def test_user_profile_creation(self) -> None:
         """Test basic user profile creation"""
         profile = UserProfile(
             user_id="user-1",
@@ -98,7 +98,7 @@ class TestUserProfile:
         assert profile.learning_rate == 0.1
         assert profile.exploration_factor == 0.15
 
-    def test_user_profile_defaults(self):
+    def test_user_profile_defaults(self) -> None:
         """Test user profile with default values"""
         profile = UserProfile(user_id="user-2")
 
@@ -112,14 +112,14 @@ class TestUserProfile:
 class TestUserInteraction:
     """Test UserInteraction model"""
 
-    def test_user_interaction_creation(self):
+    def test_user_interaction_creation(self) -> None:
         """Test basic user interaction creation"""
         interaction = UserInteraction(
             id="interaction-1",
             user_id="user-1",
             content_id="content-1",
             interaction_type=InteractionType.LIKE,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             session_duration=120,
             context={"page": "home", "source": "recommendation"},
         )
@@ -135,15 +135,15 @@ class TestUserInteraction:
 class TestContentAnalysisService:
     """Test ContentAnalysisService"""
 
-    @pytest.fixture()
-    async def analysis_service(self):
+    @pytest.fixture
+    async def analysis_service(self) -> None:
         """Create analysis service instance"""
         service = ContentAnalysisService()
         await service.initialize()
         return service
 
-    @pytest.fixture()
-    def sample_content(self):
+    @pytest.fixture
+    def sample_content(self) -> None:
         """Create sample content for testing"""
         return ContentItem(
             id="test-content",
@@ -151,15 +151,15 @@ class TestContentAnalysisService:
             content_text="Machine learning is revolutionizing healthcare by enabling early disease detection, personalized treatment plans, and improved patient outcomes. Recent advances in deep learning have shown remarkable success in medical imaging analysis, drug discovery, and clinical decision support systems.",
             author="Dr. Jane Smith",
             source_url="https://example.com/ml-healthcare",
-            published_date=datetime.now() - timedelta(days=5),
+            published_date=datetime.now(UTC) - timedelta(days=5),
             content_type="article",
             tags=["machine learning", "healthcare", "AI", "medical"],
             source_authority_score=0.9,
             source_reliability=0.8,
         )
 
-    @pytest.mark.asyncio()
-    async def test_content_analysis(self, analysis_service, sample_content):
+    @pytest.mark.asyncio
+    async def test_content_analysis(self) -> None:
         """Test content analysis functionality"""
         result = await analysis_service.analyze_content(sample_content)
 
@@ -175,8 +175,8 @@ class TestContentAnalysisService:
         assert result.topic_categories is not None
         assert len(result.topic_categories) > 0
 
-    @pytest.mark.asyncio()
-    async def test_batch_content_analysis(self, analysis_service):
+    @pytest.mark.asyncio
+    async def test_batch_content_analysis(self) -> None:
         """Test batch content analysis"""
         contents = [
             ContentItem(
@@ -199,15 +199,15 @@ class TestContentAnalysisService:
 class TestRecommendationService:
     """Test RecommendationService"""
 
-    @pytest.fixture()
-    async def recommendation_service(self):
+    @pytest.fixture
+    async def recommendation_service(self) -> None:
         """Create recommendation service instance"""
         service = RecommendationService()
         await service.initialize()
         return service
 
-    @pytest.fixture()
-    def sample_user_profile(self):
+    @pytest.fixture
+    def sample_user_profile(self) -> None:
         """Create sample user profile"""
         return UserProfile(
             user_id="test-user",
@@ -220,8 +220,8 @@ class TestRecommendationService:
             },
         )
 
-    @pytest.fixture()
-    def sample_content(self):
+    @pytest.fixture
+    def sample_content(self) -> None:
         """Create sample content"""
         return ContentItem(
             id="test-content",
@@ -232,13 +232,8 @@ class TestRecommendationService:
             credibility_score=0.7,
         )
 
-    @pytest.mark.asyncio()
-    async def test_generate_recommendation(
-        self,
-        recommendation_service,
-        sample_user_profile,
-        sample_content,
-    ):
+    @pytest.mark.asyncio
+    async def test_generate_recommendation(self) -> None:
         """Test recommendation generation"""
         recommendation = await recommendation_service.generate_recommendation(
             content=sample_content,
@@ -258,12 +253,8 @@ class TestRecommendationService:
             == "Matches user interests in AI and Machine Learning"
         )
 
-    @pytest.mark.asyncio()
-    async def test_batch_recommendations(
-        self,
-        recommendation_service,
-        sample_user_profile,
-    ):
+    @pytest.mark.asyncio
+    async def test_batch_recommendations(self) -> None:
         """Test batch recommendation generation"""
         contents = [
             ContentItem(
@@ -292,15 +283,15 @@ class TestRecommendationService:
 class TestUserPreferenceService:
     """Test UserPreferenceService"""
 
-    @pytest.fixture()
-    async def preference_service(self):
+    @pytest.fixture
+    async def preference_service(self) -> None:
         """Create preference service instance"""
         service = UserPreferenceService()
         await service.initialize()
         return service
 
-    @pytest.mark.asyncio()
-    async def test_create_user_profile(self, preference_service):
+    @pytest.mark.asyncio
+    async def test_create_user_profile(self) -> None:
         """Test user profile creation"""
         profile = await preference_service.create_user_profile(
             user_id="test-user",
@@ -315,8 +306,8 @@ class TestUserPreferenceService:
         assert "AI" in profile.interests
         assert profile.preference_weights["academic"] == 0.5
 
-    @pytest.mark.asyncio()
-    async def test_update_user_preferences(self, preference_service):
+    @pytest.mark.asyncio
+    async def test_update_user_preferences(self) -> None:
         """Test user preference updates"""
         # Create initial profile
         profile = await preference_service.create_user_profile(
@@ -331,7 +322,7 @@ class TestUserPreferenceService:
             user_id="test-user-2",
             content_id="content-1",
             interaction_type=InteractionType.LIKE,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
         )
 
         # Update preferences
@@ -347,13 +338,13 @@ class TestUserPreferenceService:
 class TestFeatureExtractor:
     """Test FeatureExtractor"""
 
-    @pytest.fixture()
-    def feature_extractor(self):
+    @pytest.fixture
+    def feature_extractor(self) -> None:
         """Create feature extractor instance"""
         return FeatureExtractor()
 
-    @pytest.fixture()
-    def sample_content(self):
+    @pytest.fixture
+    def sample_content(self) -> None:
         """Create sample content"""
         return ContentItem(
             id="test-content",
@@ -361,7 +352,7 @@ class TestFeatureExtractor:
             content_text="Machine learning is a subset of artificial intelligence that focuses on algorithms and statistical models. It enables computers to learn and make decisions from data without being explicitly programmed.",
             author="Dr. John Doe",
             source_url="https://example.com/ml-fundamentals",
-            published_date=datetime.now() - timedelta(days=10),
+            published_date=datetime.now(UTC) - timedelta(days=10),
             content_type="article",
             tags=["machine learning", "AI", "algorithms"],
             quality_score=0.8,
@@ -371,8 +362,8 @@ class TestFeatureExtractor:
             share_count=12,
         )
 
-    @pytest.fixture()
-    def sample_user_profile(self):
+    @pytest.fixture
+    def sample_user_profile(self) -> None:
         """Create sample user profile"""
         return UserProfile(
             user_id="test-user",
@@ -387,8 +378,8 @@ class TestFeatureExtractor:
             exploration_factor=0.15,
         )
 
-    @pytest.fixture()
-    def sample_interactions(self):
+    @pytest.fixture
+    def sample_interactions(self) -> None:
         """Create sample interactions"""
         return [
             UserInteraction(
@@ -396,7 +387,7 @@ class TestFeatureExtractor:
                 user_id="test-user",
                 content_id="content-1",
                 interaction_type=InteractionType.LIKE,
-                timestamp=datetime.now() - timedelta(days=1),
+                timestamp=datetime.now(UTC) - timedelta(days=1),
                 session_duration=180,
             ),
             UserInteraction(
@@ -404,13 +395,13 @@ class TestFeatureExtractor:
                 user_id="test-user",
                 content_id="content-2",
                 interaction_type=InteractionType.SHARE,
-                timestamp=datetime.now() - timedelta(days=3),
+                timestamp=datetime.now(UTC) - timedelta(days=3),
                 session_duration=240,
             ),
         ]
 
-    @pytest.mark.asyncio()
-    async def test_extract_content_features(self, feature_extractor, sample_content):
+    @pytest.mark.asyncio
+    async def test_extract_content_features(self) -> None:
         """Test content feature extraction"""
         features = await feature_extractor.extract_content_features(sample_content)
 
@@ -428,13 +419,8 @@ class TestFeatureExtractor:
         assert "content_age_days" in features.metadata_features
         assert "quality_score" in features.quality_features
 
-    @pytest.mark.asyncio()
-    async def test_extract_user_features(
-        self,
-        feature_extractor,
-        sample_user_profile,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_extract_user_features(self) -> None:
         """Test user feature extraction"""
         features = await feature_extractor.extract_user_features(
             sample_user_profile,
@@ -454,14 +440,8 @@ class TestFeatureExtractor:
         assert "share_count" in features.behavioral_features
         assert "avg_hour_of_day" in features.temporal_features
 
-    @pytest.mark.asyncio()
-    async def test_get_feature_vector(
-        self,
-        feature_extractor,
-        sample_content,
-        sample_user_profile,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_get_feature_vector(self) -> None:
         """Test feature vector generation"""
         content_features = await feature_extractor.extract_content_features(
             sample_content,
@@ -485,13 +465,13 @@ class TestFeatureExtractor:
 class TestModelTrainer:
     """Test ModelTrainer"""
 
-    @pytest.fixture()
-    def model_trainer(self):
+    @pytest.fixture
+    def model_trainer(self) -> None:
         """Create model trainer instance"""
         return ModelTrainer(models_dir="test_models")
 
-    @pytest.fixture()
-    def sample_contents(self):
+    @pytest.fixture
+    def sample_contents(self) -> None:
         """Create sample contents"""
         return [
             ContentItem(
@@ -506,8 +486,8 @@ class TestModelTrainer:
             for i in range(10)
         ]
 
-    @pytest.fixture()
-    def sample_users(self):
+    @pytest.fixture
+    def sample_users(self) -> None:
         """Create sample users"""
         return [
             UserProfile(
@@ -523,8 +503,8 @@ class TestModelTrainer:
             for i in range(5)
         ]
 
-    @pytest.fixture()
-    def sample_interactions(self):
+    @pytest.fixture
+    def sample_interactions(self) -> None:
         """Create sample interactions"""
         interactions = []
         for i in range(20):
@@ -536,19 +516,14 @@ class TestModelTrainer:
                     interaction_type=(
                         InteractionType.LIKE if i % 3 == 0 else InteractionType.VIEW
                     ),
-                    timestamp=datetime.now() - timedelta(days=i),
+                    timestamp=datetime.now(UTC) - timedelta(days=i),
                     session_duration=100 + (i * 10),
                 ),
             )
         return interactions
 
-    @pytest.mark.asyncio()
-    async def test_train_content_quality_model(
-        self,
-        model_trainer,
-        sample_contents,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_train_content_quality_model(self) -> None:
         """Test content quality model training"""
         metrics = await model_trainer.train_content_quality_model(
             sample_contents,
@@ -560,13 +535,8 @@ class TestModelTrainer:
         assert metrics.task_type == "regression"
         assert metrics.training_time > 0
 
-    @pytest.mark.asyncio()
-    async def test_train_user_preference_model(
-        self,
-        model_trainer,
-        sample_users,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_train_user_preference_model(self) -> None:
         """Test user preference model training"""
         metrics = await model_trainer.train_user_preference_model(
             sample_users,
@@ -578,8 +548,8 @@ class TestModelTrainer:
         assert metrics.task_type == "classification"
         assert metrics.training_time > 0
 
-    @pytest.mark.asyncio()
-    async def test_predict_content_quality(self, model_trainer, sample_contents):
+    @pytest.mark.asyncio
+    async def test_predict_content_quality(self) -> None:
         """Test content quality prediction"""
         # Train model first
         await model_trainer.train_content_quality_model(sample_contents, [])
@@ -595,13 +565,13 @@ class TestModelTrainer:
 class TestPredictionEngine:
     """Test PredictionEngine"""
 
-    @pytest.fixture()
-    def prediction_engine(self):
+    @pytest.fixture
+    def prediction_engine(self) -> None:
         """Create prediction engine instance"""
         return PredictionEngine(cache_size=100, cache_ttl_hours=1)
 
-    @pytest.fixture()
-    def sample_content(self):
+    @pytest.fixture
+    def sample_content(self) -> None:
         """Create sample content"""
         return ContentItem(
             id="test-content",
@@ -613,8 +583,8 @@ class TestPredictionEngine:
             tags=["AI", "ML"],
         )
 
-    @pytest.fixture()
-    def sample_user_profile(self):
+    @pytest.fixture
+    def sample_user_profile(self) -> None:
         """Create sample user profile"""
         return UserProfile(
             user_id="test-user",
@@ -622,8 +592,8 @@ class TestPredictionEngine:
             preference_weights={"academic": 0.5, "news": 0.5},
         )
 
-    @pytest.fixture()
-    def sample_interactions(self):
+    @pytest.fixture
+    def sample_interactions(self) -> None:
         """Create sample interactions"""
         return [
             UserInteraction(
@@ -631,12 +601,12 @@ class TestPredictionEngine:
                 user_id="test-user",
                 content_id="content-1",
                 interaction_type=InteractionType.LIKE,
-                timestamp=datetime.now() - timedelta(days=1),
+                timestamp=datetime.now(UTC) - timedelta(days=1),
             ),
         ]
 
-    @pytest.mark.asyncio()
-    async def test_predict_content_quality(self, prediction_engine, sample_content):
+    @pytest.mark.asyncio
+    async def test_predict_content_quality(self) -> None:
         """Test content quality prediction"""
         result = await prediction_engine.predict_content_quality(sample_content)
 
@@ -647,13 +617,8 @@ class TestPredictionEngine:
         assert 0.0 <= result.confidence <= 1.0
         assert result.prediction_time_ms > 0
 
-    @pytest.mark.asyncio()
-    async def test_predict_user_preference(
-        self,
-        prediction_engine,
-        sample_user_profile,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_predict_user_preference(self) -> None:
         """Test user preference prediction"""
         result = await prediction_engine.predict_user_preference(
             sample_user_profile,
@@ -666,14 +631,8 @@ class TestPredictionEngine:
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.confidence <= 1.0
 
-    @pytest.mark.asyncio()
-    async def test_predict_recommendation_score(
-        self,
-        prediction_engine,
-        sample_content,
-        sample_user_profile,
-        sample_interactions,
-    ):
+    @pytest.mark.asyncio
+    async def test_predict_recommendation_score(self) -> None:
         """Test recommendation score prediction"""
         result = await prediction_engine.predict_recommendation_score(
             sample_content,
@@ -688,8 +647,8 @@ class TestPredictionEngine:
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.confidence <= 1.0
 
-    @pytest.mark.asyncio()
-    async def test_prediction_caching(self, prediction_engine, sample_content):
+    @pytest.mark.asyncio
+    async def test_prediction_caching(self) -> None:
         """Test prediction caching functionality"""
         # First prediction (not cached)
         result1 = await prediction_engine.predict_content_quality(sample_content)
@@ -700,7 +659,7 @@ class TestPredictionEngine:
         assert result2.cached
         assert result2.score == result1.score
 
-    def test_performance_stats(self, prediction_engine):
+    def test_performance_stats(self) -> None:
         """Test performance statistics"""
         stats = prediction_engine.get_performance_stats()
 
@@ -714,15 +673,15 @@ class TestPredictionEngine:
 class TestCurationOrchestrator:
     """Test CurationOrchestrator"""
 
-    @pytest.fixture()
-    async def orchestrator(self):
+    @pytest.fixture
+    async def orchestrator(self) -> None:
         """Create orchestrator instance"""
         orch = CurationOrchestrator()
         await orch.initialize()
         return orch
 
-    @pytest.fixture()
-    def sample_request(self):
+    @pytest.fixture
+    def sample_request(self) -> None:
         """Create sample curation request"""
         return CurationRequest(
             user_id="test-user",
@@ -732,8 +691,8 @@ class TestCurationOrchestrator:
             include_explanations=True,
         )
 
-    @pytest.mark.asyncio()
-    async def test_curation_request(self, orchestrator, sample_request):
+    @pytest.mark.asyncio
+    async def test_curation_request(self) -> None:
         """Test curation request processing"""
         response = await orchestrator.curate_content(sample_request)
 
@@ -745,8 +704,8 @@ class TestCurationOrchestrator:
         assert response.cache_hit_rate >= 0
         assert response.model_confidence >= 0
 
-    @pytest.mark.asyncio()
-    async def test_process_user_feedback(self, orchestrator):
+    @pytest.mark.asyncio
+    async def test_process_user_feedback(self) -> None:
         """Test user feedback processing"""
         success = await orchestrator.process_user_feedback(
             user_id="test-user",
@@ -757,8 +716,8 @@ class TestCurationOrchestrator:
 
         assert success is not None
 
-    @pytest.mark.asyncio()
-    async def test_system_health(self, orchestrator):
+    @pytest.mark.asyncio
+    async def test_system_health(self) -> None:
         """Test system health check"""
         health = await orchestrator.get_system_health()
 
@@ -775,8 +734,8 @@ class TestCurationOrchestrator:
 class TestCurationSystemIntegration:
     """Integration tests for the complete curation system"""
 
-    @pytest.mark.asyncio()
-    async def test_end_to_end_curation_flow(self):
+    @pytest.mark.asyncio
+    async def test_end_to_end_curation_flow(self) -> None:
         """Test complete end-to-end curation flow"""
         # Initialize orchestrator
         orchestrator = CurationOrchestrator()
@@ -807,7 +766,7 @@ class TestCurationSystemIntegration:
                 user_id="integration-test-user",
                 content_id=f"content-{i}",
                 interaction_type=InteractionType.LIKE,
-                timestamp=datetime.now() - timedelta(days=i),
+                timestamp=datetime.now(UTC) - timedelta(days=i),
             )
             for i in range(3)
         ]

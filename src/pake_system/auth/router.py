@@ -1,5 +1,5 @@
 """Authentication API router
-Implements OAuth2 password flow endpoints
+Implements OAuth2 password flow endpoints.
 """
 
 from datetime import timedelta
@@ -105,7 +105,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
 
 @router.get("/me", response_model=User)
 async def read_users_me(
-    current_user: Annotated[User, Depends(get_current_active_user)]
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:
     """Get current authenticated user information.
 
@@ -140,7 +140,7 @@ async def read_users_me(
 
 @router.post("/logout")
 async def logout(
-    current_user: Annotated[User, Depends(get_current_active_user)]
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, str]:
     """Logout endpoint (for completeness).
 
@@ -242,14 +242,12 @@ async def register_user(user_data: UserCreate) -> User:
     hashed_password = create_password_hash(user_data.password)
 
     # Create user
-    user = await create_user(
+    return await create_user(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
         full_name=user_data.full_name,
     )
-
-    return user
 
 
 @router.get("/generate-password")
@@ -281,7 +279,7 @@ async def generate_password(length: int = 16) -> dict[str, str]:
 
 
 @router.post("/validate-password")
-async def validate_password(password: str) -> dict[str, Any]:
+async def validate_password(password: str) -> Dict[str, Any]:
     """Validate password strength.
 
     This endpoint checks if a password meets enterprise security

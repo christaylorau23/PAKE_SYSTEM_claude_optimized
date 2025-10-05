@@ -1,4 +1,4 @@
-"""Intelligence Core Service
+"""Intelligence Core Service.
 
 Central service implementing the tripartite knowledge core architecture from the
 Personal Intelligence Engine blueprint. Coordinates between:
@@ -33,7 +33,6 @@ from src.services.caching.redis_cache_service import CacheService
 
 # Vector database and NLP
 from src.services.database.vector_database_service import (
-    VectorDatabaseService,
     VectorType,
     get_vector_database_service,
 )
@@ -41,7 +40,6 @@ from src.services.nlp.intelligence_nlp_service import (
     DocumentAnalysis,
     ExtractedEntity,
     ExtractedRelationship,
-    IntelligenceNLPService,
     get_intelligence_nlp_service,
 )
 
@@ -80,8 +78,8 @@ class KnowledgeItem:
     source_path: str
 
     # Metadata
-    tags: list[str] = field(default_factory=list)
-    frontmatter: dict[str, Any] = field(default_factory=dict)
+    tags: List[str] = field(default_factory=list)
+    frontmatter: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -91,9 +89,9 @@ class KnowledgeItem:
     semantic_embedding: bytes | None = None
 
     # Cross-system references
-    neo4j_node_ids: list[str] = field(default_factory=list)
-    vector_db_ids: list[str] = field(default_factory=list)
-    linked_items: list[str] = field(default_factory=list)
+    neo4j_node_ids: List[str] = field(default_factory=list)
+    vector_db_ids: List[str] = field(default_factory=list)
+    linked_items: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -102,7 +100,7 @@ class KnowledgeQuery:
 
     query_text: str
     query_type: str = "semantic"  # semantic, graph, hybrid
-    filters: dict[str, Any] = field(default_factory=dict)
+    filters: Dict[str, Any] = field(default_factory=dict)
     limit: int = 10
     similarity_threshold: float = 0.7
     include_entities: bool = True
@@ -117,10 +115,10 @@ class KnowledgeQueryResult:
     items: list[KnowledgeItem]
     total_found: int
     query_time_ms: float
-    sources_searched: list[str]
-    related_entities: list[str] = field(default_factory=list)
-    related_concepts: list[str] = field(default_factory=list)
-    suggested_queries: list[str] = field(default_factory=list)
+    sources_searched: List[str]
+    related_entities: List[str] = field(default_factory=list)
+    related_concepts: List[str] = field(default_factory=list)
+    suggested_queries: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -131,8 +129,8 @@ class SyncResult:
     items_synced: int
     items_failed: int
     sync_time_ms: float
-    errors: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
 
 
 class IntelligenceCoreService:
@@ -146,16 +144,7 @@ class IntelligenceCoreService:
     - Cross-system relationship discovery
     """
 
-    def __init__(
-        self,
-        obsidian_vault_path: str,
-        neo4j_uri: str,
-        neo4j_user: str,
-        neo4j_REDACTED_SECRET: str,
-        vector_db_service: VectorDatabaseService,
-        nlp_service: IntelligenceNLPService,
-        cache_service: CacheService | None = None,
-    ):
+    def __init__(self) -> None:
         """Initialize the Intelligence Core Service.
 
         Args:
@@ -217,11 +206,13 @@ class IntelligenceCoreService:
 
             # Verify vector database connection
             if not await self._verify_vector_database():
-                raise RuntimeError("Vector database verification failed")
+                msg = "Vector database verification failed"
+                raise RuntimeError(msg)
 
             # Verify NLP service
             if not await self._verify_nlp_service():
-                raise RuntimeError("NLP service verification failed")
+                msg = "NLP service verification failed"
+                raise RuntimeError(msg)
 
             # Setup knowledge graph schema
             await self._setup_knowledge_graph_schema()
@@ -233,15 +224,16 @@ class IntelligenceCoreService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize Intelligence Core Service: {e}")
+            logger.error("Failed to initialize Intelligence Core Service: %s", e)
             return False
 
     async def _initialize_obsidian_vault(self) -> None:
         """Initialize connection to Obsidian vault."""
         try:
             if not self.obsidian_vault_path.exists():
+                msg = f"Obsidian vault not found: {self.obsidian_vault_path}"
                 raise FileNotFoundError(
-                    f"Obsidian vault not found: {self.obsidian_vault_path}",
+                    msg,
                 )
 
             # Initialize vault using obsidiantools
@@ -249,10 +241,10 @@ class IntelligenceCoreService:
 
             # Verify vault structure
             notes = list(self.vault.md_notes)
-            logger.info(f"Connected to Obsidian vault with {len(notes)} notes")
+            logger.info("Connected to Obsidian vault with %s notes", len(notes))
 
         except Exception as e:
-            logger.error(f"Failed to initialize Obsidian vault: {e}")
+            logger.error("Failed to initialize Obsidian vault: %s", e)
             raise
 
     async def _initialize_neo4j(self) -> None:
@@ -269,12 +261,13 @@ class IntelligenceCoreService:
                 result = await session.run("RETURN 1 as test")
                 test_value = await result.single()
                 if test_value["test"] != 1:
-                    raise RuntimeError("Neo4j connection test failed")
+                    msg = "Neo4j connection test failed"
+                    raise RuntimeError(msg)
 
             logger.info("Connected to Neo4j successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Neo4j: {e}")
+            logger.error("Failed to initialize Neo4j: %s", e)
             raise
 
     async def _verify_vector_database(self) -> bool:
@@ -283,7 +276,7 @@ class IntelligenceCoreService:
             health = await self.vector_db.health_check()
             return health.get("status") == "healthy"
         except Exception as e:
-            logger.error(f"Vector database verification failed: {e}")
+            logger.error("Vector database verification failed: %s", e)
             return False
 
     async def _verify_nlp_service(self) -> bool:
@@ -292,7 +285,7 @@ class IntelligenceCoreService:
             health = await self.nlp_service.health_check()
             return health.get("status") == "healthy"
         except Exception as e:
-            logger.error(f"NLP service verification failed: {e}")
+            logger.error("NLP service verification failed: %s", e)
             return False
 
     async def _setup_knowledge_graph_schema(self) -> None:
@@ -320,12 +313,12 @@ class IntelligenceCoreService:
                         await session.run(query)
                     except Exception as e:
                         if "already exists" not in str(e).lower():
-                            logger.warning(f"Schema setup warning: {e}")
+                            logger.warning("Schema setup warning: %s", e)
 
                 logger.info("Knowledge graph schema setup complete")
 
         except Exception as e:
-            logger.error(f"Error setting up knowledge graph schema: {e}")
+            logger.error("Error setting up knowledge graph schema: %s", e)
             raise
 
     async def _initial_knowledge_sync(self) -> None:
@@ -343,7 +336,7 @@ class IntelligenceCoreService:
             logger.info("Initial knowledge synchronization complete")
 
         except Exception as e:
-            logger.error(f"Error during initial sync: {e}")
+            logger.error("Error during initial sync: %s", e)
             raise
 
     async def add_knowledge_item(
@@ -352,8 +345,8 @@ class IntelligenceCoreService:
         title: str,
         source_type: KnowledgeSourceType,
         source_path: str,
-        tags: list[str] | None = None,
-        frontmatter: dict[str, Any] | None = None,
+        tags: List[str] | None = None,
+        frontmatter: Dict[str, Any] | None = None,
     ) -> KnowledgeItem:
         """Add a new knowledge item to the core.
 
@@ -369,7 +362,7 @@ class IntelligenceCoreService:
             KnowledgeItem: Processed knowledge item
         """
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(UTC)
 
             # Generate unique ID
             item_id = str(uuid.uuid4())
@@ -404,19 +397,19 @@ class IntelligenceCoreService:
             await self._store_knowledge_item(knowledge_item, analysis)
 
             # Update statistics
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._stats["knowledge_items"] += 1
             self._stats["entities_extracted"] += len(analysis.entities)
             self._stats["relationships_created"] += len(analysis.relationships)
             self._stats["processing_time_total_ms"] += processing_time
 
             logger.info(
-                f"Added knowledge item '{title}' with {len(analysis.entities)} entities and {len(analysis.relationships)} relationships",
+                "Added knowledge item '%s' with %s entities and %s relationships", title, len(analysis.entities), len(analysis.relationships),
             )
             return knowledge_item
 
         except Exception as e:
-            logger.error(f"Error adding knowledge item: {e}")
+            logger.error("Error adding knowledge item: %s", e)
             raise
 
     async def _store_knowledge_item(
@@ -444,9 +437,9 @@ class IntelligenceCoreService:
 
                 if not vector_result.success:
                     logger.warning(
-                        f"Failed to store vector for item {item.id}: {
+                        "Failed to store vector for item %s: %s", item.id,
                             vector_result.error
-                        }",
+                        ,
                     )
 
             # Store entities in vector database
@@ -473,7 +466,7 @@ class IntelligenceCoreService:
             await self._store_in_knowledge_graph(item, analysis)
 
         except Exception as e:
-            logger.error(f"Error storing knowledge item: {e}")
+            logger.error("Error storing knowledge item: %s", e)
             raise
 
     async def _store_in_knowledge_graph(
@@ -566,11 +559,11 @@ class IntelligenceCoreService:
                     )
 
                 logger.debug(
-                    f"Stored knowledge item {item.id} in Neo4j with {len(analysis.entities)} entities",
+                    "Stored knowledge item %s in Neo4j with %s entities", item.id, len(analysis.entities),
                 )
 
         except Exception as e:
-            logger.error(f"Error storing in knowledge graph: {e}")
+            logger.error("Error storing in knowledge graph: %s", e)
             raise
 
     async def query_knowledge(self, query: KnowledgeQuery) -> KnowledgeQueryResult:
@@ -582,7 +575,7 @@ class IntelligenceCoreService:
         Returns:
             KnowledgeQueryResult: Query results
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         try:
             # Check cache first
@@ -602,7 +595,8 @@ class IntelligenceCoreService:
                 [query.query_text],
             )
             if query_embeddings.size == 0:
-                raise ValueError("Failed to generate query embedding")
+                msg = "Failed to generate query embedding"
+                raise ValueError(msg)
 
             query_embedding = query_embeddings[0]
 
@@ -614,10 +608,11 @@ class IntelligenceCoreService:
             elif query.query_type == "hybrid":
                 results = await self._hybrid_search(query, query_embedding)
             else:
-                raise ValueError(f"Unknown query type: {query.query_type}")
+                msg = f"Unknown query type: {query.query_type}"
+                raise ValueError(msg)
 
             # Calculate processing time
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             # Create result
             query_result = KnowledgeQueryResult(
@@ -640,13 +635,13 @@ class IntelligenceCoreService:
             self._stats["processing_time_total_ms"] += processing_time
 
             logger.debug(
-                f"Knowledge query returned {len(results)} results in {
-                    processing_time:.2f}ms",
+                "Knowledge query returned %s results in %sms", len(results),
+                processing_time,
             )
             return query_result
 
         except Exception as e:
-            logger.error(f"Error querying knowledge: {e}")
+            logger.error("Error querying knowledge: %s", e)
             raise
 
     async def _semantic_search(
@@ -656,6 +651,7 @@ class IntelligenceCoreService:
     ) -> list[KnowledgeItem]:
         """Perform semantic search using vector database."""
         try:
+                pass
             # Search documents
             vector_results = await self.vector_db.semantic_search(
                 query_embedding=query_embedding,
@@ -675,7 +671,7 @@ class IntelligenceCoreService:
             return items
 
         except Exception as e:
-            logger.error(f"Error in semantic search: {e}")
+            logger.error("Error in semantic search: %s", e)
             return []
 
     async def _graph_search(self, query: KnowledgeQuery) -> list[KnowledgeItem]:
@@ -704,7 +700,7 @@ class IntelligenceCoreService:
                 return items
 
         except Exception as e:
-            logger.error(f"Error in graph search: {e}")
+            logger.error("Error in graph search: %s", e)
             return []
 
     async def _hybrid_search(
@@ -714,6 +710,7 @@ class IntelligenceCoreService:
     ) -> list[KnowledgeItem]:
         """Perform hybrid search combining semantic and graph approaches."""
         try:
+                pass
             # Run both searches in parallel
             semantic_task = self._semantic_search(query, query_embedding)
             graph_task = self._graph_search(query)
@@ -749,7 +746,7 @@ class IntelligenceCoreService:
             return merged_results[: query.limit]
 
         except Exception as e:
-            logger.error(f"Error in hybrid search: {e}")
+            logger.error("Error in hybrid search: %s", e)
             return []
 
     async def _load_knowledge_item_by_id(self, item_id: str) -> KnowledgeItem | None:
@@ -793,17 +790,18 @@ class IntelligenceCoreService:
                 )
 
         except Exception as e:
-            logger.error(f"Error loading knowledge item {item_id}: {e}")
+            logger.error("Error loading knowledge item %s: %s", item_id, e)
             return None
 
     async def _sync_obsidian_vault(self) -> SyncResult:
         """Synchronize Obsidian vault with knowledge core."""
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         sync_stats = {"processed": 0, "synced": 0, "failed": 0, "errors": []}
 
         try:
             if not self.vault:
-                raise ValueError("Obsidian vault not initialized")
+                msg = "Obsidian vault not initialized"
+                raise ValueError(msg)
 
             # Get all markdown notes
             notes = list(self.vault.md_notes)
@@ -832,9 +830,9 @@ class IntelligenceCoreService:
                 except Exception as e:
                     sync_stats["failed"] += 1
                     sync_stats["errors"].append(f"Error processing {note.path}: {e}")
-                    logger.warning(f"Failed to sync note {note.path}: {e}")
+                    logger.warning("Failed to sync note %s: %s", note.path, e)
 
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             return SyncResult(
                 items_processed=sync_stats["processed"],
@@ -845,8 +843,8 @@ class IntelligenceCoreService:
             )
 
         except Exception as e:
-            logger.error(f"Error syncing Obsidian vault: {e}")
-            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            logger.error("Error syncing Obsidian vault: %s", e)
+            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return SyncResult(
                 items_processed=0,
                 items_synced=0,
@@ -855,7 +853,7 @@ class IntelligenceCoreService:
                 errors=[str(e)],
             )
 
-    def _serialize_knowledge_item(self, item: KnowledgeItem) -> dict[str, Any]:
+    def _serialize_knowledge_item(self, item: KnowledgeItem) -> Dict[str, Any]:
         """Serialize knowledge item for caching."""
         return {
             **item.__dict__,
@@ -871,7 +869,7 @@ class IntelligenceCoreService:
             ),
         }
 
-    def _serialize_entity(self, entity: ExtractedEntity) -> dict[str, Any]:
+    def _serialize_entity(self, entity: ExtractedEntity) -> Dict[str, Any]:
         """Serialize entity for caching."""
         return {
             **entity.__dict__,
@@ -883,13 +881,14 @@ class IntelligenceCoreService:
             ),
         }
 
-    def _serialize_relationship(self, rel: ExtractedRelationship) -> dict[str, Any]:
+    def _serialize_relationship(self, rel: ExtractedRelationship) -> Dict[str, Any]:
         """Serialize relationship for caching."""
         return {**rel.__dict__, "relation_type": rel.relation_type.value}
 
-    async def get_service_stats(self) -> dict[str, Any]:
+    async def get_service_stats(self) -> Dict[str, Any]:
         """Get comprehensive service statistics."""
         try:
+                pass
             # Get stats from dependent services
             vector_stats = await self.vector_db.get_database_stats()
             nlp_stats = await self.nlp_service.get_service_stats()
@@ -941,12 +940,13 @@ class IntelligenceCoreService:
             }
 
         except Exception as e:
-            logger.error(f"Error getting service stats: {e}")
+            logger.error("Error getting service stats: %s", e)
             return {"error": str(e)}
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for the intelligence core."""
         try:
+                pass
             # Check all components
             checks = {
                 "obsidian_vault": self.vault is not None,
@@ -1006,7 +1006,7 @@ class IntelligenceCoreService:
                 logger.info("Vector database connection closed")
 
         except Exception as e:
-            logger.error(f"Error closing intelligence core: {e}")
+            logger.error("Error closing intelligence core: %s", e)
 
 
 # Singleton instance

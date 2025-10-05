@@ -27,7 +27,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -78,10 +78,10 @@ class TestResult:
     name: str
     status: str  # PASS, FAIL, SKIP, ERROR
     execution_time: float
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Dict[str, Any] = field(default_factory=dict)
     metrics: dict[str, float] = field(default_factory=dict)
     error_message: str | None = None
-    recommendations: list[str] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
 
 
@@ -98,19 +98,19 @@ class TestSuiteResults:
     skipped_tests: int = 0
     error_tests: int = 0
     test_results: list[TestResult] = field(default_factory=list)
-    performance_metrics: dict[str, Any] = field(default_factory=dict)
-    system_state: dict[str, Any] = field(default_factory=dict)
-    recommendations: list[str] = field(default_factory=list)
+    performance_metrics: Dict[str, Any] = field(default_factory=dict)
+    system_state: Dict[str, Any] = field(default_factory=dict)
+    recommendations: List[str] = field(default_factory=list)
 
 
 class UltraComprehensiveTestSuite:
     """Ultra-comprehensive test suite for complete PAKE system validation"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.suite_id = f"ultra_test_{int(time.time())}"
         self.results = TestSuiteResults(
             suite_id=self.suite_id,
-            start_time=datetime.now(),
+            start_time=datetime.now(UTC),
         )
         self.test_data_path = Path("test_data")
         self.test_data_path.mkdir(exist_ok=True)
@@ -118,9 +118,9 @@ class UltraComprehensiveTestSuite:
         # Initialize test environment
         self.setup_test_environment()
 
-        logger.info(f"Ultra-Comprehensive Test Suite initialized: {self.suite_id}")
+        logger.info("Ultra-Comprehensive Test Suite initialized: %s", self.suite_id)
 
-    def setup_test_environment(self):
+    def setup_test_environment(self) -> None:
         """Setup comprehensive test environment"""
         try:
             # Create test directories
@@ -147,10 +147,10 @@ class UltraComprehensiveTestSuite:
             logger.info("Test environment setup completed")
 
         except Exception as e:
-            logger.error(f"Error setting up test environment: {e}")
+            logger.error("Error setting up test environment: %s", e)
             raise
 
-    def init_test_database(self):
+    def init_test_database(self) -> None:
         """Initialize test database"""
         try:
             db_path = self.test_data_path / "test_results.db"
@@ -192,10 +192,10 @@ class UltraComprehensiveTestSuite:
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error initializing test database: {e}")
+            logger.error("Error initializing test database: %s", e)
             raise
 
-    def create_test_config(self):
+    def create_test_config(self) -> None:
         """Create test configuration file"""
         try:
             config = {
@@ -216,7 +216,7 @@ class UltraComprehensiveTestSuite:
                 json.dump(config, f, indent=2)
 
         except Exception as e:
-            logger.error(f"Error creating test config: {e}")
+            logger.error("Error creating test config: %s", e)
 
     async def run_ultra_comprehensive_tests(self) -> TestSuiteResults:
         """Run the complete ultra-comprehensive test suite"""
@@ -258,7 +258,7 @@ class UltraComprehensiveTestSuite:
             await self.run_user_experience_tests()
 
             # Finalize results
-            self.results.end_time = datetime.now()
+            self.results.end_time = datetime.now(UTC)
             self.results.system_state["final"] = self.capture_system_state()
 
             # Calculate summary statistics
@@ -270,15 +270,15 @@ class UltraComprehensiveTestSuite:
             return self.results
 
         except Exception as e:
-            logger.error(f"Fatal error in test suite: {e}")
+            logger.error("Fatal error in test suite: %s", e)
             self.results.error_tests += 1
             return self.results
 
-    def capture_system_state(self) -> dict[str, Any]:
+    def capture_system_state(self) -> Dict[str, Any]:
         """Capture detailed system state"""
         try:
             return {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "cpu_percent": psutil.cpu_percent(interval=1),
                 "memory": {
                     "total": psutil.virtual_memory().total,
@@ -349,7 +349,7 @@ class UltraComprehensiveTestSuite:
 
     # =================== CATEGORY 1: FUNCTIONAL TESTING ===================
 
-    async def run_functional_tests(self):
+    async def run_functional_tests(self) -> None:
         """Run comprehensive functional tests"""
         logger.info("Running Functional Tests...")
 
@@ -444,7 +444,7 @@ This is a detailed guide with multiple sections, code examples, and references.
 - Feature 3
 
 ```python
-def example():
+def example(self) -> None:
     return "code example"
 ```
 
@@ -582,7 +582,7 @@ This is a test note for functional testing.
 - Test feature 2
 
 ```python
-def test():
+def test(self) -> None:
     return True
 ```
 
@@ -709,7 +709,7 @@ This should be processed correctly.
 
     # =================== CATEGORY 2: PERFORMANCE TESTING ===================
 
-    async def run_performance_tests(self):
+    async def run_performance_tests(self) -> None:
         """Run comprehensive performance tests"""
         logger.info("Running Performance Tests...")
 
@@ -853,7 +853,7 @@ This should be processed correctly.
                         successful_processes += 1
                         total_processing_time += result.processing_time
                 except Exception as e:
-                    logger.debug(f"Error processing {test_file}: {e}")
+                    logger.debug("Error processing %s: %s", test_file, e)
 
             total_time = time.time() - start_time
 
@@ -926,7 +926,7 @@ This should be processed correctly.
 
             watcher = VaultWatcher(str(self.test_data_path / "vault"))
 
-            async def process_file_task(file_path):
+            async def process_file_task(self) -> None:
                 try:
                     start_time = time.time()
                     result = await watcher.process_file(file_path)
@@ -1079,7 +1079,7 @@ This should be processed correctly.
 
     # =================== CATEGORY 3-10: PLACEHOLDER IMPLEMENTATIONS ===================
 
-    async def run_reliability_tests(self):
+    async def run_reliability_tests(self) -> None:
         """Run reliability and failure recovery tests"""
         logger.info("Running Reliability Tests...")
         # Implementation would include failure simulation, recovery testing, etc.
@@ -1096,7 +1096,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_security_tests(self):
+    async def run_security_tests(self) -> None:
         """Run security and vulnerability tests"""
         logger.info("Running Security Tests...")
         self.add_test_result(
@@ -1112,7 +1112,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_integration_tests(self):
+    async def run_integration_tests(self) -> None:
         """Run system integration tests"""
         logger.info("Running Integration Tests...")
         self.add_test_result(
@@ -1128,7 +1128,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_edge_case_tests(self):
+    async def run_edge_case_tests(self) -> None:
         """Run edge case and boundary tests"""
         logger.info("Running Edge Case Tests...")
         self.add_test_result(
@@ -1144,7 +1144,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_scalability_tests(self):
+    async def run_scalability_tests(self) -> None:
         """Run scalability and load tests"""
         logger.info("Running Scalability Tests...")
         self.add_test_result(
@@ -1160,7 +1160,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_automation_tests(self):
+    async def run_automation_tests(self) -> None:
         """Run automation and workflow tests"""
         logger.info("Running Automation Tests...")
         self.add_test_result(
@@ -1176,7 +1176,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_data_integrity_tests(self):
+    async def run_data_integrity_tests(self) -> None:
         """Run data integrity and consistency tests"""
         logger.info("Running Data Integrity Tests...")
         self.add_test_result(
@@ -1192,7 +1192,7 @@ This should be processed correctly.
             ),
         )
 
-    async def run_user_experience_tests(self):
+    async def run_user_experience_tests(self) -> None:
         """Run user experience and usability tests"""
         logger.info("Running User Experience Tests...")
         self.add_test_result(
@@ -1231,7 +1231,7 @@ including headers, lists, code blocks, and structured content.
 
 ## Code Example
 ```python
-def test_function():
+def test_function(self) -> None:
     '''Test function for content analysis'''
     return "This is a test"
 
@@ -1301,7 +1301,7 @@ function additionalExample{i + 1}() {{
 
         return content
 
-    def add_test_result(self, result: TestResult):
+    def add_test_result(self) -> None:
         """Add test result to suite results"""
         self.results.test_results.append(result)
         self.results.total_tests += 1
@@ -1322,14 +1322,14 @@ function additionalExample{i + 1}() {{
         status_emoji = {"PASS": "✓", "FAIL": "✗", "SKIP": "↷", "ERROR": "⚠"}
 
         logger.info(
-            f"{status_emoji.get(result.status, '?')} {result.name}: {result.status} "
+            "%s %s: %s ", status_emoji.get(result.status, "?"), result.name, result.status
             f"({result.execution_time:.3f}s)",
         )
 
         if result.error_message:
-            logger.error(f"  Error: {result.error_message}")
+            logger.error("  Error: %s", result.error_message)
 
-    def store_test_result(self, result: TestResult):
+    def store_test_result(self) -> None:
         """Store test result in database"""
         try:
             db_path = self.test_data_path / "test_results.db"
@@ -1359,11 +1359,12 @@ function additionalExample{i + 1}() {{
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error storing test result: {e}")
+            logger.error("Error storing test result: %s", e)
 
-    def calculate_test_summary(self):
+    def calculate_test_summary(self) -> None:
         """Calculate comprehensive test summary"""
         try:
+                pass
             # Basic statistics
             total_execution_time = sum(
                 r.execution_time for r in self.results.test_results
@@ -1437,11 +1438,12 @@ function additionalExample{i + 1}() {{
             }
 
         except Exception as e:
-            logger.error(f"Error calculating test summary: {e}")
+            logger.error("Error calculating test summary: %s", e)
 
     def calculate_system_efficiency(self) -> float:
         """Calculate overall system efficiency score"""
         try:
+                pass
             # Factors contributing to efficiency
             success_rate = (
                 (self.results.passed_tests / self.results.total_tests * 100)
@@ -1502,10 +1504,10 @@ function additionalExample{i + 1}() {{
             return min(100, max(0, efficiency))
 
         except Exception as e:
-            logger.error(f"Error calculating system efficiency: {e}")
+            logger.error("Error calculating system efficiency: %s", e)
             return 50  # Default middle score
 
-    async def generate_comprehensive_report(self):
+    async def generate_comprehensive_report(self) -> None:
         """Generate comprehensive test report"""
         try:
             report = {
@@ -1567,7 +1569,7 @@ function additionalExample{i + 1}() {{
             with open(summary_file, "w") as f:
                 json.dump(
                     {
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                         "suite_id": self.results.suite_id,
                         "summary": report["summary"],
                         "performance": report["performance_metrics"],
@@ -1577,13 +1579,13 @@ function additionalExample{i + 1}() {{
                     indent=2,
                 )
 
-            logger.info(f"Comprehensive test report saved: {report_file}")
-            logger.info(f"Test summary saved: {summary_file}")
+            logger.info("Comprehensive test report saved: %s", report_file)
+            logger.info("Test summary saved: %s", summary_file)
 
         except Exception as e:
-            logger.error(f"Error generating comprehensive report: {e}")
+            logger.error("Error generating comprehensive report: %s", e)
 
-    def generate_recommendations(self) -> list[str]:
+    def generate_recommendations(self) -> List[str]:
         """Generate recommendations based on test results"""
         recommendations = []
 
@@ -1659,7 +1661,7 @@ function additionalExample{i + 1}() {{
 # =================== MAIN EXECUTION ===================
 
 
-async def main():
+async def main(self) -> None:
     """Main test suite execution"""
     print("PAKE Ultra-Comprehensive Test Suite")
     print("=" * 60)
@@ -1667,6 +1669,7 @@ async def main():
     print("")
 
     try:
+            pass
         # Initialize test suite
         test_suite = UltraComprehensiveTestSuite()
 
@@ -1728,7 +1731,7 @@ async def main():
         print("\n\nTest suite interrupted by user")
     except Exception as e:
         print(f"\n\nFATAL ERROR: {e}")
-        logger.error(f"Fatal error in test suite: {e}")
+        logger.error("Fatal error in test suite: %s", e)
 
 
 if __name__ == "__main__":

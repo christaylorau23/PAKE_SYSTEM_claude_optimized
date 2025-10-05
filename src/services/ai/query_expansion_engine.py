@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Intelligent Query Expansion Engine
-Phase 3 Sprint 5: Advanced AI integration with query optimization and enhancement
+Phase 3 Sprint 5: Advanced AI integration with query optimization and enhancement.
 
 Provides intelligent query expansion, synonym detection, context awareness,
 and AI-powered search optimization for enhanced content discovery.
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExpansionStrategy(Enum):
-    """Query expansion strategies"""
+    """Query expansion strategies."""
 
     SYNONYM_BASED = "synonym_based"
     SEMANTIC_SIMILARITY = "semantic_similarity"
@@ -31,7 +31,7 @@ class ExpansionStrategy(Enum):
 
 
 class ExpansionScope(Enum):
-    """Scope of query expansion"""
+    """Scope of query expansion."""
 
     CONSERVATIVE = "conservative"  # Add 1-2 related terms
     MODERATE = "moderate"  # Add 3-5 related terms
@@ -40,7 +40,7 @@ class ExpansionScope(Enum):
 
 
 class QueryType(Enum):
-    """Types of search queries"""
+    """Types of search queries."""
 
     FACTUAL = "factual"  # What is X?
     PROCEDURAL = "procedural"  # How to do X?
@@ -52,7 +52,7 @@ class QueryType(Enum):
 
 @dataclass(frozen=True)
 class ExpansionTerm:
-    """Immutable expanded query term"""
+    """Immutable expanded query term."""
 
     term: str
     confidence: float  # 0.0 to 1.0
@@ -60,8 +60,8 @@ class ExpansionTerm:
     source: str = ""
     weight: float = 1.0
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "term": self.term,
             "confidence": self.confidence,
@@ -73,17 +73,17 @@ class ExpansionTerm:
 
 @dataclass(frozen=True)
 class QueryAnalysis:
-    """Immutable query analysis result"""
+    """Immutable query analysis result."""
 
     original_query: str
     query_type: QueryType
-    key_entities: list[str]
+    key_entities: List[str]
     intent_confidence: float
     complexity_score: float  # 0.0 to 1.0
-    domain_hints: list[str] = field(default_factory=list)
+    domain_hints: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "original_query": self.original_query,
             "query_type": self.query_type.value,
@@ -96,7 +96,7 @@ class QueryAnalysis:
 
 @dataclass(frozen=True)
 class ExpandedQuery:
-    """Immutable expanded query result"""
+    """Immutable expanded query result."""
 
     original_query: str
     expanded_terms: list[ExpansionTerm]
@@ -110,11 +110,11 @@ class ExpandedQuery:
     confidence_score: float
 
     # Performance hints
-    suggested_filters: dict[str, Any] = field(default_factory=dict)
-    boost_terms: list[str] = field(default_factory=list)
+    suggested_filters: Dict[str, Any] = field(default_factory=dict)
+    boost_terms: List[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "original_query": self.original_query,
             "expanded_terms": [term.to_dict() for term in self.expanded_terms],
@@ -131,7 +131,7 @@ class ExpandedQuery:
 
 @dataclass
 class ExpansionConfig:
-    """Configuration for query expansion engine"""
+    """Configuration for query expansion engine."""
 
     # Expansion settings
     enable_synonym_expansion: bool = True
@@ -161,26 +161,26 @@ class ExpansionConfig:
     enable_personalization: bool = False
 
     # Language settings
-    supported_languages: list[str] = field(default_factory=lambda: ["en"])
+    supported_languages: List[str] = field(default_factory=lambda: ["en"])
     default_language: str = "en"
 
 
 class QueryAnalyzer(ABC):
-    """Abstract base for query analysis implementations"""
+    """Abstract base for query analysis implementations."""
 
     @abstractmethod
     async def analyze_query(
         self,
         query: str,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> QueryAnalysis:
-        """Analyze query intent and structure"""
+        """Analyze query intent and structure."""
 
 
 class SimpleQueryAnalyzer(QueryAnalyzer):
-    """Simple rule-based query analyzer"""
+    """Simple rule-based query analyzer."""
 
-    def __init__(self, config: ExpansionConfig):
+    def __init__(self) -> None:
         self.config = config
 
         # Query type patterns
@@ -269,9 +269,9 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
     async def analyze_query(
         self,
         query: str,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> QueryAnalysis:
-        """Analyze query to determine intent and characteristics"""
+        """Analyze query to determine intent and characteristics."""
         query_lower = query.lower()
 
         # Determine query type
@@ -320,8 +320,8 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
             domain_hints=domain_hints,
         )
 
-    def _extract_entities(self, query: str) -> list[str]:
-        """Extract key entities from query"""
+    def _extract_entities(self, query: str) -> List[str]:
+        """Extract key entities from query."""
         # Simple entity extraction - capitalize words and technical terms
         entities = []
         words = query.split()
@@ -356,8 +356,8 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
 
         return entities[:10]  # Limit to top 10
 
-    def _detect_domains(self, query: str) -> list[str]:
-        """Detect domain hints from query content"""
+    def _detect_domains(self, query: str) -> List[str]:
+        """Detect domain hints from query content."""
         detected_domains = []
 
         for domain, keywords in self.domain_keywords.items():
@@ -373,22 +373,22 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
 
 
 class ExpansionTermGenerator(ABC):
-    """Abstract base for term expansion implementations"""
+    """Abstract base for term expansion implementations."""
 
     @abstractmethod
     async def generate_expansions(
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
-        """Generate expansion terms for query"""
+        """Generate expansion terms for query."""
 
 
 class SynonymExpander(ExpansionTermGenerator):
-    """Synonym-based query expansion"""
+    """Synonym-based query expansion."""
 
-    def __init__(self, config: ExpansionConfig):
+    def __init__(self) -> None:
         self.config = config
 
         # Pre-built synonym dictionary (in production, this would be more comprehensive)
@@ -429,9 +429,9 @@ class SynonymExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
-        """Generate synonym-based expansion terms"""
+        """Generate synonym-based expansion terms."""
         expansions = []
         query_lower = query.lower()
 
@@ -471,9 +471,9 @@ class SynonymExpander(ExpansionTermGenerator):
 
 
 class SemanticExpander(ExpansionTermGenerator):
-    """Semantic similarity-based query expansion"""
+    """Semantic similarity-based query expansion."""
 
-    def __init__(self, config: ExpansionConfig):
+    def __init__(self) -> None:
         self.config = config
 
         # Semantic relationships (simplified - in production would use word embeddings)
@@ -532,9 +532,9 @@ class SemanticExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
-        """Generate semantically related expansion terms"""
+        """Generate semantically related expansion terms."""
         expansions = []
         query_lower = query.lower()
 
@@ -582,8 +582,8 @@ class SemanticExpander(ExpansionTermGenerator):
         expansions.sort(key=lambda x: x.confidence, reverse=True)
         return expansions[: self.config.max_expanded_terms // 2]
 
-    def _get_domain_terms(self, domain: str) -> list[str]:
-        """Get relevant terms for a specific domain"""
+    def _get_domain_terms(self, domain: str) -> List[str]:
+        """Get relevant terms for a specific domain."""
         domain_specific_terms = {
             "technology": [
                 "innovation",
@@ -605,9 +605,9 @@ class SemanticExpander(ExpansionTermGenerator):
 
 
 class ContextualExpander(ExpansionTermGenerator):
-    """Context-aware query expansion"""
+    """Context-aware query expansion."""
 
-    def __init__(self, config: ExpansionConfig):
+    def __init__(self) -> None:
         self.config = config
 
         # Contextual patterns for different query types
@@ -640,9 +640,9 @@ class ContextualExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
-        """Generate context-aware expansion terms"""
+        """Generate context-aware expansion terms."""
         expansions = []
 
         # Get contextual terms based on query type
@@ -695,7 +695,7 @@ class QueryExpansionEngine:
     Provides synonym detection, semantic expansion, and contextual enhancement.
     """
 
-    def __init__(self, config: ExpansionConfig = None):
+    def __init__(self) -> None:
         self.config = config or ExpansionConfig()
 
         # Initialize components
@@ -728,9 +728,9 @@ class QueryExpansionEngine:
         query: str,
         expansion_strategy: ExpansionStrategy = None,
         expansion_scope: ExpansionScope = None,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> str:
-        """Generate cache key for query expansion"""
+        """Generate cache key for query expansion."""
         cache_data = {"query": query.lower().strip()}
 
         # Include strategy and scope in cache key
@@ -745,7 +745,7 @@ class QueryExpansionEngine:
                 key: value
                 for key, value in context.items()
                 if key in ["domain", "user_type", "language"]
-                and isinstance(value, (str, int, float, bool))
+                and isinstance(value, str | int | float | bool)
             }
             if stable_context:
                 cache_data["context"] = stable_context
@@ -758,7 +758,7 @@ class QueryExpansionEngine:
         query: str,
         expansion_strategy: ExpansionStrategy = None,
         expansion_scope: ExpansionScope = None,
-        context: dict[str, Any] = None,
+        context: Dict[str, Any] = None,
     ) -> ExpandedQuery:
         """Expand query with intelligent term suggestions and optimization."""
         start_time = time.time()
@@ -801,7 +801,9 @@ class QueryExpansionEngine:
                     all_expansions.extend(expansions)
                 except Exception as e:
                     logger.warning(
-                        f"Expander {expander.__class__.__name__} failed: {e}",
+                        "Expander %s failed: %s",
+                        expander.__class__.__name__,
+                        e,
                     )
 
             # Filter and rank expansions
@@ -862,7 +864,7 @@ class QueryExpansionEngine:
             return expanded_query
 
         except Exception as e:
-            logger.error(f"Query expansion failed for '{query}': {e}")
+            logger.error("Query expansion failed for '%s': %s", query, e)
             # Return minimal expansion on error
             return self._create_minimal_expansion(query, start_time, str(e))
 
@@ -872,7 +874,7 @@ class QueryExpansionEngine:
         scope: ExpansionScope,
         analysis: QueryAnalysis,
     ) -> list[ExpansionTerm]:
-        """Filter and rank expansion terms based on scope and quality"""
+        """Filter and rank expansion terms based on scope and quality."""
         # Remove duplicates
         unique_expansions = {}
         for expansion in expansions:
@@ -913,7 +915,7 @@ class QueryExpansionEngine:
         expansions: list[ExpansionTerm],
         strategy: ExpansionStrategy,
     ) -> str:
-        """Build final expanded query string"""
+        """Build final expanded query string."""
         if not expansions:
             return original_query
 
@@ -957,7 +959,7 @@ class QueryExpansionEngine:
         expansions: list[ExpansionTerm],
         analysis: QueryAnalysis,
     ) -> float:
-        """Calculate overall confidence in the expansion"""
+        """Calculate overall confidence in the expansion."""
         if not expansions:
             return 0.0
 
@@ -970,15 +972,14 @@ class QueryExpansionEngine:
         # Penalize if too few expansions found
         expansion_penalty = 0.0 if len(expansions) >= 3 else 0.1
 
-        final_confidence = min(1.0, avg_confidence + analysis_boost - expansion_penalty)
-        return final_confidence
+        return min(1.0, avg_confidence + analysis_boost - expansion_penalty)
 
     def _generate_performance_hints(
         self,
         expansions: list[ExpansionTerm],
         analysis: QueryAnalysis,
-    ) -> tuple[dict[str, Any], list[str]]:
-        """Generate performance optimization hints"""
+    ) -> tuple[Dict[str, Any], List[str]]:
+        """Generate performance optimization hints."""
         suggested_filters = {}
         boost_terms = []
 
@@ -1011,7 +1012,7 @@ class QueryExpansionEngine:
         start_time: float,
         error_msg: str = None,
     ) -> ExpandedQuery:
-        """Create minimal expansion for error cases"""
+        """Create minimal expansion for error cases."""
         expansion_time = max(
             0.1,
             (time.time() - start_time) * 1000,
@@ -1037,8 +1038,8 @@ class QueryExpansionEngine:
             confidence_score=0.0,
         )
 
-    def get_expansion_statistics(self) -> dict[str, Any]:
-        """Get query expansion engine statistics"""
+    def get_expansion_statistics(self) -> Dict[str, Any]:
+        """Get query expansion engine statistics."""
         stats = self.stats.copy()
 
         if stats["total_expansions"] > 0:
@@ -1051,15 +1052,15 @@ class QueryExpansionEngine:
 
         return stats
 
-    async def clear_cache(self):
-        """Clear expansion cache"""
+    async def clear_cache(self) -> None:
+        """Clear expansion cache."""
         self.expansion_cache.clear()
         logger.info("Query expansion cache cleared")
 
 
 # Production-ready factory functions
 async def create_production_query_expansion_engine() -> QueryExpansionEngine:
-    """Create production-ready query expansion engine"""
+    """Create production-ready query expansion engine."""
     config = ExpansionConfig(
         enable_synonym_expansion=True,
         enable_semantic_expansion=True,
@@ -1083,7 +1084,7 @@ async def create_production_query_expansion_engine() -> QueryExpansionEngine:
 
 if __name__ == "__main__":
     # Example usage
-    async def main():
+    async def main(self) -> None:
         engine = QueryExpansionEngine()
 
         # Test queries

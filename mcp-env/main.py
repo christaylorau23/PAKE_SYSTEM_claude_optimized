@@ -1,4 +1,4 @@
-def main():
+def main(self) -> None:
     print("Hello from pake-mcp!")
 
 

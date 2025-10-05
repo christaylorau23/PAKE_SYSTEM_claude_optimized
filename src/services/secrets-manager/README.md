@@ -23,10 +23,10 @@ npm run dev
 
 ## 📋 Success Criteria
 
-✅ **Zero secrets in code/environment variables** - All secrets fetched at runtime via SDK  
-✅ **Automated rotation for all credentials** - Configurable rotation schedules  
-✅ **<10ms decryption overhead** - High-performance encryption/decryption  
-✅ **100% encryption coverage** - All sensitive data encrypted at rest  
+✅ **Zero secrets in code/environment variables** - All secrets fetched at runtime via SDK
+✅ **Automated rotation for all credentials** - Configurable rotation schedules
+✅ **<10ms decryption overhead** - High-performance encryption/decryption
+✅ **100% encryption coverage** - All sensitive data encrypted at rest
 ✅ **Disaster recovery tested** - Break-glass procedures and backup/restore
 
 ## 🏗️ Architecture

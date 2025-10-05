@@ -23,19 +23,19 @@ import pytest
 class TestServiceRegistryIntegration:
     """Integration tests for complete service registry workflow"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def service_registry_url(self) -> str:
         """Service registry API base URL"""
         return "http://localhost:8000/api/v1"
 
-    @pytest.fixture()
+    @pytest.fixture
     async def http_client(self) -> httpx.AsyncClient:
         """HTTP client for service registry API calls"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             yield client
 
-    @pytest.fixture()
-    def test_service_config(self) -> dict[str, Any]:
+    @pytest.fixture
+    def test_service_config(self) -> Dict[str, Any]:
         """Test service configuration for registration"""
         return {
             "service_name": f"test-service-{uuid.uuid4().hex[:8]}",
@@ -64,13 +64,8 @@ class TestServiceRegistryIntegration:
             "labels": {"team": "platform", "component": "test"},
         }
 
-    @pytest.mark.asyncio()
-    async def test_complete_service_registration_flow(
-        self,
-        service_registry_url: str,
-        http_client: httpx.AsyncClient,
-        test_service_config: dict[str, Any],
-    ):
+    @pytest.mark.asyncio
+    async def test_complete_service_registration_flow(self) -> None:
         """
         Test complete service registration workflow
 
@@ -190,10 +185,8 @@ class TestServiceRegistryIntegration:
             # Should succeed or service already gone
             assert cleanup_response.status_code in [200, 204, 404]
 
-    @pytest.mark.asyncio()
-    async def test_service_dependency_management(
-        self, service_registry_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_dependency_management(self) -> None:
         """
         Test service dependency registration and validation
 
@@ -301,10 +294,8 @@ class TestServiceRegistryIntegration:
                     f"{service_registry_url}/services/{provider_id}"
                 )
 
-    @pytest.mark.asyncio()
-    async def test_service_discovery_filtering(
-        self, service_registry_url: str, http_client: httpx.AsyncClient
-    ):
+    @pytest.mark.asyncio
+    async def test_service_discovery_filtering(self) -> None:
         """
         Test service discovery with filtering capabilities
 
@@ -405,13 +396,8 @@ class TestServiceRegistryIntegration:
                     f"{service_registry_url}/services/{service_id}"
                 )
 
-    @pytest.mark.asyncio()
-    async def test_service_health_monitoring_lifecycle(
-        self,
-        service_registry_url: str,
-        http_client: httpx.AsyncClient,
-        test_service_config: dict[str, Any],
-    ):
+    @pytest.mark.asyncio
+    async def test_service_health_monitoring_lifecycle(self) -> None:
         """
         Test complete health monitoring lifecycle
 
@@ -500,8 +486,8 @@ class TestServiceRegistryIntegration:
 class TestServiceRegistryPerformance:
     """Performance integration tests for service registry"""
 
-    @pytest.mark.asyncio()
-    async def test_concurrent_service_registrations(self):
+    @pytest.mark.asyncio
+    async def test_concurrent_service_registrations(self) -> None:
         """
         Test service registry performance under concurrent load
 

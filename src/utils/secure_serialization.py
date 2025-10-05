@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Secure Serialization Utilities for PAKE System
-Replaces insecure pickle with secure alternatives
+Replaces insecure pickle with secure alternatives.
 """
 
 import hashlib
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class SerializationFormat(Enum):
-    """Secure serialization formats"""
+    """Secure serialization formats."""
 
     JSON = "json"
     MSGPACK = "msgpack"
@@ -37,7 +37,7 @@ class SerializationFormat(Enum):
 
 @dataclass
 class SerializationConfig:
-    """Configuration for secure serialization"""
+    """Configuration for secure serialization."""
 
     default_format: SerializationFormat = SerializationFormat.JSON
     enable_compression: bool = True
@@ -47,15 +47,15 @@ class SerializationConfig:
 
 class SecureSerializer:
     """Secure serialization service that replaces pickle
-    Uses JSON, MessagePack, or CBOR for safe serialization
+    Uses JSON, MessagePack, or CBOR for safe serialization.
     """
 
-    def __init__(self, config: SerializationConfig | None = None):
+    def __init__(self) -> None:
         self.config = config or SerializationConfig()
         self._validate_dependencies()
 
-    def _validate_dependencies(self):
-        """Validate that required dependencies are available"""
+    def _validate_dependencies(self) -> None:
+        """Validate that required dependencies are available."""
         if (
             self.config.default_format == SerializationFormat.MSGPACK
             and not MSGPACK_AVAILABLE
@@ -75,7 +75,7 @@ class SecureSerializer:
         data: Any,
         format: SerializationFormat | None = None,
     ) -> bytes:
-        """Securely serialize data using the specified format
+        """Securely serialize data using the specified format.
 
         Args:
             data: Data to serialize
@@ -98,11 +98,13 @@ class SecureSerializer:
             elif format == SerializationFormat.CBOR and CBOR_AVAILABLE:
                 serialized = cbor2.dumps(data)
             else:
-                raise ValueError(f"Unsupported serialization format: {format}")
+                msg = f"Unsupported serialization format: {format}"
+                raise ValueError(msg)
 
             # Validate size
             if len(serialized) > self.config.max_size_bytes:
-                raise ValueError(f"Serialized data too large: {len(serialized)} bytes")
+                msg = f"Serialized data too large: {len(serialized)} bytes"
+                raise ValueError(msg)
 
             # Add checksum if enabled
             if self.config.enable_checksums:
@@ -114,11 +116,12 @@ class SecureSerializer:
             return format_header + serialized
 
         except Exception as e:
-            logger.error(f"Serialization failed: {e}")
-            raise RuntimeError(f"Failed to serialize data: {e}")
+            logger.error("Serialization failed: %s", e)
+            msg = f"Failed to serialize data: {e}"
+            raise RuntimeError(msg)
 
     def deserialize(self, data: bytes) -> Any:
-        """Securely deserialize data
+        """Securely deserialize data.
 
         Args:
             data: Serialized bytes
@@ -133,11 +136,13 @@ class SecureSerializer:
         try:
             # Extract format identifier
             if not data.startswith(b"FORMAT:"):
-                raise ValueError("Invalid serialized data format")
+                msg = "Invalid serialized data format"
+                raise ValueError(msg)
 
             format_end = data.find(b":", 7)
             if format_end == -1:
-                raise ValueError("Invalid format header")
+                msg = "Invalid format header"
+                raise ValueError(msg)
 
             format_str = data[7:format_end].decode()
             format = SerializationFormat(format_str)
@@ -147,7 +152,8 @@ class SecureSerializer:
             if data[payload_start : payload_start + 9] == b"CHECKSUM:":
                 checksum_end = data.find(b":", payload_start + 9)
                 if checksum_end == -1:
-                    raise ValueError("Invalid checksum header")
+                    msg = "Invalid checksum header"
+                    raise ValueError(msg)
 
                 expected_checksum = data[payload_start + 9 : checksum_end].decode()
                 payload_start = checksum_end + 1
@@ -156,7 +162,8 @@ class SecureSerializer:
                 payload = data[payload_start:]
                 actual_checksum = hashlib.sha256(payload).hexdigest()[:16]
                 if actual_checksum != expected_checksum:
-                    raise ValueError("Checksum verification failed")
+                    msg = "Checksum verification failed"
+                    raise ValueError(msg)
             else:
                 payload = data[payload_start:]
 
@@ -167,11 +174,13 @@ class SecureSerializer:
                 return msgpack.unpackb(payload, raw=False)
             if format == SerializationFormat.CBOR and CBOR_AVAILABLE:
                 return cbor2.loads(payload)
-            raise ValueError(f"Unsupported deserialization format: {format}")
+            msg = f"Unsupported deserialization format: {format}"
+            raise ValueError(msg)
 
         except Exception as e:
-            logger.error(f"Deserialization failed: {e}")
-            raise RuntimeError(f"Failed to deserialize data: {e}")
+            logger.error("Deserialization failed: %s", e)
+            msg = f"Failed to deserialize data: {e}"
+            raise RuntimeError(msg)
 
     def serialize_to_file(
         self,
@@ -179,13 +188,13 @@ class SecureSerializer:
         filepath: str,
         format: SerializationFormat | None = None,
     ) -> None:
-        """Serialize data to file"""
+        """Serialize data to file."""
         serialized = self.serialize(data, format)
         with open(filepath, "wb") as f:
             f.write(serialized)
 
     def deserialize_from_file(self, filepath: str) -> Any:
-        """Deserialize data from file"""
+        """Deserialize data from file."""
         with open(filepath, "rb") as f:
             data = f.read()
         return self.deserialize(data)
@@ -196,7 +205,7 @@ _serializer: SecureSerializer | None = None
 
 
 def get_serializer() -> SecureSerializer:
-    """Get global serializer instance"""
+    """Get global serializer instance."""
     global _serializer
     if _serializer is None:
         _serializer = SecureSerializer()
@@ -204,12 +213,12 @@ def get_serializer() -> SecureSerializer:
 
 
 def serialize(data: Any, format: SerializationFormat | None = None) -> bytes:
-    """Convenience function for serialization"""
+    """Convenience function for serialization."""
     return get_serializer().serialize(data, format)
 
 
 def deserialize(data: bytes) -> Any:
-    """Convenience function for deserialization"""
+    """Convenience function for deserialization."""
     return get_serializer().deserialize(data)
 
 
@@ -218,19 +227,19 @@ def serialize_to_file(
     filepath: str,
     format: SerializationFormat | None = None,
 ) -> None:
-    """Convenience function for file serialization"""
+    """Convenience function for file serialization."""
     get_serializer().serialize_to_file(data, filepath, format)
 
 
 def deserialize_from_file(filepath: str) -> Any:
-    """Convenience function for file deserialization"""
+    """Convenience function for file deserialization."""
     return get_serializer().deserialize_from_file(filepath)
 
 
 # Migration utilities for replacing pickle
 def migrate_from_pickle(pickle_data: bytes) -> bytes:
     """Migrate pickle data to secure format
-    This is a one-time migration utility
+    This is a one-time migration utility.
     """
     try:
         import pickle
@@ -238,19 +247,20 @@ def migrate_from_pickle(pickle_data: bytes) -> bytes:
         data = pickle.loads(pickle_data)
         return serialize(data)
     except Exception as e:
-        logger.error(f"Failed to migrate pickle data: {e}")
-        raise RuntimeError(f"Pickle migration failed: {e}")
+        logger.error("Failed to migrate pickle data: %s", e)
+        msg = f"Pickle migration failed: {e}"
+        raise RuntimeError(msg)
 
 
 def safe_pickle_replacement(data: Any) -> bytes:
     """Safe replacement for pickle.dumps()
-    Use this to replace pickle.dumps() calls
+    Use this to replace pickle.dumps() calls.
     """
     return serialize(data)
 
 
 def safe_pickle_loads_replacement(data: bytes) -> Any:
     """Safe replacement for pickle.loads()
-    Use this to replace pickle.loads() calls
+    Use this to replace pickle.loads() calls.
     """
     return deserialize(data)

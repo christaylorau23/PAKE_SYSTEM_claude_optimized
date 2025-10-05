@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Enhanced PAKE Autonomous Cognitive Evolution Engine
-Integrated with DeepSeek Strategic Vision
+Integrated with DeepSeek Strategic Vision.
 """
 
 import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -47,13 +47,13 @@ class AutonomousInsight:
     category: str
     content: str
     confidence: float
-    sources: list[str]
-    reasoning_chain: list[str]
-    impact_assessment: dict[str, Any]
+    sources: List[str]
+    reasoning_chain: List[str]
+    impact_assessment: Dict[str, Any]
 
 
 class AutonomousCognitiveEngine:
-    """Enhanced PAKE Autonomous Cognitive Evolution Engine
+    """Enhanced PAKE Autonomous Cognitive Evolution Engine.
 
     Implements the DeepSeek Strategic Vision for autonomous cognitive capabilities:
     - Hierarchical Multi-Agent System
@@ -62,7 +62,7 @@ class AutonomousCognitiveEngine:
     - Autonomous Analysis and Insight Generation
     """
 
-    def __init__(self, config_path: Path | None = None):
+    def __init__(self) -> None:
         self.config = self._load_config(config_path)
         self.state = CognitiveState.INITIALIZING
 
@@ -95,8 +95,8 @@ class AutonomousCognitiveEngine:
         self.logger = self._setup_logging()
         self.logger.info("PAKE Autonomous Cognitive Engine initializing...")
 
-    def _load_config(self, config_path: Path | None) -> dict[str, Any]:
-        """Load configuration from file or use defaults"""
+    def _load_config(self, config_path: Path | None) -> Dict[str, Any]:
+        """Load configuration from file or use defaults."""
         default_config = {
             "metacognitive": {
                 "optimization_frequency": 3600,  # 1 hour
@@ -138,7 +138,7 @@ class AutonomousCognitiveEngine:
         return default_config
 
     def _setup_logging(self) -> logging.Logger:
-        """Setup comprehensive logging for cognitive processes"""
+        """Setup comprehensive logging for cognitive processes."""
         logger = logging.getLogger("AutonomousCognitive")
         logger.setLevel(logging.INFO)
 
@@ -162,7 +162,7 @@ class AutonomousCognitiveEngine:
         return logger
 
     async def initialize(self) -> bool:
-        """Initialize all cognitive components and begin autonomous operation"""
+        """Initialize all cognitive components and begin autonomous operation."""
         try:
             self.logger.info("Starting autonomous cognitive initialization...")
 
@@ -187,14 +187,14 @@ class AutonomousCognitiveEngine:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize cognitive engine: {e}")
+            self.logger.error("Failed to initialize cognitive engine: %s", e)
             return False
 
-    async def process_autonomous_analysis(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def process_autonomous_analysis(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Core autonomous analysis pipeline
-        Implements the DeepSeek multi-agent cognitive framework
+        Implements the DeepSeek multi-agent cognitive framework.
         """
-        analysis_start = datetime.now()
+        analysis_start = datetime.now(UTC)
 
         try:
             # Step 1: Orchestrator analyzes the task and decomposes it
@@ -249,7 +249,7 @@ class AutonomousCognitiveEngine:
             }
 
         except Exception as e:
-            self.logger.error(f"Autonomous analysis failed: {e}")
+            self.logger.error("Autonomous analysis failed: %s", e)
             return {
                 "status": "error",
                 "error": str(e),
@@ -258,10 +258,10 @@ class AutonomousCognitiveEngine:
 
     async def _generate_autonomous_insights(
         self,
-        synthesized_knowledge: dict[str, Any],
-        analysis_results: dict[str, Any],
+        synthesized_knowledge: Dict[str, Any],
+        analysis_results: Dict[str, Any],
     ) -> list[AutonomousInsight]:
-        """Generate autonomous insights from analysis results"""
+        """Generate autonomous insights from analysis results."""
         insights = []
 
         try:
@@ -282,8 +282,8 @@ class AutonomousCognitiveEngine:
             }.items():
                 if data:
                     insight = AutonomousInsight(
-                        insight_id=f"{category}_{datetime.now().isoformat()}",
-                        timestamp=datetime.now(),
+                        insight_id=f"{category}_{datetime.now(UTC).isoformat()}",
+                        timestamp=datetime.now(UTC),
                         category=category,
                         content=await self._generate_insight_content(category, data),
                         confidence=data.get("confidence", 0.0),
@@ -302,11 +302,11 @@ class AutonomousCognitiveEngine:
             return insights
 
         except Exception as e:
-            self.logger.error(f"Failed to generate autonomous insights: {e}")
+            self.logger.error("Failed to generate autonomous insights: %s", e)
             return []
 
-    async def _autonomous_monitoring_loop(self):
-        """Continuous monitoring of cognitive performance"""
+    async def _autonomous_monitoring_loop(self) -> None:
+        """Continuous monitoring of cognitive performance."""
         while self.state in [CognitiveState.ACTIVE, CognitiveState.LEARNING]:
             try:
                 await asyncio.sleep(
@@ -329,10 +329,10 @@ class AutonomousCognitiveEngine:
                     self.performance_history = self.performance_history[-100:]
 
             except Exception as e:
-                self.logger.error(f"Monitoring loop error: {e}")
+                self.logger.error("Monitoring loop error: %s", e)
 
-    async def _continuous_learning_loop(self):
-        """Continuous learning from performance and user feedback"""
+    async def _continuous_learning_loop(self) -> None:
+        """Continuous learning from performance and user feedback."""
         while self.state in [CognitiveState.ACTIVE, CognitiveState.LEARNING]:
             try:
                 await asyncio.sleep(1800)  # Every 30 minutes
@@ -351,11 +351,11 @@ class AutonomousCognitiveEngine:
                 self.state = CognitiveState.ACTIVE
 
             except Exception as e:
-                self.logger.error(f"Learning loop error: {e}")
+                self.logger.error("Learning loop error: %s", e)
                 self.state = CognitiveState.ACTIVE
 
-    async def _insight_generation_loop(self):
-        """Continuous autonomous insight generation"""
+    async def _insight_generation_loop(self) -> None:
+        """Continuous autonomous insight generation."""
         while self.state in [CognitiveState.ACTIVE, CognitiveState.LEARNING]:
             try:
                 await asyncio.sleep(3600)  # Every hour
@@ -374,10 +374,10 @@ class AutonomousCognitiveEngine:
                     await self._execute_cognitive_evolution()
 
             except Exception as e:
-                self.logger.error(f"Insight generation loop error: {e}")
+                self.logger.error("Insight generation loop error: %s", e)
 
-    async def _execute_self_improvement(self):
-        """Execute metacognitive self-improvement cycle"""
+    async def _execute_self_improvement(self) -> None:
+        """Execute metacognitive self-improvement cycle."""
         self.state = CognitiveState.OPTIMIZING
         self.logger.info("Beginning autonomous self-improvement cycle...")
 
@@ -409,13 +409,13 @@ class AutonomousCognitiveEngine:
             self.logger.info("Self-improvement cycle completed successfully")
 
         except Exception as e:
-            self.logger.error(f"Self-improvement failed: {e}")
+            self.logger.error("Self-improvement failed: %s", e)
 
         finally:
             self.state = CognitiveState.ACTIVE
 
-    async def _execute_cognitive_evolution(self):
-        """Execute deeper cognitive evolution for enhanced capabilities"""
+    async def _execute_cognitive_evolution(self) -> None:
+        """Execute deeper cognitive evolution for enhanced capabilities."""
         self.state = CognitiveState.EVOLVING
         self.logger.info("Beginning cognitive evolution cycle...")
 
@@ -432,13 +432,13 @@ class AutonomousCognitiveEngine:
             self.logger.info("Cognitive evolution cycle completed")
 
         except Exception as e:
-            self.logger.error(f"Cognitive evolution failed: {e}")
+            self.logger.error("Cognitive evolution failed: %s", e)
 
         finally:
             self.state = CognitiveState.ACTIVE
 
-    def get_cognitive_status(self) -> dict[str, Any]:
-        """Get current cognitive engine status and performance"""
+    def get_cognitive_status(self) -> Dict[str, Any]:
+        """Get current cognitive engine status and performance."""
         latest_metrics = (
             self.performance_history[-1] if self.performance_history else None
         )
@@ -450,7 +450,7 @@ class AutonomousCognitiveEngine:
             "learning_cycles_completed": getattr(self, "learning_cycles", 0),
             "optimization_cycles_completed": getattr(self, "optimization_cycles", 0),
             "uptime": (
-                datetime.now() - getattr(self, "start_time", datetime.now())
+                datetime.now(UTC) - getattr(self, "start_time", datetime.now(UTC))
             ).total_seconds(),
             "component_status": {
                 "metacognitive_optimizer": self.metacognitive_optimizer.get_status(),
@@ -461,8 +461,8 @@ class AutonomousCognitiveEngine:
             },
         }
 
-    async def shutdown(self):
-        """Gracefully shutdown the cognitive engine"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the cognitive engine."""
         self.logger.info("Shutting down Autonomous Cognitive Engine...")
 
         # Save current state

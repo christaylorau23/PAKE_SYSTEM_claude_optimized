@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - PubMed E-utilities Service Implementation
-GREEN PHASE: Minimal implementation to pass failing tests
+GREEN PHASE: Minimal implementation to pass failing tests.
 
 Following TDD methodology:
 - All tests failing (RED phase complete)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class PubMedError:
-    """Immutable error class for PubMed service errors"""
+    """Immutable error class for PubMed service errors."""
 
     message: str
     error_code: str = "UNKNOWN_ERROR"
@@ -31,7 +31,7 @@ class PubMedError:
 
     @property
     def is_retryable(self) -> bool:
-        """Determine if error is retryable based on error code"""
+        """Determine if error is retryable based on error code."""
         retryable_codes = [
             "RATE_LIMIT_EXCEEDED",
             "NETWORK_ERROR",
@@ -43,7 +43,7 @@ class PubMedError:
 
 @dataclass(frozen=True)
 class PubMedAuthor:
-    """Immutable representation of a PubMed paper author"""
+    """Immutable representation of a PubMed paper author."""
 
     last_name: str
     first_name: str | None = None
@@ -53,7 +53,7 @@ class PubMedAuthor:
 
 @dataclass(frozen=True)
 class PubMedJournal:
-    """Immutable representation of a PubMed journal"""
+    """Immutable representation of a PubMed journal."""
 
     name: str
     issn: str | None = None
@@ -64,22 +64,22 @@ class PubMedJournal:
 
 @dataclass(frozen=True)
 class PubMedSearchQuery:
-    """Immutable search query configuration for PubMed E-utilities"""
+    """Immutable search query configuration for PubMed E-utilities."""
 
-    terms: list[str]
-    journal: list[str] | None = field(default_factory=list)
-    authors: list[str] | None = field(default_factory=list)
-    affiliations: list[str] | None = field(default_factory=list)
+    terms: List[str]
+    journal: List[str] | None = field(default_factory=list)
+    authors: List[str] | None = field(default_factory=list)
+    affiliations: List[str] | None = field(default_factory=list)
     date_from: datetime | None = None
     date_to: datetime | None = None
-    publication_types: list[str] | None = field(default_factory=list)
-    mesh_terms: list[str] | None = field(default_factory=list)
+    publication_types: List[str] | None = field(default_factory=list)
+    mesh_terms: List[str] | None = field(default_factory=list)
     max_results: int = 50
     start: int = 0
     sort_by: str = "relevance"
     sort_order: str = "descending"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Validate max_results is within PubMed API limits
         if self.max_results > 200:
             object.__setattr__(self, "max_results", 200)
@@ -89,7 +89,7 @@ class PubMedSearchQuery:
 
 @dataclass(frozen=True)
 class PubMedPaper:
-    """Immutable representation of a PubMed paper"""
+    """Immutable representation of a PubMed paper."""
 
     pmid: str
     title: str
@@ -97,14 +97,14 @@ class PubMedPaper:
     abstract: str
     journal: PubMedJournal
     publication_date: datetime
-    mesh_terms: list[str] = field(default_factory=list)
-    publication_types: list[str] = field(default_factory=list)
+    mesh_terms: List[str] = field(default_factory=list)
+    publication_types: List[str] = field(default_factory=list)
     doi: str | None = None
-    metadata: dict[str, Any] | None = field(default_factory=dict)
+    metadata: Dict[str, Any] | None = field(default_factory=dict)
     quality_score: float | None = None
-    cognitive_assessment: dict[str, Any] | None = field(default_factory=dict)
+    cognitive_assessment: Dict[str, Any] | None = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.metadata is None:
             object.__setattr__(self, "metadata", {})
         if self.cognitive_assessment is None:
@@ -113,7 +113,7 @@ class PubMedPaper:
 
 @dataclass(frozen=True)
 class PubMedResult:
-    """Immutable result from PubMed search operation"""
+    """Immutable result from PubMed search operation."""
 
     success: bool
     papers: list[PubMedPaper] = field(default_factory=list)
@@ -133,14 +133,8 @@ class PubMedService:
     GREEN PHASE: Minimal implementation to pass tests.
     """
 
-    def __init__(
-        self,
-        base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
-        email: str = "",
-        api_key: str | None = None,
-        max_results: int = 100,
-    ):
-        """Initialize PubMed E-utilities Service"""
+    def __init__(self) -> None:
+        """Initialize PubMed E-utilities Service."""
         self.base_url = base_url
         self.email = email
         self.api_key = api_key
@@ -149,7 +143,7 @@ class PubMedService:
         self.cache: dict[str, PubMedResult] = {}  # Simple in-memory cache
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session"""
+        """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=45),
@@ -160,7 +154,7 @@ class PubMedService:
         return self.session
 
     def _build_esearch_query(self, query: PubMedSearchQuery) -> str:
-        """Build PubMed ESearch query string from search parameters"""
+        """Build PubMed ESearch query string from search parameters."""
         search_terms = []
 
         # Add basic terms
@@ -219,166 +213,112 @@ class PubMedService:
             )
 
         # Combine all search components
-        final_query = (
+        return (
             " AND ".join(search_terms)
             if search_terms
             else "machine learning[All Fields]"
         )
-
-        return final_query
 
     async def _esearch(
         self,
         query: str,
         max_results: int,
         start: int = 0,
-    ) -> dict[str, Any]:
-        """Execute PubMed ESearch to get PMIDs.
-        GREEN PHASE: Mock implementation for testing.
-        """
-        # For GREEN phase - return mock PMIDs
-        return {
-            "esearchresult": {
-                "count": "2",
-                "retmax": "2",
-                "idlist": ["12345678", "87654321"],
-            },
+    ) -> Dict[str, Any]:
+        """Execute PubMed ESearch to get PMIDs."""
+        session = await self._get_session()
+        params = {
+            "db": "pubmed",
+            "term": query,
+            "retmax": str(max_results),
+            "retstart": str(start),
+            "usehistory": "y",
+            "retmode": "json",
         }
 
-    async def _efetch(self, pmids: list[str]) -> str:
-        """Execute PubMed EFetch to get full paper records.
-        GREEN PHASE: Mock implementation for testing.
-        """
-        # For GREEN phase - return mock PubMed XML
-        return """<?xml version="1.0" encoding="UTF-8"?>
-        <PubmedArticleSet>
-            <PubmedArticle>
-                <MedlineCitation Status="MEDLINE" Owner="NLM">
-                    <PMID Version="1">12345678</PMID>
-                    <DateCompleted>
-                        <Year>2023</Year>
-                        <Month>06</Month>
-                        <Day>15</Day>
-                    </DateCompleted>
-                    <Article PubModel="Print">
-                        <Journal>
-                            <ISSN IssnType="Print">1234-5678</ISSN>
-                            <JournalIssue CitedMedium="Print">
-                                <Volume>45</Volume>
-                                <Issue>3</Issue>
-                                <PubDate>
-                                    <Year>2023</Year>
-                                    <Month>Mar</Month>
-                                </PubDate>
-                            </JournalIssue>
-                            <Title>Nature</Title>
-                            <ISOAbbreviation>Nature</ISOAbbreviation>
-                        </Journal>
-                        <ArticleTitle>Machine Learning Applications in Biomedical Research</ArticleTitle>
-                        <Pagination>
-                            <MedlinePgn>123-145</MedlinePgn>
-                        </Pagination>
-                        <Abstract>
-                            <AbstractText>This study explores advanced machine learning applications in biomedical research, demonstrating significant improvements in diagnostic accuracy and treatment efficacy.</AbstractText>
-                        </Abstract>
-                        <AuthorList CompleteYN="Y">
-                            <Author ValidYN="Y">
-                                <LastName>Smith</LastName>
-                                <ForeName>John</ForeName>
-                                <Initials>J</Initials>
-                                <AffiliationInfo>
-                                    <Affiliation>University of Toronto, Department of Computer Science.</Affiliation>
-                                </AffiliationInfo>
-                            </Author>
-                            <Author ValidYN="Y">
-                                <LastName>Bengio</LastName>
-                                <ForeName>Yoshua</ForeName>
-                                <Initials>Y</Initials>
-                                <AffiliationInfo>
-                                    <Affiliation>University of Montreal, MILA.</Affiliation>
-                                </AffiliationInfo>
-                            </Author>
-                        </AuthorList>
-                        <PublicationTypeList>
-                            <PublicationType UI="D016428">Journal Article</PublicationType>
-                            <PublicationType UI="D016454">Review</PublicationType>
-                        </PublicationTypeList>
-                    </Article>
-                    <MeshHeadingList>
-                        <MeshHeading>
-                            <DescriptorName UI="D000465" MajorTopicYN="Y">Algorithms</DescriptorName>
-                        </MeshHeading>
-                        <MeshHeading>
-                            <DescriptorName UI="D003198" MajorTopicYN="N">Computer Simulation</DescriptorName>
-                        </MeshHeading>
-                        <MeshHeading>
-                            <DescriptorName UI="D009369" MajorTopicYN="Y">Neoplasms</DescriptorName>
-                            <QualifierName UI="Q000628" MajorTopicYN="Y">therapy</QualifierName>
-                        </MeshHeading>
-                        <MeshHeading>
-                            <DescriptorName UI="D004358" MajorTopicYN="N">Drug Therapy</DescriptorName>
-                        </MeshHeading>
-                    </MeshHeadingList>
-                </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-                <MedlineCitation Status="MEDLINE" Owner="NLM">
-                    <PMID Version="1">87654321</PMID>
-                    <DateCompleted>
-                        <Year>2023</Year>
-                        <Month>06</Month>
-                        <Day>15</Day>
-                    </DateCompleted>
-                    <Article PubModel="Print">
-                        <Journal>
-                            <ISSN IssnType="Print">5678-1234</ISSN>
-                            <JournalIssue CitedMedium="Print">
-                                <Volume>12</Volume>
-                                <Issue>1</Issue>
-                                <PubDate>
-                                    <Year>2023</Year>
-                                    <Month>Jan</Month>
-                                </PubDate>
-                            </JournalIssue>
-                            <Title>Science</Title>
-                            <ISOAbbreviation>Science</ISOAbbreviation>
-                        </Journal>
-                        <ArticleTitle>Artificial Intelligence in Medical Diagnosis</ArticleTitle>
-                        <Pagination>
-                            <MedlinePgn>456-478</MedlinePgn>
-                        </Pagination>
-                        <Abstract>
-                            <AbstractText>A comprehensive review of artificial intelligence applications in medical diagnosis, focusing on deep learning and neural network approaches.</AbstractText>
-                        </Abstract>
-                        <AuthorList CompleteYN="Y">
-                            <Author ValidYN="Y">
-                                <LastName>Hinton</LastName>
-                                <ForeName>Geoffrey</ForeName>
-                                <Initials>G</Initials>
-                                <AffiliationInfo>
-                                    <Affiliation>University of Toronto, Vector Institute.</Affiliation>
-                                </AffiliationInfo>
-                            </Author>
-                        </AuthorList>
-                        <PublicationTypeList>
-                            <PublicationType UI="D016454">Review</PublicationType>
-                            <PublicationType UI="D016454">Systematic Review</PublicationType>
-                        </PublicationTypeList>
-                    </Article>
-                    <MeshHeadingList>
-                        <MeshHeading>
-                            <DescriptorName UI="D000465" MajorTopicYN="Y">Algorithms</DescriptorName>
-                        </MeshHeading>
-                    </MeshHeadingList>
-                </MedlineCitation>
-            </PubmedArticle>
-        </PubmedArticleSet>"""
+        try:
+            async with session.get(
+                f"{self.base_url}esearch.fcgi", params=params
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                if response.status == 429:
+                    # Rate limit - return error indication
+                    return {
+                        "esearchresult": {"error": "Rate limit exceeded", "status": 429}
+                    }
+                if response.status == 503:
+                    # Service unavailable - return error indication
+                    return {
+                        "esearchresult": {"error": "Service unavailable", "status": 503}
+                    }
+                return {
+                    "esearchresult": {
+                        "count": "0",
+                        "retmax": "0",
+                        "idlist": [],
+                    },
+                }
+        except Exception as e:
+            # Check if it's a specific HTTP error
+            if hasattr(e, "status"):
+                if e.status == 503:
+                    return {
+                        "esearchresult": {"error": "Service unavailable", "status": 503}
+                    }
+                if e.status == 429:
+                    return {
+                        "esearchresult": {"error": "Rate limit exceeded", "status": 429}
+                    }
+            # Return empty result on other errors
+            return {
+                "esearchresult": {
+                    "count": "0",
+                    "retmax": "0",
+                    "idlist": [],
+                },
+            }
 
-    async def _make_request(self, url: str, params: dict[str, str]):
-        """Make request to NCBI E-utilities"""
-        # For GREEN phase - return mock successful response directly
-        # This will be overridden by test mocks
-        return MockPubMedAPIResponse(status=200, text="")
+    async def _efetch(self, pmids: List[str]) -> str:
+        """Execute PubMed EFetch to get full paper records."""
+        if not pmids:
+            return ""
+
+        session = await self._get_session()
+        params = {
+            "db": "pubmed",
+            "id": ",".join(pmids),
+            "retmode": "xml",
+            "rettype": "abstract",
+        }
+
+        try:
+            async with session.get(
+                f"{self.base_url}efetch.fcgi", params=params
+            ) as response:
+                if response.status == 200:
+                    return await response.text()
+                return ""
+        except Exception:
+            return ""
+
+    async def _make_request(self) -> None:
+        """Make request to NCBI E-utilities."""
+        session = await self._get_session()
+        full_url = f"{self.base_url}{url}"
+
+        try:
+            async with session.get(full_url, params=params) as response:
+                return MockPubMedAPIResponse(
+                    status=response.status,
+                    text=await response.text(),
+                )
+        except Exception as e:
+            # Handle network errors
+            return MockPubMedAPIResponse(
+                status=500,
+                text=f"Network error: {str(e)}",
+            )
 
     async def search_papers(self, query: PubMedSearchQuery) -> PubMedResult:
         """Search PubMed papers with advanced query parameters.
@@ -409,37 +349,47 @@ class PubMedService:
             # Build search query
             search_query = self._build_esearch_query(query)
 
-            # Check for mocked error conditions by trying to make a request
-            mock_response = await self._make_request(
-                "esearch.fcgi",
-                {"term": search_query},
-            )
-            if mock_response.status == 429:
-                return PubMedResult(
-                    success=False,
-                    error=PubMedError(
-                        message="NCBI API rate limit exceeded",
-                        error_code="RATE_LIMIT_EXCEEDED",
-                        retry_after=300,
-                        query=str(query),
-                    ),
-                )
-            if mock_response.status == 503:
-                return PubMedResult(
-                    success=False,
-                    error=PubMedError(
-                        message="NCBI service unavailable",
-                        error_code="SERVICE_UNAVAILABLE",
-                        query=str(query),
-                    ),
-                )
-
             # Step 1: ESearch to get PMIDs
             esearch_result = await self._esearch(
                 search_query,
                 query.max_results,
                 query.start,
             )
+
+            # Check for error conditions in ESearch response
+            esearch_data = esearch_result.get("esearchresult", {})
+
+            # Handle HTTP error responses
+            if "error" in esearch_data:
+                if esearch_data.get("status") == 429:
+                    return PubMedResult(
+                        success=False,
+                        error=PubMedError(
+                            message="NCBI API rate limit exceeded",
+                            error_code="RATE_LIMIT_EXCEEDED",
+                            retry_after=300,
+                            query=str(query),
+                        ),
+                    )
+                if esearch_data.get("status") == 503:
+                    return PubMedResult(
+                        success=False,
+                        error=PubMedError(
+                            message=f"NCBI service unavailable (status {esearch_data.get('status')})",
+                            error_code="SERVICE_UNAVAILABLE",
+                            query=str(query),
+                        ),
+                    )
+
+            # Check for empty results
+            if not esearch_data.get("idlist", []):
+                # No results found - this is not an error, just empty results
+                return PubMedResult(
+                    success=True,
+                    papers=[],
+                    total_results=0,
+                    query_used=query,
+                )
 
             if esearch_result.get("esearchresult", {}).get("idlist", []):
                 pmids = esearch_result["esearchresult"]["idlist"]
@@ -504,7 +454,7 @@ class PubMedService:
         papers: list[PubMedPaper],
         query: PubMedSearchQuery,
     ) -> list[PubMedPaper]:
-        """Apply additional filtering based on query parameters"""
+        """Apply additional filtering based on query parameters."""
         filtered_papers = papers
 
         # Filter by MeSH terms if specified
@@ -731,7 +681,7 @@ class PubMedService:
                     papers.append(paper)
 
                 except Exception as paper_error:
-                    logger.warning(f"Error parsing individual paper: {paper_error}")
+                    logger.warning("Error parsing individual paper: %s", paper_error)
                     continue
 
             return PubMedResult(success=True, papers=papers, total_results=len(papers))
@@ -753,7 +703,7 @@ class PubMedService:
             )
 
     def _parse_month(self, month_str: str) -> int:
-        """Parse month string to integer"""
+        """Parse month string to integer."""
         month_map = {
             "Jan": 1,
             "Feb": 2,
@@ -896,7 +846,7 @@ class PubMedService:
         result: PubMedResult,
         n8n_manager,
         workflow_type: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Trigger n8n biomedical research workflow processing.
         GREEN PHASE: Minimal implementation.
         """
@@ -904,9 +854,9 @@ class PubMedService:
             workflow_data = {
                 "papers_count": len(result.papers),
                 "query": str(result.query_used),
-                "journals": list(set(paper.journal.name for paper in result.papers)),
+                "journals": list({paper.journal.name for paper in result.papers}),
                 "mesh_terms": list(
-                    set(mesh for paper in result.papers for mesh in paper.mesh_terms),
+                    {mesh for paper in result.papers for mesh in paper.mesh_terms},
                 ),
             }
 
@@ -917,24 +867,24 @@ class PubMedService:
 
         return {"workflow_id": None}
 
-    async def close(self):
-        """Clean up resources"""
+    async def close(self) -> None:
+        """Clean up resources."""
         if self.session and not self.session.closed:
             await self.session.close()
 
-    async def __aenter__(self):
-        """Async context manager entry"""
+    async def __aenter__(self) -> None:
+        """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit"""
+    async def __aexit__(self) -> None:
+        """Async context manager exit."""
         await self.close()
 
 
 class MockPubMedAPIResponse:
-    """Mock response class for testing"""
+    """Mock response class for testing."""
 
-    def __init__(self, status: int, text: str):
+    def __init__(self) -> None:
         self.status = status
         self._text = text
 

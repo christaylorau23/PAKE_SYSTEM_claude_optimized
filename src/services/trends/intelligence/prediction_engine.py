@@ -1,4 +1,4 @@
-"""PredictionEngine - Advanced trend prediction and forecasting
+"""PredictionEngine - Advanced trend prediction and forecasting.
 
 Uses machine learning and statistical models for trend prediction and opportunity timing.
 """
@@ -7,7 +7,7 @@ import logging
 import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 import numpy as np
 
@@ -17,7 +17,7 @@ from ..models.trend_signal import TrendLifecycle, TrendSignal
 
 @dataclass
 class PredictionResult:
-    """Result of trend prediction"""
+    """Result of trend prediction."""
 
     trend_keyword: str
     prediction_type: str  # 'momentum', 'volume', 'lifecycle', 'peak_timing'
@@ -25,12 +25,12 @@ class PredictionResult:
     confidence: float
     time_horizon_hours: int
     prediction_timestamp: datetime
-    supporting_factors: list[str]
+    supporting_factors: List[str]
 
 
 @dataclass
 class ForecastModel:
-    """Simple forecasting model"""
+    """Simple forecasting model."""
 
     model_type: str
     parameters: dict[str, float]
@@ -39,7 +39,7 @@ class ForecastModel:
 
 
 class PredictionEngine:
-    """Advanced trend prediction and forecasting engine
+    """Advanced trend prediction and forecasting engine.
 
     Capabilities:
     - Momentum forecasting
@@ -50,7 +50,7 @@ class PredictionEngine:
     - Model accuracy tracking
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.accuracy_threshold = 0.95  # For contract testing
 
@@ -66,14 +66,14 @@ class PredictionEngine:
         self.feature_window = 24  # hours
         self.min_samples_for_prediction = 3
 
-    def _initialize_models(self):
-        """Initialize prediction models"""
+    def _initialize_models(self) -> None:
+        """Initialize prediction models."""
         # Simple linear trend model
         self.models["linear_trend"] = ForecastModel(
             model_type="linear_regression",
             parameters={"slope": 0.0, "intercept": 0.0, "r_squared": 0.0},
             accuracy_score=0.7,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(UTC),
         )
 
         # Momentum prediction model
@@ -81,7 +81,7 @@ class PredictionEngine:
             model_type="exponential_smoothing",
             parameters={"alpha": 0.3, "beta": 0.1, "gamma": 0.05},
             accuracy_score=0.65,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(UTC),
         )
 
         # Volume prediction model
@@ -93,7 +93,7 @@ class PredictionEngine:
                 "noise_weight": 0.1,
             },
             accuracy_score=0.6,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(UTC),
         )
 
         # Lifecycle prediction model
@@ -101,7 +101,7 @@ class PredictionEngine:
             model_type="state_transition",
             parameters={"transition_threshold": 0.1, "confidence_decay": 0.05},
             accuracy_score=0.75,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(UTC),
         )
 
     async def predict_trend_momentum(
@@ -109,7 +109,7 @@ class PredictionEngine:
         trend_history: list[TrendSignal],
         forecast_hours: int = 24,
     ) -> PredictionResult:
-        """Predict future momentum for a trend"""
+        """Predict future momentum for a trend."""
         if len(trend_history) < self.min_samples_for_prediction:
             return self._create_low_confidence_prediction(
                 trend_history[0].keyword if trend_history else "unknown",
@@ -148,7 +148,7 @@ class PredictionEngine:
             predicted_value=predicted_momentum,
             confidence=confidence,
             time_horizon_hours=forecast_hours,
-            prediction_timestamp=datetime.now(),
+            prediction_timestamp=datetime.now(UTC),
             supporting_factors=supporting_factors,
         )
 
@@ -157,7 +157,7 @@ class PredictionEngine:
         trend_history: list[TrendSignal],
         forecast_hours: int = 24,
     ) -> PredictionResult:
-        """Predict future volume growth for a trend"""
+        """Predict future volume growth for a trend."""
         if len(trend_history) < self.min_samples_for_prediction:
             return self._create_low_confidence_prediction(
                 trend_history[0].keyword if trend_history else "unknown",
@@ -210,7 +210,7 @@ class PredictionEngine:
             predicted_value=predicted_volume,
             confidence=confidence,
             time_horizon_hours=forecast_hours,
-            prediction_timestamp=datetime.now(),
+            prediction_timestamp=datetime.now(UTC),
             supporting_factors=supporting_factors,
         )
 
@@ -218,7 +218,7 @@ class PredictionEngine:
         self,
         trend_history: list[TrendSignal],
     ) -> PredictionResult:
-        """Predict next lifecycle stage transition"""
+        """Predict next lifecycle stage transition."""
         if len(trend_history) < 2:
             return self._create_low_confidence_prediction(
                 trend_history[0].keyword if trend_history else "unknown",
@@ -260,7 +260,7 @@ class PredictionEngine:
             predicted_value=self._lifecycle_to_numeric(next_stage),
             confidence=confidence,
             time_horizon_hours=hours_to_transition,
-            prediction_timestamp=datetime.now(),
+            prediction_timestamp=datetime.now(UTC),
             supporting_factors=supporting_factors,
         )
 
@@ -269,7 +269,7 @@ class PredictionEngine:
         trend_history: list[TrendSignal],
         correlations: list[TrendCorrelation] = None,
     ) -> PredictionResult:
-        """Predict when trend will reach its peak"""
+        """Predict when trend will reach its peak."""
         if len(trend_history) < self.min_samples_for_prediction:
             return self._create_low_confidence_prediction(
                 trend_history[0].keyword if trend_history else "unknown",
@@ -317,7 +317,7 @@ class PredictionEngine:
             predicted_value=peak_hours,
             confidence=confidence,
             time_horizon_hours=int(peak_hours),
-            prediction_timestamp=datetime.now(),
+            prediction_timestamp=datetime.now(UTC),
             supporting_factors=supporting_factors,
         )
 
@@ -327,7 +327,7 @@ class PredictionEngine:
         time_intervals: list[float],
         forecast_hours: float,
     ) -> tuple[float, float]:
-        """Predict using linear trend extrapolation"""
+        """Predict using linear trend extrapolation."""
         if len(values) < 2:
             return values[0] if values else 0.5, 0.3
 
@@ -371,7 +371,7 @@ class PredictionEngine:
         return max(0.0, min(1.0, predicted_value)), confidence
 
     def _exponential_smoothing(self, values: list[float], alpha: float = 0.3) -> float:
-        """Apply exponential smoothing to predict next value"""
+        """Apply exponential smoothing to predict next value."""
         if not values:
             return 0.0
 
@@ -391,8 +391,8 @@ class PredictionEngine:
         self,
         momentum_values: list[float],
         time_intervals: list[float],
-    ) -> list[str]:
-        """Analyze factors affecting momentum prediction"""
+    ) -> List[str]:
+        """Analyze factors affecting momentum prediction."""
         factors = []
 
         if len(momentum_values) >= 3:
@@ -426,7 +426,7 @@ class PredictionEngine:
         self,
         trend_history: list[TrendSignal],
     ) -> list[tuple[TrendLifecycle, TrendLifecycle]]:
-        """Analyze historical lifecycle stage changes"""
+        """Analyze historical lifecycle stage changes."""
         changes = []
         for i in range(1, len(trend_history)):
             prev_stage = trend_history[i - 1].lifecycle_stage
@@ -437,7 +437,7 @@ class PredictionEngine:
         return changes
 
     def _calculate_momentum_trend(self, trend_history: list[TrendSignal]) -> float:
-        """Calculate overall momentum trend direction"""
+        """Calculate overall momentum trend direction."""
         if len(trend_history) < 2:
             return 0.0
 
@@ -448,15 +448,14 @@ class PredictionEngine:
         y = np.array(momentum_values)
 
         if len(momentum_values) > 1:
-            correlation = (
+            return (
                 np.corrcoef(x, y)[0, 1] if not np.isnan(np.corrcoef(x, y)[0, 1]) else 0
             )
-            return correlation
 
         return 0.0
 
     def _calculate_volume_trend(self, trend_history: list[TrendSignal]) -> float:
-        """Calculate overall volume trend direction"""
+        """Calculate overall volume trend direction."""
         if len(trend_history) < 2:
             return 0.0
 
@@ -469,10 +468,9 @@ class PredictionEngine:
         y = np.array(log_volumes)
 
         if len(log_volumes) > 1:
-            correlation = (
+            return (
                 np.corrcoef(x, y)[0, 1] if not np.isnan(np.corrcoef(x, y)[0, 1]) else 0
             )
-            return correlation
 
         return 0.0
 
@@ -483,7 +481,7 @@ class PredictionEngine:
         volume_trend: float,
         stage_changes: list[tuple[TrendLifecycle, TrendLifecycle]],
     ) -> tuple[TrendLifecycle, float, int]:
-        """Predict next lifecycle stage and timing"""
+        """Predict next lifecycle stage and timing."""
         # Define stage transition probabilities
         transition_matrix = {
             TrendLifecycle.EMERGING: {
@@ -557,7 +555,7 @@ class PredictionEngine:
         return next_stage, confidence, hours_to_transition
 
     def _lifecycle_to_numeric(self, stage: TrendLifecycle) -> float:
-        """Convert lifecycle stage to numeric value for prediction"""
+        """Convert lifecycle stage to numeric value for prediction."""
         stage_values = {
             TrendLifecycle.EMERGING: 0.2,
             TrendLifecycle.GROWING: 0.4,
@@ -569,7 +567,7 @@ class PredictionEngine:
         return stage_values.get(stage, 0.5)
 
     def _calculate_derivative(self, values: list[float]) -> list[float]:
-        """Calculate simple derivative (rate of change) for time series"""
+        """Calculate simple derivative (rate of change) for time series."""
         if len(values) < 2:
             return [0.0]
 
@@ -587,7 +585,7 @@ class PredictionEngine:
         momentum_derivative: list[float],
         volume_derivative: list[float],
     ) -> tuple[float, float]:
-        """Predict peak timing from momentum and volume trajectories"""
+        """Predict peak timing from momentum and volume trajectories."""
         # Current momentum and volume
         current_momentum = momentum_trajectory[-1] if momentum_trajectory else 0.5
         current_volume = volume_trajectory[-1] if volume_trajectory else 1000
@@ -624,7 +622,7 @@ class PredictionEngine:
         base_prediction_hours: float,
         correlations: list[TrendCorrelation],
     ) -> float:
-        """Adjust peak prediction using correlation data"""
+        """Adjust peak prediction using correlation data."""
         if not correlations:
             return base_prediction_hours
 
@@ -658,14 +656,14 @@ class PredictionEngine:
         default_value: float,
         forecast_hours: int,
     ) -> PredictionResult:
-        """Create a low-confidence prediction when insufficient data"""
+        """Create a low-confidence prediction when insufficient data."""
         return PredictionResult(
             trend_keyword=keyword,
             prediction_type=prediction_type,
             predicted_value=default_value,
             confidence=0.3,
             time_horizon_hours=forecast_hours,
-            prediction_timestamp=datetime.now(),
+            prediction_timestamp=datetime.now(UTC),
             supporting_factors=[
                 "Insufficient historical data",
                 "Using default prediction",
@@ -675,9 +673,9 @@ class PredictionEngine:
     async def batch_predict(
         self,
         trends_data: dict[str, list[TrendSignal]],
-        prediction_types: list[str] = None,
+        prediction_types: List[str] = None,
     ) -> dict[str, list[PredictionResult]]:
-        """Run batch predictions for multiple trends"""
+        """Run batch predictions for multiple trends."""
         if prediction_types is None:
             prediction_types = ["momentum", "volume", "lifecycle", "peak_timing"]
 
@@ -703,7 +701,10 @@ class PredictionEngine:
 
                 except Exception as e:
                     self.logger.error(
-                        f"Prediction error for {keyword} ({pred_type}): {e}",
+                        "Prediction error for %s (%s): %s",
+                        keyword,
+                        pred_type,
+                        e,
                     )
 
             results[keyword] = keyword_results
@@ -711,7 +712,7 @@ class PredictionEngine:
         return results
 
     def get_model_accuracy(self) -> dict[str, float]:
-        """Get accuracy scores for all prediction models"""
+        """Get accuracy scores for all prediction models."""
         accuracy_summary = {}
 
         for model_name, model in self.models.items():

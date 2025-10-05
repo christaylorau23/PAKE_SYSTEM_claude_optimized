@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PAKE System - Advanced Performance Optimization Service
-Comprehensive performance optimization for ingestion pipeline
+Comprehensive performance optimization for ingestion pipeline.
 
 Features:
 - Intelligent caching with TTL management
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class OptimizationMode(Enum):
-    """Performance optimization modes"""
+    """Performance optimization modes."""
 
     SPEED_FIRST = "speed_first"  # Maximize execution speed
     MEMORY_FIRST = "memory_first"  # Minimize memory usage
@@ -50,7 +50,7 @@ class OptimizationMode(Enum):
 
 @dataclass
 class PerformanceMetrics:
-    """Performance monitoring metrics"""
+    """Performance monitoring metrics."""
 
     execution_time: float = 0.0
     memory_usage_mb: float = 0.0
@@ -66,7 +66,7 @@ class PerformanceMetrics:
 
 @dataclass
 class OptimizationConfig:
-    """Advanced performance optimization configuration"""
+    """Advanced performance optimization configuration."""
 
     mode: OptimizationMode = OptimizationMode.BALANCED
 
@@ -108,11 +108,11 @@ class OptimizationConfig:
 
 
 class IntelligentCache:
-    """Advanced caching system with TTL, compression, and LRU eviction"""
+    """Advanced caching system with TTL, compression, and LRU eviction."""
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self) -> None:
         self.config = config
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[str, Dict[str, Any]] = {}
         self._access_times: dict[str, float] = {}
         self._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
         self._lock = asyncio.Lock()
@@ -121,9 +121,9 @@ class IntelligentCache:
         self,
         namespace: str,
         identifier: str,
-        params: dict[str, Any] = None,
+        params: Dict[str, Any] = None,
     ) -> str:
-        """Generate cache key with namespace and parameter hashing"""
+        """Generate cache key with namespace and parameter hashing."""
         key_data = f"{namespace}:{identifier}"
         if params:
             param_str = json.dumps(params, sort_keys=True)
@@ -135,9 +135,9 @@ class IntelligentCache:
         self,
         namespace: str,
         identifier: str,
-        params: dict[str, Any] = None,
+        params: Dict[str, Any] = None,
     ) -> Any | None:
-        """Retrieve item from cache with TTL validation"""
+        """Retrieve item from cache with TTL validation."""
         async with self._lock:
             key = self._generate_key(namespace, identifier, params)
 
@@ -167,10 +167,10 @@ class IntelligentCache:
         namespace: str,
         identifier: str,
         data: Any,
-        params: dict[str, Any] = None,
+        params: Dict[str, Any] = None,
         ttl_override: int | None = None,
     ) -> None:
-        """Store item in cache with TTL and eviction management"""
+        """Store item in cache with TTL and eviction management."""
         async with self._lock:
             key = self._generate_key(namespace, identifier, params)
             current_time = time.time()
@@ -191,7 +191,7 @@ class IntelligentCache:
             self._access_times[key] = current_time
 
     async def _evict_lru(self) -> None:
-        """Evict least recently used items"""
+        """Evict least recently used items."""
         if not self._access_times:
             return
 
@@ -203,8 +203,8 @@ class IntelligentCache:
         del self._access_times[oldest_key]
         self._cache_stats["evictions"] += 1
 
-    def get_stats(self) -> dict[str, Any]:
-        """Get cache performance statistics"""
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache performance statistics."""
         total_requests = self._cache_stats["hits"] + self._cache_stats["misses"]
         hit_rate = self._cache_stats["hits"] / max(total_requests, 1)
 
@@ -218,9 +218,9 @@ class IntelligentCache:
 
 
 class ConnectionPool:
-    """Advanced connection pool with health monitoring"""
+    """Advanced connection pool with health monitoring."""
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self) -> None:
         self.config = config
         self._pools: dict[str, list[Any]] = defaultdict(list)
         self._pool_stats: dict[str, dict[str, int]] = defaultdict(
@@ -233,7 +233,7 @@ class ConnectionPool:
         service_name: str,
         session_factory: Callable[[], Awaitable[Any]],
     ) -> Any:
-        """Get connection from pool or create new one"""
+        """Get connection from pool or create new one."""
         async with self._pool_locks[service_name]:
             pool = self._pools[service_name]
 
@@ -249,7 +249,7 @@ class ConnectionPool:
             return session
 
     async def return_session(self, service_name: str, session: Any) -> None:
-        """Return connection to pool"""
+        """Return connection to pool."""
         async with self._pool_locks[service_name]:
             pool = self._pools[service_name]
 
@@ -263,7 +263,7 @@ class ConnectionPool:
                 self._pool_stats[service_name]["closed"] += 1
 
     async def cleanup_pools(self) -> None:
-        """Clean up all connection pools"""
+        """Clean up all connection pools."""
         for service_name, pool in self._pools.items():
             while pool:
                 session = pool.pop()
@@ -272,14 +272,14 @@ class ConnectionPool:
                 self._pool_stats[service_name]["closed"] += 1
 
     def get_pool_stats(self) -> dict[str, dict[str, int]]:
-        """Get connection pool statistics"""
+        """Get connection pool statistics."""
         return dict(self._pool_stats)
 
 
 class BatchProcessor:
-    """Intelligent batch processing with adaptive sizing"""
+    """Intelligent batch processing with adaptive sizing."""
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self) -> None:
         self.config = config
         self._batch_stats = defaultdict(
             lambda: {
@@ -295,7 +295,7 @@ class BatchProcessor:
         processor: Callable[[list[Any]], Awaitable[list[Any]]],
         batch_key: str = "default",
     ) -> list[Any]:
-        """Process items in optimized batches"""
+        """Process items in optimized batches."""
         if not items:
             return []
 
@@ -326,7 +326,9 @@ class BatchProcessor:
 
             except TimeoutError:
                 logger.warning(
-                    f"Batch processing timeout for {batch_key}, batch size: {len(batch)}",
+                    "Batch processing timeout for %s, batch size: %s",
+                    batch_key,
+                    len(batch),
                 )
                 # Process items individually as fallback
                 for item in batch:
@@ -334,12 +336,12 @@ class BatchProcessor:
                         item_result = await processor([item])
                         results.extend(item_result)
                     except Exception as e:
-                        logger.error(f"Failed to process individual item: {e}")
+                        logger.error("Failed to process individual item: %s", e)
 
         return results
 
     def _calculate_optimal_batch_size(self, total_items: int, batch_key: str) -> int:
-        """Calculate optimal batch size based on historical performance"""
+        """Calculate optimal batch size based on historical performance."""
         base_size = min(self.config.optimal_batch_size, total_items)
         max_size = min(self.config.max_batch_size, total_items)
 
@@ -356,16 +358,16 @@ class BatchProcessor:
 
 
 class AdaptiveRateLimiter:
-    """Adaptive rate limiting with burst handling"""
+    """Adaptive rate limiting with burst handling."""
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self) -> None:
         self.config = config
         self._rate_windows: dict[str, list[float]] = defaultdict(list)
         self._error_rates: dict[str, float] = defaultdict(float)
         self._lock = asyncio.Lock()
 
     async def acquire(self, service_name: str) -> None:
-        """Acquire rate limit permit"""
+        """Acquire rate limit permit."""
         if not self.config.adaptive_rate_limiting:
             return
 
@@ -390,7 +392,7 @@ class AdaptiveRateLimiter:
             window.append(current_time)
 
     def _calculate_adaptive_rate_limit(self, service_name: str) -> float:
-        """Calculate adaptive rate limit based on error rates"""
+        """Calculate adaptive rate limit based on error rates."""
         base_rate = self.config.base_rate_limit_per_second
         error_rate = self._error_rates[service_name]
 
@@ -402,14 +404,14 @@ class AdaptiveRateLimiter:
         return base_rate
 
     def record_error(self, service_name: str) -> None:
-        """Record error for adaptive rate calculation"""
+        """Record error for adaptive rate calculation."""
         self._error_rates[service_name] = min(
             self._error_rates[service_name] + 0.01,
             1.0,
         )
 
     def record_success(self, service_name: str) -> None:
-        """Record success for adaptive rate calculation"""
+        """Record success for adaptive rate calculation."""
         self._error_rates[service_name] = max(
             self._error_rates[service_name] - 0.001,
             0.0,
@@ -417,16 +419,16 @@ class AdaptiveRateLimiter:
 
 
 class MemoryManager:
-    """Advanced memory management and monitoring"""
+    """Advanced memory management and monitoring."""
 
-    def __init__(self, config: OptimizationConfig):
+    def __init__(self) -> None:
         self.config = config
         self._weak_refs: set[weakref.ref] = set()
         self._last_gc_time = time.time()
         self._memory_stats = {"peak_usage_mb": 0.0, "gc_collections": 0}
 
     def get_memory_usage(self) -> float:
-        """Get current memory usage in MB"""
+        """Get current memory usage in MB."""
         process = psutil.Process()
         memory_mb = process.memory_info().rss / 1024 / 1024
 
@@ -436,14 +438,14 @@ class MemoryManager:
         return memory_mb
 
     async def check_memory_pressure(self) -> bool:
-        """Check if memory usage is high and trigger cleanup if needed"""
+        """Check if memory usage is high and trigger cleanup if needed."""
         if not self.config.memory_monitoring_enabled:
             return False
 
         memory_usage = self.get_memory_usage()
 
         if memory_usage > self.config.memory_threshold_mb:
-            logger.info(f"Memory usage high: {memory_usage:.2f}MB, triggering cleanup")
+            logger.info("Memory usage high: %.2f%%MB, triggering cleanup", memory_usage)
             await self.force_cleanup()
             return True
 
@@ -456,7 +458,7 @@ class MemoryManager:
         return False
 
     async def force_cleanup(self) -> None:
-        """Force memory cleanup and garbage collection"""
+        """Force memory cleanup and garbage collection."""
         # Clean up weak references
         if self.config.weak_reference_cleanup:
             self._cleanup_weak_references()
@@ -465,10 +467,10 @@ class MemoryManager:
         collected = gc.collect()
         self._memory_stats["gc_collections"] += 1
 
-        logger.info(f"Force cleanup completed, collected {collected} objects")
+        logger.info("Force cleanup completed, collected %s objects", collected)
 
     async def gentle_cleanup(self) -> None:
-        """Gentle memory cleanup for periodic maintenance"""
+        """Gentle memory cleanup for periodic maintenance."""
         if self.config.weak_reference_cleanup:
             self._cleanup_weak_references()
 
@@ -476,18 +478,18 @@ class MemoryManager:
         gc.collect(0)  # Only collect generation 0
 
     def _cleanup_weak_references(self) -> None:
-        """Clean up dead weak references"""
+        """Clean up dead weak references."""
         dead_refs = [ref for ref in self._weak_refs if ref() is None]
         for ref in dead_refs:
             self._weak_refs.discard(ref)
 
     def register_weak_reference(self, obj: Any) -> None:
-        """Register object for weak reference cleanup"""
+        """Register object for weak reference cleanup."""
         if self.config.weak_reference_cleanup:
             self._weak_refs.add(weakref.ref(obj))
 
-    def get_memory_stats(self) -> dict[str, Any]:
-        """Get memory management statistics"""
+    def get_memory_stats(self) -> Dict[str, Any]:
+        """Get memory management statistics."""
         return {
             "current_usage_mb": self.get_memory_usage(),
             "peak_usage_mb": self._memory_stats["peak_usage_mb"],
@@ -497,9 +499,9 @@ class MemoryManager:
 
 
 class PerformanceOptimizationService:
-    """Advanced performance optimization service for PAKE system"""
+    """Advanced performance optimization service for PAKE system."""
 
-    def __init__(self, config: OptimizationConfig = None):
+    def __init__(self) -> None:
         self.config = config or OptimizationConfig()
         self.cache = IntelligentCache(self.config)
         self.connection_pool = ConnectionPool(self.config)
@@ -511,15 +513,16 @@ class PerformanceOptimizationService:
         self._start_time = time.time()
 
         logger.info(
-            f"PerformanceOptimizationService initialized with mode: {self.config.mode}",
+            "PerformanceOptimizationService initialized with mode: %s",
+            self.config.mode,
         )
 
     async def optimize_concurrent_execution(
         self,
         tasks: list[Callable[[], Awaitable[Any]]],
-        task_names: list[str] = None,
+        task_names: List[str] = None,
     ) -> list[Any]:
-        """Optimize concurrent task execution with adaptive concurrency"""
+        """Optimize concurrent task execution with adaptive concurrency."""
         if not tasks:
             return []
 
@@ -530,10 +533,7 @@ class PerformanceOptimizationService:
         max_concurrent = self._calculate_optimal_concurrency(len(tasks))
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def execute_task_with_optimization(
-            task: Callable[[], Awaitable[Any]],
-            task_name: str,
-        ):
+        async def execute_task_with_optimization(self) -> None:
             async with semaphore:
                 await self.rate_limiter.acquire(task_name)
 
@@ -551,7 +551,7 @@ class PerformanceOptimizationService:
 
                 except Exception as e:
                     self.rate_limiter.record_error(task_name)
-                    logger.error(f"Task {task_name} failed: {e}")
+                    logger.error("Task %s failed: %s", task_name, e)
                     raise
 
         # Execute tasks with optimization
@@ -567,7 +567,7 @@ class PerformanceOptimizationService:
         return results
 
     def _calculate_optimal_concurrency(self, total_tasks: int) -> int:
-        """Calculate optimal concurrency level based on system resources and configuration"""
+        """Calculate optimal concurrency level based on system resources and configuration."""
         base_concurrency = min(self.config.max_concurrent_tasks, total_tasks)
 
         if not self.config.adaptive_concurrency:
@@ -589,10 +589,10 @@ class PerformanceOptimizationService:
 
     async def optimize_query_deduplication(
         self,
-        queries: list[dict[str, Any]],
+        queries: list[Dict[str, Any]],
         service_name: str,
-    ) -> list[dict[str, Any]]:
-        """Remove duplicate queries and return optimized query list"""
+    ) -> list[Dict[str, Any]]:
+        """Remove duplicate queries and return optimized query list."""
         if not queries:
             return []
 
@@ -613,12 +613,15 @@ class PerformanceOptimizationService:
         deduplicated_queries = list(unique_queries.values())
 
         logger.info(
-            f"Query deduplication for {service_name}: {len(queries)} -> {len(deduplicated_queries)} queries",
+            "Query deduplication for %s: %s -> %s queries",
+            service_name,
+            len(queries),
+            len(deduplicated_queries),
         )
         return deduplicated_queries
 
-    async def get_comprehensive_metrics(self) -> dict[str, Any]:
-        """Get comprehensive performance metrics"""
+    async def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive performance metrics."""
         current_time = time.time()
         total_runtime = current_time - self._start_time
 
@@ -655,8 +658,8 @@ class PerformanceOptimizationService:
             "optimization_mode": self.config.mode.value,
         }
 
-    async def health_check(self) -> dict[str, Any]:
-        """Perform comprehensive performance health check"""
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform comprehensive performance health check."""
         health_status = {"status": "healthy", "checks": {}, "recommendations": []}
 
         # Check memory usage
@@ -704,8 +707,8 @@ class PerformanceOptimizationService:
 
         return health_status
 
-    async def get_performance_metrics(self) -> dict[str, Any]:
-        """Get comprehensive performance metrics"""
+    async def get_performance_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive performance metrics."""
         cache_stats = self.cache.get_stats()
         memory_stats = self.memory_manager.get_memory_stats()
 
@@ -730,8 +733,8 @@ class PerformanceOptimizationService:
         items: list[Any],
         key_extractor: callable,
     ) -> list[Any]:
-        """Enhanced content deduplication with performance optimization"""
-        logger.info(f"Performing intelligent deduplication on {len(items)} items")
+        """Enhanced content deduplication with performance optimization."""
+        logger.info("Performing intelligent deduplication on %s items", len(items))
 
         unique_items = []
         seen_keys = set()
@@ -747,13 +750,15 @@ class PerformanceOptimizationService:
 
         dedup_ratio = (len(items) - len(unique_items)) / len(items) if items else 0
         logger.info(
-            f"Deduplication complete: {len(unique_items)} unique items ({dedup_ratio:.2%} reduction)",
+            "Deduplication complete: %s unique items (%s reduction)",
+            len(unique_items),
+            f"{dedup_ratio:.2%}",
         )
 
         return unique_items
 
     async def close(self) -> None:
-        """Clean up resources and connections"""
+        """Clean up resources and connections."""
         await self.connection_pool.cleanup_pools()
         await self.memory_manager.force_cleanup()
 

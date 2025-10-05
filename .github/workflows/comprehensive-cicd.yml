@@ -24,11 +24,37 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Non-sensitive configuration
   PYTHON_VERSION: '3.12'
   POETRY_VERSION: '1.8.3'
   NODE_VERSION: '22.18.0'
   REGISTRY_URL: 'ghcr.io'
   IMAGE_NAME: 'pake-system'
+
+  # Sensitive secrets (from GitHub repository secrets)
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  API_KEY: ${{ secrets.API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+
+  # API Keys
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+  # Optional API Keys
+  DID_API_KEY: ${{ secrets.DID_API_KEY }}
+  HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+
+  # Webhook Security
+  WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+  # HashiCorp Vault Configuration
+  VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+  VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+  VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
 
 jobs:
   # ============================================================================
@@ -44,6 +70,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for better analysis
+
+      - name: Validate poetry.lock file exists
+        run: |
+          if [ ! -f "poetry.lock" ]; then
+            echo "❌ ERROR: poetry.lock file is missing!"
+            echo "The poetry.lock file must be committed to version control as the single source of truth for dependencies."
+            exit 1
+          fi
+          echo "✅ poetry.lock file found"
+
+      - name: Validate poetry.lock file integrity
+        run: |
+          if ! poetry check --lock; then
+            echo "❌ ERROR: poetry.lock file is corrupted or invalid!"
+            exit 1
+          fi
+          echo "✅ poetry.lock file integrity validated"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -64,10 +107,29 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
-          poetry install --no-interaction --only=dev
+          poetry install --no-interaction --no-root
+          poetry check
           npm ci
+
+      - name: Capture environment snapshot
+        run: |
+          mkdir -p reports logs
+          echo "--- Environment Variables ---" > environment.log
+          env >> environment.log
+          echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+          pip freeze >> requirements.ci.log
+          echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+          poetry show --tree >> poetry.tree.log
 
       - name: Run Ruff linting
         run: poetry run ruff check src/ tests/ --output-format=github
@@ -88,6 +150,18 @@ jobs:
         uses: commitlint/action@v1
         with:
           config: .commitlintrc.json
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-diagnostic-artifacts
+          path: |
+            reports/
+            logs/
+            environment.log
+            requirements.ci.log
+            poetry.tree.log
 
   static-analysis:
     name: 🔍 Static Analysis & Type Checking
@@ -208,6 +282,16 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction
 
+      - name: Capture environment snapshot
+        run: |
+          mkdir -p reports logs
+          echo "--- Environment Variables ---" > environment.log
+          env >> environment.log
+          echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+          pip freeze >> requirements.ci.log
+          echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+          poetry show --tree >> poetry.tree.log
+
       - name: Run unit tests with coverage
         run: |
           poetry run pytest tests/unit/ \
@@ -217,7 +301,7 @@ jobs:
             --cov-fail-under=85 \
             --junitxml=unit-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload unit test results
         uses: actions/upload-artifact@v4
@@ -228,6 +312,11 @@ jobs:
             unit-test-results-${{ matrix.test-category }}.xml
             coverage.xml
             htmlcov/
+            reports/
+            logs/
+            environment.log
+            requirements.ci.log
+            poetry.tree.log
 
   integration-tests:
     name: 🔗 Integration Tests
@@ -277,36 +366,57 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction
 
-      - name: Wait for services
+      - name: Wait for services using robust polling
         run: |
           poetry run python -c "
+          import asyncio
           import time
           import psycopg2
           import redis
+          from src.utils.test_polling import poll_until_true
 
-          # Wait for PostgreSQL
-          for i in range(30):
-              try:
-                  conn = psycopg2.connect(
-                      host='localhost',
-                      port=5432,
-                      user='test_user',
-                      password='test_password',
-                      database='pake_test'
-                  )
-                  conn.close()
-                  break
-              except:
-                  time.sleep(1)
+          async def wait_for_postgres():
+              async def check_postgres():
+                  try:
+                      conn = psycopg2.connect(
+                          host='localhost',
+                          port=5432,
+                          user='test_user',
+                          password='test_password',
+                          database='pake_test'
+                      )
+                      conn.close()
+                      return True
+                  except:
+                      return False
 
-          # Wait for Redis
-          for i in range(30):
-              try:
-                  r = redis.Redis(host='localhost', port=6379, db=1)
-                  r.ping()
-                  break
-              except:
-                  time.sleep(1)
+              return await poll_until_true(check_postgres, timeout=30.0, operation_name='postgres_ready')
+
+          async def wait_for_redis():
+              async def check_redis():
+                  try:
+                      r = redis.Redis(host='localhost', port=6379, db=1)
+                      r.ping()
+                      return True
+                  except:
+                      return False
+
+              return await poll_until_true(check_redis, timeout=30.0, operation_name='redis_ready')
+
+          async def main():
+              postgres_ready = await wait_for_postgres()
+              redis_ready = await wait_for_redis()
+
+              if not postgres_ready:
+                  print('PostgreSQL failed to become ready')
+                  exit(1)
+              if not redis_ready:
+                  print('Redis failed to become ready')
+                  exit(1)
+
+              print('All services are ready')
+
+          asyncio.run(main())
           "
 
       - name: Set environment variables
@@ -315,6 +425,16 @@ jobs:
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/pake_test" >> $GITHUB_ENV
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
+
+      - name: Capture environment snapshot
+        run: |
+          mkdir -p reports logs
+          echo "--- Environment Variables ---" > environment.log
+          env >> environment.log
+          echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+          pip freeze >> requirements.ci.log
+          echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+          poetry show --tree >> poetry.tree.log
 
       - name: Run integration tests
         run: |
@@ -325,7 +445,7 @@ jobs:
             --cov-fail-under=80 \
             --junitxml=integration-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -336,6 +456,11 @@ jobs:
             integration-test-results-${{ matrix.test-category }}.xml
             coverage.xml
             htmlcov/
+            reports/
+            logs/
+            environment.log
+            requirements.ci.log
+            poetry.tree.log
 
   e2e-tests:
     name: 🌐 End-to-End Tests
@@ -392,10 +517,44 @@ jobs:
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
 
-      - name: Start application
+      - name: Capture environment snapshot
+        run: |
+          mkdir -p reports logs
+          echo "--- Environment Variables ---" > environment.log
+          env >> environment.log
+          echo "\n--- Python Packages (pip freeze) ---" > requirements.ci.log
+          pip freeze >> requirements.ci.log
+          echo "\n--- Poetry Dependency Tree ---" > poetry.tree.log
+          poetry show --tree >> poetry.tree.log
+
+      - name: Start application with health check
         run: |
           poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
-          sleep 10
+          APP_PID=$!
+
+          # Wait for application to be ready using robust polling
+          poetry run python -c "
+          import asyncio
+          import aiohttp
+          from src.utils.test_polling import poll_until_true
+
+          async def check_app_health():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('http://localhost:8000/health') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def main():
+              ready = await poll_until_true(check_app_health, timeout=30.0, operation_name='app_health')
+              if not ready:
+                  print('Application failed to become ready')
+                  exit(1)
+              print('Application is ready')
+
+          asyncio.run(main())
+          "
 
       - name: Run E2E tests
         run: |
@@ -406,7 +565,7 @@ jobs:
             --cov-fail-under=75 \
             --junitxml=e2e-test-results-${{ matrix.test-category }}.xml \
             -m "${{ matrix.test-category }}" \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload E2E test results
         uses: actions/upload-artifact@v4
@@ -417,6 +576,11 @@ jobs:
             e2e-test-results-${{ matrix.test-category }}.xml
             coverage.xml
             htmlcov/
+            reports/
+            logs/
+            environment.log
+            requirements.ci.log
+            poetry.tree.log
 
   security-tests:
     name: 🛡️ Security Tests
@@ -470,10 +634,34 @@ jobs:
           echo "REDIS_URL=redis://localhost:6379/1" >> $GITHUB_ENV
           echo "USE_VAULT=false" >> $GITHUB_ENV
 
-      - name: Start application
+      - name: Start application with health check
         run: |
           poetry run python -m uvicorn src.pake_system.auth.example_app:app --host 0.0.0.0 --port 8000 &
-          sleep 10
+          APP_PID=$!
+
+          # Wait for application to be ready using robust polling
+          poetry run python -c "
+          import asyncio
+          import aiohttp
+          from src.utils.test_polling import poll_until_true
+
+          async def check_app_health():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('http://localhost:8000/health') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def main():
+              ready = await poll_until_true(check_app_health, timeout=30.0, operation_name='app_health')
+              if not ready:
+                  print('Application failed to become ready')
+                  exit(1)
+              print('Application is ready')
+
+          asyncio.run(main())
+          "
 
       - name: Run security test suite
         run: |
@@ -687,21 +875,52 @@ jobs:
             -n staging
           kubectl rollout status deployment/pake-backend -n staging --timeout=300s
 
-      - name: Run smoke tests against staging
+      - name: Run smoke tests against staging with robust polling
         run: |
-          # Wait for deployment to be ready
-          sleep 30
+          # Wait for deployment to be ready using robust polling
+          poetry run python -c "
+          import asyncio
+          import aiohttp
+          from src.utils.test_polling import poll_until_true
 
-          # Run basic health checks
-          curl -f https://staging.pake-system.com/health || exit 1
-          curl -f https://staging.pake-system.com/auth/generate-password || exit 1
+          async def check_staging_health():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('https://staging.pake-system.com/health') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def check_staging_auth():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('https://staging.pake-system.com/auth/generate-password') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def main():
+              health_ready = await poll_until_true(check_staging_health, timeout=60.0, operation_name='staging_health')
+              auth_ready = await poll_until_true(check_staging_auth, timeout=60.0, operation_name='staging_auth')
+
+              if not health_ready:
+                  print('Staging health endpoint failed')
+                  exit(1)
+              if not auth_ready:
+                  print('Staging auth endpoint failed')
+                  exit(1)
+
+              print('Staging environment is ready')
+
+          asyncio.run(main())
+          "
 
       - name: Run E2E tests against staging
         run: |
           poetry run pytest tests/e2e/ \
             --base-url=https://staging.pake-system.com \
             --junitxml=staging-e2e-results.xml \
-            -v
+            -vv -rA --showlocals --tb=native
 
       - name: Upload staging test results
         uses: actions/upload-artifact@v4
@@ -740,14 +959,45 @@ jobs:
             -n production
           kubectl rollout status deployment/pake-backend -n production --timeout=600s
 
-      - name: Run production health checks
+      - name: Run production health checks with robust polling
         run: |
-          # Wait for deployment to be ready
-          sleep 60
+          # Wait for deployment to be ready using robust polling
+          poetry run python -c "
+          import asyncio
+          import aiohttp
+          from src.utils.test_polling import poll_until_true
 
-          # Run comprehensive health checks
-          curl -f https://pake-system.com/health || exit 1
-          curl -f https://pake-system.com/auth/generate-password || exit 1
+          async def check_production_health():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('https://pake-system.com/health') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def check_production_auth():
+              try:
+                  async with aiohttp.ClientSession() as session:
+                      async with session.get('https://pake-system.com/auth/generate-password') as response:
+                          return response.status == 200
+              except:
+                  return False
+
+          async def main():
+              health_ready = await poll_until_true(check_production_health, timeout=120.0, operation_name='production_health')
+              auth_ready = await poll_until_true(check_production_auth, timeout=120.0, operation_name='production_auth')
+
+              if not health_ready:
+                  print('Production health endpoint failed')
+                  exit(1)
+              if not auth_ready:
+                  print('Production auth endpoint failed')
+                  exit(1)
+
+              print('Production environment is ready')
+
+          asyncio.run(main())
+          "
 
           # Run security tests against production
           poetry run python scripts/security_test_suite.py --base-url=https://pake-system.com

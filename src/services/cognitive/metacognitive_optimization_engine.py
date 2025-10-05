@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Metacognitive Optimization Engine - Cosmic Calibration Protocol
-Part of the Advanced Autonomous Cognitive Evolution System
+Part of the Advanced Autonomous Cognitive Evolution System.
 
 Implements the core self-improvement and optimization framework
 where the AI system continuously optimizes its own prompts and workflows.
@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -54,18 +54,18 @@ class OptimizationOpportunity:
     implementation_complexity: float  # 0.0 to 1.0
     estimated_improvement: float
     priority_score: float
-    suggested_actions: list[str]
-    validation_criteria: list[str]
+    suggested_actions: List[str]
+    validation_criteria: List[str]
 
 
 @dataclass
 class SelfCritiqueResult:
     analysis_timestamp: datetime
-    performance_gaps: list[str]
+    performance_gaps: List[str]
     improvement_opportunities: list[OptimizationOpportunity]
     consensus_confidence: float
     recommendation_priority: str
-    follow_up_actions: list[str]
+    follow_up_actions: List[str]
 
 
 class MetacognitiveOptimizationEngine:
@@ -76,13 +76,13 @@ class MetacognitiveOptimizationEngine:
     capabilities and operational efficiency.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self) -> None:
         self.config = config
         self.optimization_phase = OptimizationPhase.MONITORING
 
         # Core optimization components
         self.metrics_history: dict[str, list[MetacognitiveMetric]] = {}
-        self.optimization_log: list[dict[str, Any]] = []
+        self.optimization_log: list[Dict[str, Any]] = []
         self.active_optimizations: list[OptimizationOpportunity] = []
 
         # Cosmic Calibration Protocol settings
@@ -109,7 +109,7 @@ class MetacognitiveOptimizationEngine:
         )
 
     def _setup_logging(self) -> logging.Logger:
-        """Setup dedicated logging for metacognitive processes"""
+        """Setup dedicated logging for metacognitive processes."""
         logger = logging.getLogger("MetacognitiveOptimization")
         logger.setLevel(logging.INFO)
 
@@ -132,7 +132,7 @@ class MetacognitiveOptimizationEngine:
         return logger
 
     def _initialize_performance_baselines(self) -> dict[str, float]:
-        """Initialize performance baselines for comparison"""
+        """Initialize performance baselines for comparison."""
         return {
             "response_quality_score": 0.75,
             "response_time_seconds": 5.0,
@@ -147,7 +147,7 @@ class MetacognitiveOptimizationEngine:
         }
 
     async def initialize(self) -> bool:
-        """Initialize the metacognitive optimization engine"""
+        """Initialize the metacognitive optimization engine."""
         try:
             self.logger.info("Initializing Cosmic Calibration Protocol...")
 
@@ -169,14 +169,14 @@ class MetacognitiveOptimizationEngine:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize metacognitive engine: {e}")
+            self.logger.error("Failed to initialize metacognitive engine: %s", e)
             return False
 
-    async def _initialize_metacognitive_log(self):
-        """Initialize the central Metacognitive_Log.md system"""
+    async def _initialize_metacognitive_log(self) -> None:
+        """Initialize the central Metacognitive_Log.md system."""
         log_header = f"""# Metacognitive Optimization Log - Cosmic Calibration Protocol
 
-**Initialization Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Initialization Date:** {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 **Protocol Version:** 1.0 - Advanced Autonomous Cognitive Evolution
 **System Status:** Active Self-Optimization
 
@@ -204,8 +204,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         with open(self.metacognitive_log_path, "w", encoding="utf-8") as f:
             f.write(log_header)
 
-    async def _cosmic_calibration_loop(self):
-        """Main cosmic calibration loop - continuous self-optimization"""
+    async def _cosmic_calibration_loop(self) -> None:
+        """Main cosmic calibration loop - continuous self-optimization."""
         self.logger.info("Starting Cosmic Calibration continuous optimization loop")
 
         while True:
@@ -242,11 +242,11 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                 self.optimization_phase = OptimizationPhase.MONITORING
 
             except Exception as e:
-                self.logger.error(f"Error in cosmic calibration loop: {e}")
+                self.logger.error("Error in cosmic calibration loop: %s", e)
                 self.optimization_phase = OptimizationPhase.MONITORING
 
     async def _analyze_current_performance(self) -> dict[str, MetacognitiveMetric]:
-        """Analyze current system performance against baselines"""
+        """Analyze current system performance against baselines."""
         current_metrics = {}
 
         # Simulate performance metrics collection
@@ -274,7 +274,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                 baseline_value=baseline,
                 target_value=target_value,
                 improvement_percentage=improvement_pct,
-                measurement_timestamp=datetime.now(),
+                measurement_timestamp=datetime.now(UTC),
                 confidence_level=0.85,
             )
 
@@ -297,7 +297,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         self,
         current_metrics: dict[str, MetacognitiveMetric],
     ) -> list[OptimizationOpportunity]:
-        """Identify optimization opportunities based on performance analysis"""
+        """Identify optimization opportunities based on performance analysis."""
         opportunities = []
 
         for metric_name, metric in current_metrics.items():
@@ -316,7 +316,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         self,
         metric: MetacognitiveMetric,
     ) -> OptimizationOpportunity | None:
-        """Generate specific optimization opportunity for underperforming metric"""
+        """Generate specific optimization opportunity for underperforming metric."""
         opportunity_templates = {
             "response_quality_score": {
                 "category": ImprovementCategory.PROMPT_OPTIMIZATION,
@@ -372,7 +372,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         priority_score = (impact_potential * 0.7) + ((1 - complexity) * 0.3)
 
         opportunity = OptimizationOpportunity(
-            opportunity_id=f"{metric.metric_name}_{datetime.now().isoformat()}",
+            opportunity_id=f"{metric.metric_name}_{datetime.now(UTC).isoformat()}",
             category=template["category"],
             description=template["description"],
             impact_potential=impact_potential,
@@ -394,8 +394,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
     async def _generate_optimization_plan(
         self,
         opportunities: list[OptimizationOpportunity],
-    ) -> dict[str, Any]:
-        """Generate comprehensive optimization plan from identified opportunities"""
+    ) -> Dict[str, Any]:
+        """Generate comprehensive optimization plan from identified opportunities."""
         # Select top opportunities based on priority and feasibility
         selected_opportunities = []
         total_complexity = 0.0
@@ -413,8 +413,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                     break
 
         optimization_plan = {
-            "plan_id": f"optimization_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "creation_timestamp": datetime.now(),
+            "plan_id": f"optimization_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
+            "creation_timestamp": datetime.now(UTC),
             "selected_opportunities": selected_opportunities,
             "total_complexity": total_complexity,
             "estimated_duration_hours": total_complexity
@@ -440,28 +440,32 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         return optimization_plan
 
-    async def _execute_optimizations(self, optimization_plan: dict[str, Any]):
-        """Execute the optimization plan"""
-        self.logger.info(f"Executing optimization plan: {optimization_plan['plan_id']}")
+    async def _execute_optimizations(self) -> None:
+        """Execute the optimization plan."""
+        self.logger.info(
+            "Executing optimization plan: %s", optimization_plan["plan_id"]
+        )
 
         for phase in optimization_plan["implementation_phases"]:
             self.logger.info(
-                f"Executing phase {phase['phase_number']}: {phase['category']}",
+                "Executing phase %s: %s",
+                phase["phase_number"],
+                phase["category"],
             )
 
             # Execute each action in the phase
             for action in phase["actions"]:
                 try:
                     await self._execute_optimization_action(action, phase["category"])
-                    self.logger.info(f"Completed action: {action}")
+                    self.logger.info("Completed action: %s", action)
 
                 except Exception as e:
-                    self.logger.error(f"Failed to execute action '{action}': {e}")
+                    self.logger.error("Failed to execute action '%s': %s", action, e)
 
         # Log the optimization execution
         execution_log = {
             "plan_id": optimization_plan["plan_id"],
-            "execution_timestamp": datetime.now(),
+            "execution_timestamp": datetime.now(UTC),
             "status": "completed",
             "phases_executed": len(optimization_plan["implementation_phases"]),
             "notes": "Autonomous optimization cycle completed successfully",
@@ -469,8 +473,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         self.optimization_log.append(execution_log)
 
-    async def _execute_optimization_action(self, action: str, category: str):
-        """Execute a specific optimization action"""
+    async def _execute_optimization_action(self) -> None:
+        """Execute a specific optimization action."""
         # This would contain the actual implementation of optimization actions
         # For now, we'll simulate the execution
         await asyncio.sleep(1)  # Simulate processing time
@@ -479,7 +483,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         action_log = {
             "action": action,
             "category": category,
-            "execution_time": datetime.now(),
+            "execution_time": datetime.now(UTC),
             "status": "completed",
         }
 
@@ -490,8 +494,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         # - Update performance thresholds
         # etc.
 
-    async def _validate_optimizations(self, optimization_plan: dict[str, Any]):
-        """Validate that optimizations achieved their intended improvements"""
+    async def _validate_optimizations(self) -> None:
+        """Validate that optimizations achieved their intended improvements."""
         self.logger.info("Validating optimization results...")
 
         # Wait for system to stabilize after changes
@@ -510,7 +514,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         # Log validation results
         validation_result = {
             "plan_id": optimization_plan["plan_id"],
-            "validation_timestamp": datetime.now(),
+            "validation_timestamp": datetime.now(UTC),
             "improvements": improvements,
             "overall_success": any(
                 imp > self.improvement_threshold * 100 for imp in improvements.values()
@@ -521,8 +525,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         return validation_result
 
-    async def _continuous_performance_monitoring(self):
-        """Continuous monitoring of system performance"""
+    async def _continuous_performance_monitoring(self) -> None:
+        """Continuous monitoring of system performance."""
         while True:
             try:
                 await asyncio.sleep(300)  # Monitor every 5 minutes
@@ -535,7 +539,9 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                 for metric_name, metric in current_metrics.items():
                     if metric.improvement_percentage < -20:  # 20% degradation
                         self.logger.warning(
-                            f"Performance degradation detected in {metric_name}: {metric.improvement_percentage:.2f}%",
+                            "Performance degradation detected in %.2f: %s%",
+                            metric_name,
+                            metric.improvement_percentage,
                         )
                         degradation_detected = True
 
@@ -545,10 +551,10 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                     await self._emergency_optimization_cycle()
 
             except Exception as e:
-                self.logger.error(f"Error in performance monitoring: {e}")
+                self.logger.error("Error in performance monitoring: %s", e)
 
-    async def _autonomous_self_critique_loop(self):
-        """Autonomous self-critique and improvement identification"""
+    async def _autonomous_self_critique_loop(self) -> None:
+        """Autonomous self-critique and improvement identification."""
         while True:
             try:
                 await asyncio.sleep(7200)  # Every 2 hours
@@ -569,15 +575,11 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                     await self._implement_critique_recommendations(critique_result)
 
             except Exception as e:
-                self.logger.error(f"Error in self-critique loop: {e}")
+                self.logger.error("Error in self-critique loop: %s", e)
 
-    async def _log_calibration_cycle(
-        self,
-        metrics: dict[str, MetacognitiveMetric],
-        opportunities: list[OptimizationOpportunity],
-    ):
-        """Log calibration cycle to Metacognitive_Log.md"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    async def _log_calibration_cycle(self) -> None:
+        """Log calibration cycle to Metacognitive_Log.md."""
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         log_entry = f"""
 ## Calibration Cycle - {timestamp}
@@ -620,8 +622,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         with open(self.metacognitive_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    def get_status(self) -> dict[str, Any]:
-        """Get current status of metacognitive optimization engine"""
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status of metacognitive optimization engine."""
         recent_metrics = {}
         for metric_name, history in self.metrics_history.items():
             if history:
@@ -637,7 +639,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
             "optimization_cycles_completed": len(self.optimization_log),
             "performance_metrics": recent_metrics,
             "metacognitive_log_path": str(self.metacognitive_log_path),
-            "last_calibration": datetime.now().isoformat(),
+            "last_calibration": datetime.now(UTC).isoformat(),
             "system_health": (
                 "optimal"
                 if all(
@@ -650,8 +652,8 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
             ),
         }
 
-    async def shutdown(self):
-        """Gracefully shutdown the metacognitive optimization engine"""
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the metacognitive optimization engine."""
         self.logger.info("Shutting down Metacognitive Optimization Engine...")
 
         # Save final state
@@ -660,7 +662,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         # Log shutdown
         with open(self.metacognitive_log_path, "a", encoding="utf-8") as f:
             f.write(
-                f"\n\n## System Shutdown - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n",
+                f"\n\n## System Shutdown - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}\n\n",
             )
             f.write(f"Final Status: {json.dumps(final_status, indent=2)}\n\n")
 

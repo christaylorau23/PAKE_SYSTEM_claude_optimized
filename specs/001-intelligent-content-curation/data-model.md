@@ -1,7 +1,7 @@
 # Data Model: Intelligent Content Curation
 
-**Feature**: 001-intelligent-content-curation  
-**Date**: 2025-01-23  
+**Feature**: 001-intelligent-content-curation
+**Date**: 2025-01-23
 **Status**: Complete
 
 ## Overview
@@ -22,33 +22,33 @@ class ContentItem:
     content_text: Optional[str]        # Full text content
     author: Optional[str]             # Content author
     source_url: Optional[str]         # Original source URL
-    
+
     # Temporal information
     published_date: Optional[datetime] # Publication date
     ingested_at: datetime             # When added to system (auto-generated)
     updated_at: datetime              # Last update timestamp (auto-generated)
-    
+
     # Content classification
     content_type: str                 # article, blog, paper, news, tutorial, review
     tags: List[str]                   # Content tags/keywords
     topic_categories: List[str]       # Assigned topic categories
-    
+
     # Quality metrics (0.0-1.0 scale)
     quality_score: Optional[float]    # ML-calculated quality score
     credibility_score: Optional[float] # Source credibility assessment
     sentiment_score: Optional[float]  # Sentiment analysis result (-1.0 to 1.0)
     readability_score: Optional[float] # Readability assessment (0.0-1.0)
-    
+
     # Source information
     source_authority_score: Optional[float] # Source authority rating
     source_reliability: Optional[float]      # Source reliability rating
-    
+
     # Engagement metrics
     view_count: Optional[int]         # Total views
     share_count: Optional[int]        # Total shares
     like_count: Optional[int]         # Total likes
     comment_count: Optional[int]      # Total comments
-    
+
     # Additional metadata
     abstract: Optional[str]           # Content abstract/summary
     language: str = "en"             # Content language (ISO 639-1)
@@ -78,28 +78,28 @@ Represents user preferences, behavior patterns, and personalization settings.
 class UserProfile:
     # Core identification
     user_id: str                      # User identifier (matches PAKE system)
-    
+
     # Preference settings
     interests: List[str]              # User interest categories
     preference_weights: Dict[str, float] # Content type preferences
     learning_rate: float = 0.1         # ML learning rate (0.0-1.0)
     exploration_factor: float = 0.1   # Exploration vs exploitation balance
-    
+
     # Behavioral patterns
     interaction_history: List[str]    # Recent interaction IDs
     preferred_content_types: List[str] # Preferred content types
     preferred_sources: List[str]      # Preferred content sources
     preferred_topics: List[str]       # Preferred topic categories
-    
+
     # Temporal preferences
     active_hours: List[int]           # Hours of day when user is active (0-23)
     active_days: List[int]            # Days of week when user is active (0-6)
     timezone: str = "UTC"             # User timezone
-    
+
     # Privacy settings
     data_sharing_level: str = "standard" # standard, minimal, none
     personalization_enabled: bool = True # Enable/disable personalization
-    
+
     # System metadata
     created_at: datetime              # Profile creation timestamp
     updated_at: datetime              # Last update timestamp
@@ -131,24 +131,24 @@ class UserInteraction:
     id: str                           # UUID4 primary key
     user_id: str                      # User identifier
     content_id: str                   # Content identifier
-    
+
     # Interaction details
     interaction_type: InteractionType # view, like, share, save, click, dismiss
     timestamp: datetime               # Interaction timestamp
     session_duration: Optional[int]   # Session duration in seconds
     context: Dict[str, Any]          # Additional context data
-    
+
     # Interaction metadata
     source: str                       # Where interaction occurred (web, mobile, api)
     user_agent: Optional[str]        # User agent string
     ip_address: Optional[str]        # IP address (hashed for privacy)
     referrer: Optional[str]           # Referrer URL
-    
+
     # Content context
     content_position: Optional[int]   # Position in recommendation list
     recommendation_id: Optional[str]  # Associated recommendation ID
     recommendation_score: Optional[float] # Original recommendation score
-    
+
     # Feedback data
     explicit_rating: Optional[int]   # Explicit user rating (1-5)
     feedback_text: Optional[str]      # User feedback text
@@ -178,22 +178,22 @@ class Recommendation:
     id: str                           # UUID4 primary key
     content_id: str                   # Recommended content ID
     user_id: str                      # Target user ID
-    
+
     # Recommendation metrics
     relevance_score: float            # Relevance score (0.0-1.0)
     confidence_score: float           # Confidence in recommendation (0.0-1.0)
     ranking_position: int             # Position in recommendation list
-    
+
     # Recommendation context
     reasoning: Optional[str]          # Human-readable explanation
     algorithm_used: str               # ML algorithm that generated recommendation
     feature_weights: Dict[str, float] # Feature importance weights
-    
+
     # User feedback
     user_feedback: Optional[str]      # User feedback on recommendation
     feedback_timestamp: Optional[datetime] # When feedback was provided
     satisfaction_score: Optional[float] # Calculated satisfaction score
-    
+
     # System metadata
     created_at: datetime              # Recommendation creation timestamp
     expires_at: Optional[datetime]    # Recommendation expiration
@@ -224,22 +224,22 @@ class ContentSource:
     id: str                           # UUID4 primary key
     name: str                         # Source name
     domain: str                       # Source domain
-    
+
     # Source metrics
     authority_score: float            # Authority rating (0.0-1.0)
     reliability_score: float         # Reliability rating (0.0-1.0)
     quality_score: float             # Average content quality (0.0-1.0)
-    
+
     # Source characteristics
     content_types: List[str]          # Supported content types
     update_frequency: str             # daily, weekly, monthly, irregular
     content_volume: int               # Average content volume per period
-    
+
     # Integration details
     api_endpoint: Optional[str]       # API endpoint for content retrieval
     authentication_required: bool = False # Whether authentication is required
     rate_limit: Optional[int]         # Rate limit (requests per hour)
-    
+
     # System metadata
     created_at: datetime              # Source registration timestamp
     updated_at: datetime              # Last update timestamp
@@ -272,21 +272,21 @@ class TopicCategory:
     id: str                           # UUID4 primary key
     name: str                         # Category name
     slug: str                         # URL-friendly identifier
-    
+
     # Hierarchical structure
     parent_id: Optional[str]          # Parent category ID
     level: int                        # Hierarchy level (0 = root)
     path: str                         # Full path (e.g., "technology/ai/machine-learning")
-    
+
     # Category metadata
     description: Optional[str]        # Category description
     keywords: List[str]               # Associated keywords
     synonyms: List[str]               # Alternative names
-    
+
     # Content statistics
     content_count: int = 0            # Number of content items in category
     subcategory_count: int = 0        # Number of subcategories
-    
+
     # System metadata
     created_at: datetime              # Category creation timestamp
     updated_at: datetime              # Last update timestamp
@@ -397,5 +397,5 @@ class TopicCategory:
 
 ---
 
-*Data model completed: 2025-01-23*  
+*Data model completed: 2025-01-23*
 *Ready for implementation*

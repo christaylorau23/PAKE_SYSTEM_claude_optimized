@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
+def setup_test_environment(self) -> None:
     """Set up test environment variables"""
     # Disable Vault for tests to keep them simple and fast
     os.environ["USE_VAULT"] = "false"
