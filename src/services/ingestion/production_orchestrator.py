@@ -10,7 +10,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict, List
 
 import aiohttp
 
@@ -84,7 +84,7 @@ class QueryOptimizationResult:
     original_query: str
     optimized_query: str
     optimization_confidence: float
-    suggested_sources: List[str]
+    suggested_sources: list[str]
     estimated_improvement: float
 
 
@@ -98,7 +98,13 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     - Enterprise-level error handling and resilience
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        config: Any = None,
+        cognitive_engine: Any = None,
+        n8n_manager: Any = None,
+        production_config: Any = None,
+    ) -> None:
         """Initialize production orchestrator."""
         super().__init__(config, cognitive_engine, n8n_manager)
 
@@ -183,7 +189,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         for better content quality and relevance.
         """
         logger.info(
-            "Optimizing queries for plan %s with cognitive feedback", plan.plan_id,
+            "Optimizing queries for plan %s with cognitive feedback",
+            plan.plan_id,
         )
 
         if not self.cognitive_engine:
@@ -239,7 +246,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         self,
         source: IngestionSource,
         historical_results: list[IngestionResult],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract relevant historical context for query optimization."""
         context = {
             "source_type": source.source_type,
@@ -288,7 +295,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     async def _get_cognitive_optimization(
         self,
         source: IngestionSource,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> QueryOptimizationResult:
         """Get cognitive optimization suggestions."""
         # Mock implementation - would integrate with real cognitive engine
@@ -321,8 +328,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
     def _fallback_optimization(
         self,
         source: IngestionSource,
-        context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
         """Fallback optimization when cognitive engine is unavailable."""
         import copy
 
@@ -460,7 +467,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
 
         await asyncio.gather(*health_checks, return_exceptions=True)
 
-    async def _check_service_health(self) -> None:
+    async def _check_service_health(self, service_name: str) -> None:
         """Check health of a specific service."""
         start_time = datetime.now(UTC)
 
@@ -489,8 +496,9 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
                     )
 
                     logger.debug(
-                        "%s health check: %s (%.0fms)", service_name,
-                            "healthy" if is_healthy else "unhealthy",
+                        "%s health check: %s (%.0fms)",
+                        service_name,
+                        "healthy" if is_healthy else "unhealthy",
                         response_time,
                     )
 
@@ -516,7 +524,9 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
             reduction_factor = max(0.5, 1 - (unhealthy_apis * 0.2))
             optimal = max(1, int(base_concurrency * reduction_factor))
             logger.info(
-                "Reduced concurrency to %s due to %s unhealthy APIs", optimal, unhealthy_apis,
+                "Reduced concurrency to %s due to %s unhealthy APIs",
+                optimal,
+                unhealthy_apis,
             )
             return optimal
 
@@ -528,7 +538,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         if avg_response_time < 100:  # All APIs responding under 100ms
             optimal = min(10, base_concurrency + 2)
             logger.info(
-                "Increased concurrency to %s due to excellent API performance", optimal,
+                "Increased concurrency to %s due to excellent API performance",
+                optimal,
             )
             return optimal
 
@@ -570,7 +581,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         # In production, this would be stored in a database
         logger.info("Performance data: %s", performance_data)
 
-    async def get_production_status(self) -> Dict[str, Any]:
+    async def get_production_status(self) -> dict[str, Any]:
         """Get comprehensive production status."""
         return {
             "orchestrator_version": "2.0-production",

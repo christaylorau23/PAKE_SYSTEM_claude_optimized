@@ -144,7 +144,7 @@ ipython_config.py
 Pipfile.lock
 
 # poetry
-poetry.lock
+# poetry.lock  # Keep lock file for deterministic builds
 
 # pdm
 .pdm.toml

@@ -1,10 +1,16 @@
-[tool.poetry]
+[project]
 name = "pake-system"
 version = "1.0.0"
 description = "A comprehensive, AI-powered knowledge engineering platform with enterprise features, real-time trend intelligence, and multi-source ingestion capabilities."
-authors = ["chris <christaylorau23@gmail.com>"]
-license = "MIT"
+authors = [
+    {name = "chris", email = "christaylorau23@gmail.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["version"]
+
+[tool.poetry]
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]

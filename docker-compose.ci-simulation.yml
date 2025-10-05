@@ -17,7 +17,7 @@ services:
       POSTGRES_DB: pake_system_test
       POSTGRES_USER: pake_test
       POSTGRES_PASSWORD: test_password_ci_simulation
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
     ports:
       - '5434:5432'
     volumes:
@@ -32,11 +32,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'          # Allocate 0.5 CPU cores to PostgreSQL
-          memory: 1g           # Allocate 1GB RAM to PostgreSQL
+          cpus: '0.5' # Allocate 0.5 CPU cores to PostgreSQL
+          memory: 1g # Allocate 1GB RAM to PostgreSQL
         reservations:
-          cpus: '0.25'         # Reserve 0.25 CPU cores
-          memory: 512m         # Reserve 512MB RAM
+          cpus: '0.25' # Reserve 0.25 CPU cores
+          memory: 512m # Reserve 512MB RAM
     restart: unless-stopped
     networks:
       - pake-ci-network
@@ -58,11 +58,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'        # Allocate 0.25 CPU cores to Redis
-          memory: 256m         # Allocate 256MB RAM to Redis
+          cpus: '0.25' # Allocate 0.25 CPU cores to Redis
+          memory: 256m # Allocate 256MB RAM to Redis
         reservations:
-          cpus: '0.1'          # Reserve 0.1 CPU cores
-          memory: 128m         # Reserve 128MB RAM
+          cpus: '0.1' # Reserve 0.1 CPU cores
+          memory: 128m # Reserve 128MB RAM
     restart: unless-stopped
     networks:
       - pake-ci-network
@@ -108,7 +108,7 @@ services:
       VAULT_PATH: '/app/vault'
 
     ports:
-      - '8003:8000'  # Different port to avoid conflicts
+      - '8003:8000' # Different port to avoid conflicts
     volumes:
       - ./vault:/app/vault:ro
       - ./logs:/app/logs
@@ -128,11 +128,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'            # Simulate ubuntu-latest: 2 CPU cores
-          memory: 7g           # Simulate ubuntu-latest: 7GB RAM
+          cpus: '2' # Simulate ubuntu-latest: 2 CPU cores
+          memory: 7g # Simulate ubuntu-latest: 7GB RAM
         reservations:
-          cpus: '1'            # Reserve 1 CPU core
-          memory: 2g           # Reserve 2GB RAM
+          cpus: '1' # Reserve 1 CPU core
+          memory: 2g # Reserve 2GB RAM
     restart: unless-stopped
     networks:
       - pake-ci-network
@@ -185,7 +185,7 @@ services:
       JEST_TIMEOUT: '30000'
 
     ports:
-      - '3002:3001'  # Different port to avoid conflicts
+      - '3002:3001' # Different port to avoid conflicts
     volumes:
       - ./vault:/app/vault:ro
       - ./src/bridge:/app/src:ro
@@ -206,11 +206,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'         # Allocate 0.5 CPU cores to Bridge
-          memory: 1g           # Allocate 1GB RAM to Bridge
+          cpus: '0.5' # Allocate 0.5 CPU cores to Bridge
+          memory: 1g # Allocate 1GB RAM to Bridge
         reservations:
-          cpus: '0.25'         # Reserve 0.25 CPU cores
-          memory: 512m         # Reserve 512MB RAM
+          cpus: '0.25' # Reserve 0.25 CPU cores
+          memory: 512m # Reserve 512MB RAM
     restart: unless-stopped
     networks:
       - pake-ci-network
@@ -254,8 +254,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.1'          # Minimal CPU for monitoring
-          memory: 64m          # Minimal memory for monitoring
+          cpus: '0.1' # Minimal CPU for monitoring
+          memory: 64m # Minimal memory for monitoring
     restart: unless-stopped
     networks:
       - pake-ci-network

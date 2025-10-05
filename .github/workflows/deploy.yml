@@ -27,8 +27,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  id-token: write  # Required for OIDC authentication with AWS
-  contents: read   # Required for checkout
+  id-token: write # Required for OIDC authentication with AWS
+  contents: read # Required for checkout
 
 env:
   PYTHON_VERSION: '3.12'

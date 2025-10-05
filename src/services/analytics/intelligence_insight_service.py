@@ -106,11 +106,11 @@ class CommunityInsight:
 
     community_id: str
     community_description: str
-    member_entities: List[str]
+    member_entities: list[str]
     community_size: int
     modularity_score: float
     central_entities: list[tuple[str, float]]  # entity, centrality score
-    community_topics: List[str]
+    community_topics: list[str]
     growth_pattern: str
     significance: SignificanceLevel
 
@@ -124,11 +124,11 @@ class SynthesisInsight:
     description: str
     confidence_score: float
     significance: SignificanceLevel
-    supporting_evidence: List[str]
-    component_insights: List[str]  # IDs of contributing insights
-    actionable_recommendations: List[str]
+    supporting_evidence: list[str]
+    component_insights: list[str]  # IDs of contributing insights
+    actionable_recommendations: list[str]
     time_horizon: str  # "immediate", "short_term", "medium_term", "long_term"
-    categories: List[str]
+    categories: list[str]
     created_at: datetime
 
 
@@ -141,8 +141,8 @@ class InsightAlert:
     title: str
     message: str
     urgency: SignificanceLevel
-    data_summary: Dict[str, Any]
-    recommended_actions: List[str]
+    data_summary: dict[str, Any]
+    recommended_actions: list[str]
     expires_at: datetime
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -158,7 +158,13 @@ class IntelligenceInsightService:
     - Automated alerting for significant patterns
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        intelligence_core: Any,
+        nlp_service: Any,
+        vector_db: Any,
+        cache_service: Any = None,
+    ) -> None:
         """Initialize the Intelligence Insight Service.
 
         Args:
@@ -294,7 +300,7 @@ class IntelligenceInsightService:
 
     async def detect_emerging_topics(
         self,
-        documents: List[str],
+        documents: list[str],
         time_period: str = "current",
         num_topics: int | None = None,
     ) -> list[TopicEvolution]:
@@ -418,7 +424,8 @@ class IntelligenceInsightService:
             self._stats["processing_time_total_ms"] += processing_time
 
             logger.info(
-                "Detected %s topics with coherence %s", len(topic_evolutions),
+                "Detected %s topics with coherence %s",
+                len(topic_evolutions),
                 coherence_score,
             )
             return topic_evolutions
@@ -643,8 +650,9 @@ class IntelligenceInsightService:
             self.community_history.extend(community_insights)
 
             logger.info(
-                "Detected %s communities with modularity %.3f", len(community_insights),
-                    modularity_score,
+                "Detected %s communities with modularity %.3f",
+                len(community_insights),
+                modularity_score,
             )
             return community_insights
 
@@ -705,9 +713,7 @@ class IntelligenceInsightService:
 
                 if common_concepts:
                     evidence.append(
-                        f"Common concepts across topics: {
-                            ', '.join(list(common_concepts)[:3])
-                        }",
+                        f"Common concepts across topics: {', '.join(list(common_concepts)[:3])}",
                     )
 
                 confidence = min(0.9, 0.6 + 0.1 * len(evidence))
@@ -924,10 +930,7 @@ class IntelligenceInsightService:
                     alert_id=str(uuid.uuid4()),
                     insight_type=InsightType.SYNTHESIS_INSIGHT,
                     title=f"🔍 {insight.title}",
-                    message=f"{insight.description}\n\nConfidence: {
-                        insight.confidence_score:.1%}\nTime Horizon: {
-                        insight.time_horizon
-                    }\n\nEvidence:\n"
+                    message=f"{insight.description}\n\nConfidence: {insight.confidence_score:.1%}\nTime Horizon: {insight.time_horizon}\n\nEvidence:\n"
                     + "\n".join(
                         [
                             f"• {evidence}"
@@ -959,9 +962,9 @@ class IntelligenceInsightService:
 
     async def run_comprehensive_analysis(
         self,
-        documents: List[str] | None = None,
+        documents: list[str] | None = None,
         time_series_data: dict[str, pd.Series] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run comprehensive insight analysis across all systems.
 
         Args:
@@ -1048,11 +1051,12 @@ class IntelligenceInsightService:
 
             logger.info("Comprehensive analysis completed in %.2f%%ms", processing_time)
             logger.info(
-                "Results: %s topics, %s correlations, %s communities, %s insights, %s alerts", len(results["topic_evolutions"]),
-                    len(results["correlations"])
-                , len(results["communities"]),
-                    len(results["synthesis_insights"])
-                , len(results["alerts"]),
+                "Results: %s topics, %s correlations, %s communities, %s insights, %s alerts",
+                len(results["topic_evolutions"]),
+                len(results["correlations"]),
+                len(results["communities"]),
+                len(results["synthesis_insights"]),
+                len(results["alerts"]),
             )
 
             return results
@@ -1066,7 +1070,7 @@ class IntelligenceInsightService:
                 * 1000,
             }
 
-    async def get_service_stats(self) -> Dict[str, Any]:
+    async def get_service_stats(self) -> dict[str, Any]:
         """Get comprehensive service statistics."""
         return {
             "performance_stats": self._stats,
@@ -1084,7 +1088,7 @@ class IntelligenceInsightService:
             "configuration": self.config,
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Comprehensive health check for the insight service."""
         try:
             # Check dependencies

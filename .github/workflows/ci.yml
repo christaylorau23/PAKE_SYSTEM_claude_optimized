@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   PYTHON_VERSION: '3.12'
@@ -68,115 +68,115 @@ jobs:
     needs: setup-poetry-environment
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: ${{ env.POETRY_VERSION }}
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
-    - name: Cache Poetry virtualenv
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
-        restore-keys: |
-          venv-${{ runner.os }}-
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: poetry install --no-interaction --no-root
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
 
-    - name: Run linting
-      run: |
-        poetry run ruff check src tests
-        poetry run black --check src tests
-        poetry run isort --check-only src tests
-        poetry run mypy src
+      - name: Run linting
+        run: |
+          poetry run ruff check src tests
+          poetry run black --check src tests
+          poetry run isort --check-only src tests
+          poetry run mypy src
 
-    - name: Run security checks
-      run: |
-        poetry run bandit -r src -f json -o bandit_report.json
-        poetry run safety check --json --output safety_report.json
+      - name: Run security checks
+        run: |
+          poetry run bandit -r src -f json -o bandit_report.json
+          poetry run safety check --json --output safety_report.json
 
-    - name: Run tests
-      run: |
-        poetry run pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
+      - name: Run tests
+        run: |
+          poetry run pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
 
   typescript-tests:
     name: TypeScript Bridge Tests
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: src/bridge/package-lock.json
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: src/bridge/package-lock.json
 
-    - name: Install dependencies
-      working-directory: src/bridge
-      run: npm ci
+      - name: Install dependencies
+        working-directory: src/bridge
+        run: npm ci
 
-    - name: Run linting
-      working-directory: src/bridge
-      run: |
-        npm run lint
-        npm run type-check
+      - name: Run linting
+        working-directory: src/bridge
+        run: |
+          npm run lint
+          npm run type-check
 
-    - name: Run tests
-      working-directory: src/bridge
-      run: npm test
+      - name: Run tests
+        working-directory: src/bridge
+        run: npm test
 
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build Python backend image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.production
-        push: false
-        tags: pake-system:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build Python backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          push: false
+          tags: pake-system:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Build TypeScript bridge image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.bridge.production
-        push: false
-        tags: pake-bridge:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build TypeScript bridge image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.bridge.production
+          push: false
+          tags: pake-bridge:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   integration-tests:
     name: Integration Tests
@@ -208,47 +208,47 @@ jobs:
           - 6379:6379
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: ${{ env.POETRY_VERSION }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
 
-    - name: Install dependencies
-      run: poetry install --no-interaction
+      - name: Install dependencies
+        run: poetry install --no-interaction
 
-    - name: Run integration tests
-      run: |
-        poetry run pytest tests/integration/ -v -m integration
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pake_test
-        REDIS_URL: redis://localhost:6379/0
+      - name: Run integration tests
+        run: |
+          poetry run pytest tests/integration/ -v -m integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pake_test
+          REDIS_URL: redis://localhost:6379/0
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'

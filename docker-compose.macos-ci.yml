@@ -30,11 +30,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'            # Allocate 1 CPU core to PostgreSQL
-          memory: 2g           # Allocate 2GB RAM to PostgreSQL
+          cpus: '1' # Allocate 1 CPU core to PostgreSQL
+          memory: 2g # Allocate 2GB RAM to PostgreSQL
         reservations:
-          cpus: '0.5'         # Reserve 0.5 CPU cores
-          memory: 1g           # Reserve 1GB RAM
+          cpus: '0.5' # Reserve 0.5 CPU cores
+          memory: 1g # Reserve 1GB RAM
     networks:
       - pake-macos-ci-network
 
@@ -54,11 +54,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'         # Allocate 0.5 CPU cores to Redis
-          memory: 512m         # Allocate 512MB RAM to Redis
+          cpus: '0.5' # Allocate 0.5 CPU cores to Redis
+          memory: 512m # Allocate 512MB RAM to Redis
         reservations:
-          cpus: '0.25'        # Reserve 0.25 CPU cores
-          memory: 256m         # Reserve 256MB RAM
+          cpus: '0.25' # Reserve 0.25 CPU cores
+          memory: 256m # Reserve 256MB RAM
     networks:
       - pake-macos-ci-network
 
@@ -76,7 +76,7 @@ services:
       ENVIRONMENT: 'macos-ci-simulation'
       LOG_LEVEL: 'info'
       JWT_SECRET_KEY: 'macos-ci-simulation-secret-key'
-      PYTEST_WORKERS: '2'      # macOS can handle 2 workers
+      PYTEST_WORKERS: '2' # macOS can handle 2 workers
       PYTEST_TIMEOUT: '300'
       PYTEST_MAX_FAILURES: '3'
     ports:
@@ -99,11 +99,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '3'            # Simulate macOS: 3 CPU cores
-          memory: 14g          # Simulate macOS: 14GB RAM
+          cpus: '3' # Simulate macOS: 3 CPU cores
+          memory: 14g # Simulate macOS: 14GB RAM
         reservations:
-          cpus: '2'            # Reserve 2 CPU cores
-          memory: 4g           # Reserve 4GB RAM
+          cpus: '2' # Reserve 2 CPU cores
+          memory: 4g # Reserve 4GB RAM
     networks:
       - pake-macos-ci-network
     command: >

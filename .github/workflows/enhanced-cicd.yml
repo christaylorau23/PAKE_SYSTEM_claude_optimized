@@ -74,7 +74,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for better analysis
+          fetch-depth: 0 # Full history for better analysis
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -192,7 +192,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for secret scanning
+          fetch-depth: 0 # Full history for secret scanning
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -248,7 +248,14 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12']
-        test-category: ['unit_functional', 'unit_edge_case', 'unit_error_handling', 'unit_performance', 'unit_security']
+        test-category:
+          [
+            'unit_functional',
+            'unit_edge_case',
+            'unit_error_handling',
+            'unit_performance',
+            'unit_security',
+          ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -304,7 +311,13 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        test-category: ['integration', 'integration_database', 'integration_cache', 'integration_auth']
+        test-category:
+          [
+            'integration',
+            'integration_database',
+            'integration_cache',
+            'integration_auth',
+          ]
     services:
       postgres:
         image: postgres:16-alpine
@@ -422,7 +435,13 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        test-category: ['e2e_user_journey', 'e2e_performance', 'e2e_reliability', 'e2e_user_experience']
+        test-category:
+          [
+            'e2e_user_journey',
+            'e2e_performance',
+            'e2e_reliability',
+            'e2e_user_experience',
+          ]
     services:
       postgres:
         image: postgres:16-alpine
@@ -801,7 +820,18 @@ jobs:
   build-and-push:
     name: 🏗️ Build & Push Production Image
     runs-on: ubuntu-latest
-    needs: [lint-and-format, static-analysis, security-scan, unit-tests, integration-tests, e2e-tests, security-tests, test-coverage-gate, build-and-scan]
+    needs:
+      [
+        lint-and-format,
+        static-analysis,
+        security-scan,
+        unit-tests,
+        integration-tests,
+        e2e-tests,
+        security-tests,
+        test-coverage-gate,
+        build-and-scan,
+      ]
     if: github.ref == 'refs/heads/main'
     outputs:
       image-tag: ${{ steps.build.outputs.tags }}
@@ -947,7 +977,7 @@ jobs:
         if: success()
         with:
           status: success
-          text: "🚀 PAKE System successfully deployed to production!"
+          text: '🚀 PAKE System successfully deployed to production!'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -956,7 +986,7 @@ jobs:
         if: failure()
         with:
           status: failure
-          text: "❌ PAKE System deployment to production failed!"
+          text: '❌ PAKE System deployment to production failed!'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -983,7 +1013,18 @@ jobs:
   notify-completion:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
-    needs: [lint-and-format, static-analysis, security-scan, unit-tests, integration-tests, e2e-tests, security-tests, test-coverage-gate, build-and-scan]
+    needs:
+      [
+        lint-and-format,
+        static-analysis,
+        security-scan,
+        unit-tests,
+        integration-tests,
+        e2e-tests,
+        security-tests,
+        test-coverage-gate,
+        build-and-scan,
+      ]
     if: always()
     steps:
       - name: Notify CI completion

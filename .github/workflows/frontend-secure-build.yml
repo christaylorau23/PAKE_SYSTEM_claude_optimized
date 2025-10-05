@@ -292,7 +292,14 @@ jobs:
   build-summary:
     name: 📊 Build Summary
     runs-on: ubuntu-latest
-    needs: [validate-lockfile, frontend-build, bridge-build, security-audit, reproducible-build-test]
+    needs:
+      [
+        validate-lockfile,
+        frontend-build,
+        bridge-build,
+        security-audit,
+        reproducible-build-test,
+      ]
     if: always()
     steps:
       - name: Checkout code

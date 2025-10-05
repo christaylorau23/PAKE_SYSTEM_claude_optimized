@@ -2,33 +2,33 @@ name: DAST Security Scan
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ['main', 'develop']
     paths:
-      - "src/**"
-      - "package.json"
-      - "pyproject.toml"
-      - "requirements.txt"
+      - 'src/**'
+      - 'package.json'
+      - 'pyproject.toml'
+      - 'requirements.txt'
   pull_request:
-    branches: ["main", "develop"]
+    branches: ['main', 'develop']
     paths:
-      - "src/**"
-      - "package.json"
-      - "pyproject.toml"
-      - "requirements.txt"
+      - 'src/**'
+      - 'package.json'
+      - 'pyproject.toml'
+      - 'requirements.txt'
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment"
+        description: 'Target environment'
         required: true
-        default: "staging"
+        default: 'staging'
         type: choice
-        options: ["staging", "production"]
+        options: ['staging', 'production']
       scan_type:
-        description: "Scan type"
+        description: 'Scan type'
         required: true
-        default: "full"
+        default: 'full'
         type: choice
-        options: ["quick", "full", "custom"]
+        options: ['quick', 'full', 'custom']
 
 env:
   ZAP_HOST: localhost
@@ -47,13 +47,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install Python dependencies
         run: |
@@ -129,7 +129,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install security analysis tools
         run: |
@@ -173,7 +173,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install notification tools
         run: |

@@ -4,155 +4,155 @@
 version: 2
 updates:
   # Python dependencies (Poetry)
-  - package-ecosystem: "pip"
-    directory: "/"
+  - package-ecosystem: 'pip'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "UTC"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
     open-pull-requests-limit: 10
     reviewers:
-      - "chris"
+      - 'chris'
     assignees:
-      - "chris"
+      - 'chris'
     commit-message:
-      prefix: "deps"
-      include: "scope"
+      prefix: 'deps'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "python"
+      - 'dependencies'
+      - 'python'
     ignore:
       # Ignore major version updates that might break compatibility
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       # Group security updates together
       security-updates:
         patterns:
-          - "*"
+          - '*'
         update-types:
-          - "security"
+          - 'security'
       # Group FastAPI ecosystem updates
       fastapi-ecosystem:
         patterns:
-          - "fastapi"
-          - "uvicorn"
-          - "starlette"
-          - "pydantic"
+          - 'fastapi'
+          - 'uvicorn'
+          - 'starlette'
+          - 'pydantic'
       # Group database-related updates
       database-ecosystem:
         patterns:
-          - "sqlalchemy"
-          - "asyncpg"
-          - "alembic"
-          - "psycopg2-binary"
+          - 'sqlalchemy'
+          - 'asyncpg'
+          - 'alembic'
+          - 'psycopg2-binary'
       # Group testing framework updates
       testing-ecosystem:
         patterns:
-          - "pytest*"
-          - "coverage"
-          - "factory-boy"
-          - "faker"
+          - 'pytest*'
+          - 'coverage'
+          - 'factory-boy'
+          - 'faker'
 
   # Node.js dependencies (Yarn)
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "UTC"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
     open-pull-requests-limit: 10
     reviewers:
-      - "chris"
+      - 'chris'
     assignees:
-      - "chris"
+      - 'chris'
     commit-message:
-      prefix: "deps"
-      include: "scope"
+      prefix: 'deps'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "javascript"
-      - "typescript"
+      - 'dependencies'
+      - 'javascript'
+      - 'typescript'
     ignore:
       # Ignore major version updates that might break compatibility
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       # Group security updates together
       security-updates:
         patterns:
-          - "*"
+          - '*'
         update-types:
-          - "security"
+          - 'security'
       # Group ESLint ecosystem updates
       eslint-ecosystem:
         patterns:
-          - "eslint*"
-          - "@typescript-eslint/*"
+          - 'eslint*'
+          - '@typescript-eslint/*'
       # Group React ecosystem updates
       react-ecosystem:
         patterns:
-          - "react*"
-          - "@types/react*"
+          - 'react*'
+          - '@types/react*'
       # Group testing framework updates
       testing-ecosystem:
         patterns:
-          - "jest*"
-          - "@testing-library/*"
-          - "supertest"
+          - 'jest*'
+          - '@testing-library/*'
+          - 'supertest'
 
   # GitHub Actions dependencies
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "UTC"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
     open-pull-requests-limit: 5
     reviewers:
-      - "chris"
+      - 'chris'
     assignees:
-      - "chris"
+      - 'chris'
     commit-message:
-      prefix: "ci"
-      include: "scope"
+      prefix: 'ci'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "github-actions"
+      - 'dependencies'
+      - 'github-actions'
     groups:
       # Group security updates together
       security-updates:
         patterns:
-          - "*"
+          - '*'
         update-types:
-          - "security"
+          - 'security'
 
   # Docker dependencies
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: 'docker'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "UTC"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
     open-pull-requests-limit: 5
     reviewers:
-      - "chris"
+      - 'chris'
     assignees:
-      - "chris"
+      - 'chris'
     commit-message:
-      prefix: "docker"
-      include: "scope"
+      prefix: 'docker'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "docker"
+      - 'dependencies'
+      - 'docker'
     groups:
       # Group security updates together
       security-updates:
         patterns:
-          - "*"
+          - '*'
         update-types:
-          - "security"
+          - 'security'

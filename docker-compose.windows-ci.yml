@@ -31,11 +31,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'          # Allocate 0.5 CPU cores to PostgreSQL
-          memory: 1g           # Allocate 1GB RAM to PostgreSQL
+          cpus: '0.5' # Allocate 0.5 CPU cores to PostgreSQL
+          memory: 1g # Allocate 1GB RAM to PostgreSQL
         reservations:
-          cpus: '0.25'         # Reserve 0.25 CPU cores
-          memory: 512m         # Reserve 512MB RAM
+          cpus: '0.25' # Reserve 0.25 CPU cores
+          memory: 512m # Reserve 512MB RAM
     networks:
       - pake-windows-ci-network
 
@@ -55,11 +55,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'        # Allocate 0.25 CPU cores to Redis
-          memory: 256m         # Allocate 256MB RAM to Redis
+          cpus: '0.25' # Allocate 0.25 CPU cores to Redis
+          memory: 256m # Allocate 256MB RAM to Redis
         reservations:
-          cpus: '0.1'          # Reserve 0.1 CPU cores
-          memory: 128m         # Reserve 128MB RAM
+          cpus: '0.1' # Reserve 0.1 CPU cores
+          memory: 128m # Reserve 128MB RAM
     networks:
       - pake-windows-ci-network
 
@@ -77,7 +77,7 @@ services:
       ENVIRONMENT: 'windows-ci-simulation'
       LOG_LEVEL: 'info'
       JWT_SECRET_KEY: 'windows-ci-simulation-secret-key'
-      PYTEST_WORKERS: '1'      # Windows typically uses 1 worker
+      PYTEST_WORKERS: '1' # Windows typically uses 1 worker
       PYTEST_TIMEOUT: '300'
       PYTEST_MAX_FAILURES: '3'
       # Windows-specific environment variables
@@ -103,11 +103,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'            # Simulate Windows: 2 CPU cores
-          memory: 7g           # Simulate Windows: 7GB RAM
+          cpus: '2' # Simulate Windows: 2 CPU cores
+          memory: 7g # Simulate Windows: 7GB RAM
         reservations:
-          cpus: '1'            # Reserve 1 CPU core
-          memory: 2g           # Reserve 2GB RAM
+          cpus: '1' # Reserve 1 CPU core
+          memory: 2g # Reserve 2GB RAM
     networks:
       - pake-windows-ci-network
     command: >

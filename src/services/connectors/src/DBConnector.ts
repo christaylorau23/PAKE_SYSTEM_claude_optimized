@@ -414,13 +414,16 @@ export class DBConnector extends Connector {
 
     switch (request.type) {
       case ConnectorRequestType.SELECT: {
-        const columns = params.columns ?
-          params.columns.map(col => this.sanitizeIdentifier(col)).join(', ') : '*';
+        const columns = params.columns
+          ? params.columns.map(col => this.sanitizeIdentifier(col)).join(', ')
+          : '*';
         const whereClause = this.buildWhereClause(params.where);
-        const orderClause = params.orderBy ?
-          `ORDER BY ${this.sanitizeIdentifier(params.orderBy)}` : '';
-        const limitClause = params.limit ?
-          `LIMIT ${this.sanitizeNumericValue(params.limit)}` : '';
+        const orderClause = params.orderBy
+          ? `ORDER BY ${this.sanitizeIdentifier(params.orderBy)}`
+          : '';
+        const limitClause = params.limit
+          ? `LIMIT ${this.sanitizeNumericValue(params.limit)}`
+          : '';
 
         return {
           sql: `SELECT ${columns} FROM ${tableName} ${whereClause} ${orderClause} ${limitClause}`.trim(),
@@ -429,7 +432,9 @@ export class DBConnector extends Connector {
       }
 
       case ConnectorRequestType.INSERT: {
-        const insertColumns = Object.keys(params.data).map(col => this.sanitizeIdentifier(col));
+        const insertColumns = Object.keys(params.data).map(col =>
+          this.sanitizeIdentifier(col)
+        );
         const placeholders = insertColumns
           .map((_, i) => `$${i + 1}`)
           .join(', ');
@@ -441,7 +446,9 @@ export class DBConnector extends Connector {
       }
 
       case ConnectorRequestType.UPDATE: {
-        const updateColumns = Object.keys(params.data).map(col => this.sanitizeIdentifier(col));
+        const updateColumns = Object.keys(params.data).map(col =>
+          this.sanitizeIdentifier(col)
+        );
         const setClause = updateColumns
           .map((col, i) => `${col} = $${i + 1}`)
           .join(', ');
@@ -671,7 +678,10 @@ export class DBConnector extends Connector {
     if (message.includes('connection') || message.includes('connect')) {
       return ResponseStatus.SERVICE_UNAVAILABLE;
     }
-    if (message.includes('authentication') || message.includes('REDACTED_SECRET')) {
+    if (
+      message.includes('authentication') ||
+      message.includes('REDACTED_SECRET')
+    ) {
       return ResponseStatus.UNAUTHORIZED;
     }
     if (message.includes('permission') || message.includes('access')) {

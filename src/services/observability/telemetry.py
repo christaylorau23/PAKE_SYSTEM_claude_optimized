@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 # OpenTelemetry imports
 from opentelemetry import metrics, trace
@@ -99,7 +99,7 @@ class TelemetryConfig:
 class TelemetrySystem:
     """Centralized telemetry system for PAKE observability."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: TelemetryConfig = None) -> None:
         self.config = config or TelemetryConfig()
 
         # OpenTelemetry components
@@ -109,7 +109,7 @@ class TelemetrySystem:
         self.meter = None
 
         # Custom metrics
-        self.custom_metrics: Dict[str, Any] = {}
+        self.custom_metrics: dict[str, Any] = {}
         self.metric_callbacks: dict[str, Callable] = {}
 
         # Performance tracking
@@ -147,7 +147,8 @@ class TelemetrySystem:
                     await self._setup_tracing(resource)
                 except Exception as e:
                     logger.warning(
-                        "Failed to setup tracing: %s. Continuing without tracing.", e,
+                        "Failed to setup tracing: %s. Continuing without tracing.",
+                        e,
                     )
 
             # Initialize metrics
@@ -156,7 +157,8 @@ class TelemetrySystem:
                     await self._setup_metrics(resource)
                 except Exception as e:
                     logger.warning(
-                        "Failed to setup metrics: %s. Continuing without metrics.", e,
+                        "Failed to setup metrics: %s. Continuing without metrics.",
+                        e,
                     )
 
             # Setup instrumentation
@@ -164,7 +166,8 @@ class TelemetrySystem:
                 await self._setup_instrumentation()
             except Exception as e:
                 logger.warning(
-                    "Failed to setup instrumentation: %s. Continuing without instrumentation.", e,
+                    "Failed to setup instrumentation: %s. Continuing without instrumentation.",
+                    e,
                 )
 
             # Setup structured logging
@@ -173,7 +176,8 @@ class TelemetrySystem:
                     await self._setup_structured_logging()
                 except Exception as e:
                     logger.warning(
-                        "Failed to setup structured logging: %s. Continuing without structured logging.", e,
+                        "Failed to setup structured logging: %s. Continuing without structured logging.",
+                        e,
                     )
 
             # Start background tasks
@@ -184,7 +188,8 @@ class TelemetrySystem:
                 ]
             except Exception as e:
                 logger.warning(
-                    "Failed to start background tasks: %s. Continuing without background tasks.", e,
+                    "Failed to start background tasks: %s. Continuing without background tasks.",
+                    e,
                 )
                 self._background_tasks = []
 
@@ -227,6 +232,16 @@ class TelemetrySystem:
 
     async def _setup_tracing(self) -> None:
         """Setup distributed tracing."""
+        from opentelemetry.sdk.resources import Resource
+
+        resource = Resource.create(
+            {
+                "service.name": self.config.service_name,
+                "service.version": self.config.service_version,
+                "deployment.environment": self.config.environment,
+            }
+        )
+
         self.tracer_provider = TracerProvider(resource=resource)
 
         # Add exporters
@@ -276,12 +291,23 @@ class TelemetrySystem:
             prometheus_reader = PrometheusMetricReader(port=self.config.prometheus_port)
             readers.append(prometheus_reader)
             logger.info(
-                "Prometheus metrics available at http://localhost:%s/metrics", self.config.prometheus_port,
+                "Prometheus metrics available at http://localhost:%s/metrics",
+                self.config.prometheus_port,
             )
         except Exception as e:
             logger.warning("Failed to setup Prometheus reader: %s", e)
 
         # Create meter provider
+        from opentelemetry.sdk.resources import Resource
+
+        resource = Resource.create(
+            {
+                "service.name": self.config.service_name,
+                "service.version": self.config.service_version,
+                "deployment.environment": self.config.environment,
+            }
+        )
+
         self.meter_provider = MeterProvider(resource=resource, metric_readers=readers)
 
         # Set global meter provider
@@ -662,8 +688,11 @@ class TelemetrySystem:
 
                 # Log performance statistics
                 logger.debug(
-                    "Operation %s: avg=%.3fs, max=%.3fs, min=%.3fs", operation, avg_time,
-                        max_time, min_time,
+                    "Operation %s: avg=%.3fs, max=%.3fs, min=%.3fs",
+                    operation,
+                    avg_time,
+                    max_time,
+                    min_time,
                 )
 
     async def _collect_system_metrics(self) -> None:
@@ -677,7 +706,7 @@ class TelemetrySystem:
         except ImportError:
             logger.warning("psutil not available for system metrics")
 
-    async def _check_system_health(self) -> Dict[str, Any]:
+    async def _check_system_health(self) -> dict[str, Any]:
         """Check overall system health."""
         health_status = {
             "healthy": True,
@@ -740,7 +769,7 @@ class TelemetrySystem:
         except ImportError:
             return [Observation(0.0)]
 
-    def get_telemetry_summary(self) -> Dict[str, Any]:
+    def get_telemetry_summary(self) -> dict[str, Any]:
         """Get telemetry system summary."""
         return {
             "service": self.config.service_name,

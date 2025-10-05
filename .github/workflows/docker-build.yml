@@ -13,10 +13,10 @@ name: 🐳 Docker Build & Security Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ['v*']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 env:
@@ -44,74 +44,74 @@ jobs:
       cache-key: ${{ steps.cache-key.outputs.key }}
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Full history for better caching
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better caching
 
-    - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: |
-          image=moby/buildkit:latest
-          network=host
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
 
-    - name: 🔑 Generate Cache Key
-      id: cache-key
-      run: |
-        echo "key=docker-build-${{ github.sha }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
-        echo "restore-keys=docker-build-${{ github.sha }}-,docker-build-" >> $GITHUB_OUTPUT
+      - name: 🔑 Generate Cache Key
+        id: cache-key
+        run: |
+          echo "key=docker-build-${{ github.sha }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "restore-keys=docker-build-${{ github.sha }}-,docker-build-" >> $GITHUB_OUTPUT
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🏗️ Build Base Python Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.production
-        target: production
-        push: false
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
-        cache-from: |
-          type=gha,scope=python-base
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:cache
-        cache-to: |
-          type=gha,scope=python-base,mode=max
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:cache,mode=max
-        build-args: |
-          BUILD_DATE=${{ env.BUILD_DATE }}
-          GIT_COMMIT=${{ env.GIT_COMMIT }}
-          VERSION=${{ env.VERSION }}
-        platforms: linux/amd64,linux/arm64
+      - name: 🏗️ Build Base Python Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          target: production
+          push: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
+          cache-from: |
+            type=gha,scope=python-base
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:cache
+          cache-to: |
+            type=gha,scope=python-base,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:cache,mode=max
+          build-args: |
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            GIT_COMMIT=${{ env.GIT_COMMIT }}
+            VERSION=${{ env.VERSION }}
+          platforms: linux/amd64,linux/arm64
 
-    - name: 🏗️ Build TypeScript Bridge Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.bridge.production
-        target: production
-        push: false
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:${{ env.GIT_COMMIT }}
-        cache-from: |
-          type=gha,scope=bridge-base
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:cache
-        cache-to: |
-          type=gha,scope=bridge-base,mode=max
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:cache,mode=max
-        build-args: |
-          BUILD_DATE=${{ env.BUILD_DATE }}
-          GIT_COMMIT=${{ env.GIT_COMMIT }}
-          VERSION=${{ env.VERSION }}
-        platforms: linux/amd64,linux/arm64
+      - name: 🏗️ Build TypeScript Bridge Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.bridge.production
+          target: production
+          push: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:${{ env.GIT_COMMIT }}
+          cache-from: |
+            type=gha,scope=bridge-base
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:cache
+          cache-to: |
+            type=gha,scope=bridge-base,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge-base:cache,mode=max
+          build-args: |
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            GIT_COMMIT=${{ env.GIT_COMMIT }}
+            VERSION=${{ env.VERSION }}
+          platforms: linux/amd64,linux/arm64
 
   # =============================================================================
   # Job 2: Security Scanning & Vulnerability Assessment
@@ -122,50 +122,50 @@ jobs:
     needs: build-base-images
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🔒 Build Security Scanner Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.production
-        target: security-scanner
-        push: false
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/security-scanner:${{ env.GIT_COMMIT }}
-        cache-from: type=gha,scope=security-scanner
-        cache-to: type=gha,scope=security-scanner,mode=max
+      - name: 🔒 Build Security Scanner Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          target: security-scanner
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/security-scanner:${{ env.GIT_COMMIT }}
+          cache-from: type=gha,scope=security-scanner
+          cache-to: type=gha,scope=security-scanner,mode=max
 
-    - name: 🛡️ Run Trivy Security Scan
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: 🛡️ Run Trivy Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-    - name: 📊 Upload Trivy Scan Results
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: 📊 Upload Trivy Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
-    - name: 🔍 Run Snyk Security Scan
-      uses: snyk/actions/docker@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
-        args: --severity-threshold=high
+      - name: 🔍 Run Snyk Security Scan
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ env.GIT_COMMIT }}
+          args: --severity-threshold=high
 
   # =============================================================================
   # Job 3: Parallel Service Builds
@@ -196,41 +196,41 @@ jobs:
             target: production
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🏗️ Build ${{ matrix.service }} Service
-      uses: docker/build-push-action@v5
-      with:
-        context: ${{ matrix.context }}
-        file: ${{ matrix.dockerfile }}
-        target: ${{ matrix.target }}
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ env.GIT_COMMIT }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ env.VERSION }}
-        cache-from: |
-          type=gha,scope=${{ matrix.service }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:cache
-        cache-to: |
-          type=gha,scope=${{ matrix.service }},mode=max
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:cache,mode=max
-        build-args: |
-          BUILD_DATE=${{ env.BUILD_DATE }}
-          GIT_COMMIT=${{ env.GIT_COMMIT }}
-          VERSION=${{ env.VERSION }}
-        platforms: linux/amd64,linux/arm64
+      - name: 🏗️ Build ${{ matrix.service }} Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ env.GIT_COMMIT }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ env.VERSION }}
+          cache-from: |
+            type=gha,scope=${{ matrix.service }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:cache
+          cache-to: |
+            type=gha,scope=${{ matrix.service }},mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:cache,mode=max
+          build-args: |
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            GIT_COMMIT=${{ env.GIT_COMMIT }}
+            VERSION=${{ env.VERSION }}
+          platforms: linux/amd64,linux/arm64
 
   # =============================================================================
   # Job 4: Image Optimization & Compression
@@ -242,38 +242,38 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🗜️ Optimize Python Image
-      run: |
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-          wagoodman/dive:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
+      - name: 🗜️ Optimize Python Image
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            wagoodman/dive:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
 
-    - name: 📊 Generate Image Analysis Report
-      run: |
-        echo "## 🐳 Docker Image Analysis Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Build Information" >> $GITHUB_STEP_SUMMARY
-        echo "- **Build Date**: ${{ env.BUILD_DATE }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Git Commit**: ${{ env.GIT_COMMIT }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Version**: ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Security Features Implemented" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Multi-stage builds for minimal attack surface" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Non-root user execution (pake:1000)" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Comprehensive .dockerignore for build context optimization" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Layer caching optimization for faster builds" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Security vulnerability scanning with Trivy and Snyk" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Registry caching for CI/CD efficiency" >> $GITHUB_STEP_SUMMARY
+      - name: 📊 Generate Image Analysis Report
+        run: |
+          echo "## 🐳 Docker Image Analysis Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Date**: ${{ env.BUILD_DATE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Commit**: ${{ env.GIT_COMMIT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Features Implemented" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Multi-stage builds for minimal attack surface" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Non-root user execution (pake:1000)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Comprehensive .dockerignore for build context optimization" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Layer caching optimization for faster builds" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Security vulnerability scanning with Trivy and Snyk" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Registry caching for CI/CD efficiency" >> $GITHUB_STEP_SUMMARY
 
   # =============================================================================
   # Job 5: Integration Testing with Built Images
@@ -284,42 +284,42 @@ jobs:
     needs: build-services
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🐳 Pull Built Images
-      run: |
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge:${{ env.GIT_COMMIT }}
+      - name: 🐳 Pull Built Images
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge:${{ env.GIT_COMMIT }}
 
-    - name: 🧪 Run Container Health Checks
-      run: |
-        # Test Python service health
-        docker run --rm -d --name pake-test \
-          -p 8000:8000 \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
+      - name: 🧪 Run Container Health Checks
+        run: |
+          # Test Python service health
+          docker run --rm -d --name pake-test \
+            -p 8000:8000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}
 
-        # Wait for service to start
-        sleep 30
+          # Wait for service to start
+          sleep 30
 
-        # Test health endpoint
-        curl -f http://localhost:8000/health || exit 1
+          # Test health endpoint
+          curl -f http://localhost:8000/health || exit 1
 
-        # Cleanup
-        docker stop pake-test
+          # Cleanup
+          docker stop pake-test
 
-    - name: 🔍 Run Security Tests
-      run: |
-        # Test non-root user execution
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }} \
-          sh -c 'id && test $(id -u) -eq 1000' || exit 1
+      - name: 🔍 Run Security Tests
+        run: |
+          # Test non-root user execution
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }} \
+            sh -c 'id && test $(id -u) -eq 1000' || exit 1
 
   # =============================================================================
   # Job 6: Deploy to Staging (if main branch)
@@ -332,21 +332,21 @@ jobs:
     environment: staging
 
     steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: 🔐 Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🚀 Deploy to Staging Environment
-      run: |
-        echo "Deploying images to staging environment..."
-        echo "Images deployed:"
-        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}"
-        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge:${{ env.GIT_COMMIT }}"
-        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ env.GIT_COMMIT }}"
-        # Add actual deployment commands here
+      - name: 🚀 Deploy to Staging Environment
+        run: |
+          echo "Deploying images to staging environment..."
+          echo "Images deployed:"
+          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-main:${{ env.GIT_COMMIT }}"
+          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bridge:${{ env.GIT_COMMIT }}"
+          echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ env.GIT_COMMIT }}"
+          # Add actual deployment commands here
