@@ -3,15 +3,16 @@ REST API endpoints for the intelligent content curation system.
 Provides HTTP endpoints for content discovery, recommendations, and user feedback.
 """
 
-import logging
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
-import uvicorn
+import aiohttp
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+import uvicorn
 
 from ..integration.curation_orchestrator import (
     CurationOrchestrator,
@@ -156,7 +157,7 @@ async def health_check(orch: CurationOrchestrator = Depends(get_orchestrator)):
     try:
         health = await orch.get_system_health()
         return SystemHealthModel(**asdict(health))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting system health: %s", e)
         raise HTTPException(status_code=500, detail="Health check failed")
 
@@ -208,7 +209,7 @@ async def curate_content(
             created_at=response.created_at,
         )
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error processing curation request: %s", e)
         raise HTTPException(status_code=500, detail=f"Curation failed: {str(e)}")
 
@@ -231,7 +232,7 @@ async def submit_feedback(
             return {"status": "success", "message": "Feedback processed successfully"}
         raise HTTPException(status_code=400, detail="Failed to process feedback")
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error processing feedback: %s", e)
         raise HTTPException(
             status_code=500,
@@ -281,7 +282,7 @@ async def get_user_recommendations(
             "processing_time_ms": response.processing_time_ms,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting recommendations for user %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,
@@ -313,7 +314,7 @@ async def retrain_models(
             "results": results,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error retraining models: %s", e)
         raise HTTPException(
             status_code=500,
@@ -337,7 +338,7 @@ async def get_system_stats(orch: CurationOrchestrator = Depends(get_orchestrator
             "last_updated": health.last_updated,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting system stats: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
@@ -357,7 +358,7 @@ async def get_content_quality(
             "message": "Content quality analysis not yet implemented",
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting content quality for %s: %s", content_id, e)
         raise HTTPException(
             status_code=500,
@@ -385,7 +386,7 @@ async def get_user_profile(
             "updated_at": user_profile.updated_at,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting user profile for %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,
@@ -440,7 +441,7 @@ async def update_user_profile(
             },
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error updating user profile for %s: %s", user_id, e)
         raise HTTPException(
             status_code=500,

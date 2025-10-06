@@ -16,7 +16,7 @@ def safe_print(self) -> None:
     try:
         print(message)
     except UnicodeEncodeError:
-        safe_message = message.encode("ascii", "replace").decode("ascii")
+        safe_message = self.message.encode("ascii", "replace").decode("ascii")
         print(safe_message)
 
 

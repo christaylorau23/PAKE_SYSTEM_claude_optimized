@@ -7,13 +7,13 @@ from semantic search and content summarization for intelligent dashboards.
 """
 
 import asyncio
-import hashlib
-import logging
-import statistics
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import hashlib
+import logging
+import statistics
+from typing import Any, Dict, List
 
 # Import services - handle both relative and absolute imports
 try:
@@ -808,7 +808,7 @@ class MLAnalyticsAggregationService:
                 "graph_statistics": graph_stats,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to generate knowledge graph: %s", e)
             return {
                 "graph_data": {"nodes": [], "edges": [], "metadata": {}},

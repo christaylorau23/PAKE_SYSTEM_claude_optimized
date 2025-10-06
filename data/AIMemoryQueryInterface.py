@@ -1,9 +1,10 @@
+batch
 """AI Memory Query Interface and API Endpoints
 Provides high-level interface for AI memory operations and REST API endpoints.
 """
 
-import logging
 from datetime import UTC, datetime
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -56,7 +57,7 @@ class AIMemoryQueryInterface:
     Provides unified access to vector memory database functionality.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, vector_db: Any = None) -> None:
         self.vector_db = vector_db
         self.logger = logging.getLogger("ai-memory-interface")
         self.query_cache = {}
@@ -110,7 +111,7 @@ class AIMemoryQueryInterface:
 
             return enhanced_results
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Memory query failed", query=query, error=str(error))
             return {
                 "query": query,
@@ -296,7 +297,7 @@ class AIMemoryQueryInterface:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to store conversation memory",
                 conversation_id=conversation_id,
@@ -367,7 +368,7 @@ class AIMemoryQueryInterface:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to store interaction memory",
                 interaction_id=interaction_id,
@@ -404,7 +405,7 @@ class AIMemoryQueryInterface:
 
             return context
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to get conversation history",
                 conversation_id=conversation_id,
@@ -442,7 +443,7 @@ class AIMemoryQueryInterface:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Knowledge extraction failed", source_id=source_id, error=str(error)
             )
@@ -467,7 +468,7 @@ class AIMemoryQueryInterface:
 
             return stats
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Failed to get memory stats", error=str(error))
             return {"error": str(error), "timestamp": datetime.now(UTC).isoformat()}
 
@@ -485,7 +486,7 @@ class AIMemoryQueryInterface:
 
             return health
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Health check failed", error=str(error))
             return {
                 "status": "unhealthy",
@@ -515,7 +516,7 @@ def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
         return JSONResponse(content=stats)
 
     @app.post("/query")
-    async def query_memory(self) -> None:
+    async def query_memory(self, query_request: Any) -> None:
         """Query memory with semantic search."""
         result = await memory_interface.ask_memory(
             query=query_request.query,
@@ -526,7 +527,7 @@ def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
         return JSONResponse(content=result)
 
     @app.post("/conversation")
-    async def store_conversation(self) -> None:
+    async def store_conversation(self, conversation) -> None:
         """Store conversation memory."""
         result = await memory_interface.remember_conversation(
             conversation_id=conversation.conversation_id,
@@ -564,7 +565,7 @@ def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
         return JSONResponse(content=result)
 
     @app.post("/extract")
-    async def extract_knowledge(self) -> None:
+    async def extract_knowledge(self, extraction) -> None:
         """Extract and index knowledge from content."""
         result = await memory_interface.extract_knowledge(
             content=extraction.content,
@@ -632,7 +633,7 @@ def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
                     "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
-        except Exception as error:
+        except (json.JSONDecodeError, ValueError) as error:
             return JSONResponse(
                 status_code=500,
                 content={
@@ -665,6 +666,6 @@ async def create_memory_interface(
 
         return interface
 
-    except Exception as error:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
         logging.error("Failed to create memory interface: %s", error)
         raise

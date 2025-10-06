@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Social Media Listening System
@@ -5,14 +6,14 @@ Advanced social listening, sentiment analysis, and trend detection
 """
 
 import asyncio
+from collections import Counter, defaultdict
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 import os
 import re
 import sqlite3
-from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
 
 # NLP and sentiment analysis
 try:
@@ -21,10 +22,10 @@ try:
     import praw
     import requests
     import seaborn as sns
-    import tweepy
     from sklearn.cluster import KMeans
     from sklearn.feature_extraction.text import TfidfVectorizer
     from textblob import TextBlob
+    import tweepy
     from wordcloud import WordCloud
 except ImportError:
     print(
@@ -266,7 +267,7 @@ class SocialListeningSystem:
                     wait_on_rate_limit=True,
                 )
                 self.logger.info("Twitter listening client initialized")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to initialize Twitter client: %s", e)
 
         # Reddit client
@@ -284,7 +285,7 @@ class SocialListeningSystem:
                     user_agent=reddit_config["user_agent"],
                 )
                 self.logger.info("Reddit listening client initialized")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to initialize Reddit client: %s", e)
 
     async def add_monitoring_keywords(self) -> None:
@@ -326,7 +327,7 @@ class SocialListeningSystem:
                 # Wait before next cycle
                 await asyncio.sleep(300)  # 5 minutes between cycles
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in listening cycle: %s", e)
                 await asyncio.sleep(60)  # Wait 1 minute before retrying
 
@@ -364,7 +365,7 @@ class SocialListeningSystem:
                 # Rate limiting
                 await asyncio.sleep(2)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Twitter listening error: %s", e)
 
     async def _process_twitter_mention(
@@ -418,7 +419,7 @@ class SocialListeningSystem:
                 reach=tweet.public_metrics.get("impression_count", 0),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error processing Twitter mention: %s", e)
             return None
 
@@ -454,7 +455,7 @@ class SocialListeningSystem:
 
                         await asyncio.sleep(1)  # Rate limiting
 
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         self.logger.warning(
                             "Error searching subreddit %s: %s",
                             subreddit_name,
@@ -462,7 +463,7 @@ class SocialListeningSystem:
                         )
                         continue
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Reddit listening error: %s", e)
 
     async def _process_reddit_mention(
@@ -504,7 +505,7 @@ class SocialListeningSystem:
                 reach=submission.view_count or 0,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error processing Reddit mention: %s", e)
             return None
 
@@ -534,7 +535,7 @@ class SocialListeningSystem:
 
             return compound_score, label
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.warning("Sentiment analysis failed: %s", e)
             return 0.0, "neutral"
 
@@ -580,7 +581,7 @@ class SocialListeningSystem:
             word_freq = Counter(keywords)
             return [word for word, count in word_freq.most_common(10)]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.warning("Keyword extraction failed: %s", e)
             return []
 
@@ -598,23 +599,23 @@ class SocialListeningSystem:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
-                mention.id,
-                mention.platform,
-                mention.author,
-                mention.content,
-                mention.timestamp,
-                mention.url,
-                json.dumps(mention.engagement_metrics),
-                mention.sentiment_score,
-                mention.sentiment_label,
-                json.dumps(mention.keywords),
-                json.dumps(mention.hashtags),
-                json.dumps(mention.mentions),
-                mention.language,
-                mention.location,
-                mention.influence_score,
-                mention.reach,
-                mention.verified_author,
+                self.mention.id,
+                self.mention.platform,
+                self.mention.author,
+                self.mention.content,
+                self.mention.timestamp,
+                self.mention.url,
+                json.dumps(self.mention.engagement_metrics),
+                self.mention.sentiment_score,
+                self.mention.sentiment_label,
+                json.dumps(self.mention.keywords),
+                json.dumps(self.mention.hashtags),
+                json.dumps(self.mention.mentions),
+                self.mention.language,
+                self.mention.location,
+                self.mention.influence_score,
+                self.mention.reach,
+                self.mention.verified_author,
                 json.dumps(asdict(mention)),
             ),
         )
@@ -628,7 +629,7 @@ class SocialListeningSystem:
 
         # Negative sentiment alert
         if (
-            mention.sentiment_label in ["negative", "very_negative"]
+            self.mention.sentiment_label in ["negative", "very_negative"]
             and mention.influence_score > 10
         ):
             alerts.append(
@@ -655,7 +656,7 @@ class SocialListeningSystem:
 
         # Viral content alert
         engagement_total = (
-            sum(mention.engagement_metrics.values())
+            sum(self.mention.engagement_metrics.values())
             if mention.engagement_metrics
             else 0
         )
@@ -684,7 +685,7 @@ class SocialListeningSystem:
         """,
             (
                 alert["type"],
-                mention.platform,
+                self.self.mention.platform,
                 mention.keywords[0] if mention.keywords else None,
                 alert["content"],
                 alert["severity"],
@@ -769,7 +770,7 @@ class SocialListeningSystem:
                 for topic in trending[:10]:  # Top 10 per platform
                     await self._store_trending_topic(topic)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Trend detection error: %s", e)
 
     async def _store_trending_topic(self) -> None:
@@ -785,15 +786,15 @@ class SocialListeningSystem:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
-                topic.topic,
-                topic.platform,
-                topic.mention_count,
-                topic.growth_rate,
-                json.dumps(topic.sentiment_distribution),
-                topic.avg_engagement,
-                json.dumps(topic.top_keywords),
-                json.dumps(topic.sample_posts),
-                topic.trend_score,
+                self.topic.topic,
+                self.topic.platform,
+                self.topic.mention_count,
+                self.topic.growth_rate,
+                json.dumps(self.topic.sentiment_distribution),
+                self.topic.avg_engagement,
+                json.dumps(self.topic.top_keywords),
+                json.dumps(self.topic.sample_posts),
+                self.topic.trend_score,
                 topic.category,
                 datetime.now(UTC).date(),
             ),

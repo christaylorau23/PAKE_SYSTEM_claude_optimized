@@ -6,10 +6,10 @@ Enforces testing pyramid and coverage requirements
 
 import json
 import logging
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Configure logging
@@ -114,7 +114,7 @@ class TestExecutor:
 
     def parse_pytest_output(self) -> None:
         """Parse pytest output to extract test results"""
-        lines = output.split("\n")
+        lines = self.output.split("\n")
 
         # Find test results
         for line in lines:
@@ -486,7 +486,7 @@ def main(self) -> None:
             sys.exit(0)
         else:
             sys.exit(1)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         sys.exit(1)
 

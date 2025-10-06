@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Social Media Distribution Network
@@ -5,22 +6,22 @@ Automated multi-platform posting system with content optimization
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import datetime
 import json
 import logging
 import os
 import time
-from dataclasses import dataclass
-from datetime import datetime
 
 # Platform-specific imports (install with pip install -r requirements_social.txt)
 try:
     from urllib.parse import urlparse
 
+    from PIL import Image
     import praw
     import requests
     import schedule
     import tweepy
-    from PIL import Image
 except ImportError as e:
     logging.warning("Some dependencies not installed: %s", e)
     logging.info("Run: pip install -r requirements_social.txt")
@@ -116,7 +117,7 @@ class SocialMediaDistributor:
                     wait_on_rate_limit=True,
                 )
                 self.logger.info("Twitter/X client initialized")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Twitter initialization failed: %s", e)
 
         # Reddit initialization
@@ -130,7 +131,7 @@ class SocialMediaDistributor:
                     REDACTED_SECRET=self.config["reddit"]["REDACTED_SECRET"],
                 )
                 self.logger.info("Reddit client initialized")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Reddit initialization failed: %s", e)
 
         # Instagram Graph API initialization
@@ -186,7 +187,7 @@ class SocialMediaDistributor:
                 result = await task
                 results[platform_name] = result
                 self.logger.info("Successfully posted to %s", platform_name)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 results[platform_name] = {"error": str(e)}
                 self.logger.error("Failed to post to %s: %s", platform_name, e)
 
@@ -269,7 +270,7 @@ class SocialMediaDistributor:
                 "url": f"https://twitter.com/user/status/{tweet.data['id']}",
             }
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             msg = f"Twitter posting failed: {e}"
             raise Exception(msg)
 
@@ -309,7 +310,7 @@ class SocialMediaDistributor:
 
             return {"success": True, "submissions": results}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"Reddit posting failed: {e}"
             raise Exception(msg)
 
@@ -368,7 +369,7 @@ class SocialMediaDistributor:
                 "url": f"https://instagram.com/p/{publish_data.get('id')}",
             }
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             msg = f"Instagram posting failed: {e}"
             raise Exception(msg)
 
@@ -425,7 +426,7 @@ class SocialMediaDistributor:
                 msg,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"LinkedIn posting failed: {e}"
             raise Exception(msg)
 

@@ -4,15 +4,16 @@ Enterprise-grade security enforcement for multi-tenant isolation.
 """
 
 import asyncio
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 import re
 import time
+from typing import Any, Dict, List
 import uuid
-from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any
+import pydantic
 
 from src.middleware.tenant_context import (
     get_current_request_context,
@@ -292,7 +293,7 @@ class TenantIsolationEnforcer:
                 "message": "Access granted",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Security validation error: %s", e)
             violation = await self._create_security_violation(
                 violation_type="security_validation_error",
@@ -371,7 +372,7 @@ class TenantIsolationEnforcer:
 
             return {"clean": True, "message": "Response data validated"}
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Response data scanning error: %s", e)
             return {"clean": False, "error": str(e)}
 
@@ -477,7 +478,7 @@ class TenantIsolationEnforcer:
 
             return {"safe": True, "message": "Input parameters validated"}
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Input validation error: %s", e)
             return {"safe": False, "error": str(e)}
 
@@ -566,7 +567,7 @@ class TenantIsolationEnforcer:
                 )
                 await self._handle_security_violation(violation, block=False)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication pattern monitoring error: %s", e)
 
     # Helper methods
@@ -645,7 +646,7 @@ class TenantIsolationEnforcer:
                 "warning": f"Security concern logged: {violation.violation_type}",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error handling security violation: %s", e)
             return {"allowed": False, "blocked": True, "error": "Security system error"}
 
@@ -807,7 +808,7 @@ class TenantIsolationEnforcer:
             self.security_policies[policy_name] = policy
             logger.info("Security policy updated: %s", policy_name)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update security policy %s: %s", policy_name, e)
             return False
 
@@ -843,7 +844,7 @@ class TenantIsolationEnforcer:
                 "blocked_ips": len(self.blocked_ips),
                 "service": "tenant_isolation_enforcer",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
@@ -867,11 +868,11 @@ def get_security_enforcer() -> TenantIsolationEnforcer:
 # Decorator for automatic security enforcement
 
 
-def enforce_tenant_isolation(self) -> None:
+def enforce_tenant_isolation(operation: str, resource: str) -> Callable:
     """Decorator to enforce tenant isolation on functions."""
 
     def decorator(func: Callable) -> Callable:
-        async def wrapper(self) -> None:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             enforcer = get_security_enforcer()
 
             # Extract tenant ID from kwargs or context

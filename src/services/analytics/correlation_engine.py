@@ -5,12 +5,12 @@ time series, and entities with statistical significance testing and
 causal relationship inference.
 """
 
-import logging
-import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -224,7 +224,7 @@ class CorrelationEngine:
                 additional_metrics=additional_metrics,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation analysis failed: %s", e)
             # Return empty result on error
             return CorrelationResult(
@@ -258,7 +258,7 @@ class CorrelationEngine:
 
             return {"correlation": correlation, "p_value": p_value}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Pearson correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
@@ -278,7 +278,7 @@ class CorrelationEngine:
 
             return {"correlation": correlation, "p_value": p_value}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Spearman correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
@@ -298,7 +298,7 @@ class CorrelationEngine:
 
             return {"correlation": correlation, "p_value": p_value}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Kendall correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
@@ -313,7 +313,7 @@ class CorrelationEngine:
             # In a full implementation, you'd control for other variables
             return await self._pearson_correlation(arr_a, arr_b)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Partial correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
@@ -347,7 +347,7 @@ class CorrelationEngine:
 
             return {"correlation": correlation, "p_value": p_value}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Distance correlation failed: %s", e)
             return {"correlation": 0.0, "p_value": 1.0}
 
@@ -382,7 +382,7 @@ class CorrelationEngine:
 
             return (ci_lower, ci_upper)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Confidence interval calculation failed: %s", e)
             return (0.0, 0.0)
 
@@ -527,7 +527,7 @@ class CorrelationEngine:
                 lead_lag_relationship=lead_lag_relationship,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Time series correlation analysis failed: %s", e)
             return TimeSeriesCorrelation(
                 series_a_name=series_a_name,
@@ -605,7 +605,7 @@ class CorrelationEngine:
                 principal_components=pca_result,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation matrix analysis failed: %s", e)
             return CorrelationMatrix(
                 metrics=[],
@@ -654,7 +654,7 @@ class CorrelationEngine:
 
             return cluster_groups
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Metric clustering failed: %s", e)
             return [[metric] for metric in metrics]
 
@@ -683,7 +683,7 @@ class CorrelationEngine:
                 "component_loadings": pca.components_.tolist(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("PCA analysis failed: %s", e)
             return {}
 
@@ -771,7 +771,7 @@ class CorrelationEngine:
                                 ),
                             )
 
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.warning(
                             "Causal analysis failed for %s -> %s: %s",
                             metric_a,
@@ -785,7 +785,7 @@ class CorrelationEngine:
 
             return causal_relationships
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Causal relationship detection failed: %s", e)
             return []
 
@@ -885,7 +885,7 @@ class CorrelationEngine:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation analysis failed: %s", e)
             return {
                 "correlations": [],
@@ -971,7 +971,7 @@ class CorrelationEngine:
 
             return mock_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Mock metrics data generation failed: %s", e)
             # Return minimal data
             return {metric: [100.0] for metric in metrics}
@@ -1010,7 +1010,7 @@ class CorrelationEngine:
                 "cache_size": len(self.correlation_cache),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

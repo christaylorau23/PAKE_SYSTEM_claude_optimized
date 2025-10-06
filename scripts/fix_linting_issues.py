@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Comprehensive Python Linting Fixer for PAKE System
@@ -20,13 +21,13 @@ Usage:
 
 import argparse
 import ast
+from datetime import UTC, datetime
 import logging
 import os
 import re
 import shutil
 import subprocess
 import sys
-from datetime import UTC, datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,7 +104,7 @@ class PythonLintingFixer:
                     return f.read()
             except UnicodeDecodeError:
                 continue
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error reading %s: %s", file_path, e)
                 return None
 
@@ -116,7 +117,7 @@ class PythonLintingFixer:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             return True
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error writing %s: %s", file_path, e)
             return False
 
@@ -135,24 +136,24 @@ class PythonLintingFixer:
 
         class NameVisitor(ast.NodeVisitor):
             def visit_Name(self) -> None:
-                used_names.add(node.id)
+                used_names.add(self.node.id)
                 self.generic_visit(node)
 
             def visit_Attribute(self) -> None:
                 # Handle module.attribute usage
-                if isinstance(node.value, ast.Name):
-                    used_names.add(node.value.id)
+                if isinstance(self.node.value, ast.Name):
+                    used_names.add(self.node.value.id)
                 self.generic_visit(node)
 
             def visit_Call(self) -> None:
                 # Handle function calls
-                if isinstance(node.func, ast.Name):
-                    used_names.add(node.func.id)
-                elif isinstance(node.func, ast.Attribute) and isinstance(
+                if isinstance(self.node.func, ast.Name):
+                    used_names.add(self.node.func.id)
+                elif isinstance(self.node.func, ast.Attribute) and isinstance(
                     node.func.value,
                     ast.Name,
                 ):
-                    used_names.add(node.func.value.id)
+                    used_names.add(self.node.func.value.id)
                 self.generic_visit(node)
 
         visitor = NameVisitor()
@@ -645,7 +646,7 @@ class PythonLintingFixer:
             self.processed_files += 1
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error processing %s: %s", file_path, e)
             self.errors.append(f"{file_path}: {e}")
             return False
@@ -770,7 +771,7 @@ def main(self) -> None:
     except KeyboardInterrupt:
         logger.info("\nOperation cancelled by user")
         return 1
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         return 1
 

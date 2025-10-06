@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import aiohttp
 """PAKE System - Model Serving Service
 Phase 9B: Advanced AI/ML Pipeline Integration.
 
@@ -6,19 +7,19 @@ Provides enterprise-grade model serving infrastructure with Kubernetes integrati
 load balancing, health checks, and high-performance inference capabilities.
 """
 
-import asyncio
-import contextlib
-import hashlib
-import json
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import hashlib
+import json
+import logging
 from pathlib import Path
-from typing import Any
+import time
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -239,7 +240,7 @@ class ModelInterface(ABC):
 class TensorFlowModel(ModelInterface):
     """TensorFlow model implementation."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_id: str) -> None:
         self.model_id = model_id
         self.model = None
         self.model_path = None
@@ -257,7 +258,7 @@ class TensorFlowModel(ModelInterface):
             logger.info("Loaded TensorFlow model %s from %s", self.model_id, model_path)
             return True
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to load TensorFlow model %s: %s", self.model_id, e)
             return False
 
@@ -277,7 +278,7 @@ class TensorFlowModel(ModelInterface):
             # Convert predictions to dictionary
             return self._format_predictions(predictions)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("TensorFlow inference failed for %s: %s", self.model_id, e)
             raise
 
@@ -290,7 +291,7 @@ class TensorFlowModel(ModelInterface):
             logger.info("Unloaded TensorFlow model %s", self.model_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to unload TensorFlow model %s: %s", self.model_id, e)
             return False
 
@@ -333,7 +334,7 @@ class TensorFlowModel(ModelInterface):
 class ONNXModel(ModelInterface):
     """ONNX model implementation."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_id: str) -> None:
         self.model_id = model_id
         self.model = None
         self.model_path = None
@@ -351,7 +352,7 @@ class ONNXModel(ModelInterface):
             logger.info("Loaded ONNX model %s from %s", self.model_id, model_path)
             return True
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to load ONNX model %s: %s", self.model_id, e)
             return False
 
@@ -371,7 +372,7 @@ class ONNXModel(ModelInterface):
             # Format outputs
             return self._format_predictions(outputs)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ONNX inference failed for %s: %s", self.model_id, e)
             raise
 
@@ -384,7 +385,7 @@ class ONNXModel(ModelInterface):
             logger.info("Unloaded ONNX model %s", self.model_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to unload ONNX model %s: %s", self.model_id, e)
             return False
 
@@ -444,7 +445,7 @@ class ModelRegistry:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to register model %s: %s", metadata.model_id, e)
             return False
 
@@ -483,7 +484,7 @@ class ModelRegistry:
 
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to unregister model %s: %s", model_id, e)
             return False
 
@@ -493,7 +494,7 @@ class ModelServingService:
     Provides high-performance inference, load balancing, and health monitoring.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ModelServingConfig | None = None) -> None:
         self.config = config or ModelServingConfig()
 
         # Model management
@@ -541,7 +542,7 @@ class ModelServingService:
 
             logger.info("Kubernetes client initialized")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Kubernetes initialization failed: %s", e)
             self.k8s_client = None
             self.k8s_apps_client = None
@@ -554,7 +555,7 @@ class ModelServingService:
 
             logger.info("Model Serving Service started")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to start Model Serving Service: %s", e)
             raise
 
@@ -576,7 +577,7 @@ class ModelServingService:
 
             logger.info("Model Serving Service stopped")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error stopping Model Serving Service: %s", e)
 
     async def register_model(
@@ -616,7 +617,7 @@ class ModelServingService:
             msg = "Failed to register model in registry"
             raise RuntimeError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to register model: %s", e)
             raise
 
@@ -665,7 +666,7 @@ class ModelServingService:
             msg = f"Failed to load model {model_id}"
             raise RuntimeError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to load model %s: %s", model_id, e)
             return False
 
@@ -702,7 +703,7 @@ class ModelServingService:
             msg = f"Failed to unload model {model_id}"
             raise RuntimeError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to unload model %s: %s", model_id, e)
             return False
 
@@ -762,7 +763,7 @@ class ModelServingService:
 
             return response
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             # Update statistics
             self.stats["total_requests"] += 1
             self.stats["failed_requests"] += 1
@@ -773,7 +774,7 @@ class ModelServingService:
             logger.error("Inference failed for request %s: %s", request.request_id, e)
             raise
 
-    async def _warmup_model(self) -> None:
+    async def _warmup_model(self, model_id: str) -> None:
         """Warm up model with sample requests."""
         try:
             metadata = self.registry.get_model(model_id)
@@ -793,12 +794,12 @@ class ModelServingService:
 
                 try:
                     await self.predict(request)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning("Warmup request %s failed: %s", i, e)
 
             logger.info("Warmed up model %s", model_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Model warmup failed for %s: %s", model_id, e)
 
     def _create_sample_input(self, input_schema: Dict[str, Any]) -> Dict[str, Any]:
@@ -822,7 +823,7 @@ class ModelServingService:
         request_str = json.dumps(request_data, sort_keys=True)
         return hashlib.sha256(request_str.encode()).hexdigest()[:16]
 
-    async def _update_model_health(self) -> None:
+    async def _update_model_health(self, model_id: str, success: bool, latency_ms: float) -> None:
         """Update model health metrics."""
         if model_id not in self.model_health:
             return
@@ -867,7 +868,7 @@ class ModelServingService:
                 await self._perform_health_checks()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health check loop error: %s", e)
 
     async def _perform_health_checks(self) -> None:
@@ -886,7 +887,7 @@ class ModelServingService:
 
                     await self.predict(request)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Health check failed for model %s: %s", model_id, e)
 
     def get_model_status(self, model_id: str) -> ModelHealth | None:
@@ -948,7 +949,7 @@ async def create_production_model_serving_service() -> ModelServingService:
 
 if __name__ == "__main__":
     # Example usage
-    async def main(self) -> None:
+    async def main() -> None:
         service = ModelServingService()
         await service.start()
 

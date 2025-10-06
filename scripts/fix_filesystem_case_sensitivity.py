@@ -21,10 +21,10 @@ import argparse
 import ast
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 # Configure logging
@@ -97,7 +97,7 @@ class FilesystemCaseSensitivityFixer:
                                 "status": "success",
                             }
                         )
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.error("❌ Failed to rename %s: %s", old_path, e)
                         fixes.append(
                             {
@@ -175,7 +175,7 @@ class FilesystemCaseSensitivityFixer:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error fixing imports in %s: %s", py_file, e)
 
         return fixes
@@ -236,7 +236,7 @@ class FilesystemCaseSensitivityFixer:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error fixing sys.path usage in %s: %s", py_file, e)
 
         return fixes
@@ -302,7 +302,7 @@ class FilesystemCaseSensitivityFixer:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error fixing hardcoded paths in %s: %s", py_file, e)
 
         return fixes

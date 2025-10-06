@@ -1,3 +1,4 @@
+from typing import Dict
 """
 Contract Test: GET /curation/recommendations
 
@@ -8,9 +9,9 @@ according to the OpenAPI specification.
 IMPORTANT: This test MUST fail initially (TDD requirement).
 """
 
-import uuid
 from datetime import datetime
 from typing import Any
+import uuid
 
 import pytest
 

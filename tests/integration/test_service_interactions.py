@@ -18,9 +18,9 @@ Integration Testing Principles:
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import time
-from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -111,7 +111,7 @@ class TestServiceIntegration:
         }
 
         # Store in database
-        await test_database.execute_query(
+        await self.test_database.execute_query(
             "INSERT INTO users (user_id, email, profile_data) VALUES ($1, $2, $3)",
             user_data["user_id"],
             user_data["email"],
@@ -119,13 +119,13 @@ class TestServiceIntegration:
         )
 
         # Cache the data
-        cache_success = await test_cache.set(
+        cache_success = await self.test_cache.set(
             "users", user_data["user_id"], user_data, ttl=3600
         )
         assert cache_success is True
 
         # Retrieve from cache (should be fast)
-        cached_data = await test_cache.get("users", user_data["user_id"])
+        cached_data = await self.test_cache.get("users", user_data["user_id"])
         assert cached_data is not None
         assert cached_data["user_id"] == user_data["user_id"]
         assert cached_data["email"] == user_data["email"]
@@ -134,23 +134,23 @@ class TestServiceIntegration:
         updated_profile = user_data["profile"].copy()
         updated_profile["preferences"]["theme"] = "light"
 
-        await test_database.execute_query(
+        await self.test_database.execute_query(
             "UPDATE users SET profile_data = $1 WHERE user_id = $2",
             json.dumps(updated_profile),
             user_data["user_id"],
         )
 
         # Invalidate cache
-        await test_cache.delete("users", user_data["user_id"])
+        await self.test_cache.delete("users", user_data["user_id"])
 
         # Verify cache is invalidated
-        cached_data_after_invalidation = await test_cache.get(
+        cached_data_after_invalidation = await self.test_cache.get(
             "users", user_data["user_id"]
         )
         assert cached_data_after_invalidation is None
 
         # Retrieve fresh data from database
-        fresh_data = await test_database.fetch_one(
+        fresh_data = await self.test_database.fetch_one(
             "SELECT user_id, email, profile_data FROM users WHERE user_id = $1",
             user_data["user_id"],
         )
@@ -197,7 +197,7 @@ class TestServiceIntegration:
 
         # Store ingestion results in database
         for item in mock_content_items:
-            await test_database.execute_query(
+            await self.test_database.execute_query(
                 """
                 INSERT INTO content_items (title, content, source_type, url, metadata, created_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
@@ -211,7 +211,7 @@ class TestServiceIntegration:
             )
 
         # Verify data was stored correctly
-        stored_items = await test_database.fetch_all(
+        stored_items = await self.test_database.fetch_all(
             "SELECT * FROM content_items WHERE title LIKE 'Integration Test Article%'"
         )
 
@@ -259,11 +259,11 @@ class TestServiceIntegration:
 
         # Cache the result
         cache_key = f"metrics_summary_{hash(str(large_dataset))}"
-        await test_cache.set("analytics", cache_key, result1, ttl=3600)
+        await self.test_cache.set("analytics", cache_key, result1, ttl=3600)
 
         # Second run with cache (should be faster)
         start_time = time.time()
-        cached_result = await test_cache.get("analytics", cache_key)
+        cached_result = await self.test_cache.get("analytics", cache_key)
         time_with_cache = time.time() - start_time
 
         # Verify cache performance improvement
@@ -272,7 +272,7 @@ class TestServiceIntegration:
         assert time_with_cache < time_without_cache  # Cache should be faster
 
         # Verify cache hit
-        cache_stats = await test_cache.get_stats()
+        cache_stats = await self.test_cache.get_stats()
         assert cache_stats["hits"] > 0
 
     @pytest.mark.asyncio
@@ -295,7 +295,7 @@ class TestServiceIntegration:
         }
 
         # Store in database
-        await test_database.execute_query(
+        await self.test_database.execute_query(
             "INSERT INTO users (user_id, name, email, last_updated) VALUES ($1, $2, $3, $4)",
             initial_data["user_id"],
             initial_data["name"],
@@ -304,10 +304,10 @@ class TestServiceIntegration:
         )
 
         # Cache the data
-        await test_cache.set("users", initial_data["user_id"], initial_data, ttl=3600)
+        await self.test_cache.set("users", initial_data["user_id"], initial_data, ttl=3600)
 
         # Verify cache hit
-        cached_data = await test_cache.get("users", initial_data["user_id"])
+        cached_data = await self.test_cache.get("users", initial_data["user_id"])
         assert cached_data["name"] == "Original Name"
 
         # Update in database
@@ -315,7 +315,7 @@ class TestServiceIntegration:
         updated_data["name"] = "Updated Name"
         updated_data["last_updated"] = datetime.now(UTC).isoformat()
 
-        await test_database.execute_query(
+        await self.test_database.execute_query(
             "UPDATE users SET name = $1, last_updated = $2 WHERE user_id = $3",
             updated_data["name"],
             updated_data["last_updated"],
@@ -323,16 +323,16 @@ class TestServiceIntegration:
         )
 
         # Simulate cache invalidation (in real system, this would be triggered by database events)
-        await test_cache.delete("users", initial_data["user_id"])
+        await self.test_cache.delete("users", initial_data["user_id"])
 
         # Verify cache is invalidated
-        cached_data_after_update = await test_cache.get(
+        cached_data_after_update = await self.test_cache.get(
             "users", initial_data["user_id"]
         )
         assert cached_data_after_update is None
 
         # Verify database has updated data
-        db_data = await test_database.fetch_one(
+        db_data = await self.test_database.fetch_one(
             "SELECT name, last_updated FROM users WHERE user_id = $1",
             initial_data["user_id"],
         )
@@ -358,10 +358,10 @@ class TestServiceIntegration:
 
         async def message_handler(self) -> None:
             received_messages.append(message)
-            return {"status": "processed", "message_id": message.message_id}
+            return {"status": "processed", "message_id": self.message.message_id}
 
         # Subscribe to test stream
-        subscription_id = await test_message_bus.subscribe(
+        subscription_id = await self.test_message_bus.subscribe(
             "test:integration", message_handler
         )
 
@@ -393,7 +393,7 @@ class TestServiceIntegration:
         ]
 
         for msg_data in test_messages:
-            await test_message_bus.publish("test:integration", msg_data)
+            await self.test_message_bus.publish("test:integration", msg_data)
 
         # Wait for message processing using robust polling
         from src.utils.test_polling import RobustPoller
@@ -414,7 +414,7 @@ class TestServiceIntegration:
         assert received_messages[1]["message_id"] == "msg_002"
 
         # Cleanup
-        await test_message_bus.unsubscribe(subscription_id)
+        await self.test_message_bus.unsubscribe(subscription_id)
 
     @pytest.mark.asyncio
     async def test_service_coordination_integration(self) -> None:
@@ -439,27 +439,27 @@ class TestServiceIntegration:
             return {"status": "step2_complete", "workflow_complete": True}
 
         async def error_handler(self) -> None:
-            workflow_state["errors"].append(message.get("error", "Unknown error"))
+            workflow_state["errors"].append(self.message.get("error", "Unknown error"))
             return {"status": "error_handled"}
 
         # Subscribe to workflow steps
-        await test_message_bus.subscribe("workflow:step1", step1_handler)
-        await test_message_bus.subscribe("workflow:step2", step2_handler)
-        await test_message_bus.subscribe("workflow:error", error_handler)
+        await self.test_message_bus.subscribe("workflow:step1", step1_handler)
+        await self.test_message_bus.subscribe("workflow:step2", step2_handler)
+        await self.test_message_bus.subscribe("workflow:error", error_handler)
 
         # Wait for subscriptions using robust polling
         from src.utils.test_polling import poll_until_true
 
         async def subscriptions_ready(self) -> None:
             # Check if all subscriptions are active
-            return len(await test_message_bus.list_subscriptions()) >= 3
+            return len(await self.test_message_bus.list_subscriptions()) >= 3
 
         await poll_until_true(
             subscriptions_ready, timeout=5.0, operation_name="workflow_subscriptions"
         )
 
         # Execute workflow
-        await test_message_bus.publish(
+        await self.test_message_bus.publish(
             "workflow:step1",
             {
                 "workflow_id": "integration_test_workflow",
@@ -477,7 +477,7 @@ class TestServiceIntegration:
 
         await poller.poll_condition(step1_completed, operation_name="workflow_step1")
 
-        await test_message_bus.publish(
+        await self.test_message_bus.publish(
             "workflow:step2",
             {
                 "workflow_id": "integration_test_workflow",
@@ -525,7 +525,7 @@ class TestServiceIntegration:
             "created_at": datetime.now(UTC),
         }
 
-        await test_database.execute_query(
+        await self.test_database.execute_query(
             """
             INSERT INTO users (user_id, email, REDACTED_SECRET_hash, role, is_active, created_at)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -556,7 +556,7 @@ class TestServiceIntegration:
         assert validation_result.user_data["role"] == user_data["role"]
 
         # Verify user exists in database
-        db_user = await test_database.fetch_one(
+        db_user = await self.test_database.fetch_one(
             "SELECT user_id, email, role, is_active FROM users WHERE user_id = $1",
             user_data["user_id"],
         )
@@ -604,7 +604,7 @@ class TestServiceIntegration:
             workflow_messages.append(message)
             return {"status": "workflow_step_completed"}
 
-        await test_message_bus.subscribe("ingestion:workflow", workflow_handler)
+        await self.test_message_bus.subscribe("ingestion:workflow", workflow_handler)
         await asyncio.sleep(0.1)
 
         # Create comprehensive ingestion plan
@@ -671,7 +671,7 @@ class TestServiceIntegration:
             assert result.total_content_items > 0
 
             # Verify database storage
-            stored_items = await test_database.fetch_all(
+            stored_items = await self.test_database.fetch_all(
                 "SELECT * FROM content_items WHERE title LIKE '%Integration Test%'"
             )
             assert len(stored_items) > 0
@@ -679,7 +679,7 @@ class TestServiceIntegration:
             # Verify cache storage
             cached_items = []
             for item in stored_items:
-                cached_item = await test_cache.get("content_items", item["id"])
+                cached_item = await self.test_cache.get("content_items", item["id"])
                 if cached_item:
                     cached_items.append(cached_item)
             assert len(cached_items) > 0
@@ -689,7 +689,7 @@ class TestServiceIntegration:
 
             # Verify data consistency across all systems
             for stored_item in stored_items:
-                cached_item = await test_cache.get("content_items", stored_item["id"])
+                cached_item = await self.test_cache.get("content_items", stored_item["id"])
                 if cached_item:
                     assert cached_item["title"] == stored_item["title"]
                     assert cached_item["content"] == stored_item["content"]

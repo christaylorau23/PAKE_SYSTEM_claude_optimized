@@ -5,8 +5,8 @@ Quick validation script to test multi-tenant server functionality.
 """
 
 import asyncio
-import sys
 from datetime import UTC, datetime
+import sys
 
 import httpx
 
@@ -40,7 +40,7 @@ async def test_multitenant_server(self) -> None:
                 },
             )
             print(f"   Status: {response.status_code}")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         test_results.append(
             {"test": "health_endpoint", "success": False, "error": str(e)},
         )
@@ -68,7 +68,7 @@ async def test_multitenant_server(self) -> None:
                 data = response.json()
                 print(f"   System: {data.get('system', 'Unknown')}")
                 print(f"   Version: {data.get('version', 'Unknown')}")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         test_results.append(
             {"test": "system_status", "success": False, "error": str(e)},
         )
@@ -87,7 +87,7 @@ async def test_multitenant_server(self) -> None:
                 },
             )
             print(f"   Status: {response.status_code}")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         test_results.append({"test": "openapi_docs", "success": False, "error": str(e)})
         print(f"   Error: {e}")
 
@@ -105,7 +105,7 @@ async def test_multitenant_server(self) -> None:
                 },
             )
             print(f"   Status: {response.status_code}")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         test_results.append(
             {
                 "test": "metrics_endpoint",
@@ -129,7 +129,7 @@ async def test_multitenant_server(self) -> None:
                 },
             )
             print(f"   Status: {response.status_code} (expected 401/403)")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         test_results.append(
             {"test": "auth_protection", "success": False, "error": str(e)},
         )
@@ -180,6 +180,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Test interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n💥 Test execution failed: {e}")
         sys.exit(1)

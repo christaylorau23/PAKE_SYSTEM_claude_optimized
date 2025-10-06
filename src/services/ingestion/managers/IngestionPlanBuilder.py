@@ -3,10 +3,10 @@
 Single Responsibility: Building and validating ingestion plans.
 """
 
-import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
+import uuid
 
 from ..interfaces import (
     IngestionPlan,
@@ -30,7 +30,7 @@ class PlanBuilderConfig:
 class IngestionPlanBuilder(IngestionPlanBuilderInterface):
     """Single Responsibility: Building and validating ingestion plans."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: PlanBuilderConfig | None = None) -> None:
         self.config = config or PlanBuilderConfig()
 
     def build_plan(

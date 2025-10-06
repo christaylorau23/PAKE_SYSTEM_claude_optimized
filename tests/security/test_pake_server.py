@@ -5,13 +5,13 @@ Tests path traversal prevention and other security measures
 """
 
 import os
+from pathlib import Path
 import shutil
 import sys
 import tempfile
-from pathlib import Path
 
-import pytest
 from pake_mcp_server import SecurityError, VaultManager
+import pytest
 
 # Add the mcp-servers directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "mcp-servers"))
@@ -395,7 +395,7 @@ class TestSecurityIntegration:
                 results.append(f"Thread {thread_id}: SUCCESS - SECURITY BREACH!")
             except SecurityError as e:
                 results.append(f"Thread {thread_id}: BLOCKED - {str(e)}")
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 errors.append(f"Thread {thread_id}: ERROR - {str(e)}")
 
         # Launch multiple concurrent attacks

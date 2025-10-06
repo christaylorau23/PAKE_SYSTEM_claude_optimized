@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fix remaining syntax errors after initial pass removal."""
 
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 from typing import Tuple
 
 

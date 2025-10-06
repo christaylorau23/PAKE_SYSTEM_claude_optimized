@@ -45,3 +45,5 @@ src/
 ├── bridge/                 # TypeScript Obsidian Bridge v2.0
 ├── utils/                  # Shared utilities, helpers, and data structures
 └── *.py                    # Core application entry pointss
+
+

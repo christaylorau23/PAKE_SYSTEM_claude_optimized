@@ -14,12 +14,12 @@ This supports Phase 1 of the engineering plan for immediate stabilization throug
 automated remediation of production incidents.
 """
 
-import logging
-import sys
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+import logging
 from pathlib import Path
+import sys
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import libcst as cst
@@ -167,7 +167,7 @@ class CodemodRunner:
                 execution_time=execution_time,
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             execution_time = time.time() - start_time
             self.logger.error(f"Error transforming {file_path}: {e}")
 
@@ -225,7 +225,7 @@ class CodemodRunner:
                                 f"✗ {file_path.name}: {result.error_message}"
                             )
 
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError, OSError) as e:
                         self.logger.error(f"✗ {file_path.name}: Unexpected error: {e}")
                         results.append(
                             CodemodResult(

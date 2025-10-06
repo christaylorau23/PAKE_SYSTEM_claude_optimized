@@ -4,9 +4,9 @@ Install Git hooks for PAKE+ system
 """
 
 import os
+from pathlib import Path
 import shutil
 import stat
-from pathlib import Path
 
 
 def install_git_hooks(self) -> None:
@@ -137,7 +137,7 @@ def log_commit(self) -> None:
         with open(log_file, 'a') as f:
             f.write(json.dumps(log_entry) + '\\n')
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Warning: Could not log commit: {e}")
 
 if __name__ == "__main__":
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
         return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Error installing hooks: {str(e)}")
         return False
 

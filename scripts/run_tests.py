@@ -2,8 +2,8 @@
 """PAKE System - Test Execution Script"""
 
 import argparse
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 

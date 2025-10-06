@@ -3,10 +3,10 @@
 Converts trend analysis into actionable investment recommendations with specific symbols and strategies.
 """
 
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from ..models.investment_opportunity import (
     ActionType,
@@ -306,7 +306,7 @@ class InvestmentMapper:
                 timestamp=datetime.now(UTC),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error creating investment opportunity: %s", e)
             return None
 

@@ -6,9 +6,9 @@ Validates that all CI/CD pipeline components are properly configured
 
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 class CICDPipelineValidator:
@@ -42,7 +42,7 @@ class CICDPipelineValidator:
                 self.results["summary"]["failed"] += 1
                 print(f"❌ {check_name}: FAILED")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results["validation_results"].append(
                 {"name": check_name, "status": "error", "details": str(e)}
             )
@@ -71,7 +71,7 @@ class CICDPipelineValidator:
                     if "name:" not in content or "on:" not in content:
                         print(f"Invalid workflow file: {file_path}")
                         return False
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"Error reading workflow file {file_path}: {e}")
                 return False
 
@@ -131,7 +131,7 @@ class CICDPipelineValidator:
                     print("Missing coverage configuration in pyproject.toml")
                     return False
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading pyproject.toml: {e}")
             return False
 
@@ -151,7 +151,7 @@ class CICDPipelineValidator:
                 if "FROM" not in content:
                     print("Invalid Dockerfile.production")
                     return False
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading Dockerfile.production: {e}")
             return False
 
@@ -201,7 +201,7 @@ class CICDPipelineValidator:
                 if result.returncode != 0:
                     print(f"Syntax error in {script_name}: {result.stderr}")
                     return False
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"Error validating {script_name}: {e}")
                 return False
 

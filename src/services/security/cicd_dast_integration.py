@@ -13,13 +13,14 @@ This module provides:
 from pathlib import Path
 from typing import Any
 
+import aiohttp
 import yaml
 
 
 class GitHubActionsDASTWorkflow:
     """GitHub Actions workflow generator for DAST integration."""
 
-    def __init__(self) -> None:
+    def __init__(self, workflow_name: str) -> None:
         self.workflow_name = workflow_name
         self.workflow_file = Path(".github/workflows") / f"{workflow_name}.yml"
 
@@ -240,7 +241,7 @@ class GitHubActionsDASTWorkflow:
 class SecurityGateValidator:
     """Security gate validation for CI/CD pipeline."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_file: Path) -> None:
         self.config_file = config_file
         self.config = self._load_config()
 
@@ -271,7 +272,7 @@ class SecurityGateValidator:
                 with open(self.config_file) as f:
                     user_config = yaml.safe_load(f)
                     default_config.update(user_config)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"Warning: Could not load config file {self.config_file}: {e}")
 
         return default_config
@@ -363,7 +364,7 @@ class SecurityGateValidator:
 class SecurityNotificationSystem:
     """System for sending security notifications."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
 
     def send_slack_notification(self, message: str, webhook_url: str) -> bool:
@@ -385,7 +386,7 @@ class SecurityNotificationSystem:
             response = requests.post(webhook_url, json=payload)
             return response.status_code == 200
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Error sending Slack notification: {e}")
             return False
 
@@ -401,7 +402,7 @@ class SecurityNotificationSystem:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Error sending email notification: {e}")
             return False
 
@@ -427,7 +428,7 @@ class SecurityNotificationSystem:
             response = requests.post(url, headers=headers, json=payload)
             return response.status_code == 201
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Error creating GitHub issue: {e}")
             return False
 

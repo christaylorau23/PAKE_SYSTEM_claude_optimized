@@ -20,12 +20,12 @@ Usage:
 
 import argparse
 import ast
+from collections import defaultdict
 import logging
 import os
+from pathlib import Path
 import re
 import sys
-from collections import defaultdict
-from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 # Configure logging
@@ -96,7 +96,7 @@ class FilesystemDiagnostics:
                     if mismatch:
                         issues["import_case_mismatches"].append(mismatch)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing %s: %s", py_file, e)
 
         # Check directory structure for case issues
@@ -254,7 +254,7 @@ class FilesystemDiagnostics:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing %s: %s", py_file, e)
 
         return issues
@@ -283,7 +283,7 @@ class FilesystemDiagnostics:
                             "issue": "executable_python_file",
                         }
                     )
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error checking permissions for %s: %s", py_file, e)
 
         return issues
@@ -330,7 +330,7 @@ class FilesystemDiagnostics:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing %s: %s", py_file, e)
 
         return issues
@@ -388,7 +388,7 @@ class FilesystemDiagnostics:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing %s: %s", py_file, e)
 
         return issues

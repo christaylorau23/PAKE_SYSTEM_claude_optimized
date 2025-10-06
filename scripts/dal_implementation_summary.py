@@ -17,9 +17,9 @@ This implementation provides:
 import asyncio
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(

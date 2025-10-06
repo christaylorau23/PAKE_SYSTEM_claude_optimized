@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, Dict, Generic, List, TypeVar
 
 # Generic type for domain entities
 T = TypeVar("T")
@@ -335,7 +335,7 @@ class AbstractServiceFactory(ABC):
 class AbstractUserService(ABC):
     """Abstract user service interface."""
 
-    def __init__(self) -> None:
+    def __init__(self, user_repo: Any, auth_service: Any, notification_service: Any) -> None:
         self.user_repo = user_repo
         self.auth_service = auth_service
         self.notification_service = notification_service

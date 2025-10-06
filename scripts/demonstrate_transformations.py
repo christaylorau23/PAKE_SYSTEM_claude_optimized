@@ -7,8 +7,8 @@ error remediation as described in the engineering plan. It shows the
 transformations in action with real examples.
 """
 
-import sys
 from pathlib import Path
+import sys
 
 import libcst as cst
 from libcst.codemod import CodemodContext

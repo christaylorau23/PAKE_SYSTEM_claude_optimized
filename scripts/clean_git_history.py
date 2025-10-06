@@ -24,10 +24,10 @@ Requirements:
 
 import logging
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -231,7 +231,7 @@ class GitHistoryCleaner:
             )
             logger.info("✅ Backup created at: %s", backup_path)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Failed to create backup: %s", e)
             return False
 
@@ -274,7 +274,7 @@ class GitHistoryCleaner:
             logger.info("✅ Git history cleanup completed successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error during Git history cleanup: %s", e)
             return False
         finally:
@@ -314,7 +314,7 @@ class GitHistoryCleaner:
             logger.info("✅ Cleanup verification passed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error during verification: %s", e)
             return False
         finally:

@@ -1,3 +1,4 @@
+request
 #!/usr/bin/env python3
 """PAKE System - Enterprise Logging & Observability Framework
 Comprehensive logging, monitoring, and observability for enterprise applications.
@@ -12,23 +13,23 @@ This module provides:
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import logging
 import os
+from pathlib import Path
 import sys
 import time
 import traceback
-from datetime import UTC, datetime, timedelta
-from enum import Enum
-from pathlib import Path
 from typing import Any
 
-import structlog
 from datadog import initialize, statsd
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import BaseModel, Field
+import structlog
 
 
 class LogLevel(Enum):
@@ -132,7 +133,7 @@ class LoggingFramework:
     for enterprise applications with support for multiple outputs and formats.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, environment: str | None = None, log_level: Any = None, outputs: Any = None, service_name: Any = None) -> None:
         self.service_name = service_name
         self.environment = environment
         self.log_level = log_level
@@ -266,7 +267,7 @@ class LoggingFramework:
                 app_key=os.getenv("DATADOG_APP_KEY"),
             )
             self.datadog_enabled = True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Failed to initialize Datadog: {e}")
             self.datadog_enabled = False
 
@@ -290,7 +291,7 @@ class LoggingFramework:
             # Get tracer
             self.tracer = trace.get_tracer(__name__)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Failed to setup tracing: {e}")
             self.tracer = None
 
@@ -442,7 +443,7 @@ class LoggingFramework:
             elif metric_type == MetricType.TIMER:
                 statsd.timing(metric_name, value, tags=list(metric_tags.items()))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Failed to send metric: {e}")
 
     async def increment_counter(self) -> None:
@@ -472,12 +473,12 @@ class LoggingFramework:
         return None
 
     def add_span_attribute(self) -> None:
-        """Add attribute to span."""
+        """Add attribute to self.span."""
         if span:
             span.set_attribute(key, value)
 
     def add_span_event(self) -> None:
-        """Add event to span."""
+        """Add event to self.span."""
         if span:
             span.add_event(name, attributes or {})
 
@@ -509,7 +510,7 @@ class LoggingFramework:
 
                     return result
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     duration_ms = (time.time() - start_time) * 1000
                     await self.log_error(f"Operation failed: {operation_name}", e)
 
@@ -540,31 +541,31 @@ class LoggingFramework:
         try:
             # Convert log entry to Datadog format
             datadog_log = {
-                "timestamp": log_entry.timestamp.isoformat(),
-                "level": log_entry.level.value,
-                "message": log_entry.message,
-                "service": log_entry.service_name,
-                "env": log_entry.environment,
-                "logger": log_entry.logger_name,
-                "hostname": log_entry.hostname,
-                "process_id": log_entry.process_id,
-                "thread_id": log_entry.thread_id,
-                "request_id": log_entry.request_id,
-                "user_id": log_entry.user_id,
-                "session_id": log_entry.session_id,
-                "correlation_id": log_entry.correlation_id,
-                "duration_ms": log_entry.duration_ms,
-                "memory_usage_mb": log_entry.memory_usage_mb,
-                "cpu_usage_percent": log_entry.cpu_usage_percent,
-                "error_code": log_entry.error_code,
-                "stack_trace": log_entry.stack_trace,
+                "timestamp": self.log_entry.timestamp.isoformat(),
+                "level": self.log_entry.level.value,
+                "message": self.log_entry.message,
+                "service": self.log_entry.service_name,
+                "env": self.log_entry.environment,
+                "logger": self.log_entry.logger_name,
+                "hostname": self.log_entry.hostname,
+                "process_id": self.log_entry.process_id,
+                "thread_id": self.log_entry.thread_id,
+                "request_id": self.log_entry.request_id,
+                "user_id": self.log_entry.user_id,
+                "session_id": self.log_entry.session_id,
+                "correlation_id": self.log_entry.correlation_id,
+                "duration_ms": self.log_entry.duration_ms,
+                "memory_usage_mb": self.log_entry.memory_usage_mb,
+                "cpu_usage_percent": self.log_entry.cpu_usage_percent,
+                "error_code": self.log_entry.error_code,
+                "stack_trace": self.log_entry.stack_trace,
                 "extra_data": log_entry.extra_data,
             }
 
             # Send to Datadog (implementation depends on Datadog client)
             # This is a placeholder - actual implementation would use Datadog client
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Failed to send log to Datadog: {e}")
 
     # ========================================================================
@@ -689,14 +690,14 @@ class LoggingFramework:
 class FastAPILoggingMiddleware:
     """FastAPI middleware for request logging."""
 
-    def __init__(self) -> None:
+    def __init__(self, call_next: Any = None, logging_framework: Any = None, request: Any = None) -> None:
         self.logging_framework = logging_framework
 
     async def __call__(self) -> None:
         start_time = time.time()
 
         # Extract request information
-        request_id = request.headers.get("X-Request-ID", f"req_{int(time.time())}")
+        request_id = self.request.headers.get("X-Request-ID", f"req_{int(time.time())}")
         user_id = getattr(request.state, "user_id", None)
 
         # Start span
@@ -710,10 +711,10 @@ class FastAPILoggingMiddleware:
                 logger_name="http",
                 request_id=request_id,
                 user_id=user_id,
-                method=request.method,
-                path=request.url.path,
-                query_params=dict(request.query_params),
-                client_ip=request.client.host if request.client else None,
+                method=self.request.method,
+                path=self.request.url.path,
+                query_params=dict(self.self.request.query_params),
+                client_ip=self.request.client.host if self.request.client else None,
                 user_agent=request.headers.get("User-Agent"),
             )
 
@@ -745,7 +746,7 @@ class FastAPILoggingMiddleware:
                 logger_name="http",
                 request_id=request_id,
                 user_id=user_id,
-                method=request.method,
+                method=self.request.method,
                 path=request.url.path,
                 status_code=response.status_code,
                 duration_ms=duration_ms,
@@ -766,7 +767,7 @@ class FastAPILoggingMiddleware:
                 "http.request.duration",
                 duration_ms,
                 tags={
-                    "method": request.method,
+                    "method": self.request.method,
                     "path": request.url.path,
                     "status_code": str(response.status_code),
                 },
@@ -774,7 +775,7 @@ class FastAPILoggingMiddleware:
 
             return response
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration_ms = (time.time() - start_time) * 1000
 
             # Log error
@@ -784,7 +785,7 @@ class FastAPILoggingMiddleware:
                 logger_name="http",
                 request_id=request_id,
                 user_id=user_id,
-                method=request.method,
+                method=self.request.method,
                 path=request.url.path,
                 duration_ms=duration_ms,
             )

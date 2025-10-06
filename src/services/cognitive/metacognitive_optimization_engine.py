@@ -7,13 +7,13 @@ where the AI system continuously optimizes its own prompts and workflows.
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -76,7 +76,7 @@ class MetacognitiveOptimizationEngine:
     capabilities and operational efficiency.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config
         self.optimization_phase = OptimizationPhase.MONITORING
 
@@ -168,7 +168,7 @@ class MetacognitiveOptimizationEngine:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize metacognitive engine: %s", e)
             return False
 
@@ -241,7 +241,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
                 self.optimization_phase = OptimizationPhase.MONITORING
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in cosmic calibration loop: %s", e)
                 self.optimization_phase = OptimizationPhase.MONITORING
 
@@ -440,7 +440,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         return optimization_plan
 
-    async def _execute_optimizations(self) -> None:
+    async def _execute_optimizations(self, optimization_plan: Dict[str, Any]) -> None:
         """Execute the optimization plan."""
         self.logger.info(
             "Executing optimization plan: %s", optimization_plan["plan_id"]
@@ -459,7 +459,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                     await self._execute_optimization_action(action, phase["category"])
                     self.logger.info("Completed action: %s", action)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     self.logger.error("Failed to execute action '%s': %s", action, e)
 
         # Log the optimization execution
@@ -473,7 +473,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         self.optimization_log.append(execution_log)
 
-    async def _execute_optimization_action(self) -> None:
+    async def _execute_optimization_action(self, action: str, category: str) -> None:
         """Execute a specific optimization action."""
         # This would contain the actual implementation of optimization actions
         # For now, we'll simulate the execution
@@ -494,7 +494,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         # - Update performance thresholds
         # etc.
 
-    async def _validate_optimizations(self) -> None:
+    async def _validate_optimizations(self, optimization_plan: Dict[str, Any]) -> None:
         """Validate that optimizations achieved their intended improvements."""
         self.logger.info("Validating optimization results...")
 
@@ -550,7 +550,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                     self.logger.warning("Triggering emergency optimization cycle...")
                     await self._emergency_optimization_cycle()
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in performance monitoring: %s", e)
 
     async def _autonomous_self_critique_loop(self) -> None:
@@ -574,10 +574,10 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
                 ):
                     await self._implement_critique_recommendations(critique_result)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in self-critique loop: %s", e)
 
-    async def _log_calibration_cycle(self) -> None:
+    async def _log_calibration_cycle(self, metrics: dict[str, MetacognitiveMetric], opportunities: list[OptimizationOpportunity]) -> None:
         """Log calibration cycle to Metacognitive_Log.md."""
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 

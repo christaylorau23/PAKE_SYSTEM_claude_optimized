@@ -168,7 +168,7 @@ class UltraMonitoringSystem:
 
             logger.info("Monitoring database initialized")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to initialize monitoring database: %s", e)
 
     def start_monitoring_threads(self) -> None:
@@ -209,7 +209,7 @@ class UltraMonitoringSystem:
 
                 time.sleep(30)  # Collect every 30 seconds
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metrics collection error: %s", e)
                 time.sleep(60)  # Wait longer on error
 
@@ -272,7 +272,7 @@ class UltraMonitoringSystem:
             self.metrics_history.append(metrics)
             return metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error collecting system metrics: %s", e)
             raise
 
@@ -298,7 +298,7 @@ class UltraMonitoringSystem:
                             unprocessed_notes.append(
                                 str(md_file.relative_to(vault_path)),
                             )
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError, OSError) as e:
                         logger.debug("Error reading %s: %s", md_file, e)
 
             return {
@@ -312,7 +312,7 @@ class UltraMonitoringSystem:
                 "unprocessed_files": unprocessed_notes[:10],
             }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error collecting vault stats: %s", e)
             return {"error": str(e)}
 
@@ -340,11 +340,14 @@ class UltraMonitoringSystem:
                             time_part = line.split("time=")[1].split("s")[0]
                             processing_times.append(float(time_part))
                             success_count += 1
-                        except BaseException:
-                            pass
+                        except BaseException as e:
+
+                            logger.debug(f"Exception in ultra_monitoring_system.py: {e}")
+
+                            # Continue gracefully
                     elif "ERROR" in line:
                         error_count += 1
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.debug("Error parsing log file: %s", e)
 
             avg_processing_time = (
@@ -366,7 +369,7 @@ class UltraMonitoringSystem:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error collecting processing stats: %s", e)
             return {"error": str(e)}
 
@@ -402,7 +405,7 @@ class UltraMonitoringSystem:
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing metrics: %s", e)
 
     def analyze_metrics_trends(self) -> None:
@@ -479,7 +482,7 @@ class UltraMonitoringSystem:
             if not metrics.pake_processes:
                 self.create_alert("CRITICAL", "pake", "No PAKE processes detected")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing metrics trends: %s", e)
 
     def create_alert(self) -> None:
@@ -543,7 +546,7 @@ class UltraMonitoringSystem:
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing alert: %s", e)
 
     def health_assessment_loop(self) -> None:
@@ -556,7 +559,7 @@ class UltraMonitoringSystem:
 
                 time.sleep(300)  # Assess every 5 minutes
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health assessment error: %s", e)
                 time.sleep(300)
 
@@ -656,7 +659,7 @@ class UltraMonitoringSystem:
                 next_check=datetime.now(UTC) + timedelta(minutes=5),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error assessing health: %s", e)
             return HealthStatus(
                 timestamp=datetime.now(UTC),
@@ -740,7 +743,7 @@ class UltraMonitoringSystem:
 
             return min(100, max(0, performance_score))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating performance score: %s", e)
             return 50  # Default middle score on error
 
@@ -768,7 +771,7 @@ class UltraMonitoringSystem:
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing health status: %s", e)
 
     def generate_health_report(self) -> None:
@@ -796,7 +799,7 @@ class UltraMonitoringSystem:
                     health_status.performance_score:.1f,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating health report: %s", e)
 
     def process_monitoring_loop(self) -> None:
@@ -806,7 +809,7 @@ class UltraMonitoringSystem:
                 self.monitor_pake_processes()
                 time.sleep(60)  # Check every minute
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Process monitoring error: %s", e)
                 time.sleep(60)
 
@@ -845,7 +848,7 @@ class UltraMonitoringSystem:
                     "API bridge process not running",
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error monitoring PAKE processes: %s", e)
 
     def vault_monitoring_loop(self) -> None:
@@ -855,7 +858,7 @@ class UltraMonitoringSystem:
                 self.monitor_vault_activity()
                 time.sleep(120)  # Check every 2 minutes
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Vault monitoring error: %s", e)
                 time.sleep(120)
 
@@ -897,7 +900,7 @@ class UltraMonitoringSystem:
                     {"stuck_files": stuck_files[:5]},  # First 5 files
                 )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error monitoring vault activity: %s", e)
 
     def performance_optimization_loop(self) -> None:
@@ -907,7 +910,7 @@ class UltraMonitoringSystem:
                 self.optimize_performance()
                 time.sleep(1800)  # Optimize every 30 minutes
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Performance optimization error: %s", e)
                 time.sleep(1800)
 
@@ -926,7 +929,7 @@ class UltraMonitoringSystem:
 
             logger.info("Performance optimization completed")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error during performance optimization: %s", e)
 
     def cleanup_old_logs(self) -> None:
@@ -955,10 +958,10 @@ class UltraMonitoringSystem:
 
                         logger.info("Truncated old log file: %s", log_file)
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.debug("Error cleaning log file %s: %s", log_file, e)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error cleaning up logs: %s", e)
 
     def optimize_database(self) -> None:
@@ -990,7 +993,7 @@ class UltraMonitoringSystem:
 
             logger.info("Database optimization completed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error optimizing database: %s", e)
 
     def cleanup_temp_files(self) -> None:
@@ -1004,10 +1007,10 @@ class UltraMonitoringSystem:
                 for temp_file in Path("logs").glob(pattern):
                     try:
                         temp_file.unlink()
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError, OSError) as e:
                         logger.debug("Error removing temp file %s: %s", temp_file, e)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error cleaning temp files: %s", e)
 
     def self_healing_loop(self) -> None:
@@ -1017,7 +1020,7 @@ class UltraMonitoringSystem:
                 self.perform_self_healing()
                 time.sleep(300)  # Check every 5 minutes
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Self-healing error: %s", e)
                 time.sleep(300)
 
@@ -1035,7 +1038,7 @@ class UltraMonitoringSystem:
             for alert in critical_alerts:
                 self.auto_resolve_alert(alert)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error during self-healing: %s", e)
 
     def trigger_self_healing(self) -> None:
@@ -1098,7 +1101,7 @@ class UltraMonitoringSystem:
                     },
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error auto-resolving alert %s: %s", alert.id, e)
 
     def restart_pake_services(self) -> bool:
@@ -1127,7 +1130,7 @@ class UltraMonitoringSystem:
             # Fallback: restart manually
             return self.restart_vault_watcher()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error restarting PAKE services: %s", e)
             return False
 
@@ -1179,7 +1182,7 @@ class UltraMonitoringSystem:
 
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error restarting vault watcher: %s", e)
             return False
 
@@ -1194,7 +1197,7 @@ class UltraMonitoringSystem:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing stuck notes: %s", e)
             return False
 
@@ -1215,13 +1218,16 @@ class UltraMonitoringSystem:
                     for old_file in vector_files[:-1000]:
                         try:
                             old_file.unlink()
-                        except Exception:
-                            pass
+                        except Exception as e:
+
+                            logger.debug(f"Exception in ultra_monitoring_system.py: {e}")
+
+                            # Continue gracefully
 
             logger.info("Storage cleanup completed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error cleaning up storage: %s", e)
             return False
 
@@ -1250,7 +1256,7 @@ class UltraMonitoringSystem:
                 "recommendations": health_status.recommendations,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "Error", "error": str(e)}
 
 
@@ -1283,7 +1289,7 @@ def main(self) -> None:
         print("\nShutting down monitoring system...")
         monitor.monitoring_active = False
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Fatal monitoring system error: %s", e)
         print(f"ERROR: {e}")
 

@@ -5,10 +5,10 @@ SECURITY POLICY: Application must crash if required secrets are missing
 This prevents weak REDACTED_SECRET fallbacks and ensures proper secret management
 """
 
+from dataclasses import dataclass
 import os
 import sys
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List
 
 
 @dataclass(frozen=True)

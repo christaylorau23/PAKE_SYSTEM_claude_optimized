@@ -1,14 +1,15 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Enhanced Instagram Integration with Reels Support
 Supports Stories, Reels, Carousels, and IGTV
 """
 
+from dataclasses import dataclass
 import json
 import logging
 import os
 import time
-from dataclasses import dataclass
 
 import requests
 
@@ -56,7 +57,7 @@ class InstagramEnhanced:
                 "permalink": await self._get_media_permalink(result["id"]),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Single media post failed: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -97,7 +98,7 @@ class InstagramEnhanced:
                 "carousel_items": len(child_containers),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Carousel post failed: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -152,7 +153,7 @@ class InstagramEnhanced:
                 "permalink": await self._get_media_permalink(result["id"]),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Reel post failed: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -196,7 +197,7 @@ class InstagramEnhanced:
                 "expires_at": int(time.time()) + 86400,  # Stories expire in 24h
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Story post failed: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -392,7 +393,7 @@ class InstagramEnhanced:
                 "publish_time": publish_time,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": str(e)}
 
 

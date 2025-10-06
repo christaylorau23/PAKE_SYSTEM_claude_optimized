@@ -1,8 +1,8 @@
 """Simple demonstration of Proactive Anomaly-to-Action Workflows."""
 
 import asyncio
-import logging
 from datetime import UTC, datetime
+import logging
 
 from .security_monitor_integration import ProactiveSecurityMonitor
 

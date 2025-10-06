@@ -5,8 +5,8 @@ Debug script to understand PubMed service behavior
 """
 
 import asyncio
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path for imports
 project_root = Path(__file__).parent.parent
@@ -56,12 +56,12 @@ async def test_pubmed_debug(self) -> None:
             try:
                 esearch_result = await service._esearch("machine learning", 10, 0)
                 print(f"   ESearch result: {esearch_result}")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"   ESearch exception: {e}")
 
             return result.success is False and result.error is not None
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"❌ PubMed debug test failed: {e}")
         import traceback
 

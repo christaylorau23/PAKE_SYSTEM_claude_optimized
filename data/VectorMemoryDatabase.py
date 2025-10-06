@@ -1,12 +1,14 @@
+import logging
+logger = logging.getLogger(__name__)
 """Vector Memory Database Integration for AI Long-Term Memory
 Uses Chroma as the vector database backend for semantic memory storage and retrieval.
 """
 
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import logging
 import os
-from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -75,7 +77,7 @@ class VectorMemoryDatabase:
             self.is_initialized = True
             self.logger.info("Vector Memory Database initialized successfully")
 
-        except Exception as error:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
             self.logger.error(
                 "Failed to initialize Vector Memory Database", error=str(error)
             )
@@ -123,7 +125,7 @@ class VectorMemoryDatabase:
                     "Collection '%s' ready", config["name"], type=collection_type
                 )
 
-            except Exception as error:
+            except (FileNotFoundError, PermissionError, OSError) as error:
                 self.logger.error(
                     "Failed to setup collection '%s'", config["name"], error=str(error)
                 )
@@ -175,7 +177,7 @@ class VectorMemoryDatabase:
                             )
                             migrated_count += 1
 
-                except Exception as error:
+                except (FileNotFoundError, PermissionError, OSError) as error:
                     self.logger.error(
                         "Failed to migrate %s", filename, error=str(error)
                     )
@@ -227,7 +229,7 @@ class VectorMemoryDatabase:
 
             return memory_id
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Failed to add memory to collection", error=str(error))
             raise
 
@@ -238,7 +240,7 @@ class VectorMemoryDatabase:
             embeddings = self.embedding_function([text])
             return embeddings[0]
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Failed to generate embedding", error=str(error))
             raise
 
@@ -393,7 +395,7 @@ class VectorMemoryDatabase:
                         }
                         all_results.append(result)
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error("Search failed for %s", memory_type, error=str(error))
 
         # Sort by similarity and return top results
@@ -442,7 +444,7 @@ class VectorMemoryDatabase:
                     except (ValueError, TypeError):
                         continue
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error(
                     "Recent search failed for %s", memory_type, error=str(error)
                 )
@@ -482,7 +484,7 @@ class VectorMemoryDatabase:
                         "timestamp": results["metadatas"][0].get("timestamp", ""),
                     }
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error(
                     "Get memory failed for %s", collection_type, error=str(error)
                 )
@@ -531,7 +533,7 @@ class VectorMemoryDatabase:
 
             return True
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to update memory", memory_id=memory_id, error=str(error)
             )
@@ -557,7 +559,7 @@ class VectorMemoryDatabase:
             self.logger.info("Memory deleted", memory_id=memory_id)
             return True
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to delete memory", memory_id=memory_id, error=str(error)
             )
@@ -606,7 +608,7 @@ class VectorMemoryDatabase:
 
                 cleanup_stats[memory_type] = deleted_count
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error(
                     "Cleanup failed for %s", memory_type, error=str(error)
                 )
@@ -649,7 +651,7 @@ class VectorMemoryDatabase:
                 }
                 stats["total_memories"] += count
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error("Stats failed for %s", memory_type, error=str(error))
                 stats["collections"][memory_type] = {"count": 0, "error": str(error)}
 
@@ -685,7 +687,7 @@ class VectorMemoryDatabase:
                         "Collection not available"
                     )
 
-            except Exception as error:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
                 health["status"] = "degraded"
                 health["vector_db"][f"{memory_type}_error"] = str(error)
 
@@ -792,7 +794,7 @@ class VectorMemoryDatabase:
                 ),
             }
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Failed to get conversation context", error=str(error))
             return {
                 "conversation_id": conversation_id,
@@ -890,7 +892,7 @@ class VectorMemoryDatabase:
 
             return extracted_knowledge_ids
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Knowledge extraction failed", source_id=source_id, error=str(error)
             )
@@ -1062,14 +1064,16 @@ class VectorMemoryDatabase:
                     days_old = (datetime.now(UTC) - timestamp.replace(tzinfo=None)).days
                     if days_old <= 7:
                         recency_boost = 0.1 * (8 - days_old) / 8
-                except:
-                    pass
+                except (ValueError, KeyError) as e:
+                    # Log timestamp parsing errors for debugging
+                    logger.debug(f"Failed to parse timestamp for recency boost: {e}")
+                    # Continue with recency_boost = 0 (default)
 
                 memory["relevance_score"] = base_score + type_boost + recency_boost
 
             return results
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Memory query failed", query=query, error=str(error))
             results["error"] = str(error)
             return results
@@ -1135,7 +1139,7 @@ class VectorMemoryDatabase:
                     results["memory_ids"].append(memory_id)
                     results["successful"] += 1
 
-                except Exception as error:
+                except (ValueError, RuntimeError) as error:
                     results["failed"] += 1
                     results["errors"].append(
                         {"memory": memory.get("id", "unknown"), "error": str(error)}
@@ -1164,7 +1168,7 @@ class VectorMemoryDatabase:
             self.is_initialized = False
             self.logger.info("Vector Memory Database cleanup completed")
 
-        except Exception as error:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
             self.logger.error(
                 "Error during Vector Memory Database cleanup", error=str(error)
             )

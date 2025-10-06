@@ -1,13 +1,14 @@
+from typing import List
 """PredictionEngine - Advanced trend prediction and forecasting.
 
 Uses machine learning and statistical models for trend prediction and opportunity timing.
 """
 
-import logging
-import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import logging
+import statistics
 
 import numpy as np
 
@@ -699,7 +700,7 @@ class PredictionEngine:
 
                     keyword_results.append(result)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     self.logger.error(
                         "Prediction error for %s (%s): %s",
                         keyword,

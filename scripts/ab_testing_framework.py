@@ -5,14 +5,14 @@ Statistical testing, experiment management, and optimization validation
 """
 
 import asyncio
-import json
-import logging
-import sqlite3
-import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import json
+import logging
+import sqlite3
 from typing import List
+import uuid
 
 import numpy as np
 import pandas as pd
@@ -20,9 +20,9 @@ import pandas as pd
 # Statistical testing libraries
 try:
     import matplotlib.pyplot as plt
-    import seaborn as sns
     from scipy import stats
     from scipy.stats import chi2_contingency, mannwhitneyu, ttest_ind
+    import seaborn as sns
     from statsmodels.stats.power import ttest_power
     from statsmodels.stats.proportion import proportions_ztest
 except ImportError as e:
@@ -346,7 +346,7 @@ class ABTestingFramework:
             # Return total sample size (sum across all variants)
             return sample_size_per_variant * 2  # Assuming 2 variants
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Sample size calculation failed: %s", e)
             return 1000  # Default fallback
 
@@ -418,7 +418,7 @@ class ABTestingFramework:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to start test %s: %s", test_id, e)
             return False
 
@@ -459,7 +459,7 @@ class ABTestingFramework:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to record test result: %s", e)
             return False
 
@@ -490,7 +490,7 @@ class ABTestingFramework:
 
             return analysis
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to analyze test %s: %s", test_id, e)
             return None
 
@@ -999,7 +999,7 @@ class ABTestingFramework:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to stop test %s: %s", test_id, e)
             return False
 

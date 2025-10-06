@@ -4,13 +4,13 @@ Prevents injection attacks and ensures data integrity.
 SECURITY POLICY: All inputs must be validated and sanitized before processing
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import html
 import json
 import logging
 import re
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

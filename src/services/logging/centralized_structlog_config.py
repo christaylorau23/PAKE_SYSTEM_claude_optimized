@@ -4,11 +4,11 @@ Implements the production processor chain as specified in the engineering plan.
 This module provides a single, standardized structlog configuration for all services.
 """
 
+from datetime import UTC, datetime
 import logging
 import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any, Dict
 
 import structlog
@@ -172,7 +172,7 @@ def configure_structlog_production(
             file_handler.setLevel(getattr(logging, log_level.upper()))
             logging.getLogger().addHandler(file_handler)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to setup file logging: {e}", file=sys.stderr)
 
     # Return configured logger
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     try:
         msg = "Test error"
         raise ValueError(msg)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("An error occurred", error=str(e), exc_info=True)
 
     # Test structured logging

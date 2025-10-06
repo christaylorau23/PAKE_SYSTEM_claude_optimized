@@ -8,8 +8,8 @@ and cognitive intelligence features.
 """
 
 import asyncio
-import time
 from datetime import UTC, datetime
+import time
 
 import pytest
 import pytest_asyncio
@@ -155,7 +155,7 @@ class TestCognitiveAnalysisEngine:
         content = sample_research_content["content"]
         metadata = sample_research_content["metadata"]
 
-        result = await cognitive_engine.analyze_content(
+        result = await self.cognitive_engine.analyze_content(
             "research_test_1",
             content,
             metadata,
@@ -203,7 +203,7 @@ class TestCognitiveAnalysisEngine:
         content = sample_research_content["content"]
         metadata = sample_research_content["metadata"]
 
-        result = await cognitive_engine.analyze_content(
+        result = await self.cognitive_engine.analyze_content(
             "academic_test",
             content,
             metadata,
@@ -242,7 +242,7 @@ class TestCognitiveAnalysisEngine:
         content = sample_social_content["content"]
         metadata = sample_social_content["metadata"]
 
-        result = await cognitive_engine.analyze_content(
+        result = await self.cognitive_engine.analyze_content(
             "social_test",
             content,
             metadata,
@@ -270,7 +270,7 @@ class TestCognitiveAnalysisEngine:
         content = sample_news_content["content"]
         metadata = sample_news_content["metadata"]
 
-        result = await cognitive_engine.analyze_content("news_test", content, metadata)
+        result = await self.cognitive_engine.analyze_content("news_test", content, metadata)
 
         # Should categorize as news
         assert result.category == ContentCategory.NEWS_ARTICLE
@@ -291,7 +291,7 @@ class TestCognitiveAnalysisEngine:
         content = sample_research_content["content"]
         metadata = sample_research_content["metadata"]
 
-        result = await cognitive_engine.analyze_content("topic_test", content, metadata)
+        result = await self.cognitive_engine.analyze_content("topic_test", content, metadata)
 
         # Should extract topics
         assert len(result.topic_extractions) > 0
@@ -314,26 +314,26 @@ class TestCognitiveAnalysisEngine:
         content = sample_research_content["content"]
         metadata = sample_research_content["metadata"]
 
-        result = await cognitive_engine.analyze_content(
+        result = await self.cognitive_engine.analyze_content(
             "summary_test",
             content,
             metadata,
         )
 
         # Should generate summary
-        if cognitive_engine.config.enable_content_summarization:
+        if self.cognitive_engine.config.enable_content_summarization:
             assert len(result.content_summary) > 0
             assert (
                 len(result.content_summary)
-                <= cognitive_engine.config.summary_max_length
+                <= self.cognitive_engine.config.summary_max_length
             )
 
         # Should extract entities
-        if cognitive_engine.config.enable_entity_recognition:
+        if self.cognitive_engine.config.enable_entity_recognition:
             assert len(result.key_entities) >= 0  # May be empty for some content
 
         # Should generate semantic tags
-        if cognitive_engine.config.enable_semantic_tagging:
+        if self.cognitive_engine.config.enable_semantic_tagging:
             assert len(result.semantic_tags) > 0
             # Should include category as tag
             assert result.category.value in result.semantic_tags
@@ -379,7 +379,7 @@ class TestCognitiveAnalysisEngine:
 
         # Measure processing time
         start_time = time.time()
-        results = await cognitive_engine.batch_analyze_content(batch_items)
+        results = await self.cognitive_engine.batch_analyze_content(batch_items)
         processing_time = time.time() - start_time
 
         # Check results
@@ -395,7 +395,7 @@ class TestCognitiveAnalysisEngine:
         assert processing_time < 5.0  # Under 5 seconds for 5 items
 
         # Check statistics
-        stats = cognitive_engine.get_analysis_statistics()
+        stats = self.cognitive_engine.get_analysis_statistics()
         assert stats["total_analyzed"] >= 5
 
     @pytest.mark.asyncio
@@ -408,22 +408,22 @@ class TestCognitiveAnalysisEngine:
         metadata = {"source_type": "test"}
 
         # First analysis
-        result1 = await cognitive_engine.analyze_content(
+        result1 = await self.cognitive_engine.analyze_content(
             "cache_test_1",
             content,
             metadata,
         )
 
         # Second analysis of same content
-        result2 = await cognitive_engine.analyze_content(
+        result2 = await self.cognitive_engine.analyze_content(
             "cache_test_2",
             content,
             metadata,
         )
 
         # Check cache utilization
-        stats = cognitive_engine.get_analysis_statistics()
-        if cognitive_engine.config.enable_caching:
+        stats = self.cognitive_engine.get_analysis_statistics()
+        if self.cognitive_engine.config.enable_caching:
             assert stats["cache_hits"] > 0
             assert stats["cache_hit_rate"] > 0.0
 
@@ -443,7 +443,7 @@ class TestCognitiveAnalysisEngine:
 
         # Process large batch
         start_time = time.time()
-        results = await cognitive_engine.batch_analyze_content(large_batch)
+        results = await self.cognitive_engine.batch_analyze_content(large_batch)
         processing_time = time.time() - start_time
 
         # Should complete successfully
@@ -453,7 +453,7 @@ class TestCognitiveAnalysisEngine:
         assert processing_time < 15.0  # Under 15 seconds for 50 items
 
         # Check memory management
-        stats = cognitive_engine.get_analysis_statistics()
+        stats = self.cognitive_engine.get_analysis_statistics()
         assert stats["total_analyzed"] >= 50
 
     # ========================================================================
@@ -467,12 +467,12 @@ class TestCognitiveAnalysisEngine:
         and content below minimum length threshold.
         """
         # Test empty content
-        result1 = await cognitive_engine.analyze_content("empty_test", "", {})
+        result1 = await self.cognitive_engine.analyze_content("empty_test", "", {})
         assert result1.category == ContentCategory.UNKNOWN
         assert result1.quality_metrics.overall_score == 0.0
 
         # Test very short content
-        result2 = await cognitive_engine.analyze_content("short_test", "Hi", {})
+        result2 = await self.cognitive_engine.analyze_content("short_test", "Hi", {})
         assert result2.quality_metrics.quality_level in [
             QualityLevel.VERY_POOR,
             QualityLevel.POOR,
@@ -480,7 +480,7 @@ class TestCognitiveAnalysisEngine:
 
         # Test None content (should handle gracefully)
         try:
-            result3 = await cognitive_engine.analyze_content("none_test", None, {})
+            result3 = await self.cognitive_engine.analyze_content("none_test", None, {})
             assert isinstance(result3, CognitiveAnalysisResult)
         except (TypeError, AttributeError):
             # It's acceptable to throw an exception for None content
@@ -501,7 +501,7 @@ class TestCognitiveAnalysisEngine:
             "numbers": [1, 2, 3, "mixed", {"type": "list"}],
         }
 
-        result = await cognitive_engine.analyze_content(
+        result = await self.cognitive_engine.analyze_content(
             "malformed_test",
             content,
             malformed_metadata,
@@ -520,7 +520,7 @@ class TestCognitiveAnalysisEngine:
         # Create very long content
         long_content = "This is a very long piece of content. " * 1000  # Very long
 
-        result = await cognitive_engine.analyze_content("long_test", long_content, {})
+        result = await self.cognitive_engine.analyze_content("long_test", long_content, {})
 
         # Should complete successfully
         assert isinstance(result, CognitiveAnalysisResult)
@@ -537,7 +537,7 @@ class TestCognitiveAnalysisEngine:
         for i in range(20):
             content = f"Concurrent test content {i} with unique analysis requirements."
             task = asyncio.create_task(
-                cognitive_engine.analyze_content(
+                self.cognitive_engine.analyze_content(
                     f"concurrent_{i}",
                     content,
                     {"test_id": i},

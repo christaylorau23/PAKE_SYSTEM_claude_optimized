@@ -7,9 +7,9 @@ Quick detection of common filesystem issues that cause CI failures.
 """
 
 import os
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 def check_case_sensitivity_issues(self) -> None:
@@ -65,7 +65,7 @@ def check_hardcoded_paths(self) -> None:
                     )
                     print(f"⚠️  sys.path.append with hardcoded path: {py_file}:{i}")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading {py_file}: {e}")
 
     return issues
@@ -95,7 +95,7 @@ def check_import_patterns(self) -> None:
                     issues.append(f"Import from hyphenated directory in {py_file}:{i}")
                     print(f"⚠️  Import from hyphenated directory: {py_file}:{i}")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading {py_file}: {e}")
 
     return issues

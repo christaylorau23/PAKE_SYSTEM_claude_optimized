@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE+ Ingestion Manager
@@ -6,9 +7,9 @@ Web interface and management tools for the ingestion pipeline
 
 import asyncio
 import contextlib
+from datetime import UTC, datetime
 import json
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
@@ -133,7 +134,7 @@ async def add_source(
 
         return {"message": f"Source '{source.name}' added successfully"}
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error adding source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -169,7 +170,7 @@ async def update_source(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error updating source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -195,7 +196,7 @@ async def delete_source(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error deleting source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -240,7 +241,7 @@ async def toggle_source(self) -> None:
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error toggling source: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -261,7 +262,7 @@ async def get_statistics(pipeline: UniversalIngestionPipeline = Depends(get_pipe
 
         return stats
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting statistics: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -313,7 +314,7 @@ async def run_single_cycle(
         try:
             processed = await pipeline.run_single_cycle()
             logger.info("Single cycle completed, processed %s items", processed)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in single cycle: %s", e)
 
     background_tasks.add_task(run_cycle)
@@ -372,7 +373,7 @@ async def test_source(
             "sample_titles": [item.title for item in items[:5]],  # First 5 titles
         }
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error testing source %s: %s", source_name, e)
         return {
             "source_name": source_name,
@@ -618,7 +619,7 @@ async def save_configuration(self) -> None:
 
         logger.info("Configuration saved successfully")
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         logger.error("Error saving configuration: %s", e)
         raise
 

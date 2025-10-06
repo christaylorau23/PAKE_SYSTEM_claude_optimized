@@ -7,13 +7,13 @@ This script synchronizes environment variables between local and CI environments
 ensuring consistency and proper secrets management.
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import json
 import logging
 import os
-import sys
-from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
+import sys
 from typing import Dict, List, Optional, Set
 
 import yaml
@@ -190,7 +190,7 @@ class EnvironmentSynchronizer:
 
         def find_env_refs(self) -> None:
             if isinstance(obj, dict):
-                for key, value in obj.items():
+                for key, value in self.obj.items():
                     find_env_refs(value, f"{path}.{key}" if path else key)
             elif isinstance(obj, list):
                 for i, item in enumerate(obj):
@@ -227,7 +227,7 @@ class EnvironmentSynchronizer:
 
                 self._extract_workflow_env_vars(workflow_data, workflow_file)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error analyzing %s: %s", workflow_file, e)
 
     def _extract_workflow_env_vars(
@@ -237,7 +237,7 @@ class EnvironmentSynchronizer:
 
         def find_env_vars(self) -> None:
             if isinstance(obj, dict):
-                for key, value in obj.items():
+                for key, value in self.obj.items():
                     if key == "env" and isinstance(value, dict):
                         for env_name, env_value in value.items():
                             if env_name not in self.env_vars:
@@ -478,7 +478,7 @@ def find_case_sensitivity_issues(root_path: Path) -> List[Tuple[str, str, str]]:
                                         str(line_num),
                                         f"Mixed case in file path: {file_path}"
                                     ))
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error processing {py_file}: {e}")
 
     return issues

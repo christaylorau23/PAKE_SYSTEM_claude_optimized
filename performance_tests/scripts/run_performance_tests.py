@@ -55,7 +55,7 @@ def run_smoke_test(self) -> None:
 
 def run_load_test(self) -> None:
     """Run comprehensive load test."""
-    print(f"🚀 Starting PAKE System Load Test - {scenario.upper()}")
+    print(f"🚀 Starting PAKE System Load Test - {self.scenario.upper()}")
     print(f"Environment: {environment}")
     print("=" * 50)
 
@@ -140,7 +140,7 @@ def main(self) -> None:
     except KeyboardInterrupt:
         print("\n⏹️ Test interrupted by user")
         return 1
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n💥 Unexpected error: {e}")
         return 1
 

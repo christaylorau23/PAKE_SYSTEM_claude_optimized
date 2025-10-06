@@ -111,15 +111,15 @@ class TestSemanticSearchEngine:
         configuration and component setup.
         """
         # Check engine initialization
-        assert semantic_engine.config is not None
-        assert semantic_engine.embedding_generator is not None
-        assert semantic_engine.similarity_calculator is not None
+        assert self.semantic_engine.config is not None
+        assert self.semantic_engine.embedding_generator is not None
+        assert self.semantic_engine.similarity_calculator is not None
 
         # Check initial state
-        assert len(semantic_engine.embeddings_store) == 0
-        assert len(semantic_engine.content_metadata) == 0
-        assert semantic_engine.stats["total_embeddings"] == 0
-        assert semantic_engine.stats["total_searches"] == 0
+        assert len(self.semantic_engine.embeddings_store) == 0
+        assert len(self.semantic_engine.content_metadata) == 0
+        assert self.semantic_engine.stats["total_embeddings"] == 0
+        assert self.semantic_engine.stats["total_searches"] == 0
 
     async def test_should_index_single_content_successfully(self) -> None:
         """
@@ -131,23 +131,23 @@ class TestSemanticSearchEngine:
         metadata = {"source_type": "test", "quality_score": 0.8}
 
         # Index content
-        embedding = await semantic_engine.index_content(content_id, content, metadata)
+        embedding = await self.semantic_engine.index_content(content_id, content, metadata)
 
         # Verify embedding
         assert isinstance(embedding, VectorEmbedding)
         assert embedding.content_id == content_id
         assert (
-            embedding.dimensionality == semantic_engine.config.embedding_dimensionality
+            embedding.dimensionality == self.semantic_engine.config.embedding_dimensionality
         )
-        assert len(embedding.vector) == semantic_engine.config.embedding_dimensionality
+        assert len(embedding.vector) == self.semantic_engine.config.embedding_dimensionality
 
         # Verify storage
-        assert content_id in semantic_engine.embeddings_store
-        assert content_id in semantic_engine.content_metadata
-        assert semantic_engine.stats["total_embeddings"] == 1
+        assert content_id in self.semantic_engine.embeddings_store
+        assert content_id in self.semantic_engine.content_metadata
+        assert self.semantic_engine.stats["total_embeddings"] == 1
 
         # Verify metadata
-        stored_metadata = semantic_engine.content_metadata[content_id]
+        stored_metadata = self.semantic_engine.content_metadata[content_id]
         assert stored_metadata["source_type"] == "test"
         assert stored_metadata["quality_score"] == 0.8
         assert "indexed_at" in stored_metadata
@@ -159,7 +159,7 @@ class TestSemanticSearchEngine:
         with proper embedding generation and metadata storage.
         """
         # Batch index content
-        embeddings = await semantic_engine.batch_index_content(sample_content_items)
+        embeddings = await self.semantic_engine.batch_index_content(sample_content_items)
 
         # Verify embeddings
         assert len(embeddings) == len(sample_content_items)
@@ -167,18 +167,18 @@ class TestSemanticSearchEngine:
             assert isinstance(embedding, VectorEmbedding)
             assert (
                 embedding.dimensionality
-                == semantic_engine.config.embedding_dimensionality
+                == self.semantic_engine.config.embedding_dimensionality
             )
 
         # Verify storage
-        assert len(semantic_engine.embeddings_store) == len(sample_content_items)
-        assert len(semantic_engine.content_metadata) == len(sample_content_items)
-        assert semantic_engine.stats["total_embeddings"] == len(sample_content_items)
+        assert len(self.semantic_engine.embeddings_store) == len(sample_content_items)
+        assert len(self.semantic_engine.content_metadata) == len(sample_content_items)
+        assert self.semantic_engine.stats["total_embeddings"] == len(sample_content_items)
 
         # Verify all content IDs are stored
         for content_id, _, _ in sample_content_items:
-            assert content_id in semantic_engine.embeddings_store
-            assert content_id in semantic_engine.content_metadata
+            assert content_id in self.semantic_engine.embeddings_store
+            assert content_id in self.semantic_engine.content_metadata
 
     async def test_should_perform_semantic_search_with_relevance_ranking(self) -> None:
         """
@@ -186,7 +186,7 @@ class TestSemanticSearchEngine:
         ranked by relevance with proper scoring.
         """
         # Index content first
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         # Perform search
         query = SemanticSearchQuery(
@@ -195,7 +195,7 @@ class TestSemanticSearchEngine:
             include_snippets=True,
         )
 
-        response = await semantic_engine.semantic_search(query)
+        response = await self.semantic_engine.semantic_search(query)
 
         # Verify response structure
         assert isinstance(response, SemanticSearchResponse)
@@ -215,7 +215,7 @@ class TestSemanticSearchEngine:
         assert relevance_scores == sorted(relevance_scores, reverse=True)
 
         # Verify search statistics update
-        stats = semantic_engine.get_search_statistics()
+        stats = self.semantic_engine.get_search_statistics()
         assert stats["total_searches"] == 1
         assert stats["average_search_time"] > 0
 
@@ -225,10 +225,10 @@ class TestSemanticSearchEngine:
         with accurate similarity scoring and ranking.
         """
         # Index content first
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         # Find similar content to research_1 (ML/AI focused)
-        similar_results = await semantic_engine.find_similar_content(
+        similar_results = await self.semantic_engine.find_similar_content(
             "research_1",
             max_results=5,
             similarity_threshold=0.1,
@@ -258,7 +258,7 @@ class TestSemanticSearchEngine:
         Test: Should handle different search modes (semantic, fuzzy, hybrid)
         with appropriate result variation and performance.
         """
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         base_query_text = "machine learning algorithms"
 
@@ -278,7 +278,7 @@ class TestSemanticSearchEngine:
                 max_results=10,
             )
 
-            response = await semantic_engine.semantic_search(query)
+            response = await self.semantic_engine.semantic_search(query)
             results_by_mode[mode] = response
 
             # Verify basic response quality
@@ -295,7 +295,7 @@ class TestSemanticSearchEngine:
         Test: Should apply different similarity metrics (cosine, euclidean, dot product)
         with measurable differences in results.
         """
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         query_text = "neural networks deep learning"
         metrics = [
@@ -313,7 +313,7 @@ class TestSemanticSearchEngine:
                 max_results=5,
             )
 
-            response = await semantic_engine.semantic_search(query)
+            response = await self.semantic_engine.semantic_search(query)
             results_by_metric[metric] = response
 
             # Verify results exist
@@ -335,7 +335,7 @@ class TestSemanticSearchEngine:
         Test: Should apply different ranking strategies (relevance, quality, recency, hybrid)
         with observable impact on result ordering.
         """
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         query_text = "artificial intelligence"
         strategies = [
@@ -353,7 +353,7 @@ class TestSemanticSearchEngine:
                 max_results=5,
             )
 
-            response = await semantic_engine.semantic_search(query)
+            response = await self.semantic_engine.semantic_search(query)
             results_by_strategy[strategy] = response
 
             # Verify results quality
@@ -377,7 +377,7 @@ class TestSemanticSearchEngine:
         Test: Should cache search results and utilize cache for
         repeated queries with improved performance.
         """
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         query = SemanticSearchQuery(
             query_text="machine learning research",
@@ -386,12 +386,12 @@ class TestSemanticSearchEngine:
 
         # First search (cache miss)
         start_time = time.time()
-        response1 = await semantic_engine.semantic_search(query)
+        response1 = await self.semantic_engine.semantic_search(query)
         first_search_time = time.time() - start_time
 
         # Second search (should be cached)
         start_time = time.time()
-        response2 = await semantic_engine.semantic_search(query)
+        response2 = await self.semantic_engine.semantic_search(query)
         second_search_time = time.time() - start_time
 
         # Verify results are identical
@@ -399,8 +399,8 @@ class TestSemanticSearchEngine:
         assert response1.total_matches == response2.total_matches
 
         # Verify cache utilization
-        stats = semantic_engine.get_search_statistics()
-        if semantic_engine.config.enable_search_caching:
+        stats = self.semantic_engine.get_search_statistics()
+        if self.semantic_engine.config.enable_search_caching:
             assert stats["cache_hits"] > 0
             assert stats["cache_hit_rate"] > 0
             # Second search should be faster due to caching
@@ -429,13 +429,13 @@ class TestSemanticSearchEngine:
 
         # Measure indexing performance
         start_time = time.time()
-        embeddings = await semantic_engine.batch_index_content(large_content_batch)
+        embeddings = await self.semantic_engine.batch_index_content(large_content_batch)
         indexing_time = time.time() - start_time
 
         # Verify successful indexing
         assert len(embeddings) == 100
-        assert semantic_engine.stats["total_embeddings"] == 100
-        assert len(semantic_engine.embeddings_store) == 100
+        assert self.semantic_engine.stats["total_embeddings"] == 100
+        assert len(self.semantic_engine.embeddings_store) == 100
 
         # Verify reasonable performance (should complete within 30 seconds)
         assert indexing_time < 30.0
@@ -446,7 +446,7 @@ class TestSemanticSearchEngine:
             max_results=20,
         )
         search_start = time.time()
-        response = await semantic_engine.semantic_search(query)
+        response = await self.semantic_engine.semantic_search(query)
         search_time = time.time() - search_start
 
         # Search should complete quickly even with large index
@@ -459,7 +459,7 @@ class TestSemanticSearchEngine:
         without errors and with appropriate fallback behavior.
         """
         # Test empty content
-        empty_embedding = await semantic_engine.index_content(
+        empty_embedding = await self.semantic_engine.index_content(
             "empty_doc",
             "",
             {"source_type": "test"},
@@ -468,7 +468,7 @@ class TestSemanticSearchEngine:
         assert empty_embedding.content_id == "empty_doc"
 
         # Test very short content
-        short_embedding = await semantic_engine.index_content(
+        short_embedding = await self.semantic_engine.index_content(
             "short_doc",
             "AI",
             {"source_type": "test"},
@@ -477,7 +477,7 @@ class TestSemanticSearchEngine:
 
         # Test None content (should not crash)
         try:
-            none_embedding = await semantic_engine.index_content(
+            none_embedding = await self.semantic_engine.index_content(
                 "none_doc",
                 None,
                 {"source_type": "test"},
@@ -489,7 +489,7 @@ class TestSemanticSearchEngine:
 
         # Test search with empty query
         empty_query = SemanticSearchQuery(query_text="")
-        response = await semantic_engine.semantic_search(empty_query)
+        response = await self.semantic_engine.semantic_search(empty_query)
         assert isinstance(response, SemanticSearchResponse)
         # Empty query might return no results or all results
         assert response.total_matches >= 0
@@ -515,11 +515,11 @@ class TestSemanticSearchEngine:
 
         # Define concurrent operations
         async def index_operation(self) -> None:
-            return await semantic_engine.batch_index_content(concurrent_content[:10])
+            return await self.semantic_engine.batch_index_content(concurrent_content[:10])
 
         async def search_operation(self) -> None:
             query = SemanticSearchQuery(query_text="machine learning", max_results=5)
-            return await semantic_engine.semantic_search(query)
+            return await self.semantic_engine.semantic_search(query)
 
         # Run concurrent operations
         index_task = asyncio.create_task(index_operation())
@@ -539,8 +539,8 @@ class TestSemanticSearchEngine:
             assert not isinstance(result, Exception)
 
         # Verify data integrity
-        assert len(semantic_engine.embeddings_store) >= 10
-        assert semantic_engine.stats["total_embeddings"] >= 10
+        assert len(self.semantic_engine.embeddings_store) >= 10
+        assert self.semantic_engine.stats["total_embeddings"] >= 10
 
     async def test_should_clear_index_and_reset_statistics_properly(self) -> None:
         """
@@ -548,26 +548,26 @@ class TestSemanticSearchEngine:
         statistics without leaving residual data.
         """
         # Index some content and perform searches
-        await semantic_engine.batch_index_content(sample_content_items)
+        await self.semantic_engine.batch_index_content(sample_content_items)
 
         query = SemanticSearchQuery(query_text="machine learning")
-        await semantic_engine.semantic_search(query)
+        await self.semantic_engine.semantic_search(query)
 
         # Verify data exists
-        assert len(semantic_engine.embeddings_store) > 0
-        assert semantic_engine.stats["total_embeddings"] > 0
-        assert semantic_engine.stats["total_searches"] > 0
+        assert len(self.semantic_engine.embeddings_store) > 0
+        assert self.semantic_engine.stats["total_embeddings"] > 0
+        assert self.semantic_engine.stats["total_searches"] > 0
 
         # Clear index
-        await semantic_engine.clear_index()
+        await self.semantic_engine.clear_index()
 
         # Verify everything is cleared
-        assert len(semantic_engine.embeddings_store) == 0
-        assert len(semantic_engine.content_metadata) == 0
-        assert len(semantic_engine.search_cache) == 0
-        assert semantic_engine.stats["total_embeddings"] == 0
-        assert semantic_engine.stats["total_searches"] == 0
-        assert semantic_engine.stats["cache_hits"] == 0
+        assert len(self.semantic_engine.embeddings_store) == 0
+        assert len(self.semantic_engine.content_metadata) == 0
+        assert len(self.semantic_engine.search_cache) == 0
+        assert self.semantic_engine.stats["total_embeddings"] == 0
+        assert self.semantic_engine.stats["total_searches"] == 0
+        assert self.semantic_engine.stats["cache_hits"] == 0
 
 
 @pytest.mark.asyncio
@@ -595,7 +595,7 @@ class TestEmbeddingComponents:
         content = "This is a test document about machine learning and artificial intelligence algorithms."
         metadata = {"content_id": "test_doc"}
 
-        embedding = await tfidf_generator.generate_embedding(content, metadata)
+        embedding = await self.tfidf_generator.generate_embedding(content, metadata)
 
         # Verify embedding properties
         assert isinstance(embedding, VectorEmbedding)
@@ -624,26 +624,26 @@ class TestEmbeddingComponents:
         content3 = "This document is about cooking recipes and kitchen techniques."
 
         # Generate embeddings
-        embedding1 = await tfidf_generator.generate_embedding(
+        embedding1 = await self.tfidf_generator.generate_embedding(
             content1,
             {"content_id": "doc1"},
         )
-        embedding2 = await tfidf_generator.generate_embedding(
+        embedding2 = await self.tfidf_generator.generate_embedding(
             content2,
             {"content_id": "doc2"},
         )
-        embedding3 = await tfidf_generator.generate_embedding(
+        embedding3 = await self.tfidf_generator.generate_embedding(
             content3,
             {"content_id": "doc3"},
         )
 
         # Test cosine similarity
-        sim_1_2 = similarity_calculator.calculate_similarity(
+        sim_1_2 = self.similarity_calculator.calculate_similarity(
             embedding1,
             embedding2,
             SimilarityMetric.COSINE,
         )
-        sim_1_3 = similarity_calculator.calculate_similarity(
+        sim_1_3 = self.similarity_calculator.calculate_similarity(
             embedding1,
             embedding3,
             SimilarityMetric.COSINE,
@@ -658,12 +658,12 @@ class TestEmbeddingComponents:
         assert sim_1_2.similarity_score > sim_1_3.similarity_score
 
         # Test different metrics produce valid results
-        sim_euclidean = similarity_calculator.calculate_similarity(
+        sim_euclidean = self.similarity_calculator.calculate_similarity(
             embedding1,
             embedding2,
             SimilarityMetric.EUCLIDEAN,
         )
-        sim_dot_product = similarity_calculator.calculate_similarity(
+        sim_dot_product = self.similarity_calculator.calculate_similarity(
             embedding1,
             embedding2,
             SimilarityMetric.DOT_PRODUCT,
@@ -708,7 +708,7 @@ class TestEmbeddingComponents:
         ]
 
         start_time = time.time()
-        embeddings = await tfidf_generator.batch_generate_embeddings(content_items)
+        embeddings = await self.tfidf_generator.batch_generate_embeddings(content_items)
         processing_time = time.time() - start_time
 
         # Verify batch results
@@ -720,7 +720,7 @@ class TestEmbeddingComponents:
             assert embedding.content_id == content_items[i][0]
             assert (
                 embedding.dimensionality
-                == tfidf_generator.config.embedding_dimensionality
+                == self.tfidf_generator.config.embedding_dimensionality
             )
 
             # Verify vector quality

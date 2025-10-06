@@ -6,7 +6,7 @@ relationships, and enterprise patterns.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
 from uuid import UUID, uuid4
 
 from sqlalchemy import (

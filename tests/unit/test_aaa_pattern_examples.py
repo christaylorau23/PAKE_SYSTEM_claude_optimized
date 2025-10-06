@@ -1,3 +1,5 @@
+data
+config
 #!/usr/bin/env python3
 """
 PAKE System - AAA Pattern Unit Testing Examples
@@ -161,7 +163,7 @@ class MockIngestionOrchestrator:
                             )
                     else:
                         errors.append(result.error_message or "Unknown error")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 errors.append(str(e))
 
         return MockIngestionResult(
@@ -737,10 +739,10 @@ class TestAAAUnitTestingPatterns:
         analyzer = PerformanceAnalyzer()
 
         # Generate large dataset (10,000 data points)
-        import random
+        import secrets
 
-        large_response_times = [random.randint(50, 500) for _ in range(10000)]
-        large_error_rates = [random.uniform(0.0, 0.1) for _ in range(10000)]
+        large_response_times = [secrets.randbelow(451) + 50 for _ in range(10000)]
+        large_error_rates = [secrets.randbelow(1000) / 10000 for _ in range(10000)]
 
         large_metrics_data = {
             "response_time_ms": large_response_times,

@@ -9,9 +9,9 @@ Handles:
 - Cognitive optimization recommendations
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict
 
 from ..messaging.message_bus import MessageBus
 from .base_worker import BaseWorkerAgent, WorkerCapabilityBuilder
@@ -27,7 +27,7 @@ class CognitiveWorker(BaseWorkerAgent):
     content quality, relevance, and extract actionable insights.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, message_bus: Any, worker_id: str | None = None) -> None:
         """Initialize Cognitive Engine worker."""
         # Define worker capabilities
         capabilities = [
@@ -144,7 +144,7 @@ class CognitiveWorker(BaseWorkerAgent):
                 "result": None,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cognitive worker task processing error: %s", e)
             return {
                 "success": False,
@@ -207,7 +207,7 @@ class CognitiveWorker(BaseWorkerAgent):
                 total_quality_score += quality_assessment.get("overall_quality", 0.0)
                 processed_items += 1
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to assess content item: %s", e)
                 assessments.append(
                     {

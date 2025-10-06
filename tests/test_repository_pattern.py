@@ -39,7 +39,7 @@ class TestUserServiceWithFakeRepository:
         full_name = "Test User"
 
         # Act
-        user = await user_service.create_user(
+        user = await self.user_service.create_user(
             username=username,
             email=email,
             password_hash=password_hash,
@@ -65,13 +65,13 @@ class TestUserServiceWithFakeRepository:
         password_hash = "hashed_password"
 
         # Create first user
-        await user_service.create_user(username1, email, password_hash)
+        await self.user_service.create_user(username1, email, password_hash)
 
         # Act & Assert
         with pytest.raises(
             ValueError, match="User with email duplicate@example.com already exists"
         ):
-            await user_service.create_user(username2, email, password_hash)
+            await self.user_service.create_user(username2, email, password_hash)
 
     @pytest.mark.asyncio
     async def test_create_user_duplicate_username(self) -> None:
@@ -83,20 +83,20 @@ class TestUserServiceWithFakeRepository:
         password_hash = "hashed_password"
 
         # Create first user
-        await user_service.create_user(username, email1, password_hash)
+        await self.user_service.create_user(username, email1, password_hash)
 
         # Act & Assert
         with pytest.raises(
             ValueError, match="User with username duplicate_user already exists"
         ):
-            await user_service.create_user(username, email2, password_hash)
+            await self.user_service.create_user(username, email2, password_hash)
 
     @pytest.mark.asyncio
     async def test_create_user_invalid_email(self) -> None:
         """Test user creation with invalid email"""
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid email address"):
-            await user_service.create_user("testuser", "invalid-email", "password")
+            await self.user_service.create_user("testuser", "invalid-email", "password")
 
     @pytest.mark.asyncio
     async def test_create_user_short_username(self) -> None:
@@ -105,7 +105,7 @@ class TestUserServiceWithFakeRepository:
         with pytest.raises(
             ValueError, match="Username must be at least 3 characters long"
         ):
-            await user_service.create_user("ab", "test@example.com", "password")
+            await self.user_service.create_user("ab", "test@example.com", "password")
 
     @pytest.mark.asyncio
     async def test_authenticate_user_success(self) -> None:
@@ -115,10 +115,10 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "correct_hash"
 
-        user = await user_service.create_user(username, email, password_hash)
+        user = await self.user_service.create_user(username, email, password_hash)
 
         # Act
-        authenticated_user = await user_service.authenticate_user(email, password_hash)
+        authenticated_user = await self.user_service.authenticate_user(email, password_hash)
 
         # Assert
         assert authenticated_user is not None
@@ -134,10 +134,10 @@ class TestUserServiceWithFakeRepository:
         password_hash = "correct_hash"
         wrong_hash = "wrong_hash"
 
-        await user_service.create_user(username, email, password_hash)
+        await self.user_service.create_user(username, email, password_hash)
 
         # Act
-        authenticated_user = await user_service.authenticate_user(email, wrong_hash)
+        authenticated_user = await self.user_service.authenticate_user(email, wrong_hash)
 
         # Assert
         assert authenticated_user is None
@@ -150,11 +150,11 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "correct_hash"
 
-        user = await user_service.create_user(username, email, password_hash)
-        await user_service.deactivate_user(user.id, "admin")
+        user = await self.user_service.create_user(username, email, password_hash)
+        await self.user_service.deactivate_user(user.id, "admin")
 
         # Act
-        authenticated_user = await user_service.authenticate_user(email, password_hash)
+        authenticated_user = await self.user_service.authenticate_user(email, password_hash)
 
         # Assert
         assert authenticated_user is None
@@ -163,7 +163,7 @@ class TestUserServiceWithFakeRepository:
     async def test_authenticate_user_nonexistent(self) -> None:
         """Test authentication of nonexistent user"""
         # Act
-        authenticated_user = await user_service.authenticate_user(
+        authenticated_user = await self.user_service.authenticate_user(
             "nonexistent@example.com", "password"
         )
 
@@ -178,13 +178,13 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "password"
 
-        user = await user_service.create_user(username, email, password_hash)
+        user = await self.user_service.create_user(username, email, password_hash)
 
         new_full_name = "Updated Name"
         new_preferences = {"theme": "dark", "language": "en"}
 
         # Act
-        updated_user = await user_service.update_user_profile(
+        updated_user = await self.user_service.update_user_profile(
             user.id, full_name=new_full_name, preferences=new_preferences
         )
 
@@ -198,7 +198,7 @@ class TestUserServiceWithFakeRepository:
         """Test updating profile of nonexistent user"""
         # Act & Assert
         with pytest.raises(ValueError, match="User .* not found"):
-            await user_service.update_user_profile(
+            await self.user_service.update_user_profile(
                 "nonexistent_id", full_name="New Name"
             )
 
@@ -210,16 +210,16 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "password"
 
-        user = await user_service.create_user(username, email, password_hash)
+        user = await self.user_service.create_user(username, email, password_hash)
 
         # Act
-        success = await user_service.deactivate_user(user.id, "admin")
+        success = await self.user_service.deactivate_user(user.id, "admin")
 
         # Assert
         assert success is True
 
         # Verify user is deactivated
-        deactivated_user = await user_service.get_user_by_id(user.id)
+        deactivated_user = await self.user_service.get_user_by_id(user.id)
         assert deactivated_user.is_active is False
 
     @pytest.mark.asyncio
@@ -230,11 +230,11 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "password"
 
-        user = await user_service.create_user(username, email, password_hash)
-        await user_service.deactivate_user(user.id, "admin")
+        user = await self.user_service.create_user(username, email, password_hash)
+        await self.user_service.deactivate_user(user.id, "admin")
 
         # Act
-        success = await user_service.deactivate_user(user.id, "admin")
+        success = await self.user_service.deactivate_user(user.id, "admin")
 
         # Assert
         assert success is False
@@ -247,13 +247,13 @@ class TestUserServiceWithFakeRepository:
         email = "admin@example.com"
         password_hash = "password"
 
-        user = await user_service.create_user(
+        user = await self.user_service.create_user(
             username, email, password_hash, is_admin=True
         )
 
         # Act & Assert
         with pytest.raises(ValueError, match="Cannot deactivate admin users"):
-            await user_service.deactivate_user(user.id, "admin")
+            await self.user_service.deactivate_user(user.id, "admin")
 
     @pytest.mark.asyncio
     async def test_activate_user_success(self) -> None:
@@ -263,17 +263,17 @@ class TestUserServiceWithFakeRepository:
         email = "test@example.com"
         password_hash = "password"
 
-        user = await user_service.create_user(username, email, password_hash)
-        await user_service.deactivate_user(user.id, "admin")
+        user = await self.user_service.create_user(username, email, password_hash)
+        await self.user_service.deactivate_user(user.id, "admin")
 
         # Act
-        success = await user_service.activate_user(user.id, "admin")
+        success = await self.user_service.activate_user(user.id, "admin")
 
         # Assert
         assert success is True
 
         # Verify user is activated
-        activated_user = await user_service.get_user_by_id(user.id)
+        activated_user = await self.user_service.get_user_by_id(user.id)
         assert activated_user.is_active is True
 
     @pytest.mark.asyncio
@@ -281,22 +281,22 @@ class TestUserServiceWithFakeRepository:
         """Test user statistics calculation"""
         # Arrange
         # Create active users
-        await user_service.create_user("user1", "user1@example.com", "password")
-        await user_service.create_user("user2", "user2@example.com", "password")
+        await self.user_service.create_user("user1", "user1@example.com", "password")
+        await self.user_service.create_user("user2", "user2@example.com", "password")
 
         # Create admin user
-        await user_service.create_user(
+        await self.user_service.create_user(
             "admin", "admin@example.com", "password", is_admin=True
         )
 
         # Create and deactivate a user
-        inactive_user = await user_service.create_user(
+        inactive_user = await self.user_service.create_user(
             "inactive", "inactive@example.com", "password"
         )
-        await user_service.deactivate_user(inactive_user.id, "admin")
+        await self.user_service.deactivate_user(inactive_user.id, "admin")
 
         # Act
-        stats = await user_service.get_user_statistics()
+        stats = await self.user_service.get_user_statistics()
 
         # Assert
         assert stats["total_users"] == 4
@@ -310,18 +310,18 @@ class TestUserServiceWithFakeRepository:
     async def test_search_users(self) -> None:
         """Test user search functionality"""
         # Arrange
-        await user_service.create_user(
+        await self.user_service.create_user(
             "john_doe", "john@example.com", "password", full_name="John Doe"
         )
-        await user_service.create_user(
+        await self.user_service.create_user(
             "jane_smith", "jane@example.com", "password", full_name="Jane Smith"
         )
-        await user_service.create_user(
+        await self.user_service.create_user(
             "bob_wilson", "bob@example.com", "password", full_name="Bob Wilson"
         )
 
         # Act
-        results = await user_service.search_users("john")
+        results = await self.user_service.search_users("john")
 
         # Assert
         assert len(results) == 1
@@ -331,11 +331,11 @@ class TestUserServiceWithFakeRepository:
     async def test_search_users_by_email(self) -> None:
         """Test user search by email"""
         # Arrange
-        await user_service.create_user("user1", "test@example.com", "password")
-        await user_service.create_user("user2", "other@example.com", "password")
+        await self.user_service.create_user("user1", "test@example.com", "password")
+        await self.user_service.create_user("user2", "other@example.com", "password")
 
         # Act
-        results = await user_service.search_users("test@")
+        results = await self.user_service.search_users("test@")
 
         # Assert
         assert len(results) == 1
@@ -348,13 +348,13 @@ class TestUserServiceWithFakeRepository:
         with pytest.raises(
             ValueError, match="Search query must be at least 2 characters long"
         ):
-            await user_service.search_users("a")
+            await self.user_service.search_users("a")
 
     @pytest.mark.asyncio
     async def test_health_check(self) -> None:
         """Test service health check"""
         # Act
-        health = await user_service.health_check()
+        health = await self.user_service.health_check()
 
         # Assert
         assert health["status"] == "healthy"

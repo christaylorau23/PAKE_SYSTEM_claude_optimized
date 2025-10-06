@@ -5,10 +5,10 @@ Validates all components and provides comprehensive testing.
 """
 
 import asyncio
-import sys
-import time
 from datetime import UTC, datetime
 from pathlib import Path
+import sys
+import time
 
 from services.curation.integration.curation_orchestrator import (
     CurationOrchestrator,
@@ -61,7 +61,7 @@ class CurationSystemTester:
             # Generate report
             self.generate_test_report()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Test suite failed: {e}")
             return False
 
@@ -94,7 +94,7 @@ class CurationSystemTester:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ System initialization error: {e}")
             self.test_results.append(("System Initialization", "ERROR", str(e)))
 
@@ -142,7 +142,7 @@ class CurationSystemTester:
                     ("Content Analysis", "FAIL", "No analysis result returned"),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Content analysis error: {e}")
             self.test_results.append(("Content Analysis", "ERROR", str(e)))
 
@@ -201,7 +201,7 @@ class CurationSystemTester:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Recommendation generation error: {e}")
             self.test_results.append(("Recommendation Generation", "ERROR", str(e)))
 
@@ -268,7 +268,7 @@ class CurationSystemTester:
                     ("User Preference Learning", "FAIL", "No updated profile returned"),
                 )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"❌ User preference learning error: {e}")
             self.test_results.append(("User Preference Learning", "ERROR", str(e)))
 
@@ -304,7 +304,7 @@ class CurationSystemTester:
                     ),
                 )
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             print(f"❌ Feedback processing error: {e}")
             self.test_results.append(("Feedback Processing", "ERROR", str(e)))
 
@@ -347,7 +347,7 @@ class CurationSystemTester:
                     ("Feature Extraction", "FAIL", "No features extracted"),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Feature extraction error: {e}")
             self.test_results.append(("Feature Extraction", "ERROR", str(e)))
 
@@ -374,7 +374,7 @@ class CurationSystemTester:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Model training error: {e}")
             self.test_results.append(("Model Training", "ERROR", str(e)))
 
@@ -421,7 +421,7 @@ class CurationSystemTester:
                     ("Prediction Engine", "FAIL", "Invalid prediction result"),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Prediction engine error: {e}")
             self.test_results.append(("Prediction Engine", "ERROR", str(e)))
 
@@ -467,7 +467,7 @@ class CurationSystemTester:
                     ("End-to-End Workflow", "FAIL", "Workflow did not complete"),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ End-to-end workflow error: {e}")
             self.test_results.append(("End-to-End Workflow", "ERROR", str(e)))
 
@@ -520,7 +520,7 @@ class CurationSystemTester:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Performance test error: {e}")
             self.test_results.append(("Performance Requirements", "ERROR", str(e)))
 

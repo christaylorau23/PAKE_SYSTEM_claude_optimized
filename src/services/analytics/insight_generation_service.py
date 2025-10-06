@@ -4,11 +4,11 @@ Provides AI-powered insight generation, recommendation systems,
 and intelligent analysis of patterns and trends in the data.
 """
 
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -266,7 +266,7 @@ class InsightGenerationService:
             max_insights = self.config["max_insights_per_analysis"]
             return ranked_insights[:max_insights]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Comprehensive insight generation failed: %s", e)
             return []
 
@@ -335,7 +335,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend insight generation failed: %s", e)
             return []
 
@@ -403,7 +403,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation insight generation failed: %s", e)
             return []
 
@@ -462,7 +462,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Anomaly insight generation failed: %s", e)
             return []
 
@@ -518,7 +518,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Pattern insight generation failed: %s", e)
             return []
 
@@ -577,7 +577,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Optimization insight generation failed: %s", e)
             return []
 
@@ -618,7 +618,7 @@ class InsightGenerationService:
                 "relative_slope": relative_slope,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend analysis failed: %s", e)
             return {"direction": "unknown", "trend_strength": 0.0}
 
@@ -644,7 +644,7 @@ class InsightGenerationService:
                 return "significant"
             return "dramatic"
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend magnitude calculation failed: %s", e)
             return "unknown"
 
@@ -817,7 +817,7 @@ class InsightGenerationService:
 
             return patterns
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Pattern detection failed: %s", e)
             return {}
 
@@ -853,7 +853,7 @@ class InsightGenerationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Seasonal pattern detection failed: %s", e)
             return None
 
@@ -894,7 +894,7 @@ class InsightGenerationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cyclical pattern detection failed: %s", e)
             return None
 
@@ -949,7 +949,7 @@ class InsightGenerationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Threshold pattern detection failed: %s", e)
             return None
 
@@ -982,7 +982,7 @@ class InsightGenerationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Spike pattern detection failed: %s", e)
             return None
 
@@ -1007,7 +1007,7 @@ class InsightGenerationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend pattern detection failed: %s", e)
             return None
 
@@ -1054,7 +1054,7 @@ class InsightGenerationService:
                 "coefficient_of_variation": coefficient_of_variation,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Optimization analysis failed: %s", e)
             return {
                 "opportunity_score": 0.0,
@@ -1103,7 +1103,7 @@ class InsightGenerationService:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Insight ranking failed: %s", e)
             return insights
 
@@ -1131,7 +1131,7 @@ class InsightGenerationService:
                 "cache_size": len(self.insight_cache),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

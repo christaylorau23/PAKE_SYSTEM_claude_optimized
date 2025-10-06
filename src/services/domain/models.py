@@ -9,7 +9,7 @@ that are completely decoupled from any persistence mechanism.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 from uuid import uuid4
 
 

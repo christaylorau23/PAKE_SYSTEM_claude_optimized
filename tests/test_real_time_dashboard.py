@@ -8,11 +8,11 @@ and dashboard functionality.
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 import json
+from pathlib import Path
 import tempfile
 import time
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -121,13 +121,13 @@ class TestRealTimeMonitoringDashboard:
         ingestion systems with proper data structure.
         """
         # Configure dashboard with mock systems
-        dashboard.metric_collector = IngestionMetrics(
+        self.dashboard.metric_collector = IngestionMetrics(
             orchestrator_manager=None,
             cache_manager=mock_cache_manager,
         )
 
         # Collect metrics
-        metrics = await dashboard.metric_collector.collect_metrics()
+        metrics = await self.dashboard.metric_collector.collect_metrics()
 
         # Verify cache metrics are collected
         assert "cache_hit_rate" in metrics
@@ -152,25 +152,25 @@ class TestRealTimeMonitoringDashboard:
         and data point limits.
         """
         # Add sample data points
-        dashboard.metrics_history["test_metric"] = sample_metric_points.copy()
+        self.dashboard.metrics_history["test_metric"] = self.sample_metric_points.copy()
 
         # Add more points to test retention
         now = datetime.now(UTC)
         for i in range(150):  # Exceed max_data_points
             point = MetricPoint(now + timedelta(seconds=i), float(i))
-            dashboard.metrics_history["test_metric"].append(point)
+            self.dashboard.metrics_history["test_metric"].append(point)
 
         # Trim history
-        dashboard._trim_metric_history("test_metric")
+        self.dashboard._trim_metric_history("test_metric")
 
         # Check data point limit is enforced
         assert (
-            len(dashboard.metrics_history["test_metric"])
-            <= dashboard.config.max_data_points
+            len(self.dashboard.metrics_history["test_metric"])
+            <= self.dashboard.config.max_data_points
         )
 
         # Check most recent points are retained
-        latest_point = dashboard.metrics_history["test_metric"][-1]
+        latest_point = self.dashboard.metrics_history["test_metric"][-1]
         assert latest_point.value == 149.0
 
     @pytest.mark.asyncio
@@ -180,10 +180,10 @@ class TestRealTimeMonitoringDashboard:
         with proper status calculation and alerting.
         """
         # Configure health checker with mock data
-        dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
+        self.dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
 
         # Perform health check
-        health = await dashboard.health_checker.check_health()
+        health = await self.dashboard.health_checker.check_health()
 
         # Verify health check structure
         assert isinstance(health, SystemHealth)
@@ -238,15 +238,15 @@ class TestRealTimeMonitoringDashboard:
         with metrics, health, and system information.
         """
         # Configure dashboard
-        dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
+        self.dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
 
         # Simulate some metrics collection
-        metrics = await dashboard.metric_collector.collect_metrics()
-        dashboard.current_metrics = metrics
-        dashboard.current_health = await dashboard.health_checker.check_health()
+        metrics = await self.dashboard.metric_collector.collect_metrics()
+        self.dashboard.current_metrics = metrics
+        self.self.dashboard.current_health = await self.self.dashboard.health_checker.check_health()
 
         # Get dashboard data
-        dashboard_data = await dashboard.get_dashboard_data()
+        dashboard_data = await self.dashboard.get_dashboard_data()
 
         # Verify data structure
         assert "timestamp" in dashboard_data
@@ -275,12 +275,12 @@ class TestRealTimeMonitoringDashboard:
         Test: Should handle concurrent metric collection and health
         monitoring without race conditions or data corruption.
         """
-        dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
+        self.dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
 
         # Start concurrent operations
         tasks = []
         for _i in range(10):
-            task = asyncio.create_task(dashboard.metric_collector.collect_metrics())
+            task = asyncio.create_task(self.dashboard.metric_collector.collect_metrics())
             tasks.append(task)
 
         # Wait for all to complete
@@ -314,22 +314,22 @@ class TestRealTimeMonitoringDashboard:
                 labels={"batch": str(i // 100)},
             )
 
-            if metric_name not in dashboard.metrics_history:
-                dashboard.metrics_history[metric_name] = []
-            dashboard.metrics_history[metric_name].append(point)
+            if metric_name not in self.dashboard.metrics_history:
+                self.dashboard.metrics_history[metric_name] = []
+            self.dashboard.metrics_history[metric_name].append(point)
 
         # Measure trimming performance
         trim_start = time.time()
-        for metric_name in dashboard.metrics_history:
-            dashboard._trim_metric_history(metric_name)
+        for metric_name in self.dashboard.metrics_history:
+            self.dashboard._trim_metric_history(metric_name)
         trim_time = time.time() - trim_start
 
         # Should complete quickly (under 1 second)
         assert trim_time < 1.0
 
         # Verify data is properly managed
-        for metric_name, points in dashboard.metrics_history.items():
-            assert len(points) <= dashboard.config.max_data_points
+        for metric_name, points in self.dashboard.metrics_history.items():
+            assert len(points) <= self.dashboard.config.max_data_points
 
     @pytest.mark.asyncio
     async def test_should_export_metrics_to_file_successfully(self) -> None:
@@ -338,12 +338,12 @@ class TestRealTimeMonitoringDashboard:
         with proper formatting and completeness.
         """
         # Configure dashboard with test data
-        dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
+        self.dashboard.metric_collector = IngestionMetrics(cache_manager=mock_cache_manager)
 
         # Collect some metrics
-        metrics = await dashboard.metric_collector.collect_metrics()
-        dashboard.current_metrics = metrics
-        dashboard.current_health = await dashboard.health_checker.check_health()
+        metrics = await self.dashboard.metric_collector.collect_metrics()
+        self.dashboard.current_metrics = metrics
+        self.self.dashboard.current_health = await self.self.dashboard.health_checker.check_health()
 
         # Export to temporary file
         with tempfile.NamedTemporaryFile(
@@ -354,7 +354,7 @@ class TestRealTimeMonitoringDashboard:
             tmp_path = tmp_file.name
 
         # Perform export
-        success = await dashboard.export_metrics(tmp_path)
+        success = await self.dashboard.export_metrics(tmp_path)
         assert success
 
         # Verify file contents
@@ -388,12 +388,12 @@ class TestRealTimeMonitoringDashboard:
         failing_collector = AsyncMock()
         failing_collector.collect_metrics.side_effect = Exception("Collection failed")
 
-        dashboard.metric_collector = failing_collector
+        self.dashboard.metric_collector = failing_collector
         # Update health checker to use the same failing collector
-        dashboard.health_checker.metric_collector = failing_collector
+        self.dashboard.health_checker.metric_collector = failing_collector
 
         # Health checker should handle the failure
-        health = await dashboard.health_checker.check_health()
+        health = await self.dashboard.health_checker.check_health()
 
         # Should report critical status due to collection failure
         assert health.overall_status == HealthStatus.CRITICAL
@@ -407,11 +407,11 @@ class TestRealTimeMonitoringDashboard:
         without errors or crashes.
         """
         # Set up empty metrics
-        dashboard.current_metrics = {}
-        dashboard.metrics_history = {}
+        self.dashboard.current_metrics = {}
+        self.dashboard.metrics_history = {}
 
         # Should still generate dashboard data
-        dashboard_data = await dashboard.get_dashboard_data()
+        dashboard_data = await self.dashboard.get_dashboard_data()
 
         # Verify structure is maintained
         assert "timestamp" in dashboard_data
@@ -444,7 +444,7 @@ class TestRealTimeMonitoringDashboard:
         without affecting overall system operation.
         """
         # Introduce corrupted data
-        dashboard.metrics_history["corrupted_metric"] = [
+        self.dashboard.metrics_history["corrupted_metric"] = [
             "invalid_data",  # Not a MetricPoint
             None,
             {"invalid": "dict"},
@@ -452,14 +452,14 @@ class TestRealTimeMonitoringDashboard:
 
         # Should handle gracefully during trimming
         try:
-            dashboard._trim_metric_history("corrupted_metric")
+            self.dashboard._trim_metric_history("corrupted_metric")
             # If it doesn't crash, it handled the corruption
             trimming_handled = True
         except BaseException:
             trimming_handled = False
 
         # Dashboard should still be operational
-        dashboard_data = await dashboard.get_dashboard_data()
+        dashboard_data = await self.dashboard.get_dashboard_data()
         assert "timestamp" in dashboard_data
 
 

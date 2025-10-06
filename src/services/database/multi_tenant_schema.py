@@ -4,16 +4,18 @@ Enterprise-grade multi-tenant database schema with tenant isolation.
 """
 
 import asyncio
-import logging
-import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import uuid
 
 import asyncpg
-import sqlalchemy as sa
 from asyncpg import Pool
+import sqlalchemy as sa
+import sqlalchemy.exc
+import psycopg2
 from sqlalchemy import (
     JSON,
     UUID,
@@ -404,15 +406,15 @@ class MultiTenantPostgreSQLService:
     - Cross-tenant analytics capabilities
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: MultiTenantDatabaseConfig | None = None) -> None:
+        self.config = config or MultiTenantDatabaseConfig()
         self._pool: Pool | None = None
         self._engine = None
         self._session_maker = None
 
         # Build connection strings
-        self._async_url = f"postgresql+asyncpg://{config.username}:{config.REDACTED_SECRET}@{config.host}:{config.port}/{config.database}"
-        self._sync_url = f"postgresql://{config.username}:{config.REDACTED_SECRET}@{config.host}:{config.port}/{config.database}"
+        self._async_url = f"postgresql+asyncpg://{self.config.username}:{self.config.REDACTED_SECRET}@{self.config.host}:{self.config.port}/{self.config.database}"
+        self._sync_url = f"postgresql://{self.config.username}:{self.config.REDACTED_SECRET}@{self.config.host}:{self.config.port}/{self.config.database}"
 
         logger.info("Multi-tenant PostgreSQL service initialized")
 
@@ -452,7 +454,7 @@ class MultiTenantPostgreSQLService:
 
             logger.info("✅ Multi-tenant PostgreSQL service initialized successfully")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error(
                 "❌ Failed to initialize multi-tenant PostgreSQL service: %s",
                 e,
@@ -479,11 +481,11 @@ class MultiTenantPostgreSQLService:
                 for index in indexes:
                     try:
                         await conn.run_sync(lambda conn: index.create(conn))
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.warning("Index creation warning: %s", e)
 
             logger.info("Multi-tenant database migrations completed successfully")
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Multi-tenant migration error: %s", e)
             raise
 
@@ -894,7 +896,7 @@ class MultiTenantPostgreSQLService:
                     },
                     "tenant_distribution": [dict(row) for row in tenant_status],
                 }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "unhealthy", "error": str(e)}
 
     # Helper Methods
@@ -978,7 +980,7 @@ async def create_multi_tenant_database_service(
 
 
 @asynccontextmanager
-async def get_multi_tenant_database_service(self) -> None:
+async def get_multi_tenant_database_service(config: MultiTenantDatabaseConfig | None = None) -> None:
     """Context manager for multi-tenant database service."""
     service = await create_multi_tenant_database_service(config)
     try:

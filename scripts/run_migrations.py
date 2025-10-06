@@ -27,7 +27,7 @@ DATABASE_CONFIG = {
 async def run_migration_file(self) -> None:
     """Run a single migration file"""
     try:
-        logger.info("Running migration: %s", migration_file.name)
+        logger.info("Running migration: %s", self.migration_file.name)
 
         with open(migration_file) as f:
             sql_content = f.read()
@@ -37,13 +37,13 @@ async def run_migration_file(self) -> None:
 
         for statement in statements:
             if statement:
-                await connection.execute(statement)
+                await self.connection.execute(statement)
 
-        logger.info("✅ Migration %s completed successfully", migration_file.name)
+        logger.info("✅ Migration %s completed successfully", self.migration_file.name)
         return True
 
-    except Exception as e:
-        logger.error("❌ Error running migration %s: %s", migration_file.name, str(e))
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        logger.error("❌ Error running migration %s: %s", self.migration_file.name, str(e))
         return False
 
 
@@ -87,7 +87,7 @@ async def run_all_migrations(self) -> None:
         )
         return success_count == len(migration_files)
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         logger.error("Database connection error: %s", str(e))
         logger.info("Note: This is expected if PostgreSQL is not running locally")
         return False
@@ -130,7 +130,7 @@ async def verify_schema(self) -> None:
 
         return len(existing_tables) == len(tables_to_check)
 
-    except Exception as e:
+    except (pydantic.ValidationError, ValueError) as e:
         logger.error("Schema verification error: %s", str(e))
         return False
 
@@ -185,7 +185,7 @@ ON CONFLICT DO NOTHING;
             print("\n⚠️  Some migrations failed or database not available")
             print("💡 This is normal if PostgreSQL is not running locally")
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"\n❌ Migration error: {str(e)}")
         print("💡 Database migrations will be available when PostgreSQL is configured")
 

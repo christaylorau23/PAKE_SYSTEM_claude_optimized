@@ -8,12 +8,12 @@ Provides comprehensive logging integration for pytest with:
 - Integration with existing enterprise logging.
 """
 
-import logging
-import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import logging
 from pathlib import Path
+import sys
 from typing import Any
 
 import structlog
@@ -73,7 +73,7 @@ class TestLoggingConfig:
 class TestLoggingService:
     """Enhanced test logging service with comprehensive features."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: TestLoggingConfig | None = None) -> None:
         self.config = config or TestLoggingConfig()
         self.test_loggers: dict[str, StructuredLogger] = {}
         self.test_metrics: dict[str, dict[str, Any]] = {}
@@ -136,7 +136,7 @@ class TestLoggingService:
             log_dir = Path(self.config.test_log_directory)
             log_dir.mkdir(parents=True, exist_ok=True)
 
-    def _add_test_context(self) -> None:
+    def _add_test_context(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
         """Add test context to log entries."""
         if self.active_tests:
             event_dict["active_test"] = self.active_tests[-1]
@@ -146,7 +146,7 @@ class TestLoggingService:
 
         return event_dict
 
-    def get_test_logger(self, test_name: str = None) -> StructuredLogger:
+    def get_test_logger(self, test_name: str | None = None) -> StructuredLogger:
         """Get or create logger for specific test."""
         if not test_name:
             test_name = "default_test"
@@ -160,7 +160,7 @@ class TestLoggingService:
         return self.test_loggers[test_name]
 
     @contextmanager
-    def test_context(self) -> None:
+    def test_context(self, test_name: str, test_type: str = "unit"):
         """Context manager for test execution with logging."""
         if not self.config.enabled:
             yield
@@ -192,7 +192,7 @@ class TestLoggingService:
 
             yield logger
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Test %s failed",
                 test_name,
@@ -237,7 +237,7 @@ class TestLoggingService:
 
             self.active_tests.remove(test_name)
 
-    def log_application_event(self) -> None:
+    def log_application_event(self, event: str, **kwargs: Any) -> None:
         """Log application events during tests."""
         if not self.config.capture_application_logs:
             return
@@ -245,7 +245,7 @@ class TestLoggingService:
         logger = self.get_test_logger()
         logger.info("Application event: %s", event, event_type="application", **kwargs)
 
-    def log_performance_metric(self) -> None:
+    def log_performance_metric(self, operation: str, duration: float, **kwargs: Any) -> None:
         """Log performance metrics during tests."""
         if not self.config.capture_performance_metrics:
             return
@@ -260,7 +260,7 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_error(self) -> None:
+    def log_error(self, error: Exception, context: str | None = None, **kwargs: Any) -> None:
         """Log errors with detailed context."""
         if not self.config.capture_error_details:
             return
@@ -276,7 +276,7 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_database_operation(self) -> None:
+    def log_database_operation(self, operation: str, table: str | None = None, duration: float | None = None, **kwargs: Any) -> None:
         """Log database operations during tests."""
         logger = self.get_test_logger()
         logger.database(
@@ -287,7 +287,7 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_api_call(self) -> None:
+    def log_api_call(self, method: str, url: str, status_code: int | None = None, duration: float | None = None, **kwargs: Any) -> None:
         """Log API calls during tests."""
         logger = self.get_test_logger()
         logger.http(
@@ -329,7 +329,7 @@ def get_test_logging_service() -> TestLoggingService:
     return _test_logging_service
 
 
-def setup_test_logging(config: TestLoggingConfig = None) -> TestLoggingService:
+def setup_test_logging(config: TestLoggingConfig | None = None) -> TestLoggingService:
     """Setup test logging with configuration."""
     global _test_logging_service
     _test_logging_service = TestLoggingService(config)
@@ -337,43 +337,43 @@ def setup_test_logging(config: TestLoggingConfig = None) -> TestLoggingService:
 
 
 # Convenience functions for easy access
-def log_test_event(self) -> None:
+def log_test_event(event: str, **kwargs: Any) -> None:
     """Log test event."""
     service = get_test_logging_service()
     service.log_application_event(event, **kwargs)
 
 
-def log_performance(self) -> None:
+def log_performance(operation: str, duration: float, **kwargs: Any) -> None:
     """Log performance metric."""
     service = get_test_logging_service()
     service.log_performance_metric(operation, duration, **kwargs)
 
 
-def log_error(self) -> None:
+def log_error(error: Exception, context: str | None = None, **kwargs: Any) -> None:
     """Log error with context."""
     service = get_test_logging_service()
     service.log_error(error, context, **kwargs)
 
 
-def log_database(self) -> None:
+def log_database(operation: str, table: str | None = None, duration: float | None = None, **kwargs: Any) -> None:
     """Log database operation."""
     service = get_test_logging_service()
     service.log_database_operation(operation, table, duration, **kwargs)
 
 
-def log_api(self) -> None:
+def log_api(method: str, url: str, status_code: int | None = None, duration: float | None = None, **kwargs: Any) -> None:
     """Log API call."""
     service = get_test_logging_service()
     service.log_api_call(method, url, status_code, duration, **kwargs)
 
 
 # Pytest integration helpers
-def pytest_configure_logging(self) -> None:
+def pytest_configure_logging() -> TestLoggingService:
     """Configure logging for pytest."""
     return get_test_logging_service()
 
 
-def pytest_test_logger(self) -> None:
+def pytest_test_logger(test_name: str) -> StructuredLogger:
     """Get logger for specific test."""
     service = get_test_logging_service()
     return service.get_test_logger(test_name)

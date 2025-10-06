@@ -5,10 +5,10 @@ This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
-import time
-import uuid
 from datetime import UTC, datetime
-from typing import Any
+import time
+from typing import Any, Dict
+import uuid
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import PlainTextResponse
@@ -289,7 +289,7 @@ async def create_alert_rule(self) -> None:
     """Create custom alert rule."""
     rule_id = str(uuid.uuid4())
 
-    rule_data = alert_rule.dict()
+    rule_data = self.alert_rule.dict()
     rule_data.update(
         {
             "rule_id": rule_id,
@@ -305,13 +305,13 @@ async def create_alert_rule(self) -> None:
 
 
 @app.post("/api/v1/alerts/{alert_id}/acknowledge")
-async def acknowledge_alert(self) -> None:
+async def acknowledge_alert(self, alert_id: str) -> None:
     """Acknowledge an alert."""
     # Mock acknowledgment
     return {
         "alert_id": alert_id,
         "status": "acknowledged",
-        "acknowledged_by": acknowledgment.get("acknowledged_by", "system"),
+        "acknowledged_by": self.acknowledgment.get("acknowledged_by", "system"),
         "acknowledged_at": datetime.now(UTC).isoformat(),
     }
 

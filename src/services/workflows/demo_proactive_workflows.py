@@ -5,8 +5,8 @@ to automated task creation and incident response.
 """
 
 import asyncio
-import logging
 from datetime import UTC, datetime
+import logging
 
 from .security_monitor_integration import ProactiveSecurityMonitor
 
@@ -16,6 +16,27 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+class MockSecurityAlert:
+    """Mock security alert for demonstration purposes."""
+    
+    def __init__(self, id: str, severity: str, pattern_type: str, message: str, **kwargs) -> None:
+        self.id = id
+        self.timestamp = datetime.now(UTC)
+        self.severity = severity
+        self.pattern_type = pattern_type
+        self.message = message
+        self.source_ip = kwargs.get("source_ip", "192.168.1.100")
+        self.user_agent = kwargs.get("user_agent", "Mozilla/5.0")
+        self.endpoint = kwargs.get("endpoint", "/api/login")
+        self.ai_confidence = kwargs.get("ai_confidence", 0.85)
+        self.risk_score = kwargs.get("risk_score", 75)
+        self.recommended_actions = kwargs.get(
+            "recommended_actions",
+            ["Block IP", "Review logs"],
+        )
+        self.context = kwargs.get("context", {})
 
 
 class SecurityAlertSimulator:
@@ -30,27 +51,9 @@ class SecurityAlertSimulator:
         pattern_type: str,
         message: str,
         **kwargs,
-    ) -> "MockSecurityAlert":
+    ) -> MockSecurityAlert:
         """Create a mock security alert."""
         self.alert_counter += 1
-
-        class MockSecurityAlert:
-            def __init__(self) -> None:
-                self.id = id
-                self.timestamp = datetime.now(UTC)
-                self.severity = severity
-                self.pattern_type = pattern_type
-                self.message = message
-                self.source_ip = kwargs.get("source_ip", "192.168.1.100")
-                self.user_agent = kwargs.get("user_agent", "Mozilla/5.0")
-                self.endpoint = kwargs.get("endpoint", "/api/login")
-                self.ai_confidence = kwargs.get("ai_confidence", 0.85)
-                self.risk_score = kwargs.get("risk_score", 75)
-                self.recommended_actions = kwargs.get(
-                    "recommended_actions",
-                    ["Block IP", "Review logs"],
-                )
-                self.context = kwargs.get("context", {})
 
         return MockSecurityAlert(
             id=f"alert-{self.alert_counter:04d}",

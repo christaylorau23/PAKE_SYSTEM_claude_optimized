@@ -104,7 +104,7 @@ class TestArxivEnhancedService:
         as identified in Perplexity research.
         """
         # This test will fail initially - ArxivEnhancedService doesn't exist yet
-        result = await arxiv_service.search_papers(sample_search_query)
+        result = await self.arxiv_service.search_papers(sample_search_query)
 
         assert result.success is True
         assert result.papers is not None
@@ -120,7 +120,7 @@ class TestArxivEnhancedService:
 
         Critical for extracting paper metadata, authors, categories, and abstracts.
         """
-        result = await arxiv_service.parse_arxiv_response(sample_arxiv_xml)
+        result = await self.arxiv_service.parse_arxiv_response(sample_arxiv_xml)
 
         assert len(result.papers) == 1
         paper = result.papers[0]
@@ -148,7 +148,7 @@ class TestArxivEnhancedService:
             max_results=25,
         )
 
-        result = await arxiv_service.search_papers(complex_query)
+        result = await self.arxiv_service.search_papers(complex_query)
 
         assert result.success is True
         assert result.papers is not None
@@ -171,7 +171,7 @@ class TestArxivEnhancedService:
             max_results=10,
         )
 
-        result = await arxiv_service.search_papers(author_query)
+        result = await self.arxiv_service.search_papers(author_query)
 
         assert result.success is True
         # Should find papers by specified authors
@@ -197,7 +197,7 @@ class TestArxivEnhancedService:
             max_results=20,
         )
 
-        result = await arxiv_service.search_papers(date_query)
+        result = await self.arxiv_service.search_papers(date_query)
 
         assert result.success is True
         # All papers should be within date range
@@ -224,8 +224,8 @@ class TestArxivEnhancedService:
             max_results=10,
         )
 
-        result = await arxiv_service.search_papers(rss_compatible_query)
-        content_items = await arxiv_service.to_content_items(result, "arxiv_enhanced")
+        result = await self.arxiv_service.search_papers(rss_compatible_query)
+        content_items = await self.arxiv_service.to_content_items(result, "arxiv_enhanced")
 
         assert len(content_items) > 0
         # Should be compatible with existing ContentItem structure
@@ -244,7 +244,7 @@ class TestArxivEnhancedService:
 
         Integration with autonomous cognitive system for quality assessment.
         """
-        result = await arxiv_service.search_papers(sample_search_query)
+        result = await self.arxiv_service.search_papers(sample_search_query)
 
         # Should include metadata for cognitive processing
         assert result.papers[0].metadata is not None
@@ -276,7 +276,7 @@ class TestArxivEnhancedService:
             )
 
             query = ArxivSearchQuery(terms=["test rate limit"], max_results=5)
-            result = await arxiv_service.search_papers(query)
+            result = await self.arxiv_service.search_papers(query)
 
             assert result.success is False
             assert result.error is not None
@@ -292,7 +292,7 @@ class TestArxivEnhancedService:
         """
         malformed_xml = "<?xml version='1.0'?><invalid><unclosed>tag"
 
-        result = await arxiv_service.parse_arxiv_response(malformed_xml)
+        result = await self.arxiv_service.parse_arxiv_response(malformed_xml)
 
         assert result.success is False
         assert result.error is not None
@@ -309,7 +309,7 @@ class TestArxivEnhancedService:
             max_results=10,
         )
 
-        result = await arxiv_service.search_papers(empty_query)
+        result = await self.arxiv_service.search_papers(empty_query)
 
         assert result.success is True
         assert result.papers == []
@@ -333,7 +333,7 @@ class TestArxivEnhancedService:
             start=0,
         )
 
-        result = await arxiv_service.search_papers_paginated(large_query, page_size=50)
+        result = await self.arxiv_service.search_papers_paginated(large_query, page_size=50)
 
         assert result.success is True
         assert len(result.papers) <= 200
@@ -350,10 +350,10 @@ class TestArxivEnhancedService:
         query = ArxivSearchQuery(terms=["caching test"], max_results=5)
 
         # First search - should hit API
-        result1 = await arxiv_service.search_papers(query)
+        result1 = await self.arxiv_service.search_papers(query)
 
         # Second identical search - should use cache
-        result2 = await arxiv_service.search_papers(query)
+        result2 = await self.arxiv_service.search_papers(query)
 
         assert result1.success is True
         assert result2.success is True
@@ -376,7 +376,7 @@ class TestArxivEnhancedService:
         mock_cognitive_engine.assess_research_quality = AsyncMock(return_value=0.89)
 
         query = ArxivSearchQuery(terms=["neural networks"], max_results=3)
-        result = await arxiv_service.search_with_cognitive_assessment(
+        result = await self.arxiv_service.search_with_cognitive_assessment(
             query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -410,7 +410,7 @@ class TestArxivEnhancedService:
 
         poor_query = ArxivSearchQuery(terms=["obscure term"], max_results=5)
 
-        result = await arxiv_service.search_with_optimization(
+        result = await self.arxiv_service.search_with_optimization(
             poor_query,
             metacognitive_engine=mock_metacognitive_engine,
             min_results_threshold=3,
@@ -474,10 +474,10 @@ class TestArxivEnhancedService:
         )
 
         query = ArxivSearchQuery(terms=["automated research"], max_results=5)
-        result = await arxiv_service.search_papers(query)
+        result = await self.arxiv_service.search_papers(query)
 
         # Should be able to trigger research processing workflow
-        workflow_result = await arxiv_service.trigger_research_workflow(
+        workflow_result = await self.arxiv_service.trigger_research_workflow(
             result=result,
             n8n_manager=mock_n8n_manager,
             workflow_type="research_paper_analysis",
@@ -556,7 +556,7 @@ class TestArxivServicePerformance:
         start_time = datetime.now(UTC)
 
         query = ArxivSearchQuery(terms=["performance test"], max_results=10)
-        result = await arxiv_service.search_papers(query)
+        result = await self.arxiv_service.search_papers(query)
 
         end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
@@ -574,7 +574,7 @@ class TestArxivServicePerformance:
         mock_cognitive_engine.assess_research_quality = AsyncMock(return_value=0.94)
 
         query = ArxivSearchQuery(terms=["high quality research"], max_results=3)
-        result = await arxiv_service.search_with_cognitive_assessment(
+        result = await self.arxiv_service.search_with_cognitive_assessment(
             query,
             cognitive_engine=mock_cognitive_engine,
         )

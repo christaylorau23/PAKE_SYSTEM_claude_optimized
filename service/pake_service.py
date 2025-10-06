@@ -5,15 +5,15 @@ Runs continuously in background without user intervention.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
 import os
+from pathlib import Path
 import sys
 import threading
 import time
 import traceback
-from datetime import UTC, datetime
-from pathlib import Path
 
 import servicemanager
 import win32event
@@ -112,7 +112,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
             try:
                 self.vault_watcher.stop()
                 self.logger.info("Vault watcher stopped")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error stopping vault watcher: %s", e)
 
         self.logger.info("Service stopped successfully")
@@ -149,7 +149,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
                     # Timeout - perform health check
                     self.perform_health_check()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Service execution error: %s", e)
             self.logger.error(traceback.format_exc())
             servicemanager.LogMsg(
@@ -173,7 +173,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
             # Run the async monitoring
             loop.run_until_complete(self.async_monitoring())
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Monitoring thread error: %s", e)
             self.logger.error(traceback.format_exc())
 
@@ -203,11 +203,11 @@ class PAKEService(win32serviceutil.ServiceFramework):
                     # Wait before next cycle
                     await asyncio.sleep(self.config["check_interval"])
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     self.logger.error("Monitoring cycle error: %s", e)
                     await asyncio.sleep(5)  # Brief pause before retry
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Vault monitoring initialization error: %s", e)
             raise
 
@@ -254,7 +254,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
 
             self.logger.info("Monitoring thread restarted successfully")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to restart monitoring: %s", e)
 
     def perform_health_check(self) -> None:
@@ -290,7 +290,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
             with open(health_file, "w") as f:
                 json.dump(status, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Health check error: %s", e)
 
 

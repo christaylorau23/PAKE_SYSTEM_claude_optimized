@@ -16,9 +16,9 @@ Usage:
 """
 
 import argparse
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import yaml
@@ -42,7 +42,7 @@ class ServiceNetworkingValidator:
         try:
             with open(self.workflow_path) as f:
                 workflow = yaml.safe_load(f)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.issues.append(
                 {
                     "type": "parse_error",
@@ -62,13 +62,13 @@ class ServiceNetworkingValidator:
     def _validate_job(self) -> None:
         """Validate a single job's service configuration."""
         # Check if job has services
-        services = job_config.get("services", {})
+        services = self.job_config.get("services", {})
         if not services:
             return  # No services, nothing to validate
 
         # Determine networking model
         has_container = "container" in job_config
-        runs_on = job_config.get("runs-on", "")
+        runs_on = self.job_config.get("runs-on", "")
 
         if has_container:
             # Container-based networking model
@@ -91,7 +91,7 @@ class ServiceNetworkingValidator:
             container_image = container_image.get("image", "unknown")
 
         # Check for unnecessary port mappings
-        for service_name, service_config in services.items():
+        for service_name, service_config in self.services.items():
             ports = service_config.get("ports", [])
             if ports:
                 self.warnings.append(
@@ -118,7 +118,7 @@ class ServiceNetworkingValidator:
         - Port mapping required
         - Health checks recommended
         """
-        for service_name, service_config in services.items():
+        for service_name, service_config in self.services.items():
             # Check port mapping
             ports = service_config.get("ports", [])
             if not ports:
@@ -186,7 +186,7 @@ class ServiceNetworkingValidator:
 
     def _check_postgres_connection(self) -> None:
         """Check PostgreSQL connection string."""
-        database_url = env_vars.get("DATABASE_URL", "")
+        database_url = self.env_vars.get("DATABASE_URL", "")
 
         if not database_url:
             return  # No DATABASE_URL found, skip
@@ -211,7 +211,7 @@ class ServiceNetworkingValidator:
 
     def _check_redis_connection(self) -> None:
         """Check Redis connection string."""
-        redis_url = env_vars.get("REDIS_URL", "") or env_vars.get("REDIS_HOST", "")
+        redis_url = self.self.env_vars.get("REDIS_URL", "") or self.self.env_vars.get("REDIS_HOST", "")
 
         if not redis_url:
             return  # No Redis URL found, skip

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE System - Logging and Monitoring Examples
 Comprehensive examples demonstrating enterprise logging and monitoring best practices.
@@ -12,12 +14,17 @@ This module provides:
 """
 
 import asyncio
+from pathlib import Path
 
 # Add project root to path for imports
 import sys
 import time
 import uuid
-from pathlib import Path
+
+import sqlalchemy
+import sqlalchemy.exc
+import psycopg2
+import asyncpg
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -517,7 +524,7 @@ class LoggingExamples:
                 tags={"service": "database"},
             )
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             # Log unexpected error
             self.logger.critical(
                 "Unexpected error occurred",

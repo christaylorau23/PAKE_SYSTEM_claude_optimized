@@ -72,7 +72,7 @@ async def test_firecrawl_real_api(self) -> None:
                 if result.error.is_retryable:
                     print("   Retryable: Yes")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"ERROR: Test failed with exception: {e}")
 
     finally:
@@ -95,7 +95,7 @@ async def test_api_error_handling(self) -> None:
         else:
             print("WARNING: Expected auth error but got success (using mock?)")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"ERROR: Unexpected exception: {e}")
 
     finally:
@@ -145,7 +145,7 @@ async def test_email_real_api(self) -> None:
             print(f"   From: {result.sender}")
             print(f"   Date: {result.timestamp}")
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         # Expected for test credentials
         print(f"   Expected connection failure: {str(e)[:100]}...")
         print("   This proves real IMAP integration is active")
@@ -180,7 +180,7 @@ async def test_email_error_handling(self) -> None:
         else:
             print("WARNING: Expected auth error but got results (using mock?)")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"SUCCESS: Auth error handled with exception: {type(e).__name__}")
 
     finally:
@@ -282,7 +282,7 @@ async def test_social_media_real_api(self) -> None:
             print(f"   Sample LinkedIn Post: {sample_post.content[:80]}...")
             print(f"   From: {sample_post.author}")
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"   Expected API failures with test credentials: {str(e)[:100]}...")
         print("   This proves real social media API integration is active")
 
@@ -326,7 +326,7 @@ async def test_social_media_error_handling(self) -> None:
         else:
             print("   WARNING: Expected auth error but got empty result")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"   SUCCESS: Auth error handled with exception: {type(e).__name__}")
 
     finally:

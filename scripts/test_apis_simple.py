@@ -51,7 +51,7 @@ async def test_firecrawl_api(self) -> None:
                 text = await response.text()
                 return False, f"HTTP {response.status}: {text[:100]}"
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         return False, f"Connection error: {str(e)}"
 
 
@@ -73,7 +73,7 @@ async def test_arxiv_api(self) -> None:
                     return False, "No results from ArXiv"
                 return False, f"HTTP {response.status}"
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         return False, f"Connection error: {str(e)}"
 
 

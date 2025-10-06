@@ -6,10 +6,10 @@ Tests the Python DAL integration and filesystem operations without Unicode issue
 """
 
 import asyncio
+from pathlib import Path
 import shutil
 import sys
 import tempfile
-from pathlib import Path
 
 from data.DataAccessLayer import get_dal
 from data.repositories.NoteRepository import NoteRepository
@@ -18,7 +18,7 @@ from data.repositories.NoteRepository import NoteRepository
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-@pytest.mark.asyncio
+@self.pytest.mark.asyncio
 async def test_dal_and_repository(self) -> None:
     """Test the Python DAL and NoteRepository implementation"""
     print("Testing PAKE Data Access Layer Implementation...\n")
@@ -165,7 +165,7 @@ async def test_dal_and_repository(self) -> None:
 
         return True
 
-    except Exception as error:
+    except (ImportError, ModuleNotFoundError) as error:
         print(f"\nERROR: Test Failed: {str(error)}")
         import traceback
 
@@ -188,7 +188,7 @@ async def test_dal_and_repository(self) -> None:
             shutil.rmtree(temp_vault, ignore_errors=True)
             print("   SUCCESS: Temporary vault removed")
 
-        except Exception as cleanup_error:
+        except (ValueError, RuntimeError) as cleanup_error:
             print(f"   ERROR: Cleanup error: {str(cleanup_error)}")
 
     return True
@@ -224,7 +224,7 @@ def test_note_repository_standalone(self) -> None:
 
         return True
 
-    except Exception as error:
+    except (ValueError, RuntimeError) as error:
         print(f"   ERROR: Standalone test failed: {str(error)}")
         return False
 
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nTest suite interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"\nUnexpected error: {str(e)}")
         import traceback
 

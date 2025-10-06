@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Comprehensive Test Coverage Reporting and Monitoring
@@ -14,13 +16,13 @@ Features:
 """
 
 import asyncio
-import json
-import logging
-import sys
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
+import sys
 from typing import Any, Optional
 
 import coverage
@@ -525,7 +527,7 @@ class CoverageReporter:
 
     async def _save_coverage_metrics(self) -> None:
         """Save coverage metrics to file"""
-        metrics_file = self.trends_dir / f"{metrics.level.value}_coverage.json"
+        metrics_file = self.trends_dir / f"{self.metrics.level.value}_coverage.json"
         with open(metrics_file, "w") as f:
             json.dump(asdict(metrics), f, indent=2, default=str)
 

@@ -35,7 +35,7 @@ def fix_formatting(self) -> None:
         else:
             print("❌ Black formatting failed")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error: {e}")
 
 

@@ -3,10 +3,10 @@
 Supports hierarchical configuration loading: defaults -> config.json -> environment variables.
 """
 
+from dataclasses import dataclass, field
 import json
 import logging
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -197,7 +197,7 @@ class ServiceConfig:
         except json.JSONDecodeError as e:
             logger.error("Invalid JSON in config file %s: %s", config_path, e)
             return None
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error loading config file %s: %s", config_path, e)
             return None
 

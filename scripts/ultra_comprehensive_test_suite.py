@@ -146,7 +146,7 @@ class UltraComprehensiveTestSuite:
 
             logger.info("Test environment setup completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error setting up test environment: %s", e)
             raise
 
@@ -191,7 +191,7 @@ class UltraComprehensiveTestSuite:
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error initializing test database: %s", e)
             raise
 
@@ -215,7 +215,7 @@ class UltraComprehensiveTestSuite:
             with open(self.test_data_path / "test_config.json", "w") as f:
                 json.dump(config, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error creating test config: %s", e)
 
     async def run_ultra_comprehensive_tests(self) -> TestSuiteResults:
@@ -269,7 +269,7 @@ class UltraComprehensiveTestSuite:
 
             return self.results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Fatal error in test suite: %s", e)
             self.results.error_tests += 1
             return self.results
@@ -297,7 +297,7 @@ class UltraComprehensiveTestSuite:
                     "bytes_recv": psutil.net_io_counters().bytes_recv,
                 },
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"error": str(e)}
 
     async def run_test_with_timeout(
@@ -337,7 +337,7 @@ class UltraComprehensiveTestSuite:
                 execution_time=timeout,
                 error_message=f"Test timed out after {timeout} seconds",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return TestResult(
                 test_id=test_id,
                 category="Error",
@@ -410,7 +410,7 @@ class UltraComprehensiveTestSuite:
                 },
             )
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return TestResult(
                 test_id="func_imports_001",
                 category="Functional",
@@ -501,7 +501,7 @@ References: [Link1](http://example.com)
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return TestResult(
                 test_id="func_confidence_001",
                 category="Functional",
@@ -558,7 +558,7 @@ References: [Link1](http://example.com)
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return TestResult(
                 test_id="func_vector_001",
                 category="Functional",
@@ -628,7 +628,7 @@ This should be processed correctly.
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return TestResult(
                 test_id="func_processing_001",
                 category="Functional",
@@ -811,7 +811,7 @@ This should be processed correctly.
                 },
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return TestResult(
                 test_id="perf_single_001",
                 category="Performance",
@@ -852,7 +852,7 @@ This should be processed correctly.
                     if result.error is None:
                         successful_processes += 1
                         total_processing_time += result.processing_time
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.debug("Error processing %s: %s", test_file, e)
 
             total_time = time.time() - start_time
@@ -892,7 +892,7 @@ This should be processed correctly.
                 },
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return TestResult(
                 test_id="perf_batch_001",
                 category="Performance",
@@ -939,7 +939,7 @@ This should be processed correctly.
                             result.confidence_score if result.error is None else 0
                         ),
                     }
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     return {
                         "file": str(file_path),
                         "success": False,
@@ -996,7 +996,7 @@ This should be processed correctly.
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return TestResult(
                 test_id="perf_concurrent_001",
                 category="Performance",
@@ -1358,7 +1358,7 @@ function additionalExample{i + 1}() {{
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing test result: %s", e)
 
     def calculate_test_summary(self) -> None:
@@ -1437,7 +1437,7 @@ function additionalExample{i + 1}() {{
                 "system_efficiency": self.calculate_system_efficiency(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating test summary: %s", e)
 
     def calculate_system_efficiency(self) -> float:
@@ -1503,7 +1503,7 @@ function additionalExample{i + 1}() {{
 
             return min(100, max(0, efficiency))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating system efficiency: %s", e)
             return 50  # Default middle score
 
@@ -1582,7 +1582,7 @@ function additionalExample{i + 1}() {{
             logger.info("Comprehensive test report saved: %s", report_file)
             logger.info("Test summary saved: %s", summary_file)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error generating comprehensive report: %s", e)
 
     def generate_recommendations(self) -> List[str]:
@@ -1729,7 +1729,7 @@ async def main(self) -> None:
 
     except KeyboardInterrupt:
         print("\n\nTest suite interrupted by user")
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         print(f"\n\nFATAL ERROR: {e}")
         logger.error("Fatal error in test suite: %s", e)
 

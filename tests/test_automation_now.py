@@ -4,10 +4,10 @@ PAKE Automation Test - Working Version
 Tests the automation system without encoding issues
 """
 
-import json
-import time
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import time
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -22,19 +22,19 @@ class WorkingAutomationHandler(FileSystemEventHandler):
         print(f"Automation handler initialized for: {vault_path}")
 
     def on_created(self) -> None:
-        if event.is_directory:
+        if self.event.is_directory:
             return
 
-        file_path = Path(event.src_path)
+        file_path = Path(self.event.src_path)
         if file_path.suffix == ".md":
             print(f"DETECTED NEW FILE: {file_path.name}")
             self.process_file(file_path)
 
     def on_modified(self) -> None:
-        if event.is_directory:
+        if self.event.is_directory:
             return
 
-        file_path = Path(event.src_path)
+        file_path = Path(self.event.src_path)
         if file_path.suffix == ".md" and str(file_path) not in self.processed:
             print(f"DETECTED MODIFIED FILE: {file_path.name}")
             self.process_file(file_path)
@@ -42,7 +42,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
     def process_file(self) -> None:
         """Process and analyze file"""
         try:
-            print(f"PROCESSING: {file_path.name}")
+            print(f"PROCESSING: {self.file_path.name}")
 
             # Read file content
             with open(file_path, encoding="utf-8") as f:
@@ -79,7 +79,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
 
             # Create processing result
             result = {
-                "file": file_path.name,
+                "file": self.file_path.name,
                 "full_path": str(file_path),
                 "processed_at": datetime.now(UTC).isoformat(),
                 "analysis": {
@@ -96,7 +96,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             }
 
             # Display results
-            print(f"SUCCESS: {file_path.name} processed!")
+            print(f"SUCCESS: {self.file_path.name} processed!")
             print(f"  Words: {word_count}")
             print(f"  Confidence: {confidence:.3f}")
             print(
@@ -111,11 +111,11 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             # Mark as processed
             self.processed.add(str(file_path))
 
-            print(f"SAVED: Processing complete for {file_path.name}")
+            print(f"SAVED: Processing complete for {self.file_path.name}")
             print("-" * 50)
 
-        except Exception as e:
-            print(f"ERROR processing {file_path.name}: {e}")
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            print(f"ERROR processing {self.file_path.name}: {e}")
 
     def save_result(self) -> None:
         """Save processing result to file"""
@@ -139,7 +139,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             with open(results_file, "w") as f:
                 json.dump(all_results, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"ERROR saving result: {e}")
 
 

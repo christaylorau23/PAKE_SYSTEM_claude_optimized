@@ -20,15 +20,15 @@ Performance Target: <200ms signal generation, <1s alert delivery
 """
 
 import asyncio
-import json
-import logging
-import smtplib
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from email.mime.multipart import MimeMultipart
 from email.mime.text import MimeText
 from enum import Enum
-from typing import Any
+import json
+import logging
+import smtplib
+from typing import Any, Dict, List
 
 import aiohttp
 import redis.asyncio as redis
@@ -163,7 +163,8 @@ class AlertMessage:
 class TechnicalAnalysisEngine:
     """Advanced technical analysis for signal generation."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.indicators_cache = {}
 
     async def analyze_technical_signals(
@@ -193,7 +194,7 @@ class TechnicalAnalysisEngine:
                 "confidence": self._calculate_technical_confidence(signals),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in technical analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
@@ -381,6 +382,9 @@ class TechnicalAnalysisEngine:
 class FundamentalAnalysisEngine:
     """Fundamental analysis for signal generation."""
 
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+
     async def analyze_fundamental_signals(
         self,
         symbol: str,
@@ -408,7 +412,7 @@ class FundamentalAnalysisEngine:
                 "confidence": self._calculate_fundamental_confidence(signals),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in fundamental analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
@@ -600,27 +604,27 @@ class FundamentalAnalysisEngine:
 class AutomatedSignalGenerator:
     """Main automated signal generation system."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.technical_engine = TechnicalAnalysisEngine()
-        self.fundamental_engine = FundamentalAnalysisEngine()
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.technical_engine = TechnicalAnalysisEngine(self.config)
+        self.fundamental_engine = FundamentalAnalysisEngine(self.config)
 
         # Import vector intelligence database
         from .vector_intelligence_database import VectorIntelligenceDatabase
 
-        self.vector_db = VectorIntelligenceDatabase(config.get("vector_db", {}))
+        self.vector_db = VectorIntelligenceDatabase(self.config.get("vector_db", {}))
 
         # Signal generation settings
-        self.min_confidence = config.get("min_confidence", 0.6)
-        self.signal_cooldown = config.get("signal_cooldown_minutes", 15)
-        self.max_signals_per_hour = config.get("max_signals_per_hour", 10)
+        self.min_confidence = self.config.get("min_confidence", 0.6)
+        self.signal_cooldown = self.config.get("signal_cooldown_minutes", 15)
+        self.max_signals_per_hour = self.config.get("max_signals_per_hour", 10)
 
         # Performance tracking
         self.generated_signals: dict[str, TradingSignal] = {}
         self.signal_performance: dict[str, float] = {}
 
         # Alert system
-        self.notification_system = NotificationSystem(config.get("notifications", {}))
+        self.notification_system = NotificationSystem(self.config.get("notifications", {}))
 
         logger.info("Automated Signal Generator initialized")
 
@@ -690,7 +694,7 @@ class AutomatedSignalGenerator:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating signal for %s: %s", symbol, e)
             return None
 
@@ -708,7 +712,7 @@ class AutomatedSignalGenerator:
 
             return len(recent_signals) == 0
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error checking signal cooldown for %s: %s", symbol, e)
             return True
 
@@ -741,7 +745,7 @@ class AutomatedSignalGenerator:
 
             return max(-1.0, min(1.0, sentiment_score))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing sentiment for %s: %s", symbol, e)
             return 0.0
 
@@ -809,7 +813,7 @@ class AutomatedSignalGenerator:
                 "high_confidence_matches": high_confidence_matches,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting vector intelligence for %s: %s", symbol, e)
             return {"signal": 0.0, "confidence": 0.0, "matches": 0}
 
@@ -943,7 +947,7 @@ class AutomatedSignalGenerator:
 
             return signal
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error combining signals for %s: %s", symbol, e)
             return None
 
@@ -1055,7 +1059,7 @@ class AutomatedSignalGenerator:
             return "days"
         return "weeks"
 
-    async def _generate_alert(self) -> None:
+    async def _generate_alert(self, signal: TradingSignal) -> None:
         """Generate and send alert for the trading signal."""
         try:
             # Determine alert priority
@@ -1100,7 +1104,7 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
             # Send alert
             await self.notification_system.send_alert(alert)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error generating alert for signal %s: %s", signal.signal_id, e
             )
@@ -1157,19 +1161,19 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
 class NotificationSystem:
     """Multi-channel notification system for instant alerts."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.email_config = config.get("email", {})
-        self.sms_config = config.get("sms", {})
-        self.webhook_config = config.get("webhook", {})
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.email_config = self.config.get("email", {})
+        self.sms_config = self.config.get("sms", {})
+        self.webhook_config = self.config.get("webhook", {})
 
         # WebSocket connections for real-time notifications
         self.websocket_clients = set()
 
         # Redis for pub/sub notifications
         self.redis_client = None
-        if config.get("redis_url"):
-            self.redis_client = redis.from_url(config["redis_url"])
+        if self.config.get("redis_url"):
+            self.redis_client = redis.from_url(self.config["redis_url"])
 
         logger.info("Notification system initialized")
 
@@ -1209,7 +1213,7 @@ class NotificationSystem:
 
             return alert.delivered
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending alert %s: %s", alert.alert_id, e)
             return False
 
@@ -1251,7 +1255,7 @@ class NotificationSystem:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending email alert: %s", e)
             return False
 
@@ -1265,7 +1269,7 @@ class NotificationSystem:
             logger.info("SMS notification would be sent: %s", alert.title)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending SMS alert: %s", e)
             return False
 
@@ -1301,7 +1305,7 @@ class NotificationSystem:
             ):
                 return response.status == 200
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending webhook alert: %s", e)
             return False
 
@@ -1332,7 +1336,7 @@ class NotificationSystem:
 
             return len(self.websocket_clients) > len(disconnected_clients)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending WebSocket alert: %s", e)
             return False
 
@@ -1343,7 +1347,7 @@ class NotificationSystem:
             logger.info("Mobile push notification would be sent: %s", alert.title)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending mobile push alert: %s", e)
             return False
 
@@ -1360,7 +1364,7 @@ class NotificationSystem:
             logger.info("Desktop notification sent: %s", alert.title)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending desktop alert: %s", e)
             return False
 

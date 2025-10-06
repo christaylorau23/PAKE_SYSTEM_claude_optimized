@@ -1,17 +1,20 @@
+from typing import List
+from datetime import UTC
+from typing import Dict
 #!/usr/bin/env python3
 """
 Comprehensive Security Testing Script for PAKE System
 World-class security validation with TDD approach
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import json
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Any
 
 # Add src to path for imports
@@ -148,7 +151,7 @@ class SecurityTester:
                     message="Safety tool not found - install with: pip install safety",
                 )
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results.append(
                 SecurityTestResult(
                     test_name="dependency_vulnerabilities",
@@ -318,7 +321,7 @@ class SecurityTester:
                     )
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results.append(
                 SecurityTestResult(
                     test_name="secure_serialization",

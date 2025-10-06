@@ -89,7 +89,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX"], max_results=10)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify search success
         assert result.success
@@ -115,7 +115,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX", "Sent", "Archive"], max_results=20)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify multi-folder search
         assert result.success
@@ -141,7 +141,7 @@ class TestEmailIngestionService:
             max_results=10,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify sender filtering
         assert result.success
@@ -165,7 +165,7 @@ class TestEmailIngestionService:
             max_results=10,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify subject keyword filtering
         assert result.success
@@ -191,7 +191,7 @@ class TestEmailIngestionService:
             max_results=10,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify date range filtering
         assert result.success
@@ -211,7 +211,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX"], exclude_spam=True, max_results=10)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify spam filtering
         assert result.success
@@ -240,7 +240,7 @@ class TestEmailIngestionService:
             max_results=10,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify promotional filtering
         assert result.success
@@ -275,7 +275,7 @@ class TestEmailIngestionService:
             max_results=10,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify content length filtering
         assert result.success
@@ -291,7 +291,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX"], max_results=10)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify professional content prioritization
         assert result.success
@@ -331,7 +331,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX"], max_results=5)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Verify cognitive integration
         assert result.success
@@ -343,7 +343,7 @@ class TestEmailIngestionService:
             assert 0.0 <= message.content_quality_score <= 1.0
 
         # Verify cognitive engine was called
-        assert email_service.cognitive_engine.assess_content_quality.call_count > 0
+        assert self.email_service.cognitive_engine.assess_content_quality.call_count > 0
 
     @pytest.mark.asyncio
     async def test_should_handle_cognitive_assessment_failures_gracefully(self) -> None:
@@ -352,13 +352,13 @@ class TestEmailIngestionService:
         and provide meaningful fallback quality scoring.
         """
         # Mock cognitive engine to fail
-        email_service.cognitive_engine.assess_content_quality.side_effect = Exception(
+        self.email_service.cognitive_engine.assess_content_quality.side_effect = Exception(
             "Cognitive error",
         )
 
         query = EmailSearchQuery(folders=["INBOX"], max_results=5)
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Should still succeed despite cognitive failures
         assert result.success
@@ -379,9 +379,9 @@ class TestEmailIngestionService:
         with comprehensive metadata preservation.
         """
         query = EmailSearchQuery(folders=["INBOX"], max_results=3)
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
-        content_items = await email_service.to_content_items(
+        content_items = await self.email_service.to_content_items(
             result,
             "email_ingestion_test",
         )
@@ -419,14 +419,14 @@ class TestEmailIngestionService:
         with SSL support and authentication.
         """
         # Verify IMAP configuration
-        assert email_service.config.server_type == "imap"
-        assert email_service.config.hostname == "imap.company.com"
-        assert email_service.config.port == 993
-        assert email_service.config.use_ssl
+        assert self.email_service.config.server_type == "imap"
+        assert self.email_service.config.hostname == "imap.company.com"
+        assert self.email_service.config.port == 993
+        assert self.email_service.config.use_ssl
 
         # Test connection establishment
         query = EmailSearchQuery(folders=["INBOX"], max_results=1)
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         assert result.success
 
@@ -437,13 +437,13 @@ class TestEmailIngestionService:
         with appropriate protocol handling.
         """
         # Verify Exchange configuration
-        assert exchange_service.config.server_type == "exchange"
-        assert exchange_service.config.hostname == "exchange.company.com"
-        assert exchange_service.config.port == 443
+        assert self.exchange_service.config.server_type == "exchange"
+        assert self.exchange_service.config.hostname == "exchange.company.com"
+        assert self.exchange_service.config.port == 443
 
         # Test connection establishment
         query = EmailSearchQuery(folders=["INBOX"], max_results=1)
-        result = await exchange_service.search_emails(query)
+        result = await self.exchange_service.search_emails(query)
 
         assert result.success
 
@@ -464,7 +464,7 @@ class TestEmailIngestionService:
             side_effect=Exception("Connection failed"),
         ):
             query = EmailSearchQuery(folders=["INBOX"], max_results=5)
-            result = await email_service.search_emails(query)
+            result = await self.email_service.search_emails(query)
 
             # Should fail gracefully
             assert not result.success
@@ -483,7 +483,7 @@ class TestEmailIngestionService:
                 folders=["INBOX"],
                 subject_keywords=["nonexistent_keyword_xyz"],
             )
-            result = await email_service.search_emails(query)
+            result = await self.email_service.search_emails(query)
 
             # Should succeed with empty results
             assert result.success
@@ -508,7 +508,7 @@ class TestEmailIngestionService:
             exclude_promotional=True,
         )
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Should complete quickly
         assert result.success
@@ -522,7 +522,7 @@ class TestEmailIngestionService:
         """
         query = EmailSearchQuery(folders=["INBOX"], max_results=2)  # Very small limit
 
-        result = await email_service.search_emails(query)
+        result = await self.email_service.search_emails(query)
 
         # Should respect limit
         assert result.success
@@ -539,7 +539,7 @@ class TestEmailIngestionService:
         Test: Should provide detailed health check information including
         connection status, cache statistics, and service availability.
         """
-        health_status = await email_service.health_check()
+        health_status = await self.email_service.health_check()
 
         # Verify health check structure
         assert "status" in health_status
@@ -563,17 +563,17 @@ class TestEmailIngestionService:
         """
         # Establish connection first
         query = EmailSearchQuery(folders=["INBOX"], max_results=1)
-        await email_service.search_emails(query)
+        await self.email_service.search_emails(query)
 
         # Verify connections exist
-        assert len(email_service.connection_pool) > 0
+        assert len(self.email_service.connection_pool) > 0
 
         # Close service
-        await email_service.close()
+        await self.email_service.close()
 
         # Verify cleanup
-        assert len(email_service.connection_pool) == 0
-        assert len(email_service._message_cache) == 0
+        assert len(self.email_service.connection_pool) == 0
+        assert len(self.email_service._message_cache) == 0
 
 
 class TestEmailDataStructures:

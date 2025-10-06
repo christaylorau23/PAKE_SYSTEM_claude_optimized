@@ -5,7 +5,11 @@ business logic and data access concerns.
 """
 
 import logging
-from typing import Any, TypeVar
+from typing import Any, Dict, TypeVar
+
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +36,7 @@ T = TypeVar("T")
 class RepositoryContainer:
     """Dependency injection container for repositories."""
 
-    def __init__(self) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self._repositories: Dict[str, Any] = {}
         self._initialize_repositories()
@@ -56,7 +60,7 @@ class RepositoryContainer:
 
             logger.info("Repository container initialized successfully")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error initializing repository container: %s", e)
             raise
 
@@ -137,7 +141,7 @@ class RepositoryContainer:
                     health_status["repositories"][name] = "healthy"
                 else:
                     health_status["repositories"][name] = "no_count_method"
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 health_status["repositories"][name] = f"unhealthy: {str(e)}"
                 health_status["status"] = "unhealthy"
 

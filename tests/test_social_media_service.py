@@ -110,7 +110,7 @@ class TestSocialMediaService:
             max_results=10,
         )
 
-        result = await twitter_service.search_posts(query)
+        result = await self.twitter_service.search_posts(query)
 
         # Verify search success
         assert result.success
@@ -141,7 +141,7 @@ class TestSocialMediaService:
             max_results=10,
         )
 
-        result = await twitter_service.search_posts(query)
+        result = await self.twitter_service.search_posts(query)
 
         # Verify hashtag filtering
         assert result.success
@@ -168,7 +168,7 @@ class TestSocialMediaService:
             max_results=10,
         )
 
-        result = await twitter_service.search_posts(query)
+        result = await self.twitter_service.search_posts(query)
 
         # Verify no retweets
         assert result.success
@@ -193,7 +193,7 @@ class TestSocialMediaService:
             max_results=10,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Verify LinkedIn search success
         assert result.success
@@ -242,7 +242,7 @@ class TestSocialMediaService:
             max_results=10,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Verify Reddit search success
         assert result.success
@@ -275,7 +275,7 @@ class TestSocialMediaService:
             max_results=5,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Verify engagement filtering
         assert result.success
@@ -300,7 +300,7 @@ class TestSocialMediaService:
             max_results=5,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Verify sentiment analysis application
         assert result.success
@@ -345,7 +345,7 @@ class TestSocialMediaService:
                 max_results=1,
             )
 
-            result = await social_media_service.search_posts(query)
+            result = await self.social_media_service.search_posts(query)
 
             assert result.success
             assert len(result.posts) == 1
@@ -370,7 +370,7 @@ class TestSocialMediaService:
             max_results=3,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Verify cognitive integration
         assert result.success
@@ -383,7 +383,7 @@ class TestSocialMediaService:
 
         # Verify cognitive engine was called
         assert (
-            social_media_service.cognitive_engine.assess_content_quality.call_count > 0
+            self.social_media_service.cognitive_engine.assess_content_quality.call_count > 0
         )
 
     @pytest.mark.asyncio
@@ -393,7 +393,7 @@ class TestSocialMediaService:
         and provide meaningful fallback quality scoring.
         """
         # Mock cognitive engine to fail
-        social_media_service.cognitive_engine.assess_content_quality.side_effect = (
+        self.social_media_service.cognitive_engine.assess_content_quality.side_effect = (
             Exception("Cognitive error")
         )
 
@@ -403,7 +403,7 @@ class TestSocialMediaService:
             max_results=3,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Should still succeed despite cognitive failures
         assert result.success
@@ -429,8 +429,8 @@ class TestSocialMediaService:
             max_results=2,
         )
 
-        result = await social_media_service.search_posts(query)
-        content_items = await social_media_service.to_content_items(
+        result = await self.social_media_service.search_posts(query)
+        content_items = await self.social_media_service.to_content_items(
             result,
             "social_ingestion_test",
         )
@@ -470,9 +470,9 @@ class TestSocialMediaService:
         with proper configuration and rate limiting.
         """
         # Verify all platforms are configured
-        assert SocialPlatform.TWITTER in social_media_service.configs
-        assert SocialPlatform.LINKEDIN in social_media_service.configs
-        assert SocialPlatform.REDDIT in social_media_service.configs
+        assert SocialPlatform.TWITTER in self.social_media_service.configs
+        assert SocialPlatform.LINKEDIN in self.social_media_service.configs
+        assert SocialPlatform.REDDIT in self.social_media_service.configs
 
         # Test each platform individually
         platforms = [
@@ -484,7 +484,7 @@ class TestSocialMediaService:
         for platform in platforms:
             query = SocialMediaQuery(platform=platform, keywords=["AI"], max_results=3)
 
-            result = await social_media_service.search_posts(query)
+            result = await self.social_media_service.search_posts(query)
             assert result.success
             assert result.platform == platform
             assert len(result.posts) > 0
@@ -505,7 +505,7 @@ class TestSocialMediaService:
             max_results=5,
         )
 
-        result = await twitter_service.search_posts(query)
+        result = await self.twitter_service.search_posts(query)
 
         # Should fail gracefully
         assert not result.success
@@ -526,7 +526,7 @@ class TestSocialMediaService:
         # Make multiple requests to test rate limiting
         results = []
         for _ in range(3):
-            result = await twitter_service.search_posts(query)
+            result = await self.twitter_service.search_posts(query)
             results.append(result)
 
         # All should succeed (with mocks)
@@ -554,7 +554,7 @@ class TestSocialMediaService:
             max_results=20,
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Should complete quickly
         assert result.success
@@ -572,7 +572,7 @@ class TestSocialMediaService:
             max_results=2,  # Very small limit
         )
 
-        result = await social_media_service.search_posts(query)
+        result = await self.social_media_service.search_posts(query)
 
         # Should respect limit
         assert result.success
@@ -589,7 +589,7 @@ class TestSocialMediaService:
         Test: Should provide detailed health check information including
         platform status, rate limits, and service availability.
         """
-        health_status = await social_media_service.health_check()
+        health_status = await self.social_media_service.health_check()
 
         # Verify health check structure
         assert "status" in health_status
@@ -617,18 +617,18 @@ class TestSocialMediaService:
             keywords=["AI"],
             max_results=1,
         )
-        await social_media_service.search_posts(query)
+        await self.social_media_service.search_posts(query)
 
         # Verify connections exist
-        assert len(social_media_service._client_pool) > 0
+        assert len(self.social_media_service._client_pool) > 0
 
         # Close service
-        await social_media_service.close()
+        await self.social_media_service.close()
 
         # Verify cleanup
-        assert len(social_media_service._client_pool) == 0
-        assert len(social_media_service._post_cache) == 0
-        assert len(social_media_service._rate_limits) == 0
+        assert len(self.social_media_service._client_pool) == 0
+        assert len(self.social_media_service._post_cache) == 0
+        assert len(self.social_media_service._rate_limits) == 0
 
 
 class TestSocialMediaDataStructures:

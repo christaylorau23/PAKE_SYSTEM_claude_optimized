@@ -4,11 +4,11 @@ Provides efficient semantic search using TF-IDF vectorization and cosine similar
 This implementation avoids heavy ML dependencies while providing robust semantic capabilities.
 """
 
-import logging
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import os
+from typing import Any, Dict, List
 
 import numpy as np
 from sklearn.decomposition import TruncatedSVD
@@ -16,6 +16,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_to_file(data: Dict[str, Any], filepath: str) -> None:
+    """Serialize data to file using pickle with basic security."""
+    import pickle
+    with open(filepath, 'wb') as f:
+        pickle.dump(data, f)
+
+
+def deserialize_from_file(filepath: str) -> Dict[str, Any]:
+    """Deserialize data from file using pickle with basic security."""
+    import pickle
+    with open(filepath, 'rb') as f:
+        return pickle.load(f)
 
 
 @dataclass
@@ -46,7 +60,7 @@ class LightweightSemanticService:
     making it fast and resource-efficient for production use.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cache_dir: str = "/tmp/semantic_cache") -> None:
         """Initialize the semantic search service.
 
         Args:
@@ -87,7 +101,7 @@ class LightweightSemanticService:
                     len(self.documents),
                 )
                 return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Could not load semantic model: %s", e)
 
         return False
@@ -107,7 +121,7 @@ class LightweightSemanticService:
             serialize_to_file(data, model_path)
 
             logger.info("Saved semantic model with %s documents", len(self.documents))
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Could not save semantic model: %s", e)
 
     async def add_documents(self, documents: list[Dict[str, Any]]) -> bool:
@@ -169,7 +183,7 @@ class LightweightSemanticService:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error adding documents to semantic index: %s", e)
             return False
 
@@ -215,7 +229,7 @@ class LightweightSemanticService:
                 f"{self.document_vectors.shape[1]} dimensions",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error rebuilding semantic model: %s", e)
             raise
 
@@ -277,7 +291,7 @@ class LightweightSemanticService:
             )
             return matches
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in semantic search: %s", e)
             return []
 
@@ -332,7 +346,7 @@ class LightweightSemanticService:
 
             return keywords
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error extracting keywords: %s", e)
             return []
 
@@ -391,7 +405,7 @@ class LightweightSemanticService:
                 "num_clusters": num_clusters,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error clustering documents: %s", e)
             return {"clusters": [], "assignments": []}
 
@@ -457,7 +471,7 @@ class LightweightSemanticService:
                 average_similarity=avg_similarity,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting semantic analytics: %s", e)
             return SemanticAnalytics(
                 total_documents=len(self.documents),
@@ -488,7 +502,7 @@ class LightweightSemanticService:
                 "cache_dir": self.cache_dir,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

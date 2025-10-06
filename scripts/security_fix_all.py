@@ -5,10 +5,10 @@ Systematically fixes all identified security vulnerabilities
 """
 
 import logging
+from pathlib import Path
 import re
 import subprocess
 import sys
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class SecurityFixer:
 
             self._print_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Security fixes failed: %s", e)
             sys.exit(1)
 
@@ -56,7 +56,7 @@ class SecurityFixer:
             self.fixes_applied.append("dependencies")
             logger.info("✅ Dependencies fixed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.fixes_failed.append(("dependencies", str(e)))
             logger.error("❌ Dependency fix failed: %s", e)
 
@@ -120,7 +120,7 @@ class SecurityFixer:
                 len(sha1_files),
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("hash_algorithms", str(e)))
             logger.error("❌ Hash algorithm fix failed: %s", e)
 
@@ -209,7 +209,7 @@ class SecurityFixer:
                 len(critical_files),
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("serialization", str(e)))
             logger.error("❌ Serialization fix failed: %s", e)
 
@@ -246,7 +246,7 @@ class SecurityFixer:
             self.fixes_applied.append("network_bindings")
             logger.info("✅ Fixed network bindings in %s files", len(binding_files))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("network_bindings", str(e)))
             logger.error("❌ Network binding fix failed: %s", e)
 
@@ -323,7 +323,7 @@ class SecurityFixer:
                 len(critical_files),
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("hardcoded_secrets", str(e)))
             logger.error("❌ Hardcoded secrets fix failed: %s", e)
 
@@ -364,13 +364,13 @@ class SecurityFixer:
             self.fixes_applied.append("input_validation")
             logger.info("✅ Fixed input validation in %s files", len(sql_files))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("input_validation", str(e)))
             logger.error("❌ Input validation fix failed: %s", e)
 
     def _backup_file(self) -> None:
         """Create backup of file before modification"""
-        relative_path = file_path.relative_to(self.project_root)
+        relative_path = self.file_path.relative_to(self.project_root)
         backup_path = self.backup_dir / relative_path
         backup_path.parent.mkdir(parents=True, exist_ok=True)
 

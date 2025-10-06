@@ -3,7 +3,7 @@ Implements OAuth2 password flow endpoints.
 """
 
 from datetime import timedelta
-from typing import Annotated, Any
+from typing import Annotated, Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm

@@ -84,7 +84,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = web_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -110,7 +110,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = arxiv_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -136,7 +136,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = pubmed_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -166,7 +166,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = all_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -197,7 +197,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = processed_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -222,7 +222,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = deduplicated_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -245,7 +245,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = []
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -265,7 +265,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -284,7 +284,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -297,7 +297,7 @@ class TestIngestionServiceComprehensive:
         query = SearchQueryFactory(sources=[])
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -317,7 +317,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = many_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -335,7 +335,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
         async def ingest_query(self) -> None:
-            return await ingestion_service.ingest_content(query)
+            return await self.ingestion_service.ingest_content(query)
 
         # Act
         tasks = [ingest_query(query) for query in queries]
@@ -360,7 +360,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Web scraper failed"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_arxiv_scraper_failure(self) -> None:
@@ -373,7 +373,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="ArXiv scraper failed"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_pubmed_scraper_failure(self) -> None:
@@ -386,7 +386,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="PubMed scraper failed"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_content_processor_failure(self) -> None:
@@ -402,7 +402,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Content processor failed"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_deduplication_service_failure(self) -> None:
@@ -419,7 +419,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Deduplication failed"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_network_timeout_error(self) -> None:
@@ -432,7 +432,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(asyncio.TimeoutError, match="Network timeout"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
     async def test_partial_failure_with_multiple_sources(self) -> None:
@@ -453,7 +453,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = all_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -481,7 +481,7 @@ class TestIngestionServiceComprehensive:
         # Act
         start_time = time.time()
         for _ in range(10):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
         end_time = time.time()
 
         # Assert
@@ -502,7 +502,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
         async def ingest_query(self) -> None:
-            return await ingestion_service.ingest_content(query)
+            return await self.ingestion_service.ingest_content(query)
 
         # Act
         start_time = time.time()
@@ -532,7 +532,7 @@ class TestIngestionServiceComprehensive:
 
         # Act
         start_time = time.time()
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
         end_time = time.time()
 
         # Assert
@@ -566,7 +566,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = results_with_sensitive_data
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None
@@ -587,7 +587,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
         # Act
-        result = await ingestion_service.ingest_content(malicious_query)
+        result = await self.ingestion_service.ingest_content(malicious_query)
 
         # Assert
         assert result is not None
@@ -605,7 +605,7 @@ class TestIngestionServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Rate limit exceeded"):
-            await ingestion_service.ingest_content(query)
+            await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_security
     async def test_content_validation(self) -> None:
@@ -625,7 +625,7 @@ class TestIngestionServiceComprehensive:
         ].deduplicate.return_value = invalid_results
 
         # Act
-        result = await ingestion_service.ingest_content(query)
+        result = await self.ingestion_service.ingest_content(query)
 
         # Assert
         assert result is not None

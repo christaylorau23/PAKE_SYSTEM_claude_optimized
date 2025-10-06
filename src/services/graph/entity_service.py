@@ -4,11 +4,11 @@ Provides high-level entity management functionality for the PAKE System.
 Handles different entity types, validation, and business logic for knowledge graph entities.
 """
 
-import logging
-import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+import logging
+import re
+from typing import Any, Dict, List
 
 from .neo4j_service import get_neo4j_service
 
@@ -215,7 +215,7 @@ class EntityService:
                 try:
                     if not validator(value):
                         errors.append(f"Invalid value for field '{field}': {value}")
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     errors.append(f"Validation error for field '{field}': {str(e)}")
 
         return errors
@@ -255,7 +255,7 @@ class EntityService:
 
             return entity_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create %s entity: %s", entity_type.value, e)
             return None
 
@@ -368,7 +368,7 @@ class EntityService:
             )
             return rel_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create relationship: %s", e)
             return None
 
@@ -420,7 +420,7 @@ class EntityService:
             msg = "Failed to create entity"
             raise RuntimeError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in find_or_create_entity: %s", e)
             raise
 
@@ -432,7 +432,7 @@ class EntityService:
 
             return self.neo4j_service.get_entity(entity_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting entity %s: %s", entity_id, e)
             return None
 
@@ -451,7 +451,7 @@ class EntityService:
 
             return self.neo4j_service.search_entities(search_term, type_strings, limit)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error searching entities: %s", e)
             return []
 
@@ -463,7 +463,7 @@ class EntityService:
 
             return self.neo4j_service.get_entity_relationships(entity_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting relationships for entity %s: %s", entity_id, e)
             return []
 
@@ -480,7 +480,7 @@ class EntityService:
 
             return self.neo4j_service.get_subgraph(center_entity_id, depth, max_nodes)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error getting subgraph for entity %s: %s", center_entity_id, e
             )
@@ -494,7 +494,7 @@ class EntityService:
 
             return self.neo4j_service.get_graph_stats()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting graph statistics: %s", e)
             return {}
 

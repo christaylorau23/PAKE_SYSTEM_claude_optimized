@@ -15,14 +15,14 @@ Usage:
 """
 
 import argparse
+from collections import defaultdict
+from dataclasses import dataclass
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
-from collections import defaultdict
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 
@@ -175,7 +175,7 @@ class ForensicAnalyzer:
         try:
             with open(log_path, encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"⚠️  Could not read {log_path}: {e}")
             return issues
 
@@ -367,7 +367,7 @@ class ForensicAnalyzer:
 
 def generate_local_snapshot(self) -> None:
     """Generate local environment snapshot for comparison."""
-    output_dir.mkdir(parents=True, exist_ok=True)
+    self.output_dir.mkdir(parents=True, exist_ok=True)
 
     print("📸 Generating local environment snapshot...")
 

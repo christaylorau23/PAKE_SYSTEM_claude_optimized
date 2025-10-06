@@ -4,9 +4,9 @@ Pre-commit hook to check for hardcoded secrets
 Prevents hardcoded secrets from being committed to the repository
 """
 
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 def check_hardcoded_secrets(self) -> None:
@@ -76,7 +76,7 @@ def check_hardcoded_secrets(self) -> None:
                                 }
                             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading file {file_path}: {e}", file=sys.stderr)
             continue
 

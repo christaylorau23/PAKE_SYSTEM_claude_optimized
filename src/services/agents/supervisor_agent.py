@@ -10,13 +10,13 @@ Replaces the monolithic orchestrator with event-driven supervision of:
 """
 
 import asyncio
-import logging
-import time
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
+import uuid
 
 from scripts.ingestion_pipeline import ContentItem
 
@@ -99,7 +99,7 @@ class SupervisorAgent:
     - Performance optimization
     """
 
-    def __init__(self) -> None:
+    def __init__(self, agent_id: str | None = None, message_bus: Any = None, config: dict[str, Any] | None = None) -> None:
         """Initialize supervisor agent."""
         self.agent_id = agent_id or f"supervisor_{uuid.uuid4().hex[:8]}"
         self.message_bus = message_bus
@@ -300,7 +300,7 @@ class SupervisorAgent:
 
         return result
 
-    async def register_worker(self) -> None:
+    async def register_worker(self, worker_agent: WorkerAgent) -> None:
         """Register worker agent with supervisor."""
         self.registered_workers[worker_agent.id] = worker_agent
         self.metrics["workers_active"] = len(self.registered_workers)
@@ -321,7 +321,7 @@ class SupervisorAgent:
             "Registered worker %s (%s)", worker_agent.id, worker_agent.type.value
         )
 
-    async def unregister_worker(self) -> None:
+    async def unregister_worker(self, worker_id: str) -> None:
         """Unregister worker agent."""
         if worker_id in self.registered_workers:
             worker = self.registered_workers.pop(worker_id)
@@ -443,7 +443,7 @@ class SupervisorAgent:
             completion_futures[task.id] = future
 
         # Monitor task completion
-        async def completion_monitor(self) -> None:
+        async def completion_monitor() -> None:
             while completion_futures:
                 completed_tasks = []
                 for task_id, future in completion_futures.items():
@@ -511,7 +511,7 @@ class SupervisorAgent:
 
             except TimeoutError:
                 continue
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Task dispatcher error: %s", e)
                 await asyncio.sleep(1)
 
@@ -549,7 +549,7 @@ class SupervisorAgent:
         # Return worker with best performance
         return min(available_workers, key=lambda w: w.total_tasks_failed)
 
-    async def _assign_task_to_worker(self) -> None:
+    async def _assign_task_to_worker(self, task: Task, worker: WorkerAgent) -> None:
         """Assign task to specific worker."""
         task.assigned_worker = worker.id
         task.assigned_at = datetime.now(UTC)
@@ -572,7 +572,7 @@ class SupervisorAgent:
 
         logger.debug("Assigned task %s to worker %s", task.id, worker.id)
 
-    async def _handle_task_response(self) -> None:
+    async def _handle_task_response(self, message: Any) -> None:
         """Handle task response from worker."""
         task_id = message.correlation_id
         if not task_id or task_id not in self.active_tasks:
@@ -611,7 +611,7 @@ class SupervisorAgent:
 
         logger.debug("Task %s completed with status %s", task_id, task.status)
 
-    async def _handle_system_event(self) -> None:
+    async def _handle_system_event(self, message: Any) -> None:
         """Handle system-wide events."""
         event_data = message.data
         event_type = event_data.get("event_type")
@@ -625,7 +625,7 @@ class SupervisorAgent:
 
         logger.debug("Processed system event: %s", event_type)
 
-    async def _handle_worker_heartbeat(self) -> None:
+    async def _handle_worker_heartbeat(self, message: Any) -> None:
         """Handle worker heartbeat."""
         worker_id = message.source
         if worker_id in self.registered_workers:
@@ -637,7 +637,7 @@ class SupervisorAgent:
             if "status" in heartbeat_data:
                 worker.status = heartbeat_data["status"]
 
-    async def _handle_worker_registration(self) -> None:
+    async def _handle_worker_registration(self, message: Any) -> None:
         """Handle new worker registration."""
         event_data = message.data.get("event_data", {})
         worker_type = event_data.get("worker_type")
@@ -656,12 +656,12 @@ class SupervisorAgent:
             except ValueError:
                 logger.warning("Unknown worker type: %s", worker_type)
 
-    async def _handle_worker_shutdown(self) -> None:
+    async def _handle_worker_shutdown(self, message: Any) -> None:
         """Handle worker shutdown."""
         worker_id = message.source
         await self.unregister_worker(worker_id)
 
-    async def _handle_health_check(self) -> None:
+    async def _handle_health_check(self, message: Any) -> None:
         """Handle health check request."""
         health = await self.health_check()
 
@@ -698,7 +698,7 @@ class SupervisorAgent:
 
                 await asyncio.sleep(30)  # Check every 30 seconds
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health monitor error: %s", e)
                 await asyncio.sleep(5)
 
@@ -733,7 +733,7 @@ class SupervisorAgent:
 
                 await asyncio.sleep(60)  # Publish every minute
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metrics collector error: %s", e)
                 await asyncio.sleep(5)
 
@@ -781,13 +781,13 @@ class SupervisorAgent:
 
                 await asyncio.sleep(10)  # Check every 10 seconds
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Task timeout monitor error: %s", e)
                 await asyncio.sleep(5)
 
         logger.info("Task timeout monitor stopped")
 
-    async def _apply_cognitive_processing(self) -> None:
+    async def _apply_cognitive_processing(self, content_items: list[ContentItem], plan: IngestionPlan) -> None:
         """Apply cognitive processing through worker agents."""
         if not content_items:
             return
@@ -844,7 +844,7 @@ class SupervisorAgent:
 
         return content_items
 
-    async def _reschedule_task(self) -> None:
+    async def _reschedule_task(self, task: Task) -> None:
         """Reschedule failed task for retry."""
         if task.retry_count < task.max_retries:
             task.retry_count += 1

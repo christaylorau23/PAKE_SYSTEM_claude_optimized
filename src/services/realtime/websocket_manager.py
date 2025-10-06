@@ -5,14 +5,14 @@ Enterprise-grade WebSocket service for real-time notifications and live updates.
 
 import asyncio
 import contextlib
-import json
-import logging
-import uuid
-import weakref
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+import json
+import logging
+from typing import Any, Dict, TYPE_CHECKING
+import uuid
+import weakref
 
 import jwt
 import websockets
@@ -131,7 +131,7 @@ class WebSocketManager:
     - Performance metrics
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: WebSocketConfig, auth_service: JWTAuthenticationService, database_service: PostgreSQLService, cache_service: RedisCacheService) -> None:
         self.config = config
         self.auth_service = auth_service
         self.database_service = database_service
@@ -183,7 +183,7 @@ class WebSocketManager:
                 self.config.port,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to start WebSocket server: %s", e)
             raise
 
@@ -209,7 +209,7 @@ class WebSocketManager:
 
             logger.info("🛑 WebSocket server stopped")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error stopping WebSocket server: %s", e)
 
     async def _handle_connection(
@@ -247,13 +247,13 @@ class WebSocketManager:
             async for message in websocket:
                 try:
                     await self._handle_message(websocket, message)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error handling message: %s", e)
                     await self._send_error(websocket, str(e))
 
         except ConnectionClosed:
             logger.info("Connection closed: %s", websocket.remote_address)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Connection error: %s", e)
         finally:
             await self._unregister_connection(websocket, session_id)
@@ -349,7 +349,7 @@ class WebSocketManager:
                 ),
             )
             return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication error: %s", e)
             return None
 
@@ -414,7 +414,7 @@ class WebSocketManager:
 
             self.connection_count += 1
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to register connection: %s", e)
 
     async def _unregister_connection(
@@ -459,7 +459,7 @@ class WebSocketManager:
 
             self.connection_count = max(0, self.connection_count - 1)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to unregister connection: %s", e)
 
     async def _handle_message(
@@ -485,7 +485,7 @@ class WebSocketManager:
 
         except ValueError as e:
             await self._send_error(websocket, f"Invalid message format: {e}")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Message handling error: %s", e)
             await self._send_error(websocket, "Internal server error")
 
@@ -510,7 +510,7 @@ class WebSocketManager:
         except ConnectionClosed:
             logger.debug("Connection closed while sending message")
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to send message: %s", e)
             return False
 
@@ -546,7 +546,7 @@ class WebSocketManager:
             logger.info("📬 Queued message for offline user %s", user_id)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to send to user %s: %s", user_id, e)
             return False
 
@@ -626,7 +626,7 @@ class WebSocketManager:
 
                 await self.broadcast_to_all(heartbeat_message)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Heartbeat task error: %s", e)
 
     async def _cleanup_task(self) -> None:
@@ -665,7 +665,7 @@ class WebSocketManager:
                     del self.message_queues[user_id]
                     logger.info("🧹 Cleaned up old message queue for user %s", user_id)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Cleanup task error: %s", e)
 
     async def _metrics_task(self) -> None:
@@ -704,13 +704,13 @@ class WebSocketManager:
                         ttl=600,  # 10 minutes
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metrics task error: %s", e)
 
     def _setup_default_handlers(self) -> None:
         """Setup default message handlers."""
 
-        async def handle_ping(self) -> None:
+        async def handle_ping(self, websocket: WebSocketServerProtocol, message_data: Dict[str, Any]) -> None:
             pong_message = WebSocketMessage(
                 message_type=MessageType.PONG,
                 data={"timestamp": datetime.now(UTC).isoformat()},
@@ -718,7 +718,7 @@ class WebSocketManager:
             )
             await self._send_message(websocket, pong_message)
 
-        async def handle_subscribe(self) -> None:
+        async def handle_subscribe(self, websocket: WebSocketServerProtocol, message_data: Dict[str, Any]) -> None:
             user_info = self.websocket_to_user.get(websocket)
             if user_info and hasattr(user_info, "subscriptions"):
                 subscriptions = message_data.get("data", {}).get("subscriptions", [])

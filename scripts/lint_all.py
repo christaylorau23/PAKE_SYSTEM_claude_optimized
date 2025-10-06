@@ -4,9 +4,9 @@ Comprehensive linting script for PAKE System
 """
 
 import logging
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def run_command(self) -> None:
         logger.error("❌ %s failed:", description)
         logger.error(result.stderr)
         return False
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ %s failed with exception: %s", description, e)
         return False
 

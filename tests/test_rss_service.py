@@ -142,7 +142,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Verify feed parsing success
         assert result.success
@@ -161,7 +161,7 @@ class TestRSSFeedService:
         assert item.url == "https://example.com/ai-breakthrough"
         assert item.author == "Dr. Sarah Johnson"
         assert "Artificial Intelligence" in item.categories
-        assert item.feed_name == rss_config.name
+        assert item.feed_name == self.rss_config.name
 
     @pytest.mark.asyncio
     async def test_should_parse_atom_feeds_correctly(self) -> None:
@@ -178,7 +178,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(atom_config)
+            result = await self.rss_service.fetch_feed(atom_config)
 
         # Verify Atom parsing success
         assert result.success
@@ -219,7 +219,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Should fail gracefully
         assert not result.success
@@ -250,7 +250,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(config)
+            result = await self.rss_service.fetch_feed(config)
 
         # Verify keyword filtering
         assert result.success
@@ -281,7 +281,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(config)
+            result = await self.rss_service.fetch_feed(config)
 
         # Verify exclusion filtering
         assert result.success
@@ -331,7 +331,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(config)
+            result = await self.rss_service.fetch_feed(config)
 
         # Should only have the long article
         assert result.success
@@ -381,7 +381,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Should only have unique items
         assert result.success
@@ -411,7 +411,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Verify cognitive integration
         assert result.success
@@ -423,7 +423,7 @@ class TestRSSFeedService:
             assert 0.0 <= item.quality_score <= 1.0
 
         # Verify cognitive engine was called
-        assert rss_service.cognitive_engine.assess_content_quality.call_count > 0
+        assert self.rss_service.cognitive_engine.assess_content_quality.call_count > 0
 
     # ========================================================================
     # HTTP CACHING TESTS
@@ -450,12 +450,12 @@ class TestRSSFeedService:
             mock_get.return_value.__aenter__.return_value = mock_response
 
             # First fetch
-            result1 = await rss_service.fetch_feed(rss_config)
+            result1 = await self.rss_service.fetch_feed(rss_config)
             assert result1.success
 
             # Second request - should return 304
             mock_response.status = 304
-            result2 = await rss_service.fetch_feed(rss_config)
+            result2 = await self.rss_service.fetch_feed(rss_config)
 
             assert result2.success
             assert result2.http_status == 304
@@ -479,8 +479,8 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
-            content_items = await rss_service.to_content_items(
+            result = await self.rss_service.fetch_feed(rss_config)
+            content_items = await self.rss_service.to_content_items(
                 result,
                 "rss_ingestion_test",
             )
@@ -526,7 +526,7 @@ class TestRSSFeedService:
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Should fail gracefully
         assert not result.success
@@ -544,7 +544,7 @@ class TestRSSFeedService:
             "aiohttp.ClientSession.get",
             side_effect=TimeoutError("Request timeout"),
         ):
-            result = await rss_service.fetch_feed(rss_config)
+            result = await self.rss_service.fetch_feed(rss_config)
 
         # Should fail gracefully
         assert not result.success
@@ -561,7 +561,7 @@ class TestRSSFeedService:
         Test: Should provide detailed health check information including
         cache statistics and service availability.
         """
-        health_status = await rss_service.health_check()
+        health_status = await self.rss_service.health_check()
 
         # Verify health check structure
         assert "status" in health_status
@@ -588,19 +588,19 @@ class TestRSSFeedService:
 
         with patch("aiohttp.ClientSession.get") as mock_get:
             mock_get.return_value.__aenter__.return_value = mock_response
-            await rss_service.fetch_feed(rss_config)
+            await self.rss_service.fetch_feed(rss_config)
 
         # Verify some resources exist
-        health_before = await rss_service.health_check()
+        health_before = await self.rss_service.health_check()
         assert (
             health_before["feed_cache_size"] > 0 or health_before["item_cache_size"] > 0
         )
 
         # Close service
-        await rss_service.close()
+        await self.rss_service.close()
 
         # Verify cleanup
-        health_after = await rss_service.health_check()
+        health_after = await self.rss_service.health_check()
         assert health_after["feed_cache_size"] == 0
         assert health_after["item_cache_size"] == 0
 

@@ -13,12 +13,12 @@ This test suite implements:
 """
 
 import asyncio
+from datetime import datetime, timedelta
 import logging
 import os
-import uuid
-from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
+import uuid
 
 import pytest
 
@@ -80,7 +80,7 @@ class MockTenantAwareRepository:
     def __init__(self) -> None:
         self.db_service = db_service
         self.model_class = model_class
-        self._session_maker = db_service._session_maker
+        self._session_maker = self.db_service._session_maker
 
     def _get_tenant_id(self) -> str:
         """Get current tenant ID from context."""
@@ -211,7 +211,7 @@ class MockTenantAwareDataAccessLayer:
                 "database_health": db_health,
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {"status": "unhealthy", "error": str(e)}
 
     async def get_tenant_summary(self, tenant_id: str | None = None) -> dict[str, Any]:

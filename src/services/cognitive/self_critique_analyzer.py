@@ -7,13 +7,13 @@ and perform autonomous self-assessment of cognitive processes.
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -114,20 +114,20 @@ class SelfCritiqueAnalyzer:
     - Deep reasoning analysis
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Critique configuration
-        self.critique_frequency = config.get("critique_frequency", 7200)  # 2 hours
-        self.deep_critique_frequency = config.get(
+        self.critique_frequency = self.config.get("critique_frequency", 7200)  # 2 hours
+        self.deep_critique_frequency = self.config.get(
             "deep_critique_frequency",
             86400,
         )  # 24 hours
-        self.consensus_threshold = config.get("consensus_threshold", 0.7)
-        self.confidence_threshold = config.get("confidence_threshold", 0.8)
+        self.consensus_threshold = self.config.get("consensus_threshold", 0.7)
+        self.confidence_threshold = self.config.get("confidence_threshold", 0.8)
 
         # Model configuration for multi-model validation
-        self.validation_models = config.get(
+        self.validation_models = self.config.get(
             "validation_models",
             ["claude-3.5-sonnet", "gpt-4o", "gemini-1.5-pro"],
         )
@@ -185,7 +185,7 @@ class SelfCritiqueAnalyzer:
             self.logger.info("Self-Critique Analyzer fully initialized")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize self-critique analyzer: %s", e)
             return False
 
@@ -247,7 +247,7 @@ and validate system performance through multi-model consensus and adversarial te
                 if critique_result.overall_quality_score < 0.7:
                     await self._trigger_improvement_cycle(critique_result)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in critique loop: %s", e)
 
     async def _deep_analysis_loop(self) -> None:
@@ -282,7 +282,7 @@ and validate system performance through multi-model consensus and adversarial te
                 # Log deep analysis
                 await self._log_deep_analysis(self_assessment, improvement_roadmap)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in deep analysis loop: %s", e)
 
     async def _perform_critique(
@@ -352,7 +352,7 @@ and validate system performance through multi-model consensus and adversarial te
                 model_responses[model] = response
                 confidence_scores[model] = response.get("confidence", 0.0)
 
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 self.logger.warning("Failed to get response from %s: %s", model, e)
                 model_responses[model] = {"error": str(e)}
                 confidence_scores[model] = 0.0
@@ -592,7 +592,7 @@ Provide your response in JSON format with the following structure:
             implementation_priority={},
         )
 
-    async def _log_critique_cycle(self) -> None:
+    async def _log_critique_cycle(self, critique_result: CritiqueResult) -> None:
         """Log critique cycle to the critique log."""
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 

@@ -91,8 +91,11 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
                         secret_config["name"],
                     )
                     continue
-                except client.exceptions.ResourceNotFoundException:
-                    pass  # Secret doesn't exist, proceed to create
+                except client.exceptions.ResourceNotFoundException as e:
+
+                    logger.debug(f"Exception in setup_aws_secrets.py: {e}")
+
+                    # Continue gracefully  # Secret doesn't exist, proceed to create
 
                 # Create the secret
                 secret_value = (
@@ -122,7 +125,7 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
 
                 logger.info("✅ Created secret: %s", secret_config["name"])
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error(
                     "❌ Failed to create secret %s: %s", secret_config["name"], e
                 )
@@ -169,7 +172,7 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
         print("- Enable CloudTrail to audit secret access")
         print("- Rotate secrets regularly (recommended: every 90 days)")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Failed to setup AWS secrets: %s", e)
         sys.exit(1)
 
@@ -231,7 +234,7 @@ def create_iam_policy(secrets: list, region: str) -> None:
             logger.info("✅ Created IAM policy: %s", policy_name)
             logger.info("Policy ARN: %s", response["Policy"]["Arn"])
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Failed to create IAM policy: %s", e)
 
 
@@ -253,10 +256,10 @@ def delete_all_secrets(region: str = "us-east-1") -> None:
                     ForceDeleteWithoutRecovery=True,
                 )
                 logger.info("🗑️ Deleted secret: %s", secret_name)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to delete %s: %s", secret_name, e)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Failed to delete secrets: %s", e)
 
 

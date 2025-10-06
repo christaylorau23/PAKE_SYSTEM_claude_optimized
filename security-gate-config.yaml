@@ -1,0 +1,130 @@
+# PAKE System Security Configuration
+# Phoenix Protocol Phase 7.2 - Security-First CI/CD Pipeline Configuration
+
+# Security scanning thresholds
+SECURITY_GATE_CONFIG:
+  # Critical vulnerabilities - must be zero
+  CRITICAL_VULNERABILITIES_MAX: 0
+  
+  # High severity vulnerabilities - must be zero for production
+  HIGH_VULNERABILITIES_MAX: 0
+  
+  # Medium severity vulnerabilities - warning threshold
+  MEDIUM_VULNERABILITIES_MAX: 10
+  
+  # Low severity vulnerabilities - informational threshold
+  LOW_VULNERABILITIES_MAX: 50
+
+# Dependency scanning configuration
+DEPENDENCY_SCANNING:
+  # Enable/disable specific scanners
+  TRIVY_ENABLED: true
+  PIP_AUDIT_ENABLED: true
+  SAFETY_ENABLED: true
+  POETRY_AUDIT_ENABLED: true
+  
+  # Severity levels to report
+  REPORT_SEVERITIES: ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+  
+  # Ignore unfixed vulnerabilities (not recommended for production)
+  IGNORE_UNFIXED: false
+
+# Secret scanning configuration
+SECRET_SCANNING:
+  # Enable/disable specific scanners
+  TRUFFLEHOG_ENABLED: true
+  GITLEAKS_ENABLED: true
+  GITGUARDIAN_ENABLED: false  # Requires API key
+  
+  # Verification settings
+  VERIFY_SECRETS: true
+  ONLY_VERIFIED: true
+  
+  # Custom patterns
+  CUSTOM_PATTERNS_ENABLED: true
+
+# SAST configuration
+SAST_SCANNING:
+  # Enable/disable specific scanners
+  SEMGREP_ENABLED: true
+  BANDIT_ENABLED: true
+  RUFF_SECURITY_ENABLED: true
+  SONARQUBE_ENABLED: false  # Requires token
+  CODEQL_ENABLED: true
+  
+  # Security rule sets
+  SEMGREP_CONFIGS:
+    - "p/security-audit"
+    - "p/secrets"
+    - "p/owasp-top-ten"
+    - "p/python"
+    - "p/security"
+    - "p/cwe-top-25"
+  
+  # Bandit configuration
+  BANDIT_SKIP_TESTS: ["B101", "B601"]  # Skip assert and shell injection in tests
+  
+  # Ruff security rules
+  RUFF_SECURITY_RULES: ["S"]  # All security rules
+
+# Notification configuration
+NOTIFICATIONS:
+  # Enable/disable notifications
+  ENABLED: true
+  
+  # Notification channels
+  GITHUB_COMMENTS: true
+  SLACK_WEBHOOK: false  # Requires webhook URL
+  EMAIL_NOTIFICATIONS: false  # Requires SMTP configuration
+  
+  # Notification triggers
+  TRIGGERS:
+    - "critical_vulnerability_found"
+    - "security_gate_failed"
+    - "weekly_scan_completed"
+
+# Reporting configuration
+REPORTING:
+  # Report formats
+  FORMATS: ["json", "sarif", "markdown"]
+  
+  # Upload to GitHub Security tab
+  UPLOAD_TO_GITHUB_SECURITY: true
+  
+  # Generate summary reports
+  GENERATE_SUMMARY: true
+  
+  # Archive reports
+  ARCHIVE_REPORTS: true
+
+# Performance configuration
+PERFORMANCE:
+  # Timeout settings (minutes)
+  SCA_TIMEOUT: 15
+  SECRET_SCAN_TIMEOUT: 10
+  SAST_TIMEOUT: 25
+  SECURITY_GATE_TIMEOUT: 5
+  
+  # Parallel execution
+  PARALLEL_SCANS: true
+  
+  # Resource limits
+  MAX_CONCURRENT_SCANS: 3
+
+# Environment-specific settings
+ENVIRONMENTS:
+  DEVELOPMENT:
+    CRITICAL_VULNERABILITIES_MAX: 0
+    HIGH_VULNERABILITIES_MAX: 2
+    MEDIUM_VULNERABILITIES_MAX: 20
+  
+  STAGING:
+    CRITICAL_VULNERABILITIES_MAX: 0
+    HIGH_VULNERABILITIES_MAX: 0
+    MEDIUM_VULNERABILITIES_MAX: 10
+  
+  PRODUCTION:
+    CRITICAL_VULNERABILITIES_MAX: 0
+    HIGH_VULNERABILITIES_MAX: 0
+    MEDIUM_VULNERABILITIES_MAX: 0
+    LOW_VULNERABILITIES_MAX: 5

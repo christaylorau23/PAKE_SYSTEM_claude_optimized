@@ -8,9 +8,9 @@ to ensure all components work together seamlessly.
 """
 
 import asyncio
-import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -124,7 +124,7 @@ class TestCosmicCalibrationIntegration:
     async def test_system_metrics_collection(self) -> None:
         """Test comprehensive system metrics collection"""
         # Collect system metrics
-        metrics = await coordinator._collect_system_metrics()
+        metrics = await self.coordinator._collect_system_metrics()
 
         # Verify metrics structure
         assert hasattr(metrics, "timestamp")
@@ -166,7 +166,7 @@ class TestCosmicCalibrationIntegration:
             autonomous_capability_level=0.2,
         )
 
-        decisions = await coordinator._make_coordination_decisions(
+        decisions = await self.coordinator._make_coordination_decisions(
             critical_metrics,
             SystemHealth.CRITICAL,
         )
@@ -195,7 +195,7 @@ class TestCosmicCalibrationIntegration:
             autonomous_capability_level=0.9,
         )
 
-        optimal_decisions = await coordinator._make_coordination_decisions(
+        optimal_decisions = await self.coordinator._make_coordination_decisions(
             optimal_metrics,
             SystemHealth.OPTIMAL,
         )
@@ -208,10 +208,10 @@ class TestCosmicCalibrationIntegration:
         """Test integration between all cognitive components"""
 
         # Test component status retrieval
-        cognitive_status = coordinator.cognitive_engine.get_cognitive_status()
-        metacognitive_status = coordinator.metacognitive_optimizer.get_status()
-        evolution_status = coordinator.prompt_evolution.get_status()
-        critique_status = coordinator.self_critique.get_status()
+        cognitive_status = self.coordinator.cognitive_engine.get_cognitive_status()
+        metacognitive_status = self.coordinator.metacognitive_optimizer.get_status()
+        evolution_status = self.coordinator.prompt_evolution.get_status()
+        critique_status = self.coordinator.self_critique.get_status()
 
         # Verify all components are responding
         assert cognitive_status is not None
@@ -240,11 +240,11 @@ class TestCosmicCalibrationIntegration:
         }
 
         # Execute optimization
-        await coordinator._execute_coordinated_optimization(test_decisions)
+        await self.coordinator._execute_coordinated_optimization(test_decisions)
 
         # Verify optimization was recorded
-        assert coordinator.last_optimization_time is not None
-        assert datetime.now(UTC) - coordinator.last_optimization_time < timedelta(
+        assert self.coordinator.last_optimization_time is not None
+        assert datetime.now(UTC) - self.coordinator.last_optimization_time < timedelta(
             seconds=30,
         )
 
@@ -253,7 +253,7 @@ class TestCosmicCalibrationIntegration:
         """Test emergency calibration trigger"""
 
         # Trigger emergency calibration
-        result = await coordinator.trigger_emergency_calibration(
+        result = await self.coordinator.trigger_emergency_calibration(
             "Test emergency scenario",
         )
 
@@ -268,8 +268,8 @@ class TestCosmicCalibrationIntegration:
         assert "Test emergency scenario" in emergency_event["description"]
 
         # Verify emergency was logged
-        assert len(coordinator.calibration_events) > 0
-        latest_event = coordinator.calibration_events[-1]
+        assert len(self.coordinator.calibration_events) > 0
+        latest_event = self.coordinator.calibration_events[-1]
         assert latest_event.event_type == "emergency_calibration"
 
     @pytest.mark.asyncio
@@ -280,18 +280,18 @@ class TestCosmicCalibrationIntegration:
         metrics_history = []
 
         for _i in range(5):
-            metrics = await coordinator._collect_system_metrics()
+            metrics = await self.coordinator._collect_system_metrics()
             metrics_history.append(metrics)
-            coordinator.system_metrics_history.append(metrics)
+            self.coordinator.system_metrics_history.append(metrics)
             await asyncio.sleep(0.1)  # Small delay between collections
 
         # Test improvement velocity calculation
-        improvement_velocity = coordinator._calculate_improvement_velocity()
+        improvement_velocity = self.coordinator._calculate_improvement_velocity()
         assert isinstance(improvement_velocity, float)
         assert improvement_velocity >= 0.0
 
         # Test stability index calculation
-        stability_index = coordinator._calculate_stability_index()
+        stability_index = self.coordinator._calculate_stability_index()
         assert isinstance(stability_index, float)
         assert 0.0 <= stability_index <= 1.0
 
@@ -301,16 +301,16 @@ class TestCosmicCalibrationIntegration:
 
         # Override log path for testing
         test_log_path = tmp_path / "test_calibration.log"
-        coordinator.calibration_log_path = test_log_path
+        self.coordinator.calibration_log_path = test_log_path
 
         # Initialize test log
-        await coordinator._initialize_calibration_log()
+        await self.coordinator._initialize_calibration_log()
 
         # Verify log file was created
         assert test_log_path.exists()
 
         # Test coordination cycle logging
-        test_metrics = await coordinator._collect_system_metrics()
+        test_metrics = await self.coordinator._collect_system_metrics()
         test_decisions = {
             "should_optimize": False,
             "optimization_priority": "none",
@@ -319,7 +319,7 @@ class TestCosmicCalibrationIntegration:
             "coordination_actions": ["monitoring"],
         }
 
-        await coordinator._log_coordination_cycle(test_metrics, test_decisions)
+        await self.coordinator._log_coordination_cycle(test_metrics, test_decisions)
 
         # Verify log content
         log_content = test_log_path.read_text()
@@ -334,7 +334,7 @@ class TestCosmicCalibrationIntegration:
         # Simulate rapid metric collections and decisions
         tasks = []
         for _i in range(10):
-            task = asyncio.create_task(coordinator._collect_system_metrics())
+            task = asyncio.create_task(self.coordinator._collect_system_metrics())
             tasks.append(task)
 
         # Execute all tasks concurrently
@@ -372,7 +372,7 @@ class TestCosmicCalibrationIntegration:
 
     async def _test_status_format(self) -> None:
         """Helper for testing status format"""
-        status = await coordinator.get_system_status()
+        status = await self.coordinator.get_system_status()
 
         # Verify top-level status structure
         required_fields = [
@@ -485,7 +485,7 @@ if __name__ == "__main__":
             else:
                 print("❌ Initialization failed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Test failed: {e}")
 
         finally:

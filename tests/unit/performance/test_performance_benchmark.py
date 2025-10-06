@@ -4,9 +4,9 @@ Following Test-Driven Development principles
 """
 
 import asyncio
-import time
 from dataclasses import asdict
 from datetime import UTC, datetime
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -338,10 +338,10 @@ class TestPerformanceBenchmark:
         def monitoring_callback(self) -> None:
             monitoring_data.append(
                 {
-                    "timestamp": result.timestamp,
-                    "endpoint": result.endpoint,
-                    "duration": result.duration_ms,
-                    "success": result.success,
+                    "timestamp": self.result.timestamp,
+                    "endpoint": self.result.endpoint,
+                    "duration": self.result.duration_ms,
+                    "success": self.result.success,
                 },
             )
 

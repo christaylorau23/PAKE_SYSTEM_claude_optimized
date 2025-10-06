@@ -6,12 +6,12 @@ showing all features working together successfully.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import os
 
 # Import our core models
 import sys
 import uuid
-from datetime import UTC, datetime
 
 from src.services.curation.models.content_item import ContentItem, ContentType
 from src.services.curation.models.content_source import ContentSource, SourceType

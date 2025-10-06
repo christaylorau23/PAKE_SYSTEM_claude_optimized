@@ -8,13 +8,15 @@ This service implements the three core principles:
 3. Fixture-Based Seeding: Code-based fixtures instead of static SQL dumps
 """
 
-import logging
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import logging
 from pathlib import Path
 from typing import Any
+
+import pydantic
 
 try:
     import asyncpg
@@ -108,8 +110,8 @@ class TestDatabaseManager:
     - Automatic cleanup and resource management
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: TestDatabaseConfig | None = None) -> None:
+        self.config = config or TestDatabaseConfig()
         self._fixtures: dict[str, TestDataFixture] = {}
         self._active_sessions: dict[str, AsyncSession] = {}
         self._migration_history: list[str] = []
@@ -428,7 +430,7 @@ class TestDatabaseManager:
                 self.logger.info("Schema validation passed. Found tables: %s", tables)
                 return True
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             self.logger.error("Schema validation error: %s", e)
             return False
 

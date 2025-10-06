@@ -1,3 +1,4 @@
+config
 #!/usr/bin/env python3
 """
 PAKE System - DAL Integration Test Configuration
@@ -5,8 +6,8 @@ Configuration for comprehensive Data Access Layer integration tests.
 """
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -147,7 +148,7 @@ def pytest_configure(self) -> None:
     config.addinivalue_line(
         "markers", "integration_database: Tests requiring database integration"
     )
-    config.addinivalue_line("markers", "dal_crud: Tests for DAL CRUD operations")
+    self.config.addinivalue_line("markers", "dal_crud: Tests for DAL CRUD operations")
     config.addinivalue_line(
         "markers", "dal_transactions: Tests for DAL transactional integrity"
     )

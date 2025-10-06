@@ -23,9 +23,9 @@ class TestSimpleLogging:
         logger.error("Error message")
 
         # Verify logs were captured
-        assert "Info message" in caplog.text
-        assert "Warning message" in caplog.text
-        assert "Error message" in caplog.text
+        assert "Info message" in self.caplog.text
+        assert "Warning message" in self.caplog.text
+        assert "Error message" in self.caplog.text
 
     def test_logging_levels(self) -> None:
         """Test different logging levels"""

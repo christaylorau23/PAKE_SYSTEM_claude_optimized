@@ -8,8 +8,8 @@ according to the OpenAPI specification.
 IMPORTANT: This test MUST fail initially (TDD requirement).
 """
 
-import uuid
 from typing import Any
+import uuid
 
 import pytest
 

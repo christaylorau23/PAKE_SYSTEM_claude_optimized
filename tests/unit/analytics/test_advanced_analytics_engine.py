@@ -4,8 +4,8 @@ Following Test-Driven Development principles
 """
 
 import asyncio
-import time
 from datetime import UTC, datetime, timedelta
+import time
 from unittest.mock import patch
 
 import pytest
@@ -92,7 +92,7 @@ class TestAdvancedAnalyticsEngine:
         engine = AdvancedAnalyticsEngine(analytics_config)
 
         # Add anomalous data point
-        anomalous_data = sample_metrics_data.copy()
+        anomalous_data = self.sample_metrics_data.copy()
         anomalous_data["response_times"].append(500.0)  # Anomalously high response time
 
         with patch.object(engine, "_get_metrics_data", return_value=anomalous_data):

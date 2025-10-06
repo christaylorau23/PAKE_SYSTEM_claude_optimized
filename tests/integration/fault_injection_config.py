@@ -1,3 +1,4 @@
+config
 #!/usr/bin/env python3
 """
 PAKE System - Fault Injection Test Configuration
@@ -5,14 +6,14 @@ Configuration and utilities for comprehensive fault injection testing
 """
 
 import asyncio
-import logging
 from dataclasses import dataclass
 from enum import Enum
+import logging
 from typing import Any, Dict, List, Optional
 
 import aiohttp
-import pytest
 from aioresponses import aioresponses
+import pytest
 
 logger = logging.getLogger(__name__)
 

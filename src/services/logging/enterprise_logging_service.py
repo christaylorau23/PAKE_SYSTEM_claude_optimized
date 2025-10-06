@@ -10,22 +10,22 @@ Comprehensive logging service implementing enterprise best practices for:
 """
 
 import asyncio
-import logging
-import os
-import re
-import sys
-import time
-import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import logging
+import os
 from pathlib import Path
-from typing import Any
+import re
+import sys
+import time
+from typing import Any, Callable
+import uuid
 
-import structlog
 from pydantic import BaseModel, Field, validator
+import structlog
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -48,7 +48,7 @@ class LogLevel(Enum):
     ERROR = (40, "ERROR")
     CRITICAL = (50, "CRITICAL")
 
-    def __init__(self) -> None:
+    def __init__(self, level: Any = None, name: str = '') -> None:
         self.level = level
         self.name = name
 
@@ -178,7 +178,7 @@ class SensitiveDataMasker:
         return text[0] + mask_char * (len(text) - 2) + text[-1]
 
     @classmethod
-    def mask_dict(cls, data: Dict[str, Any], mask_char: str = "*") -> Dict[str, Any]:
+    def mask_dict(cls, data: dict[str, Any], mask_char: str = "*") -> dict[str, Any]:
         """Recursively mask sensitive data in a dictionary."""
         if not isinstance(data, dict):
             return data
@@ -217,8 +217,8 @@ class SensitiveDataMasker:
 class LogContext:
     """Context manager for adding contextual information to logs."""
 
-    def __init__(self) -> None:
-        self.logger = logger
+    def __init__(self, context: dict[str, Any] | None = None) -> None:
+        self.logger = get_logger()
         self.context = context
         self.previous_context = {}
 
@@ -229,7 +229,7 @@ class LogContext:
         self.logger.context.update(self.context)
         return self
 
-    def __exit__(self) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # Restore previous context
         self.logger.context = self.previous_context
 
@@ -283,12 +283,12 @@ class LogEntry(BaseModel):
     user_agent: str | None = Field(None, description="User agent")
 
     # Additional context
-    extra_data: Dict[str, Any] = Field(
+    extra_data: dict[str, Any] = Field(
         default_factory=dict, description="Additional structured data"
     )
 
     @validator("extra_data")
-    def validate_extra_data(self) -> None:
+    def validate_extra_data(cls, v: Any) -> Any:
         """Ensure extra_data doesn't contain sensitive information."""
         if isinstance(v, dict):
             return SensitiveDataMasker.mask_dict(v)
@@ -305,11 +305,11 @@ class EnterpriseLoggingService:
     - Compliance logging.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: LoggingConfig | None = None) -> None:
         self.config = config or LoggingConfig()
-        self.context: Dict[str, Any] = {}
+        self.context: dict[str, Any] = {}
         self.loggers: dict[str, logging.Logger] = {}
-        self.metrics_buffer: list[Dict[str, Any]] = []
+        self.metrics_buffer: list[dict[str, Any]] = []
         self.audit_logs: list[LogEntry] = []
 
         # Initialize logging infrastructure
@@ -371,7 +371,7 @@ class EnterpriseLoggingService:
         for category in categories:
             self._create_file_handler(log_dir, category)
 
-    def _create_file_handler(self) -> None:
+    def _create_file_handler(self, log_dir: Path, category: str) -> None:
         """Create a file handler for a specific category."""
         try:
             from logging.handlers import RotatingFileHandler
@@ -395,7 +395,7 @@ class EnterpriseLoggingService:
 
             self.loggers[category] = logger
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to create file handler for {category}: {e}", file=sys.stderr)
 
     def _setup_console_handler(self) -> None:
@@ -432,17 +432,17 @@ class EnterpriseLoggingService:
     # Context Management
     # ========================================================================
 
-    def with_context(self, **context) -> LogContext:
+    def with_context(self, context: dict[str, Any] | None = None, **kwargs) -> LogContext:
         """Create a context manager for adding contextual information."""
-        return LogContext(self, **context)
+        return LogContext(context or {}, **kwargs)
 
-    def with_correlation_id(self, correlation_id: str = None) -> LogContext:
+    def with_correlation_id(self, correlation_id: str | None = None) -> LogContext:
         """Add correlation ID for request tracing."""
         if correlation_id is None:
             correlation_id = str(uuid.uuid4())
         return self.with_context(correlation_id=correlation_id)
 
-    def with_user(self, user_id: str, username: str = None) -> LogContext:
+    def with_user(self, user_id: str, username: str | None = None) -> LogContext:
         """Add user context for audit logging."""
         context = {"user_id": user_id}
         if username:
@@ -451,11 +451,11 @@ class EnterpriseLoggingService:
 
     def with_request(
         self,
-        request_id: str = None,
-        method: str = None,
-        path: str = None,
-        ip: str = None,
-        user_agent: str = None,
+        request_id: str | None = None,
+        method: str | None = None,
+        path: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
     ) -> LogContext:
         """Add request context for API logging."""
         context = {}
@@ -480,7 +480,7 @@ class EnterpriseLoggingService:
         level: LogLevel,
         message: str,
         category: LogCategory = LogCategory.APPLICATION,
-        **kwargs,
+        **kwargs: Any,
     ) -> LogEntry:
         """Create a structured log entry."""
         # Merge context and kwargs
@@ -507,7 +507,7 @@ class EnterpriseLoggingService:
 
         return entry
 
-    def _log_entry(self) -> None:
+    def _log_entry(self, entry: LogEntry) -> None:
         """Log a structured entry."""
         # Get appropriate logger
         logger_name = f"{self.config.service_name}.{entry.category}"
@@ -528,22 +528,22 @@ class EnterpriseLoggingService:
         elif entry.level == LogLevel.CRITICAL.name:
             logger.critical(entry.message, extra=log_dict)
 
-    def debug(self) -> None:
+    def debug(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
         """Log debug message."""
         entry = self._create_log_entry(LogLevel.DEBUG, message, category, **kwargs)
         self._log_entry(entry)
 
-    def info(self) -> None:
+    def info(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
         """Log info message."""
         entry = self._create_log_entry(LogLevel.INFO, message, category, **kwargs)
         self._log_entry(entry)
 
-    def warning(self) -> None:
+    def warning(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
         """Log warning message."""
         entry = self._create_log_entry(LogLevel.WARNING, message, category, **kwargs)
         self._log_entry(entry)
 
-    def error(self) -> None:
+    def error(self, message: str, category: LogCategory = LogCategory.APPLICATION, error: Exception | None = None, **kwargs: Any) -> None:
         """Log error message with optional exception."""
         if error:
             kwargs.update(
@@ -559,7 +559,7 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(LogLevel.ERROR, message, category, **kwargs)
         self._log_entry(entry)
 
-    def critical(self) -> None:
+    def critical(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
         """Log critical message."""
         entry = self._create_log_entry(LogLevel.CRITICAL, message, category, **kwargs)
         self._log_entry(entry)
@@ -568,7 +568,7 @@ class EnterpriseLoggingService:
     # Specialized Logging Methods
     # ========================================================================
 
-    def security(self) -> None:
+    def security(self, message: str, event: str, success: bool, reason: str | None = None, ip: str | None = None, user_agent: str | None = None, user_id: str | None = None, **kwargs: Any) -> None:
         """Log security events."""
         security_data = {
             "event": event,
@@ -587,7 +587,7 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def audit(self) -> None:
+    def audit(self, message: str, event_type: str, action: str, result: str, resource: str | None = None, user_id: str | None = None, **kwargs: Any) -> None:
         """Log audit events for compliance."""
         audit_data = {
             "event_type": event_type,
@@ -607,7 +607,7 @@ class EnterpriseLoggingService:
         # Store in audit logs for compliance
         self.audit_logs.append(entry)
 
-    def performance(self) -> None:
+    def performance(self, message: str, operation: str, duration_ms: float | None = None, memory_mb: float | None = None, cpu_percent: float | None = None, **kwargs: Any) -> None:
         """Log performance metrics."""
         perf_data = {
             "operation": operation,
@@ -622,7 +622,7 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def api(self) -> None:
+    def api(self, message: str, method: str | None = None, path: str | None = None, status_code: int | None = None, duration_ms: float | None = None, user_id: str | None = None, error: Exception | None = None, **kwargs: Any) -> None:
         """Log API requests/responses."""
         api_data = {
             "method": method,
@@ -649,7 +649,7 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.API, **api_data)
         self._log_entry(entry)
 
-    def database(self) -> None:
+    def database(self, message: str, operation: str, table: str | None = None, duration_ms: float | None = None, row_count: int | None = None, error: Exception | None = None, **kwargs: Any) -> None:
         """Log database operations."""
         db_data = {
             "operation": operation,
@@ -667,7 +667,7 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.DATABASE, **db_data)
         self._log_entry(entry)
 
-    def business(self) -> None:
+    def business(self, message: str, event: str, entity_type: str | None = None, entity_id: str | None = None, action: str | None = None, metadata: dict[str, Any] | None = None, user_id: str | None = None, **kwargs: Any) -> None:
         """Log business events."""
         business_data = {
             "event": event,
@@ -702,7 +702,7 @@ class EnterpriseLoggingService:
 
         try:
             yield
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration_ms = (time.time() - start_time) * 1000
             self.error(
                 f"Operation {operation or 'timer'} failed",
@@ -721,15 +721,15 @@ class EnterpriseLoggingService:
                 duration_ms=duration_ms,
             )
 
-    def trace_operation(self) -> None:
+    def trace_operation(self, operation_name: str) -> Callable:
         """Decorator to trace an operation."""
 
-        def decorator(self) -> None:
-            async def async_wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 async with self.timer(operation_name):
                     return await func(*args, **kwargs)
 
-            def sync_wrapper(self) -> None:
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
@@ -741,7 +741,7 @@ class EnterpriseLoggingService:
                         duration_ms=duration_ms,
                     )
                     return result
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     duration_ms = (time.time() - start_time) * 1000
                     self.error(
                         f"Operation {operation_name} failed",
@@ -764,10 +764,10 @@ class EnterpriseLoggingService:
 
     def get_audit_logs(
         self,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        event_type: str = None,
-        user_id: str = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        event_type: str | None = None,
+        user_id: str | None = None,
     ) -> list[LogEntry]:
         """Get filtered audit logs."""
         filtered_logs = self.audit_logs
@@ -792,7 +792,7 @@ class EnterpriseLoggingService:
 
         return sorted(filtered_logs, key=lambda x: x.timestamp, reverse=True)
 
-    def generate_compliance_report(self, days: int = 30) -> Dict[str, Any]:
+    def generate_compliance_report(self, days: int = 30) -> dict[str, Any]:
         """Generate compliance report for audit logs."""
         end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
@@ -844,7 +844,7 @@ class EnterpriseLoggingService:
 _global_logger: EnterpriseLoggingService | None = None
 
 
-def get_enterprise_logger(config: LoggingConfig = None) -> EnterpriseLoggingService:
+def get_enterprise_logger(config: LoggingConfig | None = None) -> EnterpriseLoggingService:
     """Get or create global enterprise logger instance."""
     global _global_logger
     if _global_logger is None:
@@ -917,13 +917,13 @@ if __name__ == "__main__":
     # Timer usage
     import asyncio
 
-    async def example_async_operation(self) -> None:
+    async def example_async_operation() -> None:
         async with logger.timer("expensive_operation"):
             await asyncio.sleep(0.1)  # Simulate work
 
     # Decorator usage
     @logger.trace_operation("data_processing")
-    def process_data(self) -> None:
+    def process_data() -> str:
         time.sleep(0.05)  # Simulate work
         return "processed"
 

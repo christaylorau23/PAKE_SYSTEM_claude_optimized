@@ -4,15 +4,15 @@ Advanced tools for detecting, monitoring, and preventing race conditions in asyn
 """
 
 import asyncio
+from collections import defaultdict, deque
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 import functools
 import logging
 import threading
 import time
+from typing import Any, Callable
 import weakref
-from collections import defaultdict, deque
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any
 
 logger = logging.getLogger("race_condition_monitor")
 
@@ -58,7 +58,7 @@ class RaceConditionMetrics:
 class RaceConditionMonitor:
     """Advanced race condition detection and monitoring system."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {
             "detection_window_ms": 100,  # Time window for concurrent access detection
             "max_concurrent_access": 2,  # Maximum concurrent accesses before flagging
@@ -114,7 +114,7 @@ class RaceConditionMonitor:
         except Exception:
             return ""
 
-    def track_shared_state_access(self) -> None:
+    def track_shared_state_access(self, operation: str, state_name: str) -> None:
         """Track access to shared state."""
         with self._lock:
             access = SharedStateAccess(
@@ -139,7 +139,7 @@ class RaceConditionMonitor:
             # Check for concurrent access
             self._check_concurrent_access(state_name)
 
-    def _check_concurrent_access(self) -> None:
+    def _check_concurrent_access(self, state_name: str) -> None:
         """Check for concurrent access to shared state."""
         accesses = self.shared_state_access[state_name]
 
@@ -175,7 +175,7 @@ class RaceConditionMonitor:
                     )
                     self.metrics.concurrent_access_count += 1
 
-    def track_lock_acquisition(self) -> None:
+    def track_lock_acquisition(self, lock_name: str, task_id: str | None = None) -> None:
         """Track lock acquisition."""
         if task_id is None:
             task_id = self._get_task_id()
@@ -212,7 +212,7 @@ class RaceConditionMonitor:
                     "medium",
                 )
 
-    def track_lock_waiting(self) -> None:
+    def track_lock_waiting(self, lock_name: str, task_id: str | None = None) -> None:
         """Track task waiting for lock."""
         if task_id is None:
             task_id = self._get_task_id()
@@ -220,7 +220,7 @@ class RaceConditionMonitor:
         with self._lock:
             self.lock_waiting[lock_name].add(task_id)
 
-    def track_lock_release(self) -> None:
+    def track_lock_release(self, lock_name: str, task_id: str | None = None) -> None:
         """Track lock release."""
         if task_id is None:
             task_id = self._get_task_id()
@@ -228,7 +228,7 @@ class RaceConditionMonitor:
         with self._lock:
             self.active_locks[lock_name].discard(task_id)
 
-    def _record_race_condition(self) -> None:
+    def _record_race_condition(self, event_type: str, location: str, details: dict[str, Any], severity: str) -> None:
         """Record a race condition event."""
         event = RaceConditionEvent(
             timestamp=time.time(),
@@ -306,7 +306,7 @@ def get_race_monitor() -> RaceConditionMonitor:
 class AsyncSafeLock:
     """Async-safe lock with race condition monitoring."""
 
-    def __init__(self) -> None:
+    def __init__(self, name: str | None = None) -> None:
         self.name = name or f"lock_{id(self)}"
         self._lock = asyncio.Lock()
         self.monitor = get_race_monitor()
@@ -325,7 +325,7 @@ class AsyncSafeLock:
 class AsyncSafeSemaphore:
     """Async-safe semaphore with race condition monitoring."""
 
-    def __init__(self) -> None:
+    def __init__(self, value: int, name: str | None = None) -> None:
         self.name = name or f"semaphore_{id(self)}"
         self._semaphore = asyncio.Semaphore(value)
         self.monitor = get_race_monitor()
@@ -353,22 +353,22 @@ class AsyncSafeSemaphore:
 class RaceConditionDetector:
     """Decorator-based race condition detector."""
 
-    def __init__(self) -> None:
+    def __init__(self, monitor: RaceConditionMonitor | None = None) -> None:
         self.monitor = monitor or get_race_monitor()
 
-    def track_shared_state(self) -> None:
+    def track_shared_state(self, state_name: str) -> Callable:
         """Decorator to track shared state access."""
 
-        def decorator(self) -> None:
+        def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
-            async def async_wrapper(self) -> None:
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 self.monitor.track_shared_state_access(
                     state_name, f"call_{func.__name__}"
                 )
                 return await func(*args, **kwargs)
 
             @functools.wraps(func)
-            def sync_wrapper(self) -> None:
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 self.monitor.track_shared_state_access(
                     state_name, f"call_{func.__name__}"
                 )
@@ -380,17 +380,17 @@ class RaceConditionDetector:
 
         return decorator
 
-    def with_lock(self) -> None:
+    def with_lock(self, lock_name: str) -> Callable:
         """Decorator to ensure function runs with a lock."""
 
-        def decorator(self) -> None:
+        def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
-            async def async_wrapper(self) -> None:
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 async with AsyncSafeLock(lock_name):
                     return await func(*args, **kwargs)
 
             @functools.wraps(func)
-            def sync_wrapper(self) -> None:
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # For sync functions, we can't use async locks
                 # This is a limitation - sync functions should use threading.Lock
                 return func(*args, **kwargs)
@@ -405,22 +405,22 @@ class RaceConditionDetector:
 # Convenience functions
 
 
-def track_shared_state_access(self) -> None:
+def track_shared_state_access(state_name: str, operation: str) -> None:
     """Track access to shared state."""
     get_race_monitor().track_shared_state_access(state_name, operation)
 
 
-def track_lock_acquisition(self) -> None:
+def track_lock_acquisition(lock_name: str, task_id: str | None = None) -> None:
     """Track lock acquisition."""
     get_race_monitor().track_lock_acquisition(lock_name, task_id)
 
 
-def track_lock_waiting(self) -> None:
+def track_lock_waiting(lock_name: str, task_id: str | None = None) -> None:
     """Track task waiting for lock."""
     get_race_monitor().track_lock_waiting(lock_name, task_id)
 
 
-def track_lock_release(self) -> None:
+def track_lock_release(lock_name: str, task_id: str | None = None) -> None:
     """Track lock release."""
     get_race_monitor().track_lock_release(lock_name, task_id)
 
@@ -429,7 +429,7 @@ def track_lock_release(self) -> None:
 
 
 @asynccontextmanager
-async def monitored_lock(self) -> None:
+async def monitored_lock(lock_name: str) -> Any:
     """Context manager for monitored async lock."""
     monitor = get_race_monitor()
     monitor.track_lock_waiting(lock_name)
@@ -445,7 +445,7 @@ async def monitored_lock(self) -> None:
 
 
 @asynccontextmanager
-async def monitored_shared_state(self) -> None:
+async def monitored_shared_state(state_name: str, operation: str) -> Any:
     """Context manager for monitored shared state access."""
     monitor = get_race_monitor()
     monitor.track_shared_state_access(state_name, operation)

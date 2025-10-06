@@ -12,17 +12,18 @@ Features:
 """
 
 import asyncio
-import hashlib
-import logging
-import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import hashlib
+import logging
+import time
+from typing import Any, Dict, List
 
 import aiohttp
+import json
 import numpy as np
 import orjson  # Fast JSON parsing
 
@@ -100,7 +101,7 @@ class DataStream:
 class DataIngestionPipeline:
     """High-performance data ingestion pipeline for wealth generation."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
 
         # Performance optimization
@@ -109,7 +110,7 @@ class DataIngestionPipeline:
             try:
                 uvloop.install()
                 logger.info("🚀 UV Loop installed for maximum performance")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Could not install uvloop: %s", e)
 
         # Redis connection for high-speed caching and pub/sub
@@ -273,7 +274,7 @@ class DataIngestionPipeline:
                 ),
             )
 
-    def add_data_stream(self) -> None:
+    def add_data_stream(self, stream: DataStream) -> None:
         """Add a new data stream to the pipeline."""
         self.data_streams[stream.source_name] = stream
         logger.info(
@@ -291,7 +292,7 @@ class DataIngestionPipeline:
             try:
                 await self.redis_client.ping()
                 logger.info("✅ Redis connection established")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Redis connection failed: %s", e)
                 self.redis_client = None
 
@@ -332,7 +333,7 @@ class DataIngestionPipeline:
             for task in tasks:
                 task.cancel()
 
-    async def _websocket_stream_handler(self) -> None:
+    async def _websocket_stream_handler(self, stream: DataStream) -> None:
         """Handle WebSocket data streams."""
         while stream.active:
             try:
@@ -366,7 +367,7 @@ class DataIngestionPipeline:
                             if data_point:
                                 await self._queue_data_point(data_point)
 
-                        except Exception as e:
+                        except (ValueError, RuntimeError) as e:
                             self.metrics["errors"][stream.source_name] += 1
                             logger.error(
                                 "Error processing WebSocket message from %s: %s",
@@ -374,7 +375,7 @@ class DataIngestionPipeline:
                                 e,
                             )
 
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 self.metrics["errors"][stream.source_name] += 1
                 logger.error(
                     "WebSocket connection error for %s: %s",
@@ -390,7 +391,7 @@ class DataIngestionPipeline:
                 logger.info("Retrying WebSocket connection in %ss...", retry_delay)
                 await asyncio.sleep(retry_delay)
 
-    async def _http_stream_handler(self) -> None:
+    async def _http_stream_handler(self, stream: DataStream) -> None:
         """Handle HTTP API data streams."""
         session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),
@@ -438,7 +439,7 @@ class DataIngestionPipeline:
                     # Wait for next update
                     await asyncio.sleep(stream.update_frequency)
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     self.metrics["errors"][stream.source_name] += 1
                     logger.error("HTTP stream error for %s: %s", stream.source_name, e)
 
@@ -500,7 +501,7 @@ class DataIngestionPipeline:
 
         return params
 
-    async def _queue_data_point(self) -> None:
+    async def _queue_data_point(self, data_point: DataPoint) -> None:
         """Queue a data point for processing."""
         try:
             # Check for duplicates
@@ -526,7 +527,7 @@ class DataIngestionPipeline:
                     data_point.priority.name,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error queuing data point: %s", e)
 
     def _is_duplicate(self, data_point: DataPoint) -> bool:
@@ -539,7 +540,7 @@ class DataIngestionPipeline:
 
         return False
 
-    async def _data_processor(self) -> None:
+    async def _data_processor(self, priority: DataPriority) -> None:
         """Process data points from priority queue."""
         queue = self.data_queues[priority]
 
@@ -567,11 +568,11 @@ class DataIngestionPipeline:
                         f"{processing_time:.3f}",
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in data processor for %s: %s", priority.name, e)
                 await asyncio.sleep(0.1)  # Brief pause before retry
 
-    async def _process_data_point(self) -> None:
+    async def _process_data_point(self, data_point: DataPoint) -> None:
         """Process individual data point."""
         try:
             # Publish to Redis if available (for real-time subscribers)
@@ -594,18 +595,18 @@ class DataIngestionPipeline:
                         await subscriber(data_point)
                     else:
                         subscriber(data_point)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error notifying subscriber: %s", e)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing data point: %s", e)
 
-    def subscribe(self) -> None:
+    def subscribe(self, data_type: DataSourceType, callback: Callable) -> None:
         """Subscribe to data points of a specific type."""
         self.subscribers[data_type].append(callback)
         logger.info("Added subscriber for %s", data_type.value)
 
-    def unsubscribe(self) -> None:
+    def unsubscribe(self, data_type: DataSourceType, callback: Callable) -> None:
         """Unsubscribe from data points."""
         if callback in self.subscribers[data_type]:
             self.subscribers[data_type].remove(callback)
@@ -657,7 +658,7 @@ class DataIngestionPipeline:
                         orjson.dumps(metrics_report).decode(),
                     )
 
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError) as e:
                 logger.error("Error reporting metrics: %s", e)
 
     async def _cleanup_task(self) -> None:
@@ -687,7 +688,7 @@ class DataIngestionPipeline:
 
                 logger.debug("Cleaned up %s expired cache entries", len(expired_keys))
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in cleanup task: %s", e)
 
     async def _health_monitor(self) -> None:
@@ -715,7 +716,7 @@ class DataIngestionPipeline:
                             error_count,
                         )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in health monitor: %s", e)
 
     async def get_metrics(self) -> Dict[str, Any]:
@@ -760,7 +761,7 @@ class DataIngestionPipeline:
                     },
                     priority=stream.priority,
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing Alpha Vantage data: %s", e)
         return None
 
@@ -785,7 +786,7 @@ class DataIngestionPipeline:
                     },
                     priority=stream.priority,
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing Yahoo WebSocket data: %s", e)
         return None
 
@@ -812,7 +813,7 @@ class DataIngestionPipeline:
                     },
                     priority=stream.priority,
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing Coinbase WebSocket data: %s", e)
         return None
 
@@ -840,7 +841,7 @@ class DataIngestionPipeline:
                         priority=stream.priority,
                     )
                     data_points.append(data_point)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing CoinGecko data: %s", e)
 
         return data_points
@@ -871,7 +872,7 @@ class DataIngestionPipeline:
                     priority=stream.priority,
                 )
                 data_points.append(data_point)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing NewsAPI data: %s", e)
 
         return data_points
@@ -904,7 +905,7 @@ class DataIngestionPipeline:
                     priority=stream.priority,
                 )
                 data_points.append(data_point)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing Reddit data: %s", e)
 
         return data_points
@@ -936,7 +937,7 @@ class DataIngestionPipeline:
                     },
                     priority=stream.priority,
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error parsing FRED data: %s", e)
 
         return None
@@ -945,7 +946,7 @@ class DataIngestionPipeline:
 # Example usage and configuration
 
 
-async def main_pipeline_demo(self) -> None:
+async def main_pipeline_demo() -> None:
     """Demo of the data ingestion pipeline."""
     config = {
         "use_uvloop": True,
@@ -965,11 +966,11 @@ async def main_pipeline_demo(self) -> None:
     pipeline = DataIngestionPipeline(config)
 
     # Add data subscribers
-    def print_market_data(self) -> None:
+    def print_market_data(data_point: DataPoint) -> None:
         if data_point.symbol:
             print(f"📈 {data_point.symbol}: ${data_point.data.get('price', 0):.4f}")
 
-    def print_news(self) -> None:
+    def print_news(data_point: DataPoint) -> None:
         title = data_point.data.get("title", "Unknown")[:50]
         print(f"📰 News: {title}...")
 

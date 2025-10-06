@@ -122,7 +122,7 @@ class TestServiceIntegrationComprehensive:
         )
 
         # Act 1: User Registration
-        registered_user = await user_service.createUser(
+        registered_user = await self.user_service.createUser(
             email=user_data["email"],
             username=user_data["username"],
             password=user_data["password"],
@@ -136,11 +136,11 @@ class TestServiceIntegrationComprehensive:
         assert registered_user.username == user_data["username"]
 
         # Verify user stored in Redis
-        stored_user = await redis_service.get(f"user:{registered_user.id}")
+        stored_user = await self.redis_service.get(f"user:{registered_user.id}")
         assert stored_user is not None
 
         # Act 2: User Login
-        auth_result = await user_service.authenticateUser(
+        auth_result = await self.user_service.authenticateUser(
             user_data["username"], user_data["password"]
         )
 
@@ -158,25 +158,25 @@ class TestServiceIntegrationComprehensive:
         user_data = UserInDBFactory()
 
         # Act: Create session
-        session_id = await user_service.sessionService.createSession(
+        session_id = await self.user_service.sessionService.createSession(
             user_id=user_data["id"], username=user_data["username"], role="user"
         )
 
         # Assert: Session stored in Redis
-        session_data = await redis_service.get(f"session:{session_id}")
+        session_data = await self.redis_service.get(f"session:{session_id}")
         assert session_data is not None
         assert session_data["user_id"] == user_data["id"]
         assert session_data["username"] == user_data["username"]
 
         # Act: Validate session
-        is_valid = await user_service.sessionService.validateSession(session_id)
+        is_valid = await self.user_service.sessionService.validateSession(session_id)
         assert is_valid is True
 
         # Act: Delete session
-        await user_service.sessionService.deleteSession(session_id)
+        await self.user_service.sessionService.deleteSession(session_id)
 
         # Assert: Session removed from Redis
-        deleted_session = await redis_service.get(f"session:{session_id}")
+        deleted_session = await self.redis_service.get(f"session:{session_id}")
         assert deleted_session is None
 
     @pytest.mark.integration
@@ -188,7 +188,7 @@ class TestServiceIntegrationComprehensive:
         tenant2_user = UserFactory(tenant_id="tenant_2")
 
         # Act: Create users for different tenants
-        user1 = await user_service.createUser(
+        user1 = await self.user_service.createUser(
             email=tenant1_user["email"],
             username=tenant1_user["username"],
             password="Password123!",
@@ -197,7 +197,7 @@ class TestServiceIntegrationComprehensive:
             tenant_id="tenant_1",
         )
 
-        user2 = await user_service.createUser(
+        user2 = await self.user_service.createUser(
             email=tenant2_user["email"],
             username=tenant2_user["username"],
             password="Password123!",
@@ -207,14 +207,14 @@ class TestServiceIntegrationComprehensive:
         )
 
         # Assert: Users are isolated by tenant
-        stored_user1 = await redis_service.get(f"user:{user1.id}")
-        stored_user2 = await redis_service.get(f"user:{user2.id}")
+        stored_user1 = await self.redis_service.get(f"user:{user1.id}")
+        stored_user2 = await self.redis_service.get(f"user:{user2.id}")
 
         assert stored_user1["tenant_id"] == "tenant_1"
         assert stored_user2["tenant_id"] == "tenant_2"
 
         # Act: Try to access user from wrong tenant
-        wrong_tenant_user = await user_service.getUserById(
+        wrong_tenant_user = await self.user_service.getUserById(
             user1.id, tenant_id="tenant_2"
         )
 
@@ -234,7 +234,7 @@ class TestServiceIntegrationComprehensive:
         context = {"user_id": "integration_user", "tenant_id": "test_tenant"}
 
         # Act: First ingestion (should cache results)
-        result1 = await ingestion_orchestrator.ingest_content(topic, context)
+        result1 = await self.ingestion_orchestrator.ingest_content(topic, context)
 
         # Assert: First ingestion successful
         assert result1.success is True
@@ -242,11 +242,11 @@ class TestServiceIntegrationComprehensive:
 
         # Verify results cached in Redis
         cache_key = f"ingestion:{topic}:{hash(str(context))}"
-        cached_result = await redis_service.get(cache_key)
+        cached_result = await self.redis_service.get(cache_key)
         assert cached_result is not None
 
         # Act: Second ingestion (should use cache)
-        result2 = await ingestion_orchestrator.ingest_content(topic, context)
+        result2 = await self.ingestion_orchestrator.ingest_content(topic, context)
 
         # Assert: Second ingestion uses cache
         assert result2.success is True
@@ -262,15 +262,15 @@ class TestServiceIntegrationComprehensive:
         context = {"user_id": "test_user"}
 
         # Act: Initial ingestion
-        result1 = await ingestion_orchestrator.ingest_content(topic, context)
+        result1 = await self.ingestion_orchestrator.ingest_content(topic, context)
         assert result1.success is True
 
         # Act: Invalidate cache by tag
-        invalidated_count = await redis_service.invalidate_by_tag("ingestion")
+        invalidated_count = await self.redis_service.invalidate_by_tag("ingestion")
         assert invalidated_count > 0
 
         # Act: Second ingestion (should not use cache)
-        result2 = await ingestion_orchestrator.ingest_content(topic, context)
+        result2 = await self.ingestion_orchestrator.ingest_content(topic, context)
 
         # Assert: Second ingestion not from cache
         assert result2.success is True
@@ -285,7 +285,7 @@ class TestServiceIntegrationComprehensive:
         context = {"user_id": "db_user", "save_to_db": True}
 
         # Act: Ingest content with database persistence
-        result = await ingestion_orchestrator.ingest_content(topic, context)
+        result = await self.ingestion_orchestrator.ingest_content(topic, context)
 
         # Assert: Content persisted to database
         assert result.success is True
@@ -307,7 +307,7 @@ class TestServiceIntegrationComprehensive:
         time_range = "24h"
 
         # Act: First analytics report (should cache results)
-        report1 = await analytics_engine.generate_comprehensive_report(time_range)
+        report1 = await self.analytics_engine.generate_comprehensive_report(time_range)
 
         # Assert: First report generated successfully
         assert report1 is not None
@@ -316,11 +316,11 @@ class TestServiceIntegrationComprehensive:
 
         # Verify report cached in Redis
         cache_key = f"analytics:report:{time_range}"
-        cached_report = await redis_service.get(cache_key)
+        cached_report = await self.redis_service.get(cache_key)
         assert cached_report is not None
 
         # Act: Second report (should use cache)
-        report2 = await analytics_engine.generate_comprehensive_report(time_range)
+        report2 = await self.analytics_engine.generate_comprehensive_report(time_range)
 
         # Assert: Second report uses cache
         assert report2 is not None
@@ -347,7 +347,7 @@ class TestServiceIntegrationComprehensive:
         ]
 
         # Act: Generate analytics report
-        report = await analytics_engine.generate_comprehensive_report("24h")
+        report = await self.analytics_engine.generate_comprehensive_report("24h")
 
         # Assert: Report includes database metrics
         assert report is not None
@@ -367,7 +367,7 @@ class TestServiceIntegrationComprehensive:
         user_data = UserFactory()
 
         # Act 1: User registration and login
-        user = await user_service.createUser(
+        user = await self.user_service.createUser(
             email=user_data["email"],
             username=user_data["username"],
             password="SecurePassword123!",
@@ -375,14 +375,14 @@ class TestServiceIntegrationComprehensive:
             lastName="Test",
         )
 
-        auth_result = await user_service.authenticateUser(
+        auth_result = await self.user_service.authenticateUser(
             user_data["username"], "SecurePassword123!"
         )
         assert auth_result.success is True
 
         # Act 2: User ingests content
         context = {"user_id": user.id, "session_id": auth_result.session_id}
-        ingestion_result = await ingestion_orchestrator.ingest_content(
+        ingestion_result = await self.ingestion_orchestrator.ingest_content(
             "AI and Machine Learning", context
         )
 
@@ -391,14 +391,14 @@ class TestServiceIntegrationComprehensive:
         assert len(ingestion_result.content_items) > 0
 
         # Verify user session still valid
-        session_valid = await user_service.sessionService.validateSession(
+        session_valid = await self.user_service.sessionService.validateSession(
             auth_result.session_id
         )
         assert session_valid is True
 
         # Verify content cached with user context
         cache_key = f"ingestion:AI and Machine Learning:{hash(str(context))}"
-        cached_content = await redis_service.get(cache_key)
+        cached_content = await self.redis_service.get(cache_key)
         assert cached_content is not None
 
     @pytest.mark.integration
@@ -410,7 +410,7 @@ class TestServiceIntegrationComprehensive:
         user_data = UserFactory()
 
         # Act 1: User performs actions
-        user = await user_service.createUser(
+        user = await self.user_service.createUser(
             email=user_data["email"],
             username=user_data["username"],
             password="SecurePassword123!",
@@ -419,13 +419,13 @@ class TestServiceIntegrationComprehensive:
         )
 
         # Simulate user actions
-        await user_service.updateUserProfile(
+        await self.user_service.updateUserProfile(
             user.id, {"last_search": "machine learning"}
         )
-        await user_service.updateUserProfile(user.id, {"preferences": ["AI", "ML"]})
+        await self.user_service.updateUserProfile(user.id, {"preferences": ["AI", "ML"]})
 
         # Act 2: Generate analytics report
-        report = await analytics_engine.generate_comprehensive_report("24h")
+        report = await self.analytics_engine.generate_comprehensive_report("24h")
 
         # Assert: Analytics includes user behavior
         assert report is not None
@@ -434,7 +434,7 @@ class TestServiceIntegrationComprehensive:
 
         # Verify analytics cached
         cache_key = "analytics:report:24h"
-        cached_report = await redis_service.get(cache_key)
+        cached_report = await self.redis_service.get(cache_key)
         assert cached_report is not None
 
     @pytest.mark.integration
@@ -447,7 +447,7 @@ class TestServiceIntegrationComprehensive:
         tenant2_user = UserFactory(tenant_id="tenant_2")
 
         # Act: Create users for different tenants
-        user1 = await user_service.createUser(
+        user1 = await self.user_service.createUser(
             email=tenant1_user["email"],
             username=tenant1_user["username"],
             password="Password123!",
@@ -456,7 +456,7 @@ class TestServiceIntegrationComprehensive:
             tenant_id="tenant_1",
         )
 
-        user2 = await user_service.createUser(
+        user2 = await self.user_service.createUser(
             email=tenant2_user["email"],
             username=tenant2_user["username"],
             password="Password123!",
@@ -469,8 +469,8 @@ class TestServiceIntegrationComprehensive:
         context1 = {"user_id": user1.id, "tenant_id": "tenant_1"}
         context2 = {"user_id": user2.id, "tenant_id": "tenant_2"}
 
-        result1 = await ingestion_orchestrator.ingest_content("AI Research", context1)
-        result2 = await ingestion_orchestrator.ingest_content("AI Research", context2)
+        result1 = await self.ingestion_orchestrator.ingest_content("AI Research", context1)
+        result2 = await self.ingestion_orchestrator.ingest_content("AI Research", context2)
 
         # Assert: Results are isolated by tenant
         assert result1.success is True
@@ -480,8 +480,8 @@ class TestServiceIntegrationComprehensive:
         cache_key1 = f"ingestion:AI Research:{hash(str(context1))}"
         cache_key2 = f"ingestion:AI Research:{hash(str(context2))}"
 
-        cached1 = await redis_service.get(cache_key1)
-        cached2 = await redis_service.get(cache_key2)
+        cached1 = await self.redis_service.get(cache_key1)
+        cached2 = await self.redis_service.get(cache_key2)
 
         assert cached1 is not None
         assert cached2 is not None
@@ -503,7 +503,7 @@ class TestServiceIntegrationComprehensive:
 
         for i, user_data in enumerate(users):
             # Create user
-            user_task = user_service.createUser(
+            user_task = self.user_service.createUser(
                 email=user_data["email"],
                 username=user_data["username"],
                 password="SecurePassword123!",
@@ -519,7 +519,7 @@ class TestServiceIntegrationComprehensive:
         ingestion_tasks = []
         for user in created_users:
             context = {"user_id": user.id}
-            ingestion_task = ingestion_orchestrator.ingest_content(
+            ingestion_task = self.ingestion_orchestrator.ingest_content(
                 f"Topic for user {user.id}", context
             )
             ingestion_tasks.append(ingestion_task)
@@ -532,7 +532,7 @@ class TestServiceIntegrationComprehensive:
         assert all(result.success for result in ingestion_results)
 
         # Verify Redis performance
-        stats = await redis_service.get_stats()
+        stats = await self.redis_service.get_stats()
         assert stats["sets"] >= 10  # At least 5 users + 5 ingestion results
 
     @pytest.mark.integration
@@ -549,14 +549,14 @@ class TestServiceIntegrationComprehensive:
         # Act: Set operations
         start_time = time.time()
         set_tasks = [
-            redis_service.set(item["key"], item["value"]) for item in test_data
+            self.redis_service.set(item["key"], item["value"]) for item in test_data
         ]
         await asyncio.gather(*set_tasks)
         set_time = time.time() - start_time
 
         # Act: Get operations
         start_time = time.time()
-        get_tasks = [redis_service.get(item["key"]) for item in test_data]
+        get_tasks = [self.redis_service.get(item["key"]) for item in test_data]
         get_results = await asyncio.gather(*get_tasks)
         get_time = time.time() - start_time
 
@@ -566,6 +566,6 @@ class TestServiceIntegrationComprehensive:
         assert all(result is not None for result in get_results)
 
         # Verify cache statistics
-        stats = await redis_service.get_stats()
+        stats = await self.redis_service.get_stats()
         assert stats["sets"] >= 100
         assert stats["hits"] >= 100

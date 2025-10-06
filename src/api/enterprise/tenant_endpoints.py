@@ -4,7 +4,9 @@ World-class tenant management endpoints with comprehensive validation and securi
 """
 
 import logging
+from typing import Any
 
+import aiohttp
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from src.api.enterprise.multi_tenant_server import (
@@ -27,6 +29,29 @@ from src.services.tenant.tenant_management_service import (
 
 logger = logging.getLogger(__name__)
 
+# Mock dependencies for TDD (will be injected from main server)
+def get_tenant_service() -> Any:
+    """Get tenant service instance."""
+    return None  # Will be injected from main server
+
+def get_security_enforcer() -> Any:
+    """Get security enforcer instance."""
+    return None  # Will be injected from main server
+
+def get_tenant_orchestrators() -> Any:
+    """Get tenant orchestrators instance."""
+    return None  # Will be injected from main server
+
+# Mock metrics for TDD (will be replaced with real metrics)
+class MockMetrics:
+    def labels(self, **kwargs):
+        return self
+    
+    def inc(self):
+        pass
+
+TENANT_OPERATIONS = MockMetrics()
+
 # Create tenant management router
 tenant_router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -36,6 +61,8 @@ tenant_router = APIRouter(prefix="/tenants", tags=["tenants"])
 async def create_tenant(
     request: TenantCreateRequest,
     background_tasks: BackgroundTasks,
+    tenant_service: Any = Depends(get_tenant_service),
+    security_enforcer: Any = Depends(get_security_enforcer),
     current_user: dict = Depends(require_admin_access),
 ):
     """Create new tenant with complete provisioning."""
@@ -81,7 +108,7 @@ async def create_tenant(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant creation error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant creation service error")
 
@@ -93,6 +120,7 @@ async def list_tenants(
     plan_filter: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    tenant_service: Any = Depends(get_tenant_service),
     current_user: dict = Depends(require_admin_access),
 ):
     """List tenants with filtering and pagination."""
@@ -113,14 +141,18 @@ async def list_tenants(
             "pagination": result["pagination"],
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant listing error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant listing service error")
 
 
 @tenant_router.get("/{tenant_id}")
 @enforce_tenant_isolation("read", "tenant")
-async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_user)):
+async def get_tenant(
+    tenant_id: str,
+    tenant_service: Any = Depends(get_tenant_service),
+    current_user: dict = Depends(get_current_user),
+):
     """Get tenant details with statistics."""
     # Validate tenant access
     current_tenant = get_current_tenant_id()
@@ -139,7 +171,7 @@ async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_us
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant retrieval error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant retrieval service error")
 
@@ -149,6 +181,8 @@ async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_us
 async def update_tenant(
     tenant_id: str,
     request: TenantUpdateRequest,
+    tenant_service: Any = Depends(get_tenant_service),
+    security_enforcer: Any = Depends(get_security_enforcer),
     current_user: dict = Depends(require_admin_access),
 ):
     """Update tenant configuration."""
@@ -174,7 +208,7 @@ async def update_tenant(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant update error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant update service error")
 
@@ -185,6 +219,7 @@ async def delete_tenant(
     tenant_id: str,
     background_tasks: BackgroundTasks,
     force: bool = False,
+    tenant_service: Any = Depends(get_tenant_service),
     current_user: dict = Depends(require_admin_access),
 ):
     """Delete tenant and all associated resources."""
@@ -209,7 +244,7 @@ async def delete_tenant(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant deletion error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant deletion service error")
 
@@ -219,6 +254,7 @@ async def delete_tenant(
 async def get_tenant_analytics(
     tenant_id: str,
     days: int = 30,
+    tenant_service: Any = Depends(get_tenant_service),
     current_user: dict = Depends(get_current_user),
 ):
     """Get comprehensive tenant analytics."""
@@ -238,7 +274,7 @@ async def get_tenant_analytics(
 
         return {"success": True, "analytics": analytics}
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Tenant analytics error: %s", e)
         raise HTTPException(status_code=500, detail="Tenant analytics service error")
 
@@ -251,6 +287,8 @@ user_router = APIRouter(prefix="/users", tags=["users"])
 @enforce_tenant_isolation("create", "user")
 async def create_user(
     request: UserCreateRequest,
+    tenant_service: Any = Depends(get_tenant_service),
+    security_enforcer: Any = Depends(get_security_enforcer),
     current_user: dict = Depends(require_admin_access),
 ):
     """Create new user within current tenant."""
@@ -285,7 +323,7 @@ async def create_user(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("User creation error: %s", e)
         raise HTTPException(status_code=500, detail="User creation service error")
 
@@ -295,6 +333,7 @@ async def create_user(
 async def list_users(
     limit: int = 50,
     offset: int = 0,
+    tenant_service: Any = Depends(get_tenant_service),
     current_user: dict = Depends(get_current_user),
 ):
     """List users within current tenant."""
@@ -318,7 +357,7 @@ async def list_users(
             "pagination": result["pagination"],
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("User listing error: %s", e)
         raise HTTPException(status_code=500, detail="User listing service error")
 
@@ -326,7 +365,11 @@ async def list_users(
 # Background task functions
 
 
-async def provision_tenant_resources(self) -> None:
+async def provision_tenant_resources(
+    tenant_id: str,
+    tenant_service: Any = Depends(get_tenant_service),
+    tenant_orchestrators: Any = Depends(get_tenant_orchestrators),
+) -> None:
     """Background task to provision tenant resources."""
     try:
         logger.info("🔄 Provisioning resources for tenant %s", tenant_id)
@@ -365,11 +408,15 @@ async def provision_tenant_resources(self) -> None:
 
         await provisioner.close()
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Resource provisioning failed for tenant %s: %s", tenant_id, e)
 
 
-async def cleanup_tenant_resources(self) -> None:
+async def cleanup_tenant_resources(
+    self,
+    tenant_id: str = Depends(get_current_tenant_id),
+    tenant_orchestrators: Any = Depends(get_tenant_orchestrators),
+) -> None:
     """Background task to cleanup tenant resources."""
     try:
         logger.info("🧹 Cleaning up resources for tenant %s", tenant_id)
@@ -383,5 +430,5 @@ async def cleanup_tenant_resources(self) -> None:
 
         logger.info("✅ Successfully cleaned up resources for tenant %s", tenant_id)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Resource cleanup failed for tenant %s: %s", tenant_id, e)

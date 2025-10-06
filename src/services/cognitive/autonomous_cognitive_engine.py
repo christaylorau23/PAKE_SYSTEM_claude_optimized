@@ -4,13 +4,13 @@ Integrated with DeepSeek Strategic Vision.
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 # Core cognitive components (simplified for demo)
 # from .metacognitive_optimizer import MetacognitiveOptimizer
@@ -18,6 +18,27 @@ from typing import Any
 # from .multi_agent_orchestrator import MultiAgentOrchestrator
 # from .semantic_clustering_engine import SemanticClusteringEngine
 # from .knowledge_synthesis_core import KnowledgeSynthesisCore
+
+# Mock classes for demo purposes
+class MetacognitiveOptimizer:
+    def __init__(self, config: dict) -> None:
+        self.config = config
+
+class PromptEvolutionSystem:
+    def __init__(self, config: dict) -> None:
+        self.config = config
+
+class MultiAgentOrchestrator:
+    def __init__(self, config: dict) -> None:
+        self.config = config
+
+class SemanticClusteringEngine:
+    def __init__(self, config: dict) -> None:
+        self.config = config
+
+class KnowledgeSynthesisCore:
+    def __init__(self, config: dict) -> None:
+        self.config = config
 
 
 class CognitiveState(Enum):
@@ -62,7 +83,7 @@ class AutonomousCognitiveEngine:
     - Autonomous Analysis and Insight Generation
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config_path: Path | None = None) -> None:
         self.config = self._load_config(config_path)
         self.state = CognitiveState.INITIALIZING
 
@@ -186,7 +207,7 @@ class AutonomousCognitiveEngine:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize cognitive engine: %s", e)
             return False
 
@@ -248,7 +269,7 @@ class AutonomousCognitiveEngine:
                 "sources": analysis_results.get("sources", []),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Autonomous analysis failed: %s", e)
             return {
                 "status": "error",
@@ -301,7 +322,7 @@ class AutonomousCognitiveEngine:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to generate autonomous insights: %s", e)
             return []
 
@@ -328,7 +349,7 @@ class AutonomousCognitiveEngine:
                 if len(self.performance_history) > 100:
                     self.performance_history = self.performance_history[-100:]
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Monitoring loop error: %s", e)
 
     async def _continuous_learning_loop(self) -> None:
@@ -350,7 +371,7 @@ class AutonomousCognitiveEngine:
 
                 self.state = CognitiveState.ACTIVE
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Learning loop error: %s", e)
                 self.state = CognitiveState.ACTIVE
 
@@ -373,7 +394,7 @@ class AutonomousCognitiveEngine:
                     )
                     await self._execute_cognitive_evolution()
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Insight generation loop error: %s", e)
 
     async def _execute_self_improvement(self) -> None:
@@ -408,7 +429,7 @@ class AutonomousCognitiveEngine:
 
             self.logger.info("Self-improvement cycle completed successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Self-improvement failed: %s", e)
 
         finally:
@@ -431,7 +452,7 @@ class AutonomousCognitiveEngine:
 
             self.logger.info("Cognitive evolution cycle completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Cognitive evolution failed: %s", e)
 
         finally:

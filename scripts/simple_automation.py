@@ -4,14 +4,14 @@ PAKE+ Simple Automation System
 Processes all markdown files in vault and monitors for changes
 """
 
+from datetime import UTC, datetime
 import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import time
 import uuid
-from datetime import UTC, datetime
-from pathlib import Path
 
 import frontmatter
 
@@ -43,7 +43,7 @@ class SimpleAutomation:
                 with open(self.state_file) as f:
                     self.processed_files = json.load(f)
                 logger.info("Loaded %s processed files", len(self.processed_files))
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error loading state: %s", e)
 
     def save_state(self) -> None:
@@ -51,7 +51,7 @@ class SimpleAutomation:
         try:
             with open(self.state_file, "w") as f:
                 json.dump(self.processed_files, f, indent=2)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error saving state: %s", e)
 
     def get_file_hash(self, file_path: Path) -> str:
@@ -226,7 +226,7 @@ class SimpleAutomation:
             )
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("[ERROR] Processing %s: %s", file_path, e)
             return False
 

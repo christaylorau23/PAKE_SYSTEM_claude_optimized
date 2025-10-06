@@ -3,10 +3,11 @@
 World-class search endpoints with tenant isolation, ML enhancement, and comprehensive analytics.
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
+import aiohttp
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from prometheus_client import Counter, Histogram
 from pydantic import BaseModel, Field
@@ -17,6 +18,41 @@ from src.security.tenant_isolation_enforcer import enforce_tenant_isolation
 
 logger = logging.getLogger(__name__)
 
+# Mock dependencies for TDD (will be injected from main server)
+def get_dal() -> Any:
+    """Get data access layer instance."""
+    return None  # Will be injected from main server
+
+def get_tenant_orchestrator(tenant_id: str) -> Any:
+    """Get tenant orchestrator instance."""
+    return None  # Will be injected from main server
+
+def get_semantic_search_service() -> Any:
+    """Get semantic search service instance."""
+    return None  # Will be injected from main server
+
+def get_content_summarization_service() -> Any:
+    """Get content summarization service instance."""
+    return None  # Will be injected from main server
+
+def get_security_enforcer() -> Any:
+    """Get security enforcer instance."""
+    return None  # Will be injected from main server
+
+# Mock metrics for TDD (will be replaced with real metrics)
+class MockMetrics:
+    def labels(self, **kwargs):
+        return self
+    
+    def inc(self):
+        pass
+    
+    def observe(self, value):
+        pass
+
+SEARCH_OPERATIONS = MockMetrics()
+SEARCH_DURATION = MockMetrics()
+
 # Create search router
 search_router = APIRouter(prefix="/search", tags=["search"])
 
@@ -26,6 +62,10 @@ search_router = APIRouter(prefix="/search", tags=["search"])
 async def perform_search(
     request: SearchRequest,
     background_tasks: BackgroundTasks,
+    security_enforcer: Any = Depends(get_security_enforcer),
+    get_tenant_orchestrator: Any = Depends(get_tenant_orchestrator),
+    get_semantic_search_service: Any = Depends(get_semantic_search_service),
+    get_content_summarization_service: Any = Depends(get_content_summarization_service),
     current_user: dict = Depends(get_current_user),
 ):
     """Perform comprehensive multi-source search with tenant isolation.
@@ -88,7 +128,7 @@ async def perform_search(
                         tenant_id=tenant_id,
                     )
                     processed_results = enhanced_results
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("ML enhancement failed: %s", e)
 
         # Content summarization if enabled
@@ -103,7 +143,7 @@ async def perform_search(
                                 tenant_id=tenant_id,
                             )
                             result_item["summary"] = summary
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Content summarization failed: %s", e)
 
         # Save search history (background task)
@@ -161,7 +201,7 @@ async def perform_search(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search service error")
 
@@ -169,6 +209,7 @@ async def perform_search(
 @search_router.get("/history")
 @enforce_tenant_isolation("read", "search_history")
 async def get_search_history(
+    dal: Any = Depends(get_dal),
     limit: int = 50,
     offset: int = 0,
     user_filter: str | None = None,
@@ -230,7 +271,7 @@ async def get_search_history(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Search history error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search history service error")
 
@@ -239,6 +280,7 @@ async def get_search_history(
 @enforce_tenant_isolation("read", "search_analytics")
 async def get_search_analytics(
     days: int = 30,
+    dal: Any = Depends(get_dal),
     current_user: dict = Depends(get_current_user),
 ):
     """Get search analytics for current tenant."""
@@ -255,7 +297,7 @@ async def get_search_analytics(
 
         return {"success": True, "analytics": analytics}
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Search analytics error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Search analytics service error")
 
@@ -265,6 +307,7 @@ async def get_search_analytics(
 async def get_popular_searches(
     limit: int = 10,
     days: int = 7,
+    dal: Any = Depends(get_dal),
     current_user: dict = Depends(get_current_user),
 ):
     """Get popular searches within tenant."""
@@ -289,7 +332,7 @@ async def get_popular_searches(
             "period_days": days,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Popular searches error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Popular searches service error")
 
@@ -298,6 +341,8 @@ async def get_popular_searches(
 @enforce_tenant_isolation("create", "saved_search")
 async def save_search(
     request: SearchRequest,
+    dal: Any = Depends(get_dal),
+    security_enforcer: Any = Depends(get_security_enforcer),
     current_user: dict = Depends(get_current_user),
 ):
     """Save search query for later use."""
@@ -342,7 +387,7 @@ async def save_search(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Save search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Save search service error")
 
@@ -352,6 +397,7 @@ async def save_search(
 async def get_saved_searches(
     user_filter: str | None = None,
     public_only: bool = False,
+    dal: Any = Depends(get_dal),
     current_user: dict = Depends(get_current_user),
 ):
     """Get saved searches for current tenant."""
@@ -409,7 +455,7 @@ async def get_saved_searches(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Get saved searches error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Saved searches service error")
 
@@ -421,6 +467,7 @@ async def get_saved_searches(
 @enforce_tenant_isolation("search", "quick")
 async def quick_search(
     request: SearchRequest,
+    security_enforcer: Any = Depends(get_security_enforcer),
     current_user: dict = Depends(get_current_user),
 ):
     """Perform quick search with intelligent source selection.
@@ -494,7 +541,7 @@ async def quick_search(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Quick search error for tenant %s: %s", tenant_id, e)
         raise HTTPException(status_code=500, detail="Quick search service error")
 
@@ -540,12 +587,21 @@ async def process_search_results(
 
         return processed_results
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error processing search results: %s", e)
         return []
 
 
-async def save_search_history(self) -> None:
+async def save_search_history(
+    tenant_id: str,
+    user_id: str,
+    query: str,
+    sources: list[str],
+    results_count: int,
+    execution_time_ms: float,
+    results: list[Dict[str, Any]],
+    dal: Any = Depends(get_dal),
+) -> None:
     """Background task to save search history."""
     try:
         if not dal:
@@ -572,7 +628,7 @@ async def save_search_history(self) -> None:
 
         logger.debug("Search history saved for tenant %s", tenant_id)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error saving search history: %s", e)
 
 
@@ -604,7 +660,7 @@ def calculate_quality_score(
         total_score = (result_score + performance_score + content_score) / 100
         return round(total_score, 2)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error calculating quality score: %s", e)
         return 0.5
 
@@ -663,7 +719,7 @@ async def select_optimal_sources(query: str, tenant_id: str) -> List[str]:
 
         return sources
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error selecting optimal sources: %s", e)
         return ["web"]  # Fallback to web only
 

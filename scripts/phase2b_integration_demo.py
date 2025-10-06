@@ -213,7 +213,7 @@ class Phase2BDemo:
                     await self._simulate_test_execution(category, i + 1)
                     passed_tests += 1
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     failed_tests.append(f"{test_name}: {str(e)}")
 
         success_rate = (passed_tests / total_tests) * 100
@@ -282,7 +282,7 @@ class Phase2BDemo:
                 ,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("   ❌ Phase 2A execution failed: %s", e)
             self.phase2a_results = None
 
@@ -308,7 +308,7 @@ class Phase2BDemo:
             )
             logger.info("   👥 Used %s worker agents", len(self.workers))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("   ❌ Phase 2B execution failed: %s", e)
             self.phase2b_results = None
 
@@ -763,7 +763,7 @@ async def main(self) -> None:
         )
         print("\n🚀 Phase 2B transformation complete!")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Demo failed: %s", e)
         raise
     finally:

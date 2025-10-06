@@ -1,14 +1,15 @@
+from typing import List
 #!/usr/bin/env python3
 """
 TikTok Business API Integration
 Video upload, posting, and management for TikTok content
 """
 
+from dataclasses import dataclass
 import json
 import logging
 import os
 import time
-from dataclasses import dataclass
 
 import requests
 
@@ -73,7 +74,7 @@ class TikTokIntegration:
             # Step 3: Publish video with metadata
             return await self._publish_video(video_id, video)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("TikTok video upload failed: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -117,7 +118,7 @@ class TikTokIntegration:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Initialization failed: {str(e)}"}
 
     async def _upload_video_file(self, upload_url: str, video_path: str) -> dict:
@@ -148,7 +149,7 @@ class TikTokIntegration:
                     "error": f"Upload failed with status: {response.status_code}",
                 }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return {"success": False, "error": f"File upload failed: {str(e)}"}
 
     async def _publish_video(self, video_id: str, video: TikTokVideo) -> dict:
@@ -199,7 +200,7 @@ class TikTokIntegration:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Publish failed: {str(e)}"}
 
     def _validate_video_file(self, video_path: str) -> dict:
@@ -232,7 +233,7 @@ class TikTokIntegration:
 
             return {"valid": True}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"valid": False, "error": f"Validation error: {str(e)}"}
 
     async def get_user_info(self) -> dict:
@@ -263,7 +264,7 @@ class TikTokIntegration:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"User info request failed: {str(e)}"}
 
     async def get_video_list(self, cursor: int = 0, max_count: int = 20) -> dict:
@@ -301,7 +302,7 @@ class TikTokIntegration:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Video list request failed: {str(e)}"}
 
     async def get_video_analytics(self, video_id: str) -> dict:
@@ -338,7 +339,7 @@ class TikTokIntegration:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Analytics request failed: {str(e)}"}
 
     def _format_hashtags(self, hashtags: List[str]) -> str:
@@ -389,7 +390,7 @@ class TikTokIntegration:
                 "schedule_time": schedule_time,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Scheduling failed: {str(e)}"}
 
 
@@ -431,7 +432,7 @@ class TikTokHashtagGenerator:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": f"Trending hashtags request failed: {str(e)}",

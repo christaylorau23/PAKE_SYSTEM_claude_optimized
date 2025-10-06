@@ -1,3 +1,7 @@
+from typing import Dict
+from typing import List
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """
 Security Validation Script
@@ -6,10 +10,10 @@ Runs comprehensive security checks (Bandit, pip-audit, Safety, detect-secrets, g
 
 import argparse
 import json
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 
@@ -62,7 +66,7 @@ class SecurityValidator:
             duration = time.time() - start_time
             self.log(f"⏰ {name} timed out after 300s", "ERROR")
             return name, False, "Timeout after 300s", {}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             self.log(f"💥 {name} crashed: {e}", "ERROR")
             return name, False, str(e), {}
@@ -90,8 +94,11 @@ class SecurityValidator:
                         ),
                         "total_issues": len(bandit_data.get("results", [])),
                     }
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+
+                    logger.debug(f"Exception in validate_security.py: {e}")
+
+                    # Continue gracefully
 
             elif tool == "pip-audit" and stdout:
                 # Parse pip-audit JSON output
@@ -101,8 +108,11 @@ class SecurityValidator:
                         "vulnerabilities": len(audit_data.get("vulnerabilities", [])),
                         "packages_scanned": len(audit_data.get("dependencies", [])),
                     }
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+
+                    logger.debug(f"Exception in validate_security.py: {e}")
+
+                    # Continue gracefully
 
             elif tool == "safety" and stdout:
                 # Parse Safety JSON output
@@ -114,8 +124,11 @@ class SecurityValidator:
                             {vuln.get("package") for vuln in safety_data}
                         ),
                     }
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+
+                    logger.debug(f"Exception in validate_security.py: {e}")
+
+                    # Continue gracefully
 
             elif tool == "detect-secrets" and stdout:
                 # Parse detect-secrets output
@@ -141,7 +154,7 @@ class SecurityValidator:
                     ),
                 }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             if self.verbose:
                 self.log(f"Error parsing {tool} output: {e}", "WARNING")
 

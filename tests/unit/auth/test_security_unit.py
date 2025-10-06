@@ -10,8 +10,8 @@ Following Testing Pyramid: Unit tests (70%) - Fast, isolated, comprehensive
 from datetime import timedelta
 from unittest.mock import patch
 
-import pytest
 from jose import JWTError, jwt
+import pytest
 
 from src.pake_system.auth.security import (
     create_access_token,
@@ -132,9 +132,9 @@ class TestJWTTokenGeneration:
     def test_create_access_token_generates_valid_token(self) -> None:
         """Test that token generation creates valid JWT"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         data = {"sub": "testuser"}
 
@@ -149,16 +149,16 @@ class TestJWTTokenGeneration:
     def test_create_access_token_includes_subject(self) -> None:
         """Test that token includes the subject claim"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         data = {"sub": "testuser", "role": "admin"}
 
         # Act
         token = create_access_token(data)
         payload = jwt.decode(
-            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+            token, self.self.mock_settings.SECRET_KEY, algorithms=[self.self.mock_settings.ALGORITHM]
         )
 
         # Assert
@@ -169,16 +169,16 @@ class TestJWTTokenGeneration:
     def test_create_access_token_includes_expiration(self) -> None:
         """Test that token includes expiration claim"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         data = {"sub": "testuser"}
 
         # Act
         token = create_access_token(data)
         payload = jwt.decode(
-            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+            token, self.self.mock_settings.SECRET_KEY, algorithms=[self.self.mock_settings.ALGORITHM]
         )
 
         # Assert
@@ -190,8 +190,8 @@ class TestJWTTokenGeneration:
     def test_create_access_token_with_custom_expiration(self) -> None:
         """Test token generation with custom expiration"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
 
         data = {"sub": "testuser"}
         custom_expires = timedelta(minutes=15)
@@ -199,7 +199,7 @@ class TestJWTTokenGeneration:
         # Act
         token = create_access_token(data, expires_delta=custom_expires)
         payload = jwt.decode(
-            token, mock_settings.SECRET_KEY, algorithms=[mock_settings.ALGORITHM]
+            token, self.self.mock_settings.SECRET_KEY, algorithms=[self.self.mock_settings.ALGORITHM]
         )
 
         # Assert
@@ -210,9 +210,9 @@ class TestJWTTokenGeneration:
     def test_decode_token_validates_signature(self) -> None:
         """Test that token decoding validates signature"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         data = {"sub": "testuser"}
         token = create_access_token(data)
@@ -228,8 +228,8 @@ class TestJWTTokenGeneration:
     def test_decode_token_rejects_invalid_signature(self) -> None:
         """Test that invalid signature is rejected"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
 
         # Create token with one key, try to decode with another
         token = jwt.encode({"sub": "testuser"}, "wrong-key", algorithm="HS256")
@@ -243,8 +243,8 @@ class TestJWTTokenGeneration:
     def test_decode_token_rejects_malformed_token(self) -> None:
         """Test that malformed tokens are rejected"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
 
         malformed_token = "not.a.valid.jwt.token"
 
@@ -257,9 +257,9 @@ class TestJWTTokenGeneration:
     def test_create_access_token_with_empty_data(self) -> None:
         """Test token creation with minimal data"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         data = {}
 
@@ -308,9 +308,9 @@ class TestSecurityEdgeCases:
     def test_token_with_large_payload(self) -> None:
         """Test token creation with large payload"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         # Large payload
         data = {
@@ -361,9 +361,9 @@ class TestSecurityPerformance:
     def test_token_generation_performance(self) -> None:
         """Benchmark token generation speed"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         # Act
         result = benchmark(create_access_token, {"sub": "testuser"})
@@ -375,9 +375,9 @@ class TestSecurityPerformance:
     def test_token_decoding_performance(self) -> None:
         """Benchmark token decoding speed"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
         token = create_access_token({"sub": "testuser"})
 

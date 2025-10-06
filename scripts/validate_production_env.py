@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 Production Environment Validation Script

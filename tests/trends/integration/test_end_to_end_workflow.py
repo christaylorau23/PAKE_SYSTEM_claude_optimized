@@ -103,7 +103,7 @@ class TestEndToEndWorkflow:
         """Test complete pipeline from trends to investment opportunities"""
 
         # Step 1: Analyze trends
-        analysis_results = await trend_analyzer.analyze_trends(sample_trends)
+        analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
 
         assert len(analysis_results) == len(sample_trends)
 
@@ -115,7 +115,7 @@ class TestEndToEndWorkflow:
             assert len(result.supporting_evidence) > 0
 
         # Step 2: Map to investment opportunities
-        opportunities = await investment_mapper.map_trends_to_opportunities(
+        opportunities = await self.investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
@@ -150,8 +150,8 @@ class TestEndToEndWorkflow:
         # Test sub-second analysis requirement
         start_time = datetime.now(UTC)
 
-        analysis_results = await trend_analyzer.analyze_trends(sample_trends)
-        opportunities = await investment_mapper.map_trends_to_opportunities(
+        analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
+        opportunities = await self.investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
@@ -169,17 +169,17 @@ class TestEndToEndWorkflow:
         """Test stream manager basic functionality"""
 
         # Test configuration
-        status = await stream_manager.get_status()
+        status = await self.stream_manager.get_status()
         assert "active_streams" in status
         assert "total_trends_processed" in status
         assert "platforms" in status
 
         # Test throughput capability
-        assert stream_manager.max_throughput >= 2.78  # 10K/hour = 2.78/second
+        assert self.stream_manager.max_throughput >= 2.78  # 10K/hour = 2.78/second
 
         # Test platform configurations
         for platform in Platform:
-            config = stream_manager.stream_configs.get(platform)
+            config = self.stream_manager.stream_configs.get(platform)
             assert config is not None
             assert config.poll_interval_seconds > 0
             assert config.max_keywords > 0
@@ -193,7 +193,7 @@ class TestEndToEndWorkflow:
         trend_history = [ai_trend]
 
         # Test momentum prediction
-        momentum_prediction = await prediction_engine.predict_trend_momentum(
+        momentum_prediction = await self.prediction_engine.predict_trend_momentum(
             trend_history,
             24,
         )
@@ -203,7 +203,7 @@ class TestEndToEndWorkflow:
         assert momentum_prediction.time_horizon_hours == 24
 
         # Test volume prediction
-        volume_prediction = await prediction_engine.predict_volume_growth(
+        volume_prediction = await self.prediction_engine.predict_volume_growth(
             trend_history,
             24,
         )
@@ -212,20 +212,20 @@ class TestEndToEndWorkflow:
         assert volume_prediction.confidence >= 0.0
 
         # Test model accuracy meets threshold
-        model_accuracy = prediction_engine.get_model_accuracy()
+        model_accuracy = self.prediction_engine.get_model_accuracy()
 
         # Note: In real implementation, this would be validated against historical data
         assert "overall" in model_accuracy
 
         # For contract testing - system should be capable of 95% accuracy
-        assert prediction_engine.accuracy_threshold >= 0.95
+        assert self.prediction_engine.accuracy_threshold >= 0.95
 
     @pytest.mark.asyncio
     async def test_investment_opportunity_generation(self) -> None:
         """Test investment opportunity generation quality"""
 
-        analysis_results = await trend_analyzer.analyze_trends(sample_trends)
-        opportunities = await investment_mapper.map_trends_to_opportunities(
+        analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
+        opportunities = await self.investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
@@ -246,7 +246,7 @@ class TestEndToEndWorkflow:
         sectors = set()
         for opp in opportunities:
             # Find sector from investment mappings
-            for mapping in investment_mapper.investment_mappings:
+            for mapping in self.investment_mapper.investment_mappings:
                 if any(symbol in opp.symbols for symbol in mapping.symbols):
                     sectors.add(mapping.sector)
                     break
@@ -275,14 +275,14 @@ class TestEndToEndWorkflow:
     async def test_portfolio_optimization(self) -> None:
         """Test portfolio optimization functionality"""
 
-        analysis_results = await trend_analyzer.analyze_trends(sample_trends)
-        opportunities = await investment_mapper.map_trends_to_opportunities(
+        analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
+        opportunities = await self.investment_mapper.map_trends_to_opportunities(
             analysis_results,
         )
 
         if len(opportunities) >= 3:
             # Test portfolio optimization
-            optimized_portfolio = await investment_mapper.get_portfolio_recommendations(
+            optimized_portfolio = await self.investment_mapper.get_portfolio_recommendations(
                 opportunities,
                 max_positions=5,
                 max_sector_exposure=0.3,
@@ -297,7 +297,7 @@ class TestEndToEndWorkflow:
             # Check sector diversification
             sector_exposures = {}
             for opp in optimized_portfolio:
-                for mapping in investment_mapper.investment_mappings:
+                for mapping in self.investment_mapper.investment_mappings:
                     if any(symbol in opp.symbols for symbol in mapping.symbols):
                         sector = mapping.sector
                         sector_exposures[sector] = (
@@ -337,10 +337,10 @@ class TestEndToEndWorkflow:
         """Test system resilience to errors and edge cases"""
 
         # Test empty input
-        empty_results = await trend_analyzer.analyze_trends([])
+        empty_results = await self.trend_analyzer.analyze_trends([])
         assert len(empty_results) == 0
 
-        empty_opportunities = await investment_mapper.map_trends_to_opportunities([])
+        empty_opportunities = await self.investment_mapper.map_trends_to_opportunities([])
         assert len(empty_opportunities) == 0
 
         # Test invalid data handling
@@ -370,7 +370,7 @@ class TestEndToEndWorkflow:
             lifecycle_stage=TrendLifecycle.EMERGING,
         )
 
-        minimal_results = await trend_analyzer.analyze_trends([minimal_trend])
+        minimal_results = await self.trend_analyzer.analyze_trends([minimal_trend])
         assert len(minimal_results) == 1
         assert minimal_results[0].investment_score >= 0.0
 

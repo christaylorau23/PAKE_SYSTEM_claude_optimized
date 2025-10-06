@@ -7,13 +7,13 @@ of the PAKE cognitive architecture.
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -89,21 +89,21 @@ class CosmicCalibrationCoordinator:
     - Maintain system stability during improvements
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.calibration_phase = CalibrationPhase.INITIALIZATION
 
         # Core coordination settings
-        self.coordination_frequency = config.get(
+        self.coordination_frequency = self.config.get(
             "coordination_frequency",
             1800,
         )  # 30 minutes
-        self.health_check_frequency = config.get(
+        self.health_check_frequency = self.config.get(
             "health_check_frequency",
             300,
         )  # 5 minutes
-        self.optimization_cooldown = config.get("optimization_cooldown", 3600)  # 1 hour
-        self.evolution_frequency = config.get("evolution_frequency", 86400)  # 24 hours
+        self.optimization_cooldown = self.config.get("optimization_cooldown", 3600)  # 1 hour
+        self.evolution_frequency = self.config.get("evolution_frequency", 86400)  # 24 hours
 
         # System health thresholds
         self.health_thresholds = {
@@ -203,7 +203,7 @@ class CosmicCalibrationCoordinator:
             self.logger.info("=== COSMIC CALIBRATION PROTOCOL FULLY ACTIVE ===")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error(
                 "Failed to initialize Cosmic Calibration Coordinator: %s",
                 e,
@@ -333,7 +333,7 @@ components to achieve continuous improvement while maintaining system stability.
                 self.calibration_phase = CalibrationPhase.MONITORING
                 self.logger.info("=== MASTER COORDINATION CYCLE COMPLETED ===")
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in master coordination loop: %s", e)
                 self.calibration_phase = CalibrationPhase.MONITORING
 
@@ -576,7 +576,7 @@ components to achieve continuous improvement while maintaining system stability.
 
         return decisions
 
-    async def _execute_coordinated_optimization(self) -> None:
+    async def _execute_coordinated_optimization(self, decisions: Dict[str, Any]) -> None:
         """Execute coordinated optimization based on decisions."""
         self.logger.info(
             "Executing coordinated optimization: %s priority",
@@ -615,7 +615,7 @@ components to achieve continuous improvement while maintaining system stability.
         # Validate optimization results
         await self._validate_optimization_results(decisions)
 
-    async def _log_coordination_cycle(self) -> None:
+    async def _log_coordination_cycle(self, metrics: CalibrationMetrics, decisions: Dict[str, Any]) -> None:
         """Log coordination cycle to the master calibration log."""
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 

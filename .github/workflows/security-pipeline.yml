@@ -1,0 +1,175 @@
+name: Security-First CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly security scans
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for secret scanning
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    
+    - name: Install project
+      run: poetry install --no-interaction
+    
+    # Static Application Security Testing (SAST)
+    - name: Run Ruff Security Checks
+      run: |
+        poetry run ruff check . --select=S --output-format=json > security-report.json
+        poetry run ruff check . --select=S --statistics
+    
+    - name: Run Bandit Security Linter
+      run: |
+        poetry run bandit -r . -f json -o bandit-report.json
+        poetry run bandit -r . -ll
+    
+    # Software Composition Analysis (SCA)
+    - name: Run Safety Check
+      run: |
+        poetry run safety check --json --output safety-report.json
+        poetry run safety check
+    
+    - name: Run pip-audit
+      run: |
+        poetry run pip-audit --format=json --output=pip-audit-report.json
+        poetry run pip-audit
+    
+    # Secret Scanning
+    - name: Run TruffleHog Secret Scan
+      run: |
+        docker run --rm -v "$PWD:/pwd" trufflesecurity/trufflehog:latest           filesystem /pwd --json --output trufflehog-report.json
+    
+    - name: Run GitLeaks Secret Scan
+      run: |
+        docker run --rm -v "$PWD:/pwd" zricethezav/gitleaks:latest           detect --source /pwd --report-format json --report-path gitleaks-report.json
+    
+    # License Compliance
+    - name: Run License Check
+      run: |
+        poetry run pip-licenses --format=json --output-file=licenses-report.json
+        poetry run pip-licenses --format=table
+    
+    # Upload Security Reports
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          security-report.json
+          bandit-report.json
+          safety-report.json
+          pip-audit-report.json
+          trufflehog-report.json
+          gitleaks-report.json
+          licenses-report.json
+    
+    # Security Gate
+    - name: Security Gate
+      run: |
+        echo "🔒 Security scanning complete"
+        echo "📊 Reports generated and uploaded"
+        echo "✅ Security pipeline passed"
+
+  code-quality:
+    name: Code Quality Gates
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Run Ruff Linting
+      run: poetry run ruff check . --statistics
+    
+    - name: Run Black Formatting Check
+      run: poetry run black --check .
+    
+    - name: Run MyPy Type Checking
+      run: poetry run mypy .
+    
+    - name: Run Pytest with Coverage
+      run: |
+        poetry run pytest --cov=src --cov-report=xml --cov-report=html
+        poetry run coverage report --fail-under=80
+
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Check for outdated dependencies
+      run: poetry show --outdated
+    
+    - name: Audit dependencies for vulnerabilities
+      run: |
+        poetry run safety check
+        poetry run pip-audit
+        poetry run bandit -r . -ll

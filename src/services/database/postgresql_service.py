@@ -4,16 +4,18 @@ Enterprise-grade database service for persistent data storage and user managemen
 """
 
 import asyncio
-import logging
-import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import uuid
 
 import asyncpg
-import sqlalchemy as sa
 from asyncpg import Pool
+import sqlalchemy as sa
+import sqlalchemy.exc
+import psycopg2
 from sqlalchemy import JSON, UUID, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
@@ -143,19 +145,19 @@ class PostgreSQLService:
     - System metrics storage
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: DatabaseConfig | None = None) -> None:
+        self.config = config or DatabaseConfig()
         self._pool: Pool | None = None
         self._engine = None
         self._session_maker = None
 
         # Build connection strings
-        self._async_url = f"postgresql+asyncpg://{config.username}:{
-            config.REDACTED_SECRET
-        }@{config.host}:{config.port}/{config.database}"
-        self._sync_url = f"postgresql://{config.username}:{config.REDACTED_SECRET}@{
-            config.host
-        }:{config.port}/{config.database}"
+        self._async_url = f"postgresql+asyncpg://{self.config.username}:{
+            self.config.REDACTED_SECRET
+        }@{self.config.host}:{self.config.port}/{self.config.database}"
+        self._sync_url = f"postgresql://{self.config.username}:{self.config.REDACTED_SECRET}@{
+            self.config.host
+        }:{self.config.port}/{self.config.database}"
 
         logger.info("PostgreSQL service initialized")
 
@@ -195,7 +197,7 @@ class PostgreSQLService:
 
             logger.info("✅ PostgreSQL service initialized successfully")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Failed to initialize PostgreSQL service: %s", e)
             raise
 
@@ -215,7 +217,7 @@ class PostgreSQLService:
                 await conn.run_sync(Base.metadata.create_all)
 
             logger.info("Database migrations completed successfully")
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Migration error: %s", e)
             raise
 
@@ -491,7 +493,7 @@ class PostgreSQLService:
                     REDACTED_SECRET_hash,
                     full_name,
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create user: %s", e)
             return None
 
@@ -508,7 +510,7 @@ class PostgreSQLService:
                     username,
                 )
                 return dict(row) if row else None
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to get user by username: %s", e)
             return None
 
@@ -525,7 +527,7 @@ class PostgreSQLService:
                     email,
                 )
                 return dict(row) if row else None
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to get user by email: %s", e)
             return None
 
@@ -542,7 +544,7 @@ class PostgreSQLService:
                     user_id,
                 )
                 return dict(row) if row else None
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to get user by ID: %s", e)
             return None
 
@@ -559,7 +561,7 @@ class PostgreSQLService:
                     user_id,
                 )
                 return result != "UPDATE 0"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update last login: %s", e)
             return False
 
@@ -579,7 +581,7 @@ class PostgreSQLService:
                     REDACTED_SECRET_hash,
                 )
                 return result != "UPDATE 0"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update REDACTED_SECRET: %s", e)
             return False
 
@@ -596,7 +598,7 @@ class PostgreSQLService:
                     user_id,
                 )
                 return result != "UPDATE 0"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to deactivate user: %s", e)
             return False
 
@@ -613,7 +615,7 @@ class PostgreSQLService:
                     user_id,
                 )
                 return result != "UPDATE 0"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to activate user: %s", e)
             return False
 
@@ -644,7 +646,7 @@ class PostgreSQLService:
                         "saved_searches": saved_count,
                     },
                 }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "unhealthy", "error": str(e)}
 
     # Helper Methods
@@ -720,7 +722,7 @@ async def create_database_service(
 
 
 @asynccontextmanager
-async def get_database_service(self) -> None:
+async def get_database_service(config: DatabaseConfig | None = None) -> None:
     """Context manager for database service."""
     service = await create_database_service(config)
     try:

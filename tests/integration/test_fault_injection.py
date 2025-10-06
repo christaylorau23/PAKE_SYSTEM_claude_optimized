@@ -16,16 +16,16 @@ Test Categories:
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
-from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
+from aioresponses import aioresponses
 import pytest
 import responses
-from aioresponses import aioresponses
 
 try:
     from src.services.ingestion.arxiv_enhanced_service import (
@@ -78,7 +78,7 @@ class TestFaultInjectionFirecrawl:
                 headers={"Retry-After": "60"},
             )
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful error handling
             assert not result.success
@@ -103,7 +103,7 @@ class TestFaultInjectionFirecrawl:
                 headers={"Retry-After": "300"},
             )
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful error handling with retry information
             assert not result.success
@@ -126,7 +126,7 @@ class TestFaultInjectionFirecrawl:
                 exception=TimeoutError("Request timeout"),
             )
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful timeout handling
             assert not result.success
@@ -149,7 +149,7 @@ class TestFaultInjectionFirecrawl:
                 body="Invalid JSON response {broken",
             )
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful JSON parsing error handling
             assert not result.success
@@ -167,7 +167,7 @@ class TestFaultInjectionFirecrawl:
             # Mock empty response
             m.post("https://api.firecrawl.dev/v0/scrape", status=200, payload={})
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful empty response handling
             assert not result.success
@@ -190,7 +190,7 @@ class TestFaultInjectionFirecrawl:
                 ),
             )
 
-            result = await firecrawl_service.scrape_url(url)
+            result = await self.firecrawl_service.scrape_url(url)
 
             # Assert graceful connection error handling
             assert not result.success
@@ -239,7 +239,7 @@ class TestFaultInjectionFirecrawl:
                 },
             )
 
-            results = await firecrawl_service.scrape_bulk(urls, max_concurrent=1)
+            results = await self.firecrawl_service.scrape_bulk(urls, max_concurrent=1)
 
             # Assert partial success handling
             assert len(results) == 3
@@ -277,7 +277,7 @@ class TestFaultInjectionArxiv:
                 body="Service temporarily unavailable",
             )
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful error handling
             assert not result.success
@@ -299,7 +299,7 @@ class TestFaultInjectionArxiv:
                 headers={"Retry-After": "300"},
             )
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful error handling with retry information
             assert not result.success
@@ -320,7 +320,7 @@ class TestFaultInjectionArxiv:
                 exception=TimeoutError("Request timeout"),
             )
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful timeout handling
             assert not result.success
@@ -340,7 +340,7 @@ class TestFaultInjectionArxiv:
                 body="Invalid XML response <broken>",
             )
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful XML parsing error handling
             assert not result.success
@@ -356,7 +356,7 @@ class TestFaultInjectionArxiv:
             # Mock empty response
             m.get("http://export.arxiv.org/api/query", status=200, body="")
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful empty response handling
             assert not result.success
@@ -377,7 +377,7 @@ class TestFaultInjectionArxiv:
                 ),
             )
 
-            result = await arxiv_service.search_papers(sample_query)
+            result = await self.arxiv_service.search_papers(sample_query)
 
             # Assert graceful connection error handling
             assert not result.success
@@ -415,7 +415,7 @@ class TestFaultInjectionPubMed:
                 body="Service temporarily unavailable",
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful error handling
             assert not result.success
@@ -436,7 +436,7 @@ class TestFaultInjectionPubMed:
                 headers={"Retry-After": "300"},
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful error handling with retry information
             assert not result.success
@@ -457,7 +457,7 @@ class TestFaultInjectionPubMed:
                 exception=TimeoutError("Request timeout"),
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful timeout handling
             assert not result.success
@@ -489,7 +489,7 @@ class TestFaultInjectionPubMed:
                 body="Invalid XML response <broken>",
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful XML parsing error handling
             assert not result.success
@@ -509,7 +509,7 @@ class TestFaultInjectionPubMed:
                 payload={"esearchresult": {"count": "0", "retmax": "0", "idlist": []}},
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful empty response handling
             assert result.success
@@ -530,7 +530,7 @@ class TestFaultInjectionPubMed:
                 ),
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful connection error handling
             assert not result.success
@@ -562,7 +562,7 @@ class TestFaultInjectionPubMed:
                 body="Service temporarily unavailable",
             )
 
-            result = await pubmed_service.search_papers(sample_query)
+            result = await self.pubmed_service.search_papers(sample_query)
 
             # Assert graceful partial failure handling
             assert not result.success
@@ -625,10 +625,10 @@ class TestFaultInjectionIntegration:
             )
 
             # Create ingestion plan
-            plan = await ingestion_orchestrator.create_ingestion_plan(topic)
+            plan = await self.ingestion_orchestrator.create_ingestion_plan(topic)
 
             # Execute plan with mixed failures
-            result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+            result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
             # Assert orchestrator handles mixed failures gracefully
             assert result is not None
@@ -655,10 +655,10 @@ class TestFaultInjectionIntegration:
 
             # Create and execute plan multiple times
             for i in range(3):
-                plan = await ingestion_orchestrator.create_ingestion_plan(
+                plan = await self.ingestion_orchestrator.create_ingestion_plan(
                     f"{topic} {i}"
                 )
-                result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+                result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
                 # Assert graceful degradation
                 assert result is not None
@@ -687,8 +687,8 @@ class TestFaultInjectionIntegration:
                 exception=TimeoutError("Request timeout"),
             )
 
-            plan = await ingestion_orchestrator.create_ingestion_plan(topic)
-            result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+            plan = await self.ingestion_orchestrator.create_ingestion_plan(topic)
+            result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
             # Assert timeout handling
             assert result is not None
@@ -747,7 +747,7 @@ class TestFaultInjectionMonitoring:
             api_key="test-key", base_url="https://api.firecrawl.dev", test_mode=False
         )
 
-        with caplog.at_level(logging.ERROR), aioresponses() as m:
+        with self.caplog.at_level(logging.ERROR), aioresponses() as m:
             m.post(
                 "https://api.firecrawl.dev/v0/scrape",
                 status=503,
@@ -758,7 +758,7 @@ class TestFaultInjectionMonitoring:
 
             # Assert error logging
             assert not result.success
-            assert any("503" in record.message for record in caplog.records)
+            assert any("503" in record.message for record in self.caplog.records)
 
 
 # Test markers for CI pipeline integration

@@ -3,13 +3,13 @@
 Provides secure credential management and security utilities.
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import logging
 import os
 import secrets
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 from src.utils.exceptions import (
     ConfigurationException,
@@ -43,7 +43,7 @@ class SecureCredentialManager:
     Provides safe handling of secrets, API keys, and sensitive configuration
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: SecretConfig | None = None) -> None:
         self.config = config or SecretConfig()
         self.logger = logging.getLogger(__name__)
         self._credentials_cache: dict[str, str] = {}

@@ -7,11 +7,12 @@ with JWT/OIDC authentication for GitHub Actions integration.
 """
 
 import asyncio
+from dataclasses import dataclass
+from enum import Enum
+import json
 import logging
 import os
 import time
-from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 import aiohttp
@@ -57,7 +58,7 @@ class SecretMetadata:
 class VaultClient:
     """HashiCorp Vault client with JWT/OIDC authentication."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: VaultConfig) -> None:
         self.config = config
         self.session: aiohttp.ClientSession | None = None
         self.token: str | None = None
@@ -69,7 +70,7 @@ class VaultClient:
         await self.authenticate()
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         if self.session:
             await self.session.close()
@@ -163,7 +164,7 @@ class VaultClient:
                         return data.get("value")
                     logger.error("Failed to get OIDC token: %s", response.status)
                     return None
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error getting OIDC token: %s", e)
             return None
 
@@ -204,7 +205,7 @@ class VaultClient:
                     "Vault request failed: %s - %s", response.status, error_text
                 )
                 return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error making Vault request: %s", e)
             return None
 
@@ -278,7 +279,7 @@ class VaultClient:
 class PAKESecretsManager:
     """PAKE System secrets manager using HashiCorp Vault."""
 
-    def __init__(self) -> None:
+    def __init__(self, vault_config: VaultConfig) -> None:
         self.vault_config = vault_config
         self.vault_client: VaultClient | None = None
 
@@ -288,7 +289,7 @@ class PAKESecretsManager:
         await self.vault_client.__aenter__()
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         if self.vault_client:
             await self.vault_client.__aexit__(exc_type, exc_val, exc_tb)
@@ -421,7 +422,7 @@ async def main(self) -> None:
             for key in all_secrets:
                 logger.info("  - %s: [REDACTED_SECRET]", key)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Vault integration test failed: %s", e)
         return 1
 

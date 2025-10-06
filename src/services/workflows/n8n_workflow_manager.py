@@ -4,12 +4,12 @@ Provides a Python interface for triggering and managing n8n automation workflows
 """
 
 import asyncio
-import logging
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import os
+from typing import Any, Dict, List
 
 import aiohttp
 
@@ -59,7 +59,7 @@ class N8nWorkflowManager:
     Provides high-level interface for triggering automation workflows.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, n8n_base_url: str | None = None, auth_credentials: tuple[str, str] | None = None) -> None:
         """Initialize the workflow manager.
 
         Args:
@@ -326,7 +326,7 @@ class N8nWorkflowManager:
 
             logger.error("Workflow %s timed out", request.workflow_type)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             workflow_result.status = WorkflowStatus.FAILED
             workflow_result.error = str(e)
             workflow_result.completed_at = datetime.now(UTC)
@@ -383,11 +383,11 @@ class N8nWorkflowManager:
             logger.info("Workflow %s marked as cancelled", request_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to cancel workflow %s: %s", request_id, e)
             return False
 
-    def cleanup_completed_workflows(self) -> None:
+    def cleanup_completed_workflows(self, max_age_hours: int = 24) -> None:
         """Clean up completed workflow tracking data.
 
         Args:

@@ -4,9 +4,9 @@ This script tests the logging setup to ensure it works correctly.
 """
 
 import logging
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -187,7 +187,7 @@ def test_log_file_creation(self) -> None:
         else:
             print("⚠ Log file was not created")
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"⚠ Log file creation test failed: {e}")
 
 
@@ -217,7 +217,7 @@ def main(self) -> None:
         print("✓ All logging tests completed successfully!")
         print("=" * 60)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Test failed with error: {e}")
         sys.exit(1)
 

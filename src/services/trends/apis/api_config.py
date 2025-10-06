@@ -3,11 +3,11 @@
 Secure configuration management for all external API integrations.
 """
 
-import logging
-import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+import logging
+import os
+from typing import Any, Dict
 
 
 class APIProvider(Enum):
@@ -313,7 +313,7 @@ class APIConfig:
         self.logger.info("Reloading API configuration...")
         self._load_configuration()
 
-    def set_api_enabled(self) -> None:
+    def set_api_enabled(self, provider: APIProvider, enabled: bool) -> None:
         """Enable or disable an API provider."""
         config = self.get_api_config(provider)
         if config:
@@ -324,7 +324,7 @@ class APIConfig:
                 "enabled" if enabled else "disabled",
             )
 
-    def update_credentials(self) -> None:
+    def update_credentials(self, provider: APIProvider, credentials: dict[str, str]) -> bool:
         """Update credentials for an API provider."""
         config = self.get_api_config(provider)
         if not config:

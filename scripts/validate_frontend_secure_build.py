@@ -6,9 +6,9 @@ Validates that all objectives have been achieved.
 
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -46,7 +46,7 @@ class FrontendBuildValidator:
                 else:
                     logger.error("❌ %s: FAILED", objective_name)
                     all_passed = False
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("❌ %s: ERROR - %s", objective_name, e)
                 self.validation_results[objective_name] = False
                 all_passed = False
@@ -317,7 +317,7 @@ async def main(self) -> None:
         logger.error("💥 Some objectives failed validation!")
         return 1
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         return 1
 

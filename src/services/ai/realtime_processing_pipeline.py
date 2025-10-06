@@ -6,15 +6,15 @@ Provides high-performance streaming content processing, real-time AI analysis,
 edge computing capabilities, and intelligent content flow management.
 """
 
-import asyncio
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict
 
 # Import our AI components
 from .cognitive_analysis_engine import CognitiveAnalysisEngine, CognitiveAnalysisResult
@@ -253,7 +253,7 @@ class ProcessingStageHandler(ABC):
 class CognitiveAnalysisStage(ProcessingStageHandler):
     """Cognitive analysis processing stage."""
 
-    def __init__(self) -> None:
+    def __init__(self, cognitive_engine: CognitiveAnalysisEngine) -> None:
         self.cognitive_engine = cognitive_engine
         self._stage = ProcessingStage.COGNITIVE_ANALYSIS
 
@@ -280,7 +280,7 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
                 "processing_successful": True,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cognitive analysis failed for %s: %s", content.content_id, e)
             return {
                 "cognitive_result": None,
@@ -293,7 +293,7 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
 class SemanticIndexingStage(ProcessingStageHandler):
     """Semantic indexing processing stage."""
 
-    def __init__(self) -> None:
+    def __init__(self, semantic_engine: SemanticSearchEngine) -> None:
         self.semantic_engine = semantic_engine
         self._stage = ProcessingStage.SEMANTIC_INDEXING
 
@@ -323,7 +323,7 @@ class SemanticIndexingStage(ProcessingStageHandler):
                 "processing_successful": True,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Semantic indexing failed for %s: %s", content.content_id, e)
             return {
                 "embedding_generated": False,
@@ -336,7 +336,7 @@ class SemanticIndexingStage(ProcessingStageHandler):
 class QualityFilteringStage(ProcessingStageHandler):
     """Quality filtering processing stage."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config
         self._stage = ProcessingStage.QUALITY_FILTERING
 
@@ -371,7 +371,7 @@ class QualityFilteringStage(ProcessingStageHandler):
                 "processing_successful": True,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Quality filtering failed for %s: %s", content.content_id, e)
             return {
                 "quality_score": 0.0,
@@ -384,7 +384,7 @@ class QualityFilteringStage(ProcessingStageHandler):
 class EdgeProcessor:
     """Edge computing processor for high-speed local processing."""
 
-    def __init__(self) -> None:
+    def __init__(self, location: EdgeLocation) -> None:
         self.location = location
         self.stats = {
             "items_processed": 0,
@@ -423,7 +423,7 @@ class EdgeProcessor:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Edge processing failed for %s: %s", content.content_id, e)
             return {"edge_processed": False, "error": str(e)}
 
@@ -437,7 +437,7 @@ class RealTimeProcessingPipeline:
     Integrates cognitive analysis, semantic search, and edge computing.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
         self.config = config or PipelineConfig()
 
         # Initialize AI engines
@@ -515,8 +515,11 @@ class RealTimeProcessingPipeline:
             self._pipeline_task.cancel()
             try:
                 await self._pipeline_task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as e:
+
+                logger.debug(f"Exception in realtime_processing_pipeline.py: {e}")
+
+                # Continue gracefully
 
         # Cancel active processing tasks
         for task in list(self.active_processing.values()):
@@ -593,7 +596,7 @@ class RealTimeProcessingPipeline:
         except asyncio.CancelledError:
             logger.info("Pipeline worker cancelled")
             raise
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Pipeline worker error: %s", e)
             raise
 
@@ -623,9 +626,9 @@ class RealTimeProcessingPipeline:
                 self.active_processing[content.content_id] = task
 
                 # Set up task completion callback
-                def task_done_callback(self) -> None:
-                    if content_id in self.active_processing:
-                        del self.active_processing[content_id]
+                def task_done_callback(task, cid: str) -> None:
+                    if cid in self.active_processing:
+                        del self.active_processing[cid]
 
                 task.add_done_callback(
                     lambda t, cid=content.content_id: task_done_callback(t, cid),
@@ -781,7 +784,7 @@ class RealTimeProcessingPipeline:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             processing_time = (time.time() - start_time) * 1000
             processing_time = max(processing_time, 0.1)  # Minimum 0.1ms
             result = ProcessingResult(
@@ -803,7 +806,7 @@ class RealTimeProcessingPipeline:
     async def _collect_metrics(self) -> None:
         """Collect and update pipeline metrics."""
         try:
-                pass
+            pass
             # Update processing metrics every few seconds
             if not hasattr(self, "_last_metrics_update"):
                 self._last_metrics_update = time.time()
@@ -827,7 +830,7 @@ class RealTimeProcessingPipeline:
 
                 self._last_metrics_update = current_time
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Metrics collection error: %s", e)
 
     def get_pipeline_metrics(self) -> PipelineMetrics:
@@ -919,7 +922,7 @@ if __name__ == "__main__":
         await pipeline.start_pipeline()
 
         try:
-                pass
+            pass
             # Submit test content
             test_items = [
                 ContentItem(

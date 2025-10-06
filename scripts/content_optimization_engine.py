@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Content Optimization Engine
@@ -5,17 +6,17 @@ AI-powered content optimization for maximum social media engagement
 """
 
 import asyncio
+from dataclasses import dataclass
 import logging
 import os
 import re
-from dataclasses import dataclass
 
 # ML and NLP libraries
 try:
+    from langdetect import detect
     import nltk
     import openai
     import requests
-    from langdetect import detect
     from textblob import TextBlob
 except ImportError:
     print(
@@ -221,7 +222,7 @@ class ContentOptimizationEngine:
                 optimization_suggestions=suggestions,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Content optimization failed: %s", e)
             return ContentOptimization(
                 original_content=content,
@@ -251,15 +252,21 @@ class ContentOptimizationEngine:
         try:
             # Detect language
             analysis["language"] = detect(content)
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in content_optimization_engine.py: {e}")
+
+            # Continue gracefully
 
         try:
             # Sentiment analysis
             blob = TextBlob(content)
             analysis["sentiment"] = blob.sentiment.polarity
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in content_optimization_engine.py: {e}")
+
+            # Continue gracefully
 
         try:
             # Extract keywords (simple approach)
@@ -275,8 +282,11 @@ class ContentOptimizationEngine:
                 key=word_freq.get,
                 reverse=True,
             )[:10]
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in content_optimization_engine.py: {e}")
+
+            # Continue gracefully
 
         # Calculate readability (simple Flesch-Kincaid approximation)
         if analysis["sentences"] > 0 and analysis["word_count"] > 0:
@@ -330,7 +340,7 @@ class ContentOptimizationEngine:
 
             return optimized
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.warning("AI optimization failed, using fallback: %s", e)
             return self._simple_optimization(content, primary_platform)
 
@@ -517,8 +527,11 @@ class ContentOptimizationEngine:
             sentiment = TextBlob(content).sentiment.polarity
             if sentiment > 0.1:
                 multipliers += 0.1
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in content_optimization_engine.py: {e}")
+
+            # Continue gracefully
 
         return min(base_rate * multipliers, 15.0)  # Cap at 15%
 

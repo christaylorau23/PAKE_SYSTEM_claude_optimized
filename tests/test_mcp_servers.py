@@ -5,9 +5,9 @@ Tests both FastMCP and Node.js MCP servers for basic functionality
 """
 
 import json
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def test_server(self) -> None:
@@ -95,7 +95,7 @@ def test_server(self) -> None:
         print(f"{server_name}: Timeout")
         process.kill()
         return False
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"{server_name}: Error - {e}")
         return False
 

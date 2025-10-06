@@ -8,12 +8,16 @@ and apply all database migrations from the beginning of the project's history.
 """
 
 import asyncio
-import logging
-import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import logging
 from pathlib import Path
+import sys
 from typing import Any
+
+import pydantic
+import sqlalchemy
+import psycopg2
 
 try:
     import asyncpg
@@ -103,7 +107,7 @@ class MigrationValidator:
     5. Rollbacks work properly (if configured)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: MigrationValidationConfig) -> None:
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self._validation_database_name: str | None = None
@@ -210,7 +214,7 @@ class MigrationValidator:
             if self.config.generate_report:
                 await self._generate_report(result)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Migration validation failed with exception: %s", e)
             result.errors.append(f"Validation exception: {str(e)}")
 
@@ -246,7 +250,7 @@ class MigrationValidator:
                 "Successfully applied %s migrations", len(result.migrations_applied)
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             error_msg = f"Failed to apply migrations: {str(e)}"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
@@ -306,7 +310,7 @@ class MigrationValidator:
             error_msg = f"Alembic migration timed out after {self.config.migration_timeout_seconds}s"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             error_msg = f"Alembic migration error: {str(e)}"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
@@ -440,7 +444,7 @@ class MigrationValidator:
 
             await engine.dispose()
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             error_msg = f"Schema validation failed: {str(e)}"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
@@ -489,7 +493,7 @@ class MigrationValidator:
                 self.logger.error(error_msg)
                 result.errors.append(error_msg)
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             error_msg = f"Failed to validate table '{table_name}': {str(e)}"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
@@ -519,7 +523,7 @@ class MigrationValidator:
             await engine.dispose()
             result.data_integrity_passed = True
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             error_msg = f"Data integrity validation failed: {str(e)}"
             self.logger.error(error_msg)
             result.errors.append(error_msg)
@@ -696,7 +700,7 @@ class MigrationValidator:
             finally:
                 await conn.close()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             self.logger.warning("Failed to cleanup validation database: %s", e)
 
 

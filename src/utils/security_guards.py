@@ -4,15 +4,15 @@ Advanced security measures for protecting LLM interactions and system integrity.
 """
 
 import asyncio
-import functools
-import hashlib
-import re
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+import functools
+import hashlib
+import re
+import time
+from typing import Any, Dict, List
 
 from utils.error_handling import (
     ErrorCategory,
@@ -102,7 +102,7 @@ class SecurityConfig:
 class SecurityGuardError(PAKEException):
     """Security guard specific errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, threat: SecurityThreat | None = None, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.AUTHORIZATION, **kwargs)
         self.threat = threat
 
@@ -308,8 +308,8 @@ class PromptInjectionDetector:
 class ContentSanitizer:
     """Sanitize and clean potentially malicious content."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: SecurityConfig | None = None) -> None:
+        self.config = config or SecurityConfig()
         self.logger = get_logger(service_name="content-sanitizer")
 
     def sanitize_input(self, text: str) -> str:
@@ -377,10 +377,10 @@ class ContentSanitizer:
 class ThreatDetector:
     """Main threat detection engine."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: SecurityConfig | None = None) -> None:
+        self.config = config or SecurityConfig()
         self.prompt_detector = PromptInjectionDetector()
-        self.sanitizer = ContentSanitizer(config)
+        self.sanitizer = ContentSanitizer(self.config)
         self.logger = get_logger(service_name="threat-detector")
         self.metrics = MetricsStore(service_name="threat-detector")
 
@@ -528,7 +528,7 @@ class ThreatDetector:
 
         return threats
 
-    def _log_threat(self) -> None:
+    def _log_threat(self, threat: SecurityThreat) -> None:
         """Log detected threat."""
         log_data = {
             "threat_id": threat.threat_id,
@@ -552,9 +552,9 @@ class ThreatDetector:
 class SecurityGuard:
     """Main security guard class for comprehensive protection."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.threat_detector = ThreatDetector(config)
+    def __init__(self, config: SecurityConfig | None = None) -> None:
+        self.config = config or SecurityConfig()
+        self.threat_detector = ThreatDetector(self.config)
         self.logger = get_logger(service_name="security-guard")
 
     async def validate_input(
@@ -601,7 +601,7 @@ class SecurityGuard:
 
 
 # Decorator for automatic security validation
-def secure_endpoint(self) -> None:
+def secure_endpoint(config: SecurityConfig | None = None, input_param: str = "text", user_id_param: str = "user_id") -> None:
     """Decorator to add security validation to endpoints."""
 
     def decorator(func: Callable) -> Callable:
@@ -609,7 +609,7 @@ def secure_endpoint(self) -> None:
         guard = SecurityGuard(security_config)
 
         @functools.wraps(func)
-        async def async_wrapper(self) -> None:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> None:
             # Extract input text and user info
             input_text = kwargs.get(input_param, "")
             user_id = kwargs.get(user_id_param)
@@ -645,7 +645,7 @@ def secure_endpoint(self) -> None:
             return result
 
         @functools.wraps(func)
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> None:
             return asyncio.run(async_wrapper(*args, **kwargs))
 
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
@@ -656,7 +656,7 @@ def secure_endpoint(self) -> None:
 # Example usage and testing
 if __name__ == "__main__":
 
-    async def test_security_guards(self) -> None:
+    async def test_security_guards() -> None:
         """Test the security guard implementation."""
         config = SecurityConfig(
             prompt_injection_threshold=0.7,

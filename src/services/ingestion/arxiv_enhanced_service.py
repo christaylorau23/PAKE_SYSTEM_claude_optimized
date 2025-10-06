@@ -8,11 +8,11 @@ Following TDD methodology:
 - Based on Perplexity research for ArXiv API best practices
 """
 
-import logging
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import xml.etree.ElementTree as ET
 
 import aiohttp
 
@@ -165,7 +165,7 @@ class ArxivEnhancedService:
                     status=response.status,
                     text=await response.text(),
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Handle network errors
             return MockArxivAPIResponse(
                 status=500,
@@ -215,98 +215,7 @@ class ArxivEnhancedService:
         try:
             # Check cache first
             cache_key = str(query)
-            if cache_key in self.cache:
-                cached_result = self.cache[cache_key]
-                return ArxivResult(
-                    success=True,
-                    papers=cached_result.papers,
-                    total_results=cached_result.total_results,
-                    query_used=query,
-                    from_cache=True,
-                )
-
-            # Build query parameters
-            search_query = self._build_query_string(query)
-            query_params = {
-                "search_query": search_query,
-                "start": str(query.start),
-                "max_results": str(query.max_results),
-                "sortBy": (
-                    "relevance" if query.sort_by == "relevance" else "submittedDate"
-                ),
-                "sortOrder": query.sort_order,
-            }
-
-            # Make API request
-            response = await self._make_arxiv_request(query_params)
-
-            if response.status == 429:
-                return ArxivResult(
-                    success=False,
-                    error=ArxivError(
-                        message="ArXiv API rate limit exceeded",
-                        error_code="RATE_LIMIT_EXCEEDED",
-                        retry_after=300,
-                        query=search_query,
-                    ),
-                )
-
-            if response.status == 503:
-                return ArxivResult(
-                    success=False,
-                    error=ArxivError(
-                        message=f"ArXiv API service unavailable (status {response.status})",
-                        error_code="SERVICE_UNAVAILABLE",
-                        query=search_query,
-                    ),
-                )
-
-            if response.status != 200:
-                return ArxivResult(
-                    success=False,
-                    error=ArxivError(
-                        message=f"ArXiv API request failed with status {response.status}",
-                        error_code="API_ERROR",
-                        query=search_query,
-                    ),
-                )
-
-            # Parse response
-            xml_text = await response.text()
-            result = await self.parse_arxiv_response(xml_text)
-
-            if result.success:
-                # Apply additional filtering to mock results
-                papers = result.papers
-
-                # Filter by date range if specified
-                if query.date_from or query.date_to:
-                    filtered_papers = []
-                    for paper in papers:
-                        paper_date = (
-                            paper.published_date.replace(tzinfo=None)
-                            if paper.published_date.tzinfo
-                            else paper.published_date
-                        )
-
-                        # Normalize query dates to naive datetime for comparison
-                        query_date_from = (
-                            query.date_from.replace(tzinfo=None)
-                            if query.date_from and query.date_from.tzinfo
-                            else query.date_from
-                        )
-                        query_date_to = (
-                            query.date_to.replace(tzinfo=None)
-                            if query.date_to and query.date_to.tzinfo
-                            else query.date_to
-                        )
-
-                        if query_date_from and paper_date < query_date_from:
-                            continue
-                        if query_date_to and paper_date > query_date_to:
-                            continue
-                        filtered_papers.append(paper)
-                    papers = filtered_papers
+        self._search_papers_conditional_handler()
 
                 # Filter by authors if specified
                 if query.authors:
@@ -341,7 +250,7 @@ class ArxivEnhancedService:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return ArxivResult(
                 success=False,
                 error=ArxivError(
@@ -350,6 +259,91 @@ class ArxivEnhancedService:
                     query=str(query),
                 ),
             )
+
+    def _search_papers_conditional_handler(self) -> None:
+        """Extracted method to handle conditional logic."""
+        if cache_key in self.cache:
+cached_result = self.cache[cache_key]
+return ArxivResult(
+success=True,
+papers=cached_result.papers,
+total_results=cached_result.total_results,
+query_used=query,
+from_cache=True,
+)
+# Build query parameters
+search_query = self._build_query_string(query)
+query_params = {
+"search_query": search_query,
+"start": str(query.start),
+"max_results": str(query.max_results),
+"sortBy": (
+"relevance" if query.sort_by == "relevance" else "submittedDate"
+),
+"sortOrder": query.sort_order,
+}
+# Make API request
+response = await self._make_arxiv_request(query_params)
+if response.status == 429:
+return ArxivResult(
+success=False,
+error=ArxivError(
+message="ArXiv API rate limit exceeded",
+error_code="RATE_LIMIT_EXCEEDED",
+retry_after=300,
+query=search_query,
+),
+)
+if response.status == 503:
+return ArxivResult(
+success=False,
+error=ArxivError(
+message=f"ArXiv API service unavailable (status {response.status})",
+error_code="SERVICE_UNAVAILABLE",
+query=search_query,
+),
+)
+if response.status != 200:
+return ArxivResult(
+success=False,
+error=ArxivError(
+message=f"ArXiv API request failed with status {response.status}",
+error_code="API_ERROR",
+query=search_query,
+),
+)
+# Parse response
+xml_text = await response.text()
+result = await self.parse_arxiv_response(xml_text)
+if result.success:
+# Apply additional filtering to mock results
+papers = result.papers
+# Filter by date range if specified
+if query.date_from or query.date_to:
+filtered_papers = []
+for paper in papers:
+paper_date = (
+paper.published_date.replace(tzinfo=None)
+if paper.published_date.tzinfo
+else paper.published_date
+)
+# Normalize query dates to naive datetime for comparison
+query_date_from = (
+query.date_from.replace(tzinfo=None)
+if query.date_from and query.date_from.tzinfo
+else query.date_from
+)
+query_date_to = (
+query.date_to.replace(tzinfo=None)
+if query.date_to and query.date_to.tzinfo
+else query.date_to
+)
+if query_date_from and paper_date < query_date_from:
+continue
+if query_date_to and paper_date > query_date_to:
+continue
+filtered_papers.append(paper)
+papers = filtered_papers
 
     async def parse_arxiv_response(self, xml_text: str) -> ArxivResult:
         """Parse ArXiv XML response into structured data.
@@ -445,7 +439,7 @@ class ArxivEnhancedService:
                 ),
                 papers=[],
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return ArxivResult(
                 success=False,
                 error=ArxivError(message=str(e), error_code="UNKNOWN_ERROR"),

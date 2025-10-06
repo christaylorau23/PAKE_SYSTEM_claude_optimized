@@ -3,16 +3,16 @@ Enterprise-grade API deployment with real integrations and live data sources.
 """
 
 import asyncio
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timezone
+from enum import Enum
 import hashlib
 import json
 import logging
 import secrets
 import time
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timezone
-from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any, Dict, List, TYPE_CHECKING
 
 import aiohttp
 
@@ -163,8 +163,8 @@ class ProductionAPIConfig:
 class RateLimiter:
     """Advanced rate limiting with multiple strategies."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: ProductionAPIConfig | None = None) -> None:
+        self.config = config or ProductionAPIConfig()
         self.client_windows: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
         self.client_tokens: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {"tokens": 60, "last_refill": time.time(), "capacity": 60},
@@ -296,8 +296,8 @@ class RateLimiter:
 class CircuitBreaker:
     """Circuit breaker pattern for external API resilience."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: ProductionAPIConfig | None = None) -> None:
+        self.config = config or ProductionAPIConfig()
         self.circuit_state: dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "state": "closed",  # closed, open, half_open
@@ -325,13 +325,13 @@ class CircuitBreaker:
         # half_open
         return True
 
-    def record_success(self) -> None:
+    def record_success(self, service_name: str) -> None:
         """Record successful service call."""
         circuit = self.circuit_state[service_name]
         circuit["failure_count"] = 0
         circuit["state"] = "closed"
 
-    def record_failure(self) -> None:
+    def record_failure(self, service_name: str) -> None:
         """Record failed service call."""
         circuit = self.circuit_state[service_name]
         circuit["failure_count"] += 1
@@ -347,8 +347,8 @@ class CircuitBreaker:
 class ResponseCache:
     """Intelligent response caching system."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: ProductionAPIConfig | None = None) -> None:
+        self.config = config or ProductionAPIConfig()
         self.cache: dict[str, tuple[Dict[str, Any], datetime]] = {}
         self.access_times: dict[str, datetime] = {}
 
@@ -371,7 +371,7 @@ class ResponseCache:
 
         return None
 
-    def set(self) -> None:
+    def set(self, cache_key: str, data: Dict[str, Any]) -> None:
         """Cache response data."""
         if not self.config.enable_response_caching:
             return
@@ -403,8 +403,8 @@ class ResponseCache:
 class ExternalAPIManager:
     """Manages integrations with external APIs."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: ProductionAPIConfig | None = None) -> None:
+        self.config = config or ProductionAPIConfig()
         self.external_apis: dict[str, ExternalAPIConfig] = {}
         self.circuit_breaker = CircuitBreaker(config)
         self.session: aiohttp.ClientSession | None = None
@@ -419,7 +419,7 @@ class ExternalAPIManager:
             },
         )
 
-    def add_external_api(self) -> None:
+    def add_external_api(self, api_config: ExternalAPIConfig) -> None:
         """Add external API configuration."""
         self.external_apis[api_config.api_name] = api_config
         # Initialize health status for new API
@@ -504,7 +504,7 @@ class ExternalAPIManager:
                     msg = f"HTTP {response.status}"
                     raise aiohttp.ClientError(msg)
 
-            except Exception as e:
+            except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                 last_exception = e
                 self.circuit_breaker.record_failure(api_name)
 
@@ -535,11 +535,11 @@ class ExternalAPIManager:
 
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health check error: %s", e)
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
-    async def _check_api_health(self) -> None:
+    async def _check_api_health(self, api_name: str, api_config: ExternalAPIConfig) -> None:
         """Check health of specific external API."""
         try:
             start_time = time.time()
@@ -581,7 +581,7 @@ class ProductionAPIGateway:
     Handles authentication, rate limiting, caching, monitoring, and external integrations.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ProductionAPIConfig | None = None) -> None:
         self.config = config or ProductionAPIConfig()
         self.endpoints: dict[str, APIEndpoint] = {}
         self.rate_limiter = RateLimiter(self.config)
@@ -721,7 +721,7 @@ class ProductionAPIGateway:
         await self.external_api_manager.shutdown()
         logger.info("Production API Gateway shutdown completed")
 
-    def register_handler(self) -> None:
+    def register_handler(self, endpoint_id: str, handler: Callable) -> None:
         """Register request handler for endpoint."""
         self.request_handlers[endpoint_id] = handler
 
@@ -834,7 +834,7 @@ class ProductionAPIGateway:
                 rate_limit_remaining=rate_remaining,
             )
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.metrics["failed_requests"] += 1
             processing_time = max((time.time() - start_time) * 1000, 0.1)
 
@@ -944,7 +944,7 @@ class ProductionAPIGateway:
 
         return base_response
 
-    def _update_average_response_time(self) -> None:
+    def _update_average_response_time(self, response_time_ms: float) -> None:
         """Update average response time metric."""
         current_avg = self.metrics["average_response_time_ms"]
         total_requests = self.metrics["total_requests"]

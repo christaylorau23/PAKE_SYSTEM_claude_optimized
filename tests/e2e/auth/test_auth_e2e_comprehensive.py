@@ -36,7 +36,7 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Login to get token
@@ -45,14 +45,14 @@ class TestAuthenticationE2EComprehensive:
             "password": user_data["password"],
         }
 
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
         assert response.status_code == 200
 
         token_data = response.json()
         access_token = token_data["access_token"]
 
         # Set authorization header
-        auth_test_client.headers.update({"Authorization": f"Bearer {access_token}"})
+        self.auth_test_client.headers.update({"Authorization": f"Bearer {access_token}"})
 
         return auth_test_client
 
@@ -73,7 +73,7 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Act - Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
 
         # Assert - Registration successful
         assert response.status_code == 201
@@ -87,7 +87,7 @@ class TestAuthenticationE2EComprehensive:
 
         # Verify user can be retrieved
         user_id = registration_result["id"]
-        response = await auth_test_client.get(f"/auth/users/{user_id}")
+        response = await self.auth_test_client.get(f"/auth/users/{user_id}")
         assert response.status_code == 200
         retrieved_user = response.json()
         assert retrieved_user["username"] == user_data["username"]
@@ -105,7 +105,7 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user first
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Act - Login user
@@ -114,7 +114,7 @@ class TestAuthenticationE2EComprehensive:
             "password": user_data["password"],
         }
 
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
 
         # Assert - Login successful
         assert response.status_code == 200
@@ -145,14 +145,14 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register and login user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         login_data = {
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
         assert response.status_code == 200
 
         login_result = response.json()
@@ -160,7 +160,7 @@ class TestAuthenticationE2EComprehensive:
 
         # Act - Refresh token
         refresh_data = {"refresh_token": refresh_token}
-        response = await auth_test_client.post("/auth/refresh", json=refresh_data)
+        response = await self.auth_test_client.post("/auth/refresh", json=refresh_data)
 
         # Assert - Token refresh successful
         assert response.status_code == 200
@@ -178,7 +178,7 @@ class TestAuthenticationE2EComprehensive:
     async def test_user_logout_flow(self) -> None:
         """Test complete user logout flow"""
         # Act - Logout user
-        response = await authenticated_auth_client.post("/auth/logout")
+        response = await self.authenticated_auth_client.post("/auth/logout")
 
         # Assert - Logout successful
         assert response.status_code == 200
@@ -186,7 +186,7 @@ class TestAuthenticationE2EComprehensive:
         assert logout_result["message"] == "Logged out successfully"
 
         # Act - Try to access protected resource after logout
-        response = await authenticated_auth_client.get("/auth/profile")
+        response = await self.authenticated_auth_client.get("/auth/profile")
 
         # Assert - Access denied after logout
         assert response.status_code == 401
@@ -206,12 +206,12 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Act - Request password reset
         reset_request = {"email": user_data["email"]}
-        response = await auth_test_client.post(
+        response = await self.auth_test_client.post(
             "/auth/password-reset", json=reset_request
         )
 
@@ -225,7 +225,7 @@ class TestAuthenticationE2EComprehensive:
         new_password = "NewPassword123!"
 
         reset_confirm = {"token": reset_token, "new_password": new_password}
-        response = await auth_test_client.post(
+        response = await self.auth_test_client.post(
             "/auth/password-reset/confirm", json=reset_confirm
         )
 
@@ -236,7 +236,7 @@ class TestAuthenticationE2EComprehensive:
 
         # Act - Login with new password
         login_data = {"username": user_data["username"], "password": new_password}
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
 
         # Assert - Login with new password successful
         assert response.status_code == 200
@@ -248,7 +248,7 @@ class TestAuthenticationE2EComprehensive:
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=old_login_data)
+        response = await self.auth_test_client.post("/auth/login", json=old_login_data)
 
         # Assert - Login with old password fails
         assert response.status_code == 401
@@ -266,11 +266,11 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Act - Enable MFA
-        response = await auth_test_client.post("/auth/mfa/enable")
+        response = await self.auth_test_client.post("/auth/mfa/enable")
         assert response.status_code == 200
         mfa_result = response.json()
         assert "secret" in mfa_result
@@ -282,7 +282,7 @@ class TestAuthenticationE2EComprehensive:
             "password": user_data["password"],
             "mfa_token": "123456",  # Simulated MFA token
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
 
         # Assert - Login with MFA successful
         assert response.status_code == 200
@@ -303,7 +303,7 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Act - Login and create session
@@ -311,7 +311,7 @@ class TestAuthenticationE2EComprehensive:
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
 
         # Assert - Login successful
         assert response.status_code == 200
@@ -319,7 +319,7 @@ class TestAuthenticationE2EComprehensive:
         session_id = login_result["session_id"]
 
         # Act - Get session info
-        response = await auth_test_client.get(f"/auth/sessions/{session_id}")
+        response = await self.auth_test_client.get(f"/auth/sessions/{session_id}")
 
         # Assert - Session info retrieved
         assert response.status_code == 200
@@ -330,7 +330,7 @@ class TestAuthenticationE2EComprehensive:
         assert "last_activity" in session_info
 
         # Act - Get all user sessions
-        response = await auth_test_client.get("/auth/sessions")
+        response = await self.auth_test_client.get("/auth/sessions")
 
         # Assert - Sessions retrieved
         assert response.status_code == 200
@@ -339,13 +339,13 @@ class TestAuthenticationE2EComprehensive:
         assert any(session["session_id"] == session_id for session in sessions)
 
         # Act - Logout and destroy session
-        response = await auth_test_client.post("/auth/logout")
+        response = await self.auth_test_client.post("/auth/logout")
 
         # Assert - Logout successful
         assert response.status_code == 200
 
         # Act - Try to get session info after logout
-        response = await auth_test_client.get(f"/auth/sessions/{session_id}")
+        response = await self.auth_test_client.get(f"/auth/sessions/{session_id}")
 
         # Assert - Session not found after logout
         assert response.status_code == 404
@@ -354,7 +354,7 @@ class TestAuthenticationE2EComprehensive:
     async def test_rbac_integration_flow(self) -> None:
         """Test RBAC integration flow"""
         # Act - Check user permissions
-        response = await authenticated_auth_client.get("/auth/permissions")
+        response = await self.authenticated_auth_client.get("/auth/permissions")
 
         # Assert - Permissions retrieved
         assert response.status_code == 200
@@ -363,7 +363,7 @@ class TestAuthenticationE2EComprehensive:
         assert "roles" in permissions
 
         # Act - Check specific permission
-        response = await authenticated_auth_client.get("/auth/permissions/users:read")
+        response = await self.authenticated_auth_client.get("/auth/permissions/users:read")
 
         # Assert - Permission check successful
         assert response.status_code == 200
@@ -371,7 +371,7 @@ class TestAuthenticationE2EComprehensive:
         assert "has_permission" in permission_result
 
         # Act - Get user roles
-        response = await authenticated_auth_client.get("/auth/roles")
+        response = await self.authenticated_auth_client.get("/auth/roles")
 
         # Assert - Roles retrieved
         assert response.status_code == 200
@@ -383,7 +383,7 @@ class TestAuthenticationE2EComprehensive:
     async def test_user_profile_management_flow(self) -> None:
         """Test complete user profile management flow"""
         # Act - Get current profile
-        response = await authenticated_auth_client.get("/auth/profile")
+        response = await self.authenticated_auth_client.get("/auth/profile")
 
         # Assert - Profile retrieved
         assert response.status_code == 200
@@ -400,7 +400,7 @@ class TestAuthenticationE2EComprehensive:
             "bio": "Updated bio information",
         }
 
-        response = await authenticated_auth_client.put(
+        response = await self.authenticated_auth_client.put(
             "/auth/profile", json=profile_update
         )
 
@@ -413,7 +413,7 @@ class TestAuthenticationE2EComprehensive:
         assert updated_profile["bio"] == profile_update["bio"]
 
         # Act - Get updated profile
-        response = await authenticated_auth_client.get("/auth/profile")
+        response = await self.authenticated_auth_client.get("/auth/profile")
 
         # Assert - Updated profile retrieved
         assert response.status_code == 200
@@ -437,7 +437,7 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Act - Try to register with invalid data
-        response = await auth_test_client.post("/auth/register", json=invalid_user_data)
+        response = await self.auth_test_client.post("/auth/register", json=invalid_user_data)
 
         # Assert - Registration failed with proper error
         assert response.status_code == 400
@@ -447,7 +447,7 @@ class TestAuthenticationE2EComprehensive:
 
         # Act - Try to login with non-existent user
         login_data = {"username": "nonexistent_user", "password": "password123"}
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
 
         # Assert - Login failed with proper error
         assert response.status_code == 401
@@ -456,7 +456,7 @@ class TestAuthenticationE2EComprehensive:
         assert "message" in error_result
 
         # Act - Try to access protected resource without authentication
-        response = await auth_test_client.get("/auth/profile")
+        response = await self.auth_test_client.get("/auth/profile")
 
         # Assert - Access denied with proper error
         assert response.status_code == 401
@@ -476,31 +476,31 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register and login user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         login_data = {
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
         assert response.status_code == 200
 
         login_result = response.json()
         access_token = login_result["access_token"]
 
         # Set authorization header
-        auth_test_client.headers.update({"Authorization": f"Bearer {access_token}"})
+        self.auth_test_client.headers.update({"Authorization": f"Bearer {access_token}"})
 
         # Act - Access protected resource
-        response = await auth_test_client.get("/auth/profile")
+        response = await self.auth_test_client.get("/auth/profile")
         assert response.status_code == 200
 
         # Simulate token expiration by using invalid token
-        auth_test_client.headers.update({"Authorization": "Bearer invalid_token"})
+        self.auth_test_client.headers.update({"Authorization": "Bearer invalid_token"})
 
         # Act - Try to access protected resource with invalid token
-        response = await auth_test_client.get("/auth/profile")
+        response = await self.auth_test_client.get("/auth/profile")
 
         # Assert - Access denied with proper error
         assert response.status_code == 401
@@ -532,7 +532,7 @@ class TestAuthenticationE2EComprehensive:
         start_time = time.time()
 
         async def register_user(self) -> None:
-            response = await auth_test_client.post("/auth/register", json=user_data)
+            response = await self.auth_test_client.post("/auth/register", json=user_data)
             return response.status_code == 201
 
         tasks = [register_user(user_data) for user_data in user_data_list]
@@ -553,7 +553,7 @@ class TestAuthenticationE2EComprehensive:
                 "username": user_data["username"],
                 "password": user_data["password"],
             }
-            response = await auth_test_client.post("/auth/login", json=login_data)
+            response = await self.auth_test_client.post("/auth/login", json=login_data)
             return response.status_code == 200
 
         tasks = [login_user(user_data) for user_data in user_data_list]
@@ -581,14 +581,14 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register and login user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         login_data = {
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
         assert response.status_code == 200
 
         login_result = response.json()
@@ -599,7 +599,7 @@ class TestAuthenticationE2EComprehensive:
 
         async def refresh_token(self) -> None:
             refresh_data = {"refresh_token": refresh_token}
-            response = await auth_test_client.post("/auth/refresh", json=refresh_data)
+            response = await self.auth_test_client.post("/auth/refresh", json=refresh_data)
             return response.status_code == 200
 
         tasks = [refresh_token() for _ in range(50)]
@@ -639,7 +639,7 @@ class TestAuthenticationE2EComprehensive:
             }
 
             # Act - Try to register with weak password
-            response = await auth_test_client.post("/auth/register", json=user_data)
+            response = await self.auth_test_client.post("/auth/register", json=user_data)
 
             # Assert - Registration should fail
             assert response.status_code == 400
@@ -660,14 +660,14 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         # Act - Try to login multiple times with wrong password
         login_data = {"username": user_data["username"], "password": "wrongpassword"}
 
         for _ in range(10):
-            response = await auth_test_client.post("/auth/login", json=login_data)
+            response = await self.auth_test_client.post("/auth/login", json=login_data)
             assert response.status_code == 401
 
         # Act - Try to login with correct password after rate limiting
@@ -675,7 +675,7 @@ class TestAuthenticationE2EComprehensive:
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=correct_login_data)
+        response = await self.auth_test_client.post("/auth/login", json=correct_login_data)
 
         # Assert - Should be rate limited
         assert response.status_code == 429
@@ -696,27 +696,27 @@ class TestAuthenticationE2EComprehensive:
         }
 
         # Register and login user
-        response = await auth_test_client.post("/auth/register", json=user_data)
+        response = await self.auth_test_client.post("/auth/register", json=user_data)
         assert response.status_code == 201
 
         login_data = {
             "username": user_data["username"],
             "password": user_data["password"],
         }
-        response = await auth_test_client.post("/auth/login", json=login_data)
+        response = await self.auth_test_client.post("/auth/login", json=login_data)
         assert response.status_code == 200
 
         login_result = response.json()
         session_id = login_result["session_id"]
 
         # Act - Try to access session with invalid session ID
-        response = await auth_test_client.get("/auth/sessions/invalid_session_id")
+        response = await self.auth_test_client.get("/auth/sessions/invalid_session_id")
 
         # Assert - Should be denied
         assert response.status_code == 404
 
         # Act - Try to access session with valid session ID
-        response = await auth_test_client.get(f"/auth/sessions/{session_id}")
+        response = await self.auth_test_client.get(f"/auth/sessions/{session_id}")
 
         # Assert - Should be allowed
         assert response.status_code == 200

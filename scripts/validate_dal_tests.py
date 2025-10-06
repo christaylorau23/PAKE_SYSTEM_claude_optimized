@@ -11,9 +11,9 @@ Validates that all DAL integration tests meet the requirements:
 import asyncio
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Configure logging
@@ -58,7 +58,7 @@ class DALTestValidator:
                 logger.info("%s: %s", status, validation_name)
                 if not result:
                     all_passed = False
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("💥 ERROR in %s: %s", validation_name, e)
                 self.validation_results[validation_name] = False
                 all_passed = False
@@ -237,7 +237,7 @@ class DALTestValidator:
         except subprocess.TimeoutExpired:
             logger.error("Code coverage validation TIMEOUT")
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Code coverage validation ERROR: %s", e)
             return False
 
@@ -386,7 +386,7 @@ async def main(self) -> None:
         logger.error("❌ Check validation report for details")
         return 1
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Validation failed with error: %s", e)
         return 1
 

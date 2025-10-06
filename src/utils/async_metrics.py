@@ -4,12 +4,12 @@ Thread-safe and async-safe metrics for observability with race condition protect
 """
 
 import asyncio
-import os
-import threading
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import os
+import threading
+import time
 from typing import Any
 
 import psutil
@@ -36,7 +36,7 @@ class AsyncMetricValue:
 class AsyncMetricsStore:
     """Async-safe metrics storage with Prometheus export capability and race condition protection."""
 
-    def __init__(self) -> None:
+    def __init__(self, service_name: str | None = None) -> None:
         self.service_name = service_name
         self.start_time = time.time()
 
@@ -76,7 +76,7 @@ class AsyncMetricsStore:
             return ""
         return "|".join(f"{k}={v}" for k, v in sorted(labels.items()))
 
-    async def increment_counter_async(self) -> None:
+    async def increment_counter_async(self, name: str, value: float = 1.0, labels: dict[str, str] | None = None) -> None:
         """Increment a counter metric (async-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -89,7 +89,7 @@ class AsyncMetricsStore:
             "Counter incremented (async): %s = %s, labels: %s", name, value, labels
         )
 
-    def increment_counter_sync(self) -> None:
+    def increment_counter_sync(self, name: str, value: float = 1.0, labels: dict[str, str] | None = None) -> None:
         """Increment a counter metric (sync-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -102,7 +102,7 @@ class AsyncMetricsStore:
             "Counter incremented (sync)", metric=name, value=value, labels=labels
         )
 
-    async def set_gauge_async(self) -> None:
+    async def set_gauge_async(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
         """Set a gauge metric value (async-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -113,7 +113,7 @@ class AsyncMetricsStore:
 
         logger.debug("Gauge set (async)", metric=name, value=value, labels=labels)
 
-    def set_gauge_sync(self) -> None:
+    def set_gauge_sync(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
         """Set a gauge metric value (sync-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -124,7 +124,7 @@ class AsyncMetricsStore:
 
         logger.debug("Gauge set (sync)", metric=name, value=value, labels=labels)
 
-    async def record_histogram_async(self) -> None:
+    async def record_histogram_async(self, name: str, value: float, labels: dict[str, str] | None = None, buckets: list[float] | None = None) -> None:
         """Record a histogram value (async-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -153,7 +153,7 @@ class AsyncMetricsStore:
             "Histogram recorded (async)", metric=name, value=value, labels=labels
         )
 
-    def record_histogram_sync(self) -> None:
+    def record_histogram_sync(self, name: str, value: float, labels: dict[str, str] | None = None, buckets: list[float] | None = None) -> None:
         """Record a histogram value (sync-safe)."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -182,7 +182,7 @@ class AsyncMetricsStore:
             "Histogram recorded (sync)", metric=name, value=value, labels=labels
         )
 
-    async def record_http_request_async(self) -> None:
+    async def record_http_request_async(self, method: str, path: str, status_code: int, duration: float | None = None) -> None:
         """Record HTTP request metrics (async-safe)."""
         normalized_path = self._normalize_path(path)
         key = f"{method}:{normalized_path}:{status_code}"
@@ -214,7 +214,7 @@ class AsyncMetricsStore:
             duration=duration,
         )
 
-    def record_http_request_sync(self) -> None:
+    def record_http_request_sync(self, method: str, path: str, status_code: int, duration: float | None = None) -> None:
         """Record HTTP request metrics (sync-safe)."""
         normalized_path = self._normalize_path(path)
         key = f"{method}:{normalized_path}:{status_code}"
@@ -302,7 +302,7 @@ class AsyncMetricsStore:
                 for metric_name, value in self._system_metrics.items():
                     await self.set_gauge_async(f"system_{metric_name}", value)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to update system metrics (async)", error=e)
 
     def update_system_metrics_sync(self) -> None:
@@ -344,7 +344,7 @@ class AsyncMetricsStore:
                 for metric_name, value in self._system_metrics.items():
                     self.set_gauge_sync(f"system_{metric_name}", value)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to update system metrics (sync)", error=e)
 
     async def get_prometheus_metrics_async(self) -> str:
@@ -609,7 +609,7 @@ class AsyncMetricsStore:
 
         return "\n".join(lines)
 
-    async def get_json_metrics_async(self) -> Dict[str, Any]:
+    async def get_json_metrics_async(self) -> dict[str, Any]:
         """Get metrics in JSON format (async-safe)."""
         await self.update_system_metrics_async()
 
@@ -635,7 +635,7 @@ class AsyncMetricsStore:
                 "system": self._system_metrics,
             }
 
-    def get_json_metrics_sync(self) -> Dict[str, Any]:
+    def get_json_metrics_sync(self) -> dict[str, Any]:
         """Get metrics in JSON format (sync-safe)."""
         self.update_system_metrics_sync()
 
@@ -677,44 +677,44 @@ def get_async_metrics_store(service_name: str = "pake-system") -> AsyncMetricsSt
 # Convenience functions for async operations
 
 
-async def increment_counter_async(self) -> None:
+async def increment_counter_async(name: str, value: float = 1.0, labels: dict[str, str] | None = None) -> None:
     """Increment a counter metric (async-safe)."""
     await get_async_metrics_store().increment_counter_async(name, value, labels)
 
 
-def increment_counter_sync(self) -> None:
+def increment_counter_sync(name: str, value: float = 1.0, labels: dict[str, str] | None = None) -> None:
     """Increment a counter metric (sync-safe)."""
     get_async_metrics_store().increment_counter_sync(name, value, labels)
 
 
-async def set_gauge_async(self) -> None:
+async def set_gauge_async(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Set a gauge metric (async-safe)."""
     await get_async_metrics_store().set_gauge_async(name, value, labels)
 
 
-def set_gauge_sync(self) -> None:
+def set_gauge_sync(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Set a gauge metric (sync-safe)."""
     get_async_metrics_store().set_gauge_sync(name, value, labels)
 
 
-async def record_histogram_async(self) -> None:
+async def record_histogram_async(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Record a histogram value (async-safe)."""
     await get_async_metrics_store().record_histogram_async(name, value, labels=labels)
 
 
-def record_histogram_sync(self) -> None:
+def record_histogram_sync(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Record a histogram value (sync-safe)."""
     get_async_metrics_store().record_histogram_sync(name, value, labels=labels)
 
 
-async def record_http_request_async(self) -> None:
+async def record_http_request_async(method: str, path: str, status_code: int, duration: float | None = None) -> None:
     """Record HTTP request metrics (async-safe)."""
     await get_async_metrics_store().record_http_request_async(
         method, path, status_code, duration
     )
 
 
-def record_http_request_sync(self) -> None:
+def record_http_request_sync(method: str, path: str, status_code: int, duration: float | None = None) -> None:
     """Record HTTP request metrics (sync-safe)."""
     get_async_metrics_store().record_http_request_sync(
         method, path, status_code, duration
@@ -727,7 +727,7 @@ def record_http_request_sync(self) -> None:
 class async_timer:
     """Async context manager for timing operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, metric_name: str, labels: dict[str, str] | None = None) -> None:
         self.metric_name = metric_name
         self.labels = labels or {}
         self.start_time = None
@@ -736,17 +736,17 @@ class async_timer:
         self.start_time = time.time()
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if self.start_time:
             duration = time.time() - self.start_time
             await record_histogram_async(self.metric_name, duration, self.labels)
 
 
-def async_timed(self) -> None:
+def async_timed(metric_name: str, labels: dict[str, str] | None = None) -> Callable:
     """Decorator to time async function execution."""
 
-    def decorator(self) -> None:
-        async def wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
             async with async_timer(metric_name, labels):
                 return await func(*args, **kwargs)
 
@@ -758,7 +758,7 @@ def async_timed(self) -> None:
 # Health check functions
 
 
-async def get_health_status_async() -> Dict[str, Any]:
+async def get_health_status_async() -> dict[str, Any]:
     """Get service health status with key metrics (async-safe)."""
     metrics_store = get_async_metrics_store()
     metrics = await metrics_store.get_json_metrics_async()
@@ -800,7 +800,7 @@ async def get_health_status_async() -> Dict[str, Any]:
     }
 
 
-def get_health_status_sync() -> Dict[str, Any]:
+def get_health_status_sync() -> dict[str, Any]:
     """Get service health status with key metrics (sync-safe)."""
     metrics_store = get_async_metrics_store()
     metrics = metrics_store.get_json_metrics_sync()
@@ -845,7 +845,7 @@ def get_health_status_sync() -> Dict[str, Any]:
 if __name__ == "__main__":
     # Example usage
 
-    async def example_async_usage(self) -> None:
+    async def example_async_usage() -> None:
         # Initialize async metrics
         store = get_async_metrics_store("test-async-service")
 

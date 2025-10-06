@@ -8,13 +8,13 @@ intelligence and actionable recommendations.
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import logging
 import statistics
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -103,7 +103,7 @@ class AdvancedAnalyticsEngine:
         try:
             self.ml_aggregation = AnalyticsAggregationService()
             self.semantic_search = get_semantic_search_service()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("ML services not fully available: %s", e)
             self.ml_aggregation = None
             self.semantic_search = None
@@ -198,7 +198,7 @@ class AdvancedAnalyticsEngine:
             )
             return report
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to generate comprehensive report: %s", e)
             return {
                 "error": str(e),
@@ -249,7 +249,7 @@ class AdvancedAnalyticsEngine:
                 timestamp=datetime.now(UTC),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("System health analysis failed: %s", e)
             return SystemHealthScore(
                 overall_score=50.0,
@@ -274,7 +274,7 @@ class AdvancedAnalyticsEngine:
                         time_range=time_range,
                     )
                     trends[metric] = trend_data
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning("Failed to analyze trend for %s: %s", metric, e)
                     trends[metric] = {"error": str(e)}
 
@@ -290,7 +290,7 @@ class AdvancedAnalyticsEngine:
                 "analysis_timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Performance trend analysis failed: %s", e)
             return {"error": str(e)}
 
@@ -326,7 +326,7 @@ class AdvancedAnalyticsEngine:
                 "analysis_timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Usage pattern analysis failed: %s", e)
             return {"error": str(e)}
 
@@ -379,7 +379,7 @@ class AdvancedAnalyticsEngine:
                 "analysis_timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Anomaly detection failed: %s", e)
             return {"error": str(e)}
 
@@ -398,7 +398,7 @@ class AdvancedAnalyticsEngine:
                 "analysis_timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation analysis failed: %s", e)
             return {"error": str(e)}
 
@@ -427,7 +427,7 @@ class AdvancedAnalyticsEngine:
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Prediction generation failed: %s", e)
             return PredictiveReport(
                 forecast_horizon="7d",
@@ -547,7 +547,7 @@ class AdvancedAnalyticsEngine:
             logger.info("Synthesized %s insights from analyses", len(insights))
             return insights
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Insight synthesis failed: %s", e)
             return []
 
@@ -623,7 +623,7 @@ class AdvancedAnalyticsEngine:
 
             return recommendations
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Recommendation generation failed: %s", e)
             return []
 

@@ -5,15 +5,15 @@ Monitors the vault for changes and automatically processes all new/modified cont
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime
 import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import time
 import uuid
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from pathlib import Path
 
 import aiohttp
 import frontmatter
@@ -183,7 +183,7 @@ class VaultWatcher(FileSystemEventHandler):
                     "Loaded %s processed files from state",
                     len(self.processed_files),
                 )
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error loading processing state: %s", e)
 
     def save_processing_state(self) -> None:
@@ -193,7 +193,7 @@ class VaultWatcher(FileSystemEventHandler):
         try:
             with open(state_file, "w") as f:
                 json.dump(self.processed_files, f, indent=2)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error saving processing state: %s", e)
 
     def get_file_hash(self, file_path: Path) -> str:
@@ -326,7 +326,7 @@ class VaultWatcher(FileSystemEventHandler):
             )
             return result
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             processing_time = time.time() - start_time
             logger.error("[ERROR] Error processing %s: %s", file_path, e)
             return ProcessingResult(
@@ -429,12 +429,12 @@ class VaultWatcher(FileSystemEventHandler):
                                 f"{self.api_bridge_url}/api/notifications",
                                 json=notification,
                             )
-                    except Exception as e:
+                    except (json.JSONDecodeError, ValueError) as e:
                         logger.warning("Could not notify API bridge: %s", e)
 
                 self.processing_queue.task_done()
 
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError) as e:
                 logger.error("Error in processing worker: %s", e)
                 await asyncio.sleep(1)
 

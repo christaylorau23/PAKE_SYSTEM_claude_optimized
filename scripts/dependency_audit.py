@@ -6,11 +6,11 @@ Integrates dependency auditing with Poetry lock file verification
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
+from pathlib import Path
 import subprocess
 import sys
-from datetime import UTC, datetime
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import aiohttp
@@ -55,7 +55,7 @@ class DependencyAuditor:
 
         except subprocess.TimeoutExpired:
             return False, {"error": "pip-audit timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error running pip-audit: {e}"}
 
     def audit_with_safety(self) -> tuple[bool, dict]:
@@ -85,7 +85,7 @@ class DependencyAuditor:
 
         except subprocess.TimeoutExpired:
             return False, {"error": "safety check timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error running safety: {e}"}
 
     def audit_with_bandit(self) -> tuple[bool, dict]:
@@ -119,7 +119,7 @@ class DependencyAuditor:
 
         except subprocess.TimeoutExpired:
             return False, {"error": "bandit scan timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error running bandit: {e}"}
 
     async def audit_dependency_licenses(self) -> tuple[bool, dict]:
@@ -165,7 +165,7 @@ class DependencyAuditor:
                 "summary": f"{len(license_issues)} license issues found",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error checking licenses: {e}"}
 
     def audit_dependency_freshness(self) -> tuple[bool, dict]:
@@ -212,7 +212,7 @@ class DependencyAuditor:
 
         except subprocess.TimeoutExpired:
             return False, {"error": "Dependency freshness check timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error checking dependency freshness: {e}"}
 
     def validate_poetry_lock_consistency(self) -> tuple[bool, dict]:
@@ -236,7 +236,7 @@ class DependencyAuditor:
 
         except subprocess.TimeoutExpired:
             return False, {"error": "Poetry consistency check timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, {"error": f"Error checking Poetry consistency: {e}"}
 
     async def run_comprehensive_audit(self) -> dict:

@@ -3,14 +3,14 @@ Enterprise-grade observability, insights, and performance analytics.
 """
 
 import asyncio
-import logging
-import statistics
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+import statistics
+import time
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +172,8 @@ class AnalyticsPlatformConfig:
 class MetricsCollector:
     """High-performance metrics collection and storage."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: AnalyticsPlatformConfig | None = None) -> None:
+        self.config = config or AnalyticsPlatformConfig()
         self.metrics_buffer: deque = deque(maxlen=100000)  # High-performance buffer
         self.aggregated_metrics: dict[str, dict] = defaultdict(dict)
         self.metric_schemas: dict[str, MetricType] = {}
@@ -213,7 +213,7 @@ class MetricsCollector:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to collect metric %s: %s", metric.metric_name, e)
             return False
 
@@ -236,7 +236,7 @@ class MetricsCollector:
 
         return successful_count
 
-    async def _aggregate_metric(self) -> None:
+    async def _aggregate_metric(self, metric: MetricPoint) -> None:
         """Aggregate metric for efficient storage and querying."""
         window_key = self._get_aggregation_window_key(metric.timestamp)
         metric_key = f"{metric.component.value}_{metric.metric_name}"
@@ -323,8 +323,8 @@ class MetricsCollector:
 class AlertManager:
     """Intelligent alerting and notification management."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: AnalyticsPlatformConfig | None = None) -> None:
+        self.config = config or AnalyticsPlatformConfig()
         self.alert_rules: dict[str, AlertRule] = {}
         self.active_alerts: dict[str, Alert] = {}
         self.resolved_alerts: deque = deque(maxlen=10000)
@@ -405,7 +405,7 @@ class AlertManager:
         for rule in default_rules:
             self.add_alert_rule(rule)
 
-    def add_alert_rule(self) -> None:
+    def add_alert_rule(self, rule: AlertRule) -> None:
         """Add new alert rule."""
         self.alert_rules[rule.rule_id] = rule
         logger.info("Added alert rule: %s (%s)", rule.name, rule.rule_id)
@@ -517,7 +517,7 @@ class AlertManager:
             if condition.startswith("<="):
                 return value <= threshold
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error evaluating condition '%s': %s", condition, e)
             return False
 
@@ -585,8 +585,8 @@ class AlertManager:
 class PerformanceAnalyzer:
     """Advanced performance analytics and insights generation."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: AnalyticsPlatformConfig | None = None) -> None:
+        self.config = config or AnalyticsPlatformConfig()
         self.analysis_cache: dict[str, tuple[Any, datetime]] = {}
         self.trend_detectors: dict[str, deque] = defaultdict(
             lambda: deque(maxlen=1440),
@@ -870,7 +870,7 @@ class ComprehensiveAnalyticsPlatform:
     Provides enterprise-grade observability and insights.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: AnalyticsPlatformConfig | None = None) -> None:
         self.config = config or AnalyticsPlatformConfig()
         self.metrics_collector = MetricsCollector(self.config)
         self.alert_manager = AlertManager(self.config)
@@ -1032,7 +1032,7 @@ class ComprehensiveAnalyticsPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in real-time monitoring loop: %s", e)
                 await asyncio.sleep(30)  # Back off on error
 
@@ -1053,7 +1053,7 @@ class ComprehensiveAnalyticsPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in alert processing loop: %s", e)
                 await asyncio.sleep(30)
 
@@ -1090,7 +1090,7 @@ class ComprehensiveAnalyticsPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in analytics computation loop: %s", e)
                 await asyncio.sleep(300)  # 5 minute back off
 
@@ -1119,11 +1119,11 @@ class ComprehensiveAnalyticsPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in dashboard update loop: %s", e)
                 await asyncio.sleep(60)
 
-    async def _send_notification(self) -> None:
+    async def _send_notification(self, alert: Alert) -> None:
         """Send alert notification (mock implementation)."""
         # In production, this would integrate with actual notification systems
         logger.info(
@@ -1154,7 +1154,7 @@ class ComprehensiveAnalyticsPlatform:
             await self.alert_manager.resolve_alert(alert_id)
             logger.info("Auto-resolved stale alert: %s", alert_id)
 
-    def register_system_component(self) -> None:
+    def register_system_component(self, component: SystemComponent, metadata: Dict[str, Any] | None = None) -> None:
         """Register a system component for monitoring."""
         self.system_components[component] = {
             "registered_at": datetime.now(UTC),

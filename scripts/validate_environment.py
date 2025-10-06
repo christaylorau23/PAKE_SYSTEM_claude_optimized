@@ -5,10 +5,10 @@ Validates that local development environment matches CI/CD requirements
 """
 
 import json
+from pathlib import Path
 import platform
 import subprocess
 import sys
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
@@ -37,7 +37,7 @@ class EnvironmentValidator:
             print(f"✅ Python version: {python_version}")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.errors.append(f"Failed to check Python version: {e}")
             return False
 
@@ -147,7 +147,7 @@ class EnvironmentValidator:
                         f"Dockerfile.production doesn't use Python {self.required_python_version}"
                     )
                     return False
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.errors.append(f"Failed to read Dockerfile.production: {e}")
             return False
 
@@ -173,7 +173,7 @@ class EnvironmentValidator:
                         f"CI workflow doesn't specify Python {self.required_python_version.split('.')[0]}.{self.required_python_version.split('.')[1]}"
                     )
                     return False
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.errors.append(f"Failed to read CI workflow: {e}")
             return False
 

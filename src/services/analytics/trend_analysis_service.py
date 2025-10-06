@@ -4,13 +4,13 @@ Provides comprehensive trend analysis including time series decomposition,
 seasonality detection, trend forecasting, and trend comparison across metrics.
 """
 
-import logging
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -239,7 +239,7 @@ class TrendAnalysisService:
                 trend_segments=trend_segments,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend analysis failed for %s: %s", metric_name, e)
             # Return empty result on error
             return TrendAnalysisResult(
@@ -296,7 +296,7 @@ class TrendAnalysisService:
                         best_slope = slope
                         best_model = trend_type
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.debug("Trend model %s failed: %s", trend_type, e)
                     continue
 
@@ -328,7 +328,7 @@ class TrendAnalysisService:
                 best_r_squared,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend type detection failed: %s", e)
             return TrendType.STATIONARY, 0.0, "unknown", 0.0, 0.0
 
@@ -346,7 +346,7 @@ class TrendAnalysisService:
 
             return max(r_squared, 0), slope
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Linear trend fitting failed: %s", e)
             return 0.0, 0.0
 
@@ -370,7 +370,7 @@ class TrendAnalysisService:
 
             return max(r_squared, 0), slope
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Exponential trend fitting failed: %s", e)
             return 0.0, 0.0
 
@@ -391,7 +391,7 @@ class TrendAnalysisService:
 
             return max(r_squared, 0), slope
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Logarithmic trend fitting failed: %s", e)
             return 0.0, 0.0
 
@@ -414,7 +414,7 @@ class TrendAnalysisService:
 
             return max(r_squared, 0), slope
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Polynomial trend fitting failed: %s", e)
             return 0.0, 0.0
 
@@ -466,7 +466,7 @@ class TrendAnalysisService:
 
             return seasonality_type, best_score
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Seasonality detection failed: %s", e)
             return SeasonalityType.NONE, 0.0
 
@@ -503,7 +503,7 @@ class TrendAnalysisService:
             # Normalize to 0-1 scale
             return min(cv, 1.0)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Seasonality score calculation failed: %s", e)
             return 0.0
 
@@ -551,7 +551,7 @@ class TrendAnalysisService:
                         "seasonal": decomposition.seasonal.tolist(),
                         "residual": decomposition.resid.fillna(0).tolist(),
                     }
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning("Seasonal decomposition failed: %s", e)
 
             # Fallback: simple trend extraction
@@ -574,7 +574,7 @@ class TrendAnalysisService:
                 "residual": residual.tolist(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Time series decomposition failed: %s", e)
             return {
                 "trend": values.tolist(),
@@ -603,7 +603,7 @@ class TrendAnalysisService:
                 "n_observations": result[3],
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Stationarity test failed: %s", e)
             return {"is_stationary": False, "p_value": 1.0, "test_statistic": 0.0}
 
@@ -695,7 +695,7 @@ class TrendAnalysisService:
 
             return breakpoints, segments
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Breakpoint detection failed: %s", e)
             return [], []
 
@@ -737,7 +737,7 @@ class TrendAnalysisService:
 
             return forecast_values, forecast_confidence
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend forecasting failed: %s", e)
             return [], []
 
@@ -769,7 +769,7 @@ class TrendAnalysisService:
 
             return (slope - margin, slope + margin)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend confidence interval calculation failed: %s", e)
             return (0.0, 0.0)
 
@@ -824,7 +824,7 @@ class TrendAnalysisService:
 
             return time_series
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Mock time series generation failed: %s", e)
             # Return minimal data
             return [(datetime.now(UTC), 100.0)]
@@ -913,7 +913,7 @@ class TrendAnalysisService:
                 trend_clusters=trend_clusters,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend comparison failed: %s", e)
             return TrendComparison(
                 metrics=[],
@@ -951,7 +951,7 @@ class TrendAnalysisService:
                 + type_similarity * 0.2
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend similarity calculation failed: %s", e)
             return 0.0
 
@@ -1001,7 +1001,7 @@ class TrendAnalysisService:
 
             return list(clusters.values())
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend clustering failed: %s", e)
             return [[result.metric_name] for result in trend_results]
 
@@ -1028,7 +1028,7 @@ class TrendAnalysisService:
                 "cache_size": len(self.trend_models_cache),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

@@ -4,11 +4,15 @@ Comprehensive admin dashboard with user management, system monitoring, and analy
 """
 
 import asyncio
-import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict
+
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 from ..authentication.jwt_auth_service import JWTAuthenticationService
 from ..caching.redis_cache_service import RedisCacheService
@@ -124,7 +128,7 @@ class AdminDashboardService:
     - Maintenance operations
     """
 
-    def __init__(self) -> None:
+    def __init__(self, database_service: PostgreSQLService, auth_service: JWTAuthenticationService, search_history_service: SearchHistoryService, websocket_manager: WebSocketManager, cache_service: RedisCacheService) -> None:
         self.database_service = database_service
         self.auth_service = auth_service
         self.search_history_service = search_history_service
@@ -204,7 +208,7 @@ class AdminDashboardService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get users: %s", e)
             raise
 
@@ -257,7 +261,7 @@ class AdminDashboardService:
                 "online_status": {"is_online": is_online, "session_info": session_info},
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get user details: %s", e)
             raise
 
@@ -368,7 +372,7 @@ class AdminDashboardService:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to perform user action %s: %s", action, e)
             raise
 
@@ -451,7 +455,7 @@ class AdminDashboardService:
 
             return health
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get system health: %s", e)
             raise
 
@@ -523,7 +527,7 @@ class AdminDashboardService:
 
             return analytics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get system analytics: %s", e)
             raise
 
@@ -566,7 +570,7 @@ class AdminDashboardService:
 
             return security_events
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get security events: %s", e)
             raise
 
@@ -594,7 +598,7 @@ class AdminDashboardService:
 
             return {"database_config": config, "runtime_config": runtime_config}
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get system config: %s", e)
             raise
 
@@ -638,7 +642,7 @@ class AdminDashboardService:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update system config: %s", e)
             raise
 
@@ -731,7 +735,7 @@ class AdminDashboardService:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to perform maintenance operation %s: %s", operation, e)
             raise
 
@@ -819,7 +823,7 @@ class AdminDashboardService:
                 "avg_response_time": 0,
                 "error_rate": 0,
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get performance metrics: %s", e)
             return {}
 
@@ -827,7 +831,7 @@ class AdminDashboardService:
         """Get user statistics."""
         try:
             return await self.database_service.get_user_statistics(start_date)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get user statistics: %s", e)
             return {}
 
@@ -835,7 +839,7 @@ class AdminDashboardService:
         """Get search statistics."""
         try:
             return await self.database_service.get_search_statistics(start_date)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get search statistics: %s", e)
             return {}
 
@@ -843,7 +847,7 @@ class AdminDashboardService:
         """Get performance statistics."""
         try:
             return await self.database_service.get_performance_statistics(start_date)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get performance statistics: %s", e)
             return {}
 
@@ -851,7 +855,7 @@ class AdminDashboardService:
         """Get error statistics."""
         try:
             return await self.database_service.get_error_statistics(start_date)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get error statistics: %s", e)
             return {}
 
@@ -873,7 +877,7 @@ class AdminDashboardService:
                 details=details,
                 timestamp=datetime.now(UTC),
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to log admin action: %s", e)
 
 

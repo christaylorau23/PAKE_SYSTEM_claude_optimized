@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE System - Bandit SAST Integration
 Implements Bandit static analysis security testing (SAST) integration with proper
@@ -10,9 +12,9 @@ noisy warnings into deliberate, auditable security decisions.
 
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # Add project root to path for imports
@@ -79,8 +81,11 @@ class BanditSASTIntegration:
             try:
                 with open(policy_file) as f:
                     return json.load(f)
-            except (OSError, json.JSONDecodeError):
-                pass
+            except (OSError, json.JSONDecodeError) as e:
+
+                logger.debug(f"Exception in bandit_sast_integration.py: {e}")
+
+                # Continue gracefully
 
         return self._default_suppression_policy()
 
@@ -176,7 +181,7 @@ class BanditSASTIntegration:
             return {"error": "Bandit scan timed out"}
         except FileNotFoundError:
             return {"error": "Bandit not installed"}
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return {"error": f"Bandit scan failed: {str(e)}"}
 
     def _analyze_scan_results(self, results: dict[str, Any]) -> dict[str, Any]:

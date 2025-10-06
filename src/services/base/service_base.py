@@ -3,16 +3,16 @@
 Provides common functionality and patterns for all PAKE services.
 """
 
-import asyncio
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
 
 from src.utils.exceptions import (
     ConfigurationException,
@@ -130,7 +130,7 @@ class BaseService(ABC):
     - Lifecycle management
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ServiceConfig) -> None:
         """Initialize base service.
 
         Args:
@@ -161,7 +161,7 @@ class BaseService(ABC):
             self._initialize()
             self.status = ServiceStatus.HEALTHY
             self.logger.info("Service %s initialized successfully", self.config.name)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.status = ServiceStatus.ERROR
             error_msg = f"Failed to initialize service {self.config.name}: {str(e)}"
             self.logger.error(error_msg)
@@ -204,7 +204,7 @@ class BaseService(ABC):
             try:
                 result = check_func()
                 results.append(result)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 results.append(
                     HealthCheck(
                         name=name,
@@ -249,7 +249,7 @@ class BaseService(ABC):
             result = func(*args, **kwargs)
             success = True
             return result
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error executing %s: %s", func.__name__, str(e))
             raise
         finally:
@@ -262,7 +262,7 @@ class BaseService(ABC):
             self._cleanup()
             self.status = ServiceStatus.STOPPED
             self.logger.info("Service %s shutdown completed", self.config.name)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error during service shutdown: %s", str(e))
             self.status = ServiceStatus.ERROR
 
@@ -276,7 +276,7 @@ class AsyncBaseService(BaseService):
     Extends BaseService with async capabilities
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ServiceConfig) -> None:
         super().__init__(config)
         self._shutdown_event = asyncio.Event()
         self._background_tasks: list[asyncio.Task] = []
@@ -295,7 +295,7 @@ class AsyncBaseService(BaseService):
             await self._async_initialize()
             self.status = ServiceStatus.HEALTHY
             self.logger.info("Async service %s started successfully", self.config.name)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.status = ServiceStatus.ERROR
             error_msg = f"Failed to start async service {self.config.name}: {str(e)}"
             self.logger.error(error_msg)
@@ -343,7 +343,7 @@ class AsyncBaseService(BaseService):
                 result = func(*args, **kwargs)
             success = True
             return result
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error executing async %s: %s", func.__name__, str(e))
             raise
         finally:
@@ -351,7 +351,7 @@ class AsyncBaseService(BaseService):
             self._record_request(success, duration)
 
     @asynccontextmanager
-    async def timeout_context(self) -> None:
+    async def timeout_context(self, timeout: float | None = None) -> None:
         """Context manager for timeout handling."""
         timeout = timeout or self.config.timeout_seconds
 
@@ -385,7 +385,7 @@ class AsyncBaseService(BaseService):
                 if asyncio.iscoroutinefunction(func):
                     return await func(*args, **kwargs)
                 return func(*args, **kwargs)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 last_exception = e
                 if attempt == max_attempts - 1:
                     break
@@ -418,7 +418,7 @@ class AsyncBaseService(BaseService):
                 else:
                     result = check_func()
                 results.append(result)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 results.append(
                     HealthCheck(
                         name=name,

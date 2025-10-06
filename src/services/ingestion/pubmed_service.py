@@ -8,11 +8,11 @@ Following TDD methodology:
 - Based on NCBI E-utilities API documentation and best practices
 """
 
-import logging
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import xml.etree.ElementTree as ET
 
 import aiohttp
 
@@ -133,7 +133,7 @@ class PubMedService:
     GREEN PHASE: Minimal implementation to pass tests.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/", email: str | None = None, api_key: str | None = None, max_results: int = 50) -> None:
         """Initialize PubMed E-utilities Service."""
         self.base_url = base_url
         self.email = email
@@ -259,7 +259,7 @@ class PubMedService:
                         "idlist": [],
                     },
                 }
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             # Check if it's a specific HTTP error
             if hasattr(e, "status"):
                 if e.status == 503:
@@ -302,7 +302,7 @@ class PubMedService:
         except Exception:
             return ""
 
-    async def _make_request(self) -> None:
+    async def _make_request(self, url: str, params: dict[str, Any] | None = None) -> "MockPubMedAPIResponse":
         """Make request to NCBI E-utilities."""
         session = await self._get_session()
         full_url = f"{self.base_url}{url}"
@@ -313,7 +313,7 @@ class PubMedService:
                     status=response.status,
                     text=await response.text(),
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Handle network errors
             return MockPubMedAPIResponse(
                 status=500,
@@ -427,7 +427,7 @@ class PubMedService:
                 query_used=query,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Handle rate limiting specifically
             if "rate limit" in str(e).lower():
                 return PubMedResult(
@@ -458,11 +458,7 @@ class PubMedService:
         filtered_papers = papers
 
         # Filter by MeSH terms if specified
-        if query.mesh_terms:
-            filtered_papers = []
-            for paper in papers:
-                if any(mesh_term in paper.mesh_terms for mesh_term in query.mesh_terms):
-                    filtered_papers.append(paper)
+        self.__apply_query_filters_conditional_handler()
 
         # Filter by publication types if specified
         if query.publication_types:
@@ -512,6 +508,14 @@ class PubMedService:
             filtered_papers = temp_filtered
 
         return filtered_papers
+
+    def __apply_query_filters_conditional_handler(self) -> None:
+        """Extracted method to handle conditional logic."""
+        if query.mesh_terms:
+filtered_papers = []
+for paper in papers:
+if any(mesh_term in paper.mesh_terms for mesh_term in query.mesh_terms):
+filtered_papers.append(paper)
 
     async def parse_pubmed_response(self, xml_text: str) -> PubMedResult:
         """Parse PubMed XML response into structured data.
@@ -680,7 +684,7 @@ class PubMedService:
 
                     papers.append(paper)
 
-                except Exception as paper_error:
+                except (ValueError, RuntimeError) as paper_error:
                     logger.warning("Error parsing individual paper: %s", paper_error)
                     continue
 
@@ -695,7 +699,7 @@ class PubMedService:
                 ),
                 papers=[],
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return PubMedResult(
                 success=False,
                 error=PubMedError(message=str(e), error_code="UNKNOWN_ERROR"),
@@ -884,7 +888,7 @@ class PubMedService:
 class MockPubMedAPIResponse:
     """Mock response class for testing."""
 
-    def __init__(self) -> None:
+    def __init__(self, status: int, text: str) -> None:
         self.status = status
         self._text = text
 

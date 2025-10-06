@@ -22,21 +22,24 @@ Performance Target: <500ms notification delivery, 99.9% delivery success rate
 
 import asyncio
 import base64
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import hashlib
 import hmac
 import json
 import logging
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import aiohttp
 import aiosqlite
+import sqlalchemy
+import psycopg2
+import asyncpg
+from cryptography.hazmat.primitives import serialization
 import jwt
 import redis.asyncio as redis
-from cryptography.hazmat.primitives import serialization
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -203,13 +206,13 @@ class DeliveryResult:
 class APNSProvider:
     """Apple Push Notification Service provider."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.team_id = config.get("team_id")
-        self.key_id = config.get("key_id")
-        self.bundle_id = config.get("bundle_id")
-        self.private_key_path = config.get("private_key_path")
-        self.use_sandbox = config.get("use_sandbox", True)
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.team_id = self.config.get("team_id")
+        self.key_id = self.config.get("key_id")
+        self.bundle_id = self.config.get("bundle_id")
+        self.private_key_path = self.config.get("private_key_path")
+        self.use_sandbox = self.config.get("use_sandbox", True)
 
         # APNS endpoints
         self.apns_host = (
@@ -234,7 +237,7 @@ class APNSProvider:
                     "APNS private key not found, APNS notifications disabled",
                 )
                 self.private_key = None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error loading APNS private key: %s", e)
             self.private_key = None
 
@@ -258,7 +261,7 @@ class APNSProvider:
                 headers=headers,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating APNS JWT token: %s", e)
             return None
 
@@ -360,7 +363,7 @@ class APNSProvider:
                     },
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending APNS notification: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
@@ -374,10 +377,10 @@ class APNSProvider:
 class FCMProvider:
     """Firebase Cloud Messaging provider for Android."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.server_key = config.get("server_key")
-        self.project_id = config.get("project_id")
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.server_key = self.config.get("server_key")
+        self.project_id = self.config.get("project_id")
         self.fcm_url = "https://fcm.googleapis.com/fcm/send"
 
     async def send_notification(
@@ -470,7 +473,7 @@ class FCMProvider:
                     provider_response=response_data,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending FCM notification: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
@@ -484,11 +487,11 @@ class FCMProvider:
 class TwilioSMSProvider:
     """Twilio SMS provider."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.account_sid = config.get("account_sid")
-        self.auth_token = config.get("auth_token")
-        self.from_number = config.get("from_number")
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.account_sid = self.config.get("account_sid")
+        self.auth_token = self.config.get("auth_token")
+        self.from_number = self.config.get("from_number")
         self.twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
 
     async def send_sms(
@@ -555,7 +558,7 @@ class TwilioSMSProvider:
                     provider_response=response_data,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending SMS: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
@@ -569,9 +572,9 @@ class TwilioSMSProvider:
 class WebhookProvider:
     """Generic webhook provider."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.webhooks = config.get("webhooks", [])
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.webhooks = self.config.get("webhooks", [])
 
     async def send_webhook(
         self,
@@ -639,7 +642,7 @@ class WebhookProvider:
                     },
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending webhook: %s", e)
             return DeliveryResult(
                 notification_id=message.notification_id,
@@ -653,25 +656,25 @@ class WebhookProvider:
 class MobileNotificationService:
     """Main mobile notification service."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Initialize providers
-        self.apns_provider = APNSProvider(config.get("apns", {}))
-        self.fcm_provider = FCMProvider(config.get("fcm", {}))
-        self.sms_provider = TwilioSMSProvider(config.get("twilio", {}))
-        self.webhook_provider = WebhookProvider(config.get("webhook", {}))
+        self.apns_provider = APNSProvider(self.config.get("apns", {}))
+        self.fcm_provider = FCMProvider(self.config.get("fcm", {}))
+        self.sms_provider = TwilioSMSProvider(self.config.get("twilio", {}))
+        self.webhook_provider = WebhookProvider(self.config.get("webhook", {}))
 
         # Database for device and notification management
-        self.db_path = config.get("db_path", "data/mobile_notifications.db")
+        self.db_path = self.config.get("db_path", "data/mobile_notifications.db")
 
         # Redis for real-time notification queuing
         self.redis_client = None
-        if config.get("redis_url"):
-            self.redis_client = redis.from_url(config["redis_url"])
+        if self.config.get("redis_url"):
+            self.redis_client = redis.from_url(self.config["redis_url"])
 
         # Performance settings
-        self.max_concurrent_sends = config.get("max_concurrent_sends", 100)
+        self.max_concurrent_sends = self.config.get("max_concurrent_sends", 100)
         self.retry_delays = [30, 300, 1800, 7200]  # 30s, 5m, 30m, 2h
 
         # Initialize database
@@ -764,7 +767,7 @@ class MobileNotificationService:
 
             logger.info("Mobile notifications database initialized")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error initializing database: %s", e)
 
     async def register_device(self, device: MobileDevice) -> bool:
@@ -801,7 +804,7 @@ class MobileNotificationService:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error registering device %s: %s", device.device_id, e)
             return False
 
@@ -868,7 +871,7 @@ class MobileNotificationService:
             )
             return delivery_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error sending notification %s: %s", message.notification_id, e
             )
@@ -893,7 +896,7 @@ class MobileNotificationService:
                 error_message=f"Unsupported platform: {device.platform.value}",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending to device %s: %s", device.device_id, e)
             return DeliveryResult(
                 notification_id=message.notification_id,
@@ -959,7 +962,7 @@ class MobileNotificationService:
 
                 return devices
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting devices for recipient %s: %s", recipient_id, e)
             return []
 
@@ -975,7 +978,7 @@ class MobileNotificationService:
         # For demo purposes, return configured webhooks
         return self.webhook_provider.webhooks
 
-    async def _store_notification(self) -> None:
+    async def _store_notification(self, message: NotificationMessage) -> None:
         """Store notification in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1012,12 +1015,12 @@ class MobileNotificationService:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error(
                 "Error storing notification %s: %s", message.notification_id, e
             )
 
-    async def _store_delivery_result(self) -> None:
+    async def _store_delivery_result(self, result: DeliveryResult) -> None:
         """Store delivery result in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1044,7 +1047,7 @@ class MobileNotificationService:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing delivery result: %s", e)
 
     def _determine_overall_status(
@@ -1064,7 +1067,7 @@ class MobileNotificationService:
             return DeliveryStatus.SENT  # Partial success still counts as sent
         return DeliveryStatus.FAILED
 
-    async def _update_notification_status(self) -> None:
+    async def _update_notification_status(self, notification_id: str, status: DeliveryStatus) -> None:
         """Update notification status in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1078,7 +1081,7 @@ class MobileNotificationService:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error updating notification status: %s", e)
 
     async def get_notification_status(
@@ -1128,13 +1131,13 @@ class MobileNotificationService:
                     ],
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting notification status: %s", e)
             return None
 
 
 # Demo and testing functions
-async def demo_mobile_notifications(self) -> None:
+async def demo_mobile_notifications() -> None:
     """Demonstrate mobile notification capabilities."""
     print("📱 Mobile Notification Service Demo - Personal Wealth Generation")
     print("=" * 80)

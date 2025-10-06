@@ -18,19 +18,19 @@ E2E Testing Principles:
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import time
-from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
-
 from services.analytics.performance_analyzer import PerformanceAnalyzer
-from services.caching.redis_cache_strategy import RedisCacheStrategy
 from services.database.connection_manager import DatabaseConnectionManager
+from services.security.authentication_service import AuthenticationService
+
+from services.caching.redis_cache_strategy import RedisCacheStrategy
 from services.ingestion.orchestrator import IngestionConfig, IngestionOrchestrator
 from services.messaging.message_bus import MessageBus
-from services.security.authentication_service import AuthenticationService
 
 
 class TestCompleteUserWorkflows:
@@ -98,7 +98,7 @@ class TestCompleteUserWorkflows:
         5. Results are stored and cached
         6. User receives comprehensive results
         """
-        structured_logger.info("Starting complete knowledge ingestion workflow test")
+        self.structured_logger.info("Starting complete knowledge ingestion workflow test")
 
         db_manager = full_system_setup["database"]
         cache = full_system_setup["cache"]
@@ -136,7 +136,7 @@ class TestCompleteUserWorkflows:
             },
         }
 
-        structured_logger.info(
+        self.structured_logger.info(
             "Created user research request",
             topic=user_request["topic"],
             user_id=user_request["user_id"],
@@ -584,7 +584,7 @@ class TestCompleteUserWorkflows:
                     "sources": [
                         {
                             "type": "web",
-                            "url": f"https://example.com/{topic.replace(' ', '-').lower()}",
+                            "url": f"https://example.com/{self.topic.replace(' ', '-').lower()}",
                             "priority": 1,
                         }
                     ],

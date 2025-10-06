@@ -10,15 +10,15 @@ Implements high-performance message bus using Redis Streams for:
 """
 
 import asyncio
-import contextlib
-import json
-import logging
-import uuid
 from collections.abc import Callable
+import contextlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import json
+import logging
+from typing import Any, Dict
+import uuid
 
 import redis.asyncio as redis
 from redis.asyncio import default_backoff
@@ -91,7 +91,7 @@ class MessageBus:
     - System components
     """
 
-    def __init__(self) -> None:
+    def __init__(self, redis_url: str = "redis://localhost:6379", stream_config: StreamConfig | None = None, max_connections: int = 10) -> None:
         """Initialize message bus with Redis connection pool."""
         self.redis_url = redis_url
         self.config = stream_config or StreamConfig()
@@ -214,7 +214,7 @@ class MessageBus:
                 )
                 return message_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self._metrics["messages_failed"] += 1
             logger.error("Failed to publish message to stream %s: %s", stream, e)
             raise
@@ -257,7 +257,7 @@ class MessageBus:
         )
         return subscription_id
 
-    async def unsubscribe(self) -> None:
+    async def unsubscribe(self, subscription_id: str) -> None:
         """Unsubscribe from stream."""
         if subscription_id in self._subscribers:
             task = self._subscribers.pop(subscription_id)
@@ -287,7 +287,7 @@ class MessageBus:
         response_future = asyncio.Future()
 
         # Subscribe to response stream temporarily
-        async def response_handler(self) -> None:
+        async def response_handler(message: Message) -> None:
             if message.correlation_id == correlation_id:
                 response_future.set_result(message)
 
@@ -304,7 +304,7 @@ class MessageBus:
             # Cleanup response subscription
             await self.unsubscribe(response_sub_id)
 
-    async def send_response(self) -> None:
+    async def send_response(self, response: Message, original_message: Message, response_stream: str) -> None:
         """Send response to request with proper correlation."""
         response.correlation_id = original_message.correlation_id
         response.target = original_message.source
@@ -334,7 +334,7 @@ class MessageBus:
         except redis.ResponseError:
             return []
 
-    async def acknowledge_message(self) -> None:
+    async def acknowledge_message(self, stream: str, group: str, message_id: str) -> None:
         """Acknowledge message processing."""
         try:
             async with redis.Redis(connection_pool=self.redis_pool) as r:
@@ -382,12 +382,15 @@ class MessageBus:
                     try:
                         await r.xinfo_stream(stream)
                         active_streams.add(stream)
-                    except redis.ResponseError:
-                        pass
+                    except redis.ResponseError as e:
+
+                        logger.debug(f"Exception in message_bus.py: {e}")
+
+                        # Continue gracefully
 
                 health["streams_active"] = len(active_streams)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             health["status"] = "unhealthy"
             health["error"] = str(e)
 
@@ -414,12 +417,12 @@ class MessageBus:
 
                     logger.debug("Initialized stream: %s", stream)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning("Failed to initialize stream %s: %s", stream, e)
 
         self._metrics["active_streams"] = len(core_streams)
 
-    async def _consumer_loop(self) -> None:
+    async def _consumer_loop(self, stream: str, group: str, consumer: str, handler: Callable[[Message], None]) -> None:
         """Main consumer loop for processing messages."""
         logger.info("Starting consumer loop for %s:%s:%s", stream, group, consumer)
 
@@ -459,7 +462,7 @@ class MessageBus:
 
                                 self._metrics["messages_received"] += 1
 
-                            except Exception as e:
+                            except (ValueError, RuntimeError) as e:
                                 logger.error(
                                     "Error processing message %s: %s",
                                     message_id,
@@ -469,7 +472,7 @@ class MessageBus:
 
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Consumer loop error: %s", e)
                     await asyncio.sleep(1)  # Brief pause before retry
 

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """Enterprise Authentication and Security
 Task T039-T045 - Phase 18 Production System Integration.
 
@@ -5,11 +7,14 @@ Production-grade JWT authentication, security middleware, and
 enterprise security patterns.
 """
 
-import os
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import os
+from typing import Any, Dict
 from uuid import UUID, uuid4
 
+import sqlalchemy
+import psycopg2
+import asyncpg
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -46,7 +51,7 @@ except (ValueError, RuntimeError) as e:
         "Please configure Azure Key Vault or SECRET_KEY environment variable."
     )
     raise ValueError(msg) from e
-except Exception as e:
+except (ImportError, ModuleNotFoundError) as e:
     msg = (
         f"Unexpected error initializing authentication: {e}. "
         "Please check your secrets configuration."
@@ -234,7 +239,7 @@ class SecurityMiddleware:
             # In production, this would validate against a database of API keys
             # For now, we'll use a simple check with proper secrets management
             return api_key == expected_api_key
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to validate API key: %s", e)
             return False
 
@@ -246,7 +251,7 @@ class SecurityMiddleware:
         return True
 
     @staticmethod
-    async def log_security_event(self) -> None:
+    async def log_security_event(self, event_type: str, user_id: str, details: str) -> None:
         """Log security events."""
         # In production, this would log to a security monitoring system
         print(f"Security Event: {event_type} - User: {user_id} - Details: {details}")

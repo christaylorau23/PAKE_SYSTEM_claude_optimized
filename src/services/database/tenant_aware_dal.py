@@ -3,13 +3,15 @@
 Enterprise-grade Data Access Layer with automatic tenant isolation.
 """
 
-import logging
 from abc import ABC
 from datetime import UTC, datetime, timedelta
-from typing import Any, Generic, TypeVar
+import logging
+from typing import Any, Dict, Generic, List, TypeVar
 
 import sqlalchemy as sa
 from sqlalchemy import func
+import psycopg2
+import asyncpg
 
 from src.middleware.tenant_context import get_current_tenant_id, get_current_user_id
 from src.services.database.multi_tenant_schema import (
@@ -37,7 +39,7 @@ class TenantAwareRepository[T: Base](ABC):
     Ensures all database operations are automatically scoped to the current tenant.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService, model_class: type[T]) -> None:
         self.db_service = db_service
         self.model_class = model_class
         self._session_maker = db_service._session_maker
@@ -175,7 +177,7 @@ class TenantAwareRepository[T: Base](ABC):
 class UserRepository(TenantAwareRepository[User]):
     """Tenant-aware user repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, User)
 
     async def get_by_username(
@@ -235,7 +237,7 @@ class UserRepository(TenantAwareRepository[User]):
 class SearchHistoryRepository(TenantAwareRepository[SearchHistory]):
     """Tenant-aware search history repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, SearchHistory)
 
     async def get_by_user(
@@ -347,7 +349,7 @@ class SearchHistoryRepository(TenantAwareRepository[SearchHistory]):
 class SavedSearchRepository(TenantAwareRepository[SavedSearch]):
     """Tenant-aware saved search repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, SavedSearch)
 
     async def get_by_user(
@@ -398,7 +400,7 @@ class SavedSearchRepository(TenantAwareRepository[SavedSearch]):
 class SystemMetricsRepository(TenantAwareRepository[SystemMetrics]):
     """Tenant-aware system metrics repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, SystemMetrics)
 
     async def get_by_type(
@@ -441,7 +443,7 @@ class SystemMetricsRepository(TenantAwareRepository[SystemMetrics]):
 class TenantActivityRepository(TenantAwareRepository[TenantActivity]):
     """Tenant-aware activity repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, TenantActivity)
 
     async def log_activity(
@@ -513,7 +515,7 @@ class TenantActivityRepository(TenantAwareRepository[TenantActivity]):
 class TenantResourceUsageRepository(TenantAwareRepository[TenantResourceUsage]):
     """Tenant-aware resource usage repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         super().__init__(db_service, TenantResourceUsage)
 
     async def record_usage(
@@ -613,7 +615,7 @@ class TenantAwareDataAccessLayer:
     - Resource usage tracking
     """
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         self.db_service = db_service
 
         # Initialize repositories
@@ -643,7 +645,7 @@ class TenantAwareDataAccessLayer:
                 "database_health": db_health,
             }
 
-        except Exception as e:
+        except (sa.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {"status": "unhealthy", "error": str(e)}
 
     async def get_tenant_summary(

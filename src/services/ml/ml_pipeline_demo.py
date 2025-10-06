@@ -9,8 +9,9 @@ training orchestration, feature engineering, prediction services, and monitoring
 import asyncio
 import json
 import logging
-import time
 from pathlib import Path
+import time
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -54,8 +55,9 @@ class MLPipelineDemo:
     Shows integration of all ML services in a production-like scenario.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
         # Initialize services
+        self.config = config or {}
         self.model_serving = None
         self.training_orchestrator = None
         self.feature_engineer = None
@@ -93,7 +95,7 @@ class MLPipelineDemo:
 
             logger.info("All ML services initialized successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to setup ML services: %s", e)
             raise
 
@@ -157,7 +159,7 @@ class MLPipelineDemo:
             )
             logger.info("Demo data saved to %s", demo_data_path)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to generate demo data: %s", e)
             raise
 
@@ -195,11 +197,11 @@ class MLPipelineDemo:
 
             return processed_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Feature engineering demonstration failed: %s", e)
             raise
 
-    async def demonstrate_model_training(self) -> None:
+    async def demonstrate_model_training(self, processed_data: pd.DataFrame) -> str | None:
         """Demonstrate model training capabilities."""
         try:
             logger.info("Demonstrating model training...")
@@ -272,11 +274,11 @@ class MLPipelineDemo:
             )
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Model training demonstration failed: %s", e)
             raise
 
-    async def demonstrate_model_serving(self) -> None:
+    async def demonstrate_model_serving(self, model_path: str) -> str | None:
         """Demonstrate model serving capabilities."""
         try:
             logger.info("Demonstrating model serving...")
@@ -321,11 +323,11 @@ class MLPipelineDemo:
 
             return model_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Model serving demonstration failed: %s", e)
             raise
 
-    async def demonstrate_prediction_service(self) -> None:
+    async def demonstrate_prediction_service(self, model_id: str) -> None:
         """Demonstrate prediction service capabilities."""
         try:
             logger.info("Demonstrating prediction service...")
@@ -386,11 +388,11 @@ class MLPipelineDemo:
             stats = self.prediction_service.get_service_statistics()
             logger.info("Prediction service statistics: %s", stats)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Prediction service demonstration failed: %s", e)
             raise
 
-    async def demonstrate_ml_monitoring(self) -> None:
+    async def demonstrate_ml_monitoring(self, model_id: str) -> None:
         """Demonstrate ML monitoring capabilities."""
         try:
             logger.info("Demonstrating ML monitoring...")
@@ -438,7 +440,7 @@ class MLPipelineDemo:
             # Stop monitoring
             await self.ml_monitor.stop_monitoring(model_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ML monitoring demonstration failed: %s", e)
             raise
 
@@ -474,7 +476,7 @@ class MLPipelineDemo:
             # Print summary
             await self.print_demo_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Complete demo failed: %s", e)
             raise
 
@@ -569,11 +571,11 @@ class MLPipelineDemo:
             logger.info("DEMONSTRATION COMPLETED SUCCESSFULLY!")
             logger.info("=" * 60)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to print demo summary: %s", e)
 
 
-async def main(self) -> None:
+async def main() -> None:
     """Main function to run the ML pipeline demonstration."""
     # Setup logging
     logging.basicConfig(

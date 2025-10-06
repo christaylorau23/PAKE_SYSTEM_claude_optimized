@@ -24,6 +24,9 @@ Security Level: Military-Grade / Enterprise-Hardened
 
 import asyncio
 import base64
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import hashlib
 import json
 import logging
@@ -31,20 +34,20 @@ import os
 import re
 import secrets
 import time
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 import aiofiles
 import aiosqlite
-import GPUtil
-import psutil
+import sqlalchemy
+import psycopg2
+import asyncpg
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import GPUtil
+import psutil
 
 # Configure secure logging
 logging.basicConfig(
@@ -155,8 +158,8 @@ class SecurityPolicy:
 class AdvancedEncryptionService:
     """Advanced encryption service with multiple layers."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.master_key = self._derive_master_key()
         self.fernet = Fernet(self.master_key)
 
@@ -188,7 +191,7 @@ class AdvancedEncryptionService:
             )
             return base64.urlsafe_b64encode(kdf.derive(REDACTED_SECRET))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error deriving master key: %s", e)
             # Fallback to a secure random key
             return Fernet.generate_key()
@@ -230,7 +233,7 @@ class AdvancedEncryptionService:
                 "metadata": json.dumps(metadata) if metadata else None,
             }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error encrypting data: %s", e)
             raise
 
@@ -260,7 +263,7 @@ class AdvancedEncryptionService:
             # Decrypt with Fernet
             return self.fernet.decrypt(fernet_encrypted).decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error decrypting data: %s", e)
             raise
 
@@ -268,8 +271,8 @@ class AdvancedEncryptionService:
 class ThreatDetectionEngine:
     """Advanced threat detection and response engine."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.blocked_ips = set()
         self.rate_limits = {}
         self.suspicious_patterns = self._load_threat_patterns()
@@ -388,7 +391,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing request: %s", e)
             return None
 
@@ -440,7 +443,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error checking rate limiting: %s", e)
             return None
 
@@ -480,7 +483,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting SQL injection: %s", e)
             return None
 
@@ -519,7 +522,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting XSS attack: %s", e)
             return None
 
@@ -549,7 +552,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting directory traversal: %s", e)
             return None
 
@@ -586,7 +589,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting command injection: %s", e)
             return None
 
@@ -638,7 +641,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting suspicious user agent: %s", e)
             return None
 
@@ -684,7 +687,7 @@ class ThreatDetectionEngine:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting API abuse: %s", e)
             return None
 
@@ -692,12 +695,12 @@ class ThreatDetectionEngine:
         """Generate unique event ID."""
         return f"sec_{int(time.time())}_{secrets.token_hex(8)}"
 
-    def block_ip(self) -> None:
+    def block_ip(self, ip_address: str, duration_hours: int = 24) -> None:
         """Block an IP address."""
         self.blocked_ips.add(ip_address)
         logger.warning("IP %s blocked for %s hours", ip_address, duration_hours)
 
-    def unblock_ip(self) -> None:
+    def unblock_ip(self, ip_address: str) -> None:
         """Unblock an IP address."""
         self.blocked_ips.discard(ip_address)
         logger.info("IP %s unblocked", ip_address)
@@ -706,8 +709,8 @@ class ThreatDetectionEngine:
 class SystemMonitoringService:
     """Advanced system monitoring and intrusion detection."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.monitoring_interval = config.get("monitoring_interval", 30)  # seconds
         self.alert_thresholds = config.get(
             "alert_thresholds",
@@ -735,7 +738,7 @@ class SystemMonitoringService:
 
                 await asyncio.sleep(self.monitoring_interval)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error in system monitoring: %s", e)
                 await asyncio.sleep(self.monitoring_interval)
 
@@ -790,10 +793,13 @@ class SystemMonitoringService:
                                 "load": gpu.load,
                             },
                         )
-            except BaseException:
-                pass  # GPU monitoring not available
+            except BaseException as e:
 
-        except Exception as e:
+                logger.debug(f"Exception in enterprise_security_hardening.py: {e}")
+
+                # Continue gracefully  # GPU monitoring not available
+
+        except (ValueError, RuntimeError) as e:
             logger.error("Error monitoring system resources: %s", e)
 
     async def _monitor_network_connections(self) -> None:
@@ -833,7 +839,7 @@ class SystemMonitoringService:
                         {"port": conn.laddr.port, "address": conn.laddr.ip},
                     )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error monitoring network connections: %s", e)
 
     async def _monitor_file_integrity(self) -> None:
@@ -861,7 +867,7 @@ class SystemMonitoringService:
                     else:
                         self.baseline_metrics[file_path] = file_hash
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error monitoring file integrity: %s", e)
 
     async def _calculate_file_hash(self, file_path: str) -> str:
@@ -919,10 +925,10 @@ class SystemMonitoringService:
             else:
                 self.baseline_metrics["baseline_state"] = current_state
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in anomaly detection: %s", e)
 
-    async def _generate_system_alert(self) -> None:
+    async def _generate_system_alert(self, alert_type: str, message: str, metadata: dict[str, Any] | None = None) -> None:
         """Generate system security alert."""
         logger.warning("SECURITY ALERT [%s]: %s", alert_type, message)
 
@@ -943,8 +949,8 @@ class SystemMonitoringService:
 class EnterpriseSecurityHardening:
     """Main enterprise security hardening service."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.encryption_service = AdvancedEncryptionService(
             config.get("encryption", {}),
         )
@@ -1042,7 +1048,7 @@ class EnterpriseSecurityHardening:
 
             logger.info("Security database initialized")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error initializing security database: %s", e)
 
     async def _load_default_policies(self) -> None:
@@ -1104,7 +1110,7 @@ class EnterpriseSecurityHardening:
                     )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error loading default policies: %s", e)
 
     async def analyze_security_event(
@@ -1134,11 +1140,11 @@ class EnterpriseSecurityHardening:
 
             return {"threat_detected": False}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing security event: %s", e)
             return {"threat_detected": False, "error": str(e)}
 
-    async def _store_security_event(self) -> None:
+    async def _store_security_event(self, event: SecurityEvent) -> None:
         """Store security event in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1165,10 +1171,10 @@ class EnterpriseSecurityHardening:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing security event: %s", e)
 
-    async def _execute_response_actions(self) -> None:
+    async def _execute_response_actions(self, event: SecurityEvent) -> None:
         """Execute automated response actions."""
         try:
             if event.blocked:
@@ -1184,10 +1190,10 @@ class EnterpriseSecurityHardening:
                 if event.severity.value >= SecurityLevel.CRITICAL.value:
                     await self._send_security_alert(event)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error executing response actions: %s", e)
 
-    async def _block_ip_address(self) -> None:
+    async def _block_ip_address(self, ip_address: str, reason: str, hours: int = 24) -> None:
         """Block IP address in database and threat detection."""
         try:
             self.threat_detection.block_ip(ip_address, hours)
@@ -1207,10 +1213,10 @@ class EnterpriseSecurityHardening:
 
             logger.warning("IP %s blocked for %s hours: %s", ip_address, hours, reason)
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error blocking IP address %s: %s", ip_address, e)
 
-    async def _send_security_alert(self) -> None:
+    async def _send_security_alert(self, event: SecurityEvent) -> None:
         """Send security alert notification."""
         try:
             alert_message = f"""
@@ -1235,7 +1241,7 @@ This is an automated security alert from the Personal Wealth Generation Platform
             # In production, integrate with email/SMS/webhook alerts
             # await notification_service.send_security_alert(alert_message)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending security alert: %s", e)
 
     async def get_security_dashboard(self) -> Dict[str, Any]:
@@ -1289,7 +1295,7 @@ This is an automated security alert from the Personal Wealth Generation Platform
                     "last_updated": datetime.now(UTC).isoformat(),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting security dashboard: %s", e)
             return {"error": str(e)}
 
@@ -1306,12 +1312,12 @@ This is an automated security alert from the Personal Wealth Generation Platform
             # Wait for monitoring task
             await monitoring_task
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error starting security monitoring: %s", e)
 
 
 # Demo and testing
-async def demo_enterprise_security(self) -> None:
+async def demo_enterprise_security() -> None:
     """Demonstrate enterprise security capabilities."""
     print("🔐 Enterprise Security Hardening Demo - Personal Wealth Generation")
     print("=" * 80)

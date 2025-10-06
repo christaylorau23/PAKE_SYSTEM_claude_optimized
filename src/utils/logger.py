@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
+from typing import Any, Callable
+import aiohttp
 """Structured Logger for PAKE System
 Structlog-based JSON logger with timestamp, level, service name, and correlation IDs.
 """
 
+from datetime import UTC, datetime
 import logging
 import os
+from pathlib import Path
 import platform
 import sys
 import time
-from datetime import UTC, datetime
-from pathlib import Path
 
 import structlog
 from structlog.processors import JSONRenderer
@@ -39,7 +41,7 @@ except ImportError:
 class TimestampProcessor:
     """Add ISO8601 timestamp to log entries."""
 
-    def __call__(self) -> None:
+    def __call__(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
         event_dict["timestamp"] = datetime.now(UTC).isoformat()
         return event_dict
 
@@ -47,14 +49,14 @@ class TimestampProcessor:
 class ServiceInfoProcessor:
     """Add service information to log entries."""
 
-    def __init__(self) -> None:
+    def __init__(self, service_name: str) -> None:
         self.service_name = service_name
         self.version = os.getenv("PAKE_VERSION", "1.0.0")
         self.environment = os.getenv("ENVIRONMENT", "development")
         self.hostname = platform.node()
         self.pid = os.getpid()
 
-    def __call__(self) -> None:
+    def __call__(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
         event_dict.update(
             {
                 "service": self.service_name,
@@ -70,7 +72,7 @@ class ServiceInfoProcessor:
 class LevelNormalizer:
     """Normalize log level to uppercase."""
 
-    def __call__(self) -> None:
+    def __call__(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
         if "level" in event_dict:
             event_dict["level"] = event_dict["level"].upper()
         else:
@@ -91,7 +93,7 @@ class LevelNormalizer:
 class ErrorProcessor:
     """Process exception information."""
 
-    def __call__(self) -> None:
+    def __call__(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
         exc_info = event_dict.pop("exc_info", None)
         if exc_info:
             if exc_info is True:
@@ -190,7 +192,7 @@ def setup_structured_logging(
             )
             file_handler.setLevel(getattr(logging, log_level.upper()))
             logging.getLogger().addHandler(file_handler)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to setup file logging: {e}", file=sys.stderr)
 
     return structlog.get_logger(service_name)
@@ -215,14 +217,14 @@ def _parse_size(size_str: str) -> int:
 class StructuredLogger:
     """Enhanced logger with context support and structured methods."""
 
-    def __init__(self) -> None:
-        self.logger = logger or setup_structured_logging(service_name)
+    def __init__(self, service_name: str = "pake-system") -> None:
+        self.logger = setup_structured_logging(service_name)
         self.context = {}
 
     def bind(self, **kwargs) -> "StructuredLogger":
         """Create child logger with additional context."""
         bound_logger = self.logger.bind(**kwargs)
-        child = StructuredLogger(bound_logger)
+        child = StructuredLogger()
         child.context = {**self.context, **kwargs}
         return child
 
@@ -230,7 +232,7 @@ class StructuredLogger:
         """Add correlation ID for request tracking."""
         return self.bind(correlation_id=correlation_id)
 
-    def with_user(self, user_id: str, username: str = None) -> "StructuredLogger":
+    def with_user(self, user_id: str, username: str | None = None) -> "StructuredLogger":
         """Add user context for audit logging."""
         context = {"user_id": user_id}
         if username:
@@ -239,11 +241,11 @@ class StructuredLogger:
 
     def with_request(
         self,
-        request_id: str = None,
-        method: str = None,
-        path: str = None,
-        ip: str = None,
-        user_agent: str = None,
+        request_id: str | None = None,
+        method: str | None = None,
+        path: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
     ) -> "StructuredLogger":
         """Add request context for API logging."""
         context = {}
@@ -260,38 +262,38 @@ class StructuredLogger:
         return self.bind(**context)
 
     # Basic logging methods
-    def debug(self) -> None:
+    def debug(self, message: str, **kwargs) -> None:
         """Log debug message."""
         self.logger.debug(message, **kwargs)
 
-    def info(self) -> None:
+    def info(self, message: str, **kwargs) -> None:
         """Log info message."""
         self.logger.info(message, **kwargs)
 
-    def warn(self) -> None:
+    def warn(self, message: str, **kwargs) -> None:
         """Log warning message."""
         self.logger.warning(message, **kwargs)
 
-    def warning(self) -> None:
+    def warning(self, message: str, **kwargs) -> None:
         """Log warning message (alias)."""
         self.logger.warning(message, **kwargs)
 
-    def error(self) -> None:
+    def error(self, message: str, error: Exception | None = None, **kwargs: Any) -> None:
         """Log error message with optional exception."""
         if error:
             kwargs["exc_info"] = error
         self.logger.error(message, **kwargs)
 
-    def critical(self) -> None:
+    def critical(self, message: str, **kwargs) -> None:
         """Log critical message."""
         self.logger.critical(message, **kwargs)
 
-    def exception(self) -> None:
+    def exception(self, message: str, **kwargs) -> None:
         """Log exception with traceback."""
         self.logger.exception(message, **kwargs)
 
     # Structured logging methods for specific use cases
-    def http(self) -> None:
+    def http(self, message: str, method: str, path: str, status_code: int, duration: float | None = None, user_id: str | None = None, error: Exception | None = None, **kwargs: Any) -> None:
         """Log HTTP request/response."""
         level = self._get_http_log_level(status_code, error)
 
@@ -310,7 +312,7 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **http_data, **kwargs)
 
-    def database(self) -> None:
+    def database(self, message: str, operation: str, table: str | None = None, duration: float | None = None, row_count: int | None = None, error: Exception | None = None, **kwargs: Any) -> None:
         """Log database operations."""
         level = "error" if error else "debug"
 
@@ -327,7 +329,7 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **db_data, **kwargs)
 
-    def security(self) -> None:
+    def security(self, message: str, event: str, success: bool, reason: str | None = None, user_id: str | None = None, ip: str | None = None, user_agent: str | None = None, **kwargs: Any) -> None:
         """Log security events."""
         level = "info" if success else "warning"
 
@@ -343,7 +345,7 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **security_data, **kwargs)
 
-    def business(self) -> None:
+    def business(self, message: str, event: str, entity_type: str | None = None, entity_id: str | None = None, action: str | None = None, metadata: dict[str, Any] | None = None, user_id: str | None = None, **kwargs: Any) -> None:
         """Log business events."""
         business_data = {
             "business": {
@@ -359,7 +361,7 @@ class StructuredLogger:
 
         self.logger.info(message, **business_data, **kwargs)
 
-    def performance(self) -> None:
+    def performance(self, message: str, operation: str, duration: float | None = None, memory_mb: float | None = None, cpu_percent: float | None = None, **kwargs: Any) -> None:
         """Log performance metrics."""
         perf_data = {
             "performance": {
@@ -382,7 +384,7 @@ class StructuredLogger:
             return "warning"
         return "info"
 
-    def timer(self) -> None:
+    def timer(self, operation: str) -> "TimerContext":
         """Context manager for timing operations."""
         return TimerContext(self, operation)
 
@@ -390,7 +392,7 @@ class StructuredLogger:
 class TimerContext:
     """Context manager for timing operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, logger: StructuredLogger, operation: str) -> None:
         self.logger = logger
         self.operation = operation
         self.start_time = None
@@ -401,7 +403,7 @@ class TimerContext:
             self.logger.debug("Starting %s", self.operation)
         return self
 
-    def __exit__(self) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if self.start_time:
             duration = (time.time() - self.start_time) * 1000  # Convert to milliseconds
 
@@ -438,7 +440,7 @@ logger = get_logger()
 # FastAPI/Starlette middleware integration
 
 
-def setup_request_logging(self) -> None:
+def setup_request_logging() -> None:
     """Setup request logging for web frameworks."""
     try:
         import uuid
@@ -448,11 +450,11 @@ def setup_request_logging(self) -> None:
         from starlette.responses import Response
 
         class LoggingMiddleware(BaseHTTPMiddleware):
-            def __init__(self) -> None:
+            def __init__(self, app: Any) -> None:
                 super().__init__(app)
                 self.logger = logger or get_logger()
 
-            async def dispatch(self) -> None:
+            async def dispatch(self, request: Request, call_next: Callable) -> Response:
                 start_time = time.time()
                 request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
 
@@ -486,7 +488,7 @@ def setup_request_logging(self) -> None:
 
                     return response
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     duration = (time.time() - start_time) * 1000
                     request_logger.http(
                         "HTTP Request failed",

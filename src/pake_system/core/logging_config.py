@@ -2,18 +2,18 @@
 Structured logging with correlation IDs and comprehensive monitoring.
 """
 
+from datetime import UTC, datetime
 import json
 import logging
 import logging.config
 import sys
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
 
 
 class CorrelationFilter(logging.Filter):
     """Add correlation ID to log records."""
 
-    def filter(self) -> None:
+    def filter(self, record: logging.LogRecord) -> bool:
         # Add correlation ID if not present
         if not hasattr(record, "correlation_id"):
             record.correlation_id = "no-correlation-id"
@@ -23,7 +23,7 @@ class CorrelationFilter(logging.Filter):
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for enterprise logging."""
 
-    def format(self) -> None:
+    def format(self, record: logging.LogRecord) -> str:
         log_entry = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,

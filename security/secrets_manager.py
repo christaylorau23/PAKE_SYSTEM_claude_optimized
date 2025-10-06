@@ -12,19 +12,19 @@ This module provides:
 
 import asyncio
 import base64
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import json
 import logging
 import os
-import secrets
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 from pathlib import Path
+import secrets
 from typing import Any
 
 import aiofiles
-import boto3
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+import boto3
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -256,7 +256,7 @@ class SecretsManager:
             )
             msg = f"Insufficient permissions for {self.provider.value}"
             raise PermissionError(msg) from e
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error(
                 "Unexpected error initializing %s: %s", self.provider.value, str(e)
             )
@@ -296,7 +296,7 @@ class SecretsManager:
                 msg = f"Unsupported provider: {self.provider}"
                 raise ValueError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize secrets provider: %s", str(e))
             raise
 
@@ -336,7 +336,7 @@ class SecretsManager:
             self.logger.error("AWS permission error: %s", str(e))
             msg = f"Insufficient AWS permissions: {str(e)}"
             raise PermissionError(msg) from e
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("Unexpected AWS client initialization error: %s", str(e))
             msg = f"AWS client initialization failed: {str(e)}"
             raise RuntimeError(msg) from e
@@ -365,7 +365,7 @@ class SecretsManager:
             self.logger.error("Azure permission error: %s", str(e))
             msg = f"Insufficient Azure Key Vault permissions: {str(e)}"
             raise PermissionError(msg) from e
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error(
                 "Unexpected Azure client initialization error: %s", str(e)
             )
@@ -395,7 +395,7 @@ class SecretsManager:
             self.logger.error("Google Cloud permission error: %s", str(e))
             msg = f"Insufficient Google Secret Manager permissions: {str(e)}"
             raise PermissionError(msg) from e
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error(
                 "Unexpected Google client initialization error: %s", str(e)
             )
@@ -435,7 +435,7 @@ class SecretsManager:
             self.logger.error("Metadata file not found: %s", str(e))
             # This is not an error - metadata file is optional
             self.metadata_store = {}
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error(
                 "Unexpected local client initialization error: %s", str(e)
             )
@@ -504,7 +504,7 @@ class SecretsManager:
             self.logger.info("Secret stored successfully: %s", secret_id)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to store secret %s: %s", secret_id, str(e))
             await self._log_access(
                 secret_id, "write", "system", success=False, error_message=str(e)
@@ -597,7 +597,7 @@ class SecretsManager:
             self.logger.info("Secret retrieved successfully: %s", secret_id)
             return secret_value
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to retrieve secret %s: %s", secret_id, str(e))
             await self._log_access(
                 secret_id,
@@ -642,7 +642,7 @@ class SecretsManager:
             self.logger.info("Secret deleted successfully: %s", secret_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to delete secret %s: %s", secret_id, str(e))
             await self._log_access(
                 secret_id, "delete", deleted_by, success=False, error_message=str(e)
@@ -714,7 +714,7 @@ class SecretsManager:
         self.google_client.add_secret_version(
             request={
                 "parent": secret.name,
-                "payload": {"data": encrypted_value.encode()},
+                "payload": {"data": self.encrypted_value.encode()},
             }
         )
 
@@ -784,7 +784,7 @@ class SecretsManager:
 
             return base64.urlsafe_b64encode(encrypted_data).decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to encrypt secret: %s", str(e))
             raise
 
@@ -816,7 +816,7 @@ class SecretsManager:
 
             return decrypted_data.decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to decrypt secret: %s", str(e))
             raise
 
@@ -831,7 +831,7 @@ class SecretsManager:
                 metadata_dict = {k: v.dict() for k, v in self.metadata_store.items()}
                 async with aiofiles.open(self.metadata_file, "w") as f:
                     await f.write(json.dumps(metadata_dict, indent=2, default=str))
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to save metadata: %s", str(e))
 
     async def _log_access(self) -> None:
@@ -906,7 +906,7 @@ class SecretsManager:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to rotate secret %s: %s", secret_id, str(e))
             await self._log_access(
                 secret_id, "rotate", rotated_by, success=False, error_message=str(e)

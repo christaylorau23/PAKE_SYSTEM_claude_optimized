@@ -7,9 +7,9 @@ Executes comprehensive Data Access Layer integration tests with proper async con
 import asyncio
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -109,7 +109,7 @@ async def run_dal_tests(self) -> None:
                 "status": "TIMEOUT",
                 "error": "Test execution timed out",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("💥 %s ERROR: %s", test_config["name"], e)
             results[test_config["name"]] = {"status": "ERROR", "error": str(e)}
 
@@ -148,7 +148,7 @@ async def main(self) -> None:
     except KeyboardInterrupt:
         logger.info("Test execution interrupted by user")
         return 130
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         return 1
 

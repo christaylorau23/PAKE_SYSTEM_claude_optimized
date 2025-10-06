@@ -9,10 +9,10 @@ Replaces static SQL dumps with programmatic data generation that:
 - Enables easy maintenance and updates
 """
 
-import random
-import uuid
 from datetime import UTC, datetime
+import random
 from typing import Any
+import uuid
 
 try:
     import factory
@@ -57,14 +57,14 @@ if factory:
             abstract = True
 
         @classmethod
-        def _create(cls) -> None:
+        def _create(cls, model_class, **kwargs) -> None:
             """Create instance with proper async handling."""
             # Remove factory-specific kwargs
             factory_kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
             return model_class(**factory_kwargs)
 
         @classmethod
-        async def create_async(cls) -> None:
+        async def create_async(cls, **kwargs) -> None:
             """Async version of factory creation."""
             return cls.build(**kwargs)
 
@@ -120,7 +120,7 @@ else:
         """Fallback tenant factory when factory-boy is not available."""
 
         @classmethod
-        def build(cls) -> None:
+        def build(cls, **kwargs) -> None:
             """Build a tenant instance with default values."""
             return Tenant(
                 id=str(uuid.uuid4()),
@@ -297,7 +297,7 @@ class TestDataFixtureRegistry:
         temp_visited = set()
         order = []
 
-        def visit(self) -> None:
+        def visit(name: str) -> None:
             if name in temp_visited:
                 msg = f"Circular dependency detected involving {name}"
                 raise ValueError(msg)
@@ -471,7 +471,7 @@ async def create_system_metrics_fixture(
 
 
 # Register predefined fixtures
-def register_default_fixtures(self) -> None:
+def register_default_fixtures() -> None:
     """Register all default fixtures."""
     registry = get_fixture_registry()
 
@@ -549,24 +549,29 @@ async def create_performance_test_scenario(engine: AsyncEngine) -> dict[str, Any
 
 
 # Pytest fixtures for easy integration (only if pytest is available)
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 if pytest:
 
     @pytest.fixture
-    def fixture_registry(self) -> None:
+    def fixture_registry() -> None:
         """Get the fixture registry."""
         return get_fixture_registry()
 
     @pytest.fixture
-    async def basic_test_data(self) -> None:
+    async def basic_test_data(isolated_test_database) -> None:
         """Create basic test data for a test."""
         return await create_basic_test_scenario(isolated_test_database)
 
     @pytest.fixture
-    async def comprehensive_test_data(self) -> None:
+    async def comprehensive_test_data(isolated_test_database) -> None:
         """Create comprehensive test data for integration tests."""
         return await create_comprehensive_test_scenario(isolated_test_database)
 
     @pytest.fixture
-    async def performance_test_data(self) -> None:
+    async def performance_test_data(isolated_test_database) -> None:
         """Create performance test data for load testing."""
         return await create_performance_test_scenario(isolated_test_database)

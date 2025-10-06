@@ -169,8 +169,8 @@ class TestAuthCacheIntegration:
         # 2. Store in Redis
         # 3. Verify storage
 
-        mock_redis.set(f"session:{session_id}", user_id)
-        result = mock_redis.get(f"session:{session_id}")
+        self.mock_redis.set(f"session:{session_id}", user_id)
+        result = self.mock_redis.get(f"session:{session_id}")
 
         # Assert
         assert result == user_id
@@ -184,10 +184,10 @@ class TestAuthCacheIntegration:
         # Act - In real integration test:
         # 1. Create session with TTL
         # 2. Verify expires after TTL
-        mock_redis.set(f"session:{session_id}", "user-id")
+        self.mock_redis.set(f"session:{session_id}", "user-id")
 
         # Assert
-        exists = mock_redis.exists(f"session:{session_id}")
+        exists = self.mock_redis.exists(f"session:{session_id}")
         assert exists is not None
 
 
@@ -212,10 +212,10 @@ class TestAuthRateLimitingIntegration:
         # Act - Simulate multiple failed login attempts
         for _i in range(max_attempts + 2):
             key = f"rate_limit:{ip_address}:{username}"
-            current = mock_redis.get(key) or 0
-            mock_redis.set(key, int(current) + 1)
+            current = self.mock_redis.get(key) or 0
+            self.mock_redis.set(key, int(current) + 1)
 
-        final_count = mock_redis.get(f"rate_limit:{ip_address}:{username}")
+        final_count = self.mock_redis.get(f"rate_limit:{ip_address}:{username}")
 
         # Assert
         assert int(final_count) > max_attempts
@@ -228,9 +228,9 @@ class TestAuthRateLimitingIntegration:
         key = f"rate_limit:{ip_address}:{username}"
 
         # Act - Set and then delete (simulating expiration)
-        mock_redis.set(key, 10)
-        mock_redis.delete(key)
-        result = mock_redis.get(key)
+        self.mock_redis.set(key, 10)
+        self.mock_redis.delete(key)
+        result = self.mock_redis.get(key)
 
         # Assert
         assert result is None
@@ -322,7 +322,7 @@ class TestAuthErrorHandling:
     async def test_handles_database_connection_failure(self) -> None:
         """Test graceful handling of database failures"""
         # Arrange
-        mock_database.fetch_one = AsyncMock(
+        self.mock_database.fetch_one = AsyncMock(
             side_effect=Exception("Database connection failed")
         )
 
@@ -333,7 +333,7 @@ class TestAuthErrorHandling:
     async def test_handles_cache_unavailable(self) -> None:
         """Test graceful handling when cache is unavailable"""
         # Arrange
-        mock_redis.get = MagicMock(side_effect=Exception("Redis unavailable"))
+        self.mock_redis.get = MagicMock(side_effect=Exception("Redis unavailable"))
 
         # Act & Assert
         # Should fall back to database-only auth

@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Multi-Tenant Database Migration Script
@@ -6,11 +7,11 @@ Migrates existing single-tenant database to multi-tenant architecture.
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
 import os
 import sys
-from datetime import UTC, datetime
 from typing import Any
 
 from src.services.database.multi_tenant_schema import (
@@ -70,7 +71,7 @@ class MultiTenantMigration:
             await self.target_db.initialize()
             logger.info("✅ Target database initialized")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Failed to initialize databases: %s", e)
             raise
 
@@ -108,7 +109,7 @@ class MultiTenantMigration:
                 "postgresql_version": source_health["postgresql_version"],
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Source data validation failed: %s", e)
             return {"status": "invalid", "error": str(e)}
 
@@ -142,7 +143,7 @@ class MultiTenantMigration:
 
             return tenant["id"]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Failed to create default tenant: %s", e)
             raise
 
@@ -182,7 +183,7 @@ class MultiTenantMigration:
                     if migrated_count % 10 == 0:
                         logger.info("  Migrated %s users...", migrated_count)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     error_msg = f"Failed to migrate user {user_data['username']}: {e}"
                     logger.error(error_msg)
                     self.migration_stats["errors"].append(error_msg)
@@ -190,7 +191,7 @@ class MultiTenantMigration:
             self.migration_stats["users_migrated"] = migrated_count
             logger.info("✅ Migrated %s users", migrated_count)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ User migration failed: %s", e)
             raise
 
@@ -234,7 +235,7 @@ class MultiTenantMigration:
                     if migrated_count % 100 == 0:
                         logger.info("  Migrated %s search records...", migrated_count)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     error_msg = f"Failed to migrate search {search_data['id']}: {e}"
                     logger.error(error_msg)
                     self.migration_stats["errors"].append(error_msg)
@@ -242,7 +243,7 @@ class MultiTenantMigration:
             self.migration_stats["search_history_migrated"] = migrated_count
             logger.info("✅ Migrated %s search history records", migrated_count)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Search history migration failed: %s", e)
             raise
 
@@ -275,7 +276,7 @@ class MultiTenantMigration:
 
                     migrated_count += 1
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     error_msg = (
                         f"Failed to migrate saved search {search_data['id']}: {e}"
                     )
@@ -285,7 +286,7 @@ class MultiTenantMigration:
             self.migration_stats["saved_searches_migrated"] = migrated_count
             logger.info("✅ Migrated %s saved searches", migrated_count)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Saved searches migration failed: %s", e)
             raise
 
@@ -316,7 +317,7 @@ class MultiTenantMigration:
 
                     migrated_count += 1
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     error_msg = f"Failed to migrate metric {metric_data['id']}: {e}"
                     logger.error(error_msg)
                     self.migration_stats["errors"].append(error_msg)
@@ -324,7 +325,7 @@ class MultiTenantMigration:
             self.migration_stats["system_metrics_migrated"] = migrated_count
             logger.info("✅ Migrated %s system metrics", migrated_count)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ System metrics migration failed: %s", e)
             raise
 
@@ -359,7 +360,7 @@ class MultiTenantMigration:
 
             return validation_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Migration validation failed: %s", e)
             return {
                 "status": "invalid",
@@ -459,7 +460,7 @@ class MultiTenantMigration:
                 "report": report,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Migration failed: %s", e)
             return {
                 "status": "failed",

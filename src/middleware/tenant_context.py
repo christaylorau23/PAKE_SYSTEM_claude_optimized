@@ -3,17 +3,17 @@
 Enterprise-grade tenant context propagation and isolation middleware.
 """
 
-import logging
-import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import uuid
 
-import jwt
 from fastapi import HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -190,7 +190,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 status_code=e.status_code,
                 content={"error": e.detail, "code": "TENANT_VALIDATION_FAILED"},
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Tenant middleware error: %s", e)
             return JSONResponse(
                 status_code=500,
@@ -219,7 +219,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 msg,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Tenant resolution error: %s", e)
             msg = f"Failed to resolve tenant context: {e}"
             raise TenantResolutionError(msg)
@@ -278,7 +278,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         except InvalidTokenError:
             msg = "Invalid JWT token"
             raise TenantResolutionError(msg)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"JWT resolution failed: {e}"
             raise TenantResolutionError(msg)
 
@@ -310,7 +310,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_agent=request_context.get()["user_agent"],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"Header resolution failed: {e}"
             raise TenantResolutionError(msg)
 
@@ -354,7 +354,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_agent=request_context.get()["user_agent"],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"Subdomain resolution failed: {e}"
             raise TenantResolutionError(msg)
 
@@ -388,7 +388,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 user_agent=request_context.get()["user_agent"],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"Path resolution failed: {e}"
             raise TenantResolutionError(msg)
 

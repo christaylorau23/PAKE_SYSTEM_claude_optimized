@@ -1,76 +1,54 @@
-# Pre-commit hooks configuration for PAKE System
-# Enterprise-grade quality gates for Python codebase
-#
-# This configuration implements automated quality checks that run before every commit,
-# ensuring syntax errors and linting issues never enter the version control history.
-#
-# Installation: pre-commit install
-# Manual run: pre-commit run --all-files
-# Update hooks: pre-commit autoupdate
-
 repos:
-  # Python code quality and formatting with Ruff
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+  # Security and Quality Hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      # Ruff linter - catches syntax errors, undefined names, and code quality issues
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-docstring-first
+      - id: requirements-txt-fixer
+  
+  # Python Code Quality
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.8
+    hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-        types: [python]
-
-      # Ruff formatter - ensures consistent code formatting
       - id: ruff-format
-        types: [python]
-
-  # General file checks
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+  
+  # Security Scanning
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
     hooks:
-      # Ensure files end with newline
-      - id: end-of-file-fixer
-        types: [text]
-
-      # Remove trailing whitespace
-      - id: trailing-whitespace
-        types: [text]
-
-      # Check for merge conflict markers
-      - id: check-merge-conflict
-        types: [text]
-
-      # Check for large files
-      - id: check-added-large-files
-        args: [--maxkb=1000]
-
-      # Check for debug statements
-      - id: debug-statements
-        types: [python]
-
-      # Check for private keys and secrets
-      - id: detect-private-key
-        types: [text]
-
-      # Ensure YAML files are valid
-      - id: check-yaml
-        types: [yaml]
-
-      # Ensure JSON files are valid
-      - id: check-json
-        types: [json]
-
-      # Check for TODO/FIXME comments
-      - id: check-toml
-        types: [toml]
-
-# Configuration for specific hooks
-ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit.com hooks
-
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: []
-  submodules: false
+      - id: bandit
+        args: [-r, ., -ll]
+  
+  # Type Checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+  
+  # Secret Scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+  
+  # Dependency Security
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+  
+  # License Compliance
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-licenses
+    rev: v1.0.1
+    hooks:
+      - id: python-check-licenses

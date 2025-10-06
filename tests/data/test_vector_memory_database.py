@@ -3,11 +3,11 @@ Tests for Vector Memory Database
 Comprehensive test suite for AI long-term memory with vector database integration
 """
 
+from datetime import UTC, datetime, timedelta
 import os
 import shutil
 import sys
 import tempfile
-from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -76,7 +76,7 @@ class TestVectorMemoryDatabase:
         content = "This is a test conversation about machine learning concepts."
         metadata = {"user_id": "test_user", "turn_count": 1}
 
-        memory_id = await vector_db.store_conversation_memory(
+        memory_id = await self.vector_db.store_conversation_memory(
             conversation_id=conversation_id,
             content=content,
             metadata=metadata,
@@ -86,7 +86,7 @@ class TestVectorMemoryDatabase:
         assert memory_id.startswith("conv_")
 
         # Retrieve the stored memory
-        stored_memory = await vector_db.get_memory_by_id(memory_id, "conversations")
+        stored_memory = await self.vector_db.get_memory_by_id(memory_id, "conversations")
         assert stored_memory is not None
         assert stored_memory["content"] == content
         assert stored_memory["metadata"]["conversation_id"] == conversation_id
@@ -99,7 +99,7 @@ class TestVectorMemoryDatabase:
         knowledge_type = "technical"
         metadata = {"domain": "AI", "confidence": 0.9}
 
-        memory_id = await vector_db.store_knowledge_memory(
+        memory_id = await self.vector_db.store_knowledge_memory(
             knowledge_id=knowledge_id,
             content=content,
             knowledge_type=knowledge_type,
@@ -110,7 +110,7 @@ class TestVectorMemoryDatabase:
         assert memory_id.startswith("know_")
 
         # Retrieve the stored memory
-        stored_memory = await vector_db.get_memory_by_id(memory_id, "knowledge")
+        stored_memory = await self.vector_db.get_memory_by_id(memory_id, "knowledge")
         assert stored_memory is not None
         assert stored_memory["content"] == content
         assert stored_memory["metadata"]["knowledge_type"] == knowledge_type
@@ -129,7 +129,7 @@ class TestVectorMemoryDatabase:
         stored_ids = []
         for i, (content, memory_type) in enumerate(test_memories):
             if memory_type == "knowledge":
-                memory_id = await vector_db.store_knowledge_memory(
+                memory_id = await self.vector_db.store_knowledge_memory(
                     knowledge_id=f"test_{i}",
                     content=content,
                     knowledge_type="technical",
@@ -137,7 +137,7 @@ class TestVectorMemoryDatabase:
             stored_ids.append(memory_id)
 
         # Search for machine learning related content
-        search_results = await vector_db.semantic_search(
+        search_results = await self.vector_db.semantic_search(
             query="machine learning classification",
             memory_types=["knowledge"],
             limit=5,
@@ -164,7 +164,7 @@ class TestVectorMemoryDatabase:
         ]
 
         for i, content in enumerate(conversation_contents):
-            await vector_db.store_conversation_memory(
+            await self.vector_db.store_conversation_memory(
                 conversation_id=conversation_id,
                 content=content,
                 metadata={
@@ -174,7 +174,7 @@ class TestVectorMemoryDatabase:
             )
 
         # Get conversation context
-        context = await vector_db.get_conversation_context(
+        context = await self.vector_db.get_conversation_context(
             conversation_id=conversation_id,
             context_window=10,
         )
@@ -194,7 +194,7 @@ class TestVectorMemoryDatabase:
         """
         source_id = "python_article_001"
 
-        knowledge_ids = await vector_db.extract_and_index_knowledge(
+        knowledge_ids = await self.vector_db.extract_and_index_knowledge(
             content=content,
             source_id=source_id,
             knowledge_type="programming",
@@ -204,7 +204,7 @@ class TestVectorMemoryDatabase:
 
         # Verify extracted knowledge can be retrieved
         for knowledge_id in knowledge_ids:
-            memory = await vector_db.get_memory_by_id(knowledge_id, "knowledge")
+            memory = await self.vector_db.get_memory_by_id(knowledge_id, "knowledge")
             assert memory is not None
             assert memory["metadata"]["source_id"] == source_id
 
@@ -212,20 +212,20 @@ class TestVectorMemoryDatabase:
     async def test_find_similar_memories(self) -> None:
         """Test finding similar memories with recent context"""
         # Store test content
-        await vector_db.store_knowledge_memory(
+        await self.vector_db.store_knowledge_memory(
             knowledge_id="test_similarity_1",
             content="Python programming best practices and code optimization",
             knowledge_type="programming",
         )
 
-        await vector_db.store_context_memory(
+        await self.vector_db.store_context_memory(
             context_id="test_context_1",
             content="Recent discussion about Python performance tuning",
             context_type="discussion",
         )
 
         # Find similar memories
-        similar_memories = await vector_db.find_similar_memories(
+        similar_memories = await self.vector_db.find_similar_memories(
             content="Python performance optimization techniques",
             memory_types=["knowledge", "context"],
             limit=10,
@@ -261,7 +261,7 @@ class TestVectorMemoryDatabase:
             },
         ]
 
-        results = await vector_db.batch_store_memories(batch_memories)
+        results = await self.vector_db.batch_store_memories(batch_memories)
 
         assert results["successful"] == 3
         assert results["failed"] == 0
@@ -272,10 +272,10 @@ class TestVectorMemoryDatabase:
     async def test_memory_statistics(self) -> None:
         """Test getting memory statistics"""
         # Store some test memories
-        await vector_db.store_knowledge_memory("stats_test_1", "Test knowledge content")
-        await vector_db.store_conversation_memory("conv_stats", "Test conversation")
+        await self.vector_db.store_knowledge_memory("stats_test_1", "Test knowledge content")
+        await self.vector_db.store_conversation_memory("conv_stats", "Test conversation")
 
-        stats = await vector_db.get_memory_statistics()
+        stats = await self.vector_db.get_memory_statistics()
 
         assert "collections" in stats
         assert "total_memories" in stats
@@ -286,7 +286,7 @@ class TestVectorMemoryDatabase:
     @pytest.mark.asyncio
     async def test_health_check(self) -> None:
         """Test vector database health check"""
-        health = await vector_db.health_check()
+        health = await self.vector_db.health_check()
 
         assert health["status"] in ["healthy", "degraded"]
         assert "vector_db" in health
@@ -297,7 +297,7 @@ class TestVectorMemoryDatabase:
     async def test_cleanup_old_memories(self) -> None:
         """Test cleaning up old memories"""
         # Store a memory with old timestamp
-        old_memory = await vector_db.store_knowledge_memory(
+        old_memory = await self.vector_db.store_knowledge_memory(
             knowledge_id="old_memory_test",
             content="This is old content",
             metadata={
@@ -306,13 +306,13 @@ class TestVectorMemoryDatabase:
         )
 
         # Store a recent memory
-        recent_memory = await vector_db.store_knowledge_memory(
+        recent_memory = await self.vector_db.store_knowledge_memory(
             knowledge_id="recent_memory_test",
             content="This is recent content",
         )
 
         # Clean up old memories (older than 365 days)
-        cleanup_stats = await vector_db.cleanup_old_memories(max_age_days=365)
+        cleanup_stats = await self.vector_db.cleanup_old_memories(max_age_days=365)
 
         assert isinstance(cleanup_stats, dict)
         # The old memory should potentially be cleaned up
@@ -358,14 +358,14 @@ class TestAIMemoryQueryInterface:
     async def test_ask_memory_basic(self) -> None:
         """Test basic memory querying"""
         # Store some test knowledge
-        await memory_interface.vector_db.store_knowledge_memory(
+        await self.memory_interface.vector_db.store_knowledge_memory(
             knowledge_id="query_test_1",
             content="Python is an excellent programming language for data science",
             knowledge_type="programming",
         )
 
         # Query memory
-        results = await memory_interface.ask_memory(
+        results = await self.memory_interface.ask_memory(
             query="Python programming language",
             limit=5,
         )
@@ -387,7 +387,7 @@ class TestAIMemoryQueryInterface:
         Supervised learning uses labeled data to make predictions.
         """
 
-        result = await memory_interface.remember_conversation(
+        result = await self.memory_interface.remember_conversation(
             conversation_id=conversation_id,
             content=content,
             metadata={"user_id": "test_user"},
@@ -406,7 +406,7 @@ class TestAIMemoryQueryInterface:
         content = "User provided positive feedback on explanation of neural networks"
         feedback_score = 0.8
 
-        result = await memory_interface.learn_from_interaction(
+        result = await self.memory_interface.learn_from_interaction(
             interaction_id=interaction_id,
             content=content,
             interaction_type="feedback",
@@ -433,14 +433,14 @@ class TestAIMemoryQueryInterface:
         ]
 
         for i, content in enumerate(conversation_parts):
-            await memory_interface.remember_conversation(
+            await self.memory_interface.remember_conversation(
                 conversation_id=conversation_id,
                 content=content,
                 metadata={"turn": i + 1},
             )
 
         # Get conversation history
-        history = await memory_interface.get_conversation_history(
+        history = await self.memory_interface.get_conversation_history(
             conversation_id=conversation_id,
             context_window=5,
         )
@@ -461,7 +461,7 @@ class TestAIMemoryQueryInterface:
         """
         source_id = "ai_overview_001"
 
-        result = await memory_interface.extract_knowledge(
+        result = await self.memory_interface.extract_knowledge(
             content=content,
             source_id=source_id,
             knowledge_type="artificial_intelligence",
@@ -475,7 +475,7 @@ class TestAIMemoryQueryInterface:
     @pytest.mark.asyncio
     async def test_memory_stats(self) -> None:
         """Test getting memory statistics through interface"""
-        stats = await memory_interface.get_memory_stats()
+        stats = await self.memory_interface.get_memory_stats()
 
         assert "collections" in stats
         assert "total_memories" in stats
@@ -485,7 +485,7 @@ class TestAIMemoryQueryInterface:
     @pytest.mark.asyncio
     async def test_health_check(self) -> None:
         """Test memory interface health check"""
-        health = await memory_interface.health_check()
+        health = await self.memory_interface.health_check()
 
         assert "status" in health
         assert "memory_interface" in health

@@ -6,16 +6,16 @@ Provides automated ML training pipelines with Kubeflow integration,
 experiment tracking, model versioning, and automated retraining capabilities.
 """
 
-import asyncio
-import json
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+import time
+from typing import Any, Dict, List
 
 try:
     import mlflow
@@ -168,7 +168,7 @@ class ExperimentConfig:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            "experiment_name": experiment_name,
+            "experiment_name": self.experiment_name,
             "description": self.description,
             "tags": self.tags,
             "artifact_location": self.artifact_location,
@@ -283,7 +283,7 @@ class SklearnTrainer(ModelTrainer):
 
             return model, metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Sklearn training failed: %s", e)
             raise
 
@@ -295,7 +295,7 @@ class SklearnTrainer(ModelTrainer):
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             joblib.dump(model, path)
             return True
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to save sklearn model: %s", e)
             return False
 
@@ -305,11 +305,11 @@ class SklearnTrainer(ModelTrainer):
             import joblib
 
             return joblib.load(path)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to load sklearn model: %s", e)
             raise
 
-    def _get_model_class(self) -> None:
+    def _get_model_class(self, job: TrainingJob) -> None:
         """Get model class based on job configuration."""
         model_name = job.training_config.get("model_name", "RandomForestClassifier")
 
@@ -392,6 +392,13 @@ class SklearnTrainer(ModelTrainer):
 
         try:
             if model_type in [ModelType.CLASSIFICATION]:
+                from sklearn.metrics import (
+                    accuracy_score,
+                    f1_score,
+                    precision_score,
+                    recall_score,
+                )
+                
                 y_pred = model.predict(X_val)
                 metrics["accuracy"] = accuracy_score(y_val, y_pred)
                 metrics["precision"] = precision_score(
@@ -425,7 +432,7 @@ class SklearnTrainer(ModelTrainer):
                 else:
                     metrics["silhouette_score"] = 0.0
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to calculate some metrics: %s", e)
 
         return metrics
@@ -484,7 +491,7 @@ class TensorFlowTrainer(ModelTrainer):
 
             return model, metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("TensorFlow training failed: %s", e)
             raise
 
@@ -494,7 +501,7 @@ class TensorFlowTrainer(ModelTrainer):
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             model.save(path)
             return True
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to save TensorFlow model: %s", e)
             return False
 
@@ -504,11 +511,11 @@ class TensorFlowTrainer(ModelTrainer):
             import tensorflow as tf
 
             return tf.keras.models.load_model(path)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to load TensorFlow model: %s", e)
             raise
 
-    def _create_model(self) -> None:
+    def _create_model(self, job: TrainingJob) -> None:
         """Create TensorFlow model based on job configuration."""
         import tensorflow as tf
 
@@ -571,7 +578,7 @@ class TensorFlowTrainer(ModelTrainer):
 
         return model
 
-    def _prepare_data(self) -> None:
+    def _prepare_data(self, data: Any, job: TrainingJob) -> None:
         """Prepare data for TensorFlow training."""
         import tensorflow as tf
 
@@ -594,7 +601,7 @@ class TensorFlowTrainer(ModelTrainer):
 
         return train_dataset, val_dataset
 
-    def _extract_metrics(self, history) -> dict[str, float]:
+    def _extract_metrics(self, history: Any) -> dict[str, float]:
         """Extract metrics from training history."""
         metrics = {}
 
@@ -611,7 +618,7 @@ class TensorFlowTrainer(ModelTrainer):
                         improvement = values[-1] - values[0]
                         metrics[f"{metric_name}_improvement"] = float(improvement)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to extract some metrics: %s", e)
 
         return metrics
@@ -683,7 +690,7 @@ class TrainingOrchestrator:
             self.mlflow_client = mlflow.tracking.MlflowClient()
             logger.info("MLflow initialized with experiment ID: %s", self.experiment_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("MLflow initialization failed: %s", e)
             self.mlflow_client = None
 
@@ -698,7 +705,7 @@ class TrainingOrchestrator:
             self.k8s_client = client.CoreV1Api()
             logger.info("Kubernetes client initialized")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Kubernetes initialization failed: %s", e)
             self.k8s_client = None
 
@@ -721,11 +728,11 @@ class TrainingOrchestrator:
             logger.info("Submitted training job %s", job.job_id)
             return job.job_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to submit training job: %s", e)
             raise
 
-    async def _execute_training_job(self) -> None:
+    async def _execute_training_job(self, job: TrainingJob) -> None:
         """Execute a training job."""
         start_time = time.time()
 
@@ -803,7 +810,7 @@ class TrainingOrchestrator:
                 msg = "Failed to save trained model"
                 raise RuntimeError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Create failed result
             result = TrainingResult(
                 job_id=job.job_id,
@@ -856,7 +863,7 @@ class TrainingOrchestrator:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Job validation error: %s", e)
             return False
 
@@ -881,7 +888,7 @@ class TrainingOrchestrator:
                 # Default: assume it's a secure serialized file
                 return deserialize_from_file(str(data_path))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to load training data: %s", e)
             raise
 
@@ -894,12 +901,12 @@ class TrainingOrchestrator:
         # Default to sklearn trainer
         return self.trainers["sklearn"]
 
-    def _update_job_status(self) -> None:
+    def _update_job_status(self, job_id: str, status: TrainingStatus) -> None:
         """Update job status."""
         # This would update the job status in a database in production
         logger.info("Job %s status: %s", job_id, status.value)
 
-    def _update_average_training_time(self) -> None:
+    def _update_average_training_time(self, training_time: float) -> None:
         """Update average training time."""
         total_completed = self.stats["completed_jobs"]
         if total_completed > 0:
@@ -931,7 +938,7 @@ class TrainingOrchestrator:
 
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to cancel training job %s: %s", job_id, e)
             return False
 

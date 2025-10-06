@@ -11,11 +11,11 @@ Security Features:
 - Automatic secret rotation support
 """
 
-import logging
-import os
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any
+import logging
+import os
+from typing import Any, Dict
 
 try:
     import hvac
@@ -43,7 +43,13 @@ class VaultClient:
     - Secret rotation and lifecycle management
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        vault_url: str | None = None,
+        vault_token: str | None = None,
+        mount_point: str | None = None,
+        environment: str | None = None,
+    ) -> None:
         """Initialize Vault client.
 
         Args:
@@ -99,7 +105,7 @@ class VaultClient:
 
                 self._authenticated = True
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 msg = f"Error connecting to Vault: {e}"
                 raise VaultClientError(msg)
 
@@ -171,7 +177,7 @@ class VaultClient:
             self._log_secret_access(path, key, True)
             return secret_data
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             error_msg = f"Error retrieving secret from {full_path}: {e}"
             self._log_secret_access(path, key, False, error_msg)
 
@@ -332,7 +338,7 @@ class VaultClient:
                 "all_secrets_available": all_secrets_available,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "message": str(e),

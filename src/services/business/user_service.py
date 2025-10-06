@@ -4,9 +4,9 @@ Example service layer implementation using repository pattern for clean separati
 of business logic and data access concerns.
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict
 
 from ..domain.models import User
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class UserService:
     """User service with business logic separated from data access."""
 
-    def __init__(self) -> None:
+    def __init__(self, user_repository: Any) -> None:
         """Initialize user service with injected repository."""
         self.user_repository = user_repository
 
@@ -257,7 +257,7 @@ class UserService:
                 "user_count": user_count,
                 "service": "UserService",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "repository_connected": False,

@@ -1,3 +1,4 @@
+from typing import Dict
 """
 Integration Test: Service Registry Registration Flow
 Task T013 - Phase 18 Production System Integration
@@ -13,8 +14,8 @@ This follows TDD methodology - Red, Green, Refactor.
 """
 
 import asyncio
-import uuid
 from typing import Any
+import uuid
 
 import httpx
 import pytest

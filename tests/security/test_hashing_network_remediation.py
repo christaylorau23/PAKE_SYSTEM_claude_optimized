@@ -7,8 +7,8 @@ This test suite validates that:
 2. All network bindings use secure addresses instead of 0.0.0.0
 """
 
-import re
 from pathlib import Path
+import re
 
 import pytest
 

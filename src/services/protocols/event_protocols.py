@@ -9,14 +9,14 @@ Defines:
 - Error handling and retry mechanisms
 """
 
-import asyncio
-import logging
-import uuid
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import Any, Dict, TYPE_CHECKING
+import uuid
 
 from ..messaging.message_bus import Message, MessageBus, MessagePriority, MessageType
 
@@ -82,7 +82,7 @@ class ProtocolConfig:
 class ProtocolHandler(ABC):
     """Abstract base class for protocol handlers."""
 
-    def __init__(self) -> None:
+    def __init__(self, protocol_type: ProtocolType, config: ProtocolConfig | None = None) -> None:
         self.protocol_type = protocol_type
         self.config = config or ProtocolConfig()
         self.middleware: list[Callable] = []
@@ -94,7 +94,7 @@ class ProtocolHandler(ABC):
     ) -> ProtocolMessage | None:
         """Handle incoming protocol message."""
 
-    def add_middleware(self) -> None:
+    def add_middleware(self, middleware: Callable) -> None:
         """Add middleware to protocol handler."""
         self.middleware.append(middleware)
 
@@ -103,7 +103,7 @@ class ProtocolHandler(ABC):
         for middleware_func in self.middleware:
             try:
                 message = await middleware_func(message)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Middleware processing error: %s", e)
 
         return message
@@ -112,7 +112,7 @@ class ProtocolHandler(ABC):
 class RequestResponseProtocol(ProtocolHandler):
     """Request-Response communication protocol."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ProtocolConfig | None = None) -> None:
         super().__init__(ProtocolType.REQUEST_RESPONSE, config)
         self.pending_requests: dict[str, asyncio.Future] = {}
 
@@ -202,11 +202,11 @@ class RequestResponseProtocol(ProtocolHandler):
 class PublishSubscribeProtocol(ProtocolHandler):
     """Publish-Subscribe communication protocol."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ProtocolConfig | None = None) -> None:
         super().__init__(ProtocolType.PUBLISH_SUBSCRIBE, config)
         self.subscribers: dict[str, list[Callable]] = {}
 
-    async def publish(self) -> None:
+    async def publish(self, message_bus: MessageBus, message: ProtocolMessage, topic: str) -> None:
         """Publish message to topic."""
         # Process through middleware
         message = await self.process_middleware(message)
@@ -218,7 +218,7 @@ class PublishSubscribeProtocol(ProtocolHandler):
         stream = f"pubsub:{topic}"
         await message_bus.publish(stream, bus_message)
 
-    async def subscribe(self) -> None:
+    async def subscribe(self, message_bus: MessageBus, topic: str, handler: Callable) -> None:
         """Subscribe to topic with handler."""
         if topic not in self.subscribers:
             self.subscribers[topic] = []
@@ -246,12 +246,12 @@ class PublishSubscribeProtocol(ProtocolHandler):
                         await handler(message)
                     else:
                         handler(message)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Subscriber handler error: %s", e)
 
         return None
 
-    async def _handle_subscription_message(self) -> None:
+    async def _handle_subscription_message(self, bus_message: Message) -> None:
         """Handle message from subscription stream."""
         # Convert bus message to protocol message
         protocol_msg = self._bus_to_protocol_message(bus_message)
@@ -281,7 +281,7 @@ class PublishSubscribeProtocol(ProtocolHandler):
 class TaskCoordinationProtocol(ProtocolHandler):
     """Task coordination protocol for Supervisor-Worker interactions."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ProtocolConfig | None = None) -> None:
         super().__init__(ProtocolType.TASK_COORDINATION, config)
         self.active_tasks: dict[str, Dict[str, Any]] = {}
         self.worker_status: dict[str, str] = {}
@@ -326,7 +326,7 @@ class TaskCoordinationProtocol(ProtocolHandler):
         logger.debug("Assigned task %s to worker %s", task_id, worker_id)
         return task_id
 
-    async def report_task_progress(self) -> None:
+    async def report_task_progress(self, message_bus: MessageBus, task_id: str, progress: Dict[str, Any]) -> None:
         """Report task progress from worker."""
         progress_msg = ProtocolMessage(
             pattern=CommunicationPattern.WORKER_TO_SUPERVISOR,
@@ -344,7 +344,7 @@ class TaskCoordinationProtocol(ProtocolHandler):
 
         await self._send_protocol_message(message_bus, progress_msg)
 
-    async def complete_task(self) -> None:
+    async def complete_task(self, message_bus: MessageBus, task_id: str, result: Dict[str, Any], success: bool) -> None:
         """Complete task and report result."""
         completion_msg = ProtocolMessage(
             pattern=CommunicationPattern.WORKER_TO_SUPERVISOR,
@@ -451,7 +451,7 @@ class TaskCoordinationProtocol(ProtocolHandler):
         logger.info("Task %s completed with success=%s", task_id, success)
         return None
 
-    async def _send_protocol_message(self) -> None:
+    async def _send_protocol_message(self, message_bus: MessageBus, message: ProtocolMessage) -> None:
         """Send protocol message via message bus."""
         bus_message = Message(
             type=(
@@ -485,13 +485,13 @@ class TaskCoordinationProtocol(ProtocolHandler):
 class HealthMonitoringProtocol(ProtocolHandler):
     """Health monitoring protocol for system-wide health checks."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ProtocolConfig | None = None) -> None:
         super().__init__(ProtocolType.EVENT_SOURCING, config)
         self.health_status: dict[str, Dict[str, Any]] = {}
         self.health_history: list[Dict[str, Any]] = []
         self.max_history = 1000
 
-    async def send_heartbeat(self) -> None:
+    async def send_heartbeat(self, message_bus: MessageBus, agent_id: str, health_data: Dict[str, Any]) -> None:
         """Send heartbeat with health data."""
         heartbeat_msg = ProtocolMessage(
             pattern=CommunicationPattern.HEALTH_MONITORING,
@@ -634,7 +634,7 @@ class HealthMonitoringProtocol(ProtocolHandler):
 
         return None
 
-    async def _send_health_message(self) -> None:
+    async def _send_health_message(self, message_bus: MessageBus, message: ProtocolMessage) -> None:
         """Send health monitoring message."""
         bus_message = Message(
             type=MessageType.HEALTH_CHECK,

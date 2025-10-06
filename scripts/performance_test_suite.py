@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Performance Test Suite
@@ -54,7 +55,7 @@ class PerformanceTestSuite:
                     self.results["summary"]["performance_issues"] += 1
                 print(f"❌ {test_name}: FAILED - {result.get('details', '')}")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results["tests"].append(
                 {
                     "name": test_name,
@@ -97,7 +98,7 @@ class PerformanceTestSuite:
                     if response.status_code >= 400:
                         failed_requests += 1
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     failed_requests += 1
                     print(f"Request to {endpoint} failed: {e}")
 
@@ -142,7 +143,7 @@ class PerformanceTestSuite:
                         "status_code": response.status_code,
                         "success": response.status_code < 400,
                     }
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     return {
                         "response_time": 0,
                         "status_code": 0,
@@ -262,7 +263,7 @@ class PerformanceTestSuite:
                     if response.status_code >= 400:
                         failed_requests += 1
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     failed_requests += 1
                     print(f"Database request to {endpoint} failed: {e}")
 

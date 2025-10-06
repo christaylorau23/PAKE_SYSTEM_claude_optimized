@@ -7,11 +7,11 @@ This module tests the flaky test management system to ensure it properly
 tracks, analyzes, and helps resolve flaky tests according to enterprise policy.
 """
 
+from datetime import UTC, datetime, timedelta
 import json
+from pathlib import Path
 import tempfile
 import time
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -71,7 +71,7 @@ class TestFlakyTestTracker:
     def test_tracker_initialization(self) -> None:
         """Test tracker initialization"""
         assert isinstance(temp_tracker, FlakyTestTracker)
-        assert len(temp_tracker.flaky_tests) == 0
+        assert len(self.temp_tracker.flaky_tests) == 0
 
     def test_record_test_failure(self) -> None:
         """Test recording a test failure"""
@@ -80,7 +80,7 @@ class TestFlakyTestTracker:
         test_file = "tests/test_example.py"
         error_message = "Test failed due to race condition"
 
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_name,
             test_file=test_file,
@@ -88,8 +88,8 @@ class TestFlakyTestTracker:
             failure_mode=FailureMode.RACE_CONDITION,
         )
 
-        assert test_id in temp_tracker.flaky_tests
-        record = temp_tracker.flaky_tests[test_id]
+        assert test_id in self.temp_tracker.flaky_tests
+        record = self.temp_tracker.flaky_tests[test_id]
         assert record.test_name == test_name
         assert record.failure_mode == FailureMode.RACE_CONDITION
         assert record.failure_rate == 1.0  # First failure = 100%
@@ -100,7 +100,7 @@ class TestFlakyTestTracker:
         test_id = "test_example_success"
 
         # First record a failure
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -109,9 +109,9 @@ class TestFlakyTestTracker:
         )
 
         # Then record a success
-        temp_tracker.record_test_success(test_id)
+        self.temp_tracker.record_test_success(test_id)
 
-        record = temp_tracker.flaky_tests[test_id]
+        record = self.temp_tracker.flaky_tests[test_id]
         assert record.total_runs == 2
         assert record.total_failures == 1
         assert record.failure_rate == 0.5  # 1 failure out of 2 runs
@@ -120,21 +120,21 @@ class TestFlakyTestTracker:
         """Test recording retry attempts"""
         test_id = "test_example_retry"
 
-        temp_tracker.record_retry_attempt(test_id)
-        temp_tracker.record_retry_attempt(test_id)
+        self.temp_tracker.record_retry_attempt(test_id)
+        self.temp_tracker.record_retry_attempt(test_id)
 
-        assert temp_tracker.retry_attempts[test_id] == 2
+        assert self.temp_tracker.retry_attempts[test_id] == 2
 
     def test_should_retry_test(self) -> None:
         """Test retry decision logic"""
         test_id = "test_example_retry_decision"
 
         # Unknown test should be retryable
-        assert temp_tracker.should_retry_test(test_id) is True
+        assert self.temp_tracker.should_retry_test(test_id) is True
 
         # Record some failures
         for _ in range(3):
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -143,21 +143,21 @@ class TestFlakyTestTracker:
             )
 
         # Should still be retryable (failure rate above threshold)
-        assert temp_tracker.should_retry_test(test_id) is True
+        assert self.temp_tracker.should_retry_test(test_id) is True
 
         # Record many retry attempts
         for _ in range(5):
-            temp_tracker.record_retry_attempt(test_id)
+            self.temp_tracker.record_retry_attempt(test_id)
 
         # Should not be retryable (too many retries)
-        assert temp_tracker.should_retry_test(test_id) is False
+        assert self.temp_tracker.should_retry_test(test_id) is False
 
     def test_create_issue_ticket(self) -> None:
         """Test creating issue tickets"""
         test_id = "test_example_ticket"
 
         # First record a failure
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -166,12 +166,12 @@ class TestFlakyTestTracker:
         )
 
         # Create issue ticket
-        ticket_id = temp_tracker.create_issue_ticket(test_id)
+        ticket_id = self.temp_tracker.create_issue_ticket(test_id)
 
         assert ticket_id.startswith("FLAKY-")
         assert test_id.upper() in ticket_id
 
-        record = temp_tracker.flaky_tests[test_id]
+        record = self.temp_tracker.flaky_tests[test_id]
         assert record.issue_ticket == ticket_id
         assert record.resolution_status == FlakyTestStatus.INVESTIGATING
 
@@ -180,7 +180,7 @@ class TestFlakyTestTracker:
         test_id = "test_example_resolution"
 
         # Record failure and create ticket
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -188,17 +188,17 @@ class TestFlakyTestTracker:
             failure_mode=FailureMode.RACE_CONDITION,
         )
 
-        temp_tracker.create_issue_ticket(test_id)
+        self.temp_tracker.create_issue_ticket(test_id)
 
         # Update resolution status
-        temp_tracker.update_resolution_status(
+        self.temp_tracker.update_resolution_status(
             test_id=test_id,
             status=FlakyTestStatus.RESOLVED,
             notes="Fixed race condition with proper locking",
             refactoring_notes="Added asyncio.Lock to protect shared state",
         )
 
-        record = temp_tracker.flaky_tests[test_id]
+        record = self.temp_tracker.flaky_tests[test_id]
         assert record.resolution_status == FlakyTestStatus.RESOLVED
         assert "Fixed race condition" in record.resolution_notes
         assert "Added asyncio.Lock" in record.refactoring_notes
@@ -214,7 +214,7 @@ class TestFlakyTestTracker:
         ]
 
         for test_id, status in zip(test_ids, statuses, strict=False):
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -223,16 +223,16 @@ class TestFlakyTestTracker:
             )
 
             if status != FlakyTestStatus.IDENTIFIED:
-                temp_tracker.update_resolution_status(test_id, status)
+                self.temp_tracker.update_resolution_status(test_id, status)
 
         # Test getting by status
-        identified_tests = temp_tracker.get_flaky_tests_by_status(
+        identified_tests = self.temp_tracker.get_flaky_tests_by_status(
             FlakyTestStatus.IDENTIFIED
         )
-        investigating_tests = temp_tracker.get_flaky_tests_by_status(
+        investigating_tests = self.temp_tracker.get_flaky_tests_by_status(
             FlakyTestStatus.INVESTIGATING
         )
-        resolved_tests = temp_tracker.get_flaky_tests_by_status(
+        resolved_tests = self.temp_tracker.get_flaky_tests_by_status(
             FlakyTestStatus.RESOLVED
         )
 
@@ -251,7 +251,7 @@ class TestFlakyTestTracker:
         ]
 
         for test_id, failure_mode in zip(test_ids, failure_modes, strict=False):
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -260,13 +260,13 @@ class TestFlakyTestTracker:
             )
 
         # Test getting by failure mode
-        race_tests = temp_tracker.get_flaky_tests_by_failure_mode(
+        race_tests = self.temp_tracker.get_flaky_tests_by_failure_mode(
             FailureMode.RACE_CONDITION
         )
-        timeout_tests = temp_tracker.get_flaky_tests_by_failure_mode(
+        timeout_tests = self.temp_tracker.get_flaky_tests_by_failure_mode(
             FailureMode.TIMING_DEPENDENT
         )
-        api_tests = temp_tracker.get_flaky_tests_by_failure_mode(
+        api_tests = self.temp_tracker.get_flaky_tests_by_failure_mode(
             FailureMode.EXTERNAL_API
         )
 
@@ -280,7 +280,7 @@ class TestFlakyTestTracker:
         test_ids = ["test1", "test2", "test3"]
 
         for i, test_id in enumerate(test_ids):
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -290,15 +290,15 @@ class TestFlakyTestTracker:
 
             # Record some successes
             for _ in range(i + 1):
-                temp_tracker.record_test_success(test_id)
+                self.temp_tracker.record_test_success(test_id)
 
             # Update status for some tests
             if i == 0:
-                temp_tracker.update_resolution_status(test_id, FlakyTestStatus.RESOLVED)
+                self.temp_tracker.update_resolution_status(test_id, FlakyTestStatus.RESOLVED)
             elif i == 1:
-                temp_tracker.update_resolution_status(test_id, FlakyTestStatus.ACCEPTED)
+                self.temp_tracker.update_resolution_status(test_id, FlakyTestStatus.ACCEPTED)
 
-        metrics = temp_tracker.get_metrics()
+        metrics = self.temp_tracker.get_metrics()
 
         assert metrics.total_flaky_tests == 3
         assert metrics.resolved_tests == 1
@@ -313,7 +313,7 @@ class TestFlakyTestTracker:
         test_ids = ["test_report1", "test_report2"]
 
         for test_id in test_ids:
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -322,9 +322,9 @@ class TestFlakyTestTracker:
             )
 
             # Create tickets
-            temp_tracker.create_issue_ticket(test_id)
+            self.temp_tracker.create_issue_ticket(test_id)
 
-        report = temp_tracker.generate_report()
+        report = self.temp_tracker.generate_report()
 
         assert "summary" in report
         assert "by_status" in report
@@ -340,7 +340,7 @@ class TestFlakyTestTracker:
         test_id = "test_persistence"
 
         # Record a failure
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -349,7 +349,7 @@ class TestFlakyTestTracker:
         )
 
         # Create a new tracker with the same storage path
-        new_tracker = FlakyTestTracker(storage_path=temp_tracker.storage_path)
+        new_tracker = FlakyTestTracker(storage_path=self.temp_tracker.storage_path)
 
         # Should load the existing data
         assert test_id in new_tracker.flaky_tests
@@ -460,7 +460,7 @@ class TestIntegrationScenarios:
         test_id = "test_comprehensive_workflow"
 
         # Step 1: Record initial failure
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -470,14 +470,14 @@ class TestIntegrationScenarios:
 
         # Step 2: Record retry attempts
         for _ in range(2):
-            temp_tracker.record_retry_attempt(test_id)
+            self.temp_tracker.record_retry_attempt(test_id)
 
         # Step 3: Create issue ticket
-        ticket_id = temp_tracker.create_issue_ticket(test_id)
+        ticket_id = self.temp_tracker.create_issue_ticket(test_id)
 
         # Step 4: Record more failures during investigation
         for _ in range(2):
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -486,7 +486,7 @@ class TestIntegrationScenarios:
             )
 
         # Step 5: Update resolution status
-        temp_tracker.update_resolution_status(
+        self.temp_tracker.update_resolution_status(
             test_id=test_id,
             status=FlakyTestStatus.RESOLVED,
             notes="Fixed with proper synchronization",
@@ -495,10 +495,10 @@ class TestIntegrationScenarios:
 
         # Step 6: Record successful runs
         for _ in range(5):
-            temp_tracker.record_test_success(test_id)
+            self.temp_tracker.record_test_success(test_id)
 
         # Verify final state
-        record = temp_tracker.flaky_tests[test_id]
+        record = self.temp_tracker.flaky_tests[test_id]
         assert record.resolution_status == FlakyTestStatus.RESOLVED
         assert record.issue_ticket == ticket_id
         assert record.total_failures == 3
@@ -506,7 +506,7 @@ class TestIntegrationScenarios:
         assert record.failure_rate == 3 / 8
 
         # Generate report
-        report = temp_tracker.generate_report()
+        report = self.temp_tracker.generate_report()
         assert report["summary"]["resolved_tests"] == 1
 
     def test_multiple_failure_modes_tracking(self) -> None:
@@ -520,7 +520,7 @@ class TestIntegrationScenarios:
         ]
 
         for test_id, failure_mode in test_cases:
-            temp_tracker.record_test_failure(
+            self.temp_tracker.record_test_failure(
                 test_id=test_id,
                 test_name=test_id,
                 test_file="tests/test_example.py",
@@ -531,11 +531,11 @@ class TestIntegrationScenarios:
         # Verify all failure modes are tracked
         for failure_mode in FailureMode:
             if failure_mode != FailureMode.UNKNOWN:
-                tests = temp_tracker.get_flaky_tests_by_failure_mode(failure_mode)
+                tests = self.temp_tracker.get_flaky_tests_by_failure_mode(failure_mode)
                 assert len(tests) == 1
 
         # Generate report
-        report = temp_tracker.generate_report()
+        report = self.temp_tracker.generate_report()
         assert report["summary"]["total_flaky_tests"] == 5
 
         # Check recommendations
@@ -547,7 +547,7 @@ class TestIntegrationScenarios:
         test_id = "test_retry_policy"
 
         # Record initial failure
-        temp_tracker.record_test_failure(
+        self.temp_tracker.record_test_failure(
             test_id=test_id,
             test_name=test_id,
             test_file="tests/test_example.py",
@@ -556,28 +556,28 @@ class TestIntegrationScenarios:
         )
 
         # Should be retryable initially
-        assert temp_tracker.should_retry_test(test_id) is True
+        assert self.temp_tracker.should_retry_test(test_id) is True
 
         # Record retry attempts up to limit
         for _ in range(3):
-            temp_tracker.record_retry_attempt(test_id)
+            self.temp_tracker.record_retry_attempt(test_id)
 
         # Should not be retryable after max retries
-        assert temp_tracker.should_retry_test(test_id) is False
+        assert self.temp_tracker.should_retry_test(test_id) is False
 
         # Create ticket (mandatory per policy)
-        ticket_id = temp_tracker.create_issue_ticket(test_id)
+        ticket_id = self.temp_tracker.create_issue_ticket(test_id)
         assert ticket_id is not None
 
         # Update status to resolved
-        temp_tracker.update_resolution_status(
+        self.temp_tracker.update_resolution_status(
             test_id=test_id,
             status=FlakyTestStatus.RESOLVED,
             notes="Fixed the underlying issue",
         )
 
         # Should not be retryable when resolved
-        assert temp_tracker.should_retry_test(test_id) is False
+        assert self.temp_tracker.should_retry_test(test_id) is False
 
 
 # Pytest fixtures

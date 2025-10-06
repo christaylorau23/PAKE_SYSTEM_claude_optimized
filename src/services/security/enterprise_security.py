@@ -235,7 +235,7 @@ class EncryptionManager:
                 "encrypted_at": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Encryption failed: %s", e)
             raise
 
@@ -256,7 +256,7 @@ class EncryptionManager:
 
             return decrypted_data.decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Decryption failed: %s", e)
             raise
 
@@ -288,7 +288,7 @@ class EncryptionManager:
             logger.info("Encryption key %s rotated successfully", key_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Key rotation failed for %s: %s", key_id, e)
             return False
 
@@ -449,7 +449,7 @@ class AuditLogger:
             logger.debug("Audit event logged: %s", event.event_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to log audit event: %s", e)
             return False
 
@@ -1468,7 +1468,7 @@ class EnterpriseSecurityFramework:
                 "requires_mfa": False,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication error: %s", e)
             return {
                 "success": False,
@@ -1573,7 +1573,7 @@ class EnterpriseSecurityFramework:
             return {"authorized": False, "error": "Token expired"}
         except jwt.InvalidTokenError:
             return {"authorized": False, "error": "Invalid token"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authorization error: %s", e)
             return {"authorized": False, "error": "Authorization system error"}
 
@@ -1652,7 +1652,7 @@ class EnterpriseSecurityFramework:
                 "security_level": security_level.value,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Encryption failed: %s", e)
             return {"encrypted": False, "error": str(e)}
 

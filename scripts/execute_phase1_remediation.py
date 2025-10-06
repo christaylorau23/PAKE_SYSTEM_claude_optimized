@@ -12,12 +12,12 @@ The script follows the "Automation First" principle and ensures
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+from pathlib import Path
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 # Add the codemods directory to the path
@@ -88,7 +88,7 @@ class CodemodExecutor:
         except subprocess.TimeoutExpired:
             self.logger.warning(f"Timeout checking {file_path}")
             return []
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error(f"Error checking {file_path}: {e}")
             return []
 
@@ -119,7 +119,7 @@ class CodemodExecutor:
 
             return False, 0
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error(
                 f"Error applying context passing fixes to {file_path}: {e}"
             )
@@ -152,7 +152,7 @@ class CodemodExecutor:
 
             return False, 0
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error(f"Error applying datetime fixes to {file_path}: {e}")
             return False, 0
 
@@ -187,7 +187,7 @@ class CodemodExecutor:
             if context_modified or datetime_modified:
                 self.logger.info(f"Fixed {result['total_fixes']} issues in {file_path}")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             result["errors"].append(str(e))
             self.logger.error(f"Error processing {file_path}: {e}")
 
@@ -231,7 +231,7 @@ class CodemodExecutor:
                             f"(F821: {result['context_fixes']}, DTZ: {result['datetime_fixes']})"
                         )
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     self.logger.error(f"Failed to process {file_path}: {e}")
 
         end_time = time.time()

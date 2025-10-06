@@ -12,15 +12,15 @@ Key Features:
 - Automated memory optimization recommendations
 """
 
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import gc
 import json
+from pathlib import Path
 import subprocess
 import threading
 import time
 import tracemalloc
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 import psutil
@@ -112,7 +112,7 @@ class MemoryProfiler:
                 self.take_snapshot()
                 self._detect_memory_leaks()
                 time.sleep(self.snapshot_interval_seconds)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"Error in monitoring loop: {e}")
                 time.sleep(5)
 
@@ -182,7 +182,7 @@ class MemoryProfiler:
                 )
 
             return allocations
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Error getting top allocations: {e}")
             return []
 
@@ -526,7 +526,7 @@ class MemrayProfiler:
             raise RuntimeError(msg)
 
         if not output_file:
-            output_file = profile_file.replace(".bin", "_flamegraph.html")
+            output_file = self.profile_file.replace(".bin", "_flamegraph.html")
 
         try:
             # Generate flame graph
@@ -648,7 +648,7 @@ def main(self) -> None:
 
     except KeyboardInterrupt:
         print("\nProfiling interrupted by user")
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error: {e}")
 
 

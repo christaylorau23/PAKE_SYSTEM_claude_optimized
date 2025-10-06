@@ -6,8 +6,8 @@ for the CachingService class using pytest-mock for complete isolation.
 """
 
 import asyncio
-import json
 from datetime import UTC, datetime
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -74,14 +74,14 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         cached_data = UserFactory()
-        mock_memory_cache.get.return_value = cached_data
+        self.mock_memory_cache.get.return_value = cached_data
 
         # Act
-        result = await cache_service.get(key)
+        result = await self.cache_service.get(key)
 
         # Assert
         assert result == cached_data
-        mock_memory_cache.get.assert_called_once_with(key)
+        self.mock_memory_cache.get.assert_called_once_with(key)
 
     @pytest.mark.unit_functional
     async def test_set_cache_data_success(self) -> None:
@@ -92,12 +92,12 @@ class TestCacheServiceComprehensive:
         ttl = 3600
 
         # Act
-        result = await cache_service.set(key, data, ttl)
+        result = await self.cache_service.set(key, data, ttl)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once_with(key, data, ttl)
-        mock_redis.setex.assert_called_once_with(key, ttl, json.dumps(data))
+        self.mock_memory_cache.set.assert_called_once_with(key, data, ttl)
+        self.mock_redis.setex.assert_called_once_with(key, ttl, json.dumps(data))
 
     @pytest.mark.unit_functional
     async def test_delete_cached_data_success(self) -> None:
@@ -106,12 +106,12 @@ class TestCacheServiceComprehensive:
         key = "user:123"
 
         # Act
-        result = await cache_service.delete(key)
+        result = await self.cache_service.delete(key)
 
         # Assert
         assert result is True
-        mock_memory_cache.delete.assert_called_once_with(key)
-        mock_redis.delete.assert_called_once_with(key)
+        self.mock_memory_cache.delete.assert_called_once_with(key)
+        self.mock_redis.delete.assert_called_once_with(key)
 
     @pytest.mark.unit_functional
     async def test_cache_hit_memory_first(self) -> None:
@@ -119,15 +119,15 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         cached_data = UserFactory()
-        mock_memory_cache.get.return_value = cached_data
+        self.mock_memory_cache.get.return_value = cached_data
 
         # Act
-        result = await cache_service.get(key)
+        result = await self.cache_service.get(key)
 
         # Assert
         assert result == cached_data
-        mock_memory_cache.get.assert_called_once_with(key)
-        mock_redis.get.assert_not_called()  # Should not check Redis if memory hit
+        self.mock_memory_cache.get.assert_called_once_with(key)
+        self.mock_redis.get.assert_not_called()  # Should not check Redis if memory hit
 
     @pytest.mark.unit_functional
     async def test_cache_miss_memory_hit_redis(self) -> None:
@@ -135,32 +135,32 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         redis_data = UserFactory()
-        mock_memory_cache.get.return_value = None
-        mock_redis.get.return_value = json.dumps(redis_data)
+        self.mock_memory_cache.get.return_value = None
+        self.mock_redis.get.return_value = json.dumps(redis_data)
 
         # Act
-        result = await cache_service.get(key)
+        result = await self.cache_service.get(key)
 
         # Assert
         assert result == redis_data
-        mock_memory_cache.get.assert_called_once_with(key)
-        mock_redis.get.assert_called_once_with(key)
+        self.mock_memory_cache.get.assert_called_once_with(key)
+        self.mock_redis.get.assert_called_once_with(key)
 
     @pytest.mark.unit_functional
     async def test_cache_miss_both_levels(self) -> None:
         """Test cache miss at both L1 and L2 levels"""
         # Arrange
         key = "user:123"
-        mock_memory_cache.get.return_value = None
-        mock_redis.get.return_value = None
+        self.mock_memory_cache.get.return_value = None
+        self.mock_redis.get.return_value = None
 
         # Act
-        result = await cache_service.get(key)
+        result = await self.cache_service.get(key)
 
         # Assert
         assert result is None
-        mock_memory_cache.get.assert_called_once_with(key)
-        mock_redis.get.assert_called_once_with(key)
+        self.mock_memory_cache.get.assert_called_once_with(key)
+        self.mock_redis.get.assert_called_once_with(key)
 
     @pytest.mark.unit_functional
     async def test_set_with_default_ttl(self) -> None:
@@ -170,37 +170,37 @@ class TestCacheServiceComprehensive:
         data = UserFactory()
 
         # Act
-        result = await cache_service.set(key, data)
+        result = await self.cache_service.set(key, data)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once()
-        mock_redis.setex.assert_called_once()
+        self.mock_memory_cache.set.assert_called_once()
+        self.mock_redis.setex.assert_called_once()
 
     @pytest.mark.unit_functional
     async def test_exists_check_success(self) -> None:
         """Test checking if key exists in cache"""
         # Arrange
         key = "user:123"
-        mock_memory_cache.exists.return_value = True
+        self.mock_memory_cache.exists.return_value = True
 
         # Act
-        result = await cache_service.exists(key)
+        result = await self.cache_service.exists(key)
 
         # Assert
         assert result is True
-        mock_memory_cache.exists.assert_called_once_with(key)
+        self.mock_memory_cache.exists.assert_called_once_with(key)
 
     @pytest.mark.unit_functional
     async def test_clear_all_cache_success(self) -> None:
         """Test clearing all cache data"""
         # Act
-        result = await cache_service.clear_all()
+        result = await self.cache_service.clear_all()
 
         # Assert
         assert result is True
-        mock_memory_cache.clear.assert_called_once()
-        mock_redis.flushdb.assert_called_once()
+        self.mock_memory_cache.clear.assert_called_once()
+        self.mock_redis.flushdb.assert_called_once()
 
     # ============================================================================
     # EDGE CASES - Boundary Conditions and Edge Cases
@@ -215,12 +215,12 @@ class TestCacheServiceComprehensive:
         ttl = 0
 
         # Act
-        result = await cache_service.set(key, data, ttl)
+        result = await self.cache_service.set(key, data, ttl)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once_with(key, data, ttl)
-        mock_redis.set.assert_called_once_with(key, json.dumps(data))
+        self.mock_memory_cache.set.assert_called_once_with(key, data, ttl)
+        self.mock_redis.set.assert_called_once_with(key, json.dumps(data))
 
     @pytest.mark.unit_edge_case
     async def test_set_with_very_long_ttl(self) -> None:
@@ -231,12 +231,12 @@ class TestCacheServiceComprehensive:
         ttl = 86400 * 365  # 1 year
 
         # Act
-        result = await cache_service.set(key, data, ttl)
+        result = await self.cache_service.set(key, data, ttl)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once_with(key, data, ttl)
-        mock_redis.setex.assert_called_once_with(key, ttl, json.dumps(data))
+        self.mock_memory_cache.set.assert_called_once_with(key, data, ttl)
+        self.mock_redis.setex.assert_called_once_with(key, ttl, json.dumps(data))
 
     @pytest.mark.unit_edge_case
     async def test_set_with_special_characters_key(self) -> None:
@@ -246,12 +246,12 @@ class TestCacheServiceComprehensive:
         data = UserFactory()
 
         # Act
-        result = await cache_service.set(key, data)
+        result = await self.cache_service.set(key, data)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once()
-        mock_redis.setex.assert_called_once()
+        self.mock_memory_cache.set.assert_called_once()
+        self.mock_redis.setex.assert_called_once()
 
     @pytest.mark.unit_edge_case
     async def test_set_with_complex_nested_data(self) -> None:
@@ -269,22 +269,22 @@ class TestCacheServiceComprehensive:
         }
 
         # Act
-        result = await cache_service.set(key, data)
+        result = await self.cache_service.set(key, data)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once()
-        mock_redis.setex.assert_called_once()
+        self.mock_memory_cache.set.assert_called_once()
+        self.mock_redis.setex.assert_called_once()
 
     @pytest.mark.unit_edge_case
     async def test_get_with_empty_key(self) -> None:
         """Test getting cache data with empty key"""
         # Arrange
         key = ""
-        mock_memory_cache.get.return_value = None
+        self.mock_memory_cache.get.return_value = None
 
         # Act
-        result = await cache_service.get(key)
+        result = await self.cache_service.get(key)
 
         # Assert
         assert result is None
@@ -297,12 +297,12 @@ class TestCacheServiceComprehensive:
         data = None
 
         # Act
-        result = await cache_service.set(key, data)
+        result = await self.cache_service.set(key, data)
 
         # Assert
         assert result is True
-        mock_memory_cache.set.assert_called_once_with(key, data, 3600)
-        mock_redis.setex.assert_called_once_with(key, 3600, json.dumps(data))
+        self.mock_memory_cache.set.assert_called_once_with(key, data, 3600)
+        self.mock_redis.setex.assert_called_once_with(key, 3600, json.dumps(data))
 
     @pytest.mark.unit_edge_case
     async def test_concurrent_access_same_key(self) -> None:
@@ -312,10 +312,10 @@ class TestCacheServiceComprehensive:
         data = UserFactory()
 
         async def set_data(self) -> None:
-            return await cache_service.set(key, data)
+            return await self.cache_service.set(key, data)
 
         async def get_data(self) -> None:
-            return await cache_service.get(key)
+            return await self.cache_service.get(key)
 
         # Act
         tasks = [set_data(), get_data(), set_data(), get_data()]
@@ -335,11 +335,11 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         data = UserFactory()
-        mock_redis.setex.side_effect = Exception("Redis connection failed")
+        self.mock_redis.setex.side_effect = Exception("Redis connection failed")
 
         # Act & Assert
         with pytest.raises(Exception, match="Redis connection failed"):
-            await cache_service.set(key, data)
+            await self.cache_service.set(key, data)
 
     @pytest.mark.unit_error_handling
     async def test_memory_cache_failure(self) -> None:
@@ -347,11 +347,11 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         data = UserFactory()
-        mock_memory_cache.set.side_effect = Exception("Memory cache full")
+        self.mock_memory_cache.set.side_effect = Exception("Memory cache full")
 
         # Act & Assert
         with pytest.raises(Exception, match="Memory cache full"):
-            await cache_service.set(key, data)
+            await self.cache_service.set(key, data)
 
     @pytest.mark.unit_error_handling
     async def test_json_serialization_error(self) -> None:
@@ -359,34 +359,34 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         data = object()  # Non-serializable object
-        mock_memory_cache.set.return_value = True
+        self.mock_memory_cache.set.return_value = True
 
         # Act & Assert
         with pytest.raises(TypeError):
-            await cache_service.set(key, data)
+            await self.cache_service.set(key, data)
 
     @pytest.mark.unit_error_handling
     async def test_json_deserialization_error(self) -> None:
         """Test handling of JSON deserialization errors"""
         # Arrange
         key = "user:123"
-        mock_memory_cache.get.return_value = None
-        mock_redis.get.return_value = "invalid json"
+        self.mock_memory_cache.get.return_value = None
+        self.mock_redis.get.return_value = "invalid json"
 
         # Act & Assert
         with pytest.raises(json.JSONDecodeError):
-            await cache_service.get(key)
+            await self.cache_service.get(key)
 
     @pytest.mark.unit_error_handling
     async def test_delete_nonexistent_key(self) -> None:
         """Test deleting non-existent cache key"""
         # Arrange
         key = "nonexistent:key"
-        mock_memory_cache.delete.return_value = False
-        mock_redis.delete.return_value = 0
+        self.mock_memory_cache.delete.return_value = False
+        self.mock_redis.delete.return_value = 0
 
         # Act
-        result = await cache_service.delete(key)
+        result = await self.cache_service.delete(key)
 
         # Assert
         assert result is False
@@ -396,12 +396,12 @@ class TestCacheServiceComprehensive:
         """Test handling of Redis timeout errors"""
         # Arrange
         key = "user:123"
-        mock_memory_cache.get.return_value = None
-        mock_redis.get.side_effect = TimeoutError("Redis timeout")
+        self.mock_memory_cache.get.return_value = None
+        self.mock_redis.get.side_effect = TimeoutError("Redis timeout")
 
         # Act & Assert
         with pytest.raises(asyncio.TimeoutError, match="Redis timeout"):
-            await cache_service.get(key)
+            await self.cache_service.get(key)
 
     # ============================================================================
     # PERFORMANCE TESTS - Algorithm Efficiency and Performance
@@ -415,18 +415,18 @@ class TestCacheServiceComprehensive:
         # Arrange
         key = "user:123"
         data = UserFactory()
-        mock_memory_cache.get.return_value = data
+        self.mock_memory_cache.get.return_value = data
 
         # Act
         start_time = time.time()
         for _ in range(1000):
-            await cache_service.get(key)
+            await self.cache_service.get(key)
         end_time = time.time()
 
         # Assert
         execution_time = end_time - start_time
         assert execution_time < 1.0  # Should complete within 1 second
-        assert mock_memory_cache.get.call_count == 1000
+        assert self.mock_memory_cache.get.call_count == 1000
 
     @pytest.mark.unit_performance
     async def test_bulk_operations_performance(self) -> None:
@@ -440,7 +440,7 @@ class TestCacheServiceComprehensive:
         start_time = time.time()
         tasks = []
         for i, data in enumerate(data_items):
-            tasks.append(cache_service.set(f"user:{i}", data))
+            tasks.append(self.cache_service.set(f"user:{i}", data))
 
         await asyncio.gather(*tasks)
         end_time = time.time()
@@ -454,14 +454,14 @@ class TestCacheServiceComprehensive:
         """Test cache hit ratio performance"""
         # Arrange
         keys = [f"user:{i}" for i in range(10)]
-        mock_memory_cache.get.side_effect = (
+        self.mock_memory_cache.get.side_effect = (
             lambda key: UserFactory() if key in keys[:5] else None
         )
 
         # Act
         hit_count = 0
         for key in keys:
-            result = await cache_service.get(key)
+            result = await self.cache_service.get(key)
             if result is not None:
                 hit_count += 1
 
@@ -485,14 +485,14 @@ class TestCacheServiceComprehensive:
         }
 
         # Act
-        await cache_service.set(key, sensitive_data)
+        await self.cache_service.set(key, sensitive_data)
 
         # Assert
         # Verify that sensitive data is not exposed in logs
         # This would require checking log output, but for unit tests we verify
         # that the data is properly serialized
-        mock_redis.setex.assert_called_once()
-        call_args = mock_redis.setex.call_args[0]
+        self.mock_redis.setex.assert_called_once()
+        call_args = self.mock_redis.setex.call_args[0]
         serialized_data = call_args[2]
         assert "secretpassword" in serialized_data  # Data is serialized
         assert isinstance(serialized_data, str)  # Not logged as object
@@ -505,12 +505,12 @@ class TestCacheServiceComprehensive:
         data = UserFactory()
 
         # Act
-        result = await cache_service.set(malicious_key, data)
+        result = await self.cache_service.set(malicious_key, data)
 
         # Assert
         assert result is True
         # Verify that the key is used as-is (sanitization should happen at higher level)
-        mock_memory_cache.set.assert_called_once_with(malicious_key, data, 3600)
+        self.mock_memory_cache.set.assert_called_once_with(malicious_key, data, 3600)
 
     @pytest.mark.unit_security
     async def test_cache_expiration_security(self) -> None:
@@ -521,12 +521,12 @@ class TestCacheServiceComprehensive:
         short_ttl = 1  # 1 second
 
         # Act
-        await cache_service.set(key, data, short_ttl)
+        await self.cache_service.set(key, data, short_ttl)
 
         # Assert
         # Verify that TTL is set correctly
-        mock_redis.setex.assert_called_once_with(key, short_ttl, json.dumps(data))
-        mock_memory_cache.set.assert_called_once_with(key, data, short_ttl)
+        self.mock_redis.setex.assert_called_once_with(key, short_ttl, json.dumps(data))
+        self.mock_memory_cache.set.assert_called_once_with(key, data, short_ttl)
 
     @pytest.mark.unit_security
     async def test_cache_isolation(self) -> None:
@@ -538,15 +538,15 @@ class TestCacheServiceComprehensive:
         data2 = UserFactory(username="user2")
 
         # Act
-        await cache_service.set(key1, data1)
-        await cache_service.set(key2, data2)
+        await self.cache_service.set(key1, data1)
+        await self.cache_service.set(key2, data2)
 
         # Assert
         # Verify that different keys store different data
-        assert mock_memory_cache.set.call_count == 2
-        assert mock_redis.setex.call_count == 2
+        assert self.mock_memory_cache.set.call_count == 2
+        assert self.mock_redis.setex.call_count == 2
 
         # Verify that the data is stored separately
-        call_args_list = mock_memory_cache.set.call_args_list
+        call_args_list = self.mock_memory_cache.set.call_args_list
         assert call_args_list[0][0][0] == key1
         assert call_args_list[1][0][0] == key2

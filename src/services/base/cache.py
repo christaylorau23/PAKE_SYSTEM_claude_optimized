@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Dict, List
 
 import redis.asyncio as redis
 from redis.asyncio import ConnectionPool
@@ -36,7 +36,7 @@ class CacheConfig:
 class CacheService:
     """Enterprise Redis caching service."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: CacheConfig | None = None) -> None:
         self.config = config or CacheConfig()
         self.pool: ConnectionPool | None = None
         self.redis: redis.Redis | None = None
@@ -63,7 +63,7 @@ class CacheService:
             self._initialized = True
             logger.info("Redis cache service initialized successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Redis cache: %s", e)
             raise
 
@@ -92,7 +92,7 @@ class CacheService:
             except (json.JSONDecodeError, TypeError):
                 return value.decode("utf-8") if isinstance(value, bytes) else value
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Cache get error for key %s: %s", key, e)
             return None
 
@@ -121,7 +121,7 @@ class CacheService:
 
             return result is not None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache set error for key %s: %s", key, e)
             return False
 
@@ -133,7 +133,7 @@ class CacheService:
         try:
             result = await self.redis.delete(key)
             return result > 0
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache delete error for key %s: %s", key, e)
             return False
 
@@ -145,7 +145,7 @@ class CacheService:
         try:
             result = await self.redis.exists(key)
             return result > 0
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache exists error for key %s: %s", key, e)
             return False
 
@@ -156,7 +156,7 @@ class CacheService:
 
         try:
             return await self.redis.expire(key, ttl)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache expire error for key %s: %s", key, e)
             return False
 
@@ -180,7 +180,7 @@ class CacheService:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache get_many error: %s", e)
             return {}
 
@@ -209,7 +209,7 @@ class CacheService:
             await pipe.execute()
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache set_many error: %s", e)
             return False
 
@@ -220,7 +220,7 @@ class CacheService:
 
         try:
             return await self.redis.incrby(key, amount)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache increment error for key %s: %s", key, e)
             return None
 
@@ -239,7 +239,7 @@ class CacheService:
                 "total_commands_processed": info.get("total_commands_processed", 0),
                 "uptime_in_seconds": info.get("uptime_in_seconds", 0),
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache stats error: %s", e)
             return {}
 
@@ -278,7 +278,7 @@ class CachePatterns:
             await self.cache.set(key, value, ttl)
             return value
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache-aside fetch error for key %s: %s", key, e)
             raise
 
@@ -313,11 +313,11 @@ class CachePatterns:
 
             return result
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Write-through error for key %s: %s", key, e)
             raise
 
-    async def cache_prefetch(self) -> None:
+    async def cache_prefetch(self, keys_and_fetch_funcs: Dict[str, Any], ttl: int | None = None) -> None:
         """Cache prefetch pattern: Proactively load data into cache.
 
         Args:
@@ -335,7 +335,7 @@ class CachePatterns:
             logger.info(
                 "Cache prefetch completed for %s keys", len(keys_and_fetch_funcs)
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cache prefetch error: %s", e)
 
 

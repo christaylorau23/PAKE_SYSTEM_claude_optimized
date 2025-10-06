@@ -436,7 +436,7 @@ def transform_logging_calls(source_code: str) -> tuple[str, list[tuple[str, str]
 
         return transformed_tree.code, transformer.transformations
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error transforming code: {e}")
         return source_code, []
 
@@ -458,7 +458,7 @@ def fix_g004_violations(source_code: str) -> tuple[str, int]:
 
         return transformed_tree.code, transformer.fixes_applied
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error fixing G004 violations: {e}")
         return source_code, 0
 

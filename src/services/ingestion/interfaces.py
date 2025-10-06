@@ -6,12 +6,12 @@ This module defines abstract interfaces that high-level modules depend on,
 rather than depending on concrete implementations.
 """
 
-import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
+import uuid
 
 
 class SourceType(Enum):

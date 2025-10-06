@@ -6,19 +6,19 @@ Provides intelligent semantic search, content similarity analysis, vector embedd
 and context-aware search capabilities for enhanced content discovery.
 """
 
+from abc import ABC, abstractmethod
 import asyncio
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import hashlib
 import json
 import logging
 import math
 import re
 import time
-from abc import ABC, abstractmethod
-from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -242,8 +242,8 @@ class EmbeddingGenerator(ABC):
 class TFIDFEmbeddingGenerator(EmbeddingGenerator):
     """TF-IDF based embedding generator with enhancements."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.vocabulary: dict[str, int] = {}
         self.idf_scores: dict[str, float] = {}
         self.document_frequencies: dict[str, int] = defaultdict(int)
@@ -359,7 +359,7 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
 
         return [word for word in words if word not in stop_words and len(word) > 2]
 
-    def _update_vocabulary_and_idf(self) -> None:
+    def _update_vocabulary_and_idf(self, processed_words: List[str]) -> None:
         """Update vocabulary and IDF scores."""
         # Add new words to vocabulary
         unique_words = set(processed_words)
@@ -562,7 +562,7 @@ class SemanticSearchEngine:
     Provides intelligent content discovery and contextual search capabilities.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
         self.config = config or SemanticConfig()
 
         # Initialize components
@@ -622,7 +622,7 @@ class SemanticSearchEngine:
             )
             return embedding
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to index content %s: %s", content_id, e)
             raise
 
@@ -659,7 +659,7 @@ class SemanticSearchEngine:
             )
             return embeddings
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to batch index content: %s", e)
             raise
 
@@ -751,7 +751,7 @@ class SemanticSearchEngine:
 
             return response
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Semantic search failed: %s", e)
             raise
 

@@ -284,7 +284,7 @@ class VectorDatabaseService:
             logger.info("Vector Database Service initialized successfully")
             return True
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to initialize vector database: %s", e)
             self._connection_healthy = False
             return False
@@ -318,12 +318,12 @@ class VectorDatabaseService:
                     try:
                         await conn.execute(sa.text(query))
                         logger.debug("Created vector index: %s", query.split()[4])
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.warning("Failed to create index: %s", e)
 
                 logger.info("Vector indexes created successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error creating vector indexes: %s", e)
 
     async def _verify_pgvector(self) -> None:
@@ -424,7 +424,7 @@ class VectorDatabaseService:
                     embedding_dimensions=self.embedding_dimensions,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error inserting document vector: %s", e)
             return VectorInsertResult(
                 id="",
@@ -534,7 +534,7 @@ class VectorDatabaseService:
                     embedding_dimensions=self.embedding_dimensions,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error inserting entity vector: %s", e)
             return VectorInsertResult(
                 id="",
@@ -667,7 +667,7 @@ class VectorDatabaseService:
                 )
                 return search_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error performing semantic search: %s", e)
             return []
 
@@ -747,7 +747,7 @@ class VectorDatabaseService:
                 logger.debug("Found %s similar entities", len(similar_entities))
                 return similar_entities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error finding similar entities: %s", e)
             return []
 
@@ -797,7 +797,7 @@ class VectorDatabaseService:
                     "connection_healthy": self._connection_healthy,
                 }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error getting database stats: %s", e)
             return {"error": str(e), "connection_healthy": False}
 
@@ -837,7 +837,7 @@ class VectorDatabaseService:
                 logger.info("Cleaned up %s old vectors", deleted_count)
                 return deleted_count
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error cleaning up old vectors: %s", e)
             return 0
 
@@ -876,7 +876,7 @@ class VectorDatabaseService:
                 "database_stats": stats,
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
@@ -893,7 +893,7 @@ class VectorDatabaseService:
                 self._connection_healthy = False
                 logger.info("Vector database connections closed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error closing vector database: %s", e)
 
 

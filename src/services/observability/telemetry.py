@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import aiohttp
 """PAKE System - OpenTelemetry Observability Framework
 Comprehensive observability solution for hierarchical event-driven architecture.
 
@@ -11,13 +12,13 @@ Implements:
 """
 
 import asyncio
-import json
-import logging
-import time
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
+import time
 from typing import TYPE_CHECKING, Any, Dict
 
 # OpenTelemetry imports
@@ -99,7 +100,7 @@ class TelemetryConfig:
 class TelemetrySystem:
     """Centralized telemetry system for PAKE observability."""
 
-    def __init__(self, config: TelemetryConfig = None) -> None:
+    def __init__(self, config: TelemetryConfig | None = None) -> None:
         self.config = config or TelemetryConfig()
 
         # OpenTelemetry components
@@ -145,7 +146,7 @@ class TelemetrySystem:
             if self.config.enable_tracing:
                 try:
                     await self._setup_tracing(resource)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning(
                         "Failed to setup tracing: %s. Continuing without tracing.",
                         e,
@@ -155,7 +156,7 @@ class TelemetrySystem:
             if self.config.enable_metrics:
                 try:
                     await self._setup_metrics(resource)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning(
                         "Failed to setup metrics: %s. Continuing without metrics.",
                         e,
@@ -164,7 +165,7 @@ class TelemetrySystem:
             # Setup instrumentation
             try:
                 await self._setup_instrumentation()
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Failed to setup instrumentation: %s. Continuing without instrumentation.",
                     e,
@@ -174,7 +175,7 @@ class TelemetrySystem:
             if self.config.enable_structured_logging:
                 try:
                     await self._setup_structured_logging()
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning(
                         "Failed to setup structured logging: %s. Continuing without structured logging.",
                         e,
@@ -186,7 +187,7 @@ class TelemetrySystem:
                     asyncio.create_task(self._metrics_collection_loop()),
                     asyncio.create_task(self._health_monitoring_loop()),
                 ]
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Failed to start background tasks: %s. Continuing without background tasks.",
                     e,
@@ -198,7 +199,7 @@ class TelemetrySystem:
                 "OpenTelemetry observability framework initialized successfully",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize telemetry system: %s", e)
             logger.info(
                 "Continuing without telemetry - system will operate with reduced observability",
@@ -230,7 +231,7 @@ class TelemetrySystem:
         self._running = False
         logger.info("Observability framework shutdown complete")
 
-    async def _setup_tracing(self) -> None:
+    async def _setup_tracing(self, resource: Resource) -> None:
         """Setup distributed tracing."""
         from opentelemetry.sdk.resources import Resource
 
@@ -266,7 +267,7 @@ class TelemetrySystem:
 
         logger.info("Distributed tracing initialized")
 
-    async def _setup_metrics(self) -> None:
+    async def _setup_metrics(self, resource: Resource) -> None:
         """Setup metrics collection."""
         readers = []
 
@@ -294,7 +295,7 @@ class TelemetrySystem:
                 "Prometheus metrics available at http://localhost:%s/metrics",
                 self.config.prometheus_port,
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             logger.warning("Failed to setup Prometheus reader: %s", e)
 
         # Create meter provider
@@ -401,14 +402,14 @@ class TelemetrySystem:
             try:
                 RedisInstrumentor().instrument()
                 logger.info("Redis instrumentation enabled")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to instrument Redis: %s", e)
 
         if self.config.enable_asyncio_instrumentation:
             try:
                 AsyncioInstrumentor().instrument()
                 logger.info("Asyncio instrumentation enabled")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to instrument asyncio: %s", e)
 
     async def _setup_structured_logging(self) -> None:
@@ -428,7 +429,7 @@ class TelemetrySystem:
 
         # Create custom formatter
         class StructuredFormatter(logging.Formatter):
-            def format(self) -> None:
+            def format(self, record: logging.LogRecord) -> str:
                 # Add trace context if available
                 if hasattr(record, "trace_id"):
                     span = trace.get_current_span()
@@ -467,7 +468,7 @@ class TelemetrySystem:
         logger.info("Structured logging initialized")
 
     @contextmanager
-    def trace_operation(self) -> None:
+    def trace_operation(self, operation_name: str, span_kind: str = "INTERNAL", attributes: dict[str, Any] | None = None):
         """Context manager for tracing operations."""
         if not self.tracer:
             yield None
@@ -486,7 +487,7 @@ class TelemetrySystem:
                 # Record success
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 # Record error
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
@@ -523,7 +524,7 @@ class TelemetrySystem:
                     ][-1000:]
 
     @asynccontextmanager
-    async def trace_async_operation(self) -> None:
+    async def trace_async_operation(self, operation_name: str, span_kind: str = "INTERNAL", attributes: dict[str, Any] | None = None):
         """Async context manager for tracing operations."""
         if not self.tracer:
             yield None
@@ -542,7 +543,7 @@ class TelemetrySystem:
                 # Record success
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 # Record error
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
@@ -566,7 +567,7 @@ class TelemetrySystem:
                         {"operation": operation_name},
                     )
 
-    def record_metric(self) -> None:
+    def record_metric(self, metric_name: str, metric_type: MetricType, value: float, attributes: dict[str, str] | None = None) -> None:
         """Record a custom metric."""
         if metric_name not in self.custom_metrics:
             logger.warning("Metric %s not found in custom metrics", metric_name)
@@ -582,7 +583,7 @@ class TelemetrySystem:
         elif metric_type == MetricType.UP_DOWN_COUNTER:
             metric.add(value, attrs)
 
-    def record_task_execution(self) -> None:
+    def record_task_execution(self, task_type: str, duration: float, success: bool, agent_id: str | None = None) -> None:
         """Record task execution metrics."""
         attributes = {"task_type": task_type}
         if agent_id:
@@ -601,7 +602,7 @@ class TelemetrySystem:
         if not success and "error_counter" in self.custom_metrics:
             self.custom_metrics["error_counter"].add(1, attributes)
 
-    def record_message_processing(self) -> None:
+    def record_message_processing(self, message_type: str, agent_type: str, success: bool) -> None:
         """Record message processing metrics."""
         if "message_counter" in self.custom_metrics:
             attributes = {
@@ -611,7 +612,7 @@ class TelemetrySystem:
             }
             self.custom_metrics["message_counter"].add(1, attributes)
 
-    def record_cache_operation(self) -> None:
+    def record_cache_operation(self, hit: bool, cache_level: str) -> None:
         """Record cache operation metrics."""
         attributes = {"cache_level": cache_level}
 
@@ -620,13 +621,13 @@ class TelemetrySystem:
         elif not hit and "cache_misses" in self.custom_metrics:
             self.custom_metrics["cache_misses"].add(1, attributes)
 
-    def record_content_quality(self) -> None:
+    def record_content_quality(self, quality_score: float, source_type: str) -> None:
         """Record content quality metrics."""
         if "content_quality" in self.custom_metrics:
             attributes = {"source_type": source_type}
             self.custom_metrics["content_quality"].record(quality_score, attributes)
 
-    def update_active_agents(self) -> None:
+    def update_active_agents(self, count: int, agent_type: str) -> None:
         """Update active agents count."""
         if "active_agents" in self.custom_metrics:
             attributes = {"agent_type": agent_type}
@@ -649,7 +650,7 @@ class TelemetrySystem:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metrics collection error: %s", e)
                 await asyncio.sleep(5)
 
@@ -671,7 +672,7 @@ class TelemetrySystem:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health monitoring error: %s", e)
                 await asyncio.sleep(10)
 
@@ -798,14 +799,14 @@ def get_telemetry() -> TelemetrySystem:
     return _telemetry_instance
 
 
-def initialize_telemetry(config: TelemetryConfig = None) -> TelemetrySystem:
+def initialize_telemetry(config: TelemetryConfig | None = None) -> TelemetrySystem:
     """Initialize global telemetry system."""
     global _telemetry_instance
     _telemetry_instance = TelemetrySystem(config)
     return _telemetry_instance
 
 
-async def setup_observability(config: TelemetryConfig = None) -> TelemetrySystem:
+async def setup_observability(config: TelemetryConfig | None = None) -> TelemetrySystem:
     """Setup and initialize observability system."""
     telemetry = initialize_telemetry(config)
     await telemetry.initialize()
@@ -813,18 +814,18 @@ async def setup_observability(config: TelemetryConfig = None) -> TelemetrySystem
 
 
 # Convenience decorators
-def trace_function(self) -> None:
+def trace_function(operation_name: str | None = None, attributes: dict[str, Any] | None = None) -> Callable:
     """Decorator for tracing functions."""
 
-    def decorator(self) -> None:
-        async def async_wrapper(self) -> None:
+    def decorator(func: Callable) -> Callable:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             name = operation_name or f"{func.__module__}.{func.__qualname__}"
             telemetry = get_telemetry()
 
             async with telemetry.trace_async_operation(name, attributes):
                 return await func(*args, **kwargs)
 
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             name = operation_name or f"{func.__module__}.{func.__qualname__}"
             telemetry = get_telemetry()
 
@@ -838,11 +839,11 @@ def trace_function(self) -> None:
     return decorator
 
 
-def record_execution_time(self) -> None:
+def record_execution_time(metric_name: str, attributes: dict[str, Any] | None = None) -> Callable:
     """Decorator for recording execution time."""
 
-    def decorator(self) -> None:
-        async def async_wrapper(self) -> None:
+    def decorator(func: Callable) -> Callable:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             telemetry = get_telemetry()
             start_time = time.time()
 
@@ -851,9 +852,9 @@ def record_execution_time(self) -> None:
                 duration = time.time() - start_time
                 telemetry.record_metric(
                     metric_name,
+                    MetricType.HISTOGRAM,
                     duration,
                     attributes,
-                    MetricType.HISTOGRAM,
                 )
                 return result
             except Exception:
@@ -861,13 +862,13 @@ def record_execution_time(self) -> None:
                 error_attrs = {**(attributes or {}), "status": "error"}
                 telemetry.record_metric(
                     metric_name,
+                    MetricType.HISTOGRAM,
                     duration,
                     error_attrs,
-                    MetricType.HISTOGRAM,
                 )
                 raise
 
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             telemetry = get_telemetry()
             start_time = time.time()
 
@@ -876,9 +877,9 @@ def record_execution_time(self) -> None:
                 duration = time.time() - start_time
                 telemetry.record_metric(
                     metric_name,
+                    MetricType.HISTOGRAM,
                     duration,
                     attributes,
-                    MetricType.HISTOGRAM,
                 )
                 return result
             except Exception:
@@ -886,9 +887,9 @@ def record_execution_time(self) -> None:
                 error_attrs = {**(attributes or {}), "status": "error"}
                 telemetry.record_metric(
                     metric_name,
+                    MetricType.HISTOGRAM,
                     duration,
                     error_attrs,
-                    MetricType.HISTOGRAM,
                 )
                 raise
 

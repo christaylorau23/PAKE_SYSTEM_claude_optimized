@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE+ Comprehensive System Test Suite
@@ -5,17 +6,17 @@ Validates all system components and addresses recurring errors
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import json
 import logging
 import os
+from pathlib import Path
 import shutil
 import sys
 import time
 import traceback
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from pathlib import Path
 from typing import Any
 
 
@@ -162,7 +163,7 @@ class PAKESystemTestSuite:
                         category_total,
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("💥 %s failed with exception: %s", category_name, e)
                 error_result = TestResult(
                     test_name=f"{category.value}_category_failure",
@@ -474,7 +475,7 @@ class PAKESystemTestSuite:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
 
             self.logger.error(
@@ -532,7 +533,7 @@ class PAKESystemTestSuite:
 
         except TimeoutError:
             return False, "Docker command timed out", {}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Docker test failed: {e}", {}
 
     async def _test_docker_compose_file(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -578,7 +579,7 @@ class PAKESystemTestSuite:
                 {"services": list(services.keys())},
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"Compose file test failed: {e}", {}
 
     async def _test_docker_services_running(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -625,7 +626,7 @@ class PAKESystemTestSuite:
                 {"running_services": running_services},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Service status test failed: {e}", {}
 
     async def _test_port_accessibility(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -650,7 +651,7 @@ class PAKESystemTestSuite:
                 await writer.wait_closed()
                 accessible_ports[port] = service_name
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 inaccessible_ports[port] = {"service": service_name, "error": str(e)}
 
         if inaccessible_ports:
@@ -721,7 +722,7 @@ class PAKESystemTestSuite:
             try:
                 test_file.write_text("test")
                 test_file.unlink()
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 permission_issues.append({"location": str(location), "error": str(e)})
 
         if permission_issues:
@@ -761,7 +762,7 @@ class PAKESystemTestSuite:
 
             return True, f"Disk space OK: {free_gb:.1f}GB free", details
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Disk space test failed: {e}", {}
 
     async def _test_network_connectivity(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -837,10 +838,10 @@ class PAKESystemTestSuite:
                     "PostgreSQL TCP connection successful (psycopg2 not available)",
                     {},
                 )
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 return False, f"PostgreSQL connection failed: {e}", {}
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return False, f"PostgreSQL not accessible: {e}", {}
 
     async def _test_redis_connection(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -864,7 +865,7 @@ class PAKESystemTestSuite:
                 return True, "Redis connection successful", {}
             return False, f"Redis unexpected response: {response}", {}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Redis connection failed: {e}", {}
 
     async def _test_mcp_server_health(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -906,10 +907,10 @@ class PAKESystemTestSuite:
                     {},
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 return False, f"MCP server health test failed: {e}", {}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"MCP server health test failed: {e}", {}
 
     async def _test_api_bridge_health(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -924,7 +925,7 @@ class PAKESystemTestSuite:
 
             return True, "API bridge accessible", {}
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"API bridge not accessible: {e}", {}
 
     async def _test_n8n_health(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -939,7 +940,7 @@ class PAKESystemTestSuite:
 
             return True, "n8n accessible", {}
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"n8n not accessible: {e}", {}
 
     async def _test_service_dependencies(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1040,7 +1041,7 @@ class PAKESystemTestSuite:
 
         except ImportError:
             return True, "Database schema not tested (psycopg2 not available)", {}
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return False, f"Database schema test failed: {e}", {}
 
     async def _test_database_indices(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1090,7 +1091,7 @@ class PAKESystemTestSuite:
 
         except ImportError:
             return True, "Database indices not tested (psycopg2 not available)", {}
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return False, f"Database indices test failed: {e}", {}
 
     async def _test_database_functions(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1151,7 +1152,7 @@ class PAKESystemTestSuite:
                 return True, "Vault permissions OK", {}
             return False, "Vault read/write mismatch", {}
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"Vault permission test failed: {e}", {}
 
     async def _test_data_backup_systems(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1212,7 +1213,7 @@ Testing the complete note creation and processing workflow.
                 return False, "Note content mismatch", {}
             return False, "Note creation failed", {}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Note creation flow failed: {e}", {}
 
     async def _test_content_processing_flow(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1247,7 +1248,7 @@ Testing the complete note creation and processing workflow.
                 {"hook_path": str(pre_commit_hook)},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Git hooks test failed: {e}", {}
 
     async def _test_automation_workflows(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1295,7 +1296,7 @@ Testing the complete note creation and processing workflow.
 
         except ImportError:
             return True, "Memory usage not tested (psutil not available)", {}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return False, f"Memory usage test failed: {e}", {}
 
     async def _test_database_performance(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1556,7 +1557,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Tests interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"💥 Fatal test error: {e}")
         import traceback
 

@@ -6,10 +6,10 @@ Complete system deployment and initialization
 
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -244,7 +244,7 @@ class PAKEDeployer:
                 conn.close()
                 return False
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Database initialization failed: %s", e)
             return False
 
@@ -334,7 +334,7 @@ class PAKEDeployer:
             self.deployment_status["api_bridge"] = True
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("API bridge startup failed: %s", e)
             return False
         finally:
@@ -384,7 +384,7 @@ class PAKEDeployer:
             self.deployment_status["ingestion"] = True
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Ingestion setup failed: %s", e)
             return False
 
@@ -495,7 +495,7 @@ Congratulations! Your PAKE+ system has been successfully deployed and configured
             logger.info("Sample content created ✓")
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Sample content creation failed: %s", e)
             return False
 
@@ -585,7 +585,7 @@ Generated: {time.strftime("%Y-%m-%d %H:%M:%S")}
                 else:
                     logger.error("❌ %s failed", step_name)
                     failed_steps.append(step_name)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("❌ %s failed with exception: %s", step_name, e)
                 failed_steps.append(step_name)
 

@@ -3,12 +3,12 @@
 Extracted shared functionality to break circular dependencies.
 """
 
+from collections.abc import Callable
+from datetime import UTC, datetime
 import hashlib
 import json
 import logging
-from collections.abc import Callable
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

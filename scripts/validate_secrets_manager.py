@@ -4,9 +4,9 @@ Pre-commit hook to validate secrets manager usage
 Ensures proper use of enterprise secrets manager instead of hardcoded fallbacks
 """
 
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 def validate_secrets_manager_usage(self) -> None:
@@ -71,7 +71,7 @@ def validate_secrets_manager_usage(self) -> None:
                                 }
                             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading file {file_path}: {e}", file=sys.stderr)
             continue
 

@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 Test script for Node.js integration and bridge services
@@ -65,7 +66,7 @@ class NodeJSIntegrationTester:
                 print(f"   Dev Dependencies: {len(results['devDependencies'])}")
                 print(f"   Scripts: {list(results['scripts'].keys())}")
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"   Error reading package.json: {e}")
 
         # Check TypeScript configuration
@@ -112,7 +113,7 @@ class NodeJSIntegrationTester:
                 print(f"   Dependencies: {len(results['installed_packages'])}")
                 print(f"   Available scripts: {results['scripts_available']}")
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"   Error reading package.json: {e}")
 
         # Check node_modules
@@ -215,7 +216,7 @@ class NodeJSIntegrationTester:
             else:
                 print("   No TypeScript files found")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"   Compilation error: {e}")
             results["compilation_errors"].append(str(e))
 
@@ -277,7 +278,7 @@ class NodeJSIntegrationTester:
         try:
             # Simulate TypeScript compilation
             return {"status": "success", "errors": [], "warnings": []}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "error", "errors": [str(e)], "warnings": []}
 
     async def _test_npm_commands(self) -> Dict[str, Any]:
@@ -290,7 +291,7 @@ class NodeJSIntegrationTester:
                 "npm_build": "success",
                 "npm_start": "success",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "npm_install": "error",
                 "npm_test": "error",
@@ -308,7 +309,7 @@ class NodeJSIntegrationTester:
                 "bridge_status": {"status": 200, "response_time": 0.08},
                 "data_processing": {"status": 200, "response_time": 0.12},
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"error": str(e)}
 
     async def _test_data_flow(self) -> Dict[str, Any]:
@@ -320,7 +321,7 @@ class NodeJSIntegrationTester:
                 "binary_transfer": {"status": "success", "size": "5KB"},
                 "stream_processing": {"status": "success", "throughput": "100MB/s"},
             }
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"error": str(e)}
 
     async def _test_error_handling(self) -> Dict[str, Any]:
@@ -332,7 +333,7 @@ class NodeJSIntegrationTester:
                 "api_timeout": {"handled": True, "retry": "exponential"},
                 "data_validation_error": {"handled": True, "response": "400"},
             }
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             return {"error": str(e)}
 
     async def generate_integration_report(self) -> Dict[str, Any]:
@@ -455,7 +456,7 @@ async def _test_nodejs_integration_async(self) -> None:
         print("\nNode.js integration tests completed successfully!")
         return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"ERROR: Node.js integration tests failed: {e}")
         return False
 

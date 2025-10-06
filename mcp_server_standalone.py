@@ -3,19 +3,18 @@
 Simplified server without database dependencies for immediate use.
 """
 
+from datetime import UTC, datetime, timedelta
 import logging
 import os
-import sys
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
-import uvicorn
+import sys
 
 # FastAPI imports
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
+import uvicorn
 
 # Setup logging first
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +48,7 @@ try:
     advanced_analytics_engine = get_advanced_analytics_engine()
     ADVANCED_ANALYTICS_AVAILABLE = True
     logger.info("✅ Advanced Analytics Engine initialized")
-except Exception as e:
+except (ValueError, RuntimeError) as e:
     logger.warning("⚠️ Advanced Analytics Engine not available: %s", e)
     advanced_analytics_engine = None
     ADVANCED_ANALYTICS_AVAILABLE = False
@@ -70,7 +69,7 @@ if GRAPHQL_AVAILABLE:
         graphql_router = GraphQLRouter(graphql_schema)
         app.include_router(graphql_router, prefix="/graphql")
         logger.info("✅ GraphQL API initialized at /graphql")
-    except Exception as e:
+    except (pydantic.ValidationError, ValueError) as e:
         logger.warning("⚠️ GraphQL initialization failed: %s", e)
         graphql_router = None
 else:
@@ -153,7 +152,7 @@ async def startup_event(self) -> None:
         logger.info("✅ PAKE Standalone Server started successfully!")
         logger.info("🌐 Ready to process multi-source research queries")
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         logger.error("Failed to initialize server: %s", e)
         raise
 
@@ -203,7 +202,7 @@ async def root(self) -> None:
 
 
 @app.post("/search")
-async def perform_search(self) -> None:
+async def perform_search(search_request: SearchRequest) -> None:
     """Perform comprehensive multi-source search."""
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Orchestrator not available")
@@ -263,7 +262,7 @@ async def perform_search(self) -> None:
                 )
                 results_data = [result.to_dict() for result in enhanced_results]
                 logger.info("Enhanced %s results with ML insights", len(results_data))
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "ML enhancement failed, returning original results: %s", e
                 )
@@ -283,7 +282,7 @@ async def perform_search(self) -> None:
                 logger.info(
                     "Applied advanced summarization to %s results", len(results_data)
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Content summarization failed, returning results without summarization: %s",
                     e,
@@ -300,7 +299,7 @@ async def perform_search(self) -> None:
                 execution_time_ms=execution_time * 1000,
                 sources_used=search_request.sources,
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to record search analytics: %s", e)
 
         # Build response metadata
@@ -339,13 +338,13 @@ async def perform_search(self) -> None:
             "metadata": metadata,
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Search failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @app.post("/quick")
-async def quick_search(self) -> None:
+async def quick_search(search_request: SearchRequest) -> None:
     """Quick search with automatic source selection."""
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Orchestrator not available")
@@ -406,7 +405,7 @@ async def quick_search(self) -> None:
                     "Enhanced %s quick search results with ML insights",
                     len(results_data),
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Quick search ML enhancement failed, returning original results: %s",
                     e,
@@ -428,7 +427,7 @@ async def quick_search(self) -> None:
                     "Applied advanced summarization to %s quick search results",
                     len(results_data),
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Quick search content summarization failed, returning results without summarization: %s",
                     e,
@@ -449,7 +448,7 @@ async def quick_search(self) -> None:
                     "pubmed",
                 ],  # Quick search uses all sources
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to record quick search analytics: %s", e)
 
         # Build enhanced summary with ML analytics
@@ -493,13 +492,13 @@ async def quick_search(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Quick search failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Quick search failed: {str(e)}")
 
 
 @app.post("/summarize")
-async def summarize_content(self) -> None:
+async def summarize_content(summarize_request: SummarizeRequest) -> None:
     """Advanced content summarization with multiple techniques."""
     try:
         start_time = datetime.now(UTC)
@@ -527,7 +526,7 @@ async def summarize_content(self) -> None:
             },
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Content summarization failed: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Content summarization failed: {str(e)}"
@@ -535,7 +534,7 @@ async def summarize_content(self) -> None:
 
 
 @app.get("/summarize/analytics")
-async def get_summarization_analytics(self) -> None:
+async def get_summarization_analytics() -> None:
     """Get analytics from content summarization service."""
     try:
         summarization_service = get_content_summarization_service()
@@ -547,7 +546,7 @@ async def get_summarization_analytics(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get summarization analytics: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get summarization analytics: {str(e)}"
@@ -555,7 +554,7 @@ async def get_summarization_analytics(self) -> None:
 
 
 @app.get("/ml/dashboard")
-async def get_ml_dashboard_data(self) -> None:
+async def get_ml_dashboard_data() -> None:
     """Get comprehensive ML intelligence dashboard data."""
     try:
         analytics_service = get_ml_analytics_service()
@@ -567,7 +566,7 @@ async def get_ml_dashboard_data(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get ML dashboard data: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get ML dashboard data: {str(e)}"
@@ -575,7 +574,7 @@ async def get_ml_dashboard_data(self) -> None:
 
 
 @app.get("/ml/insights")
-async def get_knowledge_insights(self) -> None:
+async def get_knowledge_insights() -> None:
     """Get AI-generated knowledge insights and recommendations."""
     try:
         analytics_service = get_ml_analytics_service()
@@ -588,7 +587,7 @@ async def get_knowledge_insights(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get knowledge insights: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get knowledge insights: {str(e)}"
@@ -596,7 +595,7 @@ async def get_knowledge_insights(self) -> None:
 
 
 @app.get("/ml/patterns")
-async def get_research_patterns(self) -> None:
+async def get_research_patterns() -> None:
     """Get identified research patterns and behaviors."""
     try:
         analytics_service = get_ml_analytics_service()
@@ -609,7 +608,7 @@ async def get_research_patterns(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get research patterns: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get research patterns: {str(e)}"
@@ -617,7 +616,7 @@ async def get_research_patterns(self) -> None:
 
 
 @app.get("/ml/metrics")
-async def get_dashboard_metrics(self) -> None:
+async def get_dashboard_metrics() -> None:
     """Get real-time dashboard metrics."""
     try:
         analytics_service = get_ml_analytics_service()
@@ -629,7 +628,7 @@ async def get_dashboard_metrics(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get dashboard metrics: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get dashboard metrics: {str(e)}"
@@ -637,7 +636,7 @@ async def get_dashboard_metrics(self) -> None:
 
 
 @app.get("/ml/knowledge-graph")
-async def get_knowledge_graph(self) -> None:
+async def get_knowledge_graph() -> None:
     """Get knowledge graph visualization data."""
     try:
         analytics_service = get_ml_analytics_service()
@@ -649,7 +648,7 @@ async def get_knowledge_graph(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get knowledge graph: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get knowledge graph: {str(e)}"
@@ -662,7 +661,7 @@ async def get_knowledge_graph(self) -> None:
 
 
 @app.get("/analytics/enhanced-dashboard")
-async def get_enhanced_dashboard(self) -> None:
+async def get_enhanced_dashboard(metric_types: str = "all", time_range: str = "24h") -> None:
     """Get comprehensive analytics data for enhanced visualization dashboard."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -680,7 +679,7 @@ async def get_enhanced_dashboard(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get enhanced dashboard data: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get enhanced dashboard data: {str(e)}"
@@ -688,7 +687,7 @@ async def get_enhanced_dashboard(self) -> None:
 
 
 @app.get("/analytics/time-series")
-async def get_time_series_data(self) -> None:
+async def get_time_series_data(metric: str, time_range: str = "24h", granularity: str = "hour") -> None:
     """Get time series data for specific metrics."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -731,7 +730,7 @@ async def get_time_series_data(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get time series data: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get time series data: {str(e)}"
@@ -739,7 +738,7 @@ async def get_time_series_data(self) -> None:
 
 
 @app.get("/analytics/correlations")
-async def get_correlation_analysis(self) -> None:
+async def get_correlation_analysis(metrics: str) -> None:
     """Get correlation analysis between metrics."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -754,7 +753,7 @@ async def get_correlation_analysis(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get correlation analysis: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get correlation analysis: {str(e)}"
@@ -762,7 +761,7 @@ async def get_correlation_analysis(self) -> None:
 
 
 @app.get("/analytics/real-time-activity")
-async def get_real_time_activity(self) -> None:
+async def get_real_time_activity() -> None:
     """Get real-time activity stream for live dashboard updates."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -775,7 +774,7 @@ async def get_real_time_activity(self) -> None:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get real-time activity: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get real-time activity: {str(e)}"
@@ -788,7 +787,7 @@ async def get_real_time_activity(self) -> None:
 
 
 @app.get("/analytics/comprehensive-report")
-async def get_comprehensive_analytics_report(self) -> None:
+async def get_comprehensive_analytics_report(time_range: str = "24h", include_predictions: bool = True, include_recommendations: bool = True) -> None:
     """Get comprehensive analytics report with insights and recommendations."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -800,7 +799,7 @@ async def get_comprehensive_analytics_report(self) -> None:
             include_predictions=include_predictions,
             include_recommendations=include_recommendations,
         )
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to generate comprehensive report: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to generate comprehensive report: {str(e)}"
@@ -808,7 +807,7 @@ async def get_comprehensive_analytics_report(self) -> None:
 
 
 @app.get("/analytics/system-health")
-async def get_system_health_analysis(self) -> None:
+async def get_system_health_analysis(time_range: str = "24h") -> None:
     """Get detailed system health analysis."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -829,7 +828,7 @@ async def get_system_health_analysis(self) -> None:
             },
             "time_range": time_range,
         }
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get system health analysis: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get system health analysis: {str(e)}"
@@ -837,7 +836,7 @@ async def get_system_health_analysis(self) -> None:
 
 
 @app.get("/analytics/insights")
-async def get_analytics_insights(self) -> None:
+async def get_analytics_insights(time_range: str = "24h", priority: str = "all") -> None:
     """Get analytics insights filtered by priority."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -879,7 +878,7 @@ async def get_analytics_insights(self) -> None:
             "time_range": time_range,
             "priority_filter": priority,
         }
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get analytics insights: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get analytics insights: {str(e)}"
@@ -887,7 +886,7 @@ async def get_analytics_insights(self) -> None:
 
 
 @app.get("/analytics/anomalies")
-async def get_anomaly_detection(self) -> None:
+async def get_anomaly_detection(time_range: str = "24h") -> None:
     """Get anomaly detection results."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -899,7 +898,7 @@ async def get_anomaly_detection(self) -> None:
             "time_range": time_range,
             "analysis_timestamp": datetime.now(UTC).isoformat(),
         }
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get anomaly detection: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get anomaly detection: {str(e)}"
@@ -907,7 +906,7 @@ async def get_anomaly_detection(self) -> None:
 
 
 @app.get("/analytics/usage-patterns")
-async def get_usage_pattern_analysis(self) -> None:
+async def get_usage_pattern_analysis(time_range: str = "24h") -> None:
     """Get detailed usage pattern analysis."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -921,7 +920,7 @@ async def get_usage_pattern_analysis(self) -> None:
             "time_range": time_range,
             "analysis_timestamp": datetime.now(UTC).isoformat(),
         }
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get usage pattern analysis: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get usage pattern analysis: {str(e)}"
@@ -934,7 +933,7 @@ async def get_usage_pattern_analysis(self) -> None:
 
 
 @app.post("/graph/entities")
-async def create_entity(self) -> None:
+async def create_entity(entity_data: dict) -> None:
     """Create a new entity in the knowledge graph."""
     try:
         from src.services.graph.entity_service import EntityType, get_entity_service
@@ -963,7 +962,7 @@ async def create_entity(self) -> None:
             }
         raise HTTPException(status_code=400, detail="Failed to create entity")
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to create entity: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to create entity: {str(e)}"
@@ -971,7 +970,7 @@ async def create_entity(self) -> None:
 
 
 @app.post("/graph/relationships")
-async def create_relationship(self) -> None:
+async def create_relationship(relationship_data: dict) -> None:
     """Create a relationship between entities."""
     try:
         from src.services.graph.entity_service import (
@@ -1010,7 +1009,7 @@ async def create_relationship(self) -> None:
             }
         raise HTTPException(status_code=400, detail="Failed to create relationship")
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to create relationship: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to create relationship: {str(e)}"
@@ -1018,7 +1017,7 @@ async def create_relationship(self) -> None:
 
 
 @app.get("/graph/entities/{entity_id}")
-async def get_entity(self) -> None:
+async def get_entity(entity_id: str) -> None:
     """Get entity by ID."""
     try:
         from src.services.graph.entity_service import get_entity_service
@@ -1030,13 +1029,13 @@ async def get_entity(self) -> None:
             return {"success": True, "entity": entity}
         raise HTTPException(status_code=404, detail="Entity not found")
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get entity %s: %s", entity_id, e)
         raise HTTPException(status_code=500, detail=f"Failed to get entity: {str(e)}")
 
 
 @app.get("/graph/entities/{entity_id}/relationships")
-async def get_entity_relationships(self) -> None:
+async def get_entity_relationships(entity_id: str) -> None:
     """Get all relationships for an entity."""
     try:
         from src.services.graph.entity_service import get_entity_service
@@ -1051,7 +1050,7 @@ async def get_entity_relationships(self) -> None:
             "count": len(relationships),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get relationships for entity %s: %s", entity_id, e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get relationships: {str(e)}"
@@ -1059,7 +1058,7 @@ async def get_entity_relationships(self) -> None:
 
 
 @app.get("/graph/search")
-async def search_entities(self) -> None:
+async def search_entities(q: str, entity_types: str = None, limit: int = 50) -> None:
     """Search entities by text."""
     try:
         from src.services.graph.entity_service import EntityType, get_entity_service
@@ -1072,8 +1071,11 @@ async def search_entities(self) -> None:
             try:
                 type_strings = [t.strip() for t in entity_types.split(",")]
                 type_filter = [EntityType(t) for t in type_strings if t]
-            except ValueError:
-                pass  # Invalid types will be ignored
+            except ValueError as e:
+
+                logger.debug(f"Exception in mcp_server_standalone.py: {e}")
+
+                # Continue gracefully  # Invalid types will be ignored
 
         entities = await entity_service.search_entities(q, type_filter, limit)
 
@@ -1084,7 +1086,7 @@ async def search_entities(self) -> None:
             "count": len(entities),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to search entities: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to search entities: {str(e)}"
@@ -1092,7 +1094,7 @@ async def search_entities(self) -> None:
 
 
 @app.get("/graph/visualize")
-async def get_graph_visualization(self) -> None:
+async def get_graph_visualization(center_entity_id: str = None, max_nodes: int = 100) -> None:
     """Get knowledge graph visualization data."""
     try:
         from src.services.graph.knowledge_graph_service import (
@@ -1104,7 +1106,7 @@ async def get_graph_visualization(self) -> None:
             center_entity_id=center_entity_id, max_nodes=max_nodes
         )
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get graph visualization: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get graph visualization: {str(e)}"
@@ -1112,7 +1114,7 @@ async def get_graph_visualization(self) -> None:
 
 
 @app.post("/graph/process-document")
-async def process_document_entities(self) -> None:
+async def process_document_entities(document_data: dict) -> None:
     """Process a document and extract entities to knowledge graph."""
     try:
         from src.services.graph.knowledge_graph_service import (
@@ -1122,7 +1124,7 @@ async def process_document_entities(self) -> None:
         kg_service = get_knowledge_graph_service()
         return await kg_service.process_document_entities(document_data)
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to process document entities: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to process document: {str(e)}"
@@ -1130,7 +1132,7 @@ async def process_document_entities(self) -> None:
 
 
 @app.get("/graph/stats")
-async def get_graph_statistics(self) -> None:
+async def get_graph_statistics() -> None:
     """Get knowledge graph statistics."""
     try:
         from src.services.graph.knowledge_graph_service import (
@@ -1140,7 +1142,7 @@ async def get_graph_statistics(self) -> None:
         kg_service = get_knowledge_graph_service()
         return await kg_service.get_graph_statistics()
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get graph statistics: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get graph statistics: {str(e)}"
@@ -1148,7 +1150,7 @@ async def get_graph_statistics(self) -> None:
 
 
 @app.get("/graph/insights/{entity_id}")
-async def get_entity_insights(self) -> None:
+async def get_entity_insights(entity_id: str) -> None:
     """Get insights about a specific entity."""
     try:
         from src.services.graph.knowledge_graph_service import (
@@ -1158,7 +1160,7 @@ async def get_entity_insights(self) -> None:
         kg_service = get_knowledge_graph_service()
         return await kg_service.get_entity_insights(entity_id)
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get entity insights: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get entity insights: {str(e)}"
@@ -1171,7 +1173,7 @@ async def get_entity_insights(self) -> None:
 
 
 @app.post("/semantic/add-documents")
-async def add_documents_to_semantic_index(self) -> None:
+async def add_documents_to_semantic_index(documents: dict) -> None:
     """Add documents to the semantic search index."""
     try:
         from src.services.semantic.lightweight_semantic_service import (
@@ -1195,7 +1197,7 @@ async def add_documents_to_semantic_index(self) -> None:
             status_code=400, detail="Failed to add documents to semantic index"
         )
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to add documents to semantic index: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to add documents: {str(e)}"
@@ -1203,7 +1205,7 @@ async def add_documents_to_semantic_index(self) -> None:
 
 
 @app.get("/semantic/search")
-async def semantic_search(self) -> None:
+async def semantic_search(q: str, top_k: int = 10, min_score: float = 0.5) -> None:
     """Perform semantic search."""
     try:
         from src.services.semantic.lightweight_semantic_service import (
@@ -1230,7 +1232,7 @@ async def semantic_search(self) -> None:
             "count": len(results),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to perform semantic search: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to perform semantic search: {str(e)}"
@@ -1238,7 +1240,7 @@ async def semantic_search(self) -> None:
 
 
 @app.get("/semantic/similar/{document_id}")
-async def find_similar_documents(self) -> None:
+async def find_similar_documents(document_id: str, top_k: int = 5) -> None:
     """Find documents similar to a specific document."""
     try:
         from src.services.semantic.lightweight_semantic_service import (
@@ -1268,7 +1270,7 @@ async def find_similar_documents(self) -> None:
             "count": len(results),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to find similar documents: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to find similar documents: {str(e)}"
@@ -1276,7 +1278,7 @@ async def find_similar_documents(self) -> None:
 
 
 @app.get("/semantic/analytics")
-async def get_semantic_analytics(self) -> None:
+async def get_semantic_analytics() -> None:
     """Get semantic search analytics."""
     try:
         from src.services.semantic.lightweight_semantic_service import (
@@ -1297,7 +1299,7 @@ async def get_semantic_analytics(self) -> None:
             },
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to get semantic analytics: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get semantic analytics: {str(e)}"
@@ -1305,7 +1307,7 @@ async def get_semantic_analytics(self) -> None:
 
 
 @app.post("/semantic/cluster")
-async def cluster_documents(self) -> None:
+async def cluster_documents(num_clusters: int = 5) -> None:
     """Cluster documents using semantic similarity."""
     try:
         from src.services.semantic.lightweight_semantic_service import (
@@ -1317,7 +1319,7 @@ async def cluster_documents(self) -> None:
 
         return {"success": True, "clustering": clustering_result}
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to cluster documents: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to cluster documents: {str(e)}"
@@ -1330,7 +1332,7 @@ async def cluster_documents(self) -> None:
 
 
 @app.post("/nlp/extract-entities")
-async def extract_entities_from_text(self) -> None:
+async def extract_entities_from_text(text_data: dict) -> None:
     """Extract entities from text using advanced NLP."""
     try:
         from src.services.nlp.advanced_nlp_service import get_nlp_service
@@ -1368,7 +1370,7 @@ async def extract_entities_from_text(self) -> None:
             "count": len(entities),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to extract entities: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to extract entities: {str(e)}"
@@ -1376,7 +1378,7 @@ async def extract_entities_from_text(self) -> None:
 
 
 @app.post("/nlp/analyze-text")
-async def analyze_text_content(self) -> None:
+async def analyze_text_content(text_data: dict) -> None:
     """Perform comprehensive text analysis."""
     try:
         from src.services.nlp.advanced_nlp_service import get_nlp_service
@@ -1405,13 +1407,13 @@ async def analyze_text_content(self) -> None:
             },
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Failed to analyze text: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to analyze text: {str(e)}")
 
 
 @app.get("/health")
-async def health_check(self) -> None:
+async def health_check() -> None:
     """System health check."""
     # Check Neo4j connection
     neo4j_status = "unknown"
@@ -1465,7 +1467,7 @@ async def health_check(self) -> None:
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(self) -> None:
+async def dashboard() -> None:
     """Simple dashboard for system monitoring."""
     return """
     <!DOCTYPE html>
@@ -1650,14 +1652,14 @@ async def dashboard(self) -> None:
 
 
 @app.get("/dashboard/realtime")
-async def realtime_dashboard(self) -> None:
+async def realtime_dashboard() -> None:
     """Serve the enhanced real-time analytics dashboard."""
     try:
         dashboard_path = Path(__file__).parent / "real_time_analytics_dashboard.html"
         if dashboard_path.exists():
             return FileResponse(dashboard_path, media_type="text/html")
         raise HTTPException(status_code=404, detail="Real-time dashboard not found")
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error serving dashboard: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Error serving dashboard: {str(e)}"
@@ -1665,7 +1667,7 @@ async def realtime_dashboard(self) -> None:
 
 
 @app.get("/dashboard/advanced")
-async def advanced_analytics_dashboard(self) -> None:
+async def advanced_analytics_dashboard() -> None:
     """Serve the advanced analytics dashboard with insights and predictions."""
     try:
         dashboard_path = Path(__file__).parent / "advanced_analytics_dashboard.html"
@@ -1674,7 +1676,7 @@ async def advanced_analytics_dashboard(self) -> None:
         raise HTTPException(
             status_code=404, detail="Advanced analytics dashboard not found"
         )
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error serving advanced dashboard: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Error serving advanced dashboard: {str(e)}"
@@ -1682,7 +1684,7 @@ async def advanced_analytics_dashboard(self) -> None:
 
 
 @app.get("/dashboard/obsidian")
-async def enhanced_obsidian_dashboard(self) -> None:
+async def enhanced_obsidian_dashboard() -> None:
     """Serve the enhanced Obsidian integration dashboard."""
     try:
         dashboard_path = Path(__file__).parent / "enhanced_obsidian_dashboard.html"
@@ -1691,7 +1693,7 @@ async def enhanced_obsidian_dashboard(self) -> None:
         raise HTTPException(
             status_code=404, detail="Enhanced Obsidian dashboard not found"
         )
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error serving Obsidian dashboard: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Error serving Obsidian dashboard: {str(e)}"
@@ -1700,7 +1702,7 @@ async def enhanced_obsidian_dashboard(self) -> None:
 
 # Enhanced Obsidian Integration Endpoints
 @app.post("/obsidian/sync")
-async def obsidian_sync(self) -> None:
+async def obsidian_sync(request: dict) -> None:
     """Handle real-time sync events from Obsidian vault."""
     try:
         event_type = request.get("event", {}).get("type")
@@ -1733,19 +1735,19 @@ async def obsidian_sync(self) -> None:
                     "processed_at": datetime.now(UTC).isoformat(),
                 }
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Failed to process file content: %s", e)
                 sync_result["warning"] = str(e)
 
         return sync_result
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error processing Obsidian sync: %s", e)
         raise HTTPException(status_code=500, detail=f"Sync processing failed: {str(e)}")
 
 
 @app.post("/ml/auto-tag")
-async def auto_tag_content(self) -> None:
+async def auto_tag_content(request: dict) -> None:
     """Generate automatic tags for content using ML."""
     try:
         content = request.get("content", "")
@@ -1821,13 +1823,13 @@ async def auto_tag_content(self) -> None:
             "processed_at": datetime.now(UTC).isoformat(),
         }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error in auto-tagging: %s", e)
         raise HTTPException(status_code=500, detail=f"Auto-tagging failed: {str(e)}")
 
 
 @app.post("/ml/extract-metadata")
-async def extract_metadata(self) -> None:
+async def extract_metadata(request: dict) -> None:
     """Extract enhanced metadata from content."""
     try:
         content = request.get("content", "")
@@ -1938,7 +1940,7 @@ async def extract_metadata(self) -> None:
 
         return metadata
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error extracting metadata: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Metadata extraction failed: {str(e)}"
@@ -1946,14 +1948,14 @@ async def extract_metadata(self) -> None:
 
 
 @app.get("/knowledge-graph")
-async def get_knowledge_graph(self) -> None:
+async def get_knowledge_graph() -> None:
     """Get knowledge graph data."""
     try:
         # Use knowledge graph service if available
         try:
             kg_service = get_knowledge_graph_service()
             return await kg_service.get_graph_data()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Knowledge graph service not available: %s", e)
 
             # Return basic graph structure
@@ -1968,7 +1970,7 @@ async def get_knowledge_graph(self) -> None:
                 },
             }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error getting knowledge graph: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Knowledge graph retrieval failed: {str(e)}"
@@ -1976,7 +1978,7 @@ async def get_knowledge_graph(self) -> None:
 
 
 @app.post("/knowledge-graph/update")
-async def update_knowledge_graph(self) -> None:
+async def update_knowledge_graph(request: dict) -> None:
     """Update knowledge graph with new node data."""
     try:
         node_data = request
@@ -1993,7 +1995,7 @@ async def update_knowledge_graph(self) -> None:
         try:
             kg_service = get_knowledge_graph_service()
             return await kg_service.add_node(node_data)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Knowledge graph service not available: %s", e)
 
             # Return success response even if service is unavailable
@@ -2004,7 +2006,7 @@ async def update_knowledge_graph(self) -> None:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Error updating knowledge graph: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Knowledge graph update failed: {str(e)}"

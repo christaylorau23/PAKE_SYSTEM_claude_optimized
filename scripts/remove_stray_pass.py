@@ -3,8 +3,8 @@
 Remove stray 'pass' statements that are causing syntax errors.
 """
 
-import sys
 from pathlib import Path
+import sys
 
 
 def remove_stray_pass_statements(file_path: Path) -> int:

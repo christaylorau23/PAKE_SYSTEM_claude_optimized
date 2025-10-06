@@ -3,10 +3,10 @@ Showcases the capabilities of the vector memory system.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import logging
 import shutil
 import tempfile
-from datetime import UTC, datetime
 
 from AIMemoryQueryInterface import create_memory_interface
 
@@ -63,7 +63,7 @@ async def demonstrate_vector_memory_system(self) -> None:
         print("💡 To enable vector memory features, install ChromaDB:")
         print("   pip install chromadb")
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"\n❌ Error during demonstration: {e}")
 
     finally:
@@ -120,7 +120,7 @@ async def demo_conversation_memory(self) -> None:
     stored_memories = []
 
     for turn in conversation_turns:
-        result = await memory_interface.remember_conversation(
+        result = await self.memory_interface.remember_conversation(
             conversation_id=conversation_id,
             content=turn["content"],
             metadata=turn["metadata"],
@@ -134,7 +134,7 @@ async def demo_conversation_memory(self) -> None:
 
     # Retrieve conversation history
     print(f"\n🔍 Retrieving conversation history for: {conversation_id}")
-    history = await memory_interface.get_conversation_history(
+    history = await self.memory_interface.get_conversation_history(
         conversation_id=conversation_id, context_window=10
     )
 
@@ -167,7 +167,7 @@ async def demo_knowledge_extraction(self) -> None:
 
     print("📚 Extracting knowledge from technical content...")
 
-    extraction_result = await memory_interface.extract_knowledge(
+    extraction_result = await self.memory_interface.extract_knowledge(
         content=technical_content,
         source_id="deep_learning_overview_2024",
         knowledge_type="deep_learning",
@@ -203,7 +203,7 @@ async def demo_knowledge_extraction(self) -> None:
     """
 
     print("\n📈 Extracting business knowledge...")
-    business_result = await memory_interface.extract_knowledge(
+    business_result = await self.memory_interface.extract_knowledge(
         content=business_content,
         source_id="project_management_guide",
         knowledge_type="project_management",
@@ -231,7 +231,7 @@ async def demo_semantic_search(self) -> None:
     for query in search_queries:
         print(f"\n🔎 Searching for: '{query}'")
 
-        results = await memory_interface.ask_memory(
+        results = await self.memory_interface.ask_memory(
             query=query, memory_types=["knowledge", "conversations"], limit=5
         )
 
@@ -290,7 +290,7 @@ async def demo_feedback_learning(self) -> None:
     print("🎓 Processing user feedback to improve future responses...")
 
     for interaction in interactions:
-        result = await memory_interface.learn_from_interaction(
+        result = await self.memory_interface.learn_from_interaction(
             interaction_id=interaction["id"],
             content=interaction["content"],
             interaction_type=interaction["type"],
@@ -339,7 +339,7 @@ async def demo_contextual_queries(self) -> None:
         print(f"\n🔍 Contextual query: '{query}'")
 
         # Query with conversation context
-        results = await memory_interface.ask_memory(
+        results = await self.memory_interface.ask_memory(
             query=query,
             context_id=conversation_id,
             memory_types=["conversations", "knowledge"],
@@ -368,7 +368,7 @@ async def show_system_statistics(self) -> None:
     print("-" * 60)
 
     # Get memory statistics
-    stats = await memory_interface.get_memory_stats()
+    stats = await self.memory_interface.get_memory_stats()
 
     print("🗄️ Memory Database Status:")
     print(f"   • Total memories: {stats['total_memories']}")
@@ -386,7 +386,7 @@ async def show_system_statistics(self) -> None:
     print(f"   • Active: {interface_stats.get('query_interface_active', False)}")
 
     # Health check
-    health = await memory_interface.health_check()
+    health = await self.memory_interface.health_check()
     print(f"\n💚 System Health: {health['status'].upper()}")
 
     if health["status"] == "healthy":
@@ -482,7 +482,7 @@ async def run_simple_demo(self) -> None:
 
     except ImportError:
         print("❌ ChromaDB not available - install with: pip install chromadb")
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"❌ Error: {e}")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

@@ -6,17 +6,17 @@ Provides intelligent content analysis, quality assessment, sentiment analysis,
 topic extraction, and cognitive scoring for enhanced content processing.
 """
 
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import hashlib
 import json
 import logging
 import re
 import time
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -212,8 +212,8 @@ class ContentAnalyzer(ABC):
 class SentimentAnalyzer(ContentAnalyzer):
     """Advanced sentiment analysis with emotion detection."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Pre-defined sentiment lexicon (simplified for demonstration)
         self.positive_words = {
@@ -347,8 +347,8 @@ class SentimentAnalyzer(ContentAnalyzer):
 class TopicExtractor(ContentAnalyzer):
     """ML-powered topic extraction from content."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Pre-defined topic keywords (in production, this would be ML-based)
         self.topic_keywords = {
@@ -477,8 +477,8 @@ class TopicExtractor(ContentAnalyzer):
 class QualityAssessor(ContentAnalyzer):
     """Comprehensive content quality assessment."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Quality indicators
         self.quality_indicators = {
@@ -637,8 +637,8 @@ class QualityAssessor(ContentAnalyzer):
 class ContentCategorizer(ContentAnalyzer):
     """Intelligent content categorization."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Category indicators
         self.category_patterns = {
@@ -763,7 +763,7 @@ class CognitiveAnalysisEngine:
     Provides ML-powered content understanding, quality assessment, and intelligence.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or CognitiveConfig()
 
         # Initialize analyzers
@@ -928,7 +928,7 @@ class CognitiveAnalysisEngine:
 
             return cognitive_result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Cognitive analysis failed for %s: %s", content_id, e)
             return self._create_minimal_result(content_id, start_time, str(e))
 
@@ -1144,7 +1144,7 @@ class CognitiveAnalysisEngine:
             # Limit concurrent analysis
             semaphore = asyncio.Semaphore(self.config.max_concurrent_analysis)
 
-            async def analyze_with_semaphore(self) -> None:
+            async def analyze_with_semaphore(content_id: str, content: str, metadata: dict[str, Any]) -> Any:
                 async with semaphore:
                     return await self.analyze_content(content_id, content, metadata)
 

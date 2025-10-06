@@ -59,9 +59,9 @@ class TestRealTimeProcessingPipeline:
     @pytest_asyncio.fixture
     async def running_pipeline(self) -> None:
         """Create and start a running pipeline for testing"""
-        await pipeline.start_pipeline()
+        await self.pipeline.start_pipeline()
         yield pipeline
-        await pipeline.stop_pipeline()
+        await self.pipeline.stop_pipeline()
 
     @pytest.fixture
     def sample_content_items(self) -> None:
@@ -100,24 +100,24 @@ class TestRealTimeProcessingPipeline:
         configuration and component setup.
         """
         # Check pipeline initialization
-        assert pipeline.config is not None
-        assert pipeline.cognitive_engine is not None
-        assert pipeline.semantic_engine is not None
-        assert pipeline.query_engine is not None
+        assert self.pipeline.config is not None
+        assert self.pipeline.cognitive_engine is not None
+        assert self.pipeline.semantic_engine is not None
+        assert self.pipeline.query_engine is not None
 
         # Check processing stages
-        assert ProcessingStage.COGNITIVE_ANALYSIS in pipeline.stages
-        assert ProcessingStage.SEMANTIC_INDEXING in pipeline.stages
-        assert ProcessingStage.QUALITY_FILTERING in pipeline.stages
+        assert ProcessingStage.COGNITIVE_ANALYSIS in self.pipeline.stages
+        assert ProcessingStage.SEMANTIC_INDEXING in self.pipeline.stages
+        assert ProcessingStage.QUALITY_FILTERING in self.pipeline.stages
 
         # Check edge processors
-        assert EdgeLocation.LOCAL in pipeline.edge_processors
-        assert EdgeLocation.REGIONAL in pipeline.edge_processors
+        assert EdgeLocation.LOCAL in self.pipeline.edge_processors
+        assert EdgeLocation.REGIONAL in self.pipeline.edge_processors
 
         # Check initial state
-        assert not pipeline._running
-        assert len(pipeline.processing_results) == 0
-        assert pipeline.get_active_processing_count() == 0
+        assert not self.pipeline._running
+        assert len(self.pipeline.processing_results) == 0
+        assert self.pipeline.get_active_processing_count() == 0
 
     async def test_should_start_and_stop_pipeline_correctly(self) -> None:
         """
@@ -125,20 +125,20 @@ class TestRealTimeProcessingPipeline:
         with proper state management and cleanup.
         """
         # Initial state
-        assert not pipeline._running
-        assert pipeline._pipeline_task is None
+        assert not self.pipeline._running
+        assert self.pipeline._pipeline_task is None
 
         # Start pipeline
-        await pipeline.start_pipeline()
-        assert pipeline._running
-        assert pipeline._pipeline_task is not None
+        await self.pipeline.start_pipeline()
+        assert self.pipeline._running
+        assert self.pipeline._pipeline_task is not None
 
         # Give pipeline time to initialize
         await asyncio.sleep(0.1)
 
         # Stop pipeline
-        await pipeline.stop_pipeline()
-        assert not pipeline._running
+        await self.pipeline.stop_pipeline()
+        assert not self.pipeline._running
 
     async def test_should_handle_pipeline_restart_gracefully(self) -> None:
         """
@@ -146,20 +146,20 @@ class TestRealTimeProcessingPipeline:
         without state corruption or resource leaks.
         """
         # Start pipeline
-        await pipeline.start_pipeline()
-        assert pipeline._running
+        await self.pipeline.start_pipeline()
+        assert self.pipeline._running
 
         # Stop pipeline
-        await pipeline.stop_pipeline()
-        assert not pipeline._running
+        await self.pipeline.stop_pipeline()
+        assert not self.pipeline._running
 
         # Restart pipeline
-        await pipeline.start_pipeline()
-        assert pipeline._running
+        await self.pipeline.start_pipeline()
+        assert self.pipeline._running
 
         # Stop again
-        await pipeline.stop_pipeline()
-        assert not pipeline._running
+        await self.pipeline.stop_pipeline()
+        assert not self.pipeline._running
 
     # ========================================================================
     # Content Processing Tests
@@ -173,11 +173,11 @@ class TestRealTimeProcessingPipeline:
         content = sample_content_items[1]  # Normal priority research content
 
         # Submit content for processing
-        content_id = await running_pipeline.submit_content(content)
+        content_id = await self.running_pipeline.submit_content(content)
         assert content_id == content.content_id
 
         # Wait for processing to complete
-        result = await running_pipeline.get_result(content_id, timeout=10.0)
+        result = await self.running_pipeline.get_result(content_id, timeout=10.0)
 
         # Verify processing result
         assert result is not None
@@ -192,7 +192,7 @@ class TestRealTimeProcessingPipeline:
         assert result.quality_score > 0
 
         # Should be semantically indexed (if passed quality filter)
-        if result.quality_score >= running_pipeline.config.min_quality_threshold:
+        if result.quality_score >= self.running_pipeline.config.min_quality_threshold:
             assert result.semantic_indexed
 
     async def test_should_handle_different_priority_levels_correctly(self) -> None:
@@ -203,13 +203,13 @@ class TestRealTimeProcessingPipeline:
         # Submit items in reverse priority order
         submitted_items = []
         for item in reversed(sample_content_items):  # Low, Normal, High
-            content_id = await running_pipeline.submit_content(item)
+            content_id = await self.running_pipeline.submit_content(item)
             submitted_items.append((content_id, item.priority))
 
         # Wait for all processing to complete
         results = []
         for content_id, priority in submitted_items:
-            result = await running_pipeline.get_result(content_id, timeout=10.0)
+            result = await self.running_pipeline.get_result(content_id, timeout=10.0)
             results.append((result, priority))
 
         # Verify all items processed successfully
@@ -241,7 +241,7 @@ class TestRealTimeProcessingPipeline:
         start_time = time.time()
         submitted_ids = []
         for item in batch_items:
-            content_id = await running_pipeline.submit_content(item)
+            content_id = await self.running_pipeline.submit_content(item)
             submitted_ids.append(content_id)
 
         submission_time = time.time() - start_time
@@ -249,7 +249,7 @@ class TestRealTimeProcessingPipeline:
         # Wait for all results
         results = []
         for content_id in submitted_ids:
-            result = await running_pipeline.get_result(content_id, timeout=15.0)
+            result = await self.running_pipeline.get_result(content_id, timeout=15.0)
             if result:
                 results.append(result)
 
@@ -289,7 +289,7 @@ class TestRealTimeProcessingPipeline:
 
         # Submit filler items
         for item in filler_items:
-            await running_pipeline.submit_content(item)
+            await self.running_pipeline.submit_content(item)
 
         # Submit high-priority item that should trigger edge processing
         priority_content = ContentItem(
@@ -299,10 +299,10 @@ class TestRealTimeProcessingPipeline:
             edge_location=EdgeLocation.LOCAL,
         )
 
-        priority_id = await running_pipeline.submit_content(priority_content)
+        priority_id = await self.running_pipeline.submit_content(priority_content)
 
         # Wait for priority item result
-        result = await running_pipeline.get_result(priority_id, timeout=5.0)
+        result = await self.running_pipeline.get_result(priority_id, timeout=5.0)
 
         # Verify result
         assert result is not None
@@ -351,13 +351,13 @@ class TestRealTimeProcessingPipeline:
         # Submit all items
         submitted_ids = []
         for item in test_items:
-            content_id = await running_pipeline.submit_content(item)
+            content_id = await self.running_pipeline.submit_content(item)
             submitted_ids.append(content_id)
 
         # Wait for results
         results = {}
         for content_id in submitted_ids:
-            result = await running_pipeline.get_result(content_id, timeout=10.0)
+            result = await self.running_pipeline.get_result(content_id, timeout=10.0)
             results[content_id] = result
 
         # Verify quality filtering behavior
@@ -365,7 +365,7 @@ class TestRealTimeProcessingPipeline:
         assert high_quality_result.status == ProcessingStatus.COMPLETED
         assert (
             high_quality_result.quality_score
-            > running_pipeline.config.min_quality_threshold
+            > self.running_pipeline.config.min_quality_threshold
         )
         assert high_quality_result.semantic_indexed  # Should pass quality filter
 
@@ -373,7 +373,7 @@ class TestRealTimeProcessingPipeline:
         assert low_quality_result.status == ProcessingStatus.COMPLETED
         assert (
             low_quality_result.quality_score
-            < running_pipeline.config.min_quality_threshold
+            < self.running_pipeline.config.min_quality_threshold
         )
         # May or may not be semantically indexed depending on quality filter
 
@@ -408,8 +408,8 @@ class TestRealTimeProcessingPipeline:
         # Submit all items
         results = []
         for item in error_items:
-            content_id = await running_pipeline.submit_content(item)
-            result = await running_pipeline.get_result(content_id, timeout=10.0)
+            content_id = await self.running_pipeline.submit_content(item)
+            result = await self.running_pipeline.get_result(content_id, timeout=10.0)
             results.append(result)
 
         # Verify error handling
@@ -441,8 +441,8 @@ class TestRealTimeProcessingPipeline:
 
         # Submit items concurrently
         async def submit_item(self) -> None:
-            content_id = await running_pipeline.submit_content(item)
-            return await running_pipeline.get_result(content_id, timeout=15.0)
+            content_id = await self.running_pipeline.submit_content(item)
+            return await self.running_pipeline.get_result(content_id, timeout=15.0)
 
         # Run concurrent submissions
         tasks = [asyncio.create_task(submit_item(item)) for item in concurrent_items]
@@ -483,11 +483,11 @@ class TestRealTimeProcessingPipeline:
 
         # Submit and process items
         for item in test_items:
-            content_id = await running_pipeline.submit_content(item)
-            await running_pipeline.get_result(content_id, timeout=10.0)
+            content_id = await self.running_pipeline.submit_content(item)
+            await self.running_pipeline.get_result(content_id, timeout=10.0)
 
         # Get pipeline metrics
-        metrics = running_pipeline.get_pipeline_metrics()
+        metrics = self.running_pipeline.get_pipeline_metrics()
 
         # Verify metrics structure and content
         assert isinstance(metrics, PipelineMetrics)
@@ -526,10 +526,10 @@ class TestRealTimeProcessingPipeline:
                     content=f"Queue test content for {priority.value} priority.",
                     priority=priority,
                 )
-                await running_pipeline.submit_content(content)
+                await self.running_pipeline.submit_content(content)
 
         # Check queue status
-        queue_status = running_pipeline.get_queue_status()
+        queue_status = self.running_pipeline.get_queue_status()
 
         # Verify queue status structure
         assert isinstance(queue_status, dict)
@@ -539,7 +539,7 @@ class TestRealTimeProcessingPipeline:
             assert queue_status[priority.value] >= 0
 
         # Check active processing count
-        active_count = running_pipeline.get_active_processing_count()
+        active_count = self.running_pipeline.get_active_processing_count()
         assert isinstance(active_count, int)
         assert active_count >= 0
 
@@ -618,7 +618,7 @@ class TestProcessingStages:
             metadata={"source_type": "academic"},
         )
 
-        result = await cognitive_stage.process(content)
+        result = await self.cognitive_stage.process(content)
 
         # Verify cognitive analysis result
         assert isinstance(result, dict)
@@ -641,7 +641,7 @@ class TestProcessingStages:
             metadata={"content_type": "research"},
         )
 
-        result = await semantic_stage.process(content)
+        result = await self.semantic_stage.process(content)
 
         # Verify semantic indexing result
         assert isinstance(result, dict)
@@ -674,7 +674,7 @@ class TestProcessingStages:
             )
 
             context = {"quality_score": test_case["quality_score"]}
-            result = await quality_stage.process(content, context)
+            result = await self.quality_stage.process(content, context)
 
             # Verify quality filtering result
             assert isinstance(result, dict)

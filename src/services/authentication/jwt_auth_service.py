@@ -4,11 +4,11 @@ Enterprise-grade authentication system with JWT tokens, user registration, and s
 """
 
 import asyncio
-import logging
-import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+import secrets
+from typing import Any, Dict, List
 
 import jwt
 from passlib.context import CryptContext
@@ -73,7 +73,7 @@ class JWTAuthenticationService:
     - Account activation/deactivation
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: AuthConfig, database_service: Any) -> None:
         self.config = config
         self.database_service = database_service
 
@@ -306,7 +306,7 @@ class JWTAuthenticationService:
                 }
             return False, {"errors": ["Failed to create user"]}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Registration failed: %s", e)
             return False, {"errors": ["Registration failed"]}
 
@@ -361,7 +361,7 @@ class JWTAuthenticationService:
 
             return True, user_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication failed: %s", e)
             return False, {"errors": ["Authentication failed"]}
 
@@ -435,7 +435,7 @@ class JWTAuthenticationService:
 
             return True, token_pair
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Token refresh failed: %s", e)
             return False, {"errors": ["Token refresh failed"]}
 
@@ -455,7 +455,7 @@ class JWTAuthenticationService:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get current user: %s", e)
             return None
 
@@ -501,7 +501,7 @@ class JWTAuthenticationService:
                 return True, {"message": "Password changed successfully"}
             return False, {"errors": ["Failed to update REDACTED_SECRET"]}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Password change failed: %s", e)
             return False, {"errors": ["Password change failed"]}
 

@@ -6,14 +6,17 @@ Supports real-time feedback processing, batch analytics, and automated quality a
 """
 
 import asyncio
-import logging
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 import numpy as np
+import sqlalchemy
+import psycopg2
+import asyncpg
 from sklearn.preprocessing import StandardScaler
 
 from ..models.content_item import ContentItem
@@ -79,7 +82,7 @@ class FeedbackProcessingService:
     provides quality assessment, and generates actionable insights.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, feedback_quality_threshold: float = 0.7, batch_processing_size: int = 100, anomaly_detection_enabled: bool = True) -> None:
         """Initialize feedback processing service.
 
         Args:
@@ -164,7 +167,7 @@ class FeedbackProcessingService:
             )
             return learning_signal
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error processing feedback %s: %s", feedback.id, str(e))
             # Return neutral learning signal
             return LearningSignal(
@@ -235,7 +238,7 @@ class FeedbackProcessingService:
             )
             return learning_signal
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error processing implicit feedback: %s", str(e))
             return LearningSignal(
                 user_id=interaction.user_id,
@@ -292,7 +295,7 @@ class FeedbackProcessingService:
             logger.info("Batch processed %s feedback items", len(feedback_batch))
             return all_signals
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error in batch feedback processing: %s", str(e))
             return []
 
@@ -362,7 +365,7 @@ class FeedbackProcessingService:
             )
             return patterns
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error(
                 "Error analyzing feedback patterns for user %s: %s",
                 user_id,
@@ -435,7 +438,7 @@ class FeedbackProcessingService:
             logger.debug("Generated insights for content %s", content_id)
             return insight
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error generating insights for content %s: %s",
                 content_id,
@@ -532,7 +535,7 @@ class FeedbackProcessingService:
             )
             return metrics
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error generating system feedback metrics: %s", str(e))
             return self._create_empty_system_metrics()
 
@@ -605,7 +608,7 @@ class FeedbackProcessingService:
             logger.debug("Detected %s feedback anomalies", len(anomalies))
             return anomalies
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error detecting feedback anomalies: %s", str(e))
             return []
 

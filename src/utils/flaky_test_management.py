@@ -6,15 +6,15 @@ This module implements the tactical retry policy with mandatory issue tracking
 as specified in the enterprise testing standards.
 """
 
-import json
-import logging
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
-from typing import Any
+import time
+from typing import Any, Callable
 
 import pytest
 
@@ -85,7 +85,7 @@ class FlakyTestMetrics:
 class FlakyTestTracker:
     """Enterprise flaky test tracking and management system."""
 
-    def __init__(self) -> None:
+    def __init__(self, storage_path: str) -> None:
         self.storage_path = Path(storage_path)
         self.flaky_tests: dict[str, FlakyTestRecord] = {}
         self.test_failures: dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
@@ -123,7 +123,7 @@ class FlakyTestTracker:
                     self.flaky_tests[test_id] = FlakyTestRecord(**test_data)
 
                 logger.info("Loaded %s flaky test records", len(self.flaky_tests))
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to load flaky test data: %s", e)
 
     def _save_data(self) -> None:
@@ -162,10 +162,17 @@ class FlakyTestTracker:
             with open(self.storage_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to save flaky test data: %s", e)
 
-    def record_test_failure(self) -> None:
+    def record_test_failure(
+        self,
+        test_id: str,
+        test_name: str,
+        test_file: str,
+        error_message: str,
+        failure_mode: FailureMode = FailureMode.UNKNOWN,
+    ) -> None:
         """Record a test failure for flaky test analysis."""
         current_time = datetime.now(UTC)
 
@@ -226,7 +233,7 @@ class FlakyTestTracker:
         # Save data
         self._save_data()
 
-    def record_test_success(self) -> None:
+    def record_test_success(self, test_id: str) -> None:
         """Record a successful test run."""
         if test_id in self.flaky_tests:
             existing_record = self.flaky_tests[test_id]
@@ -253,7 +260,7 @@ class FlakyTestTracker:
 
             self._save_data()
 
-    def record_retry_attempt(self) -> None:
+    def record_retry_attempt(self, test_id: str) -> None:
         """Record a retry attempt."""
         self.retry_attempts[test_id] += 1
 
@@ -324,7 +331,15 @@ class FlakyTestTracker:
 
         return ticket_id
 
-    def update_resolution_status(self) -> None:
+    def update_resolution_status(
+        self,
+        test_id: str,
+        status: FlakyTestStatus,
+        notes: str | None = None,
+        mock_implementation: str | None = None,
+        refactoring_notes: str | None = None,
+        accepted_reason: str | None = None,
+    ) -> None:
         """Update the resolution status of a flaky test."""
         if test_id not in self.flaky_tests:
             msg = f"Test {test_id} not found in flaky test records"
@@ -526,7 +541,7 @@ def get_flaky_tracker() -> FlakyTestTracker:
 
 
 # Pytest hooks for automatic flaky test detection
-def pytest_runtest_setup(self) -> None:
+def pytest_runtest_setup(item: Any) -> None:
     """Pytest hook called before each test."""
     test_id = f"{item.nodeid}"
     tracker = get_flaky_tracker()
@@ -536,7 +551,7 @@ def pytest_runtest_setup(self) -> None:
         pytest.skip(f"Test {test_id} marked as non-retryable due to enterprise policy")
 
 
-def pytest_runtest_logreport(self) -> None:
+def pytest_runtest_logreport(report: Any) -> None:
     """Pytest hook called after each test report."""
     if report.when == "call":  # Only process actual test execution
         test_id = f"{report.nodeid}"
@@ -581,10 +596,14 @@ def pytest_runtest_logreport(self) -> None:
 
 
 # Decorator for marking tests as flaky
-def flaky_test(self) -> None:
+def flaky_test(
+    failure_mode: FailureMode = FailureMode.UNKNOWN,
+    max_retries: int = 3,
+    issue_ticket: str | None = None,
+) -> Callable:
     """Decorator for marking tests as flaky with enterprise policy compliance."""
 
-    def decorator(self) -> None:
+    def decorator(func: Callable) -> Callable:
         # Add pytest markers
         func = pytest.mark.flaky(func)
         func = pytest.mark.retry_on_failure(func)

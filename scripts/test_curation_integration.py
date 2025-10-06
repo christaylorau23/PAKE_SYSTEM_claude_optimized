@@ -5,12 +5,12 @@ Tests all components working together and validates system readiness.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import os
 
 # Import our core models
 import sys
 import uuid
-from datetime import UTC, datetime
 
 from src.services.curation.models.content_item import ContentItem, ContentType
 from src.services.curation.models.content_source import ContentSource, SourceType
@@ -106,7 +106,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             self.log_test("Content Creation", False, str(e))
             return False
 
@@ -134,7 +134,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.log_test("User Profile Management", False, str(e))
             return False
 
@@ -185,7 +185,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_test("Interaction Tracking", False, str(e))
             return False
 
@@ -228,7 +228,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             self.log_test("Feedback Processing", False, str(e))
             return False
 
@@ -263,7 +263,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.log_test("Content Source Management", False, str(e))
             return False
 
@@ -303,7 +303,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_test("Topic Category Management", False, str(e))
             return False
 
@@ -338,7 +338,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_test("Recommendation Creation", False, str(e))
             return False
 
@@ -397,7 +397,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             self.log_test("End-to-End Workflow", False, str(e))
             return False
 
@@ -437,7 +437,7 @@ class CurationIntegrationTest:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_test("Performance Testing", False, str(e))
             return False
 
@@ -466,7 +466,7 @@ class CurationIntegrationTest:
                 result = await test_method()
                 if result:
                     passed_tests += 1
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"  ❌ FAIL: {test_method.__name__} - {str(e)}")
 
         # Summary

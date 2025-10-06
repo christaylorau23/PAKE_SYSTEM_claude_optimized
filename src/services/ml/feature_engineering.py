@@ -6,17 +6,17 @@ Provides comprehensive feature engineering capabilities including feature extrac
 transformation, selection, and automated feature pipeline management.
 """
 
-import asyncio
-import hashlib
-import json
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import hashlib
+import json
+import logging
 from pathlib import Path
-from typing import Any
+import time
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -217,7 +217,7 @@ class FeatureTransformer(ABC):
 class NumericalScaler(FeatureTransformer):
     """Numerical feature scaler."""
 
-    def __init__(self) -> None:
+    def __init__(self, method: str = "standard") -> None:
         self.method = method
         self.scaler = None
         self.feature_names = []
@@ -272,7 +272,7 @@ class NumericalScaler(FeatureTransformer):
 class CategoricalEncoder(FeatureTransformer):
     """Categorical feature encoder."""
 
-    def __init__(self) -> None:
+    def __init__(self, method: str = "onehot", handle_unknown: str = "ignore") -> None:
         self.method = method
         self.handle_unknown = handle_unknown
         self.encoder = None
@@ -340,6 +340,7 @@ class CategoricalEncoder(FeatureTransformer):
             transformed_data = pd.concat([transformed_data, encoded_df], axis=1)
 
         elif self.method == "label":
+            from sklearn.preprocessing import LabelEncoder
             for col in self.categorical_columns:
                 if col in data.columns:
                     le = LabelEncoder()
@@ -364,7 +365,7 @@ class CategoricalEncoder(FeatureTransformer):
 class TextFeatureExtractor(FeatureTransformer):
     """Text feature extractor."""
 
-    def __init__(self) -> None:
+    def __init__(self, method: str = "tfidf", max_features: int = 1000) -> None:
         self.method = method
         self.max_features = max_features
         self.extractor = None
@@ -449,7 +450,7 @@ class TextFeatureExtractor(FeatureTransformer):
 class FeatureSelector(FeatureTransformer):
     """Feature selector."""
 
-    def __init__(self) -> None:
+    def __init__(self, method: str = "correlation", k: int = 10) -> None:
         self.method = method
         self.k = k
         self.selector = None
@@ -563,7 +564,7 @@ class FeatureSelector(FeatureTransformer):
 class FeatureStore:
     """Feature store for managing feature definitions and metadata."""
 
-    def __init__(self) -> None:
+    def __init__(self, storage_path: str = "./feature_store") -> None:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -620,7 +621,7 @@ class FeatureStore:
                 len(self.feature_pipelines),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to load feature definitions: %s", e)
 
     def _save_feature_definitions(self) -> None:
@@ -638,7 +639,7 @@ class FeatureStore:
 
             logger.info("Saved feature definitions")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to save feature definitions: %s", e)
 
     def register_feature_set(self, feature_set: FeatureSet) -> bool:
@@ -648,7 +649,7 @@ class FeatureStore:
             self._save_feature_definitions()
             logger.info("Registered feature set %s", feature_set.feature_set_id)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to register feature set: %s", e)
             return False
 
@@ -659,7 +660,7 @@ class FeatureStore:
             self._save_feature_definitions()
             logger.info("Registered feature pipeline %s", pipeline.pipeline_id)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to register feature pipeline: %s", e)
             return False
 
@@ -679,7 +680,7 @@ class FeatureStore:
         """List all feature pipelines."""
         return list(self.feature_pipelines.values())
 
-    def cache_features(self) -> None:
+    def cache_features(self, cache_key: str, features: pd.DataFrame) -> None:
         """Cache processed features."""
         self.feature_cache[cache_key] = features.copy()
 
@@ -697,7 +698,7 @@ class FeatureEngineer:
     Provides comprehensive feature engineering capabilities with automated pipelines.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: FeatureEngineeringConfig | None = None) -> None:
         self.config = config or FeatureEngineeringConfig()
 
         # Initialize feature store
@@ -790,7 +791,7 @@ class FeatureEngineer:
             logger.info("Processed features with pipeline %s", pipeline_id)
             return processed_data, result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Feature processing failed: %s", e)
             raise
 
@@ -841,7 +842,7 @@ class FeatureEngineer:
 
             return data, features_created, features_dropped
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Transformation failed: %s", e)
             raise
 
@@ -927,7 +928,7 @@ class FeatureEngineer:
             logger.info("Created automated pipeline %s", pipeline_id)
             return pipeline_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create automated pipeline: %s", e)
             raise
 

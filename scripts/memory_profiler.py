@@ -19,12 +19,12 @@ Usage:
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import gc
 import json
 import linecache
 import time
 import tracemalloc
-from datetime import UTC, datetime
 
 import psutil
 
@@ -215,7 +215,7 @@ class MemoryProfiler:
                         for frame in stat.traceback
                     ],
                 }
-                for stat in snapshot.statistics("lineno")
+                for stat in self.snapshot.statistics("lineno")
             ],
         }
         serialize_to_file(snapshot_data, filename)

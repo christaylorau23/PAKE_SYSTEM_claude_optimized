@@ -10,11 +10,11 @@ This module provides:
 5. Integration with development workflow
 """
 
-import json
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +117,7 @@ class SecurityMetrics:
 class SecurityTriageSystem:
     """System for triaging and managing security findings."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_file: str = "security_triage_config.yaml") -> None:
         self.config_file = config_file
         self.config = self._load_config()
         self.findings: list[SecurityFinding] = []
@@ -189,7 +189,7 @@ class SecurityTriageSystem:
                 with open(self.config_file) as f:
                     user_config = yaml.safe_load(f)
                     default_config.update(user_config)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not load config file %s: %s", self.config_file, e)
 
         return default_config
@@ -204,7 +204,7 @@ class SecurityTriageSystem:
                     for finding_data in data.get("findings", []):
                         finding = SecurityFinding(**finding_data)
                         self.findings.append(finding)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not load existing findings: %s", e)
 
     def _save_data(self) -> None:
@@ -243,7 +243,7 @@ class SecurityTriageSystem:
             with open("security_findings.json", "w") as f:
                 json.dump(data, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error saving findings data: %s", e)
 
     def _initialize_workflow_rules(self) -> None:
@@ -520,7 +520,7 @@ class SecurityTriageSystem:
                     "Failed to send Slack notification: %s", response.status_code
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending Slack notification: %s", e)
 
     def _send_email_notification(self, message: str, finding: SecurityFinding) -> None:
@@ -536,7 +536,7 @@ class SecurityTriageSystem:
             logger.info("Subject: Security Finding Alert - %s", finding.finding_id)
             logger.info("Message: %s", message)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending email notification: %s", e)
 
     def _update_metrics(self) -> None:

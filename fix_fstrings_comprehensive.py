@@ -3,8 +3,8 @@
 This script handles various patterns of malformed f-strings.
 """
 
-import re
 from pathlib import Path
+import re
 
 
 def fix_fstrings_in_file(self) -> None:
@@ -19,9 +19,9 @@ def fix_fstrings_in_file(self) -> None:
         pattern1 = r'f"([^"]*)\{\s*([^}]+)\s*\}([^"]*)"'
 
         def fix_match1(self) -> None:
-            prefix = match.group(1)
-            variable = match.group(2).strip()
-            suffix = match.group(3)
+            prefix = self.match.group(1)
+            variable = self.match.group(2).strip()
+            suffix = self.match.group(3)
             return f'f"{prefix}{{{variable}}}{suffix}"'
 
         content = re.sub(pattern1, fix_match1, content, flags=re.MULTILINE | re.DOTALL)
@@ -32,9 +32,9 @@ def fix_fstrings_in_file(self) -> None:
         pattern2 = r'f"([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
         def fix_match2(self) -> None:
-            prefix = match.group(1)
-            variable = match.group(2).strip()
-            suffix = match.group(3)
+            prefix = self.match.group(1)
+            variable = self.match.group(2).strip()
+            suffix = self.match.group(3)
             return f'f"{prefix}{{{variable}}}{suffix}"'
 
         content = re.sub(pattern2, fix_match2, content, flags=re.MULTILINE | re.DOTALL)
@@ -45,11 +45,11 @@ def fix_fstrings_in_file(self) -> None:
         pattern3 = r'f"([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
         def fix_match3(self) -> None:
-            prefix = match.group(1)
-            var1 = match.group(2).strip()
-            middle = match.group(3)
-            var2 = match.group(4).strip()
-            suffix = match.group(5)
+            prefix = self.match.group(1)
+            var1 = self.match.group(2).strip()
+            middle = self.match.group(3)
+            var2 = self.match.group(4).strip()
+            suffix = self.match.group(5)
             return f'f"{prefix}{{{var1}}}{middle}{{{var2}}}{suffix}"'
 
         content = re.sub(pattern3, fix_match3, content, flags=re.MULTILINE | re.DOTALL)
@@ -59,7 +59,7 @@ def fix_fstrings_in_file(self) -> None:
         pattern4 = r'f"\{\s*\n\s*([^}]+)\s*\n\s*\}"'
 
         def fix_match4(self) -> None:
-            variable = match.group(1).strip()
+            variable = self.match.group(1).strip()
             return f'f"{{{variable}}}"'
 
         content = re.sub(pattern4, fix_match4, content, flags=re.MULTILINE | re.DOTALL)
@@ -68,8 +68,8 @@ def fix_fstrings_in_file(self) -> None:
         pattern5 = r'f"\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
         def fix_match5(self) -> None:
-            variable = match.group(1).strip()
-            suffix = match.group(2)
+            variable = self.match.group(1).strip()
+            suffix = self.match.group(2)
             return f'f"{{{variable}}}{suffix}"'
 
         content = re.sub(pattern5, fix_match5, content, flags=re.MULTILINE | re.DOTALL)
@@ -82,7 +82,7 @@ def fix_fstrings_in_file(self) -> None:
             return True
         return False
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error processing {file_path}: {e}")
         return False
 

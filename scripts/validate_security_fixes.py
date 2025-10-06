@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Security Validation Script for PAKE System
@@ -18,9 +19,9 @@ Requirements:
 """
 
 import logging
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -85,7 +86,7 @@ class SecurityValidator:
                             continue
                         found_secrets.append(f"{py_file}: {match}")
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error reading %s: %s", py_file, e)
 
         # Search through YAML files
@@ -111,7 +112,7 @@ class SecurityValidator:
                             continue
                         found_secrets.append(f"{yaml_file}: {match}")
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error reading %s: %s", yaml_file, e)
 
         success = len(found_secrets) == 0
@@ -184,7 +185,7 @@ class SecurityValidator:
             self.validation_results["vault_integration"] = {"success": True}
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error checking Vault integration: %s", e)
             self.validation_results["vault_integration"] = {
                 "success": False,
@@ -227,7 +228,7 @@ class SecurityValidator:
             self.validation_results["fail_fast_security"] = {"success": True}
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error checking fail-fast security: %s", e)
             self.validation_results["fail_fast_security"] = {
                 "success": False,
@@ -278,7 +279,7 @@ class SecurityValidator:
             self.validation_results["kubernetes_secrets"] = {"success": True}
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error checking Kubernetes secrets: %s", e)
             self.validation_results["kubernetes_secrets"] = {
                 "success": False,
@@ -329,7 +330,7 @@ class SecurityValidator:
             self.validation_results["trufflehog_ignore"] = {"success": True}
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error checking .trufflehog-ignore: %s", e)
             self.validation_results["trufflehog_ignore"] = {
                 "success": False,
@@ -363,7 +364,7 @@ class SecurityValidator:
                 result = check()
                 if not result:
                     all_passed = False
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("❌ Validation check failed: %s", e)
                 all_passed = False
 

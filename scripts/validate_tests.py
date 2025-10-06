@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 #!/usr/bin/env python3
 """
 Test Validation Script
@@ -5,10 +7,10 @@ Runs comprehensive test suite (unit, integration, E2E, performance, security)
 """
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 
@@ -60,7 +62,7 @@ class TestValidator:
             duration = time.time() - start_time
             self.log(f"⏰ {name} timed out after 600s", "ERROR")
             return name, False, "Timeout after 600s", {}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             self.log(f"💥 {name} crashed: {e}", "ERROR")
             return name, False, str(e), {}
@@ -124,7 +126,7 @@ class TestValidator:
                     (summary.get("passed", 0) / total * 100) if total > 0 else 0
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             if self.verbose:
                 self.log(f"Error parsing {test_type} output: {e}", "WARNING")
 

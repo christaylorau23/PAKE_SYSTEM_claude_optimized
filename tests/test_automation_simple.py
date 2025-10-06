@@ -5,12 +5,12 @@ Tests the complete automation pipeline from note creation to analysis
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
+from pathlib import Path
 import sys
 import time
 import uuid
-from datetime import UTC, datetime
-from pathlib import Path
 
 import frontmatter
 
@@ -93,7 +93,7 @@ class SimpleAutomationTester:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"  ERROR: Component test failed: {e}")
             self.test_results["component_tests"] = {"error": str(e)}
             return False
@@ -188,7 +188,7 @@ This note should trigger the automation system to:
 
                 return note_path
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"  WARNING: Could not parse frontmatter: {e}")
                 self.test_results["note_creation"] = {
                     "note_created": True,
@@ -197,7 +197,7 @@ This note should trigger the automation system to:
                 }
                 return note_path
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"  ERROR: Note creation failed: {e}")
             self.test_results["note_creation"] = {"error": str(e)}
             return None
@@ -206,7 +206,7 @@ This note should trigger the automation system to:
         """Test manual processing using PAKE components"""
         print("\nTesting Manual Processing...")
 
-        if not note_path or not note_path.exists():
+        if not note_path or not self.self.note_path.exists():
             print("  ERROR: No test note available")
             return
 
@@ -245,7 +245,7 @@ This note should trigger the automation system to:
                     "knowledge_graph_updated": result.knowledge_graph_updated,
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"  ERROR: Manual processing test failed: {e}")
             self.test_results["manual_processing"] = {"error": str(e)}
 
@@ -287,7 +287,7 @@ This note should trigger the automation system to:
                 "vector_files_count": len(vector_files) if vectors_dir.exists() else 0,
             }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"  ERROR: Data persistence check failed: {e}")
             self.test_results["data_persistence"] = {"error": str(e)}
 
@@ -312,7 +312,7 @@ This note should trigger the automation system to:
                     "log_entries": len(lines),
                 }
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"  WARNING: Could not read log file: {e}")
                 self.test_results["automation_status"] = {
                     "log_exists": True,

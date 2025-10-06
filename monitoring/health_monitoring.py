@@ -12,13 +12,13 @@ This module provides:
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import json
 import logging
 import os
-import time
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
@@ -408,7 +408,7 @@ class HealthMonitoringSystem:
                 "Service %s health check: %s", service_name, health_status.value
             )
             return health_status
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Health check failed for %s: %s", service_name, str(e))
             return HealthStatus.CRITICAL
 
@@ -423,7 +423,7 @@ class HealthMonitoringSystem:
             # This is a placeholder - implement actual database health check
             return HealthStatus.HEALTHY
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             self.logger.error("Database health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -438,7 +438,7 @@ class HealthMonitoringSystem:
             # This is a placeholder - implement actual Redis health check
             return HealthStatus.HEALTHY
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Redis health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -453,7 +453,7 @@ class HealthMonitoringSystem:
                     if response.status == 200:
                         return HealthStatus.HEALTHY
                     return HealthStatus.DEGRADED
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.logger.error("API gateway health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -465,7 +465,7 @@ class HealthMonitoringSystem:
             await asyncio.sleep(0.1)
             return HealthStatus.HEALTHY
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Ingestion service health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -477,7 +477,7 @@ class HealthMonitoringSystem:
             await asyncio.sleep(0.1)
             return HealthStatus.HEALTHY
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Analytics service health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -494,7 +494,7 @@ class HealthMonitoringSystem:
                 return HealthStatus.DEGRADED
             return HealthStatus.HEALTHY
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Storage health check failed: %s", str(e))
             return HealthStatus.CRITICAL
 
@@ -507,7 +507,7 @@ class HealthMonitoringSystem:
                     if response.status == 200:
                         return HealthStatus.HEALTHY
                     return HealthStatus.DEGRADED
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.logger.error("Network health check failed: %s", str(e))
             return HealthStatus.DEGRADED
 
@@ -539,7 +539,7 @@ class HealthMonitoringSystem:
 
         # Create health report
         report = SystemHealthReport(
-            report_id=f"health_{int(time.time())}_{secrets.token_hex(4)}",
+            report_id=f"health_{int(time.time())}_{self.secrets.token_hex(4)}",
             overall_status=overall_status,
             service_status=service_status,
             metrics=current_metrics,
@@ -719,7 +719,7 @@ class HealthMonitoringSystem:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             task.last_run = start_time
             task.last_status = "error"
             task.last_error = str(e)
@@ -753,7 +753,7 @@ class HealthMonitoringSystem:
             self.logger.error("Unknown task type: %s", task.task_type)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Task execution failed: %s", str(e))
             return False
 
@@ -782,7 +782,7 @@ class HealthMonitoringSystem:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Cleanup task failed: %s", str(e))
             return False
 
@@ -819,7 +819,7 @@ class HealthMonitoringSystem:
             self.logger.info("Backup created: %s", backup_file)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Backup task failed: %s", str(e))
             return False
 
@@ -844,7 +844,7 @@ class HealthMonitoringSystem:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Cache clear task failed: %s", str(e))
             return False
 
@@ -858,7 +858,7 @@ class HealthMonitoringSystem:
             self.logger.info("Security scan completed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Security scan task failed: %s", str(e))
             return False
 
@@ -885,7 +885,7 @@ class HealthMonitoringSystem:
             self.logger.info("Capacity check completed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Capacity check task failed: %s", str(e))
             return False
 
@@ -904,7 +904,7 @@ class HealthMonitoringSystem:
             self.logger.info("Optimization task completed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Optimization task failed: %s", str(e))
             return False
 
@@ -973,7 +973,7 @@ class HealthMonitoringSystem:
                 # Wait for next check
                 await asyncio.sleep(interval_seconds)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Health monitoring error: %s", str(e))
                 await asyncio.sleep(interval_seconds)
 

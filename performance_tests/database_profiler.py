@@ -12,14 +12,14 @@ Key Features:
 - Automated performance monitoring
 """
 
-import json
-import logging
-import re
-import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import json
+import logging
 from pathlib import Path
+import re
+import time
 from typing import Any
 
 from sqlalchemy import event
@@ -89,15 +89,15 @@ class DatabaseProfiler:
         @event.listens_for(engine, "before_cursor_execute")
         def receive_before_cursor_execute(self) -> None:
             """Called before cursor execution."""
-            context._query_start_time = time.time()
-            context._query_statement = statement
-            context._query_parameters = parameters
+            self.context._query_start_time = time.time()
+            self.context._query_statement = statement
+            self.context._query_parameters = parameters
 
         @event.listens_for(engine, "after_cursor_execute")
         def receive_after_cursor_execute(self) -> None:
             """Called after cursor execution."""
             if hasattr(context, "_query_start_time"):
-                execution_time = (time.time() - context._query_start_time) * 1000
+                execution_time = (time.time() - self.context._query_start_time) * 1000
 
                 # Extract query information
                 query_type = self._extract_query_type(statement)
@@ -112,7 +112,7 @@ class DatabaseProfiler:
                     timestamp=datetime.now(UTC).isoformat(),
                     connection_id=str(id(conn)),
                     parameters=parameters or {},
-                    result_count=cursor.rowcount if hasattr(cursor, "rowcount") else 0,
+                    result_count=self.self.cursor.rowcount if hasattr(cursor, "rowcount") else 0,
                     query_type=query_type,
                     table_name=table_name,
                 )
@@ -163,7 +163,7 @@ class DatabaseProfiler:
 
     def _detect_n_plus_one_patterns(self) -> None:
         """Detect N+1 query patterns."""
-        if metrics.query_type != "SELECT":
+        if self.metrics.query_type != "SELECT":
             return
 
         # Look for patterns in recent queries
@@ -431,9 +431,9 @@ class SQLAlchemyOptimizer:
 
         if relationship.property.direction.name == "MANYTOONE":
             # Use joinedload for many-to-one relationships
-            return session.query(model_class).options(joinedload(relationship_name))
+            return self.session.query(model_class).options(joinedload(relationship_name))
         # Use selectinload for one-to-many relationships
-        return session.query(model_class).options(selectinload(relationship_name))
+        return self.session.query(model_class).options(selectinload(relationship_name))
 
     @staticmethod
     def batch_load_relationships(self) -> None:
@@ -441,8 +441,8 @@ class SQLAlchemyOptimizer:
         from sqlalchemy.orm import selectinload
 
         return (
-            session.query(model_class)
-            .filter(model_class.id.in_(ids))
+            self.session.query(model_class)
+            .filter(self.model_class.id.in_(ids))
             .options(selectinload(relationship_name))
             .all()
         )
@@ -452,7 +452,7 @@ class SQLAlchemyOptimizer:
         """Add query hints for index usage."""
         # This would be database-specific implementation
         # For PostgreSQL, you could use query hints
-        return query.with_hint(table_name, f"INDEX({', '.join(columns)})")
+        return self.query.with_hint(table_name, f"INDEX({', '.join(columns)})")
 
 
 def main(self) -> None:

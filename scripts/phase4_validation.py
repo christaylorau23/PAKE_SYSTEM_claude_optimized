@@ -10,14 +10,14 @@ This script validates all Phase 4 implementations including:
 - Case-sensitivity fixes
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import json
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import yaml
@@ -237,7 +237,7 @@ class Phase4Validator:
                     "No env section found in workflow",
                 )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.add_result(
                 f"Workflow Updates - {workflow_file.name} - Parse",
                 ValidationStatus.FAIL,
@@ -380,7 +380,7 @@ class Phase4Validator:
                     ValidationStatus.WARNING,
                     "Case-sensitivity script timed out",
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.add_result(
                     "Case Sensitivity - Script Execution",
                     ValidationStatus.FAIL,

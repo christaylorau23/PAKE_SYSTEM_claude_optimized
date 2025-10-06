@@ -44,7 +44,7 @@ class TestAPIGatewayRoutingContract:
             "max_results": 10,
         }
 
-        response = await http_client.post(
+        response = await self.http_client.post(
             f"{api_gateway_base_url}/services/research/multi-source",
             json=research_request,
         )
@@ -75,7 +75,7 @@ class TestAPIGatewayRoutingContract:
         Expected: Request forwarded to cache management endpoints
         """
         # This test WILL FAIL until API Gateway routing is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/services/cache/stats")
+        response = await self.http_client.get(f"{api_gateway_base_url}/services/cache/stats")
 
         # API Gateway should route this to cache service
         assert (
@@ -101,7 +101,7 @@ class TestAPIGatewayRoutingContract:
         Contract Requirement: API Gateway must route /services/performance/* to performance-monitor service
         """
         # This test WILL FAIL until API Gateway routing is implemented
-        response = await http_client.get(
+        response = await self.http_client.get(
             f"{api_gateway_base_url}/services/performance/metrics"
         )
 
@@ -129,7 +129,7 @@ class TestAPIGatewayRoutingContract:
         Contract Requirement: API Gateway must discover and route to all registered services
         """
         # This test WILL FAIL until API Gateway and service registry are implemented
-        response = await http_client.get(f"{api_gateway_base_url}/services")
+        response = await self.http_client.get(f"{api_gateway_base_url}/services")
 
         # Should return list of available services
         assert response.status_code in [
@@ -170,7 +170,7 @@ class TestAPIGatewayRoutingContract:
             "Authorization": "Bearer test-token",
         }
 
-        response = await http_client.get(
+        response = await self.http_client.get(
             f"{api_gateway_base_url}/services/cache/stats", headers=test_headers
         )
 
@@ -195,7 +195,7 @@ class TestAPIGatewayRoutingContract:
         # This test WILL FAIL until API Gateway authentication is implemented
 
         # Test without authentication - should be rejected
-        response_no_auth = await http_client.post(
+        response_no_auth = await self.http_client.post(
             f"{api_gateway_base_url}/services/research/multi-source",
             json={"query": "test"},
         )
@@ -211,7 +211,7 @@ class TestAPIGatewayRoutingContract:
         ), f"Expected 401/403 for unauthenticated request, got {response_no_auth.status_code}"
 
         # Test with invalid token - should be rejected
-        response_bad_auth = await http_client.post(
+        response_bad_auth = await self.http_client.post(
             f"{api_gateway_base_url}/services/research/multi-source",
             json={"query": "test"},
             headers={"Authorization": "Bearer invalid-token"},
@@ -231,7 +231,7 @@ class TestAPIGatewayRoutingContract:
         Contract Requirement: Gateway may add metadata, timing info, etc. to responses
         """
         # This test WILL FAIL until API Gateway response transformation is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/services/cache/stats")
+        response = await self.http_client.get(f"{api_gateway_base_url}/services/cache/stats")
 
         assert response.status_code in [200, 503]
 
@@ -260,7 +260,7 @@ class TestAPIGatewayRoutingContract:
         # This test WILL FAIL until API Gateway error handling is implemented
 
         # Test routing to non-existent service
-        response = await http_client.get(
+        response = await self.http_client.get(
             f"{api_gateway_base_url}/services/nonexistent/endpoint"
         )
 

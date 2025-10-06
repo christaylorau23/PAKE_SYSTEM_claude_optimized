@@ -6,12 +6,16 @@ Addresses all recurring deployment and management issues.
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
+import logging
 import os
+from pathlib import Path
 import sys
 import time
-from datetime import UTC, datetime
-from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Add scripts directory to path
 SCRIPTS_DIR = Path(__file__).parent / "scripts"
@@ -205,7 +209,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
         except KeyboardInterrupt:
             print(f"\n{Colors.yellow('🛑 Operation cancelled by user')}")
             return 130
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"{Colors.red('💥 Error:')} {str(e)}")
             if args.verbose:
                 import traceback
@@ -250,7 +254,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_deploy(args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Deployment error:')} {str(e)}")
             return 1
 
@@ -301,7 +305,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_service_command("start", args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Start error:')} {str(e)}")
             return 1
 
@@ -327,7 +331,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_service_command("stop", args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Stop error:')} {str(e)}")
             return 1
 
@@ -355,7 +359,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_service_command("restart", args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Restart error:')} {str(e)}")
             return 1
 
@@ -376,7 +380,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_status(args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Status error:')} {str(e)}")
             return 1
 
@@ -513,7 +517,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
 
         except ImportError:
             return await self._fallback_health(args)
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Health check error:')} {str(e)}")
             return 1
 
@@ -545,7 +549,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
         except ImportError:
             print(f"{Colors.red('❌ Test suite not available')}")
             return 1
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"{Colors.red('💥 Test error:')} {str(e)}")
             return 1
 
@@ -575,7 +579,7 @@ For detailed help on any command: {Colors.cyan("python pake.py <command> --help"
                 else:
                     print(f"    ❌ {message}")
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"    💥 {check_name} failed: {e}")
                 results.append(False)
 
@@ -761,7 +765,7 @@ Environment Variables:
             print(f"{Colors.red('❌ Deployment script not found')}")
             return 1
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"{Colors.red('💥 Fallback deployment failed:')} {str(e)}")
             return 1
 
@@ -796,7 +800,7 @@ Environment Variables:
 
                 return return_code
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"{Colors.red('💥 Fallback start failed:')} {str(e)}")
                 return 1
 
@@ -821,7 +825,7 @@ Environment Variables:
 
                 return return_code
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"{Colors.red('💥 Fallback stop failed:')} {str(e)}")
                 return 1
 
@@ -855,7 +859,7 @@ Environment Variables:
 
             return process.returncode
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"{Colors.red('💥 Fallback status failed:')} {str(e)}")
             return 1
 
@@ -904,7 +908,7 @@ Environment Variables:
                 return True, f"Docker available: {version}"
             return False, "Docker not available"
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Docker check failed: {str(e)}"
 
     async def _validate_directories(self) -> tuple:
@@ -949,8 +953,13 @@ Environment Variables:
                 await writer.wait_closed()
                 busy_ports.append(port)
 
-            except BaseException:
-                pass  # Port is free
+            except BaseException as e:
+
+
+                logger.debug(f"Exception in pake.py: {e}")
+
+
+                # Continue gracefully  # Port is free
 
         if busy_ports:
             return True, f"Services running on ports: {', '.join(map(str, busy_ports))}"
@@ -965,11 +974,11 @@ Environment Variables:
 
             return True, "File permissions OK"
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"Permission issue: {str(e)}"
 
     # Helper methods
-    def _print_status(self) -> None:
+    def _print_status(self, status: Dict[str, Any]) -> None:
         """Print formatted status."""
         print(f"{Colors.blue('📊 PAKE+ System Status')}")
         print(
@@ -1039,19 +1048,19 @@ Environment Variables:
         print(info)
 
     # Placeholder methods for unimplemented commands
-    async def _handle_update(self, args) -> int:
+    async def _handle_update(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('🔄 Update functionality coming soon...')}")
         return 0
 
-    async def _handle_backup(self, args) -> int:
+    async def _handle_backup(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('💾 Backup functionality coming soon...')}")
         return 0
 
-    async def _handle_restore(self, args) -> int:
+    async def _handle_restore(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📥 Restore functionality coming soon...')}")
         return 0
 
-    async def _handle_clean(self, args) -> int:
+    async def _handle_clean(self, args: argparse.Namespace) -> int:
         print(f"{Colors.blue('🧹 Cleaning temporary files...')}")
 
         temp_patterns = [
@@ -1076,15 +1085,18 @@ Environment Variables:
 
                         shutil.rmtree(file_path)
                         cleaned_count += 1
-                except Exception:
-                    pass
+                except Exception as e:
+
+                    logger.debug(f"Exception in pake.py: {e}")
+
+                    # Continue gracefully
 
         print(
             f"{Colors.green(f'✅ Cleaned {cleaned_count} temporary files/directories')}",
         )
         return 0
 
-    async def _handle_reset(self, args) -> int:
+    async def _handle_reset(self, args: argparse.Namespace) -> int:
         if not args.force:
             response = input(
                 f"{Colors.red('⚠️  This will reset the entire system. Continue? (y/N): ')}",
@@ -1099,43 +1111,43 @@ Environment Variables:
         )
         return 0
 
-    async def _handle_benchmark(self, args) -> int:
+    async def _handle_benchmark(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📈 Benchmark functionality coming soon...')}")
         return 0
 
-    async def _handle_security_scan(self, args) -> int:
+    async def _handle_security_scan(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('🛡️  Security scan functionality coming soon...')}")
         return 0
 
-    async def _handle_monitor(self, args) -> int:
+    async def _handle_monitor(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📊 Monitor functionality coming soon...')}")
         return 0
 
-    async def _handle_dashboard(self, args) -> int:
+    async def _handle_dashboard(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📈 Dashboard functionality coming soon...')}")
         return 0
 
-    async def _handle_report(self, args) -> int:
+    async def _handle_report(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📋 Report functionality coming soon...')}")
         return 0
 
-    async def _handle_metrics(self, args) -> int:
+    async def _handle_metrics(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('📊 Metrics functionality coming soon...')}")
         return 0
 
-    async def _handle_dev(self, args) -> int:
+    async def _handle_dev(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('🛠️  Development mode coming soon...')}")
         return 0
 
-    async def _handle_build(self, args) -> int:
+    async def _handle_build(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('🔨 Build functionality coming soon...')}")
         return 0
 
-    async def _handle_lint(self, args) -> int:
+    async def _handle_lint(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('🔍 Lint functionality coming soon...')}")
         return 0
 
-    async def _handle_format(self, args) -> int:
+    async def _handle_format(self, args: argparse.Namespace) -> int:
         print(f"{Colors.yellow('✨ Format functionality coming soon...')}")
         return 0
 
@@ -1236,7 +1248,7 @@ async def main() -> int:
     # Execute command
     try:
         return await cli.handle_command(args)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"{Colors.red('💥 Fatal error:')} {str(e)}")
         if args.verbose:
             import traceback
@@ -1252,6 +1264,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n{Colors.yellow('🛑 Interrupted by user')}")
         sys.exit(130)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"{Colors.red('💥 Fatal error:')} {str(e)}")
         sys.exit(1)

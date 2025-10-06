@@ -3,11 +3,15 @@ Integration layer that connects the intelligent content curation system with the
 Provides unified API for content discovery, analysis, and recommendation.
 """
 
-import logging
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import uuid
+
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 from ..ml.feature_extractor import FeatureExtractor
 from ..ml.model_trainer import ModelTrainer
@@ -110,7 +114,7 @@ class CurationOrchestrator:
             logger.info("Curation system initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error initializing curation system: %s", e)
             return False
 
@@ -172,7 +176,7 @@ class CurationOrchestrator:
 
             # Calculate average model confidence
             model_confidence = (
-                np.mean([r.confidence_score for r in recommendations])
+                self.np.mean([r.confidence_score for r in recommendations])
                 if recommendations
                 else 0.0
             )
@@ -195,7 +199,7 @@ class CurationOrchestrator:
             )
             return response
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing curation request %s: %s", request_id, e)
             # Return empty response on error
             return CurationResponse(
@@ -231,7 +235,7 @@ class CurationOrchestrator:
                 exploration_factor=0.1,
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error getting user profile for %s: %s", user_id, e)
             # Return default profile
             return UserProfile(
@@ -258,7 +262,7 @@ class CurationOrchestrator:
             )
             return interactions
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting user interactions for %s: %s", user_id, e)
             return []
 
@@ -301,7 +305,7 @@ class CurationOrchestrator:
             logger.info("Discovered %s unique content items", len(unique_content))
             return unique_content
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error discovering content: %s", e)
             return []
 
@@ -386,7 +390,7 @@ class CurationOrchestrator:
 
                 analyzed_content.append(updated_content)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Error analyzing content %s: %s", content.id, e)
                 analyzed_content.append(content)  # Use original content
 
@@ -456,7 +460,7 @@ class CurationOrchestrator:
 
                 recommendations.append(recommendation)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Error generating recommendation for content %s: %s",
                     contents[i].id,
@@ -542,7 +546,7 @@ class CurationOrchestrator:
             )
             return True
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error processing feedback: %s", e)
             return False
 
@@ -577,7 +581,7 @@ class CurationOrchestrator:
             logger.info("Model retraining completed successfully")
             return {"retrained": True, "results": results}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error retraining models: %s", e)
             return {"retrained": False, "error": str(e)}
 
@@ -641,5 +645,5 @@ class CurationOrchestrator:
 
             logger.info("Curation system shutdown completed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error during shutdown: %s", e)

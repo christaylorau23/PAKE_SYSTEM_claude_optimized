@@ -7,9 +7,9 @@ Systematically fixes the most common linting issues across the codebase
 import ast
 import logging
 import os
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 # Configure logging
@@ -191,7 +191,7 @@ class LintingFixer:
 
             return fixes_applied
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error fixing imports in %s: %s", file_path, e)
             return 0
 
@@ -238,7 +238,7 @@ class LintingFixer:
 
             return fixes_applied
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error fixing type annotations in %s: %s", file_path, e)
             return 0
 
@@ -278,7 +278,7 @@ class LintingFixer:
 
             return fixes_applied
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error fixing async issues in %s: %s", file_path, e)
             return 0
 
@@ -327,7 +327,7 @@ class LintingFixer:
 
             return fixes_applied
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error fixing model issues in %s: %s", file_path, e)
             return 0
 
@@ -373,7 +373,7 @@ class LintingFixer:
                 if fixes > 0:
                     results[str(file_path)] = fixes
                     logger.info("Fixed %s issues in %s", fixes, file_path)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error processing %s: %s", file_path, e)
 
         return results
@@ -490,7 +490,7 @@ class LintingFixer:
 
             return error_count
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error running linter: %s", e)
             return -1
 

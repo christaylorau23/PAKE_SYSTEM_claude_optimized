@@ -4,10 +4,10 @@ Provides time series forecasting, trend prediction, and pattern analysis
 using statistical models and machine learning algorithms.
 """
 
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -154,7 +154,7 @@ class PredictiveAnalyticsService:
                 trend_strength=trend_strength,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in time series forecasting: %s", e)
             # Return empty result on error
             return PredictionResult(
@@ -188,8 +188,11 @@ class PredictiveAnalyticsService:
                     seasonal_strength = np.std(decomposition.seasonal) / np.std(series)
                     if seasonal_strength > 0.3:
                         return "exponential"  # Good for seasonal data
-                except Exception:
-                    pass
+                except Exception as e:
+
+                    logger.debug(f"Exception in predictive_analytics_service.py: {e}")
+
+                    # Continue gracefully
 
             # Check stationarity (simplified)
             diff_series = series.diff().dropna()
@@ -198,7 +201,7 @@ class PredictiveAnalyticsService:
 
             return "ml"  # Default to ML for complex patterns
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Model selection failed, using default: %s", e)
             return "exponential"
 
@@ -232,7 +235,7 @@ class PredictiveAnalyticsService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ARIMA forecasting failed: %s", e)
             # Fallback to simple linear trend
             return await self._forecast_linear_trend(series, horizon)
@@ -284,7 +287,7 @@ class PredictiveAnalyticsService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Exponential smoothing failed: %s", e)
             return await self._forecast_linear_trend(series, horizon)
 
@@ -343,7 +346,7 @@ class PredictiveAnalyticsService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ML forecasting failed: %s", e)
             return await self._forecast_linear_trend(df["value"], horizon)
 
@@ -450,7 +453,7 @@ class PredictiveAnalyticsService:
                 "accuracy_metrics": {"mae": mae, "rmse": rmse, "slope": slope},
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Linear trend forecast failed: %s", e)
             # Ultimate fallback - repeat last value
             last_value = series.iloc[-1] if not series.empty else 0.0
@@ -489,7 +492,7 @@ class PredictiveAnalyticsService:
 
             return direction, strength
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend analysis failed: %s", e)
             return "unknown", 0.0
 
@@ -523,7 +526,7 @@ class PredictiveAnalyticsService:
                 detection_method="z_score",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Anomaly detection failed: %s", e)
             return AnomalyResult(
                 anomaly_points=[],
@@ -597,7 +600,7 @@ class PredictiveAnalyticsService:
                         0.0,
                     )
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning("Forecast failed for %s: %s", metric, e)
                     forecasts[metric] = []
                     confidence_intervals[metric] = []
@@ -616,7 +619,7 @@ class PredictiveAnalyticsService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Forecast generation failed: %s", e)
             return {
                 "forecasts": {},
@@ -693,7 +696,7 @@ class PredictiveAnalyticsService:
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Mock time series generation failed: %s", e)
             # Return minimal data
             return TimeSeriesData(
@@ -738,7 +741,7 @@ class PredictiveAnalyticsService:
                 "cache_size": len(self.models_cache),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

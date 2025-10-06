@@ -5,11 +5,11 @@ proactive anomaly-to-action workflow system.
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+import json
+import logging
+from typing import Any, Dict, TYPE_CHECKING
 
 from .anomaly_to_action import AnomalyToActionEngine
 from .task_management import TaskManagementSystem
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class SecurityAlertAdapter:
     """Adapter to convert SecurityAlert from ai-security-monitor.py to our workflow format."""
 
-    def __init__(self) -> None:
+    def __init__(self, security_alert) -> None:
         """Initialize with SecurityAlert from ai-security-monitor.py."""
         self.id = security_alert.id
         self.timestamp = security_alert.timestamp
@@ -69,7 +69,7 @@ class ProactiveSecurityMonitor:
     def _setup_default_notifications(self) -> None:
         """Setup default notification handlers for task creation."""
 
-        async def log_task_creation(self) -> None:
+        async def log_task_creation(task, action) -> None:
             """Log task creation events."""
             if action == "created":
                 logger.info(
@@ -78,7 +78,7 @@ class ProactiveSecurityMonitor:
                     task.priority.value,
                 )
 
-        async def alert_on_critical_tasks(self) -> None:
+        async def alert_on_critical_tasks(task, action) -> None:
             """Send alerts for critical security tasks."""
             if action == "created" and task.priority.value in ["critical", "high"]:
                 logger.warning("CRITICAL SECURITY TASK CREATED: %s", task.title)
@@ -108,7 +108,7 @@ class ProactiveSecurityMonitor:
         for processor in self.alert_processors:
             try:
                 await processor(adapted_alert, result)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Alert processor failed: %s", e)
 
         # Return comprehensive result
@@ -124,7 +124,7 @@ class ProactiveSecurityMonitor:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    def add_alert_processor(self) -> None:
+    def add_alert_processor(self, processor: Callable) -> None:
         """Add custom alert processor."""
         self.alert_processors.append(processor)
 
@@ -162,7 +162,7 @@ def get_workflow_dashboard() -> Dict[str, Any]:
     return proactive_monitor.get_workflow_statistics()
 
 
-def integrate_with_security_monitor(self) -> None:
+def integrate_with_security_monitor() -> None:
     """Integration function to patch the existing ai-security-monitor.py.
 
     This would modify the existing security monitor to call our workflow system
@@ -190,7 +190,7 @@ async def create_security_alert_with_workflows(self) -> None:
     try:
         workflow_result = await process_alert_with_workflows(alert)
         logger.info("Proactive workflow triggered for alert %s: %s", alert.id, workflow_result)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Proactive workflow failed for alert %s: %s", alert.id, e)
 
     return alert
@@ -221,13 +221,13 @@ async def get_enhanced_security_dashboard(self) -> None:
 # Example usage and demonstration
 
 
-async def demonstrate_integration(self) -> None:
+async def demonstrate_integration() -> None:
     """Demonstrate the integration with sample alerts."""
     logger.info("Demonstrating Proactive Anomaly-to-Action Workflow Integration")
 
     # Create sample alerts that would come from ai-security-monitor.py
     class MockSecurityAlert:
-        def __init__(self) -> None:
+        def __init__(self, id: str, severity: str, pattern_type: str, message: str) -> None:
             self.id = id
             self.timestamp = datetime.now(UTC)
             self.severity = severity

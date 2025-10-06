@@ -4,8 +4,8 @@ This script finds f-strings that are split across multiple lines incorrectly
 and fixes them by joining the lines properly.
 """
 
-import re
 from pathlib import Path
+import re
 
 
 def fix_fstrings_in_file(self) -> None:
@@ -21,9 +21,9 @@ def fix_fstrings_in_file(self) -> None:
         pattern = r'f"([^"]*)\{\s*([^}]+)\s*\}([^"]*)"'
 
         def fix_match(self) -> None:
-            prefix = match.group(1)
-            variable = match.group(2).strip()
-            suffix = match.group(3)
+            prefix = self.match.group(1)
+            variable = self.match.group(2).strip()
+            suffix = self.match.group(3)
             return f'f"{prefix}{{{variable}}}{suffix}"'
 
         # Apply the fix
@@ -34,9 +34,9 @@ def fix_fstrings_in_file(self) -> None:
         multiline_pattern = r'f"([^"]*)\{\s*\n\s*([^}]+)\s*\n\s*\}([^"]*)"'
 
         def fix_multiline_match(self) -> None:
-            prefix = match.group(1)
-            variable = match.group(2).strip()
-            suffix = match.group(3)
+            prefix = self.match.group(1)
+            variable = self.match.group(2).strip()
+            suffix = self.match.group(3)
             return f'f"{prefix}{{{variable}}}{suffix}"'
 
         content = re.sub(
@@ -54,7 +54,7 @@ def fix_fstrings_in_file(self) -> None:
             return True
         return False
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error processing {file_path}: {e}")
         return False
 

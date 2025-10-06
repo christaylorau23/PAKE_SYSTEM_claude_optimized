@@ -8,14 +8,14 @@ This script validates that the development environment is properly configured
 to prevent Python syntax errors, particularly IndentationError issues.
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import json
 import os
+from pathlib import Path
 import platform
 import subprocess
 import sys
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
@@ -90,7 +90,7 @@ class DevelopmentEnvironmentValidator:
                         fix_command="Install Python 3.12+ or update your Python installation",
                     )
                 )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results.append(
                 ValidationResult(
                     name="Python Version",
@@ -144,7 +144,7 @@ class DevelopmentEnvironmentValidator:
                             details="Check that Python files use spaces and 4-space indentation",
                         )
                     )
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 self.results.append(
                     ValidationResult(
                         name="EditorConfig",
@@ -195,7 +195,7 @@ class DevelopmentEnvironmentValidator:
                                 details="Ensure Python files use spaces and 4-space indentation",
                             )
                         )
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     self.results.append(
                         ValidationResult(
                             name="VS Code Python Settings",
@@ -245,7 +245,7 @@ class DevelopmentEnvironmentValidator:
                             details="Ensure ruff and black are configured",
                         )
                     )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.results.append(
                     ValidationResult(
                         name="Pre-commit Configuration",
@@ -315,7 +315,7 @@ class DevelopmentEnvironmentValidator:
                         details="Tool may be installed but slow to respond",
                     )
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.results.append(
                     ValidationResult(
                         name=f"{tool.title()} Tool",
@@ -360,7 +360,7 @@ class DevelopmentEnvironmentValidator:
                             indentation_issues += 1
                             break
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.results.append(
                     ValidationResult(
                         name="Python File Indentation",
@@ -404,7 +404,7 @@ class DevelopmentEnvironmentValidator:
                     message="Project directory is writable",
                 )
             )
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.results.append(
                 ValidationResult(
                     name="File Permissions",

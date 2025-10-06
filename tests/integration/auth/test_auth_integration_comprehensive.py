@@ -174,7 +174,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].createUser.return_value = created_user
 
         # Act
-        result = await auth_service_integration.registerUser(**registration_data)
+        result = await self.auth_service_integration.registerUser(**registration_data)
 
         # Assert
         assert result is not None
@@ -205,7 +205,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service_integration.loginUser(
+        result = await self.auth_service_integration.loginUser(
             login_data["username"], login_data["password"]
         )
 
@@ -233,7 +233,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["tokenService"].refreshToken.return_value = new_tokens
 
         # Act
-        result = await auth_service_integration.refreshToken(refresh_token)
+        result = await self.auth_service_integration.refreshToken(refresh_token)
 
         # Assert
         assert result["accessToken"] == "new_access_token_123"
@@ -251,7 +251,7 @@ class TestAuthenticationIntegrationComprehensive:
         session_id = "session_123"
 
         # Act
-        result = await auth_service_integration.logoutUser(session_id)
+        result = await self.auth_service_integration.logoutUser(session_id)
 
         # Assert
         assert result is True
@@ -272,7 +272,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].getUserByEmail.return_value = user_data
 
         # Act - Request password reset
-        request_result = await auth_service_integration.requestPasswordReset(email)
+        request_result = await self.auth_service_integration.requestPasswordReset(email)
 
         # Assert
         assert request_result is True
@@ -286,7 +286,7 @@ class TestAuthenticationIntegrationComprehensive:
         reset_token = "reset_token_123"
         new_password = "NewSecurePassword123!"
 
-        confirm_result = await auth_service_integration.confirmPasswordReset(
+        confirm_result = await self.auth_service_integration.confirmPasswordReset(
             reset_token, new_password
         )
 
@@ -324,7 +324,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["mfaService"].verifyToken.return_value = True
 
         # Act
-        result = await auth_service_integration.loginUser(username, password, mfa_token)
+        result = await self.auth_service_integration.loginUser(username, password, mfa_token)
 
         # Assert
         assert result["success"] is True
@@ -358,14 +358,14 @@ class TestAuthenticationIntegrationComprehensive:
         }
 
         # Act - Login and create session
-        login_result = await auth_service_integration.loginUser(username, password)
+        login_result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert login_result["success"] is True
         assert login_result["sessionId"] == "session_123"
 
         # Act - Get session info
-        session_info = await auth_service_integration.getSessionInfo("session_123")
+        session_info = await self.auth_service_integration.getSessionInfo("session_123")
 
         # Assert
         assert session_info is not None
@@ -399,14 +399,14 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["rbacService"].hasPermission.return_value = True
 
         # Act
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
         assert result["user"].roles == ["admin"]
 
         # Act - Check permission
-        has_permission = await auth_service_integration.checkPermission(
+        has_permission = await self.auth_service_integration.checkPermission(
             "session_123", "users:read"
         )
 
@@ -440,7 +440,7 @@ class TestAuthenticationIntegrationComprehensive:
 
         # Act
         async def login_user(self) -> None:
-            return await auth_service_integration.loginUser(
+            return await self.auth_service_integration.loginUser(
                 login_data["username"], login_data["password"]
             )
 
@@ -467,7 +467,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is False
@@ -484,7 +484,7 @@ class TestAuthenticationIntegrationComprehensive:
         auth_response["sessionId"] = "session_123"
 
         # Act - Should succeed after error recovery
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -504,7 +504,7 @@ class TestAuthenticationIntegrationComprehensive:
 
         # Act & Assert - Should handle Redis failure
         with pytest.raises(Exception, match="Redis connection failed"):
-            await auth_service_integration.registerUser(
+            await self.auth_service_integration.registerUser(
                 email="redis@example.com",
                 username=username,
                 password=password,
@@ -520,7 +520,7 @@ class TestAuthenticationIntegrationComprehensive:
         user_data = UserFactory(username=username)
         mock_auth_services["userService"].createUser.return_value = user_data
 
-        result = await auth_service_integration.registerUser(
+        result = await self.auth_service_integration.registerUser(
             email="redis@example.com",
             username=username,
             password=password,
@@ -549,14 +549,14 @@ class TestAuthenticationIntegrationComprehensive:
 
         # Act & Assert - Should handle email service failure
         with pytest.raises(Exception, match="Email service unavailable"):
-            await auth_service_integration.requestPasswordReset(email)
+            await self.auth_service_integration.requestPasswordReset(email)
 
         # Reset email service mock
         mock_auth_services["emailService"].sendPasswordResetEmail.side_effect = None
         mock_auth_services["emailService"].sendPasswordResetEmail.return_value = True
 
         # Act - Should succeed after email service recovery
-        result = await auth_service_integration.requestPasswordReset(email)
+        result = await self.auth_service_integration.requestPasswordReset(email)
 
         # Assert
         assert result is True
@@ -587,7 +587,7 @@ class TestAuthenticationIntegrationComprehensive:
         start_time = time.time()
 
         async def authenticate(self) -> None:
-            return await auth_service_integration.loginUser(username, password)
+            return await self.auth_service_integration.loginUser(username, password)
 
         tasks = [authenticate() for _ in range(100)]
         results = await asyncio.gather(*tasks)
@@ -621,7 +621,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].createUser.return_value = created_user
 
         # Act
-        result = await auth_service_integration.registerUser(**registration_data)
+        result = await self.auth_service_integration.registerUser(**registration_data)
 
         # Assert
         assert result is not None
@@ -655,7 +655,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -687,7 +687,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -709,7 +709,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service_integration.loginUser(username, password)
+        result = await self.auth_service_integration.loginUser(username, password)
 
         # Assert
         assert result["success"] is False

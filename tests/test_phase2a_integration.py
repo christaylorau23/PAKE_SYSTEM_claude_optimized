@@ -104,7 +104,7 @@ class TestPhase2AIntegration:
 
         web_results = []
         for url in web_urls:
-            result = await firecrawl_service.scrape_url(
+            result = await self.firecrawl_service.scrape_url(
                 url,
                 options=ScrapingOptions(
                     wait_time=3000,
@@ -122,7 +122,7 @@ class TestPhase2AIntegration:
             max_results=10,
         )
 
-        arxiv_result = await arxiv_service.search_with_cognitive_assessment(
+        arxiv_result = await self.arxiv_service.search_with_cognitive_assessment(
             arxiv_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -138,7 +138,7 @@ class TestPhase2AIntegration:
             max_results=10,
         )
 
-        pubmed_result = await pubmed_service.search_with_cognitive_assessment(
+        pubmed_result = await self.pubmed_service.search_with_cognitive_assessment(
             pubmed_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -171,9 +171,9 @@ class TestPhase2AIntegration:
         all_content_items = []
 
         # 1. Web content
-        web_result = await firecrawl_service.scrape_url("https://example.com/test")
+        web_result = await self.firecrawl_service.scrape_url("https://example.com/test")
         if web_result.success:
-            web_content = await firecrawl_service.to_content_item(
+            web_content = await self.firecrawl_service.to_content_item(
                 web_result,
                 "web_research",
             )
@@ -181,9 +181,9 @@ class TestPhase2AIntegration:
 
         # 2. ArXiv papers
         arxiv_query = ArxivSearchQuery(terms=["neural networks"], max_results=3)
-        arxiv_result = await arxiv_service.search_papers(arxiv_query)
+        arxiv_result = await self.arxiv_service.search_papers(arxiv_query)
         if arxiv_result.success:
-            arxiv_content = await arxiv_service.to_content_items(
+            arxiv_content = await self.arxiv_service.to_content_items(
                 arxiv_result,
                 "arxiv_research",
             )
@@ -191,9 +191,9 @@ class TestPhase2AIntegration:
 
         # 3. PubMed papers
         pubmed_query = PubMedSearchQuery(terms=["deep learning"], max_results=3)
-        pubmed_result = await pubmed_service.search_papers(pubmed_query)
+        pubmed_result = await self.pubmed_service.search_papers(pubmed_query)
         if pubmed_result.success:
-            pubmed_content = await pubmed_service.to_content_items(
+            pubmed_content = await self.pubmed_service.to_content_items(
                 pubmed_result,
                 "pubmed_research",
             )
@@ -235,12 +235,12 @@ class TestPhase2AIntegration:
         )
 
         # Apply cognitive assessment to both
-        arxiv_result = await arxiv_service.search_with_cognitive_assessment(
+        arxiv_result = await self.arxiv_service.search_with_cognitive_assessment(
             arxiv_query,
             cognitive_engine=mock_cognitive_engine,
         )
 
-        pubmed_result = await pubmed_service.search_with_cognitive_assessment(
+        pubmed_result = await self.pubmed_service.search_with_cognitive_assessment(
             pubmed_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -263,7 +263,7 @@ class TestPhase2AIntegration:
         # Verify cognitive engine was called consistently
         total_assessments = len(arxiv_result.papers) + len(pubmed_result.papers)
         assert (
-            mock_cognitive_engine.assess_research_quality.call_count
+            self.mock_cognitive_engine.assess_research_quality.call_count
             == total_assessments
         )
 
@@ -278,7 +278,7 @@ class TestPhase2AIntegration:
         """
         # Mock varied quality scores
         quality_scores = [0.95, 0.72, 0.88, 0.65, 0.91]  # Mixed quality
-        mock_cognitive_engine.assess_research_quality = AsyncMock(
+        self.mock_cognitive_engine.assess_research_quality = AsyncMock(
             side_effect=quality_scores,
         )
 
@@ -286,12 +286,12 @@ class TestPhase2AIntegration:
         arxiv_query = ArxivSearchQuery(terms=["machine learning"], max_results=3)
         pubmed_query = PubMedSearchQuery(terms=["machine learning"], max_results=2)
 
-        arxiv_result = await arxiv_service.search_with_cognitive_assessment(
+        arxiv_result = await self.arxiv_service.search_with_cognitive_assessment(
             arxiv_query,
             cognitive_engine=mock_cognitive_engine,
         )
 
-        pubmed_result = await pubmed_service.search_with_cognitive_assessment(
+        pubmed_result = await self.pubmed_service.search_with_cognitive_assessment(
             pubmed_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -337,14 +337,14 @@ class TestPhase2AIntegration:
         arxiv_query = ArxivSearchQuery(terms=["automated research"], max_results=2)
         pubmed_query = PubMedSearchQuery(terms=["clinical trials"], max_results=2)
 
-        arxiv_result = await arxiv_service.search_papers(arxiv_query)
-        pubmed_result = await pubmed_service.search_papers(pubmed_query)
+        arxiv_result = await self.arxiv_service.search_papers(arxiv_query)
+        pubmed_result = await self.pubmed_service.search_papers(pubmed_query)
 
         # Trigger different workflows based on source
         workflows_triggered = []
 
         if arxiv_result.success:
-            arxiv_workflow = await arxiv_service.trigger_research_workflow(
+            arxiv_workflow = await self.arxiv_service.trigger_research_workflow(
                 result=arxiv_result,
                 n8n_manager=mock_n8n_manager,
                 workflow_type="arxiv_paper_analysis",
@@ -352,7 +352,7 @@ class TestPhase2AIntegration:
             workflows_triggered.append(arxiv_workflow)
 
         if pubmed_result.success:
-            pubmed_workflow = await pubmed_service.trigger_biomedical_workflow(
+            pubmed_workflow = await self.pubmed_service.trigger_biomedical_workflow(
                 result=pubmed_result,
                 n8n_manager=mock_n8n_manager,
                 workflow_type="biomedical_literature_review",
@@ -364,7 +364,7 @@ class TestPhase2AIntegration:
         assert all(
             workflow["workflow_id"] is not None for workflow in workflows_triggered
         )
-        assert mock_n8n_manager.trigger_workflow.call_count >= 2
+        assert self.mock_n8n_manager.trigger_workflow.call_count >= 2
 
     @pytest.mark.asyncio
     async def test_should_handle_cross_source_content_deduplication(self) -> None:
@@ -387,21 +387,21 @@ class TestPhase2AIntegration:
             max_results=5,
         )
 
-        arxiv_result = await arxiv_service.search_papers(arxiv_query)
-        pubmed_result = await pubmed_service.search_papers(pubmed_query)
+        arxiv_result = await self.arxiv_service.search_papers(arxiv_query)
+        pubmed_result = await self.pubmed_service.search_papers(pubmed_query)
 
         # Convert to unified format for comparison
         all_content = []
 
         if arxiv_result.success:
-            arxiv_content = await arxiv_service.to_content_items(
+            arxiv_content = await self.arxiv_service.to_content_items(
                 arxiv_result,
                 "arxiv_research",
             )
             all_content.extend(arxiv_content)
 
         if pubmed_result.success:
-            pubmed_content = await pubmed_service.to_content_items(
+            pubmed_content = await self.pubmed_service.to_content_items(
                 pubmed_result,
                 "pubmed_research",
             )
@@ -434,7 +434,7 @@ class TestPhase2AIntegration:
         tasks = []
 
         # Web scraping task
-        web_task = firecrawl_service.scrape_url(
+        web_task = self.firecrawl_service.scrape_url(
             "https://example.com/concurrent-test",
             options=ScrapingOptions(wait_time=3000),
         )
@@ -442,7 +442,7 @@ class TestPhase2AIntegration:
 
         # ArXiv search task
         arxiv_query = ArxivSearchQuery(terms=["concurrent processing"], max_results=3)
-        arxiv_task = arxiv_service.search_with_cognitive_assessment(
+        arxiv_task = self.arxiv_service.search_with_cognitive_assessment(
             arxiv_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -450,7 +450,7 @@ class TestPhase2AIntegration:
 
         # PubMed search task
         pubmed_query = PubMedSearchQuery(terms=["parallel processing"], max_results=3)
-        pubmed_task = pubmed_service.search_with_cognitive_assessment(
+        pubmed_task = self.pubmed_service.search_with_cognitive_assessment(
             pubmed_query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -488,7 +488,7 @@ class TestPhase2AIntegration:
         # Create multiple ArXiv searches
         for i in range(5):
             query = ArxivSearchQuery(terms=[f"load test {i}"], max_results=2)
-            task = arxiv_service.search_with_cognitive_assessment(
+            task = self.arxiv_service.search_with_cognitive_assessment(
                 query,
                 cognitive_engine=mock_cognitive_engine,
             )
@@ -497,7 +497,7 @@ class TestPhase2AIntegration:
         # Create multiple PubMed searches
         for i in range(5):
             query = PubMedSearchQuery(terms=[f"stress test {i}"], max_results=2)
-            task = pubmed_service.search_with_cognitive_assessment(
+            task = self.pubmed_service.search_with_cognitive_assessment(
                 query,
                 cognitive_engine=mock_cognitive_engine,
             )
@@ -526,7 +526,7 @@ class TestPhase2AIntegration:
         )
         if total_papers > 0:
             assert (
-                mock_cognitive_engine.assess_research_quality.call_count == total_papers
+                self.mock_cognitive_engine.assess_research_quality.call_count == total_papers
             )
 
     # ========================================================================
@@ -550,12 +550,12 @@ class TestPhase2AIntegration:
             arxiv_query = ArxivSearchQuery(terms=["failure test"], max_results=3)
             pubmed_query = PubMedSearchQuery(terms=["resilience test"], max_results=3)
 
-            arxiv_result = await arxiv_service.search_with_cognitive_assessment(
+            arxiv_result = await self.arxiv_service.search_with_cognitive_assessment(
                 arxiv_query,
                 cognitive_engine=mock_cognitive_engine,
             )
 
-            pubmed_result = await pubmed_service.search_with_cognitive_assessment(
+            pubmed_result = await self.pubmed_service.search_with_cognitive_assessment(
                 pubmed_query,
                 cognitive_engine=mock_cognitive_engine,
             )

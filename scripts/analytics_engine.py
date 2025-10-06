@@ -5,25 +5,25 @@ Comprehensive performance tracking, analysis, and optimization system
 """
 
 import asyncio
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 import os
-import sqlite3
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
+import sqlite3
 from typing import Any, Dict, List
 
 # Visualization and reporting
 try:
+    from jinja2 import Template
     import matplotlib.pyplot as plt
     import openai
     import plotly.express as px
     import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
     import requests
     import seaborn as sns
-    from jinja2 import Template
-    from plotly.subplots import make_subplots
     from slack_sdk import WebClient
 except ImportError as e:
     print(f"Analytics dependencies not installed: {e}")
@@ -233,7 +233,7 @@ class VibeAnalyticsEngine:
             try:
                 clients["slack"] = WebClient(token=self.config["slack_token"])
                 self.logger.info("Slack client initialized")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to initialize Slack client: %s", e)
 
         # Import social media clients from our existing modules
@@ -323,7 +323,7 @@ class VibeAnalyticsEngine:
             conn.close()
             return rules
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to load optimization rules: %s", e)
             return self._get_default_optimization_rules()
 
@@ -378,7 +378,7 @@ class VibeAnalyticsEngine:
                 metrics = await task
                 all_metrics["platforms"][platform] = metrics
                 await self._store_platform_metrics(platform, metrics)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to collect metrics for %s: %s", platform, e)
                 all_metrics["platforms"][platform] = {"error": str(e)}
 
@@ -432,7 +432,7 @@ class VibeAnalyticsEngine:
                 "top_posts": await self._get_top_posts("twitter", limit=5),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Twitter metrics collection failed: %s", e)
             return {"error": str(e)}
 
@@ -447,7 +447,7 @@ class VibeAnalyticsEngine:
                 "reels_performance": await self._get_reels_metrics("instagram"),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Instagram metrics collection failed: %s", e)
             return {"error": str(e)}
 
@@ -462,7 +462,7 @@ class VibeAnalyticsEngine:
                 "trending_hashtags": await self._get_trending_hashtags("tiktok"),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("TikTok metrics collection failed: %s", e)
             return {"error": str(e)}
 
@@ -477,7 +477,7 @@ class VibeAnalyticsEngine:
                 "lead_generation": await self._get_lead_metrics("linkedin"),
             }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("LinkedIn metrics collection failed: %s", e)
             return {"error": str(e)}
 
@@ -492,7 +492,7 @@ class VibeAnalyticsEngine:
                 "trending_posts": await self._get_trending_posts("reddit"),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Reddit metrics collection failed: %s", e)
             return {"error": str(e)}
 
@@ -873,7 +873,7 @@ class VibeAnalyticsEngine:
 
                 return response.choices[0].message.content.strip()
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to generate AI summary: %s", e)
 
         # Fallback template-based summary
@@ -1119,7 +1119,7 @@ class VibeAnalyticsEngine:
 
             return recommendations[:5]  # Return top 5
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to generate AI recommendations: %s", e)
             return self._generate_template_recommendations(metrics)
 
@@ -1243,7 +1243,7 @@ class VibeAnalyticsEngine:
                 include_plotlyjs="cdn",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to create visualizations: %s", e)
             visualizations["error"] = f"Visualization creation failed: {str(e)}"
 
@@ -1440,7 +1440,7 @@ class VibeAnalyticsEngine:
 
             self.logger.info("Report sent to Slack channel %s", channel)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to send Slack report: %s", e)
 
     def _format_top_metrics_for_slack(self, report: PerformanceReport) -> str:

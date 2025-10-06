@@ -4,8 +4,8 @@ Advanced Autonomous Cognitive Evolution System - Phase 1.
 """
 
 import asyncio
-import random
 from datetime import UTC, datetime
+import random
 
 
 class CosmicDemo:
@@ -17,7 +17,7 @@ class CosmicDemo:
         self.evolution_cycles = 0
         self.critique_cycles = 0
 
-    def log(self) -> None:
+    def log(self, message: str) -> None:
         timestamp = datetime.now(UTC).strftime("%H:%M:%S")
         print(f"{timestamp} [COSMIC] {message}")
 
@@ -309,7 +309,7 @@ async def main(self) -> None:
         print("\n\n[STOP] Demonstration interrupted by user")
         print("Thank you for experiencing the Cosmic Calibration Protocol!")
         return 0
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n[ERROR] Demo failed: {e}")
         return 1
 

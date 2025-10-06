@@ -11,11 +11,11 @@ This orchestrator now follows SRP by delegating specific responsibilities to foc
 """
 
 import asyncio
-import logging
-import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import time
+from typing import Any, Dict
 
 from .interfaces import (
     IngestionPlan,
@@ -42,7 +42,7 @@ class OrchestratorConfig:
 class IngestionOrchestratorRefactored:
     """Refactored orchestrator following Single Responsibility Principle."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: OrchestratorConfig | None = None, plan_builder: IngestionPlanBuilder | None = None, source_executor: SourceExecutor | None = None) -> None:
         self.config = config or OrchestratorConfig()
 
         # Use dependency injection for managers
@@ -119,7 +119,7 @@ class IngestionOrchestratorRefactored:
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             result.success = False
             result.execution_time_ms = (time.time() - start_time) * 1000
             result.error = str(e)

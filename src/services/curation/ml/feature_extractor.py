@@ -4,18 +4,18 @@ Supports text, metadata, and behavioral feature extraction with caching and opti
 """
 
 import asyncio
-import logging
-import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import re
+from typing import Any, Dict
 
 import nltk
-import numpy as np
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+import numpy as np
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
@@ -54,7 +54,7 @@ class UserFeatures:
 class FeatureExtractor:
     """Advanced feature extraction pipeline for content and user analysis."""
 
-    def __init__(self) -> None:
+    def __init__(self, cache_size: int = 10000) -> None:
         self.cache_size = cache_size
         self.feature_cache: Dict[str, Any] = {}
         self.text_vectorizer = TfidfVectorizer(
@@ -138,7 +138,7 @@ class FeatureExtractor:
             logger.info("Extracted features for content %s", content.id)
             return features
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error extracting features for content %s: %s", content.id, e)
             raise
 
@@ -187,7 +187,7 @@ class FeatureExtractor:
             logger.info("Extracted features for user %s", user_profile.user_id)
             return features
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error(
                 "Error extracting features for user %s: %s",
                 user_profile.user_id,
@@ -347,7 +347,7 @@ class FeatureExtractor:
             for i, idx in enumerate(top_indices):
                 features[f"tfidf_top_{i}"] = tfidf_features[idx]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Error in TF-IDF extraction: %s", e)
 
         # Topic distribution (if LDA model is trained)
@@ -356,7 +356,7 @@ class FeatureExtractor:
                 topic_probs = self.lda_model.transform(tfidf_matrix)
                 for i, prob in enumerate(topic_probs[0]):
                     features[f"topic_{i}_probability"] = prob
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Error in topic modeling: %s", e)
 
         return features
@@ -531,8 +531,11 @@ class FeatureExtractor:
                     - (84.6 * avg_syllables_per_word)
                 )
                 return max(0, min(100, score))
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in feature_extractor.py: {e}")
+
+            # Continue gracefully
         return 50.0  # Default middle score
 
     def _calculate_fk_grade(self, text: str) -> float:
@@ -551,8 +554,11 @@ class FeatureExtractor:
                     - 15.59
                 )
                 return max(0, grade)
-        except BaseException:
-            pass
+        except BaseException as e:
+
+            logger.debug(f"Exception in feature_extractor.py: {e}")
+
+            # Continue gracefully
         return 8.0  # Default grade level
 
     def _count_syllables(self, word: str) -> int:

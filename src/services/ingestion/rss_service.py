@@ -8,13 +8,13 @@ intelligent content filtering, and cognitive quality assessment.
 
 import asyncio
 import contextlib
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 import hashlib
 import logging
 import re
+from typing import Any, Dict, List
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any
 
 import aiohttp
 
@@ -99,7 +99,7 @@ class RSSFeedService:
     - Multi-format support (RSS, Atom, JSON Feed)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cognitive_engine: Any | None = None) -> None:
         """Initialize RSS feed service."""
         self.cognitive_engine = cognitive_engine
         self._feed_cache: dict[str, Dict[str, Any]] = {}
@@ -199,7 +199,7 @@ class RSSFeedService:
             logger.info("RSS feed fetch completed: %s new items", len(final_items))
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001
@@ -386,7 +386,7 @@ class RSSFeedService:
                 word_count=word_count,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to parse RSS item: %s", e)
             return None
 
@@ -468,7 +468,7 @@ class RSSFeedService:
                 word_count=word_count,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Failed to parse Atom entry: %s", e)
             return None
 
@@ -627,7 +627,7 @@ class RSSFeedService:
 
                 assessed_items.append(assessed_item)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to assess item %s: %s", item.item_id, e)
                 assessed_items.append(item)  # Keep original
 
@@ -656,7 +656,7 @@ class RSSFeedService:
             last_modified=cache_info.get("last_modified"),
         )
 
-    def _update_feed_cache(self) -> None:
+    def _update_feed_cache(self, url: str, etag: str | None, last_modified: str | None, items: list[FeedItem]) -> None:
         """Update feed cache with new data."""
         self._feed_cache[url] = {
             "etag": etag,

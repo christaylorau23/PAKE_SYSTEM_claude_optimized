@@ -10,12 +10,12 @@ This module defines formal contracts that enforce:
 5. Comprehensive error handling and monitoring
 """
 
-import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Generic, TypeVar
+import uuid
 
 # Generic types for contracts
 T = TypeVar("T")

@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Intelligent Optimization Engine
@@ -5,12 +6,12 @@ AI-powered optimization rules, predictive analytics, and automated improvements
 """
 
 import asyncio
-import json
-import logging
-import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+import json
+import logging
 from pathlib import Path
+import sqlite3
 from typing import Any
 
 import numpy as np
@@ -208,7 +209,7 @@ class IntelligentOptimizationEngine:
 
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to load optimization rules: %s", e)
             rules = self._create_default_rules()
 
@@ -383,7 +384,7 @@ class IntelligentOptimizationEngine:
 
                     self.logger.info("Rule triggered: %s", rule.name)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error evaluating rule %s: %s", rule.name, e)
 
         # Sort by priority
@@ -427,7 +428,7 @@ class IntelligentOptimizationEngine:
             self.logger.warning("Unsafe condition: %s", condition)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error evaluating condition '%s': %s", condition, e)
             return False
 
@@ -506,7 +507,7 @@ class IntelligentOptimizationEngine:
             # Log action
             await self._log_optimization_action(rule.id, action_result, metrics)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to execute action for rule %s: %s", rule.name, e)
             action_result["error"] = str(e)
 
@@ -658,11 +659,11 @@ class IntelligentOptimizationEngine:
                             ),
                         }
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     self.logger.error("Failed to predict %s: %s", target, e)
                     predictions[target] = {"error": str(e)}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Prediction generation failed: %s", e)
             predictions = {"error": str(e)}
 
@@ -722,7 +723,7 @@ class IntelligentOptimizationEngine:
                 model = joblib.load(model_path)
                 self.logger.info("Loaded existing model for %s", target)
                 return model
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.warning("Failed to load model for %s: %s", target, e)
 
         # Train new model
@@ -733,7 +734,7 @@ class IntelligentOptimizationEngine:
                 self.logger.info("Trained and saved new model for %s", target)
             return model
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to train model for %s: %s", target, e)
             return None
 
@@ -819,7 +820,7 @@ class IntelligentOptimizationEngine:
 
             return model_wrapper
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Model training failed for %s: %s", target, e)
             return None
 
@@ -1016,7 +1017,7 @@ class IntelligentOptimizationEngine:
 
             return analysis
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to analyze optimization impact: %s", e)
             return {"error": str(e)}
 
@@ -1050,7 +1051,7 @@ class IntelligentOptimizationEngine:
                 self.prediction_models[model_name] = model
                 self.logger.info("Loaded prediction model: %s", model_name)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 self.logger.error("Failed to load model %s: %s", model_file, e)
 
 

@@ -1,0 +1,122 @@
+{
+  "timestamp": "2025-10-04T20:44:00.339942",
+  "validations": {
+    "workflow_files": {
+      "success": true,
+      "workflows": [
+        "phoenix-protocol-security.yml"
+      ],
+      "issues": []
+    },
+    "security_tools": {
+      "success": false,
+      "tools": {
+        "trivy": {
+          "available": false
+        },
+        "bandit": {
+          "available": false
+        },
+        "safety": {
+          "available": false
+        },
+        "pip-audit": {
+          "available": false
+        },
+        "ruff": {
+          "available": true,
+          "version": "ruff 0.13.3"
+        },
+        "semgrep": {
+          "available": false
+        },
+        "trufflehog": {
+          "available": false
+        },
+        "gitleaks": {
+          "available": false
+        }
+      },
+      "missing_tools": [
+        "trivy",
+        "bandit",
+        "safety",
+        "pip-audit",
+        "semgrep",
+        "trufflehog",
+        "gitleaks"
+      ]
+    },
+    "configuration_files": {
+      "success": true,
+      "files": {
+        ".trufflehog-ignore": {
+          "exists": true,
+          "size": 1037
+        },
+        "sonar-project.properties": {
+          "exists": true,
+          "size": 1472
+        },
+        "security-gate-config.yaml": {
+          "exists": true,
+          "size": 3157
+        }
+      },
+      "missing_files": []
+    },
+    "security_scripts": {
+      "success": true,
+      "scripts": {
+        "security_test_suite.py": {
+          "exists": true,
+          "executable": false,
+          "size": 18308
+        }
+      },
+      "missing_scripts": []
+    },
+    "dependency_management": {
+      "success": false,
+      "files": {
+        "pyproject.toml": {
+          "exists": true
+        },
+        "poetry.lock": {
+          "exists": true
+        }
+      },
+      "issues": [
+        "Found 12 requirements.txt files - should use Poetry"
+      ]
+    },
+    "security_gates": {
+      "success": true,
+      "gates": {
+        "configuration": {
+          "valid": true
+        }
+      },
+      "issues": []
+    },
+    "ci_cd_integration": {
+      "success": true,
+      "integrations": {
+        "github_actions": {
+          "enabled": true,
+          "workflows": 31
+        },
+        "pre_commit": {
+          "enabled": true
+        }
+      },
+      "issues": []
+    }
+  },
+  "summary": {
+    "total_validations": 7,
+    "passed": 5,
+    "failed": 2,
+    "warnings": 0
+  }
+}

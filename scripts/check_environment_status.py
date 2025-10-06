@@ -5,8 +5,8 @@ Quick demonstration of the implemented environment fortification
 """
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 
 def check_environment():
@@ -42,7 +42,7 @@ def check_environment():
                 print(f"✅ {tool.title()}: Installed")
             else:
                 print(f"❌ {tool.title()}: Not installed")
-        except:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ {tool.title()}: Check failed")
 
     # Check Python version

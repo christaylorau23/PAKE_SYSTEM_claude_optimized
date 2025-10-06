@@ -13,8 +13,8 @@ Key Fixes:
 """
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 
 def fix_ai_security_monitor(self) -> None:
@@ -45,7 +45,7 @@ def fix_ai_security_monitor(self) -> None:
         print("ℹ️  No hardcoded path found in ai-security-monitor.py")
         return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Error fixing ai-security-monitor.py: {e}")
         return False
 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         print("✅ Created CI-compatible diagnostic script")
         return True
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"❌ Error creating CI diagnostic script: {e}")
         return False
 
@@ -201,7 +201,7 @@ python -c "import src.services.agent_runtime"
         print("✅ Created directory naming guide")
         return True
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"❌ Error creating naming guide: {e}")
         return False
 
@@ -230,7 +230,7 @@ def create_ci_workflow_step(self) -> None:
         print("✅ Created CI workflow step")
         return True
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"❌ Error creating workflow step: {e}")
         return False
 

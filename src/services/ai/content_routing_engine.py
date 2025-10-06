@@ -3,14 +3,14 @@ AI-driven content flow optimization with dynamic routing and smart prioritizatio
 """
 
 import asyncio
-import hashlib
-import logging
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import hashlib
+import logging
+import time
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +166,8 @@ class ContentRoutingConfig:
 class PriorityCalculator:
     """Calculates content priority based on multiple factors."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.priority_weights = {
             "quality_score": 0.25,
             "urgency_score": 0.35,
@@ -221,8 +221,8 @@ class PriorityCalculator:
 class LoadBalancer:
     """Manages content load balancing across users and destinations."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.user_loads: dict[str, list[datetime]] = defaultdict(list)
         self.destination_loads: dict[ContentDestination, int] = defaultdict(int)
 
@@ -242,7 +242,7 @@ class LoadBalancer:
         current_load = len(self.user_loads[user_id])
         return current_load < self.config.max_user_content_per_hour
 
-    def record_user_delivery(self) -> None:
+    def record_user_delivery(self, user_id: str) -> None:
         """Record content delivery to user."""
         self.user_loads[user_id].append(datetime.now(UTC))
 
@@ -266,7 +266,7 @@ class LoadBalancer:
 
         return optimal_destination
 
-    def update_destination_load(self) -> None:
+    def update_destination_load(self, destination: ContentDestination, delta: int) -> None:
         """Update destination load."""
         self.destination_loads[destination] += delta
 
@@ -274,7 +274,7 @@ class LoadBalancer:
 class IntelligentRouter:
     """Core intelligent routing logic with AI-driven decisions."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ContentRoutingConfig) -> None:
         self.config = config
         self.routing_rules: list[RoutingRule] = []
         self.topic_specialists: dict[str, list[ContentDestination]] = {}
@@ -282,13 +282,13 @@ class IntelligentRouter:
             lambda: defaultdict(float),
         )
 
-    def add_routing_rule(self) -> None:
+    def add_routing_rule(self, rule: RoutingRule) -> None:
         """Add new routing rule."""
         self.routing_rules.append(rule)
         # Sort by priority (higher priority first)
         self.routing_rules.sort(key=lambda x: x.priority, reverse=True)
 
-    def setup_topic_specialists(self) -> None:
+    def setup_topic_specialists(self, topic_mappings: dict[str, list[str]]) -> None:
         """Setup topic-specific routing destinations."""
         for topic, destinations in topic_mappings.items():
             self.topic_specialists[topic] = [
@@ -444,7 +444,7 @@ class ContentRoutingEngine:
     Orchestrates intelligent content flow with AI-driven routing decisions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ContentRoutingConfig | None = None) -> None:
         self.config = config or ContentRoutingConfig()
         self.priority_calculator = PriorityCalculator(self.config)
         self.load_balancer = LoadBalancer(self.config)
@@ -535,7 +535,7 @@ class ContentRoutingEngine:
         )
         self.intelligent_router.add_routing_rule(low_quality_rule)
 
-    def set_user_context(self) -> None:
+    def set_user_context(self, user_context: UserContext) -> None:
         """Set or update user context for routing decisions."""
         self.user_contexts[user_context.user_id] = user_context
 
@@ -636,7 +636,7 @@ class ContentRoutingEngine:
 
                 return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Content routing failed: %s", e)
             processing_time = max((time.time() - start_time) * 1000, 0.1)
             return RoutingResult(

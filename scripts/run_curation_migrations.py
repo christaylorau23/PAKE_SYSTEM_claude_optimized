@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 #!/usr/bin/env python3
 """
 Intelligent Content Curation - Database Migration Runner
@@ -19,11 +21,11 @@ Environment Variables:
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import logging
 import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 import asyncpg
@@ -74,7 +76,7 @@ class MigrationRunner:
                 )
             logger.info("Successfully connected to database")
             return conn
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to connect to database: %s", e)
             raise
 
@@ -96,7 +98,7 @@ class MigrationRunner:
         try:
             await conn.execute(create_table_sql)
             logger.info("Migration tracking table ready")
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to create migration table: %s", e)
             raise
 
@@ -107,7 +109,7 @@ class MigrationRunner:
                 "SELECT filename FROM curation_migrations ORDER BY applied_at",
             )
             return [row["filename"] for row in rows]
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to fetch applied migrations: %s", e)
             return []
 
@@ -169,7 +171,7 @@ class MigrationRunner:
             )
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to execute migration %s: %s", filename, e)
             return False
 
@@ -215,7 +217,7 @@ class MigrationRunner:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Migration process failed: %s", e)
             return False
 
@@ -249,7 +251,7 @@ class MigrationRunner:
             logger.info("Successfully rolled back migration %s", filename)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to rollback migration %s: %s", filename, e)
             return False
 
@@ -291,7 +293,7 @@ class MigrationRunner:
                 "pending_migrations": pending_migrations,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get migration status: %s", e)
             return {"error": str(e)}
 
@@ -393,7 +395,7 @@ async def main(self) -> None:
     except KeyboardInterrupt:
         logger.info("Migration process interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         sys.exit(1)
 

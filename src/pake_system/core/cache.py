@@ -3,7 +3,7 @@ Multi-level caching with optional Redis integration.
 """
 
 import json
-from typing import Any
+from typing import Any, Dict
 
 from src.utils.secure_serialization import deserialize, serialize
 
@@ -21,7 +21,7 @@ except ImportError:
 class CacheService:
     """Enterprise caching service with optional Redis backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, redis_url: str | None = None, default_ttl: int = 3600) -> None:
         self.redis_url = redis_url
         self.default_ttl = default_ttl
         self._redis: Any | None = None
@@ -172,11 +172,11 @@ async def get_cache_service() -> CacheService:
     return _cache_service
 
 
-async def cache_key(self) -> None:
+async def cache_key(func: Any, key: str | None = None, ttl: int | None = None) -> Any:
     """Decorator for caching function results."""
 
-    def decorator(self) -> None:
-        async def wrapper(self) -> None:
+    def decorator(func: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             cache = await get_cache_service()
 
             # Create cache key from function name and arguments

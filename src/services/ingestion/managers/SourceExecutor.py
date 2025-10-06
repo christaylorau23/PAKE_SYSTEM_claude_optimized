@@ -5,7 +5,7 @@ Single Responsibility: Executing ingestion from individual sources.
 
 import logging
 import time
-from typing import Any
+from typing import Any, Dict
 
 from ..arxiv_enhanced_service import ArxivEnhancedService, ArxivSearchQuery
 from ..firecrawl_service import FirecrawlService, ScrapingOptions
@@ -78,7 +78,7 @@ class SourceExecutor(SourceExecutorInterface):
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             metrics["error"] = str(e)
             metrics["processing_time_ms"] = (time.time() - start_time) * 1000
 

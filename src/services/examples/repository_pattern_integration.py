@@ -9,9 +9,9 @@ This example shows:
 4. How to gradually migrate from direct SQLAlchemy usage
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class PAKESystemService:
     """Example PAKE System service using Repository Pattern."""
 
-    def __init__(self) -> None:
+    def __init__(self, repository_container: RepositoryContainer | None = None, session: AsyncSession | None = None) -> None:
         """Initialize service with repository container or session."""
         if repository_container:
             # Use provided repository container
@@ -83,7 +83,7 @@ class PAKESystemService:
                 "error": str(e),
                 "error_type": "validation_error",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Unexpected error creating user: %s", e)
             return {
                 "success": False,
@@ -123,7 +123,7 @@ class PAKESystemService:
                 "system_stats": user_stats,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication error: %s", e)
             return {
                 "success": False,
@@ -156,7 +156,7 @@ class PAKESystemService:
                 "last_login": user.last_login.isoformat() if user.last_login else None,
             }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error getting user profile: %s", e)
             return {
                 "success": False,
@@ -198,7 +198,7 @@ class PAKESystemService:
                 "error": str(e),
                 "error_type": "validation_error",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error updating preferences: %s", e)
             return {
                 "success": False,
@@ -243,7 +243,7 @@ class PAKESystemService:
                 "error": str(e),
                 "error_type": "validation_error",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error deactivating user: %s", e)
             return {
                 "success": False,
@@ -294,7 +294,7 @@ class PAKESystemService:
                 "error": str(e),
                 "error_type": "validation_error",
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error searching users: %s", e)
             return {
                 "success": False,
@@ -321,7 +321,7 @@ class PAKESystemService:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting system statistics: %s", e)
             return {
                 "success": False,
@@ -353,7 +353,7 @@ class PAKESystemService:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Health check failed: %s", e)
             return {
                 "status": "unhealthy",
@@ -402,8 +402,8 @@ async def migrate_existing_service_to_repository_pattern(self) -> None:
     #     return user_orm
 
     # After: Repository pattern usage
-    async def new_create_user(self) -> None:
-        return await service.create_user_account(
+    async def new_create_user(self, username: str, email: str) -> None:
+        return await self.service.create_user_account(
             username=username, email=email, password_hash="hashed_password"
         )
 

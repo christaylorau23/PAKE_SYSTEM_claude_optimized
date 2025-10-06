@@ -7,9 +7,9 @@ Converts E2E tests to integration tests and improves test pyramid structure
 import ast
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Configure logging
@@ -97,7 +97,7 @@ class TestRefactoringTool:
             # Default to unit if no markers found
             return "unit"
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.warning("Could not analyze %s: %s", test_file, e)
             return "unit"
 
@@ -171,7 +171,7 @@ class TestRefactoringTool:
 
             return False
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to convert %s: %s", test_file, e)
             return False
 
@@ -216,7 +216,7 @@ class TestRefactoringTool:
 
             return False
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to optimize %s: %s", test_file, e)
             return False
 
@@ -258,7 +258,7 @@ class TestRefactoringTool:
             logger.info("Created unit test: %s", test_file_path)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to add unit tests for %s: %s", service_file, e)
             return False
 
@@ -339,7 +339,7 @@ class Test{service_name.title()}:
             self.stats["coverage_improved"] = len(missing_tests)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to improve coverage: %s", e)
             return False
 
@@ -438,7 +438,7 @@ def main(self) -> None:
             logger.info("🎉 Test refactoring completed successfully!")
         else:
             logger.error("❌ Test refactoring failed!")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
 
 

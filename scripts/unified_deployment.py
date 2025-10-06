@@ -1,3 +1,4 @@
+config
 #!/usr/bin/env python3
 """
 PAKE+ Unified Deployment System
@@ -6,17 +7,17 @@ Integrates all components from the provided code snippets
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import json
 import logging
 import os
+from pathlib import Path
 import platform
 import shutil
 import sys
 import time
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from pathlib import Path
 
 import yaml
 
@@ -215,7 +216,7 @@ class PAKEUnifiedDeployment:
                             )
                             break
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     phase_duration = time.time() - phase_start
 
                     self.logger.error("💥 %s failed with exception: %s", phase_name, e)
@@ -254,7 +255,7 @@ class PAKEUnifiedDeployment:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.critical("💥 Fatal deployment error: %s", e)
             self.deployment_errors.append(f"Fatal: {str(e)}")
             await self._generate_deployment_report(False)
@@ -287,7 +288,7 @@ class PAKEUnifiedDeployment:
                 else:
                     self.logger.error("  ❌ %s: FAILED", task_name)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("  💥 %s: ERROR - %s", task_name, e)
                 results.append(False)
 
@@ -321,12 +322,15 @@ class PAKEUnifiedDeployment:
                 memory_gb = psutil.virtual_memory().total / (1024**3)
                 if memory_gb < 4:
                     self.logger.warning("Low memory: %.1f%%GB available", memory_gb)
-            except ImportError:
-                pass
+            except ImportError as e:
+
+                logger.debug(f"Exception in unified_deployment.py: {e}")
+
+                # Continue gracefully
 
             return True
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("System requirements validation failed: %s", e)
             return False
 
@@ -426,7 +430,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Configuration validation failed: %s", e)
             return False
 
@@ -476,12 +480,15 @@ class PAKEUnifiedDeployment:
                     self.logger.warning(
                         "Docker daemon not accessible - may need to start Docker Desktop",
                     )
-            except Exception:
-                pass
+            except Exception as e:
+
+                logger.debug(f"Exception in unified_deployment.py: {e}")
+
+                # Continue gracefully
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Permission validation failed: %s", e)
             return False
 
@@ -506,7 +513,7 @@ class PAKEUnifiedDeployment:
                     return False
                 self.logger.info("  ✅ %s completed", task_name)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("  💥 %s error: %s", task_name, e)
                 return False
 
@@ -551,7 +558,7 @@ class PAKEUnifiedDeployment:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Environment preparation failed: %s", e)
             return False
 
@@ -589,7 +596,7 @@ class PAKEUnifiedDeployment:
             self.logger.debug("Created %s directories", len(directories))
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Directory preparation failed: %s", e)
             return False
 
@@ -616,7 +623,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Configuration preparation failed: %s", e)
             return False
 
@@ -637,7 +644,7 @@ class PAKEUnifiedDeployment:
 
             return python_success and node_success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Dependency preparation failed: %s", e)
             return False
 
@@ -711,7 +718,7 @@ class PAKEUnifiedDeployment:
         except TimeoutError:
             self.logger.error("    Python dependency installation timed out")
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("    Python dependency installation failed: %s", e)
             return False
 
@@ -777,7 +784,7 @@ class PAKEUnifiedDeployment:
         except TimeoutError:
             self.logger.error("    Node.js dependency installation timed out")
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("    Node.js dependency installation failed: %s", e)
             return False
 
@@ -808,7 +815,7 @@ class PAKEUnifiedDeployment:
             self.logger.error("  ❌ Docker infrastructure deployment failed")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Infrastructure deployment failed: %s", e)
             return False
 
@@ -843,7 +850,7 @@ class PAKEUnifiedDeployment:
             self.logger.warning("  Only non-critical services failed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Service deployment failed: %s", e)
             return False
 
@@ -873,7 +880,7 @@ class PAKEUnifiedDeployment:
                 else:
                     self.logger.warning("  ⚠️  %s: FAILED", task_name)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("  💥 %s: ERROR - %s", task_name, e)
                 results.append(False)
 
@@ -914,7 +921,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Service health verification failed: %s", e)
             return False
 
@@ -943,7 +950,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Database connectivity verification failed: %s", e)
             return False
 
@@ -971,7 +978,7 @@ class PAKEUnifiedDeployment:
                                     response.status,
                                 )
                                 return False
-                    except Exception as e:
+                    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                         self.logger.warning("    %s: %s", endpoint, e)
                         return False
 
@@ -1000,7 +1007,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("API endpoint verification failed: %s", e)
             return False
 
@@ -1037,7 +1044,7 @@ class PAKEUnifiedDeployment:
 
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("File system verification failed: %s", e)
             return False
 
@@ -1088,7 +1095,7 @@ Deployment verification in progress...
             self.logger.error("    ❌ Failed to create test note")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Integration verification failed: %s", e)
             return False
 
@@ -1122,13 +1129,16 @@ Deployment verification in progress...
             for temp_file in temp_files:
                 try:
                     temp_file.unlink()
-                except Exception:
-                    pass
+                except Exception as e:
+
+                    logger.debug(f"Exception in unified_deployment.py: {e}")
+
+                    # Continue gracefully
 
             self.logger.info("  ✅ Deployment finalized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Deployment finalization failed: %s", e)
             return False
 
@@ -1197,8 +1207,13 @@ Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
                             info['display_name']
                         }**: {info['state'].upper()}\n"
 
-                except Exception:
-                    pass
+                except Exception as e:
+
+
+                    logger.debug(f"Exception in unified_deployment.py: {e}")
+
+
+                    # Continue gracefully
 
             report += f"""
 ## Next Steps
@@ -1227,7 +1242,7 @@ Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
             self.logger.info("📊 Deployment report saved: %s", report_file)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to generate deployment report: %s", e)
 
     def _show_installation_instructions(self) -> None:
@@ -1337,7 +1352,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Deployment interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"💥 Fatal deployment error: {e}")
         import traceback
 

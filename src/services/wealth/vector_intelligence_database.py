@@ -201,7 +201,7 @@ class VectorEmbeddingGenerator:
 
             return features.tolist()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating market embedding: %s", e)
             return [0.0] * 128  # Return zero vector as fallback
 
@@ -259,7 +259,7 @@ class VectorEmbeddingGenerator:
 
             return features.tolist()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating trend embedding: %s", e)
             return [0.0] * 128
 
@@ -318,7 +318,7 @@ class VectorEmbeddingGenerator:
 
             return features.tolist()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating outcome embedding: %s", e)
             return [0.0] * 128
 
@@ -365,7 +365,7 @@ class VectorIntelligenceDatabase:
             logger.info("Stored vector: %s (%s)", vector.vector_id, vector.category.value)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing vector %s: %s", vector.vector_id, e)
             return False
 
@@ -427,7 +427,7 @@ class VectorIntelligenceDatabase:
 
             return matches[:limit]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error finding similar patterns: %s", e)
             return []
 
@@ -476,7 +476,7 @@ class VectorIntelligenceDatabase:
             )
             return True
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error learning from outcome for %s: %s", vector_id, e)
             return False
 
@@ -543,7 +543,7 @@ class VectorIntelligenceDatabase:
 
             return stats
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting pattern statistics for %s: %s", category, e)
             return {"error": str(e)}
 
@@ -567,7 +567,7 @@ class VectorIntelligenceDatabase:
             similarity = 1 - cosine(vec1, vec2)
             return max(0.0, min(1.0, similarity))  # Clamp to [0, 1]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating similarity: %s", e)
             return 0.0
 
@@ -607,7 +607,7 @@ class VectorIntelligenceDatabase:
                 "historical_success_rate": None,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error predicting outcome: %s", e)
             return {"predicted_return": 0.0, "confidence": "low", "error": str(e)}
 
@@ -630,7 +630,7 @@ class VectorIntelligenceDatabase:
 
             return base_adjustment * data_confidence
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating confidence adjustment: %s", e)
             return 0.0
 
@@ -670,7 +670,7 @@ class VectorIntelligenceDatabase:
                 return "medium"
             return "high"
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error assessing risk: %s", e)
             return "medium"
 
@@ -724,7 +724,7 @@ class VectorIntelligenceDatabase:
             # Overall success rate
             return np.mean(success_factors)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating success rate: %s", e)
             return 0.5
 
@@ -736,7 +736,7 @@ class VectorIntelligenceDatabase:
             async with aiofiles.open(filename, "w") as f:
                 await f.write(json.dumps(vector.to_dict(), indent=2))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error persisting vector %s: %s", vector.vector_id, e)
 
     async def load_from_disk(self) -> None:
@@ -771,12 +771,12 @@ class VectorIntelligenceDatabase:
                                 vector.vector_id,
                             )
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.error("Error loading vector from %s: %s", filename, e)
 
             logger.info("Loaded %s vectors from disk", len(self.vectors))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error loading vectors from disk: %s", e)
 
 

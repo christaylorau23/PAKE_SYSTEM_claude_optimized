@@ -3,8 +3,8 @@ TDD Service Integration Tests
 Test-Driven Development for service template and FastAPI functionality
 """
 
-import subprocess
 from pathlib import Path
+import subprocess
 
 import pytest
 

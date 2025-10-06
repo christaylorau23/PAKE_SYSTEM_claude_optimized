@@ -5,10 +5,10 @@ Deploy email integration, social media monitoring, RSS feeds, and analytics dash
 """
 
 import asyncio
-import json
-import sys
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -112,7 +112,7 @@ class EmailIntegrationService:
                 return await self._connect_gmail_api()
             else:
                 return await self._connect_imap()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Email connection failed: {e}")
             return False
 
@@ -125,7 +125,7 @@ class EmailIntegrationService:
             mail.logout()
             self.connected = True
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"IMAP connection failed: {e}")
             return False
 
@@ -166,7 +166,7 @@ class EmailIntegrationService:
 
             return sample_emails
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Error fetching emails: {e}")
             return []
 
@@ -221,7 +221,7 @@ class EmailIntegrationService:
             )
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_status(
                 "EMAIL",
                 "ERROR",
@@ -278,7 +278,7 @@ class EmailIntegrationService:
             )
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_status(
                 "SOCIAL",
                 "ERROR",
@@ -333,7 +333,7 @@ class EmailIntegrationService:
             )
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_status("RSS", "ERROR", f"RSS service deployment failed: {str(e)}")
             return False
 
@@ -438,7 +438,7 @@ class AnalyticsDashboard:
                 'content_quality': content_quality
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {'error': str(e), 'timestamp': datetime.now(UTC).isoformat()}
 
     async def websocket_manager(self) -> None:
@@ -574,7 +574,7 @@ class AnalyticsDashboard:
             self.deployed_services.append("analytics_dashboard")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_status(
                 "ANALYTICS",
                 "ERROR",
@@ -627,7 +627,7 @@ class AnalyticsDashboard:
             )
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log_status(
                 "INTEGRATION",
                 "ERROR",
@@ -703,7 +703,7 @@ async def main(self) -> None:
                 print(f"✅ {service_name} deployed successfully")
             else:
                 print(f"⚠️  {service_name} deployment had issues")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ {service_name} deployment failed: {str(e)}")
 
     # Generate and save report

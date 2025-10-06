@@ -8,7 +8,7 @@ for data access operations without specifying implementation details.
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Dict, Generic, List, TypeVar
 
 # Generic type for domain entities
 T = TypeVar("T")

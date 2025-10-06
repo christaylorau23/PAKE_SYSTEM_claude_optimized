@@ -5,9 +5,9 @@ Focuses only on actual source code, excluding virtual environments and backups
 """
 
 import logging
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class SourceOnlySecurityFixer:
 
             self._print_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Security fixes failed: %s", e)
             sys.exit(1)
 
@@ -142,7 +142,7 @@ class SourceOnlySecurityFixer:
                 len(sha1_files),
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("source_hash_algorithms", str(e)))
             logger.error("❌ Source hash algorithm fix failed: %s", e)
 
@@ -234,7 +234,7 @@ class SourceOnlySecurityFixer:
                 fixed_count,
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("source_serialization", str(e)))
             logger.error("❌ Source serialization fix failed: %s", e)
 
@@ -275,7 +275,7 @@ class SourceOnlySecurityFixer:
                 len(binding_files),
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("source_network_bindings", str(e)))
             logger.error("❌ Source network binding fix failed: %s", e)
 
@@ -357,7 +357,7 @@ class SourceOnlySecurityFixer:
                 fixed_count,
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("source_hardcoded_secrets", str(e)))
             logger.error("❌ Source hardcoded secrets fix failed: %s", e)
 
@@ -399,13 +399,13 @@ class SourceOnlySecurityFixer:
             self.fixes_applied.append("source_input_validation")
             logger.info("✅ Fixed input validation in %s source files", len(sql_files))
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("source_input_validation", str(e)))
             logger.error("❌ Source input validation fix failed: %s", e)
 
     def _backup_file(self) -> None:
         """Create backup of file before modification"""
-        relative_path = file_path.relative_to(self.project_root)
+        relative_path = self.file_path.relative_to(self.project_root)
         backup_path = self.backup_dir / relative_path
         backup_path.parent.mkdir(parents=True, exist_ok=True)
 

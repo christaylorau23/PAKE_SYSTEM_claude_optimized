@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE System Local Validation Script
@@ -5,14 +6,14 @@ Runs all CI/CD quality checks locally before pushing to GitHub
 """
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 
@@ -370,7 +371,7 @@ class LocalValidator:
             self.log("Dependencies installed successfully", "INFO")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log(f"Error installing dependencies: {e}", "ERROR")
             return False
 
@@ -431,7 +432,7 @@ class LocalValidator:
                 error=f"Timeout after {step.timeout}s",
                 exit_code=-1,
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             self.log(f"💥 {step.name} crashed: {e}", "ERROR")
             return ValidationResult(

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE System - Enterprise Monitoring Service
 Comprehensive monitoring service implementing enterprise best practices for:
@@ -10,17 +12,17 @@ Comprehensive monitoring service implementing enterprise best practices for:
 """
 
 import asyncio
-import json
-import os
-
-# Add project root to path for imports
-import sys
-import time
 from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import json
+import os
 from pathlib import Path
+
+# Add project root to path for imports
+import sys
+import time
 from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
@@ -181,7 +183,7 @@ class EnterpriseMonitoringService:
     - Capacity planning
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: str | None = None, logger: Any = None) -> None:
         self.config = config or MonitoringConfig()
         self.logger = logger or (get_logger() if get_logger else None)
 
@@ -226,7 +228,7 @@ class EnterpriseMonitoringService:
             try:
                 await self._collect_system_metrics()
                 await asyncio.sleep(self.config.collection_interval_seconds)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 if self.logger:
                     self.logger.error(
                         "Error collecting system metrics",
@@ -241,7 +243,7 @@ class EnterpriseMonitoringService:
             try:
                 await self._perform_health_checks()
                 await asyncio.sleep(self.config.health_check_interval_seconds)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 if self.logger:
                     self.logger.error(
                         "Error performing health checks",
@@ -256,7 +258,7 @@ class EnterpriseMonitoringService:
             try:
                 await self._process_alerts()
                 await asyncio.sleep(60)  # Check alerts every minute
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 if self.logger:
                     self.logger.error(
                         "Error processing alerts",
@@ -342,7 +344,7 @@ class EnterpriseMonitoringService:
             # Check thresholds and create alerts
             await self._check_thresholds(system_metrics)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             if self.logger:
                 self.logger.error(
                     "Failed to collect system metrics",
@@ -350,7 +352,7 @@ class EnterpriseMonitoringService:
                     error=e,
                 )
 
-    async def _check_thresholds(self) -> None:
+    async def _check_thresholds(self, metrics: SystemMetrics) -> None:
         """Check metrics against thresholds and create alerts"""
         alerts_to_create = []
 
@@ -415,7 +417,7 @@ class EnterpriseMonitoringService:
         for check_name, health_check in self.health_checks.items():
             try:
                 await self._run_health_check(check_name, health_check)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 if self.logger:
                     self.logger.error(
                         f"Health check {check_name} failed",
@@ -423,7 +425,7 @@ class EnterpriseMonitoringService:
                         error=e,
                     )
 
-    async def _run_health_check(self) -> None:
+    async def _run_health_check(self, name: str, health_check: HealthCheck) -> None:
         """Run a specific health check"""
         start_time = time.time()
 
@@ -445,13 +447,13 @@ class EnterpriseMonitoringService:
             health_check.response_time_ms = response_time_ms
             health_check.timestamp = datetime.now(UTC)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             health_check.status = HealthStatus.UNHEALTHY
             health_check.message = f"Health check failed: {str(e)}"
             health_check.response_time_ms = (time.time() - start_time) * 1000
             health_check.timestamp = datetime.now(UTC)
 
-    async def _check_database_health(self) -> None:
+    async def _check_database_health(self, health_check: HealthCheck) -> None:
         """Check database health"""
         # Simulate database health check
         await asyncio.sleep(0.1)  # Simulate DB query
@@ -459,7 +461,7 @@ class EnterpriseMonitoringService:
         health_check.message = "Database connection is healthy"
         health_check.details = {"connection_pool_size": 10, "active_connections": 3}
 
-    async def _check_redis_health(self) -> None:
+    async def _check_redis_health(self, health_check: HealthCheck) -> None:
         """Check Redis health"""
         # Simulate Redis health check
         await asyncio.sleep(0.05)  # Simulate Redis ping
@@ -467,7 +469,7 @@ class EnterpriseMonitoringService:
         health_check.message = "Redis connection is healthy"
         health_check.details = {"memory_usage": "45MB", "connected_clients": 5}
 
-    async def _check_api_health(self) -> None:
+    async def _check_api_health(self, health_check: HealthCheck) -> None:
         """Check API health"""
         # Simulate API health check
         await asyncio.sleep(0.2)  # Simulate API call
@@ -475,7 +477,7 @@ class EnterpriseMonitoringService:
         health_check.message = "API endpoints are responding"
         health_check.details = {"response_time_avg": "150ms", "error_rate": "0.1%"}
 
-    def register_health_check(self) -> None:
+    def register_health_check(self, name: str, check_func: Callable | None = None) -> None:
         """Register a health check"""
         health_check = HealthCheck(
             name=name,
@@ -499,7 +501,7 @@ class EnterpriseMonitoringService:
     # Metrics Recording
     # ========================================================================
 
-    def record_metric(self) -> None:
+    def record_metric(self, name: str, value: int | float, metric_type: MetricType, tags: dict[str, str] | None = None) -> None:
         """Record a custom metric"""
         metric = Metric(
             name=name,
@@ -523,15 +525,15 @@ class EnterpriseMonitoringService:
                 tags=tags,
             )
 
-    def increment_counter(self) -> None:
+    def increment_counter(self, name: str, value: int = 1, tags: dict[str, str] | None = None) -> None:
         """Increment a counter metric"""
         self.record_metric(name, value, MetricType.COUNTER, tags)
 
-    def set_gauge(self) -> None:
+    def set_gauge(self, name: str, value: int | float, tags: dict[str, str] | None = None) -> None:
         """Set a gauge metric"""
         self.record_metric(name, value, MetricType.GAUGE, tags)
 
-    def record_timing(self) -> None:
+    def record_timing(self, name: str, duration_ms: float, tags: dict[str, str] | None = None) -> None:
         """Record a timing metric"""
         self.record_metric(name, duration_ms, MetricType.TIMER, tags)
 
@@ -545,7 +547,7 @@ class EnterpriseMonitoringService:
         if len(self.performance_metrics[name]) > 1000:
             self.performance_metrics[name] = self.performance_metrics[name][-1000:]
 
-    def record_error(self) -> None:
+    def record_error(self, error_type: str, tags: dict[str, str] | None = None) -> None:
         """Record an error occurrence"""
         self.increment_counter(f"errors.{error_type}", tags=tags)
 
@@ -565,7 +567,7 @@ class EnterpriseMonitoringService:
     # Alerting
     # ========================================================================
 
-    async def create_alert(self) -> None:
+    async def create_alert(self, title: str, message: str, severity: AlertSeverity, tags: dict[str, str] | None = None) -> str:
         """Create a new alert"""
         alert_id = f"{self.config.service_name}_{int(time.time())}"
 
@@ -607,7 +609,7 @@ class EnterpriseMonitoringService:
 
         return alert_id
 
-    async def resolve_alert(self) -> None:
+    async def resolve_alert(self, alert_id: str, resolution_message: str | None = None) -> None:
         """Resolve an alert"""
         if alert_id in self.active_alerts:
             alert = self.active_alerts[alert_id]
@@ -808,18 +810,18 @@ class EnterpriseMonitoringService:
     # Context Managers and Decorators
     # ========================================================================
 
-    def monitor_operation(self) -> None:
+    def monitor_operation(self, operation_name: str) -> Callable:
         """Decorator to monitor an operation"""
 
-        def decorator(self) -> None:
-            async def async_wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            async def async_wrapper(*args, **kwargs) -> Any:
                 start_time = time.time()
                 try:
                     result = await func(*args, **kwargs)
                     duration_ms = (time.time() - start_time) * 1000
                     self.record_timing(f"operation.{operation_name}", duration_ms)
                     return result
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     duration_ms = (time.time() - start_time) * 1000
                     self.record_error(
                         f"operation.{operation_name}", {"error_type": type(e).__name__}
@@ -827,14 +829,14 @@ class EnterpriseMonitoringService:
                     self.record_timing(f"operation.{operation_name}.error", duration_ms)
                     raise
 
-            def sync_wrapper(self) -> None:
+            def sync_wrapper(*args, **kwargs) -> Any:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
                     duration_ms = (time.time() - start_time) * 1000
                     self.record_timing(f"operation.{operation_name}", duration_ms)
                     return result
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     duration_ms = (time.time() - start_time) * 1000
                     self.record_error(
                         f"operation.{operation_name}", {"error_type": type(e).__name__}
@@ -908,7 +910,7 @@ def get_monitor() -> EnterpriseMonitoringService:
 
 if __name__ == "__main__":
 
-    async def main(self) -> None:
+    async def main() -> None:
         # Initialize monitoring service
         monitoring = get_monitoring_service()
 

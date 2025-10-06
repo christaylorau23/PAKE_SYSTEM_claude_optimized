@@ -5,14 +5,14 @@ Simulates the entire GitHub Actions CI/CD pipeline locally
 """
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 
@@ -372,7 +372,7 @@ class CICDSimulator:
             self.log("Dependencies installed successfully", "INFO")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log(f"Error installing dependencies: {e}", "ERROR")
             return False
 
@@ -412,7 +412,7 @@ class CICDSimulator:
                     all_errors.append(f"Command timed out after {config['timeout']}s")
                     exit_code = -1
                     break
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     all_errors.append(str(e))
                     exit_code = -1
                     break
@@ -445,7 +445,7 @@ class CICDSimulator:
 
             return execution
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             self.log(f"💥 {config['name']} crashed: {e}", "ERROR")
             return StageExecution(

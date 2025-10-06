@@ -1,3 +1,5 @@
+from typing import Dict
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE+ Universal Ingestion Pipeline
@@ -5,24 +7,24 @@ Multi-source content ingestion with automated processing
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import email
 import hashlib
 import imaplib
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import sqlite3
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 import aiohttp
-import feedparser
 
 # Third-party imports
 from bs4 import BeautifulSoup
+import feedparser
 from readability import Document
 
 try:
@@ -189,7 +191,7 @@ class UniversalIngestionPipeline:
                 # Create default configuration
                 await self._create_default_config()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error loading configuration: %s", e)
             await self._create_default_config()
 
@@ -307,7 +309,7 @@ class UniversalIngestionPipeline:
 
             logger.info("Extracted %s items from %s", len(items), source.name)
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error ingesting RSS feed %s: %s", source.name, e)
 
         return items
@@ -403,10 +405,10 @@ class UniversalIngestionPipeline:
                             if unread_only:
                                 mail.store(msg_id, "+FLAGS", "\\Seen")
 
-                        except Exception as e:
+                        except (FileNotFoundError, PermissionError, OSError) as e:
                             logger.warning("Error processing email %s: %s", msg_id, e)
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.warning("Error accessing folder %s: %s", folder, e)
 
             mail.close()
@@ -414,7 +416,7 @@ class UniversalIngestionPipeline:
 
             logger.info("Extracted %s emails from %s", len(items), source.name)
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error ingesting email %s: %s", source.name, e)
 
         return items
@@ -491,7 +493,7 @@ class UniversalIngestionPipeline:
 
             logger.info("Extracted %s items from %s", len(items), source.name)
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error ingesting web content %s: %s", source.name, e)
 
         return items
@@ -557,12 +559,12 @@ class UniversalIngestionPipeline:
 
                         items.append(item)
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.warning("Error processing file %s: %s", file_path, e)
 
             logger.info("Processed %s files from %s", len(items), source.name)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error processing file source %s: %s", source.name, e)
 
         return items
@@ -601,9 +603,9 @@ class UniversalIngestionPipeline:
             """,
                 (
                     content_hash,
-                    item.source_name,
-                    item.source_type,
-                    item.title,
+                    self.item.source_name,
+                    self.item.source_type,
+                    self.item.title,
                     item.url,
                     item.published,
                     pake_id,
@@ -659,7 +661,7 @@ class UniversalIngestionPipeline:
                     item.title,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error sending to MCP server: %s", e)
 
         return None
@@ -732,7 +734,7 @@ class UniversalIngestionPipeline:
                         ),
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error processing item %s: %s", item.title, e)
 
         logger.info("Processed %s new items from %s", processed_count, source.name)
@@ -748,7 +750,7 @@ class UniversalIngestionPipeline:
             try:
                 processed = await self.process_source(source)
                 total_processed += processed
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error processing source %s: %s", source.name, e)
 
         logger.info(
@@ -787,7 +789,7 @@ class UniversalIngestionPipeline:
             except KeyboardInterrupt:
                 logger.info("Ingestion pipeline stopped by user")
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in continuous ingestion: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 

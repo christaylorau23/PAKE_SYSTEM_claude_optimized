@@ -6,12 +6,12 @@ Standalone demonstration showcasing the autonomous self-optimization framework.
 """
 
 import asyncio
+from datetime import UTC, datetime
+from enum import Enum
 import logging
-import random
+import secrets
 import signal
 import sys
-from datetime import datetime, UTC
-from enum import Enum
 
 
 class SystemHealth(Enum):
@@ -89,7 +89,7 @@ class CosmicCalibrationDemo:
 
         # Custom formatter with emojis and colors
         class ColoredFormatter(logging.Formatter):
-            def format(self) -> None:
+            def format(self, record: logging.LogRecord) -> str:
                 colors = {
                     "INFO": "\033[36m",  # Cyan
                     "WARNING": "\033[33m",  # Yellow
@@ -110,7 +110,7 @@ class CosmicCalibrationDemo:
 
         return logger
 
-    def _signal_handler(self) -> None:
+    def _signal_handler(self, signum: int) -> None:
         """Handle graceful shutdown."""
         self.logger.info("Received signal %s, shutting down gracefully...", signum)
         self.demo_active = False
@@ -118,12 +118,12 @@ class CosmicCalibrationDemo:
     def _simulate_system_evolution(self) -> None:
         """Simulate autonomous system evolution."""
         # Add small random variations to simulate real system behavior
-        self.performance_score += random.uniform(-0.02, 0.05)
-        self.optimization_efficiency += random.uniform(-0.01, 0.03)
-        self.evolution_progress += random.uniform(0.01, 0.04)
-        self.critique_quality += random.uniform(-0.01, 0.02)
-        self.stability_index += random.uniform(-0.02, 0.01)
-        self.improvement_velocity = random.uniform(0.02, 0.08)
+        self.performance_score += secrets.randbelow(700) / 10000 - 0.02
+        self.optimization_efficiency += secrets.randbelow(400) / 10000 - 0.01
+        self.evolution_progress += secrets.randbelow(300) / 10000 + 0.01
+        self.critique_quality += secrets.randbelow(300) / 10000 - 0.01
+        self.stability_index += secrets.randbelow(300) / 10000 - 0.02
+        self.improvement_velocity = secrets.randbelow(600) / 10000 + 0.02
 
         # Keep values in realistic ranges
         self.performance_score = max(0.3, min(1.0, self.performance_score))
@@ -309,7 +309,7 @@ class CosmicCalibrationDemo:
             "   Critiques Performed: %s", self.component_status["self_critique"]["critiques_performed"],
         )
         self.logger.info(
-            "   Quality Score: %s", self.component_status["self_critique"]["quality"]:.3f,
+            "   Quality Score: %.3f", self.component_status["self_critique"]["quality"],
         )
 
         self.logger.info("✅ All components coordinating successfully")
@@ -373,8 +373,8 @@ class CosmicCalibrationDemo:
 
         self.logger.info("🧬 Evolution Results:")
         self.logger.info("   Generation: %s", self.evolution_cycles)
-        self.logger.info("   New Organisms: %s", random.randint(3, 8))
-        self.logger.info("   Best Fitness: %.3f%%", random.uniform(0.85, 0.95))
+        self.logger.info("   New Organisms: %s", secrets.randbelow(6) + 3)
+        self.logger.info("   Best Fitness: %.3f%%", secrets.randbelow(1000) / 10000 + 0.85)
         self.logger.info("   Evolution Progress: %.3f%%", self.evolution_progress)
 
         # Simulate self-critique
@@ -385,7 +385,7 @@ class CosmicCalibrationDemo:
 
         self.logger.info("🔍 Self-Critique Results:")
         self.logger.info("   Critiques Performed: %s", self.critique_cycles)
-        self.logger.info("   Multi-Model Consensus: %.3f%%", random.uniform(0.8, 0.95))
+        self.logger.info("   Multi-Model Consensus: %.3f%%", secrets.randbelow(1500) / 10000 + 0.8)
         self.logger.info("   Quality Assessment: %.3f%%", self.critique_quality)
 
         self.logger.info("✅ Cognitive evolution cycle completed")
@@ -457,7 +457,7 @@ class CosmicCalibrationDemo:
                 if demo_phase <= 5:
                     await asyncio.sleep(3)  # Pause between major phases
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("❌ Demo error: %s", e)
                 await asyncio.sleep(5)
 
@@ -501,7 +501,7 @@ class CosmicCalibrationDemo:
             await self.run_live_demonstration()
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Demo failed: %s", e)
             return False
         finally:
@@ -532,7 +532,7 @@ async def main(self) -> None:
         print("\n\n⚠️ Demonstration stopped by user")
         print("👋 Thank you for experiencing the Cosmic Calibration Protocol!")
         return 0
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n❌ Demo error: {e}")
         return 1
 

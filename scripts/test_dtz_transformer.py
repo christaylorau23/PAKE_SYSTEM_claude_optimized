@@ -6,8 +6,8 @@ to ensure it correctly handles all the datetime timezone issues described in
 the engineering plan.
 """
 
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import List, Tuple
 
 import libcst as cst
@@ -108,7 +108,7 @@ def process_data():
             else:
                 print("⚠️  No transformations applied")
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"❌ Error: {e}")
 
     print("\n" + "=" * 60)
@@ -188,7 +188,7 @@ class TimeProcessor:
         print("⚠️  No modifications made to real file")
         return False
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"❌ Error in real file test: {e}")
         return False
 

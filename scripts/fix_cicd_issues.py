@@ -5,8 +5,8 @@ Addresses critical CI/CD pipeline failures
 """
 
 import logging
-import sys
 from pathlib import Path
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class CICDFixer:
 
             self._print_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("CI/CD fixes failed: %s", e)
             sys.exit(1)
 
@@ -134,7 +134,7 @@ jobs:
             self.fixes_applied.append("secrets_detection")
             logger.info("✅ Fixed secrets detection configuration")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("secrets_detection", str(e)))
             logger.error("❌ Secrets detection fix failed: %s", e)
 
@@ -324,7 +324,7 @@ class TestNetworkConfig:
             self.fixes_applied.append("core_tests")
             logger.info("✅ Fixed core test suite configuration")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.fixes_failed.append(("core_tests", str(e)))
             logger.error("❌ Core tests fix failed: %s", e)
 
@@ -393,7 +393,7 @@ jobs:
             self.fixes_applied.append("security_pipeline")
             logger.info("✅ Fixed security pipeline configuration")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.fixes_failed.append(("security_pipeline", str(e)))
             logger.error("❌ Security pipeline fix failed: %s", e)
 
@@ -465,7 +465,7 @@ echo "✅ NPM audit fix completed"
             self.fixes_applied.append("nodejs_audits")
             logger.info("✅ Fixed Node.js audit configuration")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.fixes_failed.append(("nodejs_audits", str(e)))
             logger.error("❌ Node.js audits fix failed: %s", e)
 
@@ -652,7 +652,7 @@ def run_command(self) -> None:
             logger.error("❌ %s failed:", description)
             logger.error(result.stderr)
             return False
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ %s failed with exception: %s", description, e)
         return False
 
@@ -692,7 +692,7 @@ if __name__ == "__main__":
             self.fixes_applied.append("linting")
             logger.info("✅ Fixed linting configuration")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.fixes_failed.append(("linting", str(e)))
             logger.error("❌ Linting fix failed: %s", e)
 

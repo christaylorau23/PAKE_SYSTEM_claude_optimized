@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 17 Multi-Tenant API Integration Tests
@@ -5,9 +6,9 @@ Comprehensive end-to-end testing suite for multi-tenant API endpoints.
 """
 
 import asyncio
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 import httpx
@@ -159,7 +160,7 @@ class MultiTenantAPITester:
                     "error": response.text if response.status_code != 201 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "create_tenant", "success": False, "error": str(e)}
 
     async def _get_tenant(self, tenant_id: str) -> Dict[str, Any]:
@@ -180,7 +181,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "get_tenant", "success": False, "error": str(e)}
 
     async def _update_tenant(
@@ -206,7 +207,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "update_tenant", "success": False, "error": str(e)}
 
     async def _list_tenants(self) -> Dict[str, Any]:
@@ -227,7 +228,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "list_tenants", "success": False, "error": str(e)}
 
     # User Management Tests
@@ -306,7 +307,7 @@ class MultiTenantAPITester:
                     "error": response.text if response.status_code != 201 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "create_user", "success": False, "error": str(e)}
 
     async def _list_tenant_users(self, tenant_id: str) -> Dict[str, Any]:
@@ -328,7 +329,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "list_tenant_users", "success": False, "error": str(e)}
 
     # Authentication Tests
@@ -413,7 +414,7 @@ class MultiTenantAPITester:
                     "expected_status": expected_status,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "user_login", "success": False, "error": str(e)}
 
     async def _test_token_validation(self, tenant_id: str) -> Dict[str, Any]:
@@ -443,7 +444,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "token_validation", "success": False, "error": str(e)}
 
     async def _test_cross_tenant_access(self) -> Dict[str, Any]:
@@ -492,7 +493,7 @@ class MultiTenantAPITester:
                     ),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "cross_tenant_access", "success": False, "error": str(e)}
 
     # Tenant Isolation Tests
@@ -566,7 +567,7 @@ class MultiTenantAPITester:
                     ),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "search_isolation", "success": False, "error": str(e)}
 
     async def _test_user_isolation(self) -> Dict[str, Any]:
@@ -626,7 +627,7 @@ class MultiTenantAPITester:
                     "isolation_verified": isolation_verified,
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "user_isolation", "success": False, "error": str(e)}
 
     async def _test_analytics_isolation(self) -> Dict[str, Any]:
@@ -666,7 +667,7 @@ class MultiTenantAPITester:
                     ),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "analytics_isolation", "success": False, "error": str(e)}
 
     # Search Functionality Tests
@@ -730,7 +731,7 @@ class MultiTenantAPITester:
                     ),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "basic_search", "success": False, "error": str(e)}
 
     async def _test_search_with_sources(self, tenant_id: str) -> Dict[str, Any]:
@@ -757,7 +758,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "search_with_sources", "success": False, "error": str(e)}
 
     async def _test_search_history(self, tenant_id: str) -> Dict[str, Any]:
@@ -779,7 +780,7 @@ class MultiTenantAPITester:
                     "data": response.json() if response.status_code == 200 else None,
                 }
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             return {"test": "search_history", "success": False, "error": str(e)}
 
     async def _test_saved_searches(self, tenant_id: str) -> Dict[str, Any]:
@@ -828,7 +829,7 @@ class MultiTenantAPITester:
                     ),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "saved_searches", "success": False, "error": str(e)}
 
     # Security Enforcement Tests
@@ -905,7 +906,7 @@ class MultiTenantAPITester:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "rate_limiting", "success": False, "error": str(e)}
 
     async def _test_input_validation(self) -> Dict[str, Any]:
@@ -949,7 +950,7 @@ class MultiTenantAPITester:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "input_validation", "success": False, "error": str(e)}
 
     async def _test_authentication_bypass(self) -> Dict[str, Any]:
@@ -989,7 +990,7 @@ class MultiTenantAPITester:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "authentication_bypass", "success": False, "error": str(e)}
 
     async def _test_sql_injection_protection(self) -> Dict[str, Any]:
@@ -1041,7 +1042,7 @@ class MultiTenantAPITester:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "sql_injection", "success": False, "error": str(e)}
 
     # Performance Tests
@@ -1122,7 +1123,7 @@ class MultiTenantAPITester:
                 "threshold": "2.0 seconds",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "response_times", "success": False, "error": str(e)}
 
     async def _test_concurrent_requests(self) -> Dict[str, Any]:
@@ -1168,7 +1169,7 @@ class MultiTenantAPITester:
                 "requests_per_second": 10 / total_time if total_time > 0 else 0,
             }
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             return {"test": "concurrent_requests", "success": False, "error": str(e)}
 
     async def _test_large_payload(self) -> Dict[str, Any]:
@@ -1211,7 +1212,7 @@ class MultiTenantAPITester:
                     "message": "Large payload handled appropriately",
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "large_payload", "success": False, "error": str(e)}
 
     # Utility Methods
@@ -1241,7 +1242,7 @@ class MultiTenantAPITester:
             # In a real implementation, this would clean up database test data
             print("🧹 Test data cleanup completed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             print(f"⚠️ Cleanup error: {e}")
 
     def _generate_test_summary(self, test_results: Dict[str, Any]) -> Dict[str, Any]:
@@ -1338,6 +1339,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Tests interrupted by user")
         exit(130)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n💥 Test suite error: {e}")
         exit(1)

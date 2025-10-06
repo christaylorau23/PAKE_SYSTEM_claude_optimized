@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Comprehensive Test Execution Script for PAKE System
@@ -13,13 +14,13 @@ Usage:
     python scripts/run_tests_comprehensive.py --all --coverage --report
 """
 
+from datetime import UTC, datetime
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from datetime import UTC, datetime
-from pathlib import Path
 
 import click
 from rich.console import Console

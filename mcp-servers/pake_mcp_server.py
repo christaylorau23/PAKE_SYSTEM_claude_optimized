@@ -4,13 +4,13 @@ Official MCP (Model Context Protocol) server for Knowledge Vault integration
 Uses the official Python MCP SDK and follows the JSON-RPC 2.0 protocol.
 """
 
+from datetime import UTC, datetime
 import json
 import logging
 import os
-import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+import uuid
 
 import aiofiles
 
@@ -21,13 +21,12 @@ class SecurityError(Exception):
 
 
 # MCP SDK imports
-import mcp.server.stdio
-import mcp.types as types
-
 # Load environment variables
 from dotenv import load_dotenv
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
+import mcp.server.stdio
+import mcp.types as types
 
 load_dotenv()
 
@@ -49,21 +48,21 @@ class JsonFormatter(logging.Formatter):
 
     def format(self) -> None:
         log_entry = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
+            "timestamp": datetime.fromtimestamp(self.record.created, tz=UTC).isoformat(),
+            "level": self.record.levelname,
+            "logger": self.record.name,
+            "message": self.record.getMessage(),
+            "module": self.record.module,
+            "function": self.record.funcName,
+            "line": self.record.lineno,
         }
 
         # Add exception info if present
-        if record.exc_info:
-            log_entry["exception"] = self.formatException(record.exc_info)
+        if self.record.exc_info:
+            log_entry["exception"] = self.formatException(self.record.exc_info)
 
         # Add extra fields from record
-        for key, value in record.__dict__.items():
+        for key, value in self.record.__dict__.items():
             if key not in [
                 "name",
                 "msg",
@@ -163,7 +162,7 @@ class VaultManager:
             for pattern in ["../", "..\\", "./", ".\\"]:
                 if pattern in decoded_lower:
                     return True
-        except:
+        except (ValueError, RuntimeError) as e:
             # If URL decoding fails, be safe and assume potential attack
             pass
 

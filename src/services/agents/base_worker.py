@@ -9,15 +9,15 @@ Provides common functionality for:
 - Error handling and recovery
 """
 
-import asyncio
-import logging
-import time
-import uuid
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
+import uuid
 
 from ..messaging.message_bus import (
     MessagePriority,
@@ -60,7 +60,7 @@ class BaseWorkerAgent(ABC):
     - Performance tracking
     """
 
-    def __init__(self) -> None:
+    def __init__(self, worker_id: str | None = None, worker_type: str = "base", message_bus: Any = None, capabilities: List[WorkerCapability] | None = None) -> None:
         """Initialize base worker agent."""
         self.worker_id = worker_id or f"{worker_type}_{uuid.uuid4().hex[:8]}"
         self.worker_type = worker_type
@@ -143,8 +143,11 @@ class BaseWorkerAgent(ABC):
             self._heartbeat_task.cancel()
             try:
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as e:
+
+                logger.debug(f"Exception in base_worker.py: {e}")
+
+                # Continue gracefully
 
         # Send shutdown event
         shutdown_event = create_system_event(
@@ -202,7 +205,7 @@ class BaseWorkerAgent(ABC):
     async def _on_stop(self) -> None:
         """Override in subclasses for custom shutdown logic."""
 
-    async def _handle_task_message(self) -> None:
+    async def _handle_task_message(self, message: Any) -> None:
         """Handle task message from supervisor."""
         if message.target != self.worker_id:
             return  # Not for this worker
@@ -224,7 +227,7 @@ class BaseWorkerAgent(ABC):
         # Process task
         await self._execute_task(message)
 
-    async def _execute_task(self) -> None:
+    async def _execute_task(self, message: Any) -> None:
         """Execute task with error handling and metrics."""
         task_id = message.correlation_id
         self.current_task_id = task_id
@@ -281,7 +284,7 @@ class BaseWorkerAgent(ABC):
             await self.message_bus.publish("supervisor:responses", response)
             self._update_failure_metrics(time.time() - start_time, "timeout")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Task execution error
             error_msg = f"Task execution failed: {str(e)}"
             logger.error("Worker %s task %s failed: %s", self.worker_id, task_id, e)
@@ -303,7 +306,7 @@ class BaseWorkerAgent(ABC):
             self.current_task_id = None
             self.status = WorkerStatus.IDLE
 
-    async def _handle_system_event(self) -> None:
+    async def _handle_system_event(self, message: Any) -> None:
         """Handle system events."""
         event_data = message.data
         event_type = event_data.get("event_type")
@@ -313,7 +316,7 @@ class BaseWorkerAgent(ABC):
         elif event_type == "shutdown_request":
             await self.stop()
 
-    async def _handle_health_check_request(self) -> None:
+    async def _handle_health_check_request(self, message: Any) -> None:
         """Handle health check request."""
         health_status = await self.get_health_status()
 
@@ -370,13 +373,13 @@ class BaseWorkerAgent(ABC):
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Heartbeat error for worker %s: %s", self.worker_id, e)
                 await asyncio.sleep(5)
 
         logger.info("Worker %s heartbeat stopped", self.worker_id)
 
-    def _update_success_metrics(self) -> None:
+    def _update_success_metrics(self, execution_time: float) -> None:
         """Update metrics for successful task."""
         self.metrics["tasks_processed"] += 1
         self.metrics["tasks_successful"] += 1
@@ -392,7 +395,7 @@ class BaseWorkerAgent(ABC):
             self.metrics["tasks_failed"] / self.metrics["tasks_processed"]
         )
 
-    def _update_failure_metrics(self) -> None:
+    def _update_failure_metrics(self, execution_time: float, failure_type: str) -> None:
         """Update metrics for failed task."""
         self.metrics["tasks_processed"] += 1
         self.metrics["tasks_failed"] += 1
@@ -421,29 +424,29 @@ class BaseWorkerAgent(ABC):
 class WorkerCapabilityBuilder:
     """Builder for creating worker capabilities."""
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.description = ""
         self.input_types = []
         self.output_types = []
         self.performance_metrics = {}
 
-    def with_description(self) -> None:
+    def with_description(self, description: str) -> "WorkerCapabilityBuilder":
         """Add capability description."""
         self.description = description
         return self
 
-    def with_input_types(self) -> None:
+    def with_input_types(self, input_types: List[str]) -> "WorkerCapabilityBuilder":
         """Add input types."""
         self.input_types.extend(input_types)
         return self
 
-    def with_output_types(self) -> None:
+    def with_output_types(self, output_types: List[str]) -> "WorkerCapabilityBuilder":
         """Add output types."""
         self.output_types.extend(output_types)
         return self
 
-    def with_performance_metrics(self) -> None:
+    def with_performance_metrics(self, metrics: Dict[str, Any]) -> "WorkerCapabilityBuilder":
         """Add performance metrics."""
         self.performance_metrics.update(metrics)
         return self

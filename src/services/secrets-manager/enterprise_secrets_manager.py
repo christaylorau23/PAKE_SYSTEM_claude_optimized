@@ -4,10 +4,10 @@ Production-grade secrets management with Azure Key Vault integration.
 """
 
 import asyncio
-import logging
-import os
 from dataclasses import dataclass
 from enum import Enum
+import logging
+import os
 
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -41,7 +41,7 @@ class SecretConfig:
 class EnterpriseSecretsManager:
     """Enterprise-grade secrets management with Azure Key Vault."""
 
-    def __init__(self) -> None:
+    def __init__(self, vault_url: str | None = None) -> None:
         """Initialize secrets manager.
 
         Args:
@@ -64,7 +64,7 @@ class EnterpriseSecretsManager:
             credential = DefaultAzureCredential()
             self.client = SecretClient(vault_url=self.vault_url, credential=credential)
             logger.info("Connected to Azure Key Vault: %s", self.vault_url)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Azure Key Vault client: %s", e)
             self.client = None
 
@@ -90,7 +90,7 @@ class EnterpriseSecretsManager:
                         "Retrieved secret '%s' from Azure Key Vault", config.secret_name
                     )
                     return secret_value
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 logger.warning("Failed to retrieve secret from vault: %s", e)
 
         # Try environment variable fallback
@@ -121,7 +121,7 @@ class EnterpriseSecretsManager:
         try:
             secret = self.client.get_secret(secret_name)
             return secret.value
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error(
                 "Failed to retrieve secret '%s' from vault: %s", secret_name, e
             )
@@ -150,7 +150,7 @@ class EnterpriseSecretsManager:
 
             logger.info("Successfully rotated secret '%s'", config.secret_name)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to rotate secret '%s': %s", config.secret_name, e)
             return False
 
@@ -276,7 +276,7 @@ if __name__ == "__main__":
             api_key = await get_api_key()
             print(f"✅ API key retrieved: {api_key[:8]}...")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Secrets manager initialization failed: {e}")
 
     asyncio.run(main())

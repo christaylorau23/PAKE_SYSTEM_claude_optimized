@@ -4,13 +4,13 @@ Secure Error Handling Tests for PAKE MCP Server
 Tests specific exception handling and information disclosure prevention
 """
 
+from io import StringIO
 import json
 import logging
+from pathlib import Path
 import shutil
 import sys
 import tempfile
-from io import StringIO
-from pathlib import Path
 from unittest.mock import mock_open, patch
 
 import pytest

@@ -4,9 +4,9 @@ Security Fixes Verification Script
 Verifies that critical security vulnerabilities have been properly resolved
 """
 
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def check_vulnerabilities_removed(self) -> None:
@@ -150,7 +150,7 @@ def test_secrets_validator(self) -> None:
             "✅ Fail-fast behavior confirmed (missing secrets cause application to exit)",
         )
         return True
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Error testing secrets validator: {e}")
         return False
 
@@ -178,7 +178,7 @@ def test_input_validation(self) -> None:
 
         print("✅ Input validation working correctly")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Error testing input validation: {e}")
         return False
 
@@ -207,7 +207,7 @@ def main(self) -> None:
                 passed += 1
             else:
                 print(f"❌ {check_name} check failed")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ {check_name} check error: {e}")
 
     print("\n" + "=" * 50)

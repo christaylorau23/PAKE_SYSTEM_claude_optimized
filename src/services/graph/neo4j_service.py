@@ -4,9 +4,9 @@ Provides core Neo4j database connectivity and operations for the PAKE System.
 Handles entity creation, relationship management, and graph querying.
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, TransientError
@@ -21,7 +21,7 @@ class Neo4jService:
     with async support and comprehensive error handling.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, uri: str, user: str, REDACTED_SECRET: str) -> None:
         """Initialize Neo4j service with connection parameters.
 
         Args:
@@ -58,7 +58,7 @@ class Neo4jService:
         except ServiceUnavailable as e:
             logger.error("Neo4j service unavailable: %s", e)
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to connect to Neo4j: %s", e)
             return False
 
@@ -94,7 +94,7 @@ class Neo4jService:
         except TransientError as e:
             logger.warning("Transient Neo4j error: %s", e)
             raise
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Neo4j query error: %s", e)
             raise
 
@@ -116,7 +116,7 @@ class Neo4jService:
             msg = "Neo4j driver not connected"
             raise RuntimeError(msg)
 
-        def _transaction_function(self) -> None:
+        def _transaction_function(tx) -> None:
             result = tx.run(query, parameters or {})
             return [record.data() for record in result]
 
@@ -124,7 +124,7 @@ class Neo4jService:
             with self.driver.session() as session:
                 return session.execute_write(_transaction_function)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Neo4j write transaction error: %s", e)
             raise
 
@@ -401,7 +401,7 @@ class Neo4jService:
                     stats[stat_name] = result[0][list(result[0].keys())[0]]
                 else:
                     stats[stat_name] = result[0]["count"]
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to get %s: %s", stat_name, e)
                 stats[stat_name] = 0
 
@@ -499,7 +499,7 @@ class Neo4jService:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "connection": "failed",

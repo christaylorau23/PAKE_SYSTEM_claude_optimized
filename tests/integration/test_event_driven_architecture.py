@@ -131,7 +131,7 @@ class TestEventDrivenArchitecture:
             received_messages.append(message)
 
         # Subscribe to test stream
-        subscription_id = await message_bus.subscribe("test:stream", message_handler)
+        subscription_id = await self.message_bus.subscribe("test:stream", message_handler)
 
         # Wait a moment for subscription to be ready
         await asyncio.sleep(0.1)
@@ -144,7 +144,7 @@ class TestEventDrivenArchitecture:
             task_data={"test": "data"},
         )
 
-        await message_bus.publish("test:stream", test_message)
+        await self.message_bus.publish("test:stream", test_message)
 
         # Wait for message processing
         await asyncio.sleep(0.5)
@@ -155,14 +155,14 @@ class TestEventDrivenArchitecture:
         assert received_messages[0].data["task_type"] == "test_task"
 
         # Cleanup
-        await message_bus.unsubscribe(subscription_id)
+        await self.message_bus.unsubscribe(subscription_id)
 
     @pytest.mark.asyncio
     async def test_supervisor_worker_coordination(self) -> None:
         """Test supervisor-worker coordination through message bus"""
         # Register workers with supervisor
-        for _worker_type, worker in worker_agents.items():
-            await supervisor_agent.register_worker(worker)
+        for _worker_type, worker in self.worker_agents.items():
+            await self.supervisor_agent.register_worker(worker)
 
         # Wait for registration
         await asyncio.sleep(0.5)
@@ -201,7 +201,7 @@ class TestEventDrivenArchitecture:
                 "error": None,
             }
 
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
 
         # Verify coordination worked
         assert result.success is True
@@ -216,8 +216,8 @@ class TestEventDrivenArchitecture:
     async def test_multi_worker_parallel_execution(self) -> None:
         """Test parallel execution across multiple workers"""
         # Register workers
-        for worker in worker_agents.values():
-            await supervisor_agent.register_worker(worker)
+        for worker in self.worker_agents.values():
+            await self.supervisor_agent.register_worker(worker)
 
         await asyncio.sleep(0.5)
 
@@ -269,7 +269,7 @@ class TestEventDrivenArchitecture:
             ),
         ):
             start_time = time.time()
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             execution_time = time.time() - start_time
 
         # Verify parallel execution
@@ -416,21 +416,21 @@ class TestEventDrivenArchitecture:
         test_value = {"data": "test cache data", "timestamp": time.time()}
 
         # Set value in cache
-        success = await cache_strategy.set("test_namespace", test_key, test_value)
+        success = await self.cache_strategy.set("test_namespace", test_key, test_value)
         assert success is True
 
         # Get value from cache (should hit L1)
-        cached_value = await cache_strategy.get("test_namespace", test_key)
+        cached_value = await self.cache_strategy.get("test_namespace", test_key)
         assert cached_value is not None
         assert cached_value["data"] == "test cache data"
 
         # Clear L1 cache and test L2 cache
-        if cache_strategy.layers:
-            l1_layer = list(cache_strategy.layers.values())[0]
+        if self.cache_strategy.layers:
+            l1_layer = list(self.cache_strategy.layers.values())[0]
             await l1_layer.clear()
 
         # Should still get value from L2/L3
-        cached_value = await cache_strategy.get("test_namespace", test_key)
+        cached_value = await self.cache_strategy.get("test_namespace", test_key)
         assert cached_value is not None
         assert cached_value["data"] == "test cache data"
 
@@ -490,8 +490,8 @@ class TestEventDrivenArchitecture:
     async def test_phase2a_orchestrator_compatibility(self) -> None:
         """Verify Phase 2B maintains Phase 2A orchestrator compatibility"""
         # Register all workers
-        for worker in worker_agents.values():
-            await supervisor_agent.register_worker(worker)
+        for worker in self.worker_agents.values():
+            await self.supervisor_agent.register_worker(worker)
 
         await asyncio.sleep(0.5)
 
@@ -640,7 +640,7 @@ class TestEventDrivenArchitecture:
                 ),
             ),
         ):
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
 
         # Verify result matches Phase 2A expectations
         assert result.success is True
@@ -683,8 +683,8 @@ class TestEventDrivenArchitecture:
         failed_tests = []
 
         # Register all workers
-        for worker in worker_agents.values():
-            await supervisor_agent.register_worker(worker)
+        for worker in self.worker_agents.values():
+            await self.supervisor_agent.register_worker(worker)
 
         await asyncio.sleep(1.0)  # Allow registration
 
@@ -713,7 +713,7 @@ class TestEventDrivenArchitecture:
 
                     successful_tests += 1
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     failed_tests.append(f"{scenario_type}_{i}: {str(e)}")
 
         # Calculate success rate
@@ -758,7 +758,7 @@ class TestEventDrivenArchitecture:
         with patch.object(supervisor_agent, "_execute_tasks_parallel") as mock_execute:
             mock_execute.return_value = [{"title": "Test", "content": "Test content"}]
 
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
     async def _test_arxiv_scenario(self) -> None:
@@ -787,7 +787,7 @@ class TestEventDrivenArchitecture:
                 {"title": "ArXiv Paper", "content": "Academic content"},
             ]
 
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
     async def _test_pubmed_scenario(self) -> None:
@@ -816,7 +816,7 @@ class TestEventDrivenArchitecture:
                 {"title": "Medical Paper", "content": "Medical content"},
             ]
 
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
     async def _test_orchestrator_scenario(self) -> None:
@@ -851,7 +851,7 @@ class TestEventDrivenArchitecture:
                 {"title": "ArXiv Paper", "content": "Academic content"},
             ]
 
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
     async def _test_integration_scenario(self) -> None:
@@ -914,7 +914,7 @@ class TestEventDrivenArchitecture:
                 ),
             ),
         ):
-            result = await supervisor_agent.execute_ingestion_plan(plan)
+            result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
 

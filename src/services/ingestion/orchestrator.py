@@ -6,15 +6,15 @@ Following TDD methodology - GREEN phase implementation.
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import hashlib
 import json
 import logging
 import time
+from typing import Any, Dict, List
 import uuid
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from typing import Any
 
 from scripts.ingestion_pipeline import ContentItem
 
@@ -150,7 +150,7 @@ class IngestionOrchestrator:
     workflow automation, error handling, and performance optimization.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: IngestionConfig | None = None, cognitive_engine: Any = None, n8n_manager: Any = None, performance_config: OptimizationConfig | None = None) -> None:
         """Initialize ingestion orchestrator."""
         self.config = config
         self.cognitive_engine = cognitive_engine
@@ -633,7 +633,7 @@ class IngestionOrchestrator:
                 )
                 return content_items, metrics
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 metrics["retry_attempts"] += 1
                 logger.warning(
                     "Attempt %s failed for %s: %s",
@@ -678,7 +678,7 @@ class IngestionOrchestrator:
                         f"web_ingestion_{source.source_id}",
                     )
                     content_items.append(content_item)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to scrape %s: %s", url, e)
                 continue
 
@@ -918,7 +918,7 @@ class IngestionOrchestrator:
             "retry_success_rate": 0.8,  # Mock value
         }
 
-    def _update_execution_metrics(self) -> None:
+    def _update_execution_metrics(self, result: IngestionResult) -> None:
         """Update global execution metrics."""
         self.execution_metrics["plans_executed"] += 1
         self.execution_metrics["total_content_retrieved"] += result.total_content_items
@@ -995,7 +995,7 @@ class IngestionOrchestrator:
                 else:
                     optimized_sources.append(source)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to optimize %s query: %s", source.source_type, e)
                 optimized_sources.append(source)  # Use original if optimization fails
 

@@ -4,12 +4,12 @@ Manages multiple platform streams with Redis Streams integration and performance
 """
 
 import asyncio
-import contextlib
-import logging
 from collections.abc import AsyncGenerator
+import contextlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 import redis.asyncio as redis
 
@@ -54,7 +54,7 @@ class StreamManager:
     - Graceful error handling and recovery
     """
 
-    def __init__(self) -> None:
+    def __init__(self, redis_url: str = "redis://localhost:6379") -> None:
         self.redis_url = redis_url
         self.redis_client: redis.Redis | None = None
         self.logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class StreamManager:
             self.logger.info("StreamManager initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize StreamManager: %s", e)
             return False
 
@@ -173,7 +173,7 @@ class StreamManager:
             self.logger.info("Started stream for %s", platform.value)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to start stream for %s: %s", platform.value, e)
             return False
 
@@ -208,7 +208,7 @@ class StreamManager:
             self.logger.info("Stopped stream for %s", platform.value)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to stop stream for %s: %s", platform.value, e)
             return False
 
@@ -252,7 +252,7 @@ class StreamManager:
         uptime = (datetime.now(UTC) - self.start_time).total_seconds()
         return self.trends_processed_total / uptime if uptime > 0 else 0.0
 
-    async def _run_platform_stream(self) -> None:
+    async def _run_platform_stream(self, platform: Platform, keywords: List[str]) -> None:
         """Run the streaming loop for a specific platform."""
         config = self.stream_configs[platform]
 
@@ -294,7 +294,7 @@ class StreamManager:
                 # Wait for next poll
                 await asyncio.sleep(config.poll_interval_seconds)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in %s stream: %s", platform.value, e)
                 await self._handle_stream_error(platform, e)
                 await asyncio.sleep(60)  # Error backoff
@@ -325,7 +325,7 @@ class StreamManager:
 
         return trends
 
-    async def _publish_trend(self) -> None:
+    async def _publish_trend(self, trend: TrendSignal) -> None:
         """Publish trend to Redis stream."""
         if not self.redis_client:
             return
@@ -341,10 +341,10 @@ class StreamManager:
 
             await self.redis_client.xadd(self.trend_stream_name, trend_data)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to publish trend: %s", e)
 
-    async def _update_latency_metrics(self) -> None:
+    async def _update_latency_metrics(self, platform: Platform, latency_ms: float) -> None:
         """Update latency metrics for platform."""
         if platform in self.stream_status:
             status = self.stream_status[platform]
@@ -361,7 +361,7 @@ class StreamManager:
                 health_score=status.health_score,
             )
 
-    async def _handle_stream_error(self) -> None:
+    async def _handle_stream_error(self, platform: Platform, error: Exception) -> None:
         """Handle stream errors and update health metrics."""
         if platform in self.stream_status:
             status = self.stream_status[platform]
@@ -410,14 +410,14 @@ class StreamManager:
                                 message_id,
                             )
 
-                        except Exception as e:
+                        except (ValueError, RuntimeError) as e:
                             self.logger.error(
                                 "Failed to process message %s: %s",
                                 message_id,
                                 e,
                             )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 self.logger.error("Error reading from stream: %s", e)
                 await asyncio.sleep(5)
 

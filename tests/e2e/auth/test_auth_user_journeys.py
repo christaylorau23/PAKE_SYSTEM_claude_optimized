@@ -39,19 +39,19 @@ class TestUserRegistrationJourney:
         6. Verify user data is correct
         """
         # Step 1: Access public homepage
-        response = test_client.get("/")
+        response = self.test_client.get("/")
         assert response.status_code == 200
         assert "PAKE System" in response.json().get("message", "")
 
         # Step 2: Attempt to access protected endpoint without auth
-        response = test_client.get("/protected")
+        response = self.test_client.get("/protected")
         assert response.status_code == 401
 
         # Step 3: Register user (using existing test user from fake_users_db)
         # In production, would POST to /register endpoint
 
         # Step 4: Login with credentials
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/token", data={"username": "admin", "password": "secret"}
         )
 
@@ -62,7 +62,7 @@ class TestUserRegistrationJourney:
 
         # Step 5: Access protected endpoint with token
         token = token_data["access_token"]
-        protected_response = test_client.get(
+        protected_response = self.test_client.get(
             "/protected", headers={"Authorization": f"Bearer {token}"}
         )
 
@@ -70,7 +70,7 @@ class TestUserRegistrationJourney:
         assert "admin" in protected_response.json()["message"]
 
         # Step 6: Verify user info
-        user_info_response = test_client.get(
+        user_info_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {token}"}
         )
 
@@ -103,7 +103,7 @@ class TestLoginAccessLogoutJourney:
         6. Verify token is invalidated (optional, depends on implementation)
         """
         # Step 1: Login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/token", data={"username": "admin", "password": "secret"}
         )
 
@@ -112,21 +112,21 @@ class TestLoginAccessLogoutJourney:
         headers = {"Authorization": f"Bearer {token}"}
 
         # Step 2: Access user profile
-        profile_response = test_client.get("/auth/me", headers=headers)
+        profile_response = self.test_client.get("/auth/me", headers=headers)
         assert profile_response.status_code == 200
         assert profile_response.json()["username"] == "admin"
 
         # Step 3: Access protected resource
-        resource1_response = test_client.get("/protected", headers=headers)
+        resource1_response = self.test_client.get("/protected", headers=headers)
         assert resource1_response.status_code == 200
 
         # Step 4: Access admin panel
-        admin_response = test_client.get("/admin", headers=headers)
+        admin_response = self.test_client.get("/admin", headers=headers)
         assert admin_response.status_code == 200
         assert "admin" in admin_response.json()["message"]
 
         # Step 5: Logout
-        logout_response = test_client.post("/auth/logout", headers=headers)
+        logout_response = self.test_client.post("/auth/logout", headers=headers)
         assert logout_response.status_code == 200
 
         # Step 6: Verify token invalidation (if implemented)
@@ -156,7 +156,7 @@ class TestTokenRefreshJourney:
         5. Verify old token still works (until expiry)
         """
         # Step 1: Initial login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/token", data={"username": "admin", "password": "secret"}
         )
 
@@ -164,7 +164,7 @@ class TestTokenRefreshJourney:
         initial_token = login_response.json()["access_token"]
 
         # Step 2: Use initial access token
-        response = test_client.get(
+        response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {initial_token}"}
         )
         assert response.status_code == 200
@@ -195,7 +195,7 @@ class TestPasswordChangeJourney:
         5. Access protected resources with new token
         """
         # Step 1: Login with current password
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/token", data={"username": "testuser", "password": "secret"}
         )
 
@@ -224,7 +224,7 @@ class TestFailedAuthenticationJourneys:
         4. Verify access to protected resources is denied
         """
         # Step 1: Attempt login with wrong password
-        response = test_client.post(
+        response = self.test_client.post(
             "/token", data={"username": "admin", "password": "wrongpassword"}
         )
 
@@ -234,7 +234,7 @@ class TestFailedAuthenticationJourneys:
 
         # Step 3 & 4: Verify no authentication occurred
         # Try to access protected resource without token
-        protected_response = test_client.get("/protected")
+        protected_response = self.test_client.get("/protected")
         assert protected_response.status_code == 401
 
     def test_access_protected_resource_without_token(self) -> None:
@@ -247,7 +247,7 @@ class TestFailedAuthenticationJourneys:
         3. Verify helpful error message
         """
         # Step 1: Attempt access without token
-        response = test_client.get("/protected")
+        response = self.test_client.get("/protected")
 
         # Step 2: Verify 401 response
         assert response.status_code == 401
@@ -268,7 +268,7 @@ class TestFailedAuthenticationJourneys:
         invalid_token = "invalid.token.here"
 
         # Step 2: Attempt access with invalid token
-        response = test_client.get(
+        response = self.test_client.get(
             "/protected", headers={"Authorization": f"Bearer {invalid_token}"}
         )
 
@@ -316,14 +316,14 @@ class TestCompleteApplicationFlow:
         9. User's session persists
         """
         # Step 1: Visit homepage
-        home_response = test_client.get("/")
+        home_response = self.test_client.get("/")
         assert home_response.status_code == 200
 
         # Steps 2-9: Full lifecycle test
         # Using existing admin user from fake_users_db
 
         # Step 3: Login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -331,30 +331,30 @@ class TestCompleteApplicationFlow:
         headers = {"Authorization": f"Bearer {token}"}
 
         # Step 4: Access profile
-        profile_response = test_client.get("/auth/me", headers=headers)
+        profile_response = self.test_client.get("/auth/me", headers=headers)
         assert profile_response.status_code == 200
         user_data = profile_response.json()
 
         # Step 5: Perform application actions
-        protected_response = test_client.get("/protected", headers=headers)
+        protected_response = self.test_client.get("/protected", headers=headers)
         assert protected_response.status_code == 200
 
-        admin_response = test_client.get("/admin", headers=headers)
+        admin_response = self.test_client.get("/admin", headers=headers)
         assert admin_response.status_code == 200
 
         # Step 7: Logout
-        logout_response = test_client.post("/auth/logout", headers=headers)
+        logout_response = self.test_client.post("/auth/logout", headers=headers)
         assert logout_response.status_code == 200
 
         # Step 8: Log back in
-        second_login_response = test_client.post(
+        second_login_response = self.test_client.post(
             "/token", data={"username": "admin", "password": "secret"}
         )
         assert second_login_response.status_code == 200
         new_token = second_login_response.json()["access_token"]
 
         # Step 9: Verify session persists
-        new_profile_response = test_client.get(
+        new_profile_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {new_token}"}
         )
         assert new_profile_response.status_code == 200
@@ -384,7 +384,7 @@ class TestAuthPerformanceAndReliability:
         # Multiple concurrent logins
         responses = []
         for _ in range(10):
-            response = test_client.post(
+            response = self.test_client.post(
                 "/token", data={"username": "admin", "password": "secret"}
             )
             responses.append(response)
@@ -403,7 +403,7 @@ class TestAuthPerformanceAndReliability:
         """
 
         def login(self) -> None:
-            return test_client.post(
+            return self.test_client.post(
                 "/token", data={"username": "admin", "password": "secret"}
             )
 

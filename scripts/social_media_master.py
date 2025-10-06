@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Social Media Distribution Network - Master Integration
@@ -5,10 +6,10 @@ Complete social media automation and management system
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
 import os
-from datetime import UTC, datetime
 from pathlib import Path
 
 # Import all social media components
@@ -282,7 +283,7 @@ class SocialMediaMaster:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to create and optimize post: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -315,7 +316,7 @@ class SocialMediaMaster:
                 cover_url=cover_url,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to post Instagram Reel: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -353,7 +354,7 @@ class SocialMediaMaster:
             # Upload video
             return await self.tiktok_enhanced.upload_video(tiktok_video)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to post TikTok video: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -380,7 +381,7 @@ class SocialMediaMaster:
                 "generated_at": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to generate comprehensive analytics: %s", e)
             return {"error": str(e)}
 
@@ -394,7 +395,7 @@ class SocialMediaMaster:
                 # Wait 1 hour before next collection
                 await asyncio.sleep(3600)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Analytics collection error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
@@ -415,7 +416,7 @@ class SocialMediaMaster:
                 # Wait 15 minutes before next check
                 await asyncio.sleep(900)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Content monitoring error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
@@ -444,7 +445,7 @@ class SocialMediaMaster:
                 "last_updated": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get system status: %s", e)
             return {"error": str(e)}
 
@@ -469,7 +470,7 @@ class SocialMediaMaster:
                     results["failed"] += 1
                     results["errors"].append(result["error"])
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 results["failed"] += 1
                 results["errors"].append(str(e))
 
@@ -553,7 +554,7 @@ async def main(self) -> None:
             status = await master.get_system_status()
             print(f"System Status: {json.dumps(status, indent=2, default=str)}")
 
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         print(f"Error: {e}")
 
 

@@ -4,9 +4,9 @@ PAKE System - Test Logging and Monitoring System
 Simple test script to verify the logging and monitoring implementation.
 """
 
+from datetime import UTC, datetime
 import time
 import uuid
-from datetime import UTC, datetime
 
 
 def test_basic_logging(self) -> None:

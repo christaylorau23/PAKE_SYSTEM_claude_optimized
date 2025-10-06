@@ -4,12 +4,12 @@ Provides task creation, assignment, and tracking capabilities for
 automated incident response workflows.
 """
 
-import logging
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import Any, Dict, List, TYPE_CHECKING
+import uuid
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -418,15 +418,15 @@ class TaskManagementSystem:
 
         return success
 
-    async def _send_notifications(self) -> None:
+    async def _send_notifications(self, task: Task, action: str) -> None:
         """Send notifications for task events."""
         for handler in self.notification_handlers:
             try:
                 await handler(task, action)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Notification handler failed: %s", e)
 
-    def add_notification_handler(self) -> None:
+    def add_notification_handler(self, handler: Callable) -> None:
         """Add a notification handler."""
         self.notification_handlers.append(handler)
 

@@ -6,19 +6,19 @@ Provides enterprise caching with memory, disk, and distributed tiers,
 intelligent invalidation, and performance optimization.
 """
 
-import asyncio
-import hashlib
-import json
-import logging
-
-# import pickle  # SECURITY: Replaced with secure serialization
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import hashlib
+import json
+import logging
 from pathlib import Path
-from typing import Any
+
+# import pickle  # SECURITY: Replaced with secure serialization
+import time
+from typing import Any, Dict, List
 
 import aiofiles
 
@@ -175,8 +175,8 @@ class CacheTierInterface(ABC):
 class MemoryCacheTier(CacheTierInterface):
     """In-memory cache tier with LRU/LFU eviction."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: CacheConfig | None = None) -> None:
+        self.config = config or CacheConfig()
         self._cache: dict[str, CacheEntry] = {}
         self._access_order: List[str] = []  # For LRU
         self._lock = asyncio.Lock()
@@ -316,13 +316,13 @@ class MemoryCacheTier(CacheTierInterface):
             seconds=self.config.memory_ttl_seconds,
         )
 
-    def _update_access_order(self) -> None:
+    def _update_access_order(self, key_str: str) -> None:
         """Update access order for LRU eviction."""
         if key_str in self._access_order:
             self._access_order.remove(key_str)
         self._access_order.append(key_str)
 
-    async def _ensure_capacity(self) -> None:
+    async def _ensure_capacity(self, new_entry_size: int) -> None:
         """Ensure cache has capacity for new entry."""
         # Check size limits
         while (
@@ -336,7 +336,7 @@ class MemoryCacheTier(CacheTierInterface):
             lru_key = self._access_order[0]
             await self._evict_entry(lru_key)
 
-    async def _evict_entry(self) -> None:
+    async def _evict_entry(self, key_str: str) -> None:
         """Evict specific entry."""
         if key_str in self._cache:
             entry = self._cache[key_str]
@@ -346,7 +346,7 @@ class MemoryCacheTier(CacheTierInterface):
             if key_str in self._access_order:
                 self._access_order.remove(key_str)
 
-    async def _remove_expired(self) -> None:
+    async def _remove_expired(self, key_str: str) -> None:
         """Remove expired entry."""
         await self._evict_entry(key_str)
 
@@ -354,9 +354,9 @@ class MemoryCacheTier(CacheTierInterface):
 class DiskCacheTier(CacheTierInterface):
     """Disk-based cache tier with file storage."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.cache_dir = Path(config.disk_path)
+    def __init__(self, config: CacheConfig | None = None) -> None:
+        self.config = config or CacheConfig()
+        self.cache_dir = Path(self.config.disk_path)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
         self._metadata: dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
@@ -416,7 +416,7 @@ class DiskCacheTier(CacheTierInterface):
 
                 return entry
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Failed to read disk cache entry %s: %s", key_str, e)
                 return None
 
@@ -452,7 +452,7 @@ class DiskCacheTier(CacheTierInterface):
 
                 return True
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Failed to write disk cache entry %s: %s", key_str, e)
                 return False
 
@@ -473,7 +473,7 @@ class DiskCacheTier(CacheTierInterface):
 
                 self._metadata.clear()
                 return True
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to clear disk cache: %s", e)
                 return False
 
@@ -497,7 +497,7 @@ class DiskCacheTier(CacheTierInterface):
             seconds=self.config.disk_ttl_seconds,
         )
 
-    async def _update_metadata(self) -> None:
+    async def _update_metadata(self, key_str: str, entry: CacheEntry) -> None:
         """Update metadata file."""
         metadata = {
             "key": key_str,
@@ -525,7 +525,7 @@ class DiskCacheTier(CacheTierInterface):
                 metadata_path.unlink()
 
             return True
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.warning("Failed to remove disk cache file %s: %s", key_str, e)
             return False
 
@@ -542,19 +542,19 @@ class MultiTierCacheManager:
     - Compression and encryption support
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: CacheConfig | None = None) -> None:
+        self.config = config or CacheConfig()
         self.stats = CacheStats()
 
         # Initialize cache tiers
-        self.memory_tier = MemoryCacheTier(config)
-        self.disk_tier = DiskCacheTier(config)
+        self.memory_tier = MemoryCacheTier(self.config)
+        self.disk_tier = DiskCacheTier(self.config)
         self.distributed_tier: Any | None = None  # Redis tier (mock for now)
 
         # Initialize distributed tier if configured
-        if config.redis_url:
+        if self.config.redis_url:
             # In production: initialize Redis connection
-            logger.info("Redis caching configured: %s", config.redis_url)
+            logger.info("Redis caching configured: %s", self.config.redis_url)
 
         self._promotion_threshold = 3  # Access count for promotion
         self._demotion_threshold = 1800  # Seconds for demotion
@@ -722,7 +722,7 @@ class MultiTierCacheManager:
             },
         }
 
-    async def _consider_promotion(self) -> None:
+    async def _consider_promotion(self, entry: CacheEntry) -> None:
         """Consider promoting entry to higher tier."""
         # Already in memory tier (highest)
         if entry.tier == CacheTier.MEMORY:
@@ -733,7 +733,7 @@ class MultiTierCacheManager:
             await self.memory_tier.set(entry)
             self.stats.sets[CacheTier.MEMORY] += 1
 
-    def _update_response_time(self) -> None:
+    def _update_response_time(self, response_time: float) -> None:
         """Update average response time."""
         if self.stats.average_response_time == 0:
             self.stats.average_response_time = response_time

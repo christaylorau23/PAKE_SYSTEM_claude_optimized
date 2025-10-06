@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE System - Comprehensive Security Audit and Hardening Suite
@@ -5,14 +6,14 @@ Enterprise-grade security assessment and vulnerability analysis
 """
 
 import asyncio
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 import json
 import logging
+from pathlib import Path
 import re
 import subprocess
 import sys
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
-from pathlib import Path
 
 import aiohttp
 
@@ -104,7 +105,7 @@ class SecurityAuditor:
                                 ),
                             )
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.warning("Could not read %s: %s", env_file, e)
 
         # Check for .env files in git
@@ -125,8 +126,11 @@ class SecurityAuditor:
                         recommendation="Add .env* to .gitignore and remove from git history",
                     ),
                 )
-        except Exception:
-            pass  # Git not available or not a git repo
+        except Exception as e:
+
+            logger.debug(f"Exception in security_audit.py: {e}")
+
+            # Continue gracefully  # Git not available or not a git repo
 
     def check_dependency_security(self) -> None:
         """Check for vulnerable dependencies"""
@@ -176,7 +180,7 @@ class SecurityAuditor:
                                 ),
                             )
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.warning("Could not read %s: %s", req_file, e)
 
     def check_code_security(self) -> None:
@@ -226,7 +230,7 @@ class SecurityAuditor:
                             ),
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not read %s: %s", py_file, e)
 
         # Check JavaScript/TypeScript files
@@ -266,7 +270,7 @@ class SecurityAuditor:
                             ),
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not read %s: %s", js_file, e)
 
     def check_authentication_security(self) -> None:
@@ -356,7 +360,7 @@ class SecurityAuditor:
                         ),
                     )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not read server file: %s", e)
 
     def check_ssl_tls_security(self) -> None:
@@ -456,7 +460,7 @@ class SecurityAuditor:
                             ),
                         )
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.warning(
                         "Could not check permissions for %s: %s", file_path, e
                     )
@@ -509,7 +513,7 @@ class SecurityAuditor:
                             ),
                         )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Could not test API security: %s", e)
 
     def calculate_security_score(self) -> float:

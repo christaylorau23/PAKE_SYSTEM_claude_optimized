@@ -7,9 +7,12 @@ the gap between pure domain models and the database. This approach inverts
 the dependency: the ORM layer depends on the domain model, not the other way around.
 """
 
-import logging
 from datetime import datetime
+import logging
 
+import sqlalchemy
+import psycopg2
+import asyncpg
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -281,27 +284,27 @@ def start_mappers(self) -> None:
 
         logger.info("All domain model mappers initialized successfully")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error initializing mappers: %s", e)
         raise
 
 
-def create_all_tables(self) -> None:
+def create_all_tables(engine: sqlalchemy.Engine) -> None:
     """Create all tables in the database."""
     try:
         metadata.create_all(engine)
         logger.info("All database tables created successfully")
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         logger.error("Error creating database tables: %s", e)
         raise
 
 
-def drop_all_tables(self) -> None:
+def drop_all_tables(engine: sqlalchemy.Engine) -> None:
     """Drop all tables from the database."""
     try:
         metadata.drop_all(engine)
         logger.info("All database tables dropped successfully")
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         logger.error("Error dropping database tables: %s", e)
         raise
 

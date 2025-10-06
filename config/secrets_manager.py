@@ -2,12 +2,12 @@
 Supports multiple secret backends with fallback to environment variables.
 """
 
-import json
-import logging
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+import json
+import logging
+import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -203,7 +203,7 @@ class AWSSecretsManagerBackend(SecretBackend):
             logger.info("Retrieved secret %s from AWS Secrets Manager", secret_name)
             return secret_value
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to retrieve secret %s from AWS: %s", secret_name, e)
             return None
 
@@ -255,7 +255,7 @@ class HashiCorpVaultBackend(SecretBackend):
         except ImportError:
             logger.error("aiohttp not installed. Install with: pip install aiohttp")
             return None
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             logger.error("Vault request failed: %s", e)
             return None
 

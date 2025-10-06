@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     def parse_allowed_hosts(self) -> None:
         """Parse ALLOWED_HOSTS from string or list."""
         if isinstance(v, str):
-            return [host.strip() for host in v.split(",")]
+            return [host.strip() for host in self.v.split(",")]
         return v
 
     @validator("ENVIRONMENT")
@@ -83,10 +83,10 @@ class Settings(BaseSettings):
     def validate_log_level(self) -> None:
         """Validate log level setting."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        if v.upper() not in allowed_levels:
+        if self.v.upper() not in allowed_levels:
             msg = f"Log level must be one of: {allowed_levels}"
             raise ValueError(msg)
-        return v.upper()
+        return self.v.upper()
 
     class Config:
         env_file = ".env"

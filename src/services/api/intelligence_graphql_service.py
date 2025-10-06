@@ -1,3 +1,4 @@
+from typing import List
 """Intelligence GraphQL Service.
 
 FastAPI + GraphQL interface for unified querying across all knowledge stores
@@ -13,16 +14,20 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
-import logging
 from datetime import UTC, datetime
+import json
+import logging
 
-import strawberry
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 # FastAPI and GraphQL
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from graphene import Mutation
+import strawberry
 from strawberry.asgi import GraphQL
 
 from src.services.analytics.intelligence_insight_service import (
@@ -300,7 +305,7 @@ class Query:
 
             return items
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in knowledge search: %s", e)
             msg = f"Knowledge search failed: {str(e)}"
             raise Exception(msg)
@@ -348,7 +353,7 @@ class Query:
 
             return search_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in semantic search: %s", e)
             msg = f"Semantic search failed: {str(e)}"
             raise Exception(msg)
@@ -402,7 +407,7 @@ class Query:
 
             return insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting insights: %s", e)
             msg = f"Failed to retrieve insights: {str(e)}"
             raise Exception(msg)
@@ -461,7 +466,7 @@ class Query:
 
             return topic_evolutions
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting topic evolution: %s", e)
             msg = f"Failed to retrieve topic evolution: {str(e)}"
             raise Exception(msg)
@@ -488,7 +493,7 @@ class Query:
                 insight_service=insight_stats,
             )
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error getting service statistics: %s", e)
             msg = f"Failed to retrieve service statistics: {str(e)}"
             raise Exception(msg)
@@ -554,7 +559,7 @@ class Query:
                 response_time_ms=response_time,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in health check: %s", e)
             msg = f"Health check failed: {str(e)}"
             raise Exception(msg)
@@ -625,7 +630,7 @@ class Mutation:
                 relationships=relationships,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error adding knowledge item: %s", e)
             msg = f"Failed to add knowledge item: {str(e)}"
             raise Exception(msg)
@@ -733,7 +738,7 @@ class Mutation:
                 processing_time_ms=results["processing_time_ms"],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in comprehensive analysis: %s", e)
             msg = f"Comprehensive analysis failed: {str(e)}"
             raise Exception(msg)
@@ -751,7 +756,7 @@ class IntelligenceGraphQLService:
     and production-ready performance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, obsidian_vault_path: str, neo4j_uri: str, neo4j_user: str, neo4j_REDACTED_SECRET: str, postgres_url: str, cache_service: CacheService | None = None, host: str = "localhost", port: int = 8000) -> None:
         """Initialize the GraphQL service.
 
         Args:
@@ -880,7 +885,7 @@ class IntelligenceGraphQLService:
                     "timestamp": datetime.now(UTC).isoformat(),
                 }
 
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError) as e:
                 return JSONResponse(
                     status_code=500,
                     content={"status": "unhealthy", "error": str(e)},
@@ -934,7 +939,7 @@ class IntelligenceGraphQLService:
             logger.info("Intelligence GraphQL Service initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Intelligence GraphQL Service: %s", e)
             return False
 
@@ -971,7 +976,7 @@ class IntelligenceGraphQLService:
 
             logger.info("Intelligence GraphQL Service closed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error closing GraphQL service: %s", e)
 
 

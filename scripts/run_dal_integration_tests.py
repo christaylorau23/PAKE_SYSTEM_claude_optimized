@@ -72,7 +72,7 @@ class DALTestRunner:
             )
             return overall_success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Test suite failed with error: %s", e)
             return False
 
@@ -112,7 +112,7 @@ class DALTestRunner:
                 file_path.write_text("\n".join(lines))
                 logger.info("Annotated async tests in %s", file_path.name)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.warning("Could not annotate %s: %s", file_path.name, e)
 
     async def _run_dal_integration_tests(self) -> bool:
@@ -162,7 +162,7 @@ class DALTestRunner:
             }
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to run DAL integration tests: %s", e)
             self.test_results["dal_integration"] = {"status": "ERROR", "error": str(e)}
             return False
@@ -203,7 +203,7 @@ class DALTestRunner:
                         logger.error("Async tests in %s FAILED", test_file.name)
                         logger.error("Error: %s", result.stderr)
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.error("Failed to run %s: %s", test_file.name, e)
 
         success_rate = (success_count / total_count * 100) if total_count > 0 else 0
@@ -251,7 +251,7 @@ class DALTestRunner:
             self.test_results["coverage"] = {"status": "FAILED", "error": result.stderr}
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to generate coverage report: %s", e)
             self.test_results["coverage"] = {"status": "ERROR", "error": str(e)}
             return False
@@ -299,7 +299,7 @@ class DALTestRunner:
             }
             return False
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Failed to validate coverage threshold: %s", e)
             self.test_results["coverage_threshold"] = {
                 "status": "ERROR",
@@ -440,7 +440,7 @@ class DALTestRunner:
             logger.info("CI pipeline validation PASSED")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("CI validation failed: %s", e)
             return False
 
@@ -477,6 +477,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Test suite interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         sys.exit(1)

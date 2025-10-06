@@ -6,8 +6,8 @@ Validates and configures real API integrations for Phase 2B deployment
 
 import asyncio
 import os
-import sys
 from pathlib import Path
+import sys
 
 import aiohttp
 from dotenv import load_dotenv
@@ -43,7 +43,7 @@ def print_status(self) -> None:
 def print_header(self) -> None:
     """Print section header"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.CYAN}{title.center(60)}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.CYAN}{self.title.center(60)}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 60}{Colors.END}\n")
 
 
@@ -78,7 +78,7 @@ async def validate_firecrawl_api(api_key: str, base_url: str) -> tuple[bool, str
                 error_text = await response.text()
                 return False, f"HTTP {response.status}: {error_text[:200]}"
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         return False, f"Connection error: {str(e)}"
 
 
@@ -120,7 +120,7 @@ async def validate_pubmed_api(
                 error_text = await response.text()
                 return False, f"HTTP {response.status}: {error_text[:200]}"
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         return False, f"Connection error: {str(e)}"
 
 
@@ -144,7 +144,7 @@ async def validate_arxiv_api() -> tuple[bool, str]:
                 error_text = await response.text()
                 return False, f"HTTP {response.status}: {error_text[:200]}"
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         return False, f"Connection error: {str(e)}"
 
 
@@ -226,7 +226,7 @@ async def test_production_pipeline(self) -> None:
         print_status("ERROR", "Pipeline test failed")
         return False
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print_status("ERROR", f"Pipeline test error: {str(e)}")
         return False
 
@@ -412,5 +412,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print(f"\n{Colors.YELLOW}Setup interrupted by user{Colors.END}")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n{Colors.RED}Setup failed: {str(e)}{Colors.END}")

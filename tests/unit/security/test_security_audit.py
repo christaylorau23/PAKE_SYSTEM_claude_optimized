@@ -3,8 +3,8 @@ TDD Tests for Security Audit System
 Following Test-Driven Development principles
 """
 
-import os
 from datetime import UTC, datetime
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 

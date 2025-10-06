@@ -1,3 +1,4 @@
+config
 #!/usr/bin/env python3
 """
 PAKE System - Enterprise Deployment Tests
@@ -8,11 +9,11 @@ and production readiness validation.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
+from pathlib import Path
 import tempfile
 import time
-from datetime import UTC, datetime
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -288,8 +289,8 @@ class TestEnterpriseDeploymentOrchestrator:
         await orchestrator._perform_health_checks()
 
         # Check health status was recorded for all services
-        for service in orchestrator.config.services:
-            assert service.name in orchestrator.deployment_status.health_checks
+        for service in self.orchestrator.config.services:
+            assert service.name in self.orchestrator.deployment_status.health_checks
             health = orchestrator.deployment_status.health_checks[service.name]
             assert health.status == HealthCheckStatus.HEALTHY
             assert health.response_time_ms > 0
@@ -567,7 +568,7 @@ class TestEnterpriseDeploymentOrchestrator:
             assert not isinstance(result, Exception)
 
         # Verify health status is still intact
-        for service in orchestrator.config.services:
+        for service in self.orchestrator.config.services:
             assert service.name in orchestrator.deployment_status.health_checks
 
     # ========================================================================
@@ -622,11 +623,11 @@ class TestEnterpriseDeploymentOrchestrator:
         mock_service_manager.health_check.side_effect = mock_failing_health_check
 
         # Deploy and perform health checks
-        await orchestrator.deploy()
+        await self.orchestrator.deploy()
         await orchestrator._perform_health_checks()
 
         # Check health status
-        healthy_service = await orchestrator.get_service_health("test-service-1")
+        healthy_service = await self.orchestrator.get_service_health("test-service-1")
         unhealthy_service = await orchestrator.get_service_health("test-service-2")
 
         assert healthy_service.status == HealthCheckStatus.HEALTHY

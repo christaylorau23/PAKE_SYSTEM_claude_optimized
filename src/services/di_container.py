@@ -9,9 +9,9 @@ This container manages all service dependencies and provides:
 4. Circular dependency prevention
 """
 
-import logging
 from collections.abc import Callable
-from typing import Any, TypeVar
+import logging
+from typing import Any, Dict, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ServiceLifetime:
 class ServiceRegistration:
     """Service registration metadata."""
 
-    def __init__(self) -> None:
+    def __init__(self, interface: type[T], implementation: type[T] | None = None, lifetime: str = ServiceLifetime.TRANSIENT, factory: Callable[[], T] | None = None) -> None:
         self.interface = interface
         self.implementation = implementation
         self.lifetime = lifetime
@@ -156,7 +156,7 @@ class DIContainer:
             try:
                 # Try to resolve constructor dependencies
                 return self._resolve_dependencies(registration.implementation)  # type: ignore[return-value]
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Failed to resolve dependencies for %s: %s",
                     registration.implementation.__name__,

@@ -6,8 +6,8 @@ Tests the full omni-source pipeline with real APIs
 
 import asyncio
 import os
-import sys
 from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 
@@ -18,7 +18,7 @@ def safe_print(self) -> None:
         print(message)
     except UnicodeEncodeError:
         # Replace problematic characters
-        safe_message = message.encode("ascii", "replace").decode("ascii")
+        safe_message = self.message.encode("ascii", "replace").decode("ascii")
         print(safe_message)
 
 
@@ -110,7 +110,7 @@ async def test_production_pipeline(self) -> None:
                 safe_print(f"  - {error}")
         return False
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         safe_print(f"[ERROR] Test failed: {str(e)}")
         import traceback
 

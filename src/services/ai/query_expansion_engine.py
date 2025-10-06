@@ -6,16 +6,16 @@ Provides intelligent query expansion, synonym detection, context awareness,
 and AI-powered search optimization for enhanced content discovery.
 """
 
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass, field
+from enum import Enum
 import hashlib
 import json
 import logging
 import re
 import time
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -180,8 +180,8 @@ class QueryAnalyzer(ABC):
 class SimpleQueryAnalyzer(QueryAnalyzer):
     """Simple rule-based query analyzer."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Query type patterns
         self.query_patterns = {
@@ -388,8 +388,8 @@ class ExpansionTermGenerator(ABC):
 class SynonymExpander(ExpansionTermGenerator):
     """Synonym-based query expansion."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Pre-built synonym dictionary (in production, this would be more comprehensive)
         self.synonym_dict = {
@@ -473,8 +473,8 @@ class SynonymExpander(ExpansionTermGenerator):
 class SemanticExpander(ExpansionTermGenerator):
     """Semantic similarity-based query expansion."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Semantic relationships (simplified - in production would use word embeddings)
         self.semantic_clusters = {
@@ -607,8 +607,8 @@ class SemanticExpander(ExpansionTermGenerator):
 class ContextualExpander(ExpansionTermGenerator):
     """Context-aware query expansion."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
 
         # Contextual patterns for different query types
         self.contextual_patterns = {
@@ -695,7 +695,7 @@ class QueryExpansionEngine:
     Provides synonym detection, semantic expansion, and contextual enhancement.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
         self.config = config or ExpansionConfig()
 
         # Initialize components
@@ -799,7 +799,7 @@ class QueryExpansionEngine:
                         context,
                     )
                     all_expansions.extend(expansions)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning(
                         "Expander %s failed: %s",
                         expander.__class__.__name__,
@@ -863,7 +863,7 @@ class QueryExpansionEngine:
 
             return expanded_query
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Query expansion failed for '%s': %s", query, e)
             # Return minimal expansion on error
             return self._create_minimal_expansion(query, start_time, str(e))
@@ -919,36 +919,48 @@ class QueryExpansionEngine:
         if not expansions:
             return original_query
 
-        # Extract expansion terms
         expansion_terms = [exp.term for exp in expansions]
-
+        
         if strategy == ExpansionStrategy.SYNONYM_BASED:
-            # Add synonyms with OR logic
-            synonym_terms = [
-                exp.term
-                for exp in expansions
-                if exp.expansion_type in ["synonym", "word_synonym"]
-            ]
-            if synonym_terms:
-                return f"{original_query} {' '.join(synonym_terms)}"
-
+            return self._build_synonym_query(original_query, expansions)
         elif strategy == ExpansionStrategy.SEMANTIC_SIMILARITY:
-            # Add semantic terms
-            semantic_terms = [
-                exp.term for exp in expansions if exp.expansion_type == "semantic"
-            ]
-            if semantic_terms:
-                return f"{original_query} {' '.join(semantic_terms[:3])}"
-
+            return self._build_semantic_query(original_query, expansions)
         elif strategy == ExpansionStrategy.CONTEXTUAL_EXPANSION:
-            # Add contextual terms
-            contextual_terms = [
-                exp.term for exp in expansions if "contextual" in exp.expansion_type
-            ]
-            if contextual_terms:
-                return f"{original_query} {' '.join(contextual_terms[:2])}"
+            return self._build_contextual_query(original_query, expansions)
+        else:
+            return self._build_hybrid_query(original_query, expansions, expansion_terms)
 
-        # Default hybrid approach - mix all types
+    def _build_synonym_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+        """Build query with synonym-based expansion."""
+        synonym_terms = [
+            exp.term
+            for exp in expansions
+            if exp.expansion_type in ["synonym", "word_synonym"]
+        ]
+        if synonym_terms:
+            return f"{original_query} {' '.join(synonym_terms)}"
+        return original_query
+
+    def _build_semantic_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+        """Build query with semantic similarity expansion."""
+        semantic_terms = [
+            exp.term for exp in expansions if exp.expansion_type == "semantic"
+        ]
+        if semantic_terms:
+            return f"{original_query} {' '.join(semantic_terms[:3])}"
+        return original_query
+
+    def _build_contextual_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+        """Build query with contextual expansion."""
+        contextual_terms = [
+            exp.term for exp in expansions if "contextual" in exp.expansion_type
+        ]
+        if contextual_terms:
+            return f"{original_query} {' '.join(contextual_terms[:2])}"
+        return original_query
+
+    def _build_hybrid_query(self, original_query: str, expansions: list[ExpansionTerm], expansion_terms: list[str]) -> str:
+        """Build query with hybrid expansion approach."""
         high_confidence_terms = [exp.term for exp in expansions if exp.confidence > 0.7]
         if high_confidence_terms:
             return f"{original_query} {' '.join(high_confidence_terms[:4])}"

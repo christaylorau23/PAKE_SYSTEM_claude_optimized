@@ -3,12 +3,14 @@
 Comprehensive search history tracking with analytics and user preferences.
 """
 
-import logging
-import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict, List
+import uuid
+
+import pydantic
 
 from ..caching.redis_cache_service import RedisCacheService
 from ..database.postgresql_service import PostgreSQLService
@@ -85,7 +87,7 @@ class SearchHistoryService:
     - Export/import functionality
     """
 
-    def __init__(self) -> None:
+    def __init__(self, database_service: PostgreSQLService, cache_service: RedisCacheService) -> None:
         self.database_service = database_service
         self.cache_service = cache_service
         self.logger = logger
@@ -137,7 +139,7 @@ class SearchHistoryService:
             )
             return search_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to record search: %s", e)
             raise
 
@@ -216,7 +218,7 @@ class SearchHistoryService:
 
             return history_entries
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get search history: %s", e)
             raise
 
@@ -257,7 +259,7 @@ class SearchHistoryService:
 
             return history_entries
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to search history: %s", e)
             raise
 
@@ -284,7 +286,7 @@ class SearchHistoryService:
             )
             return new_status
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Failed to toggle favorite: %s", e)
             raise
 
@@ -310,7 +312,7 @@ class SearchHistoryService:
             logger.info("🏷️ Added tags %s to search %s", tags, search_id)
             return True
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Failed to add tags: %s", e)
             raise
 
@@ -331,7 +333,7 @@ class SearchHistoryService:
             logger.info("🗑️ Deleted search %s", search_id)
             return True
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Failed to delete search: %s", e)
             raise
 
@@ -356,7 +358,7 @@ class SearchHistoryService:
             )
             return deleted_count
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to clear history: %s", e)
             raise
 
@@ -402,7 +404,7 @@ class SearchHistoryService:
 
             return analytics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get analytics: %s", e)
             raise
 
@@ -436,7 +438,7 @@ class SearchHistoryService:
 
             return popular_queries
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get popular queries: %s", e)
             raise
 
@@ -494,7 +496,7 @@ class SearchHistoryService:
 
             return prefs
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get user preferences: %s", e)
             raise
 
@@ -524,7 +526,7 @@ class SearchHistoryService:
             logger.info("⚙️ Updated preferences for user %s", user_id)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update preferences: %s", e)
             raise
 
@@ -565,7 +567,7 @@ class SearchHistoryService:
             )
             return export_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to export user data: %s", e)
             raise
 

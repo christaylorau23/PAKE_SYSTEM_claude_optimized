@@ -4,7 +4,10 @@ Manages dependencies and breaks circular imports through proper injection.
 """
 
 import logging
-from typing import Any, TypeVar
+from typing import Any, Dict, TypeVar, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .IngestionOrchestratorRefactored import IngestionOrchestratorRefactored
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,7 @@ def register_ingestion_services() -> None:
     logger.info("Ingestion services registered in DI container")
 
 
-def get_orchestrator_with_injection() -> "IngestionOrchestratorRefactored":
+def get_orchestrator_with_injection() -> IngestionOrchestratorRefactored:
     """Get orchestrator instance with proper dependency injection."""
     from .IngestionOrchestratorRefactored import IngestionOrchestratorRefactored
     from .interfaces import (

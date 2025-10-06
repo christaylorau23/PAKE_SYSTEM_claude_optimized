@@ -9,9 +9,9 @@ This service demonstrates the refactored architecture by:
 4. Being easily testable with mock dependencies
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict
 
 from ..domain.interfaces import (
     ServiceResult,
@@ -29,7 +29,7 @@ class UserService:
     Dependencies: Injected through constructor (Dependency Injection)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, user_repository: Any, auth_service: Any, notification_service: Any) -> None:
         """Initialize UserService with injected dependencies."""
         self.user_repository = user_repository
         self.auth_service = auth_service
@@ -113,7 +113,7 @@ class UserService:
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create user %s: %s", email, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"User creation failed: {str(e)}"
@@ -154,7 +154,7 @@ class UserService:
                 },
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to get user profile %s: %s", user_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"Profile retrieval failed: {str(e)}"
@@ -205,7 +205,7 @@ class UserService:
                 },
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to update user profile %s: %s", user_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED, error=f"Profile update failed: {str(e)}"
@@ -244,7 +244,7 @@ class UserService:
                 metadata={"count": len(user_data)},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get users for tenant %s: %s", tenant_id, e)
             return ServiceResult(
                 status=ServiceStatus.FAILED,
@@ -285,6 +285,6 @@ class UserService:
 class ValidationResult:
     """Simple validation result container."""
 
-    def __init__(self) -> None:
+    def __init__(self, is_valid: bool, error: str | None = None) -> None:
         self.is_valid = is_valid
         self.error = error

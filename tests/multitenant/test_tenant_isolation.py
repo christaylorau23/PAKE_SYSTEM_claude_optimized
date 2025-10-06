@@ -5,8 +5,8 @@ Comprehensive testing for tenant isolation and data leakage prevention.
 """
 
 import asyncio
-import uuid
 from datetime import UTC, datetime
+import uuid
 
 import pytest
 
@@ -44,14 +44,14 @@ class TestTenantIsolation:
     @pytest.fixture
     async def test_tenants(self) -> None:
         """Create test tenants"""
-        tenant1 = await db_service.create_tenant(
+        tenant1 = await self.db_service.create_tenant(
             name="test-tenant-1",
             display_name="Test Tenant 1",
             domain="test1.pake.com",
             plan="basic",
         )
 
-        tenant2 = await db_service.create_tenant(
+        tenant2 = await self.db_service.create_tenant(
             name="test-tenant-2",
             display_name="Test Tenant 2",
             domain="test2.pake.com",
@@ -66,7 +66,7 @@ class TestTenantIsolation:
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
 
-        user1 = await db_service.create_user(
+        user1 = await self.db_service.create_user(
             tenant_id=tenant1_id,
             username="user1",
             email="user1@test1.pake.com",
@@ -74,7 +74,7 @@ class TestTenantIsolation:
             full_name="User 1",
         )
 
-        user2 = await db_service.create_user(
+        user2 = await self.db_service.create_user(
             tenant_id=tenant2_id,
             username="user2",
             email="user2@test2.pake.com",
@@ -93,7 +93,7 @@ class TestTenantIsolation:
         user2_id = test_users[1]["id"]
 
         # Create search history for tenant 1
-        search1_id = await db_service.save_search_history(
+        search1_id = await self.db_service.save_search_history(
             tenant_id=tenant1_id,
             user_id=user1_id,
             query="machine learning",
@@ -103,7 +103,7 @@ class TestTenantIsolation:
         )
 
         # Create search history for tenant 2
-        search2_id = await db_service.save_search_history(
+        search2_id = await self.db_service.save_search_history(
             tenant_id=tenant2_id,
             user_id=user2_id,
             query="artificial intelligence",
@@ -123,12 +123,12 @@ class TestTenantIsolation:
         tenant2_id = test_tenants[1]["id"]
 
         # Get users for tenant 1
-        tenant1_users = await db_service.get_tenant_users(tenant1_id)
+        tenant1_users = await self.db_service.get_tenant_users(tenant1_id)
         assert len(tenant1_users) == 1
         assert tenant1_users[0]["tenant_id"] == tenant1_id
 
         # Get users for tenant 2
-        tenant2_users = await db_service.get_tenant_users(tenant2_id)
+        tenant2_users = await self.db_service.get_tenant_users(tenant2_id)
         assert len(tenant2_users) == 1
         assert tenant2_users[0]["tenant_id"] == tenant2_id
 
@@ -143,13 +143,13 @@ class TestTenantIsolation:
         tenant2_id = test_tenants[1]["id"]
 
         # Get search history for tenant 1
-        tenant1_searches = await db_service.get_tenant_search_history(tenant1_id)
+        tenant1_searches = await self.db_service.get_tenant_search_history(tenant1_id)
         assert len(tenant1_searches) == 1
         assert tenant1_searches[0]["tenant_id"] == tenant1_id
         assert tenant1_searches[0]["query"] == "machine learning"
 
         # Get search history for tenant 2
-        tenant2_searches = await db_service.get_tenant_search_history(tenant2_id)
+        tenant2_searches = await self.db_service.get_tenant_search_history(tenant2_id)
         assert len(tenant2_searches) == 1
         assert tenant2_searches[0]["tenant_id"] == tenant2_id
         assert tenant2_searches[0]["query"] == "artificial intelligence"
@@ -166,11 +166,11 @@ class TestTenantIsolation:
 
         # Try to get user1 from tenant1 using tenant2 context
         # This should return None (no cross-tenant access)
-        user_from_wrong_tenant = await db_service.get_user_by_id(tenant2_id, user1_id)
+        user_from_wrong_tenant = await self.db_service.get_user_by_id(tenant2_id, user1_id)
         assert user_from_wrong_tenant is None
 
         # Verify user1 is only accessible from tenant1
-        user_from_correct_tenant = await db_service.get_user_by_id(tenant1_id, user1_id)
+        user_from_correct_tenant = await self.db_service.get_user_by_id(tenant1_id, user1_id)
         assert user_from_correct_tenant is not None
         assert user_from_correct_tenant["id"] == user1_id
 
@@ -181,7 +181,7 @@ class TestTenantIsolation:
         tenant2_id = test_tenants[1]["id"]
 
         # Get analytics for tenant 1
-        tenant1_analytics = await db_service.get_tenant_search_analytics(
+        tenant1_analytics = await self.db_service.get_tenant_search_analytics(
             tenant1_id,
             days=1,
         )
@@ -189,7 +189,7 @@ class TestTenantIsolation:
         assert tenant1_analytics["total_searches"] == 1
 
         # Get analytics for tenant 2
-        tenant2_analytics = await db_service.get_tenant_search_analytics(
+        tenant2_analytics = await self.db_service.get_tenant_search_analytics(
             tenant2_id,
             days=1,
         )
@@ -237,12 +237,12 @@ class TestTenantIsolation:
         invalid_tenant_id = str(uuid.uuid4())
 
         # Test valid tenant context
-        tenant_data = await db_service.get_tenant_by_id(tenant1_id)
+        tenant_data = await self.db_service.get_tenant_by_id(tenant1_id)
         assert tenant_data is not None
         assert tenant_data["id"] == tenant1_id
 
         # Test invalid tenant context
-        invalid_tenant_data = await db_service.get_tenant_by_id(invalid_tenant_id)
+        invalid_tenant_data = await self.db_service.get_tenant_by_id(invalid_tenant_id)
         assert invalid_tenant_data is None
 
     @pytest.mark.asyncio
@@ -267,27 +267,27 @@ class TestTenantIsolation:
         tenant2_id = test_tenants[1]["id"]
 
         # Create resource usage for tenant 1
-        await db_service.log_tenant_activity(
+        await self.db_service.log_tenant_activity(
             tenant_id=tenant1_id,
             activity_type="api_call",
             activity_data={"endpoint": "/api/search", "method": "POST"},
         )
 
         # Create resource usage for tenant 2
-        await db_service.log_tenant_activity(
+        await self.db_service.log_tenant_activity(
             tenant_id=tenant2_id,
             activity_type="api_call",
             activity_data={"endpoint": "/api/analytics", "method": "GET"},
         )
 
         # Get activity for tenant 1
-        tenant1_activity = await db_service.get_tenant_activity(tenant1_id)
+        tenant1_activity = await self.db_service.get_tenant_activity(tenant1_id)
         assert len(tenant1_activity) == 1
         assert tenant1_activity[0]["tenant_id"] == tenant1_id
         assert tenant1_activity[0]["activity_type"] == "api_call"
 
         # Get activity for tenant 2
-        tenant2_activity = await db_service.get_tenant_activity(tenant2_id)
+        tenant2_activity = await self.db_service.get_tenant_activity(tenant2_id)
         assert len(tenant2_activity) == 1
         assert tenant2_activity[0]["tenant_id"] == tenant2_id
         assert tenant2_activity[0]["activity_type"] == "api_call"
@@ -301,14 +301,14 @@ class TestTenantIsolation:
         tenant1_id = test_tenants[0]["id"]
 
         # Test active tenant
-        tenant_data = await db_service.get_tenant_by_id(tenant1_id)
+        tenant_data = await self.db_service.get_tenant_by_id(tenant1_id)
         assert tenant_data["status"] == "active"
 
         # Suspend tenant
-        await db_service.update_tenant_status(tenant1_id, "suspended")
+        await self.db_service.update_tenant_status(tenant1_id, "suspended")
 
         # Verify status update
-        updated_tenant = await db_service.get_tenant_by_id(tenant1_id)
+        updated_tenant = await self.db_service.get_tenant_by_id(tenant1_id)
         assert updated_tenant["status"] == "suspended"
 
     @pytest.mark.asyncio
@@ -318,8 +318,8 @@ class TestTenantIsolation:
         tenant2_id = test_tenants[1]["id"]
 
         # Get tenant data
-        tenant1_data = await db_service.get_tenant_by_id(tenant1_id)
-        tenant2_data = await db_service.get_tenant_by_id(tenant2_id)
+        tenant1_data = await self.db_service.get_tenant_by_id(tenant1_id)
+        tenant2_data = await self.db_service.get_tenant_by_id(tenant2_id)
 
         # Verify plan assignments
         assert tenant1_data["plan"] == "basic"
@@ -340,7 +340,7 @@ class TestTenantIsolation:
         start_time = datetime.now(UTC)
 
         for i in range(10):
-            await db_service.create_user(
+            await self.db_service.create_user(
                 tenant_id=tenant1_id,
                 username=f"perf_user_{i}",
                 email=f"perf_user_{i}@test1.pake.com",
@@ -349,7 +349,7 @@ class TestTenantIsolation:
             )
 
         # Query users with tenant filter
-        users = await db_service.get_tenant_users(tenant1_id)
+        users = await self.db_service.get_tenant_users(tenant1_id)
 
         end_time = datetime.now(UTC)
         query_time = (end_time - start_time).total_seconds()
@@ -367,7 +367,7 @@ class TestTenantIsolation:
         async def create_users_for_tenant(self) -> None:
             """Create users for a specific tenant"""
             for i in range(count):
-                await db_service.create_user(
+                await self.db_service.create_user(
                     tenant_id=tenant_id,
                     username=f"concurrent_user_{i}",
                     email=f"concurrent_user_{i}@{tenant_id}.com",
@@ -382,8 +382,8 @@ class TestTenantIsolation:
         )
 
         # Verify isolation maintained
-        tenant1_users = await db_service.get_tenant_users(tenant1_id)
-        tenant2_users = await db_service.get_tenant_users(tenant2_id)
+        tenant1_users = await self.db_service.get_tenant_users(tenant1_id)
+        tenant2_users = await self.db_service.get_tenant_users(tenant2_id)
 
         assert len(tenant1_users) == 6  # 1 original + 5 new
         assert len(tenant2_users) == 6  # 1 original + 5 new
@@ -400,23 +400,23 @@ class TestTenantIsolation:
     async def test_empty_tenant_data(self) -> None:
         """Test handling of empty tenant data"""
         # Create tenant with no data
-        empty_tenant = await db_service.create_tenant(
+        empty_tenant = await self.db_service.create_tenant(
             name="empty-tenant",
             display_name="Empty Tenant",
             plan="basic",
         )
 
         # Verify empty tenant can be queried
-        tenant_data = await db_service.get_tenant_by_id(empty_tenant["id"])
+        tenant_data = await self.db_service.get_tenant_by_id(empty_tenant["id"])
         assert tenant_data is not None
         assert tenant_data["name"] == "empty-tenant"
 
         # Verify no users
-        users = await db_service.get_tenant_users(empty_tenant["id"])
+        users = await self.db_service.get_tenant_users(empty_tenant["id"])
         assert len(users) == 0
 
         # Verify no search history
-        searches = await db_service.get_tenant_search_history(empty_tenant["id"])
+        searches = await self.db_service.get_tenant_search_history(empty_tenant["id"])
         assert len(searches) == 0
 
     @pytest.mark.asyncio
@@ -426,7 +426,7 @@ class TestTenantIsolation:
         user1_id = test_users[0]["id"]
 
         # Create some data for tenant 1
-        await db_service.save_search_history(
+        await self.db_service.save_search_history(
             tenant_id=tenant1_id,
             user_id=user1_id,
             query="test query",
@@ -436,18 +436,18 @@ class TestTenantIsolation:
         )
 
         # Verify data exists
-        users = await db_service.get_tenant_users(tenant1_id)
+        users = await self.db_service.get_tenant_users(tenant1_id)
         assert len(users) == 1
 
-        searches = await db_service.get_tenant_search_history(tenant1_id)
+        searches = await self.db_service.get_tenant_search_history(tenant1_id)
         assert len(searches) == 1
 
         # Delete tenant (this would cascade delete all related data)
         # Note: In a real implementation, this would be handled by database constraints
-        await db_service.update_tenant_status(tenant1_id, "deleted")
+        await self.db_service.update_tenant_status(tenant1_id, "deleted")
 
         # Verify tenant status updated
-        tenant_data = await db_service.get_tenant_by_id(tenant1_id)
+        tenant_data = await self.db_service.get_tenant_by_id(tenant1_id)
         assert tenant_data["status"] == "deleted"
 
 

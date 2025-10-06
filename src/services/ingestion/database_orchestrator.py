@@ -4,11 +4,15 @@ Extends the Redis cached orchestrator with PostgreSQL integration for comprehens
 """
 
 import asyncio
-import logging
-import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
+
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 from ..database.postgresql_service import (
     DatabaseConfig,
@@ -54,7 +58,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
     - Search history and saved searches support
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: DatabaseIngestionConfig, **kwargs: Any) -> None:
         # Initialize parent cached orchestrator
         super().__init__(config, **kwargs)
 
@@ -84,7 +88,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
                 logger.info("✅ PostgreSQL database service initialized successfully")
 
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.warning(
                     "⚠️ Failed to initialize PostgreSQL, continuing without database: %s",
                     e,
@@ -136,7 +140,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                     UTC
                 ).isoformat()
 
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.error("Failed to save search history: %s", e)
                 self.database_metrics["database_errors"] += 1
 
@@ -146,7 +150,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                 await self._save_performance_metrics(result)
                 self.database_metrics["metrics_saved"] += 1
 
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.error("Failed to save system metrics: %s", e)
                 self.database_metrics["database_errors"] += 1
 
@@ -255,7 +259,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             logger.info("Saved user search: %s for user %s", name, user_id)
             return search_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to save user search: %s", e)
             return None
 
@@ -275,7 +279,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
                 limit=limit,
                 offset=offset,
             )
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get user search history: %s", e)
             return []
 
@@ -286,7 +290,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
         try:
             return await self.database_service.get_user_saved_searches(user_id)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get user saved searches: %s", e)
             return []
 
@@ -307,7 +311,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
             return analytics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get search analytics: %s", e)
             return {"error": str(e)}
 
@@ -322,7 +326,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
         try:
             return await self.database_service.get_popular_searches(limit, days)
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get popular searches: %s", e)
             return []
 
@@ -347,7 +351,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             try:
                 db_health = await self.database_service.health_check()
                 stats["database"]["health"] = db_health
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 stats["database"]["health"] = {"status": "error", "error": str(e)}
 
         # Get recent analytics if available
@@ -355,7 +359,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             try:
                 analytics = await self.get_search_analytics(days=1)  # Last 24 hours
                 stats["recent_analytics"] = analytics
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 stats["recent_analytics"] = {"error": str(e)}
 
         return stats

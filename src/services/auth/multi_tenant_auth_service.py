@@ -3,16 +3,19 @@
 Enterprise-grade authentication with tenant isolation and role-based access control.
 """
 
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import logging
 import secrets
 import time
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict, List
 
-import jwt
+import sqlalchemy
+import psycopg2
+import asyncpg
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
 from src.middleware.tenant_context import get_current_tenant_id
@@ -188,7 +191,7 @@ class MultiTenantAuthService:
     - Audit logging
     """
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService, config: AuthConfig | None = None) -> None:
         self.db_service = db_service
         self.config = config or AuthConfig()
         self.REDACTED_SECRET_hasher = PasswordHasher()
@@ -383,7 +386,7 @@ class MultiTenantAuthService:
                 permissions=permissions,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Authentication error: %s", e)
             return LoginResponse(success=False, error="Authentication service error")
 
@@ -452,7 +455,7 @@ class MultiTenantAuthService:
             return LoginResponse(success=False, error="Refresh token has expired")
         except InvalidTokenError:
             return LoginResponse(success=False, error="Invalid refresh token")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Token refresh error: %s", e)
             return LoginResponse(success=False, error="Token refresh service error")
 
@@ -486,7 +489,7 @@ class MultiTenantAuthService:
 
             return {"success": True, "message": "Successfully logged out"}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Logout error: %s", e)
             return {"success": False, "error": "Logout service error"}
 
@@ -532,7 +535,7 @@ class MultiTenantAuthService:
             return {"valid": False, "error": "Token has expired"}
         except InvalidTokenError:
             return {"valid": False, "error": "Invalid token"}
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Token validation error: %s", e)
             return {"valid": False, "error": "Token validation service error"}
 
@@ -597,7 +600,7 @@ class MultiTenantAuthService:
 
             return {"success": True, "message": "Password changed successfully"}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Password change error: %s", e)
             return {"success": False, "error": "Password change service error"}
 
@@ -833,7 +836,7 @@ class MultiTenantAuthService:
                 "service": "multi_tenant_auth",
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

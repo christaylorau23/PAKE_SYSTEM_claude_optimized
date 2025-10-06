@@ -1,14 +1,16 @@
+from datetime import UTC, datetime
+from functools import wraps
 import hashlib
 import os
+from pathlib import Path
 
 # Import structured logger
 import sys
 import threading
-import uuid
-from datetime import UTC, datetime
-from functools import wraps
-from pathlib import Path
 from typing import Any
+import uuid
+import logging
+logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from utils.logger import get_logger
@@ -76,11 +78,11 @@ def with_error_handling(self) -> None:
     def wrapper(self) -> None:
         try:
             return func(self, *args, **kwargs)
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Error in %s",
-                func.__name__,
-                method=func.__name__,
+                self.func.__name__,
+                method=self.func.__name__,
                 args_count=len(args),
                 error=str(error),
             )
@@ -339,7 +341,7 @@ class NoteRepository:
                             self.cache.set(cache_key, note_data)
                             return {**note_data, "from_cache": False}
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     self.logger.warning(
                         "Error reading note file",
                         file_path=str(file_path),
@@ -403,7 +405,7 @@ class NoteRepository:
                 if note_data:
                     notes.append(note_data)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 self.logger.warning(
                     "Error parsing note file", file_path=str(file_path), error=str(e)
                 )
@@ -528,7 +530,7 @@ class NoteRepository:
 
                 return True
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 self.logger.error(
                     "Failed to delete note file",
                     note_id=note_id,
@@ -588,7 +590,7 @@ class NoteRepository:
                             if len(results) >= limit:
                                 break
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     self.logger.warning(
                         "Error searching note file",
                         file_path=str(file_path),
@@ -654,7 +656,7 @@ class NoteRepository:
                 "metadata": metadata,
             }
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error(
                 "Error parsing note file", file_path=str(file_path), error=str(e)
             )
@@ -721,7 +723,7 @@ class NoteRepository:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

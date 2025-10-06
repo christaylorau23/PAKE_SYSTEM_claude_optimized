@@ -3,14 +3,14 @@
 Tracks response times, error rates, and availability for all external APIs.
 """
 
-import logging
-import statistics
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import statistics
+import time
+from typing import Any, Dict
 
 
 class HealthStatus(Enum):
@@ -61,7 +61,7 @@ class APIHealthMonitor:
     - Health score calculation
     """
 
-    def __init__(self) -> None:
+    def __init__(self, max_history_hours: int = 24) -> None:
         self.logger = logging.getLogger(__name__)
         self.max_history_hours = max_history_hours
         self.max_history_seconds = max_history_hours * 3600

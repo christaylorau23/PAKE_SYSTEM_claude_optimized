@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
+import logging
+import aiohttp
+logger = logging.getLogger(__name__)
 """PAKE+ Standardized API Patterns
 Enterprise-grade API patterns with foundation component integration.
 """
 
 import asyncio
-import time
-import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import time
+from typing import Any, Dict
+import uuid
 
-import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # from fastapi.middleware.base import BaseHTTPMiddleware  # Not needed, using starlette
 from pydantic import BaseModel, Field, validator
+import redis.asyncio as redis
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 
@@ -151,7 +154,7 @@ class RateLimitInfo(BaseModel):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for comprehensive request/response logging."""
 
-    def __init__(self) -> None:
+    def __init__(self, app: FastAPI, config: APIConfig) -> None:
         super().__init__(app)
         self.config = config
         self.logger = get_logger(service_name="api-request-logging")
@@ -191,8 +194,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 if body:
                     request_data["body_size"] = len(body)
                     # Don't log full body for security, just size
-            except Exception:
-                pass
+            except Exception as e:
+
+                logger.debug(f"Exception in api_patterns.py: {e}")
+
+                # Continue gracefully
 
         request_logger.http("Request started", **request_data)
 
@@ -203,7 +209,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             error = e
             # Create error response
             response = JSONResponse(
@@ -265,7 +271,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware with Redis backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, app: FastAPI, config: APIConfig, redis_client: redis.Redis) -> None:
         super().__init__(app)
         self.config = config
         self.redis_client = redis_client
@@ -373,7 +379,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 reset=datetime.fromtimestamp(current_time + 60, tz=UTC),
             )
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("Rate limit check failed", error=e)
             # Allow request if Redis is down
             return True, RateLimitInfo(
@@ -387,7 +393,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class EnhancedAPIFactory:
     """Factory for creating standardized API patterns with foundation integration."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: APIConfig, redis_url: str) -> None:
         self.config = config
         self.redis_url = redis_url
 
@@ -472,11 +478,11 @@ class EnhancedAPIFactory:
 
         return app
 
-    def _add_exception_handlers(self) -> None:
+    def _add_exception_handlers(self, app: FastAPI) -> None:
         """Add standardized exception handlers."""
 
         @app.exception_handler(PAKEException)
-        async def pake_exception_handler(self) -> None:
+        async def pake_exception_handler(request: Request, exc: PAKEException) -> JSONResponse:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -499,7 +505,7 @@ class EnhancedAPIFactory:
             )
 
         @app.exception_handler(HTTPException)
-        async def http_exception_handler(self) -> None:
+        async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -516,11 +522,11 @@ class EnhancedAPIFactory:
                 ).dict(),
             )
 
-    def _add_standard_endpoints(self) -> None:
+    def _add_standard_endpoints(self, app: FastAPI) -> None:
         """Add standard system endpoints."""
 
         @app.get("/health", response_model=APIResponse, tags=["System"])
-        async def health_check(self) -> None:
+        async def health_check() -> APIResponse:
             """System health check endpoint."""
             try:
                 # Check Redis connectivity
@@ -576,13 +582,19 @@ class EnhancedAPIFactory:
                 },
             )
 
-    def create_crud_endpoints(self) -> None:
+    def create_crud_endpoints(
+        self,
+        app: FastAPI,
+        model_class: type[BaseModel],
+        prefix: str,
+        tags: list[str] | None = None,
+    ) -> None:
         """Create standardized CRUD endpoints with caching and security."""
 
         @app.post(f"{prefix}/", response_model=APIResponse, tags=tags or [])
         @secure_endpoint() if self.security_guard else lambda x: x
         @with_error_handling("create_resource")
-        async def create_resource(self) -> None:
+        async def create_resource(item: model_class, request: Request) -> APIResponse:
             """Create a new resource."""
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
@@ -615,7 +627,7 @@ class EnhancedAPIFactory:
 
         @app.get(f"{prefix}/{{item_id}}", response_model=APIResponse, tags=tags or [])
         @with_error_handling("get_resource")
-        async def get_resource(self) -> None:
+        async def get_resource(item_id: str, request: Request) -> APIResponse:
             """Get a resource by ID with caching."""
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
@@ -671,7 +683,7 @@ class TaskItem(BaseModel):
     completed: bool = Field(default=False)
 
     @validator("title")
-    def title_must_not_be_empty(self) -> None:
+    def title_must_not_be_empty(cls, v: str) -> str:
         if not v.strip():
             msg = "Title cannot be empty"
             raise ValueError(msg)
@@ -724,7 +736,7 @@ if __name__ == "__main__":
             # Test would continue with actual HTTP requests in a real scenario
             print("SUCCESS: API patterns validation complete")
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"ERROR: API patterns test failed: {e}")
             import traceback
 

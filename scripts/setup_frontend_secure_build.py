@@ -6,9 +6,9 @@ This script ensures a deterministic, secure, and reproducible build process.
 
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -50,7 +50,7 @@ class FrontendBuildManager:
             logger.info("✅ yarn.lock files generated successfully")
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("❌ Failed to generate yarn.lock: %s", e)
             return False
 
@@ -153,7 +153,7 @@ class FrontendBuildManager:
             logger.info("✅ Build dependencies resolved")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Failed to resolve build dependencies: %s", e)
             return False
 
@@ -244,7 +244,7 @@ class FrontendBuildManager:
             logger.info("✅ Build process validation passed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Build process validation failed: %s", e)
             return False
 
@@ -364,7 +364,7 @@ async def main(self) -> None:
         logger.error("💥 Some setup steps failed!")
         return 1
 
-    except Exception as e:
+    except (pydantic.ValidationError, ValueError) as e:
         logger.error("Unexpected error: %s", e)
         return 1
 

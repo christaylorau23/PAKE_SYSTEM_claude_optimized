@@ -7,9 +7,9 @@ Validates poetry.lock file integrity and dependency consistency
 import argparse
 import hashlib
 import json
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
@@ -46,7 +46,7 @@ class PoetryLockValidator:
 
             return True, "poetry.lock file format is valid"
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"Error reading poetry.lock file: {e}"
 
     def validate_poetry_check(self) -> tuple[bool, str]:
@@ -66,7 +66,7 @@ class PoetryLockValidator:
 
         except subprocess.TimeoutExpired:
             return False, "poetry check timed out"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Error running poetry check: {e}"
 
     def validate_dependency_consistency(self) -> tuple[bool, str]:
@@ -107,7 +107,7 @@ class PoetryLockValidator:
 
         except subprocess.TimeoutExpired:
             return False, "Dependency consistency check timed out"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Error checking dependency consistency: {e}"
 
     def _extract_packages_from_lock(self) -> set:
@@ -130,7 +130,7 @@ class PoetryLockValidator:
                     packages.add(package_name)
                     in_package_section = False
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Warning: Error parsing lock file: {e}")
 
         return packages
@@ -144,7 +144,7 @@ class PoetryLockValidator:
             file_hash = hashlib.sha256(content).hexdigest()
             return True, f"Lock file hash: {file_hash[:16]}..."
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             return False, f"Error calculating lock file hash: {e}"
 
     def validate_pyproject_consistency(self) -> tuple[bool, str]:
@@ -172,7 +172,7 @@ class PoetryLockValidator:
 
         except subprocess.TimeoutExpired:
             return False, "pyproject.toml consistency check timed out"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Error checking pyproject.toml consistency: {e}"
 
     def run_comprehensive_validation(self) -> dict[str, tuple[bool, str]]:

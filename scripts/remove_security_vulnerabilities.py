@@ -7,9 +7,9 @@ CRITICAL: This script removes security vulnerabilities identified in the audit
 """
 
 import os
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 class SecurityVulnerabilityRemover:
@@ -74,7 +74,7 @@ class SecurityVulnerabilityRemover:
                 if re.search(pattern, content):
                     return True
             return False
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error reading {file_path}: {e}")
             return False
 
@@ -114,7 +114,7 @@ class SecurityVulnerabilityRemover:
 
             return False
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"❌ Error processing {file_path}: {e}")
             return False
 
@@ -131,7 +131,7 @@ class SecurityVulnerabilityRemover:
                 with open(backup_path, "w", encoding="utf-8") as dst:
                     dst.write(src.read())
             return backup_path
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Warning: Could not create backup for {file_path}: {e}")
             return file_path
 

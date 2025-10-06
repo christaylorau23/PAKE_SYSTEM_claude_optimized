@@ -1,9 +1,11 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """Fix logging f-string issues - migrate to structured logging."""
 
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 
 
 def fix_file(file_path: Path) -> tuple[bool, int]:
@@ -86,7 +88,7 @@ def fix_file(file_path: Path) -> tuple[bool, int]:
 
         return False, 0
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error processing {file_path}: {e}")
         return False, 0
 

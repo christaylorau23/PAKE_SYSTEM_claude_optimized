@@ -9,9 +9,9 @@ Handles:
 - Category and subject filtering
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from ..ingestion.arxiv_enhanced_service import ArxivEnhancedService, ArxivSearchQuery
 from ..messaging.message_bus import MessageBus
@@ -28,7 +28,7 @@ class ArXivWorker(BaseWorkerAgent):
     for comprehensive academic content retrieval with cognitive assessment.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, worker_id: str | None = None, message_bus: MessageBus | None = None) -> None:
         """Initialize ArXiv worker."""
         # Define worker capabilities
         capabilities = [
@@ -204,7 +204,7 @@ class ArXivWorker(BaseWorkerAgent):
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ArXiv worker task processing error: %s", e)
             return {
                 "success": False,
@@ -228,7 +228,7 @@ class ArXivWorker(BaseWorkerAgent):
 
         return valid_categories
 
-    def _enhance_content_metadata(self) -> None:
+    def _enhance_content_metadata(self, content_item: Any, plan_context: Dict[str, Any], source_data: Dict[str, Any], cognitive_applied: bool) -> None:
         """Enhance content item with ArXiv-specific metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
@@ -300,7 +300,7 @@ class ArXivWorker(BaseWorkerAgent):
                     test_result.error,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ArXivWorker %s service test failed: %s", self.worker_id, e)
 
     async def _on_stop(self) -> None:
@@ -335,7 +335,7 @@ class ArXivWorker(BaseWorkerAgent):
                 arxiv_health["arxiv_service_status"] = "degraded"
                 arxiv_health["arxiv_service_error"] = test_result.error
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             arxiv_health["arxiv_service_status"] = "unhealthy"
             arxiv_health["arxiv_service_error"] = str(e)
 

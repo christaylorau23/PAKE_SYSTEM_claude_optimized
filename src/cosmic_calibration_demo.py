@@ -7,11 +7,11 @@ implementing the complete "Cosmic Calibration" protocol.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import logging
+from pathlib import Path
 import signal
 import sys
-from datetime import UTC, datetime
-from pathlib import Path
 
 from services.cognitive.cosmic_calibration_coordinator import (
     CosmicCalibrationCoordinator,
@@ -121,7 +121,7 @@ class CosmicCalibrationDemo:
 
         return logger
 
-    def _signal_handler(self) -> None:
+    def _signal_handler(self, signum: int) -> None:
         """Handle graceful shutdown signals."""
         self.logger.info("Received signal %s, initiating graceful shutdown...", signum)
         self.demo_active = False
@@ -155,7 +155,7 @@ class CosmicCalibrationDemo:
             self.logger.error("❌ Failed to initialize Cosmic Calibration Protocol")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Demo initialization failed: %s", e)
             return False
 
@@ -203,7 +203,7 @@ class CosmicCalibrationDemo:
                 if demo_phase <= 5:
                     await asyncio.sleep(15)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error(
                     "❌ Error in demonstration phase %s: %s", demo_phase, e
                 )
@@ -455,7 +455,7 @@ class CosmicCalibrationDemo:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Demo failed: %s", e)
             return False
 
@@ -483,7 +483,7 @@ class CosmicCalibrationDemo:
                 total_cycles = len(self.coordinator.system_metrics_history)
                 self.logger.info("🔄 Total Optimization Cycles: %s", total_cycles)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.warning("Could not collect final metrics: %s", e)
 
             self.logger.info("🔧 Shutting down cosmic calibration coordinator...")
@@ -534,7 +534,7 @@ async def main(self) -> None:
     except KeyboardInterrupt:
         print("\n\n⚠️ Demo interrupted by user")
         return 0
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n❌ Demo crashed: {e}")
         return 1
 

@@ -4,14 +4,14 @@ Comprehensive tools for debugging asynchronous code, race conditions, and flaky 
 """
 
 import asyncio
+from collections.abc import Callable
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 import functools
 import logging
 import os
 import time
-from collections.abc import Callable
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import pytest
 
@@ -58,15 +58,15 @@ class AsyncOperationMetrics:
 class AsyncDebugCollector:
     """Collects and analyzes async debugging information."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: Optional[AsyncDebugConfig] = None) -> None:
         self.config = config or AsyncDebugConfig()
-        self.operations: list[AsyncOperationMetrics] = []
-        self.race_conditions: list[dict[str, Any]] = []
-        self.unawaited_coroutines: list[str] = []
-        self.slow_operations: list[AsyncOperationMetrics] = []
+        self.operations: List[AsyncOperationMetrics] = []
+        self.race_conditions: List[Dict[str, Any]] = []
+        self.unawaited_coroutines: List[str] = []
+        self.slow_operations: List[AsyncOperationMetrics] = []
         self._lock = asyncio.Lock()
 
-    async def record_operation(self) -> None:
+    async def record_operation(self, operation: AsyncOperationMetrics) -> None:
         """Record an async operation."""
         async with self._lock:
             self.operations.append(operation)
@@ -84,21 +84,21 @@ class AsyncDebugCollector:
                         operation.duration,
                     )
 
-    async def record_race_condition(self) -> None:
+    async def record_race_condition(self, details: Dict[str, Any]) -> None:
         """Record a potential race condition."""
         async with self._lock:
             self.race_conditions.append(details)
             if self.config.log_race_conditions:
                 logger.warning("Potential race condition detected: %s", details)
 
-    async def record_unawaited_coroutine(self) -> None:
+    async def record_unawaited_coroutine(self, coroutine_name: str) -> None:
         """Record an unawaited coroutine."""
         async with self._lock:
             self.unawaited_coroutines.append(coroutine_name)
             if self.config.log_unawaited_coroutines:
                 logger.warning("Unawaited coroutine detected: %s", coroutine_name)
 
-    def get_summary(self) -> dict[str, Any]:
+    def get_summary(self) -> Dict[str, Any]:
         """Get a summary of async debugging information."""
         return {
             "total_operations": len(self.operations),
@@ -137,20 +137,20 @@ def get_debug_collector() -> AsyncDebugCollector:
 class AsyncDebugContext:
     """Context manager for async debugging."""
 
-    def __init__(self) -> None:
+    def __init__(self, operation_name: str, config: Optional[AsyncDebugConfig] = None) -> None:
         self.operation_name = operation_name
         self.config = config or AsyncDebugConfig()
-        self.start_time = None
-        self.metrics = None
+        self.start_time: Optional[float] = None
+        self.metrics: Optional[AsyncOperationMetrics] = None
 
-    async def __aenter__(self) -> None:
+    async def __aenter__(self) -> "AsyncDebugContext":
         self.start_time = time.time()
         self.metrics = AsyncOperationMetrics(
             operation_name=self.operation_name, start_time=self.start_time
         )
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
         if self.metrics:
             self.metrics.end_time = time.time()
             self.metrics.duration = self.metrics.end_time - self.metrics.start_time
@@ -162,12 +162,12 @@ class AsyncDebugContext:
             await _debug_collector.record_operation(self.metrics)
 
 
-def async_debug(self) -> None:
+def async_debug(operation_name: Optional[str] = None) -> Callable:
     """Decorator for async debugging."""
 
-    def decorator(self) -> None:
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def wrapper(self) -> None:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             name = operation_name or f"{func.__name__}"
             async with AsyncDebugContext(name):
                 return await func(*args, **kwargs)
@@ -181,11 +181,11 @@ class RaceConditionDetector:
     """Detects potential race conditions in async code."""
 
     def __init__(self) -> None:
-        self.shared_state_access = {}
+        self.shared_state_access: Dict[str, List[Dict[str, Any]]] = {}
         self.concurrent_access_count = 0
         self._lock = asyncio.Lock()
 
-    async def track_shared_state_access(self) -> None:
+    async def track_shared_state_access(self, state_name: str, operation: str) -> None:
         """Track access to shared state."""
         async with self._lock:
             if state_name not in self.shared_state_access:
@@ -231,7 +231,7 @@ def get_race_detector() -> RaceConditionDetector:
 class AsyncSafeCounter:
     """Async-safe counter with race condition protection."""
 
-    def __init__(self) -> None:
+    def __init__(self, initial_value: int = 0) -> None:
         self._value = initial_value
         self._lock = asyncio.Lock()
 
@@ -268,7 +268,7 @@ class AsyncSafeDict:
     """Async-safe dictionary with race condition protection."""
 
     def __init__(self) -> None:
-        self._data = {}
+        self._data: Dict[str, Any] = {}
         self._lock = asyncio.Lock()
 
     async def get(self, key: str, default: Any = None) -> Any:
@@ -289,19 +289,19 @@ class AsyncSafeDict:
             await _race_detector.track_shared_state_access("dict", "delete")
             return self._data.pop(key, None)
 
-    async def keys(self) -> list[str]:
+    async def keys(self) -> List[str]:
         """Get all keys safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "keys")
             return list(self._data.keys())
 
-    async def values(self) -> list[Any]:
+    async def values(self) -> List[Any]:
         """Get all values safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "values")
             return list(self._data.values())
 
-    async def items(self) -> list[tuple]:
+    async def items(self) -> List[tuple[str, Any]]:
         """Get all items safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "items")
@@ -309,7 +309,7 @@ class AsyncSafeDict:
 
 
 @asynccontextmanager
-async def async_timeout_context(self) -> None:
+async def async_timeout_context(timeout: float, operation_name: str) -> AsyncGenerator[None, None]:
     """Context manager for async timeout with debugging."""
     start_time = time.time()
 
@@ -335,12 +335,12 @@ class AsyncTestHelper:
 
     @staticmethod
     async def run_concurrent_tasks(
-        tasks: list[Callable], max_concurrent: int = 10, timeout: float = 30.0
-    ) -> list[Any]:
+        tasks: List[Callable], max_concurrent: int = 10, timeout: float = 30.0
+    ) -> List[Any]:
         """Run multiple async tasks concurrently with debugging."""
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def run_with_semaphore(self) -> None:
+        async def run_with_semaphore(task_func: Callable) -> Any:
             async with semaphore:
                 async with AsyncDebugContext(f"concurrent_task_{task_func.__name__}"):
                     return await task_func()
@@ -352,7 +352,7 @@ class AsyncTestHelper:
                     return_exceptions=True,
                 )
                 return results
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in concurrent task execution: %s", e)
             raise
 
@@ -363,10 +363,10 @@ class AsyncTestHelper:
         delay_range: tuple = (0.001, 0.01),
     ) -> list[Any]:
         """Simulate race conditions for testing."""
-        import random
+        import secrets
 
-        async def competing_task(self) -> None:
-            delay = random.uniform(*delay_range)
+        async def competing_task(task_id: int) -> None:
+            delay = secrets.randbelow(int((delay_range[1] - delay_range[0]) * 1000)) / 1000 + delay_range[0]
             await asyncio.sleep(delay)
             return await shared_state_accessor(task_id)
 
@@ -453,7 +453,7 @@ async def async_test_helper(self) -> None:
 # Pytest markers for async debugging
 
 
-def pytest_configure(self) -> None:
+def pytest_configure(config) -> None:
     """Configure pytest with async debugging markers."""
     config.addinivalue_line(
         "markers", "async_debug: mark test as requiring async debugging"

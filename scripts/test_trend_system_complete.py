@@ -5,16 +5,17 @@ Comprehensive test of the live trend data feed system with all components.
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 import os
 import sys
-from datetime import UTC, datetime, timedelta
+
+from services.trends.models.trend_signal import Platform, TrendLifecycle, TrendSignal
 
 from services.trends.apis.api_health_monitor import APIHealthMonitor
 from services.trends.apis.rate_limit_controller import RateLimitController
 from services.trends.intelligence.investment_mapper import InvestmentMapper
 from services.trends.intelligence.prediction_engine import PredictionEngine
 from services.trends.intelligence.trend_analyzer import TrendAnalyzer
-from services.trends.models.trend_signal import Platform, TrendLifecycle, TrendSignal
 from services.trends.streaming.stream_manager import StreamManager
 
 # Add src to path
@@ -341,7 +342,7 @@ async def main(self) -> None:
             return 0
         print("\n❌ System validation failed")
         return 1
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"\n💥 System error: {e}")
         import traceback
 

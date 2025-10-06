@@ -1,3 +1,4 @@
+from typing import Dict
 """
 Contract Test: Service Mesh Inter-Service Communication
 Task T009 - Phase 18 Production System Integration

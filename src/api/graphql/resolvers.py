@@ -1,11 +1,12 @@
+from typing import List
 """GraphQL Resolvers.
 
 Implements the business logic for GraphQL queries and mutations,
 connecting the GraphQL schema to the underlying services.
 """
 
-import logging
 from datetime import UTC, datetime, timedelta
+import logging
 
 import strawberry
 
@@ -65,7 +66,7 @@ class Query:
                 confidence_score=entity_data.get("confidence_score", 1.0),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching entity %s: %s", id, e)
             return None
 
@@ -115,7 +116,7 @@ class Query:
 
             return entities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching entities: %s", e)
             return []
 
@@ -200,7 +201,7 @@ class Query:
                 relationship_count=len(relationships),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching entity with relationships %s: %s", id, e)
             return None
 
@@ -288,7 +289,7 @@ class Query:
                 processing_time_ms=processing_time,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in comprehensive search: %s", e)
             return SearchResult(
                 query=search_input.query,
@@ -356,7 +357,7 @@ class Query:
                 ],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting system health: %s", e)
             return SystemHealth(
                 status="error",
@@ -449,7 +450,7 @@ class Query:
                 edge_count=len(edges),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting graph visualization: %s", e)
             return GraphVisualization(
                 nodes=[],
@@ -485,7 +486,7 @@ class Query:
                 for i in range(days_back):
                     # Generate realistic sample data with trends
                     # Upward trend with noise
-                    value = 100 + i * 0.5 + np.random.normal(0, 5)
+                    value = 100 + i * 0.5 + self.np.random.normal(0, 5)
                     sample_data.append((base_date + timedelta(days=i), value))
 
                 time_series_data[metric] = sample_data
@@ -514,7 +515,7 @@ class Query:
 
             return graphql_insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Analytics insights generation failed: %s", e)
             return []
 
@@ -536,10 +537,10 @@ class Query:
 
             # Generate sample data for demonstration
             sample_data_a = [
-                100 + i * 0.5 + np.random.normal(0, 3) for i in range(days_back)
+                100 + i * 0.5 + self.np.random.normal(0, 3) for i in range(days_back)
             ]
             sample_data_b = [
-                50 + i * 0.3 + np.random.normal(0, 2) for i in range(days_back)
+                50 + i * 0.3 + self.np.random.normal(0, 2) for i in range(days_back)
             ]
 
             # Perform correlation analysis
@@ -560,7 +561,7 @@ class Query:
                 relationship_type=result.relationship_type,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Correlation analysis failed: %s", e)
             return CorrelationAnalysis(
                 metric_a=metric_a,
@@ -591,7 +592,7 @@ class Query:
 
             for i in range(days_back):
                 # Generate data with a clear upward trend
-                value = 100 + i * 1.2 + np.random.normal(0, 3)
+                value = 100 + i * 1.2 + self.np.random.normal(0, 3)
                 sample_data.append((base_date + timedelta(days=i), value))
 
             # Perform trend analysis
@@ -626,7 +627,7 @@ class Query:
                 ],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Trend analysis failed: %s", e)
             return TrendAnalysis(
                 metric_name=metric_name,
@@ -675,7 +676,7 @@ class Mutation:
                 confidence_score=entity_data.get("confidence_score", 1.0),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error creating entity: %s", e)
             msg = f"Failed to create entity: {str(e)}"
             raise Exception(msg)
@@ -709,7 +710,7 @@ class Mutation:
                 created_at=relationship_data.get("created_at", datetime.now(UTC)),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error creating relationship: %s", e)
             msg = f"Failed to create relationship: {str(e)}"
             raise Exception(msg)
@@ -762,7 +763,7 @@ class Mutation:
 
             return entities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing document: %s", e)
             msg = f"Failed to process document: {str(e)}"
             raise Exception(msg)

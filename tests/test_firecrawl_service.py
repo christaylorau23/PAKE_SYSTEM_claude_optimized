@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 2A TDD Tests for FirecrawlService
@@ -149,7 +150,7 @@ class TestFirecrawlService:
         Critical integration behavior - must work seamlessly with existing
         ingestion pipeline and ContentItem data structure.
         """
-        result = await firecrawl_service.scrape_url(sample_url)
+        result = await self.firecrawl_service.scrape_url(sample_url)
         content_item = await firecrawl_service.to_content_item(result, "firecrawl_web")
 
         # Verify ContentItem compatibility

@@ -9,12 +9,12 @@ Handles:
 - Cache management and optimization
 """
 
+from datetime import UTC, datetime
 import gc
 import hashlib
 import logging
 import time
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict, List
 
 import psutil
 
@@ -32,7 +32,7 @@ class PerformanceWorker(BaseWorkerAgent):
     deduplication, caching, metrics collection, and system monitoring.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, message_bus: Any, worker_id: str | None = None) -> None:
         """Initialize Performance Optimizer worker."""
         # Define worker capabilities
         capabilities = [
@@ -146,7 +146,7 @@ class PerformanceWorker(BaseWorkerAgent):
                 "result": None,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Performance worker task processing error: %s", e)
             return {
                 "success": False,

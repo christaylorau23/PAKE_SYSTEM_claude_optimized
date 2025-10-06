@@ -28,7 +28,7 @@ class TestCriticalUserJourneys:
         }
 
         # Act 1: User Registration
-        registration_response = test_client.post("/auth/register", json=user_data)
+        registration_response = self.test_client.post("/auth/register", json=user_data)
 
         # Assert 1: Registration successful
         assert registration_response.status_code == 200
@@ -39,7 +39,7 @@ class TestCriticalUserJourneys:
         assert "hashed_password" not in registered_user  # Password not returned
 
         # Act 2: User Login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token",
             data={"username": user_data["username"], "password": user_data["password"]},
         )
@@ -55,7 +55,7 @@ class TestCriticalUserJourneys:
         refresh_token = token_data["refresh_token"]
 
         # Act 3: Access Protected Resource
-        protected_response = test_client.get(
+        protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
         )
 
@@ -66,7 +66,7 @@ class TestCriticalUserJourneys:
         assert user_info["email"] == user_data["email"]
 
         # Act 4: Token Refresh
-        refresh_response = test_client.post(
+        refresh_response = self.test_client.post(
             "/auth/refresh", json={"refresh_token": refresh_token}
         )
 
@@ -78,7 +78,7 @@ class TestCriticalUserJourneys:
 
         # Act 5: Use New Token
         new_access_token = new_token_data["access_token"]
-        new_protected_response = test_client.get(
+        new_protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {new_access_token}"}
         )
 
@@ -88,7 +88,7 @@ class TestCriticalUserJourneys:
         assert new_user_info["username"] == user_data["username"]
 
         # Act 6: Logout
-        logout_response = test_client.post(
+        logout_response = self.test_client.post(
             "/auth/logout", headers={"Authorization": f"Bearer {new_access_token}"}
         )
 
@@ -119,14 +119,14 @@ class TestCriticalUserJourneys:
             }
 
             # Registration should fail
-            registration_response = test_client.post("/auth/register", json=user_data)
+            registration_response = self.test_client.post("/auth/register", json=user_data)
             assert registration_response.status_code == 400
             assert (
                 "Password validation failed" in registration_response.json()["detail"]
             )
 
             # Password validation endpoint should also fail
-            validation_response = test_client.post(
+            validation_response = self.test_client.post(
                 "/auth/validate-password", json={"password": weak_password}
             )
             assert validation_response.status_code == 200
@@ -143,11 +143,11 @@ class TestCriticalUserJourneys:
         }
 
         # Registration should succeed
-        registration_response = test_client.post("/auth/register", json=user_data)
+        registration_response = self.test_client.post("/auth/register", json=user_data)
         assert registration_response.status_code == 200
 
         # Password validation should pass
-        validation_response = test_client.post(
+        validation_response = self.test_client.post(
             "/auth/validate-password", json={"password": strong_password}
         )
         assert validation_response.status_code == 200
@@ -168,7 +168,7 @@ class TestCriticalUserJourneys:
         generated_passwords = []
 
         for length in password_lengths:
-            response = test_client.get(f"/auth/generate-password?length={length}")
+            response = self.test_client.get(f"/auth/generate-password?length={length}")
             assert response.status_code == 200
 
             password_data = response.json()
@@ -181,7 +181,7 @@ class TestCriticalUserJourneys:
         assert len(set(generated_passwords)) == len(generated_passwords)  # All unique
 
         for password in generated_passwords:
-            validation_response = test_client.post(
+            validation_response = self.test_client.post(
                 "/auth/validate-password", json={"password": password}
             )
             assert validation_response.status_code == 200
@@ -217,7 +217,7 @@ class TestCriticalUserJourneys:
         failed_responses = []
 
         for wrong_password in wrong_passwords:
-            response = test_client.post(
+            response = self.test_client.post(
                 "/auth/token", data={"username": username, "password": wrong_password}
             )
             failed_responses.append(response)
@@ -227,7 +227,7 @@ class TestCriticalUserJourneys:
             assert response.status_code == 401
 
         # Act 2: Correct login after failures
-        correct_response = test_client.post(
+        correct_response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
 
@@ -238,7 +238,7 @@ class TestCriticalUserJourneys:
 
         # Act 3: Access protected resource
         access_token = token_data["access_token"]
-        protected_response = test_client.get(
+        protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
         )
 
@@ -271,7 +271,7 @@ class TestCriticalUserJourneys:
         )
 
         # Act 1: Initial login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
 
@@ -282,7 +282,7 @@ class TestCriticalUserJourneys:
         refresh_token = token_data["refresh_token"]
 
         # Act 2: Use access token
-        protected_response = test_client.get(
+        protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
         )
 
@@ -290,7 +290,7 @@ class TestCriticalUserJourneys:
         assert protected_response.status_code == 200
 
         # Act 3: Refresh token
-        refresh_response = test_client.post(
+        refresh_response = self.test_client.post(
             "/auth/refresh", json={"refresh_token": refresh_token}
         )
 
@@ -300,7 +300,7 @@ class TestCriticalUserJourneys:
         new_access_token = new_token_data["access_token"]
 
         # Act 4: Use new access token
-        new_protected_response = test_client.get(
+        new_protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {new_access_token}"}
         )
 
@@ -308,7 +308,7 @@ class TestCriticalUserJourneys:
         assert new_protected_response.status_code == 200
 
         # Act 5: Try to use old access token (should still work if not expired)
-        old_protected_response = test_client.get(
+        old_protected_response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
         )
 
@@ -342,7 +342,7 @@ class TestCriticalUserJourneys:
         start_time = time.time()
 
         async def register_user(self) -> None:
-            return test_client.post("/auth/register", json=user_data)
+            return self.test_client.post("/auth/register", json=user_data)
 
         tasks = [register_user(user_data) for user_data in users_data]
         registration_responses = await asyncio.gather(*tasks)
@@ -357,7 +357,7 @@ class TestCriticalUserJourneys:
         start_time = time.time()
 
         async def login_user(self) -> None:
-            return test_client.post(
+            return self.test_client.post(
                 "/auth/token",
                 data={
                     "username": user_data["username"],
@@ -392,7 +392,7 @@ class TestCriticalUserJourneys:
         endpoints = ["/auth/me", "/auth/generate-password", "/health"]
 
         for endpoint in endpoints:
-            response = test_client.get(endpoint)
+            response = self.test_client.get(endpoint)
 
             # Assert: Security headers present
             headers = response.headers
@@ -429,7 +429,7 @@ class TestCriticalUserJourneys:
         # Act & Assert: Test various error conditions
 
         # 1. Invalid JSON in registration
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/register",
             data="invalid json",
             headers={"Content-Type": "application/json"},
@@ -437,11 +437,11 @@ class TestCriticalUserJourneys:
         assert response.status_code == 422
 
         # 2. Missing required fields
-        response = test_client.post("/auth/register", json={})
+        response = self.test_client.post("/auth/register", json={})
         assert response.status_code == 422
 
         # 3. Invalid email format
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/register",
             json={
                 "username": "testuser",
@@ -453,17 +453,17 @@ class TestCriticalUserJourneys:
         assert response.status_code == 422
 
         # 4. Invalid token format
-        response = test_client.get(
+        response = self.test_client.get(
             "/auth/me", headers={"Authorization": "Bearer invalid-token"}
         )
         assert response.status_code == 401
 
         # 5. Missing authorization header
-        response = test_client.get("/auth/me")
+        response = self.test_client.get("/auth/me")
         assert response.status_code == 401
 
         # 6. Invalid refresh token
-        response = test_client.post("/auth/refresh", json={"refresh_token": "invalid"})
+        response = self.test_client.post("/auth/refresh", json={"refresh_token": "invalid"})
         assert response.status_code == 401
 
     @pytest.mark.e2e
@@ -483,11 +483,11 @@ class TestCriticalUserJourneys:
         }
 
         # Act 1: Register user
-        registration_response = test_client.post("/auth/register", json=user_data)
+        registration_response = self.test_client.post("/auth/register", json=user_data)
         assert registration_response.status_code == 200
 
         # Act 2: Login user
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token",
             data={"username": user_data["username"], "password": user_data["password"]},
         )
@@ -498,7 +498,7 @@ class TestCriticalUserJourneys:
 
         user_info_responses = []
         for _ in range(3):
-            response = test_client.get(
+            response = self.test_client.get(
                 "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
             )
             user_info_responses.append(response)
@@ -559,7 +559,7 @@ class TestPerformanceE2E:
         start_time = time.time()
 
         async def login_request(self) -> None:
-            return test_client.post(
+            return self.test_client.post(
                 "/auth/token", data={"username": username, "password": password}
             )
 
@@ -596,7 +596,7 @@ class TestPerformanceE2E:
 
         passwords = []
         for _ in range(20):
-            response = test_client.get("/auth/generate-password")
+            response = self.test_client.get("/auth/generate-password")
             assert response.status_code == 200
             password_data = response.json()
             passwords.append(password_data["password"])

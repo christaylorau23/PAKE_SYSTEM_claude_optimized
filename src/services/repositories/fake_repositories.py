@@ -6,9 +6,9 @@ These fake repositories store data in memory and implement the same interfaces
 as the real repositories, allowing for easy unit testing without database dependencies.
 """
 
-import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+from typing import Any, Dict
 from uuid import uuid4
 
 from ..domain.models import (

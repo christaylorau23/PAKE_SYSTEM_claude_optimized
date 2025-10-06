@@ -1,18 +1,20 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Circuit Breaker Implementation
 Advanced circuit breaker patterns for MCP servers and external service calls.
 """
 
 import asyncio
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
 import functools
 import json
 import statistics
 import threading
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 from utils.error_handling import ErrorCategory, PAKEException
 from utils.logger import get_logger
@@ -84,7 +86,7 @@ class CallResult:
 class CircuitBreakerError(PAKEException):
     """Circuit breaker specific errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, state: CircuitState | None = None, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
         self.circuit_state = state
 
@@ -92,7 +94,7 @@ class CircuitBreakerError(PAKEException):
 class RateLimiter:
     """Token bucket rate limiter."""
 
-    def __init__(self) -> None:
+    def __init__(self, rate: float, capacity: int) -> None:
         self.rate = rate  # tokens per second
         self.capacity = capacity  # maximum tokens
         self.tokens = capacity
@@ -125,7 +127,7 @@ class RateLimiter:
 class CircuitBreaker:
     """Advanced circuit breaker with comprehensive failure detection."""
 
-    def __init__(self) -> None:
+    def __init__(self, name: str, config: CircuitBreakerConfig) -> None:
         self.name = name
         self.config = config
         self.logger = get_logger(service_name=f"circuit-breaker-{name}")
@@ -398,7 +400,7 @@ class CircuitBreaker:
 
             raise
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             result.duration = time.time() - start_time
             result.failure_type = FailureType.EXCEPTION
             result.exception = e
@@ -447,7 +449,7 @@ class CircuitBreaker:
 class CircuitBreakerRegistry:
     """Registry for managing multiple circuit breakers."""
 
-    def __init__(self) -> None:
+    def __init__(self, registry: "CircuitBreakerRegistry" | None = None) -> None:
         self._breakers: dict[str, CircuitBreaker] = {}
         self.logger = get_logger(service_name="circuit-breaker-registry")
 
@@ -492,7 +494,7 @@ circuit_registry = CircuitBreakerRegistry()
 
 
 # Decorators for easy circuit breaker integration
-def with_circuit_breaker(self) -> None:
+def with_circuit_breaker(name: str, config: CircuitBreakerConfig | None = None, registry: CircuitBreakerRegistry | None = None) -> Callable:
     """Decorator to add circuit breaker protection to functions."""
 
     def decorator(func: Callable) -> Callable:
@@ -504,11 +506,11 @@ def with_circuit_breaker(self) -> None:
             breaker = registry.create_breaker(name, breaker_config)
 
         @functools.wraps(func)
-        async def async_wrapper(self) -> None:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             return await breaker.call(func, *args, **kwargs)
 
         @functools.wraps(func)
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             return asyncio.run(breaker.call(func, *args, **kwargs))
 
         if asyncio.iscoroutinefunction(func):
@@ -628,7 +630,7 @@ if __name__ == "__main__":
                 print(f"Call {i + 1}: Success - {result}")
             except CircuitBreakerError as e:
                 print(f"Call {i + 1}: Circuit breaker blocked - {e.message}")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"Call {i + 1}: Failed - {str(e)}")
 
             await asyncio.sleep(0.5)

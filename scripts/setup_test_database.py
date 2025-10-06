@@ -6,8 +6,8 @@ Creates and initializes test database for automated testing
 
 import asyncio
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -89,12 +89,12 @@ async def setup_test_database(self) -> None:
             r.ping()
             r.set("test:setup", "success")
             print("✅ Redis connection verified")
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"⚠️  Redis connection failed (non-critical): {e}")
 
         return True
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"❌ Database setup failed: {e}")
         return False
 

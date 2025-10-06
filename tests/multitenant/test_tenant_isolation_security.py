@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Multi-Tenant Security Testing Suite
@@ -5,13 +7,13 @@ Comprehensive tenant isolation and security validation tests.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
-import sys
-import uuid
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any
+import uuid
 
 import pytest
 
@@ -190,7 +192,7 @@ class MultiTenantSecurityTester:
                 "message": "Tenant isolation maintained - no cross-tenant data access",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Exception is expected for proper isolation
             return {
                 "test": "tenant_data_isolation",
@@ -231,7 +233,7 @@ class MultiTenantSecurityTester:
                     "message": f"Tenant {tenant_id} can create data in tenant {other_tenant_id}",
                 }
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 return {
                     "test": "tenant_modification_isolation",
                     "tenant_id": tenant_id,
@@ -240,7 +242,7 @@ class MultiTenantSecurityTester:
                     "message": f"Modification properly blocked: {str(e)}",
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "test": "tenant_modification_isolation",
                 "tenant_id": tenant_id,
@@ -332,7 +334,7 @@ class MultiTenantSecurityTester:
                 "message": "JWT token properly isolated to original tenant",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "test": "jwt_cross_tenant_access",
                 "original_tenant": original_tenant,
@@ -398,7 +400,7 @@ class MultiTenantSecurityTester:
                 "message": "Malicious input properly handled",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "test": "sql_injection_protection",
                 "tenant_id": tenant_id,
@@ -483,7 +485,7 @@ class MultiTenantSecurityTester:
                 "message": "Weak REDACTED_SECRET properly rejected",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "test": "weak_REDACTED_SECRET_rejection",
                 "tenant_id": tenant_id,
@@ -705,7 +707,7 @@ class MultiTenantSecurityTester:
                     tenant["tenant"]["id"],
                     force=True,
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Error cleaning up tenant: %s", e)
 
     def _generate_security_report(self) -> Dict[str, Any]:

@@ -10,9 +10,9 @@ Based on the engineering plan's requirements for automated remediation
 of production incidents.
 """
 
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import List, Tuple
 
 import libcst as cst
@@ -82,7 +82,7 @@ def apply_dtz_transformer(file_path: Path) -> tuple[bool, int, str]:
             return True, modifications, ""
         return False, 0, ""
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         return False, 0, f"Error: {e}"
 
 
@@ -109,7 +109,7 @@ def get_dtz_issues() -> list[str]:
 
         return list(files_with_issues)
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Warning: Could not get DTZ issues from ruff: {e}")
         return []
 
@@ -197,7 +197,7 @@ def main():
                 print("⚠️  Some DTZ issues may remain:")
                 print(result.stdout)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"⚠️  Could not verify with ruff: {e}")
 
         return 0

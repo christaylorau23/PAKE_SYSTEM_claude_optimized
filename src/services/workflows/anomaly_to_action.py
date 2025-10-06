@@ -4,15 +4,15 @@ Automatically converts security anomalies into actionable tasks with
 comprehensive context, priority assignment, and incident response workflows.
 """
 
-import hashlib
-import logging
-import uuid
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import hashlib
+import logging
+from typing import Any, Dict, List
+import uuid
 
 from .task_management import (
     Task,
@@ -401,7 +401,7 @@ class AnomalyProcessingResult:
 class AnomalyToActionEngine:
     """Main engine for converting anomalies to actionable tasks."""
 
-    def __init__(self) -> None:
+    def __init__(self, task_manager: Any = None) -> None:
         self.task_manager = task_manager
         self.workflow_rules: list[WorkflowRule] = []
         self.incident_counter = 0
@@ -531,7 +531,7 @@ class AnomalyToActionEngine:
             try:
                 if rule.condition(alert):
                     return rule
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error evaluating rule %s: %s", rule.name, e)
         return None
 

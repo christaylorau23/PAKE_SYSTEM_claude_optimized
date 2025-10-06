@@ -3,11 +3,11 @@
 Replaces insecure pickle with secure alternatives.
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import json
 import logging
-from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 try:
@@ -50,7 +50,7 @@ class SecureSerializer:
     Uses JSON, MessagePack, or CBOR for safe serialization.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: SerializationConfig | None = None) -> None:
         self.config = config or SerializationConfig()
         self._validate_dependencies()
 
@@ -115,7 +115,7 @@ class SecureSerializer:
             format_header = f"FORMAT:{format.value}:".encode()
             return format_header + serialized
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Serialization failed: %s", e)
             msg = f"Failed to serialize data: {e}"
             raise RuntimeError(msg)
@@ -177,7 +177,7 @@ class SecureSerializer:
             msg = f"Unsupported deserialization format: {format}"
             raise ValueError(msg)
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Deserialization failed: %s", e)
             msg = f"Failed to deserialize data: {e}"
             raise RuntimeError(msg)
@@ -246,7 +246,7 @@ def migrate_from_pickle(pickle_data: bytes) -> bytes:
 
         data = pickle.loads(pickle_data)
         return serialize(data)
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         logger.error("Failed to migrate pickle data: %s", e)
         msg = f"Pickle migration failed: {e}"
         raise RuntimeError(msg)

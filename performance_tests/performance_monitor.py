@@ -12,16 +12,16 @@ Key Features:
 - Integration with external monitoring systems
 """
 
-import json
-import logging
-import threading
-import time
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import json
+import logging
 from pathlib import Path
+import threading
+import time
 from typing import TYPE_CHECKING, Any
 
 import psutil
@@ -175,7 +175,7 @@ class PerformanceMonitor:
 
                 time.sleep(self.config["monitoring_interval_seconds"])
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in monitoring loop: %s", e)
                 time.sleep(5)
 
@@ -240,69 +240,69 @@ class PerformanceMonitor:
         thresholds = self.config["thresholds"]
 
         # Check CPU usage
-        if metrics.cpu_usage_percent > thresholds["cpu_usage_percent"]:
+        if self.metrics.cpu_usage_percent > thresholds["cpu_usage_percent"]:
             self._create_alert(
                 "cpu_usage",
                 "high",
-                f"CPU usage is {metrics.cpu_usage_percent:.1f}%",
+                f"CPU usage is {self.metrics.cpu_usage_percent:.1f}%",
                 metrics,
                 thresholds["cpu_usage_percent"],
-                metrics.cpu_usage_percent,
+                self.metrics.cpu_usage_percent,
             )
 
         # Check memory usage
-        if metrics.memory_usage_percent > thresholds["memory_usage_percent"]:
+        if self.metrics.memory_usage_percent > thresholds["memory_usage_percent"]:
             self._create_alert(
                 "memory_usage",
                 "high",
-                f"Memory usage is {metrics.memory_usage_percent:.1f}%",
+                f"Memory usage is {self.metrics.memory_usage_percent:.1f}%",
                 metrics,
                 thresholds["memory_usage_percent"],
-                metrics.memory_usage_percent,
+                self.metrics.memory_usage_percent,
             )
 
         # Check disk usage
-        if metrics.disk_usage_percent > thresholds["disk_usage_percent"]:
+        if self.metrics.disk_usage_percent > thresholds["disk_usage_percent"]:
             self._create_alert(
                 "disk_usage",
                 "critical",
-                f"Disk usage is {metrics.disk_usage_percent:.1f}%",
+                f"Disk usage is {self.metrics.disk_usage_percent:.1f}%",
                 metrics,
                 thresholds["disk_usage_percent"],
-                metrics.disk_usage_percent,
+                self.metrics.disk_usage_percent,
             )
 
         # Check response time
-        if metrics.response_time_ms > thresholds["response_time_ms"]:
+        if self.metrics.response_time_ms > thresholds["response_time_ms"]:
             self._create_alert(
                 "response_time",
                 "high",
-                f"Response time is {metrics.response_time_ms:.1f}ms",
+                f"Response time is {self.metrics.response_time_ms:.1f}ms",
                 metrics,
                 thresholds["response_time_ms"],
-                metrics.response_time_ms,
+                self.metrics.response_time_ms,
             )
 
         # Check error rate
-        if metrics.error_rate_percent > thresholds["error_rate_percent"]:
+        if self.metrics.error_rate_percent > thresholds["error_rate_percent"]:
             self._create_alert(
                 "error_rate",
                 "high",
-                f"Error rate is {metrics.error_rate_percent:.1f}%",
+                f"Error rate is {self.metrics.error_rate_percent:.1f}%",
                 metrics,
                 thresholds["error_rate_percent"],
-                metrics.error_rate_percent,
+                self.metrics.error_rate_percent,
             )
 
         # Check queue length
-        if metrics.queue_length > thresholds["queue_length"]:
+        if self.metrics.queue_length > thresholds["queue_length"]:
             self._create_alert(
                 "queue_length",
                 "medium",
-                f"Queue length is {metrics.queue_length}",
+                f"Queue length is {self.metrics.queue_length}",
                 metrics,
                 thresholds["queue_length"],
-                metrics.queue_length,
+                self.metrics.queue_length,
             )
 
     def _create_alert(self) -> None:
@@ -347,7 +347,7 @@ class PerformanceMonitor:
         for handler in self.alert_handlers:
             try:
                 handler(alert)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in alert handler: %s", e)
 
     def add_alert_handler(self) -> None:
@@ -367,26 +367,26 @@ class PerformanceMonitor:
         msg = MIMEMultipart()
         msg["From"] = "pake-system@example.com"
         msg["To"] = ", ".join(recipients)
-        msg["Subject"] = f"PAKE System Alert: {alert.alert_type.upper()}"
+        msg["Subject"] = f"PAKE System Alert: {self.alert.alert_type.upper()}"
 
         # Email body
         body = f"""
 PAKE System Performance Alert
 
-Alert Type: {alert.alert_type}
-Severity: {alert.severity}
-Message: {alert.message}
-Timestamp: {alert.timestamp}
-Environment: {alert.environment}
+Alert Type: {self.alert.alert_type}
+Severity: {self.alert.severity}
+Message: {self.alert.message}
+Timestamp: {self.alert.timestamp}
+Environment: {self.alert.environment}
 
-Current Value: {alert.current_value}
-Threshold: {alert.threshold_value}
+Current Value: {self.alert.current_value}
+Threshold: {self.alert.threshold_value}
 
 Metrics:
-- CPU Usage: {alert.metrics["cpu_usage_percent"]:.1f}%
-- Memory Usage: {alert.metrics["memory_usage_percent"]:.1f}%
-- Response Time: {alert.metrics["response_time_ms"]:.1f}ms
-- Error Rate: {alert.metrics["error_rate_percent"]:.1f}%
+- CPU Usage: {self.alert.metrics["cpu_usage_percent"]:.1f}%
+- Memory Usage: {self.alert.metrics["memory_usage_percent"]:.1f}%
+- Response Time: {self.alert.metrics["response_time_ms"]:.1f}ms
+- Error Rate: {self.alert.metrics["error_rate_percent"]:.1f}%
 
 Please investigate and take appropriate action.
 
@@ -396,7 +396,7 @@ PAKE System Performance Monitor
         msg.attach(MIMEText(body, "plain"))
 
         # Send email (simulated - configure with your SMTP server)
-        print(f"Email alert sent: {alert.message}")
+        print(f"Email alert sent: {self.alert.message}")
 
     def _slack_alert_handler(self) -> None:
         """Slack alert handler."""
@@ -414,37 +414,37 @@ PAKE System Performance Monitor
             "high": "danger",
             "critical": "danger",
         }
-        color = color_map.get(alert.severity, "warning")
+        color = color_map.get(self.alert.severity, "warning")
 
         # Create Slack message
         message = {
             "attachments": [
                 {
                     "color": color,
-                    "title": f"PAKE System Alert: {alert.alert_type.upper()}",
+                    "title": f"PAKE System Alert: {self.alert.alert_type.upper()}",
                     "fields": [
                         {
                             "title": "Severity",
-                            "value": alert.severity.upper(),
+                            "value": self.alert.severity.upper(),
                             "short": True,
                         },
-                        {"title": "Message", "value": alert.message, "short": False},
+                        {"title": "Message", "value": self.alert.message, "short": False},
                         {
                             "title": "Current Value",
-                            "value": str(alert.current_value),
+                            "value": str(self.alert.current_value),
                             "short": True,
                         },
                         {
                             "title": "Threshold",
-                            "value": str(alert.threshold_value),
+                            "value": str(self.alert.threshold_value),
                             "short": True,
                         },
                         {
                             "title": "Environment",
-                            "value": alert.environment,
+                            "value": self.alert.environment,
                             "short": True,
                         },
-                        {"title": "Timestamp", "value": alert.timestamp, "short": True},
+                        {"title": "Timestamp", "value": self.alert.timestamp, "short": True},
                     ],
                     "footer": "PAKE System Performance Monitor",
                     "ts": int(time.time()),
@@ -455,10 +455,10 @@ PAKE System Performance Monitor
         try:
             response = requests.post(webhook_url, json=message)
             if response.status_code == 200:
-                print(f"Slack alert sent: {alert.message}")
+                print(f"Slack alert sent: {self.alert.message}")
             else:
                 print(f"Failed to send Slack alert: {response.status_code}")
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Error sending Slack alert: {e}")
 
     def _webhook_alert_handler(self) -> None:
@@ -472,24 +472,24 @@ PAKE System Performance Monitor
 
         # Create webhook payload
         payload = {
-            "alert_id": alert.alert_id,
-            "alert_type": alert.alert_type,
-            "severity": alert.severity,
-            "message": alert.message,
-            "timestamp": alert.timestamp,
-            "environment": alert.environment,
-            "metrics": alert.metrics,
-            "threshold_value": alert.threshold_value,
-            "current_value": alert.current_value,
+            "alert_id": self.alert.alert_id,
+            "alert_type": self.alert.alert_type,
+            "severity": self.alert.severity,
+            "message": self.alert.message,
+            "timestamp": self.alert.timestamp,
+            "environment": self.alert.environment,
+            "metrics": self.alert.metrics,
+            "threshold_value": self.alert.threshold_value,
+            "current_value": self.alert.current_value,
         }
 
         try:
             response = requests.post(webhook_url, json=payload)
             if response.status_code == 200:
-                print(f"Webhook alert sent: {alert.message}")
+                print(f"Webhook alert sent: {self.alert.message}")
             else:
                 print(f"Failed to send webhook alert: {response.status_code}")
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Error sending webhook alert: {e}")
 
     def get_performance_summary(self) -> dict[str, Any]:
@@ -721,7 +721,7 @@ def main(self) -> None:
 
     except KeyboardInterrupt:
         print("\nMonitoring interrupted by user")
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error: {e}")
 
 

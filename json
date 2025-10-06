@@ -1,0 +1,23 @@
+F821 Undefined name `config`
+   --> src/services/base/service_base.py:140:25
+    |
+138 |         """
+139 |         # Validate configuration
+140 |         config_errors = config.validate()
+    |                         ^^^^^^
+141 |         if config_errors:
+142 |             msg = f"Invalid service configuration: {', '.join(config_errors)}"
+    |
+
+F821 Undefined name `config`
+   --> src/services/base/service_base.py:147:23
+    |
+145 |             )
+146 |
+147 |         self.config = config
+    |                       ^^^^^^
+148 |         self.status = ServiceStatus.INITIALIZING
+149 |         self.metrics = ServiceMetrics()
+    |
+
+Found 2 errors.

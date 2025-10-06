@@ -1,16 +1,18 @@
-#!/usr/bin/env python3
+3#!/usr/bin/env python3
 """FastAPI Authentication Middleware.
 
 Integrates with the Node.js authentication service to provide
 JWT token validation and RBAC for Python services.
 """
 
+import asyncio
 import json
 import logging
+import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from functools import wraps
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 import jwt
@@ -165,7 +167,7 @@ class AuthService:
 
             logger.info("Auth service initialized")
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             logger.error("Failed to initialize auth service: %s", e)
             raise
 
@@ -212,7 +214,7 @@ class AuthService:
         except jwt.InvalidTokenError as e:
             logger.warning("Invalid token: %s", e)
             return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Token verification error: %s", e)
             return None
 
@@ -243,7 +245,7 @@ class AuthService:
             await self.redis.incr(key)
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Rate limit check failed: %s", e)
             return True  # Fail open
 
@@ -277,7 +279,7 @@ class AuthService:
 
             return []
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get user permissions: %s", e)
             return []
 
@@ -311,7 +313,7 @@ class AuthService:
             if self._http_client:
                 await self._http_client.post("/api/audit/log", json=audit_data)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             logger.error("Failed to log audit event: %s", e)
 
 

@@ -9,9 +9,9 @@ and advanced deduplication policies.
 
 import asyncio
 import json
+from pathlib import Path
 import tempfile
 import time
-from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -124,7 +124,7 @@ class TestAdvancedContentDeduplicationService:
         assert service.normalizer is not None
 
         # Check detectors are initialized for enabled methods
-        assert len(service.detectors) == len(dedup_config.enabled_methods)
+        assert len(service.detectors) == len(self.dedup_config.enabled_methods)
         assert DeduplicationMethod.EXACT_HASH in service.detectors
         assert DeduplicationMethod.FUZZY_HASH in service.detectors
         assert DeduplicationMethod.TITLE_SIMILARITY in service.detectors
@@ -144,7 +144,7 @@ class TestAdvancedContentDeduplicationService:
         item2 = sample_content_items[1]  # Exact duplicate
 
         # Check first item (should not be duplicate)
-        result1 = await dedup_service.check_duplicate(
+        result1 = await self.dedup_service.check_duplicate(
             item1["id"],
             item1["content"],
             item1["metadata"],
@@ -154,7 +154,7 @@ class TestAdvancedContentDeduplicationService:
         assert result1.fingerprint is not None
 
         # Check second item (should be exact duplicate)
-        result2 = await dedup_service.check_duplicate(
+        result2 = await self.dedup_service.check_duplicate(
             item2["id"],
             item2["content"],
             item2["metadata"],
@@ -175,7 +175,7 @@ class TestAdvancedContentDeduplicationService:
         item3 = sample_content_items[2]  # Similar but not exact
 
         # Add first item
-        result1 = await dedup_service.check_duplicate(
+        result1 = await self.dedup_service.check_duplicate(
             item1["id"],
             item1["content"],
             item1["metadata"],
@@ -183,7 +183,7 @@ class TestAdvancedContentDeduplicationService:
         assert not result1.is_duplicate
 
         # Check similar item
-        result3 = await dedup_service.check_duplicate(
+        result3 = await self.dedup_service.check_duplicate(
             item3["id"],
             item3["content"],
             item3["metadata"],
@@ -214,11 +214,11 @@ class TestAdvancedContentDeduplicationService:
         metadata2 = {"title": "Machine Learning Fundamentals Tutorial"}
 
         # Add first item
-        result1 = await dedup_service.check_duplicate("item1", content1, metadata1)
+        result1 = await self.dedup_service.check_duplicate("item1", content1, metadata1)
         assert not result1.is_duplicate
 
         # Check second item with similar title
-        result2 = await dedup_service.check_duplicate("item2", content2, metadata2)
+        result2 = await self.dedup_service.check_duplicate("item2", content2, metadata2)
 
         # Should detect title similarity if threshold is met
         if result2.is_duplicate:
@@ -239,7 +239,7 @@ class TestAdvancedContentDeduplicationService:
             "category": "Technology",
         }
 
-        result = await dedup_service.check_duplicate("test_item", content, metadata)
+        result = await self.dedup_service.check_duplicate("test_item", content, metadata)
 
         # Check fingerprint creation
         assert result.fingerprint is not None
@@ -250,7 +250,7 @@ class TestAdvancedContentDeduplicationService:
         assert len(fingerprint.metadata_hash) == 64
         assert (
             fingerprint.fuzzy_hash is not None
-            if DeduplicationMethod.FUZZY_HASH in dedup_service.config.enabled_methods
+            if DeduplicationMethod.FUZZY_HASH in self.dedup_service.config.enabled_methods
             else True
         )
         assert len(fingerprint.title_tokens) > 0
@@ -271,7 +271,7 @@ class TestAdvancedContentDeduplicationService:
         ]
 
         # Process batch
-        results = await dedup_service.batch_check_duplicates(batch_items)
+        results = await self.dedup_service.batch_check_duplicates(batch_items)
 
         # Verify results
         assert len(results) == len(sample_content_items)
@@ -390,7 +390,7 @@ class TestAdvancedContentDeduplicationService:
 
         # Measure processing time
         start_time = time.time()
-        results = await dedup_service.batch_check_duplicates(content_items)
+        results = await self.dedup_service.batch_check_duplicates(content_items)
         processing_time = time.time() - start_time
 
         # Should complete in reasonable time (under 5 seconds for 201 items)
@@ -401,7 +401,7 @@ class TestAdvancedContentDeduplicationService:
         assert len(duplicate_results) >= 1
 
         # Verify statistics
-        stats = dedup_service.get_statistics()
+        stats = self.dedup_service.get_statistics()
         assert stats["total_processed"] == len(content_items)
         assert stats["duplicates_found"] >= 1
 
@@ -412,7 +412,7 @@ class TestAdvancedContentDeduplicationService:
         and removing oldest entries when limit is reached.
         """
         # Configure with small memory limit for testing
-        dedup_config.max_fingerprints_memory = 10
+        self.dedup_config.max_fingerprints_memory = 10
         service = AdvancedContentDeduplicationService(dedup_config)
 
         # Add more items than memory limit
@@ -424,7 +424,7 @@ class TestAdvancedContentDeduplicationService:
             )
 
         # Should not exceed memory limit
-        assert len(service.fingerprints) <= dedup_config.max_fingerprints_memory
+        assert len(service.fingerprints) <= self.dedup_config.max_fingerprints_memory
 
         # Should still function correctly
         result = await service.check_duplicate(
@@ -444,7 +444,7 @@ class TestAdvancedContentDeduplicationService:
         tasks = []
         for i in range(20):
             task = asyncio.create_task(
-                dedup_service.check_duplicate(
+                self.dedup_service.check_duplicate(
                     f"concurrent_item_{i}",
                     f"Concurrent content {i} for testing race conditions",
                     {"title": f"Concurrent Article {i}"},
@@ -461,7 +461,7 @@ class TestAdvancedContentDeduplicationService:
             assert isinstance(result, DeduplicationResult)
 
         # Verify data integrity
-        stats = dedup_service.get_statistics()
+        stats = self.dedup_service.get_statistics()
         assert stats["total_processed"] >= 20
 
     # ========================================================================
@@ -475,13 +475,13 @@ class TestAdvancedContentDeduplicationService:
         and malformed input data.
         """
         # Test empty content
-        result1 = await dedup_service.check_duplicate("empty", "", {})
+        result1 = await self.dedup_service.check_duplicate("empty", "", {})
         assert not result1.is_duplicate
         assert result1.fingerprint is not None
 
         # Test None content (should be handled gracefully)
         try:
-            result2 = await dedup_service.check_duplicate("none", None, {})
+            result2 = await self.dedup_service.check_duplicate("none", None, {})
             # If it doesn't throw an exception, it should handle gracefully
             assert isinstance(result2, DeduplicationResult)
         except TypeError:
@@ -490,10 +490,10 @@ class TestAdvancedContentDeduplicationService:
 
         # Test very long content (should be truncated)
         long_content = "x" * 50000
-        result3 = await dedup_service.check_duplicate("long", long_content, {})
+        result3 = await self.dedup_service.check_duplicate("long", long_content, {})
         assert (
             result3.fingerprint.content_length
-            <= dedup_service.config.max_content_length
+            <= self.dedup_service.config.max_content_length
         )
 
     @pytest.mark.asyncio
@@ -505,7 +505,7 @@ class TestAdvancedContentDeduplicationService:
         content = "Test content with problematic metadata"
 
         # Test with None metadata
-        result1 = await dedup_service.check_duplicate("test1", content, None)
+        result1 = await self.dedup_service.check_duplicate("test1", content, None)
         assert isinstance(result1, DeduplicationResult)
 
         # Test with malformed metadata
@@ -515,7 +515,7 @@ class TestAdvancedContentDeduplicationService:
             "date": "invalid_date_format",
             "tags": [1, 2, 3, {"invalid": "tag"}],
         }
-        result2 = await dedup_service.check_duplicate(
+        result2 = await self.dedup_service.check_duplicate(
             "test2",
             content,
             malformed_metadata,
@@ -530,7 +530,7 @@ class TestAdvancedContentDeduplicationService:
         """
         # Add some content to create fingerprints
         for item in sample_content_items[:2]:
-            await dedup_service.check_duplicate(
+            await self.dedup_service.check_duplicate(
                 item["id"],
                 item["content"],
                 item["metadata"],
@@ -544,7 +544,7 @@ class TestAdvancedContentDeduplicationService:
         ) as tmp_file:
             tmp_path = tmp_file.name
 
-        success = await dedup_service.export_fingerprints(tmp_path)
+        success = await self.dedup_service.export_fingerprints(tmp_path)
         assert success
 
         # Verify exported data
@@ -592,14 +592,14 @@ class TestDeduplicationDetectors:
         ]
 
         for i, content in enumerate(contents):
-            normalized = normalizer.normalize_content(content)
+            normalized = self.normalizer.normalize_content(content)
             content_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
             fingerprint = ContentFingerprint(
                 content_hash=content_hash,
                 metadata_hash=f"metadata_hash_{i}",
                 fuzzy_hash=f"fuzzy_hash_{i}",
-                title_tokens=normalizer.extract_title_tokens(f"Title {i}"),
+                title_tokens=self.normalizer.extract_title_tokens(f"Title {i}"),
                 content_length=len(content),
             )
             fingerprints.append(fingerprint)

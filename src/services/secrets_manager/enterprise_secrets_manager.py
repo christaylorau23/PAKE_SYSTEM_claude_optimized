@@ -6,12 +6,13 @@ This module provides enterprise-grade secrets management with multiple backends
 including HashiCorp Vault, Azure Key Vault, and AWS Secrets Manager.
 """
 
-import asyncio
-import logging
-import os
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass
 from enum import Enum
+import logging
+import os
+from typing import Any
 
 from .vault_client import PAKESecretsManager, create_vault_config_from_env
 
@@ -65,7 +66,7 @@ class SecretsBackendInterface(ABC):
 class VaultSecretsBackend(SecretsBackendInterface):
     """HashiCorp Vault secrets backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, vault_config: dict[str, Any] | None = None) -> None:
         self.vault_config = vault_config or create_vault_config_from_env()
         self.secrets_manager: PAKESecretsManager | None = None
 
@@ -75,7 +76,7 @@ class VaultSecretsBackend(SecretsBackendInterface):
         await self.secrets_manager.__aenter__()
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """Async context manager exit."""
         if self.secrets_manager:
             await self.secrets_manager.__aexit__(exc_type, exc_val, exc_tb)
@@ -137,7 +138,7 @@ class VaultSecretsBackend(SecretsBackendInterface):
 class AzureKeyVaultBackend(SecretsBackendInterface):
     """Azure Key Vault secrets backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, vault_url: str, client_id: str, client_secret: str, tenant_id: str) -> None:
         self.vault_url = vault_url
         self.client_id = client_id
         self.client_secret = client_secret
@@ -162,7 +163,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
             msg = "Azure Key Vault SDK not available"
             raise RuntimeError(msg)
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """Async context manager exit."""
         if self._client:
             await self._client.close()
@@ -176,7 +177,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
         try:
             secret = await self._client.get_secret(name)
             return secret.value
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get secret %s: %s", name, e)
             return None
 
@@ -189,7 +190,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
         try:
             await self._client.set_secret(name, value)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to set secret %s: %s", name, e)
             return False
 
@@ -204,7 +205,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
             async for secret_properties in self._client.list_properties_of_secrets():
                 secrets.append(secret_properties.name)
             return secrets
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to list secrets: %s", e)
             return []
 
@@ -217,7 +218,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
         try:
             await self._client.begin_delete_secret(name)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to delete secret %s: %s", name, e)
             return False
 
@@ -225,7 +226,7 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
 class AWSSecretsManagerBackend(SecretsBackendInterface):
     """AWS Secrets Manager backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, region: str) -> None:
         self.region = region
         self._client = None
 
@@ -242,7 +243,7 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
             msg = "AWS SDK not available"
             raise RuntimeError(msg)
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """Async context manager exit."""
         # boto3 client doesn't need explicit cleanup
 
@@ -255,7 +256,7 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
         try:
             response = self._client.get_secret_value(SecretId=name)
             return response["SecretString"]
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get secret %s: %s", name, e)
             return None
 
@@ -268,7 +269,7 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
         try:
             self._client.put_secret_value(SecretId=name, SecretString=value)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to set secret %s: %s", name, e)
             return False
 
@@ -281,7 +282,7 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
         try:
             response = self._client.list_secrets()
             return [secret["Name"] for secret in response["SecretList"]]
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to list secrets: %s", e)
             return []
 
@@ -294,7 +295,7 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
         try:
             self._client.delete_secret(SecretId=name, ForceDeleteWithoutRecovery=True)
             return True
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to delete secret %s: %s", name, e)
             return False
 
@@ -339,7 +340,7 @@ class EnvironmentSecretsBackend(SecretsBackendInterface):
 class EnterpriseSecretsManager:
     """Enterprise secrets manager with multiple backend support."""
 
-    def __init__(self) -> None:
+    def __init__(self, primary_backend: SecretsBackend) -> None:
         self.primary_backend = primary_backend
         self.backends: dict[SecretsBackend, SecretsBackendInterface] = {}
         self._current_backend: SecretsBackendInterface | None = None
@@ -349,7 +350,7 @@ class EnterpriseSecretsManager:
         await self._initialize_backend()
         return self
 
-    async def __aexit__(self) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """Async context manager exit."""
         if self._current_backend and hasattr(self._current_backend, "__aexit__"):
             await self._current_backend.__aexit__(exc_type, exc_val, exc_tb)
@@ -536,7 +537,7 @@ async def main(self) -> None:
             for key in all_secrets:
                 logger.info("  - %s: [REDACTED_SECRET]", key)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Enterprise secrets manager test failed: %s", e)
         return 1
 

@@ -12,8 +12,8 @@ Usage:
 """
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -54,7 +54,7 @@ def test_vault_integration(self) -> None:
 
         return True
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"❌ Failed to load configuration from Vault: {e}")
         return False
 
@@ -97,7 +97,7 @@ def test_environment_fallback(self) -> None:
 
         return True
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"❌ Failed to load configuration from environment: {e}")
         return False
 
@@ -137,7 +137,7 @@ def test_vault_priority(self) -> None:
 
         return True
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"❌ Priority test failed: {e}")
         return False
 
@@ -160,7 +160,7 @@ def test_vault_client_health(self) -> None:
 
         return health.get("status") == "healthy"
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Health check failed: {e}")
         return False
 

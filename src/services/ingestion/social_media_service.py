@@ -7,13 +7,13 @@ intelligent content filtering, and cognitive quality assessment.
 """
 
 import asyncio
-import hashlib
-import logging
-import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import hashlib
+import logging
+import re
+from typing import Any, Dict, List
 
 import aiohttp
 
@@ -114,7 +114,7 @@ class SocialMediaService:
     - Multi-language support
     """
 
-    def __init__(self) -> None:
+    def __init__(self, configs: List[SocialMediaConfig], cognitive_engine: Any = None) -> None:
         """Initialize social media service with platform configurations."""
         self.configs = {config.platform: config for config in configs}
         self.cognitive_engine = cognitive_engine
@@ -208,7 +208,7 @@ class SocialMediaService:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001
@@ -222,7 +222,7 @@ class SocialMediaService:
                 execution_time=execution_time,
             )
 
-    async def _get_platform_client(self) -> None:
+    async def _get_platform_client(self, platform: SocialPlatform) -> Any:
         """Get or create client for specific platform."""
         if platform not in self._client_pool:
             config = self.configs[platform]
@@ -313,7 +313,7 @@ class SocialMediaService:
                 # Fallback to mock data
                 return self._generate_mock_twitter_posts(query)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Twitter search failed: %s", e)
             # Fallback to mock data when API fails
             return self._generate_mock_twitter_posts(query)
@@ -358,7 +358,7 @@ class SocialMediaService:
                 # Fallback to mock data
                 return self._generate_mock_linkedin_posts(query)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("LinkedIn search failed: %s", e)
             # Fallback to mock data when API fails
             return self._generate_mock_linkedin_posts(query)
@@ -772,7 +772,7 @@ What fields do you think will be transformed next?""",
 
                 assessed_posts.append(assessed_post)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to assess post %s: %s", post.post_id, e)
                 assessed_posts.append(post)  # Keep original
 
@@ -894,7 +894,7 @@ What fields do you think will be transformed next?""",
         self._rate_limits.clear()
         logger.info("SocialMediaService closed")
 
-    async def _create_twitter_client(self) -> None:
+    async def _create_twitter_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
         """Create Twitter API v2 client."""
         credentials = config.api_credentials
         return {
@@ -904,7 +904,7 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_linkedin_client(self) -> None:
+    async def _create_linkedin_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
         """Create LinkedIn API client."""
         credentials = config.api_credentials
         return {
@@ -914,7 +914,7 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_reddit_client(self) -> None:
+    async def _create_reddit_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
         """Create Reddit API client."""
         credentials = config.api_credentials
         return {
@@ -981,7 +981,7 @@ What fields do you think will be transformed next?""",
 
                 posts.append(post)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Failed to parse Twitter tweet %s: %s",
                     tweet.get("id", "unknown"),
@@ -1032,7 +1032,7 @@ What fields do you think will be transformed next?""",
 
                 posts.append(post)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Failed to parse LinkedIn share %s: %s",
                     share.get("id", "unknown"),

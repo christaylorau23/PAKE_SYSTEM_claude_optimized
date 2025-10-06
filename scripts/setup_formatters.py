@@ -1,12 +1,13 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Setup and Validation Script for Code Formatters
 Configures and validates Black, Prettier, Ruff, and isort across the PAKE System codebase.
 """
 
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 class FormatterSetup:

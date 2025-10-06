@@ -80,12 +80,12 @@ class SimpleTestRunner:
                 self.log(f"✓ {service_name} started successfully")
                 self.services_started.append((process, service_name))
                 return process
-            except:
+            except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                 self.log(f"✗ {service_name} failed to start", "ERROR")
                 process.terminate()
                 return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log(f"✗ Failed to start {service_name}: {e}", "ERROR")
             return None
 
@@ -262,7 +262,7 @@ class SimpleTestRunner:
                     "ERROR",
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.tests_failed += 1
             self.log(f"✗ Service registry test failed: {e}", "ERROR")
 
@@ -322,11 +322,11 @@ class SimpleTestRunner:
                 process.terminate()
                 process.wait(timeout=5)
                 self.log(f"✓ Stopped {name}")
-            except:
+            except (ValueError, RuntimeError) as e:
                 try:
                     process.kill()
                     self.log(f"✓ Killed {name}")
-                except:
+                except (ValueError, RuntimeError) as e:
                     self.log(f"✗ Failed to stop {name}", "ERROR")
 
     def run_all_tests(self) -> None:

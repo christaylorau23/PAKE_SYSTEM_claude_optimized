@@ -39,7 +39,7 @@ class TestAPIGatewayHealthContract:
         Expected: 200 or 503 status (healthy or degraded, but endpoint must exist)
         """
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
 
         # Health endpoint must exist (200 healthy, 503 degraded/unhealthy)
         assert response.status_code in [
@@ -63,7 +63,7 @@ class TestAPIGatewayHealthContract:
         }
         """
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
 
         assert response.status_code in [200, 503]
         health_data = response.json()
@@ -104,7 +104,7 @@ class TestAPIGatewayHealthContract:
         start_time = time.time()
 
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
 
         response_time = time.time() - start_time
 
@@ -122,7 +122,7 @@ class TestAPIGatewayHealthContract:
         Expected: Services object with individual service health statuses
         """
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
 
         assert response.status_code in [200, 503]
         health_data = response.json()
@@ -161,7 +161,7 @@ class TestAPIGatewayHealthContract:
         Contract Requirement: Health endpoint must return application/json
         """
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
 
         assert response.status_code in [200, 503]
         assert response.headers[
@@ -179,11 +179,11 @@ class TestAPIGatewayHealthContract:
         """
         # Test shallow health check (default)
         # This test WILL FAIL until API Gateway is implemented
-        response = await http_client.get(f"{api_gateway_base_url}/health")
+        response = await self.http_client.get(f"{api_gateway_base_url}/health")
         assert response.status_code in [200, 503]
 
         # Test deep health check with dependencies
-        response_deep = await http_client.get(
+        response_deep = await self.http_client.get(
             f"{api_gateway_base_url}/health?level=deep"
         )
         assert response_deep.status_code in [200, 503]

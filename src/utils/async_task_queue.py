@@ -1,22 +1,24 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Async Task Queue System
 High-performance async task processing with Celery, Redis, and foundation integration.
 """
 
 import asyncio
-import functools
-import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import functools
+import time
+from typing import Any, Dict
 
-import redis.asyncio as redis
 from celery import Celery
 from celery.result import AsyncResult
 from kombu import Exchange, Queue
+import redis.asyncio as redis
 
 from utils.circuit_breaker import (
     CircuitBreaker,
@@ -90,7 +92,7 @@ class TaskResult:
 class TaskQueueError(PAKEException):
     """Task queue-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
 
 
@@ -99,7 +101,7 @@ class AsyncTaskQueue:
     Includes circuit breaker protection, retry mechanisms, and comprehensive monitoring.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, redis_url: str = "redis://localhost:6379", broker_url: str | None = None, result_backend: str | None = None, app_name: str = "pake_tasks") -> None:
         self.redis_url = redis_url
         self.broker_url = broker_url or redis_url
         self.result_backend = result_backend or redis_url
@@ -211,7 +213,7 @@ class AsyncTaskQueue:
                 labels={"status": "success"},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.metrics.increment_counter(
                 "task_queue_connections",
                 labels={"status": "error"},
@@ -229,10 +231,10 @@ class AsyncTaskQueue:
                 await self.redis_client.close()
             await self.cache.disconnect()
             self.logger.info("Disconnected from task queue")
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("Error disconnecting from task queue", error=e)
 
-    def task(self) -> None:
+    def task(self, name: str | None = None, config: TaskConfig | None = None) -> Callable:
         """Decorator to register async functions as Celery tasks."""
 
         def decorator(func: Callable) -> Callable:
@@ -263,7 +265,7 @@ class AsyncTaskQueue:
 
         @functools.wraps(func)
         @with_error_handling(f"task_{func.__name__}")
-        async def async_wrapper(self) -> None:
+        async def async_wrapper(celery_self, *args: Any, **kwargs: Any) -> Any:
             task_id = celery_self.request.id
             start_time = time.time()
 
@@ -295,7 +297,7 @@ class AsyncTaskQueue:
                 )
                 return result
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 duration = time.time() - start_time
                 self.metrics.record_histogram(
                     "task_duration",
@@ -311,7 +313,7 @@ class AsyncTaskQueue:
                 )
                 raise
 
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(celery_self, *args: Any, **kwargs: Any) -> Any:
             """Sync wrapper that runs async function in event loop."""
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -377,7 +379,7 @@ class AsyncTaskQueue:
 
             return task_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.metrics.increment_counter(
                 "task_submission_errors",
                 labels={"task_name": task_name},
@@ -418,7 +420,7 @@ class AsyncTaskQueue:
 
             return task_result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             msg = f"Failed to get task result: {str(e)}"
             raise TaskQueueError(
                 msg,
@@ -438,7 +440,7 @@ class AsyncTaskQueue:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to cancel task %s", task_id, error=e)
             return False
 
@@ -466,7 +468,7 @@ class AsyncTaskQueue:
 
             return stats
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get queue stats", error=e)
             return {"error": str(e)}
 
@@ -529,16 +531,16 @@ def get_task_queue() -> AsyncTaskQueue:
 
 
 # Convenience decorators
-def async_task(self) -> None:
+def async_task(config: TaskConfig | None = None, name: str | None = None) -> Callable:
     """Convenience decorator for registering async tasks."""
     queue = get_task_queue()
     return queue.task(config=config, name=name)
 
 
 @asynccontextmanager
-async def task_queue_context(self) -> None:
+async def task_queue_context(redis_url: str = "redis://localhost:6379") -> Any:
     """Context manager for task queue operations."""
-    queue = get_task_queue()
+    queue = AsyncTaskQueue(redis_url=redis_url)
     try:
         await queue.connect()
         yield queue

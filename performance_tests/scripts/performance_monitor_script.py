@@ -12,11 +12,11 @@ Features:
 """
 
 import argparse
-import json
-import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import time
 from typing import Any
 
 import requests  # type: ignore
@@ -210,36 +210,36 @@ class PerformanceMonitor:
             # Update baseline with weighted average
             alpha = 0.1  # Learning rate
             updated_metrics = PerformanceMetrics(
-                timestamp=metrics.timestamp,
-                environment=metrics.environment,
-                test_type=metrics.test_type,
-                scenario=metrics.scenario,
+                timestamp=self.metrics.timestamp,
+                environment=self.metrics.environment,
+                test_type=self.metrics.test_type,
+                scenario=self.metrics.scenario,
                 total_requests=int(
                     self.baseline.total_requests * (1 - alpha)
-                    + metrics.total_requests * alpha
+                    + self.metrics.total_requests * alpha
                 ),
                 failed_requests=int(
                     self.baseline.failed_requests * (1 - alpha)
-                    + metrics.failed_requests * alpha
+                    + self.metrics.failed_requests * alpha
                 ),
                 avg_response_time=self.baseline.avg_response_time * (1 - alpha)
-                + metrics.avg_response_time * alpha,
+                + self.metrics.avg_response_time * alpha,
                 max_response_time=max(
-                    self.baseline.max_response_time, metrics.max_response_time
+                    self.baseline.max_response_time, self.metrics.max_response_time
                 ),
                 min_response_time=min(
-                    self.baseline.min_response_time, metrics.min_response_time
+                    self.baseline.min_response_time, self.metrics.min_response_time
                 ),
                 p95_response_time=self.baseline.p95_response_time * (1 - alpha)
-                + metrics.p95_response_time * alpha,
+                + self.metrics.p95_response_time * alpha,
                 p99_response_time=self.baseline.p99_response_time * (1 - alpha)
-                + metrics.p99_response_time * alpha,
+                + self.metrics.p99_response_time * alpha,
                 requests_per_second=self.baseline.requests_per_second * (1 - alpha)
-                + metrics.requests_per_second * alpha,
+                + self.metrics.requests_per_second * alpha,
                 error_rate_percent=self.baseline.error_rate_percent * (1 - alpha)
-                + metrics.error_rate_percent * alpha,
-                concurrent_users=metrics.concurrent_users,
-                test_duration_seconds=metrics.test_duration_seconds,
+                + self.metrics.error_rate_percent * alpha,
+                concurrent_users=self.metrics.concurrent_users,
+                test_duration_seconds=self.metrics.test_duration_seconds,
             )
             self.save_baseline(updated_metrics)
             print("Updated baseline")
@@ -384,7 +384,7 @@ class PerformanceAlerting:
             print("No Slack webhook URL configured - alert not sent")
             return
 
-        summary = report.get("summary", {})
+        summary = self.report.get("summary", {})
         overall_status = summary.get("overall_status", "unknown")
 
         # Determine alert color
@@ -436,7 +436,7 @@ class PerformanceAlerting:
         }
 
         # Add recommendations if any
-        recommendations = report.get("recommendations", [])
+        recommendations = self.report.get("recommendations", [])
         if recommendations:
             fields = alert_message["attachments"][0]["fields"]
             if isinstance(fields, list):
@@ -456,7 +456,7 @@ class PerformanceAlerting:
                 print("Performance alert sent successfully")
             else:
                 print(f"Failed to send alert: {response.status_code}")
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Error sending alert: {e}")
 
 

@@ -3,10 +3,10 @@
 Demonstrates the core automation without complex dependencies.
 """
 
-import json
-import time
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import time
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -15,11 +15,11 @@ from watchdog.observers import Observer
 class SimpleAutomationHandler(FileSystemEventHandler):
     """Simple file handler for testing automation."""
 
-    def __init__(self) -> None:
+    def __init__(self, vault_path: str | Path) -> None:
         self.vault_path = Path(vault_path)
         self.processed = set()
 
-    def on_created(self) -> None:
+    def on_created(self, event) -> None:
         if event.is_directory:
             return
 
@@ -28,7 +28,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"🔍 DETECTED: {file_path.name}")
             self.process_file(file_path)
 
-    def on_modified(self) -> None:
+    def on_modified(self, event) -> None:
         if event.is_directory:
             return
 
@@ -37,7 +37,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"📝 MODIFIED: {file_path.name}")
             self.process_file(file_path)
 
-    def process_file(self) -> None:
+    def process_file(self, file_path: Path) -> None:
         """Simple processing demonstration."""
         try:
             print(f"⚙️  PROCESSING: {file_path.name}")
@@ -109,7 +109,7 @@ class SimpleAutomationHandler(FileSystemEventHandler):
             print(f"💾 SAVED: Processing result for {file_path.name}")
             print("=" * 50)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"❌ ERROR processing {file_path.name}: {e}")
 
 

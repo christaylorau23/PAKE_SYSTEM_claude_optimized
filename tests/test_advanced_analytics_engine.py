@@ -88,12 +88,12 @@ class TestAdvancedAnalyticsEngine:
     def test_analytics_engine_initialization(self) -> None:
         """Test that the analytics engine initializes correctly."""
         assert analytics_engine is not None
-        assert analytics_engine.trend_service is not None
-        assert analytics_engine.correlation_engine is not None
-        assert analytics_engine.predictive_service is not None
-        assert analytics_engine.insight_service is not None
-        assert analytics_engine._insight_cache is not None
-        assert analytics_engine._cache_ttl == timedelta(minutes=5)
+        assert self.analytics_engine.trend_service is not None
+        assert self.analytics_engine.correlation_engine is not None
+        assert self.analytics_engine.predictive_service is not None
+        assert self.analytics_engine.insight_service is not None
+        assert self.analytics_engine._insight_cache is not None
+        assert self.analytics_engine._cache_ttl == timedelta(minutes=5)
 
     # Test 2: Singleton Pattern
     def test_singleton_pattern(self) -> None:
@@ -150,7 +150,7 @@ class TestAdvancedAnalyticsEngine:
             mock_recommendations.return_value = []
 
             # Execute test
-            report = await analytics_engine.generate_comprehensive_report(
+            report = await self.analytics_engine.generate_comprehensive_report(
                 time_range=mock_time_range,
                 include_predictions=True,
                 include_recommendations=True,
@@ -176,7 +176,7 @@ class TestAdvancedAnalyticsEngine:
     @pytest.mark.asyncio
     async def test_analyze_system_health_success(self) -> None:
         """Test successful system health analysis."""
-        health_score = await analytics_engine._analyze_system_health(mock_time_range)
+        health_score = await self.analytics_engine._analyze_system_health(mock_time_range)
 
         assert isinstance(health_score, SystemHealthScore)
         assert 0 <= health_score.overall_score <= 100
@@ -200,7 +200,7 @@ class TestAdvancedAnalyticsEngine:
     async def test_analyze_performance_trends_success(self) -> None:
         """Test successful performance trends analysis."""
         with patch.object(
-            analytics_engine.trend_service,
+            self.analytics_engine.trend_service,
             "analyze_trend",
         ) as mock_analyze_trend:
             mock_analyze_trend.return_value = {
@@ -209,7 +209,7 @@ class TestAdvancedAnalyticsEngine:
                 "confidence": 0.85,
             }
 
-            trends = await analytics_engine._analyze_performance_trends(mock_time_range)
+            trends = await self.analytics_engine._analyze_performance_trends(mock_time_range)
 
             assert isinstance(trends, dict)
             assert "performance_score" in trends
@@ -225,7 +225,7 @@ class TestAdvancedAnalyticsEngine:
     @pytest.mark.asyncio
     async def test_analyze_usage_patterns_success(self) -> None:
         """Test successful usage patterns analysis."""
-        patterns = await analytics_engine._analyze_usage_patterns(mock_time_range)
+        patterns = await self.analytics_engine._analyze_usage_patterns(mock_time_range)
 
         assert isinstance(patterns, dict)
         assert "usage_patterns" in patterns
@@ -246,7 +246,7 @@ class TestAdvancedAnalyticsEngine:
     @pytest.mark.asyncio
     async def test_detect_anomalies_success(self) -> None:
         """Test successful anomaly detection."""
-        anomalies = await analytics_engine._detect_anomalies(mock_time_range)
+        anomalies = await self.analytics_engine._detect_anomalies(mock_time_range)
 
         assert isinstance(anomalies, dict)
         assert "anomalies_detected" in anomalies
@@ -280,7 +280,7 @@ class TestAdvancedAnalyticsEngine:
     async def test_generate_correlations_success(self) -> None:
         """Test successful correlation analysis."""
         with patch.object(
-            analytics_engine.correlation_engine,
+            self.analytics_engine.correlation_engine,
             "analyze_correlations",
         ) as mock_analyze:
             mock_analyze.return_value = {
@@ -291,7 +291,7 @@ class TestAdvancedAnalyticsEngine:
                 },
             }
 
-            correlations = await analytics_engine._generate_correlations(
+            correlations = await self.analytics_engine._generate_correlations(
                 mock_time_range,
             )
 
@@ -305,7 +305,7 @@ class TestAdvancedAnalyticsEngine:
     async def test_generate_predictions_success(self) -> None:
         """Test successful predictive analytics generation."""
         with patch.object(
-            analytics_engine.predictive_service,
+            self.analytics_engine.predictive_service,
             "generate_forecast",
         ) as mock_forecast:
             mock_forecast.return_value = {
@@ -319,7 +319,7 @@ class TestAdvancedAnalyticsEngine:
                 },
             }
 
-            predictions = await analytics_engine._generate_predictions(mock_time_range)
+            predictions = await self.analytics_engine._generate_predictions(mock_time_range)
 
             assert isinstance(predictions, PredictiveReport)
             assert predictions.forecast_horizon == "7d"
@@ -357,7 +357,7 @@ class TestAdvancedAnalyticsEngine:
             scenario_analysis={},
         )
 
-        insights = await analytics_engine._synthesize_insights(
+        insights = await self.analytics_engine._synthesize_insights(
             health_analysis,
             trend_analysis,
             usage_analysis,
@@ -420,7 +420,7 @@ class TestAdvancedAnalyticsEngine:
             ),
         ]
 
-        recommendations = await analytics_engine._generate_recommendations(insights)
+        recommendations = await self.analytics_engine._generate_recommendations(insights)
 
         assert isinstance(recommendations, list)
 
@@ -486,7 +486,7 @@ class TestAdvancedAnalyticsEngine:
             ),
         ]
 
-        summary = analytics_engine._create_executive_summary(insights)
+        summary = self.analytics_engine._create_executive_summary(insights)
 
         assert isinstance(summary, dict)
         assert "overall_status" in summary
@@ -539,7 +539,7 @@ class TestAdvancedAnalyticsEngine:
             ),
         ]
 
-        confidence = analytics_engine._calculate_report_confidence(insights)
+        confidence = self.analytics_engine._calculate_report_confidence(insights)
 
         assert isinstance(confidence, float)
         assert 0 <= confidence <= 1
@@ -548,7 +548,7 @@ class TestAdvancedAnalyticsEngine:
     # Test 14: Empty Insights Handling
     def test_create_executive_summary_empty_insights(self) -> None:
         """Test executive summary creation with empty insights."""
-        summary = analytics_engine._create_executive_summary([])
+        summary = self.analytics_engine._create_executive_summary([])
 
         assert isinstance(summary, dict)
         assert summary["overall_status"] == "healthy"
@@ -563,7 +563,7 @@ class TestAdvancedAnalyticsEngine:
         with patch.object(analytics_engine, "_analyze_system_health") as mock_health:
             mock_health.side_effect = Exception("Test error")
 
-            report = await analytics_engine.generate_comprehensive_report(
+            report = await self.analytics_engine.generate_comprehensive_report(
                 mock_time_range,
             )
 
@@ -576,15 +576,15 @@ class TestAdvancedAnalyticsEngine:
     def test_insight_cache_functionality(self) -> None:
         """Test insight cache functionality."""
         # Test cache initialization
-        assert analytics_engine._insight_cache == {}
-        assert analytics_engine._cache_ttl == timedelta(minutes=5)
+        assert self.analytics_engine._insight_cache == {}
+        assert self.analytics_engine._cache_ttl == timedelta(minutes=5)
 
         # Test cache key generation
         cache_key = f"test_key_{datetime.now(UTC).timestamp()}"
-        analytics_engine._insight_cache[cache_key] = {"test": "data"}
+        self.analytics_engine._insight_cache[cache_key] = {"test": "data"}
 
-        assert cache_key in analytics_engine._insight_cache
-        assert analytics_engine._insight_cache[cache_key] == {"test": "data"}
+        assert cache_key in self.analytics_engine._insight_cache
+        assert self.analytics_engine._insight_cache[cache_key] == {"test": "data"}
 
     # Test 17: Data Validation
     @pytest.mark.asyncio
@@ -614,7 +614,7 @@ class TestAdvancedAnalyticsEngine:
         import time
 
         start_time = time.time()
-        report = await analytics_engine.generate_comprehensive_report(mock_time_range)
+        report = await self.analytics_engine.generate_comprehensive_report(mock_time_range)
         end_time = time.time()
 
         processing_time = end_time - start_time
@@ -633,7 +633,7 @@ class TestAdvancedAnalyticsEngine:
         """Test concurrent report generation."""
         # Generate multiple reports concurrently
         tasks = [
-            analytics_engine.generate_comprehensive_report(mock_time_range)
+            self.analytics_engine.generate_comprehensive_report(mock_time_range)
             for _ in range(3)
         ]
 
@@ -654,7 +654,7 @@ class TestAdvancedAnalyticsEngine:
         time_ranges = ["1h", "6h", "24h", "7d"]
 
         for time_range in time_ranges:
-            report = await analytics_engine.generate_comprehensive_report(
+            report = await self.analytics_engine.generate_comprehensive_report(
                 time_range=time_range,
                 include_predictions=True,
                 include_recommendations=True,

@@ -3,10 +3,10 @@ Centralized secrets management with secure credential handling.
 """
 
 import asyncio
+from dataclasses import dataclass
 import json
 import logging
 import os
-from dataclasses import dataclass
 from typing import Any, List
 
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
@@ -102,7 +102,7 @@ class VaultClient:
                 encrypted_data = self._cache[cache_key]
                 decrypted_data = self._fernet.decrypt(encrypted_data.encode())
                 return json.loads(decrypted_data.decode())
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError) as e:
                 logger.warning("Cache decryption failed for %s: %s", path, e)
 
         await self._ensure_session()
@@ -138,7 +138,7 @@ class VaultClient:
                     msg = f"API error {response.status}: {error_data}"
                     raise VaultAPIError(msg)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 if attempt == self.config.max_retries - 1:
                     logger.error(
                         "Failed to retrieve secret %s after %s attempts: %s",
@@ -297,7 +297,7 @@ class VaultSecretManager:
             # Store updated secret
             return await self.vault.put_secret(path, existing)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to rotate secret %s.%s: %s", path, key, e)
             return False
 
@@ -358,7 +358,7 @@ async def main(self) -> None:
             vapi_config = await secrets_manager.get_vapi_config()
             print(f"Vapi config retrieved: {list(vapi_config.keys())}")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Error: {e}")
 
 

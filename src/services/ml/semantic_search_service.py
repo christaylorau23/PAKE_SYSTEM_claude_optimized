@@ -7,14 +7,14 @@ and intelligent ranking without heavy ML dependencies.
 """
 
 import asyncio
+from collections import Counter
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 import json
 import logging
 import math
 import re
-from collections import Counter
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

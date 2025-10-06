@@ -3,28 +3,34 @@
 World-class multi-tenant FastAPI server with comprehensive security, monitoring, and performance optimization.
 """
 
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+import json
 import logging
 import os
+from pathlib import Path
 import sys
 import time
 import traceback
+from typing import Any, Dict, List, Callable
 import uuid
-from contextlib import asynccontextmanager
-from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
 
+import aiohttp
+import sqlalchemy
+import psycopg2
+import asyncpg
 import structlog
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # FastAPI and web framework imports
-import uvicorn
 from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Request,
+    Response,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -35,6 +41,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 # Performance and monitoring
 from prometheus_client import Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field, validator
+import uvicorn
 
 from src.middleware.tenant_context import (
     TenantConfig,
@@ -95,8 +102,11 @@ try:
         get_content_summarization_service,
     )
     from src.services.ml.knowledge_graph_service import get_knowledge_graph_service
-except ImportError:
-    pass
+except ImportError as e:
+
+    logger.debug(f"Exception in multi_tenant_server.py: {e}")
+
+    # Continue gracefully
 
 try:
     from src.services.visualization.analytics_endpoints import (
@@ -242,7 +252,7 @@ class SearchRequest(TenantAwareBaseModel):
     )
 
     @validator("sources")
-    def validate_sources(self) -> None:
+    def validate_sources(cls, v) -> List[str]:
         allowed_sources = ["web", "arxiv", "pubmed", "github", "stackoverflow"]
         invalid_sources = [s for s in v if s not in allowed_sources]
         if invalid_sources:
@@ -319,7 +329,7 @@ async def lifespan(self) -> None:
 
         yield
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Failed to start server: %s", e)
         logger.error(traceback.format_exc())
         raise
@@ -370,7 +380,7 @@ async def initialize_services(self) -> None:
         security_enforcer = get_security_enforcer()
         logger.info("✅ Tenant isolation security enforcer initialized")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Failed to initialize services: %s", e)
         raise
 
@@ -427,7 +437,7 @@ async def cleanup_services(self) -> None:
 
         logger.info("✅ Services cleanup complete")
 
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         logger.error("Error during cleanup: %s", e)
 
 
@@ -475,7 +485,7 @@ if config.ENABLE_GZIP:
 
 
 @app.middleware("http")
-async def request_logging_middleware(self) -> None:
+async def request_logging_middleware(request: Request, call_next: Callable) -> Response:
     """Log requests and collect metrics."""
     start_time = time.time()
 
@@ -587,7 +597,7 @@ async def health_check(self) -> None:
 
         return health_data
 
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         return JSONResponse(
             status_code=503,
             content={
@@ -642,7 +652,7 @@ async def root(self) -> None:
 
 
 @app.post(f"{config.API_PREFIX}/auth/login", response_model=LoginResponse)
-async def login(self) -> None:
+async def login(request: LoginRequest) -> LoginResponse:
     """Authenticate user and return JWT tokens."""
     if not auth_service:
         raise HTTPException(
@@ -687,7 +697,7 @@ async def login(self) -> None:
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         AUTH_ATTEMPTS.labels(tenant_id=tenant_id, success="error").inc()
         logger.error("Authentication error: %s", e)
         raise HTTPException(status_code=500, detail="Authentication service error")
@@ -710,7 +720,7 @@ async def refresh_token(self) -> None:
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Token refresh error: %s", e)
         raise HTTPException(status_code=500, detail="Token refresh service error")
 
@@ -731,7 +741,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
         # Current implementation uses placeholder - requires proper JWT token extraction
         return await auth_service.logout_user("access_token_here")
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
         logger.error("Logout error: %s", e)
         raise HTTPException(status_code=500, detail="Logout service error")
 

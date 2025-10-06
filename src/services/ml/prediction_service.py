@@ -6,18 +6,19 @@ Provides high-performance prediction services with model ensemble capabilities,
 batch processing, streaming predictions, and comprehensive result management.
 """
 
-import asyncio
-import logging
-import time
-import uuid
 from abc import ABC, abstractmethod
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
+import uuid
 
 import numpy as np
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +215,7 @@ class InferenceEngine(ABC):
 class ModelServingInferenceEngine(InferenceEngine):
     """Inference engine using model serving service."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_serving_service: Any) -> None:
         self.model_serving_service = model_serving_service
 
     async def predict(
@@ -235,7 +236,7 @@ class ModelServingInferenceEngine(InferenceEngine):
             response = await self.model_serving_service.predict(request)
             return response.predictions
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Inference failed for model %s: %s", model_id, e)
             raise
 
@@ -263,7 +264,7 @@ class ModelServingInferenceEngine(InferenceEngine):
 
             return predictions
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Batch inference failed for model %s: %s", model_id, e)
             raise
 
@@ -282,7 +283,7 @@ class ModelServingInferenceEngine(InferenceEngine):
                 }
             return {"model_id": model_id, "status": "not_found"}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get model info for %s: %s", model_id, e)
             return {"model_id": model_id, "status": "error", "error": str(e)}
 
@@ -312,7 +313,7 @@ class EnsemblePredictor:
             msg = f"Unsupported ensemble method: {method}"
             raise ValueError(msg)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Ensemble prediction failed: %s", e)
             raise
 
@@ -355,7 +356,7 @@ class EnsemblePredictor:
                 "model_count": len(predictions),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Voting ensemble failed: %s", e)
             raise
 
@@ -391,7 +392,7 @@ class EnsemblePredictor:
                 "model_count": len(predictions),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Averaging ensemble failed: %s", e)
             raise
 
@@ -436,7 +437,7 @@ class EnsemblePredictor:
                 "weights": weights.tolist(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Weighted averaging ensemble failed: %s", e)
             raise
 
@@ -451,7 +452,7 @@ class EnsemblePredictor:
             # In production, this would use a meta-learner
             return await self._weighted_averaging_ensemble(predictions, weights)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Stacking ensemble failed: %s", e)
             raise
 
@@ -461,7 +462,7 @@ class PredictionService:
     Provides real-time, batch, and streaming predictions with comprehensive result management.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, inference_engine: InferenceEngine) -> None:
         self.inference_engine = inference_engine
         self.ensemble_predictor = EnsemblePredictor()
 
@@ -510,7 +511,7 @@ class PredictionService:
                         request.input_data,
                     )
                     model_predictions[model_id] = prediction
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     model_errors[model_id] = str(e)
                     logger.error("Prediction failed for model %s: %s", model_id, e)
 
@@ -526,7 +527,7 @@ class PredictionService:
                         )
                     )
                     self.stats["ensemble_requests"] += 1
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     logger.error("Ensemble prediction failed: %s", e)
 
             # Calculate processing time
@@ -563,7 +564,7 @@ class PredictionService:
             logger.info("Prediction completed for request %s", request.request_id)
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Create failed result
             processing_time = (time.time() - start_time) * 1000
             result = PredictionResult(
@@ -660,7 +661,7 @@ class PredictionService:
             logger.info("Batch prediction completed for batch %s", request.batch_id)
             return batch_result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Create failed batch result
             total_processing_time = (time.time() - start_time) * 1000
             batch_result = BatchPredictionResult(
@@ -702,7 +703,7 @@ class PredictionService:
 
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Request validation error: %s", e)
             return False
 
@@ -724,11 +725,11 @@ class PredictionService:
             # Check batch size
             return not request.batch_size <= 0
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Batch request validation error: %s", e)
             return False
 
-    def _update_average_processing_time(self) -> None:
+    def _update_average_processing_time(self, processing_time: float) -> None:
         """Update average processing time."""
         total_requests = (
             self.stats["successful_requests"] + self.stats["failed_requests"]
@@ -778,7 +779,7 @@ class PredictionService:
 
         return stats
 
-    async def cleanup_old_results(self) -> None:
+    async def cleanup_old_results(self, max_age_hours: int = 24) -> None:
         """Clean up old prediction results."""
         try:
             cutoff_time = datetime.now(UTC).timestamp() - (max_age_hours * 3600)
@@ -809,7 +810,7 @@ class PredictionService:
                 len(old_batches),
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to cleanup old results: %s", e)
 
 

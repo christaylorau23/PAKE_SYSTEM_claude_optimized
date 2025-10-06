@@ -9,8 +9,8 @@ new structured pipeline.
 import logging
 import logging.config
 import os
-import sys
 from pathlib import Path
+import sys
 from typing import Any, Dict, Optional
 
 import structlog

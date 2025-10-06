@@ -6,11 +6,11 @@ Following TDD methodology for RSS/Atom feed ingestion with cognitive integration
 """
 
 import asyncio
-import hashlib
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import hashlib
+import logging
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import aiohttp
@@ -221,7 +221,7 @@ class RSSFeedService:
                         status=response.status,
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Attempt %s failed for %s: %s", attempt + 1, feed_url, e)
 
                 if attempt < max_retries:
@@ -325,7 +325,7 @@ class RSSFeedService:
 
                     items.append(item)
 
-                except Exception as item_error:
+                except (ValueError, RuntimeError) as item_error:
                     logger.warning(
                         "Failed to parse item in %s: %s", feed_url, item_error
                     )
@@ -338,7 +338,7 @@ class RSSFeedService:
                 items=items,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to parse feed %s: %s", feed_url, e)
             return RSSFeedResult(
                 success=False,
@@ -503,7 +503,7 @@ class RSSFeedService:
                     # Basic content extraction (could be enhanced with newspaper3k or similar)
                     # For now, return raw HTML
                     return html_content[:5000]  # Truncate for safety
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.warning(
                 "Failed to fetch article content from %s: %s", article_url, e
             )
@@ -559,7 +559,7 @@ class RSSFeedService:
 
                 assessed_items.append(enhanced_item)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Cognitive assessment failed for item %s: %s",
                     item.title,
@@ -623,7 +623,7 @@ class RSSFeedService:
 
                 content_items.append(content_item)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to convert RSS item to ContentItem: %s", e)
                 continue
 
@@ -672,7 +672,7 @@ class RSSFeedService:
 
         return None
 
-    def _cache_result(self) -> None:
+    def _cache_result(self, feed_url: str, result: RSSFeedResult) -> None:
         """Cache successful result."""
         cache_key = hashlib.sha256(feed_url.encode()).hexdigest()
 
@@ -692,7 +692,7 @@ class RSSFeedService:
             for key in oldest_keys:
                 del self.cache[key]
 
-    async def _apply_rate_limit(self) -> None:
+    async def _apply_rate_limit(self, delay: float) -> None:
         """Apply rate limiting delay."""
         current_time = asyncio.get_event_loop().time()
         elapsed = current_time - self.last_request_time

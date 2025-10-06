@@ -1,3 +1,5 @@
+from datetime import UTC
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Production Health Validation
@@ -50,7 +52,7 @@ class ProductionHealthValidator:
                     self.results["summary"]["critical_failures"] += 1
                 print(f"❌ {check_name}: FAILED - {result.get('details', '')}")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.results["checks"].append(
                 {
                     "name": check_name,
@@ -76,7 +78,7 @@ class ProductionHealthValidator:
                     response = await client.get(f"{self.base_url}{endpoint}")
                     if response.status_code != 200:
                         failed_endpoints.append(f"{endpoint} ({response.status_code})")
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     failed_endpoints.append(f"{endpoint} (error: {str(e)})")
 
             return {
@@ -120,7 +122,7 @@ class ProductionHealthValidator:
                         "critical": True,
                         "details": f"SSL certificate expires in {days_until_expiry} days",
                     }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "passed": False,
                 "critical": True,
@@ -141,7 +143,7 @@ class ProductionHealthValidator:
 
                     if response_time > 2000:  # 2 seconds threshold
                         slow_endpoints.append(f"{endpoint} ({response_time:.0f}ms)")
-                except:
+                except (ValueError, RuntimeError) as e:
                     slow_endpoints.append(f"{endpoint} (timeout)")
 
             return {
@@ -170,7 +172,7 @@ class ProductionHealthValidator:
                     "details": "Database connectivity"
                     + ("OK" if db_accessible else "FAILED"),
                 }
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 return {
                     "passed": False,
                     "critical": True,
@@ -193,7 +195,7 @@ class ProductionHealthValidator:
                     "critical": False,
                     "details": "Cache system" + ("OK" if cache_working else "FAILED"),
                 }
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 return {
                     "passed": False,
                     "critical": False,
@@ -222,7 +224,7 @@ class ProductionHealthValidator:
                     if missing_headers
                     else "All security headers present",
                 }
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 return {
                     "passed": False,
                     "critical": False,

@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Migration script to help developers transition from requirements.txt files to Poetry.
@@ -14,11 +15,11 @@ Usage:
 """
 
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:

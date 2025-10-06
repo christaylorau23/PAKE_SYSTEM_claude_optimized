@@ -6,9 +6,9 @@ Addresses security vulnerabilities and updates deprecated packages
 
 import json
 import logging
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Configure logging
@@ -254,7 +254,7 @@ def main(self) -> None:
         else:
             logger.error("❌ Dependency update process failed!")
             sys.exit(1)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Unexpected error: %s", e)
         sys.exit(1)
 

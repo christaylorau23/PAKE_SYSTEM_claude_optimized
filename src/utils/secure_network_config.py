@@ -3,11 +3,11 @@
 Replaces insecure 0.0.0.0 bindings with secure alternatives.
 """
 
-import logging
-import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+import logging
+import os
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class SecureNetworkConfig:
     Provides environment-appropriate network settings.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, environment: Environment | None = None) -> None:
         self.environment = environment or self._detect_environment()
         self.config = self._get_secure_config()
 

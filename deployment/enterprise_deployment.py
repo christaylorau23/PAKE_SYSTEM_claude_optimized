@@ -1,3 +1,4 @@
+config
 #!/usr/bin/env python3
 """PAKE System - Enterprise Deployment Configuration
 Phase 2B Sprint 4: Production-ready deployment orchestration and configuration.
@@ -6,15 +7,15 @@ Provides enterprise-grade deployment configuration, service orchestration,
 health monitoring, and production readiness validation.
 """
 
+from abc import ABC, abstractmethod
 import asyncio
 import contextlib
-import json
-import logging
-import time
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -226,7 +227,7 @@ class LocalServiceManager(ServiceManager):
             await asyncio.sleep(0.1)  # Simulate startup time
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to deploy %s: %s", config.name, e)
             return False
 
@@ -241,7 +242,7 @@ class LocalServiceManager(ServiceManager):
                 logger.info("Stopped %s", service_name)
                 return True
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to stop %s: %s", service_name, e)
             return False
 
@@ -278,7 +279,7 @@ class LocalServiceManager(ServiceManager):
                 error_message="Service not running",
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             response_time = (time.time() - start_time) * 1000
             return ServiceHealth(
                 service_name=service_name,
@@ -484,7 +485,7 @@ class EnterpriseDeploymentOrchestrator:
             logger.info("Deployment completed successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Deployment failed: %s", e)
             self.deployment_status.overall_status = ServiceStatus.FAILED
             return False
@@ -520,7 +521,7 @@ class EnterpriseDeploymentOrchestrator:
             logger.info("Deployment stopped")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error stopping deployment: %s", e)
             return False
 
@@ -577,7 +578,7 @@ class EnterpriseDeploymentOrchestrator:
                 await asyncio.sleep(self.health_check_interval)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health monitoring error: %s", e)
                 await asyncio.sleep(5)  # Brief pause before retry
 
@@ -642,7 +643,7 @@ class EnterpriseDeploymentOrchestrator:
             logger.info("Configuration exported to %s", filepath)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to export configuration: %s", e)
             return False
 

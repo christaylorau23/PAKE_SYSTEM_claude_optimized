@@ -9,16 +9,16 @@ Provides intelligent content deduplication using multiple algorithms:
 - Configurable similarity thresholds and policies
 """
 
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
 import hashlib
 import json
 import logging
 import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class DeduplicationConfig:
 class ContentNormalizer:
     """Normalizes content for consistent deduplication."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: DeduplicationConfig) -> None:
         self.config = config
 
         # Pre-compiled regex patterns for performance
@@ -233,7 +233,7 @@ class DuplicationDetector(ABC):
 class ExactHashDetector(DuplicationDetector):
     """Exact hash-based duplicate detection."""
 
-    def __init__(self) -> None:
+    def __init__(self, normalizer: ContentNormalizer) -> None:
         self.normalizer = normalizer
 
     async def detect_duplicate(
@@ -258,7 +258,7 @@ class ExactHashDetector(DuplicationDetector):
 class FuzzyHashDetector(DuplicationDetector):
     """Fuzzy hash-based near-duplicate detection."""
 
-    def __init__(self) -> None:
+    def __init__(self, normalizer: ContentNormalizer, config: DeduplicationConfig) -> None:
         self.normalizer = normalizer
         self.config = config
 
@@ -322,7 +322,7 @@ class FuzzyHashDetector(DuplicationDetector):
 class TitleSimilarityDetector(DuplicationDetector):
     """Title-based similarity detection."""
 
-    def __init__(self) -> None:
+    def __init__(self, normalizer: ContentNormalizer, config: DeduplicationConfig) -> None:
         self.normalizer = normalizer
         self.config = config
 
@@ -376,7 +376,7 @@ class AdvancedContentDeduplicationService:
     Provides ML-powered similarity detection and configurable policies.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: DeduplicationConfig | None = None) -> None:
         self.config = config or DeduplicationConfig()
         self.normalizer = ContentNormalizer(self.config)
 
@@ -492,7 +492,7 @@ class AdvancedContentDeduplicationService:
 
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in duplicate check: %s", e)
             processing_time = (time.time() - start_time) * 1000
 
@@ -542,7 +542,7 @@ class AdvancedContentDeduplicationService:
             content_length=len(content),
         )
 
-    def _store_fingerprint(self) -> None:
+    def _store_fingerprint(self, content_id: str, fingerprint: ContentFingerprint) -> None:
         """Store fingerprint for future comparisons."""
         # Memory management - remove oldest fingerprints if limit exceeded
         if len(self.fingerprints) >= self.config.max_fingerprints_memory:
@@ -565,7 +565,7 @@ class AdvancedContentDeduplicationService:
         self.fingerprints[fingerprint.content_hash] = fingerprint
         self.content_id_mapping[fingerprint.content_hash] = content_id
 
-    def _update_stats(self) -> None:
+    def _update_stats(self, method: DeduplicationMethod | None, processing_time: float, is_duplicate: bool) -> None:
         """Update processing statistics."""
         self.stats["total_processed"] += 1
         self.stats["processing_time_total"] += processing_time
@@ -648,7 +648,7 @@ class AdvancedContentDeduplicationService:
             )
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to export fingerprints: %s", e)
             return False
 

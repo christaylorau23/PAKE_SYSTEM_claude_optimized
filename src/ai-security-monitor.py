@@ -14,20 +14,19 @@ Features:
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import logging
 import os
 import re
 import time
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from enum import Enum
-from typing import Any
-
-import uvicorn
+from typing import Any, Dict, List
 
 # FastAPI and async dependencies
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
+import uvicorn
 
 # Elasticsearch integration
 try:
@@ -180,7 +179,7 @@ class MockLLMAnalyzer:
                 behavioral_alerts = await self._analyze_user_behavior(log_entry)
                 alerts.extend(behavioral_alerts)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error analyzing log entry: %s", e)
                 continue
 
@@ -194,59 +193,104 @@ class MockLLMAnalyzer:
     ) -> list[tuple[SecurityPatternType, float]]:
         """Detect security patterns in log messages."""
         detected = []
-
         message_lower = message.lower()
 
         for pattern_name, regex_patterns in self.security_patterns.items():
-            confidence = 0.0
-            matches = 0
-
-            for pattern in regex_patterns:
-                if re.search(pattern, message_lower, re.IGNORECASE):
-                    matches += 1
-                    confidence += 0.3
-
-            if matches > 0:
-                # Adjust confidence based on context
-                if pattern_name == "failed_login":
-                    if log_entry.get("status_code") == 401:
-                        confidence += 0.4
-                    if (
-                        "REDACTED_SECRET" in message_lower
-                        or "username" in message_lower
-                    ):
-                        confidence += 0.2
-
-                elif pattern_name == "sql_injection":
-                    if log_entry.get("endpoint", "").endswith(("/api/", "/query")):
-                        confidence += 0.3
-                    if log_entry.get("method") == "POST":
-                        confidence += 0.2
-
-                elif pattern_name == "slow_query":
-                    # Extract execution time if available
-                    time_match = re.search(
-                        r"(\d+\.?\d*)\s*(?:ms|seconds?)",
-                        message_lower,
-                    )
-                    if time_match:
-                        exec_time = float(time_match.group(1))
-                        if exec_time > 1000:  # >1 second
-                            confidence += 0.5
-                        elif exec_time > 500:  # >500ms
-                            confidence += 0.3
-
-                # Cap confidence at 1.0
-                confidence = min(confidence, 1.0)
-
-                if confidence > 0.3:  # Threshold for alert generation
-                    try:
-                        pattern_type = SecurityPatternType(pattern_name)
-                        detected.append((pattern_type, confidence))
-                    except ValueError:
-                        continue
+            confidence = self._calculate_base_confidence(message_lower, regex_patterns)
+            
+            if confidence <= 0:
+                continue
+                
+            # Apply context-specific adjustments
+            confidence = self._apply_context_adjustments(pattern_name, message_lower, log_entry, confidence)
+            
+            # Cap confidence and add to results if above threshold
+            confidence = min(confidence, 1.0)
+            if confidence > 0.3:  # Threshold for alert generation
+                pattern_type = self._get_pattern_type(pattern_name)
+                if pattern_type:
+                    detected.append((pattern_type, confidence))
 
         return detected
+
+    def _calculate_base_confidence(self, message_lower: str, regex_patterns: list) -> float:
+        """Calculate base confidence from regex pattern matches."""
+        confidence = 0.0
+        matches = 0
+
+        for pattern in regex_patterns:
+            if re.search(pattern, message_lower, re.IGNORECASE):
+                matches += 1
+                confidence += 0.3
+
+        return confidence if matches > 0 else 0.0
+
+    def _apply_context_adjustments(
+        self, 
+        pattern_name: str, 
+        message_lower: str, 
+        log_entry: Dict[str, Any], 
+        confidence: float
+    ) -> float:
+        """Apply context-specific confidence adjustments."""
+        if pattern_name == "failed_login":
+            return self._adjust_failed_login_confidence(message_lower, log_entry, confidence)
+        elif pattern_name == "sql_injection":
+            return self._adjust_sql_injection_confidence(log_entry, confidence)
+        elif pattern_name == "slow_query":
+            return self._adjust_slow_query_confidence(message_lower, confidence)
+        
+        return confidence
+
+    def _adjust_failed_login_confidence(
+        self, 
+        message_lower: str, 
+        log_entry: Dict[str, Any], 
+        confidence: float
+    ) -> float:
+        """Adjust confidence for failed login patterns."""
+        if log_entry.get("status_code") == 401:
+            confidence += 0.4
+        
+        if "REDACTED_SECRET" in message_lower or "username" in message_lower:
+            confidence += 0.2
+            
+        return confidence
+
+    def _adjust_sql_injection_confidence(
+        self, 
+        log_entry: Dict[str, Any], 
+        confidence: float
+    ) -> float:
+        """Adjust confidence for SQL injection patterns."""
+        if log_entry.get("endpoint", "").endswith(("/api/", "/query")):
+            confidence += 0.3
+        
+        if log_entry.get("method") == "POST":
+            confidence += 0.2
+            
+        return confidence
+
+    def _adjust_slow_query_confidence(self, message_lower: str, confidence: float) -> float:
+        """Adjust confidence for slow query patterns."""
+        time_match = re.search(r"(\d+\.?\d*)\s*(?:ms|seconds?)", message_lower)
+        if not time_match:
+            return confidence
+            
+        exec_time = float(time_match.group(1))
+        if exec_time > 1000:  # >1 second
+            confidence += 0.5
+        elif exec_time > 500:  # >500ms
+            confidence += 0.3
+            
+        return confidence
+
+    def _get_pattern_type(self, pattern_name: str) -> SecurityPatternType | None:
+        """Get SecurityPatternType enum value safely."""
+        try:
+            return SecurityPatternType(pattern_name)
+        except ValueError:
+            return None
 
     async def _analyze_user_behavior(
         self,
@@ -588,7 +632,7 @@ class MockLLMAnalyzer:
 class ElasticsearchLogConsumer:
     """Consumes logs from Elasticsearch for analysis."""
 
-    def __init__(self) -> None:
+    def __init__(self, elasticsearch_host: str = "localhost", elasticsearch_port: int = 9200) -> None:
         self.host = elasticsearch_host
         self.port = elasticsearch_port
         self.client = None
@@ -604,7 +648,7 @@ class ElasticsearchLogConsumer:
                     elasticsearch_host,
                     elasticsearch_port,
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to connect to Elasticsearch: %s", e)
                 self.client = None
         else:
@@ -647,7 +691,7 @@ class ElasticsearchLogConsumer:
             logger.info("Fetched %s logs from Elasticsearch", len(logs))
             return logs
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error fetching logs from Elasticsearch: %s", e)
             return self._generate_mock_logs(limit)
 
@@ -750,7 +794,7 @@ class MCPSecurityIntegration:
                 self.vault_manager = VaultManager()
                 self.security_logger = SecurityLogger()
                 logger.info("MCP integration initialized successfully")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to initialize MCP integration: %s", e)
         else:
             logger.warning("MCP system not available")
@@ -787,7 +831,7 @@ class MCPSecurityIntegration:
                     },
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error enriching alert context: %s", e)
 
         return alert
@@ -887,7 +931,12 @@ async def root(self) -> None:
 
 
 @app.get("/alerts", response_model=list[SecurityAlertResponse])
-async def get_security_alerts(self) -> None:
+async def get_security_alerts(
+    severity: str | None = None,
+    pattern_type: str | None = None,
+    offset: int = 0,
+    limit: int = 50,
+) -> list[SecurityAlertResponse]:
     """Get security alerts with optional filtering."""
     global security_alerts
 
@@ -984,7 +1033,7 @@ async def get_security_dashboard(self) -> None:
 
 
 @app.post("/analyze")
-async def trigger_log_analysis(self) -> None:
+async def trigger_log_analysis(background_tasks: BackgroundTasks) -> dict[str, str]:
     """Manually trigger log analysis."""
     background_tasks.add_task(analyze_logs_task)
     return {"message": "Log analysis triggered", "status": "processing"}
@@ -1064,7 +1113,7 @@ async def analyze_logs_task(self) -> None:
         else:
             logger.info("No security alerts generated from recent logs")
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         logger.error("Error in log analysis task: %s", e)
 
 
@@ -1103,7 +1152,7 @@ async def periodic_analysis(self) -> None:
             await analyze_logs_task()
             # Run analysis every 5 minutes
             await asyncio.sleep(300)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in periodic analysis: %s", e)
             # Wait 1 minute before retrying on error
             await asyncio.sleep(60)

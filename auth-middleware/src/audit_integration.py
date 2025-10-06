@@ -3,17 +3,21 @@ Provides audit logging integration with the PAKE Audit System.
 """
 
 import asyncio
-import json
-import time
-import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
+import time
 from typing import Any
+import uuid
 
-import httpx
 from fastapi import Request, Response
+import httpx
 from starlette.middleware.base import BaseHTTPMiddleware
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class ActorType(str, Enum):
@@ -119,7 +123,7 @@ class AuditLogger:
             print(f"Audit logging failed: HTTP {response.status_code}")
             return False
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"Audit logging error: {str(e)}")
             return False
 
@@ -437,7 +441,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
             await self.audit_logger.log_event(event)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             # Log error but don't fail the request
             print(f"Audit middleware error: {str(e)}")
 
@@ -501,8 +505,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 body = await request.body()
                 if body:
                     return json.loads(body.decode())
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError) as e:
+            # Log the exception for debugging while gracefully handling JSON parsing errors
+            logger.warning(f"Failed to parse request body as JSON: {e}")
         return None
 
     def _sanitize_data(self, data: Any) -> Any:

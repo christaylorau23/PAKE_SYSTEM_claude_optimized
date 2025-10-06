@@ -1,3 +1,4 @@
+from fastapi import Path
 #!/usr/bin/env python3
 """PAKE System - Security Monitoring & Alerting System
 Comprehensive security monitoring, threat detection, and incident response.
@@ -12,11 +13,11 @@ This module provides:
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import logging
 import re
 import time
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -322,7 +323,7 @@ class SecurityMonitoringSystem:
                 # Update threat level if rule threat level is higher
                 if self._get_threat_level_value(
                     rule.threat_level
-                ) > self._get_threat_level_value(event.threat_level):
+                ) > self._get_threat_level_value(self.event.threat_level):
                     event.threat_level = rule.threat_level
 
                 # Add rule metadata
@@ -559,15 +560,15 @@ class SecurityMonitoringSystem:
 
     async def _update_threat_indicators(self) -> None:
         """Update threat indicators for correlation."""
-        if event.source_ip:
-            if event.source_ip not in self.threat_indicators:
+        if self.event.source_ip:
+            if self.event.source_ip not in self.threat_indicators:
                 self.threat_indicators[event.source_ip] = []
 
             self.threat_indicators[event.source_ip].append(event.timestamp)
 
             # Keep only recent indicators (last 24 hours)
             cutoff_time = datetime.now(UTC) - timedelta(hours=24)
-            self.threat_indicators[event.source_ip] = [
+            self.threat_indicators[self.event.source_ip] = [
                 ts for ts in self.threat_indicators[event.source_ip] if ts > cutoff_time
             ]
 
@@ -644,10 +645,10 @@ class SecurityMonitoringSystem:
 
         alert = SecurityAlert(
             alert_id=f"alert_{int(time.time())}_{secrets.token_hex(4)}",
-            incident_id=incident.incident_id,
-            event_id=incident.events[0].event_id,
-            title=f"Security Incident Alert: {incident.title}",
-            message=f"New security incident detected: {incident.description}",
+            incident_id=self.incident.incident_id,
+            event_id=self.incident.events[0].event_id,
+            title=f"Security Incident Alert: {self.incident.title}",
+            message=f"New security incident detected: {self.incident.description}",
             threat_level=incident.threat_level,
             channels=alert_channels,
         )
@@ -658,7 +659,7 @@ class SecurityMonitoringSystem:
         for channel in alert_channels:
             try:
                 await self.alert_handlers[channel](alert)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to send alert to %s: %s", channel, str(e))
 
     async def _send_incident_update_alerts(self) -> None:
@@ -669,10 +670,10 @@ class SecurityMonitoringSystem:
 
         alert = SecurityAlert(
             alert_id=f"alert_{int(time.time())}_{secrets.token_hex(4)}",
-            incident_id=incident.incident_id,
-            event_id=incident.events[-1].event_id,
-            title=f"Security Incident Update: {incident.title}",
-            message=f"Security incident updated: {incident.description}",
+            incident_id=self.incident.incident_id,
+            event_id=self.incident.events[-1].event_id,
+            title=f"Security Incident Update: {self.incident.title}",
+            message=f"Security incident updated: {self.incident.description}",
             threat_level=incident.threat_level,
             channels=alert_channels,
         )
@@ -683,7 +684,7 @@ class SecurityMonitoringSystem:
         for channel in alert_channels:
             try:
                 await self.alert_handlers[channel](alert)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to send alert to %s: %s", channel, str(e))
 
     def _get_alert_channels_for_threat_level(

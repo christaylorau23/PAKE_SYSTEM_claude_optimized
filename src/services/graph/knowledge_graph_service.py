@@ -4,9 +4,9 @@ Provides high-level knowledge graph operations for the PAKE System.
 Handles entity extraction from text, relationship inference, and graph visualization.
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from .entity_service import (
     EntityType,
@@ -99,7 +99,7 @@ class KnowledgeGraphService:
 
             return results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing document entities: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -238,7 +238,7 @@ class KnowledgeGraphService:
                 "relationships_created": relationships_created,
             }
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error extracting entities from text: %s", e)
             return {"entities_created": [], "relationships_created": []}
 
@@ -287,7 +287,7 @@ class KnowledgeGraphService:
                 "relationships_created": relationships_created,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error processing authors: %s", e)
             return {"entities_created": [], "relationships_created": []}
 
@@ -336,7 +336,7 @@ class KnowledgeGraphService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting knowledge graph visualization: %s", e)
             return {
                 "success": False,
@@ -386,7 +386,7 @@ class KnowledgeGraphService:
 
             return {"nodes": [], "relationships": []}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting sample graph: %s", e)
             return {"nodes": [], "relationships": []}
 
@@ -474,7 +474,7 @@ class KnowledgeGraphService:
 
             return {"nodes": nodes, "edges": edges}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error formatting graph data for visualization: %s", e)
             return {"nodes": [], "edges": []}
 
@@ -516,7 +516,7 @@ class KnowledgeGraphService:
                 "generated_at": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting entity insights for %s: %s", entity_id, e)
             return {"success": False, "error": str(e)}
 
@@ -564,7 +564,7 @@ class KnowledgeGraphService:
 
             return {"degree": 0, "relationship_count": 0}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error calculating network metrics: %s", e)
             return {"degree": 0, "relationship_count": 0}
 
@@ -588,7 +588,7 @@ class KnowledgeGraphService:
                 "generated_at": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting graph statistics: %s", e)
             return {"success": False, "error": str(e)}
 
@@ -616,7 +616,7 @@ class KnowledgeGraphService:
 
             return distribution
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting entity type distribution: %s", e)
             return {}
 
@@ -639,7 +639,7 @@ class KnowledgeGraphService:
 
             return distribution
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting relationship type distribution: %s", e)
             return {}
 

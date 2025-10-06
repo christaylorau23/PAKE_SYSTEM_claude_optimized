@@ -5,10 +5,10 @@ Complete analytics, optimization, and A/B testing integration
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 import os
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Import all analytics components
@@ -222,7 +222,7 @@ class AnalyticsMasterController:
 
             self.logger.info("Complete analysis cycle finished successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Analysis cycle failed: %s", e)
             cycle_results["error"] = str(e)
 
@@ -260,7 +260,7 @@ class AnalyticsMasterController:
                 # Wait for next cycle
                 await asyncio.sleep(optimization_interval)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Optimization loop error: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
@@ -305,7 +305,7 @@ class AnalyticsMasterController:
                 # Wait 1 hour before next check
                 await asyncio.sleep(3600)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("A/B testing automation error: %s", e)
                 await asyncio.sleep(300)
 
@@ -335,7 +335,7 @@ class AnalyticsMasterController:
                 # Wait 1 minute before next check
                 await asyncio.sleep(60)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Reporting schedule error: %s", e)
                 await asyncio.sleep(60)
 
@@ -358,7 +358,7 @@ class AnalyticsMasterController:
                 # Wait 15 minutes before next check
                 await asyncio.sleep(900)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Real-time monitoring error: %s", e)
                 await asyncio.sleep(300)
 
@@ -402,7 +402,7 @@ class AnalyticsMasterController:
                                 }",
                             )
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("A/B test update failed: %s", e)
             update_results["error"] = str(e)
 
@@ -668,7 +668,7 @@ class AnalyticsMasterController:
             cycle_results = await self.run_complete_analysis_cycle()
             # Format and send summary (integrate with Slack/email)
             self.logger.info("Executive summary sent")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to send executive summary: %s", e)
 
     async def _send_detailed_report(self) -> None:
@@ -677,7 +677,7 @@ class AnalyticsMasterController:
             analytics_report = await self.analytics_engine.generate_daily_report()
             # Format and send detailed report
             self.logger.info("Detailed report sent")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to send detailed report: %s", e)
 
     async def _send_weekly_deep_dive(self) -> None:
@@ -686,7 +686,7 @@ class AnalyticsMasterController:
             # Generate comprehensive weekly analysis
             # Include trends, insights, and strategic recommendations
             self.logger.info("Weekly deep dive sent")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to send weekly deep dive: %s", e)
 
     async def _send_immediate_alert(self, alert: dict) -> None:
@@ -733,7 +733,7 @@ class AnalyticsMasterController:
                 ),  # Simplified health score
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("System health check failed: %s", e)
             return {"error": str(e), "health_score": 0.0}
 
@@ -818,7 +818,7 @@ async def main(self) -> None:
         if master.is_running:
             await master.stop_master_system()
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error: {e}")
 
 

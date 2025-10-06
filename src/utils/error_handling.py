@@ -1,19 +1,21 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Enhanced Error Handling Patterns
 Comprehensive error handling, retry mechanisms, and resilience patterns.
 """
 
 import asyncio
-import functools
-import json
-import time
-import traceback
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import functools
+import json
+import time
+import traceback
+from typing import Any, Dict
 from uuid import uuid4
 
 from utils.logger import get_logger
@@ -101,7 +103,15 @@ class PAKEException(Exception):
         ...     )
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        message: str,
+        severity: ErrorSeverity = ErrorSeverity.MEDIUM,
+        category: ErrorCategory = ErrorCategory.SYSTEM,
+        context: ErrorContext | None = None,
+        original_exception: Exception | None = None,
+        user_message: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.severity = severity
@@ -133,28 +143,28 @@ class PAKEException(Exception):
 class NetworkError(PAKEException):
     """Network-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.NETWORK, **kwargs)
 
 
 class DatabaseError(PAKEException):
     """Database-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.DATABASE, **kwargs)
 
 
 class ValidationError(PAKEException):
     """Validation-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.VALIDATION, **kwargs)
 
 
 class ExternalAPIError(PAKEException):
     """External API-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, category=ErrorCategory.EXTERNAL_API, **kwargs)
 
 
@@ -174,12 +184,12 @@ class ErrorHandler:
         >>> error_handler = ErrorHandler("my-service")
         >>> try:
         ...     risky_operation()
-        ... except Exception as e:
+        ... except (ValueError, RuntimeError) as e:
         ...     pake_error = error_handler.handle_exception(e)
         ...     # Error is logged and metrics are updated
     """
 
-    def __init__(self) -> None:
+    def __init__(self, service_name: str) -> None:
         self.service_name = service_name
         self.logger = get_logger(service_name=service_name)
         self.metrics = MetricsStore(service_name=service_name)
@@ -271,7 +281,7 @@ class ErrorHandler:
 
         return ErrorSeverity.LOW
 
-    def _log_error(self) -> None:
+    def _log_error(self, error: PAKEException) -> None:
         """Log error with structured logging."""
         log_data = error.to_dict()
 
@@ -284,7 +294,7 @@ class ErrorHandler:
         else:
             self.logger.info("Low severity error occurred", extra=log_data)
 
-    def _update_metrics(self) -> None:
+    def _update_metrics(self, error: PAKEException) -> None:
         """Update error metrics."""
         tags = {
             "service": self.service_name,
@@ -297,7 +307,12 @@ class ErrorHandler:
         self.metrics.set_gauge("last_error_timestamp", time.time(), labels=tags)
 
 
-def with_error_handling(self) -> None:
+def with_error_handling(
+    operation_name: str,
+    severity: ErrorSeverity | None = None,
+    category: ErrorCategory | None = None,
+    reraise: bool = True,
+) -> Callable:
     """Decorator for automatic error handling.
 
     This decorator wraps functions with automatic error handling, converting
@@ -325,8 +340,8 @@ def with_error_handling(self) -> None:
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(self) -> None:
-            error_handler = ErrorHandler()
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            error_handler = ErrorHandler(func.__module__)
             context = ErrorContext(
                 service_name=func.__module__,
                 operation=operation_name,
@@ -334,15 +349,15 @@ def with_error_handling(self) -> None:
 
             try:
                 return await func(*args, **kwargs)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 pake_error = error_handler.handle_exception(e, context, severity)
                 if reraise:
                     raise pake_error
                 return None
 
         @functools.wraps(func)
-        def sync_wrapper(self) -> None:
-            error_handler = ErrorHandler()
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            error_handler = ErrorHandler(func.__module__)
             context = ErrorContext(
                 service_name=func.__module__,
                 operation=operation_name,
@@ -350,7 +365,7 @@ def with_error_handling(self) -> None:
 
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 pake_error = error_handler.handle_exception(e, context, severity)
                 if reraise:
                     raise pake_error
@@ -361,14 +376,14 @@ def with_error_handling(self) -> None:
     return decorator
 
 
-def with_retry(self) -> None:
+def with_retry(policy: RetryPolicy | None = None) -> Callable:
     """Decorator for automatic retry with exponential backoff."""
 
     def decorator(func: Callable) -> Callable:
         retry_policy = policy or RetryPolicy()
 
         @functools.wraps(func)
-        async def async_wrapper(self) -> None:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(retry_policy.max_attempts):
@@ -412,7 +427,7 @@ def with_retry(self) -> None:
             raise last_exception
 
         @functools.wraps(func)
-        def sync_wrapper(self) -> None:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(retry_policy.max_attempts):
@@ -461,14 +476,17 @@ def with_retry(self) -> None:
 
 
 @asynccontextmanager
-async def error_boundary(self) -> None:
+async def error_boundary(
+    operation_name: str,
+    reraise: bool = True,
+) -> Any:
     """Async context manager for error boundaries."""
-    error_handler = ErrorHandler()
+    error_handler = ErrorHandler(operation_name)
     context = ErrorContext(operation=operation_name)
 
     try:
         yield
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         pake_error = error_handler.handle_exception(e, context)
         if reraise:
             raise pake_error
@@ -478,12 +496,12 @@ async def error_boundary(self) -> None:
 class HealthChecker:
     """System health monitoring and error detection."""
 
-    def __init__(self) -> None:
-        self.logger = get_logger(service_name="health-checker")
-        self.metrics = MetricsStore(service_name="health-checker")
+    def __init__(self, service_name: str = "health-checker") -> None:
+        self.logger = get_logger(service_name=service_name)
+        self.metrics = MetricsStore(service_name=service_name)
         self.checks = []
 
-    async def add_health_check(self) -> None:
+    async def add_health_check(self, name: str, check_func: Callable) -> None:
         """Add a health check function."""
         self.checks.append((name, check_func))
 
@@ -517,7 +535,7 @@ class HealthChecker:
                     labels={"check": name, "status": "healthy"},
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 failed_checks += 1
                 duration = time.time() - start_time
 

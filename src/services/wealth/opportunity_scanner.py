@@ -160,7 +160,7 @@ class AlphaVantageDataSource(MarketDataSource):
                                 ),
                             }
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error fetching data for %s: %s", symbol, e)
                     results[symbol] = {}
 
@@ -176,7 +176,7 @@ class AlphaVantageDataSource(MarketDataSource):
             ticker = yf.Ticker(symbol)
             data = ticker.history(period=period)
             return data
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching historical data for %s: %s", symbol, e)
             return pd.DataFrame()
 
@@ -229,7 +229,7 @@ class CryptocurrencyDataSource(MarketDataSource):
                         else:
                             results[symbol] = {}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching crypto data: %s", e)
             results = {symbol: {} for symbol in symbols}
 
@@ -260,7 +260,7 @@ class CryptocurrencyDataSource(MarketDataSource):
                         df.set_index("timestamp", inplace=True)
                         return df
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error fetching historical crypto data for %s: %s", symbol, e)
 
         return pd.DataFrame()
@@ -525,11 +525,11 @@ class OpportunityScanner:
                             "📈 Stock opportunity detected: %s (%s confidence)", symbol, opportunity.confidence_score:.2f,
                         )
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error analyzing stock %s: %s", symbol, e)
                     continue
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in stock opportunity scanning: %s", e)
 
         return opportunities
@@ -612,11 +612,11 @@ class OpportunityScanner:
                                 confidence:.2f,
                         )
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error analyzing crypto %s: %s", symbol, e)
                     continue
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in crypto opportunity scanning: %s", e)
 
         return opportunities

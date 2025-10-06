@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Lint Validation Script
@@ -5,10 +6,10 @@ Runs all linting checks (Ruff, Black, isort, ESLint, Prettier)
 """
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 
 class LintValidator:
@@ -56,7 +57,7 @@ class LintValidator:
             duration = time.time() - start_time
             self.log(f"⏰ {name} timed out after 300s", "ERROR")
             return name, False, "Timeout after 300s"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             self.log(f"💥 {name} crashed: {e}", "ERROR")
             return name, False, str(e)

@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 17 End-to-End Tenant Provisioning Workflow
@@ -12,11 +13,11 @@ This script demonstrates the full multi-tenant system lifecycle:
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 import httpx
@@ -103,7 +104,7 @@ class TenantProvisioningWorkflow:
 
             logger.info("✅ Services initialized successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Failed to initialize services: %s", e)
             raise
 
@@ -176,7 +177,7 @@ class TenantProvisioningWorkflow:
 
             return workflow_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Workflow failed: %s", e)
             return {
                 "error": str(e),
@@ -562,7 +563,7 @@ class TenantProvisioningWorkflow:
                 "details": health_check,
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {"test": "database_connectivity", "success": False, "error": str(e)}
 
     async def _test_api_server_health(self) -> Dict[str, Any]:
@@ -582,7 +583,7 @@ class TenantProvisioningWorkflow:
                     "status_code": response.status_code,
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "api_server_health", "success": False, "error": str(e)}
 
     async def _test_service_dependencies(self) -> Dict[str, Any]:
@@ -603,7 +604,7 @@ class TenantProvisioningWorkflow:
                 "dependencies": dependencies,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"test": "service_dependencies", "success": False, "error": str(e)}
 
     async def _test_cache_infrastructure(self) -> Dict[str, Any]:
@@ -621,7 +622,7 @@ class TenantProvisioningWorkflow:
                     "cache_available": response.status_code == 200,
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "test": "cache_infrastructure",
                 "success": True,  # Cache is optional, so don't fail the workflow
@@ -669,7 +670,7 @@ class TenantProvisioningWorkflow:
                 ),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create tenant %s: %s", config["name"], e)
             return {
                 "test": f"create_tenant_{config['name']}",
@@ -721,7 +722,7 @@ class TenantProvisioningWorkflow:
                 },
             }
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             return {
                 "test": f"validate_tenant_{tenant_id}",
                 "success": False,
@@ -852,7 +853,7 @@ class TenantProvisioningWorkflow:
                     try:
                         await self.tenant_service.delete_tenant(tenant_id, force=True)
                         logger.info("  🗑️ Deleted tenant: %s", tenant_id)
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.warning(
                             "  ⚠️ Failed to delete tenant %s: %s", tenant_id, e
                         )
@@ -863,7 +864,7 @@ class TenantProvisioningWorkflow:
 
             logger.info("✅ Cleanup completed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Cleanup error: %s", e)
 
     def _generate_workflow_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
@@ -970,7 +971,7 @@ async def main(self) -> None:
     except KeyboardInterrupt:
         print("\n🛑 Workflow interrupted by user")
         return 130
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("❌ Workflow execution failed: %s", e)
         print(f"\n💥 FATAL ERROR: {e}")
         return 1

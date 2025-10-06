@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 Secrets Migration Script for PAKE System
@@ -57,7 +58,7 @@ class VaultSecretsManager:
             print(f"✅ Successfully connected to Vault at {self.vault_url}")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error connecting to Vault: {e}")
             return False
 
@@ -79,7 +80,7 @@ class VaultSecretsManager:
             print(f"✅ Created secret at: {path}")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error creating secret at {path}: {e}")
             return False
 
@@ -206,7 +207,7 @@ class VaultSecretsManager:
                 secret_data = response["data"]["data"]
                 print(f"✅ Successfully read secret from: {path}")
                 print(f"   Keys: {', '.join(secret_data.keys())}")
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"❌ Error reading secret from {path}: {e}")
 
         print("\n" + "=" * 60 + "\n")

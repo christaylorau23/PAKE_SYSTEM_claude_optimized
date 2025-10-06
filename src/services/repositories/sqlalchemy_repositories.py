@@ -3,8 +3,8 @@
 Concrete repository implementations using SQLAlchemy with classical mapping.
 """
 
-import logging
 from abc import ABC
+import logging
 from typing import Any, TypeVar
 
 import sqlalchemy as sa
@@ -27,7 +27,7 @@ T = TypeVar("T")
 class BaseRepository(AbstractRepository[T], ABC):
     """Base repository implementation with common functionality."""
 
-    def __init__(self) -> None:
+    def __init__(self, session_maker: Any, model_class: Any) -> None:
         self._session_maker = session_maker
         self._model_class = model_class
 
@@ -44,7 +44,7 @@ class BaseRepository(AbstractRepository[T], ABC):
                     "Created %s: %s", self._model_class.__name__, domain_entity.id
                 )
                 return domain_entity
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create %s: %s", self._model_class.__name__, e)
             raise
 
@@ -61,7 +61,7 @@ class BaseRepository(AbstractRepository[T], ABC):
                 if orm_entity:
                     return self._orm_to_domain(orm_entity)
                 return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Failed to get %s by ID %s: %s",
                 self._model_class.__name__,
@@ -83,7 +83,7 @@ class BaseRepository(AbstractRepository[T], ABC):
                     "Updated %s: %s", self._model_class.__name__, domain_entity.id
                 )
                 return domain_entity
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update %s: %s", self._model_class.__name__, e)
             raise
 
@@ -105,7 +105,7 @@ class BaseRepository(AbstractRepository[T], ABC):
                     )
                     return True
                 return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Failed to delete %s %s: %s", self._model_class.__name__, entity_id, e
             )
@@ -127,7 +127,7 @@ class BaseRepository(AbstractRepository[T], ABC):
                     self._model_class.__name__,
                 )
                 return domain_entities
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Failed to list %s entities: %s", self._model_class.__name__, e
             )
@@ -147,7 +147,7 @@ class BaseRepository(AbstractRepository[T], ABC):
 class UserRepository(BaseRepository[User], AbstractUserRepository[User]):
     """User repository implementation."""
 
-    def __init__(self) -> None:
+    def __init__(self, session_maker: Any) -> None:
         super().__init__(session_maker, UserORM)
 
     async def get_by_email(self, email: str) -> User | None:
@@ -161,7 +161,7 @@ class UserRepository(BaseRepository[User], AbstractUserRepository[User]):
                 if orm_user:
                     return self._orm_to_domain(orm_user)
                 return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get user by email %s: %s", email, e)
             raise
 
@@ -177,7 +177,7 @@ class UserRepository(BaseRepository[User], AbstractUserRepository[User]):
                     "Found %s users for tenant %s", len(domain_users), tenant_id
                 )
                 return domain_users
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get users by tenant %s: %s", tenant_id, e)
             raise
 

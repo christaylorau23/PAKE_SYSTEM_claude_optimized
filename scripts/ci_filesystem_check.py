@@ -21,14 +21,14 @@ Usage:
 
 import argparse
 import ast
+from collections import defaultdict
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import stat
 import sys
-from collections import defaultdict
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Configure logging
@@ -116,7 +116,7 @@ class CIFilesystemDiagnostics:
                 else "Case-insensitive (macOS/Windows)",
                 "ci_compatible": both_exist,  # Linux CI is case-sensitive
             }
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.warning("Error testing case sensitivity: %s", e)
             return {
                 "is_case_sensitive": True,  # Assume case-sensitive for safety
@@ -196,7 +196,7 @@ class CIFilesystemDiagnostics:
                     if mismatch:
                         issues["import_case_mismatches"].append(mismatch)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing %s: %s", py_file, e)
 
         # Check for hyphenated directory imports
@@ -219,7 +219,7 @@ class CIFilesystemDiagnostics:
                         }
                     )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning(
                     "Error checking hyphenated imports in %s: %s", py_file, e
                 )
@@ -337,7 +337,7 @@ class CIFilesystemDiagnostics:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error validating imports in %s: %s", py_file, e)
 
         return validation
@@ -395,7 +395,7 @@ class CIFilesystemDiagnostics:
                             }
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error analyzing path resolution in %s: %s", py_file, e)
 
         return issues
@@ -427,7 +427,7 @@ class CIFilesystemDiagnostics:
                         }
                     )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error checking permissions for %s: %s", py_file, e)
 
         return issues
@@ -457,7 +457,7 @@ class CIFilesystemDiagnostics:
                             {"file": str(py_file), "line": i, "content": line.strip()}
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning(
                     "Error analyzing working directory in %s: %s", py_file, e
                 )
@@ -499,7 +499,7 @@ class CIFilesystemDiagnostics:
                             {"file": str(py_file), "line": i, "content": line.strip()}
                         )
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error auditing sys.path in %s: %s", py_file, e)
 
         return issues

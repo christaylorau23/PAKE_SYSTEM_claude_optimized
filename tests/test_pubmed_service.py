@@ -142,7 +142,7 @@ class TestPubMedService:
         Must support MeSH terms, publication types, journals, author searches,
         and date ranges as per NCBI E-utilities specification.
         """
-        result = await pubmed_service.search_papers(sample_search_query)
+        result = await self.pubmed_service.search_papers(sample_search_query)
 
         assert result.success is True
         assert result.papers is not None
@@ -162,7 +162,7 @@ class TestPubMedService:
         Critical for extracting PMID, title, abstract, authors, journal info,
         MeSH terms, and publication metadata.
         """
-        result = await pubmed_service.parse_pubmed_response(sample_pubmed_xml)
+        result = await self.pubmed_service.parse_pubmed_response(sample_pubmed_xml)
 
         assert len(result.papers) == 1
         paper = result.papers[0]
@@ -188,7 +188,7 @@ class TestPubMedService:
             max_results=20,
         )
 
-        result = await pubmed_service.search_papers(mesh_query)
+        result = await self.pubmed_service.search_papers(mesh_query)
 
         assert result.success is True
         # Should find papers tagged with specified MeSH terms
@@ -211,7 +211,7 @@ class TestPubMedService:
             max_results=15,
         )
 
-        result = await pubmed_service.search_papers(review_query)
+        result = await self.pubmed_service.search_papers(review_query)
 
         assert result.success is True
         # All results should be review articles
@@ -232,7 +232,7 @@ class TestPubMedService:
             max_results=25,
         )
 
-        result = await pubmed_service.search_papers(journal_query)
+        result = await self.pubmed_service.search_papers(journal_query)
 
         assert result.success is True
         # Should find papers from specified journals
@@ -255,7 +255,7 @@ class TestPubMedService:
             max_results=10,
         )
 
-        result = await pubmed_service.search_papers(author_query)
+        result = await self.pubmed_service.search_papers(author_query)
 
         assert result.success is True
         # Should find papers by specified authors or affiliations
@@ -297,7 +297,7 @@ class TestPubMedService:
             }
             mock_efetch.return_value = """<PubmedArticleSet></PubmedArticleSet>"""
 
-            result = await pubmed_service.search_papers(query)
+            result = await self.pubmed_service.search_papers(query)
 
             # Should call ESearch first, then EFetch
             mock_esearch.assert_called_once()
@@ -321,7 +321,7 @@ class TestPubMedService:
                 success=False,
             )
 
-            result = await pubmed_service.search_papers(query)
+            result = await self.pubmed_service.search_papers(query)
 
             assert result.success is False
             assert result.error is not None
@@ -341,7 +341,7 @@ class TestPubMedService:
             start=0,  # Larger than typical API limit
         )
 
-        result = await pubmed_service.search_papers_paginated(
+        result = await self.pubmed_service.search_papers_paginated(
             large_query,
             page_size=100,
         )
@@ -363,9 +363,9 @@ class TestPubMedService:
         Must convert PubMed papers to ContentItem format for pipeline processing.
         """
         query = PubMedSearchQuery(terms=["machine learning"], max_results=3)
-        result = await pubmed_service.search_papers(query)
+        result = await self.pubmed_service.search_papers(query)
 
-        content_items = await pubmed_service.to_content_items(result, "pubmed_research")
+        content_items = await self.pubmed_service.to_content_items(result, "pubmed_research")
 
         assert len(content_items) > 0
         # Should be compatible with existing ContentItem structure
@@ -386,7 +386,7 @@ class TestPubMedService:
 
         Integration with autonomous cognitive system for research quality assessment.
         """
-        result = await pubmed_service.search_papers(sample_search_query)
+        result = await self.pubmed_service.search_papers(sample_search_query)
 
         # Should include metadata for cognitive processing
         assert result.papers[0].metadata is not None
@@ -410,7 +410,7 @@ class TestPubMedService:
         """
         query = PubMedSearchQuery(terms=["nonexistent pmid test"], max_results=5)
 
-        result = await pubmed_service.search_papers(query)
+        result = await self.pubmed_service.search_papers(query)
 
         assert result.success is True
         assert result.papers == []  # No papers found for invalid search
@@ -425,7 +425,7 @@ class TestPubMedService:
         """
         malformed_xml = "<?xml version='1.0'?><invalid><unclosed>tag"
 
-        result = await pubmed_service.parse_pubmed_response(malformed_xml)
+        result = await self.pubmed_service.parse_pubmed_response(malformed_xml)
 
         assert result.success is False
         assert result.error is not None
@@ -446,7 +446,7 @@ class TestPubMedService:
                 success=False,
             )
 
-            result = await pubmed_service.search_papers(query)
+            result = await self.pubmed_service.search_papers(query)
 
             assert result.success is False
             assert result.error is not None
@@ -466,10 +466,10 @@ class TestPubMedService:
         query = PubMedSearchQuery(terms=["caching test"], max_results=5)
 
         # First search - should hit API
-        result1 = await pubmed_service.search_papers(query)
+        result1 = await self.pubmed_service.search_papers(query)
 
         # Second identical search - should use cache
-        result2 = await pubmed_service.search_papers(query)
+        result2 = await self.pubmed_service.search_papers(query)
 
         assert result1.success is True
         assert result2.success is True
@@ -486,7 +486,7 @@ class TestPubMedService:
         start_time = datetime.now(UTC)
 
         query = PubMedSearchQuery(terms=["performance test medical"], max_results=20)
-        result = await pubmed_service.search_papers(query)
+        result = await self.pubmed_service.search_papers(query)
 
         end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
@@ -510,7 +510,7 @@ class TestPubMedService:
         mock_cognitive_engine.assess_research_quality = AsyncMock(return_value=0.92)
 
         query = PubMedSearchQuery(terms=["neural networks medical"], max_results=3)
-        result = await pubmed_service.search_with_cognitive_assessment(
+        result = await self.pubmed_service.search_with_cognitive_assessment(
             query,
             cognitive_engine=mock_cognitive_engine,
         )
@@ -537,10 +537,10 @@ class TestPubMedService:
         )
 
         query = PubMedSearchQuery(terms=["automated literature review"], max_results=5)
-        result = await pubmed_service.search_papers(query)
+        result = await self.pubmed_service.search_papers(query)
 
         # Should be able to trigger biomedical processing workflow
-        workflow_result = await pubmed_service.trigger_biomedical_workflow(
+        workflow_result = await self.pubmed_service.trigger_biomedical_workflow(
             result=result,
             n8n_manager=mock_n8n_manager,
             workflow_type="literature_review_analysis",
@@ -661,7 +661,7 @@ class TestPubMedServicePerformance:
             terms=["high quality biomedical research"],
             max_results=3,
         )
-        result = await pubmed_service.search_with_cognitive_assessment(
+        result = await self.pubmed_service.search_with_cognitive_assessment(
             query,
             cognitive_engine=mock_cognitive_engine,
         )

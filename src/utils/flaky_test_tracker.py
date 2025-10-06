@@ -3,14 +3,14 @@
 Comprehensive system for tracking, analyzing, and managing flaky tests and technical debt.
 """
 
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import json
 import logging
 import os
 import sqlite3
 import time
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 
 logger = logging.getLogger("flaky_test_tracker")
 
@@ -100,7 +100,7 @@ class TechnicalDebtTicket:
 class FlakyTestTracker:
     """Comprehensive flaky test tracking and management system."""
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: str = "flaky_tests.db") -> None:
         self.db_path = db_path
         self._init_database()
 
@@ -566,7 +566,7 @@ class FlakyTestPlugin:
 
     def pytest_runtest_setup(self) -> None:
         """Called before each test."""
-        self.start_times[item.nodeid] = time.time()
+        self.start_times[self.item.nodeid] = time.time()
 
     def pytest_runtest_logreport(self) -> None:
         """Called after each test report."""

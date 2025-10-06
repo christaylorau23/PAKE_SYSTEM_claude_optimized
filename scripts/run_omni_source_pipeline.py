@@ -10,13 +10,13 @@ Usage:
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
 
 # Add services to path
 import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 from services.ingestion.orchestrator import IngestionConfig, IngestionOrchestrator
@@ -175,7 +175,7 @@ async def save_results_to_vault(self) -> None:
     # Create note content
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
     filename = f"omni-source-research-{datetime.now(UTC).strftime('%Y-%m-%d')}-{
-        topic.replace(' ', '-')[:30]
+        self.topic.replace(' ', '-')[:30]
     }.md"
 
     content = f"""---
@@ -185,19 +185,19 @@ type: research
 source: omni-source-pipeline
 tags: [research, omni-source, automated]
 topic: "{topic}"
-total_sources: {len(result.source_results)}
-total_items: {len(result.content_items)}
-processing_time: {result.processing_time_seconds:.2f}s
+total_sources: {len(self.result.source_results)}
+total_items: {len(self.result.content_items)}
+processing_time: {self.result.processing_time_seconds:.2f}s
 ---
 
 # Omni-Source Research: {topic}
 
 **Generated:** {timestamp}
-**Sources:** {len(result.source_results)} ({
-        ", ".join(sr.source_type for sr in result.source_results)
+**Sources:** {len(self.result.source_results)} ({
+        ", ".join(sr.source_type for sr in self.result.source_results)
     })
-**Items Found:** {len(result.content_items)}
-**Processing Time:** {result.processing_time_seconds:.2f}s
+**Items Found:** {len(self.result.content_items)}
+**Processing Time:** {self.result.processing_time_seconds:.2f}s
 
 ## Summary
 
@@ -207,7 +207,7 @@ This research was automatically generated using the PAKE+ omni-source ingestion 
 
 """
 
-    for source_result in result.source_results:
+    for source_result in self.result.source_results:
         status = "✅ Success" if source_result.success else "❌ Failed"
         content += f"### {source_result.source_type.upper()} - {status}\n\n"
         content += f"- **Items found:** {len(source_result.content_items)}\n"
@@ -218,7 +218,7 @@ This research was automatically generated using the PAKE+ omni-source ingestion 
     # Add content items
     content += "## Research Results\n\n"
 
-    for i, item in enumerate(result.content_items, 1):
+    for i, item in enumerate(self.result.content_items, 1):
         content += f"### {i}. {item.title}\n\n"
         content += f"**Source:** {item.source}  \n"
         content += f"**Quality Score:** {item.confidence_score:.2f}  \n"
@@ -301,7 +301,7 @@ async def main(self) -> None:
             print("\n⚠️  Research pipeline completed with some issues")
             print(f"📊 {len(result.content_items)} items collected")
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n❌ Error running research pipeline: {e}")
         sys.exit(1)
 

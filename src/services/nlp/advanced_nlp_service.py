@@ -4,12 +4,12 @@ Provides sophisticated natural language processing capabilities using lightweigh
 production-ready implementations that avoid heavy dependencies.
 """
 
+from collections import Counter
+from dataclasses import dataclass
 import logging
 import re
 import string
-from collections import Counter
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List
 
 import nltk
 from nltk.chunk import ne_chunk
@@ -185,7 +185,7 @@ class AdvancedNLPService:
             logger.info("Extracted %s entities from text", len(entities))
             return entities
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error extracting entities: %s", e)
             return []
 
@@ -266,7 +266,7 @@ class AdvancedNLPService:
                         ),
                     )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("NLTK entity extraction failed: %s", e)
 
         return entities
@@ -444,7 +444,7 @@ class AdvancedNLPService:
                 sentiment_indicators=sentiment_indicators,
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error analyzing text: %s", e)
             return TextAnalytics(
                 word_count=0,
@@ -523,7 +523,7 @@ class AdvancedNLPService:
             key_terms.sort(key=lambda x: x[1], reverse=True)
             return key_terms[:10]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Key phrase extraction failed: %s", e)
             return []
 
@@ -620,7 +620,7 @@ class AdvancedNLPService:
                 "nltk_available": True,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

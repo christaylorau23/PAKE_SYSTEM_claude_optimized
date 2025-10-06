@@ -90,7 +90,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        plan = await orchestrator.create_ingestion_plan(topic, context)
+        plan = await self.orchestrator.create_ingestion_plan(topic, context)
 
         # Assert
         assert plan is not None
@@ -132,7 +132,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -171,7 +171,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        result = await orchestrator.ingest_content(topic, context)
+        result = await self.orchestrator.ingest_content(topic, context)
 
         # Assert
         assert result is not None
@@ -180,14 +180,14 @@ class TestIngestionOrchestratorComprehensive:
         assert all(item.get("title") for item in result.content_items)
 
         # Verify metrics tracking
-        assert orchestrator.execution_metrics["plans_executed"] >= 1
-        assert orchestrator.execution_metrics["total_content_retrieved"] >= 2
+        assert self.orchestrator.execution_metrics["plans_executed"] >= 1
+        assert self.orchestrator.execution_metrics["total_content_retrieved"] >= 2
 
     @pytest.mark.unit_functional
     async def test_get_ingestion_metrics_success(self) -> None:
         """Test successful metrics retrieval"""
         # Arrange - Set some initial metrics
-        orchestrator.execution_metrics = {
+        self.orchestrator.execution_metrics = {
             "plans_executed": 5,
             "total_content_retrieved": 25,
             "average_execution_time": 15.5,
@@ -195,7 +195,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        metrics = await orchestrator.get_ingestion_metrics()
+        metrics = await self.orchestrator.get_ingestion_metrics()
 
         # Assert
         assert metrics is not None
@@ -222,7 +222,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        plan = await orchestrator.create_ingestion_plan(topic, minimal_context)
+        plan = await self.orchestrator.create_ingestion_plan(topic, minimal_context)
 
         # Assert
         assert plan is not None
@@ -243,7 +243,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        plan = await orchestrator.create_ingestion_plan(topic, context)
+        plan = await self.orchestrator.create_ingestion_plan(topic, context)
 
         # Assert
         assert plan is not None
@@ -258,7 +258,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -283,7 +283,7 @@ class TestIngestionOrchestratorComprehensive:
         mock_dependencies["pubmed_service"].search.return_value = []
 
         # Act
-        result = await orchestrator.ingest_content(long_topic, context)
+        result = await self.orchestrator.ingest_content(long_topic, context)
 
         # Assert
         assert result is not None
@@ -307,13 +307,13 @@ class TestIngestionOrchestratorComprehensive:
         ]
 
         # Act
-        tasks = [orchestrator.ingest_content(topic, context) for topic in topics]
+        tasks = [self.orchestrator.ingest_content(topic, context) for topic in topics]
         results = await asyncio.gather(*tasks)
 
         # Assert
         assert len(results) == 3
         assert all(result.success for result in results)
-        assert orchestrator.execution_metrics["plans_executed"] >= 3
+        assert self.orchestrator.execution_metrics["plans_executed"] >= 3
 
     # ============================================================================
     # ERROR HANDLING - Exception Scenarios and Error Cases
@@ -327,7 +327,7 @@ class TestIngestionOrchestratorComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Topic cannot be empty"):
-            await orchestrator.create_ingestion_plan(invalid_topic, {})
+            await self.orchestrator.create_ingestion_plan(invalid_topic, {})
 
     @pytest.mark.unit_error_handling
     async def test_create_plan_cognitive_engine_failure(self) -> None:
@@ -342,7 +342,7 @@ class TestIngestionOrchestratorComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Cognitive engine unavailable"):
-            await orchestrator.create_ingestion_plan(topic, context)
+            await self.orchestrator.create_ingestion_plan(topic, context)
 
     @pytest.mark.unit_error_handling
     async def test_execute_plan_service_timeout(self) -> None:
@@ -360,7 +360,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -383,7 +383,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -411,7 +411,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
         # Act
-        result = await orchestrator.ingest_content(topic, context)
+        result = await self.orchestrator.ingest_content(topic, context)
 
         # Assert
         assert result is not None
@@ -437,7 +437,7 @@ class TestIngestionOrchestratorComprehensive:
         ]
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -465,7 +465,7 @@ class TestIngestionOrchestratorComprehensive:
 
         # Act
         start_time = time.time()
-        plan = await orchestrator.create_ingestion_plan(topic, context)
+        plan = await self.orchestrator.create_ingestion_plan(topic, context)
         end_time = time.time()
 
         # Assert
@@ -489,7 +489,7 @@ class TestIngestionOrchestratorComprehensive:
         ]
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -514,7 +514,7 @@ class TestIngestionOrchestratorComprehensive:
         mock_dependencies["arxiv_service"].search.return_value = large_results
 
         # Act
-        result = await orchestrator.execute_ingestion_plan(plan)
+        result = await self.orchestrator.execute_ingestion_plan(plan)
 
         # Assert
         assert result is not None
@@ -543,7 +543,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act
-        plan = await orchestrator.create_ingestion_plan(topic, malicious_context)
+        plan = await self.orchestrator.create_ingestion_plan(topic, malicious_context)
 
         # Assert
         assert plan is not None
@@ -559,7 +559,7 @@ class TestIngestionOrchestratorComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError):
-            await orchestrator.create_ingestion_plan(malicious_topic, {})
+            await self.orchestrator.create_ingestion_plan(malicious_topic, {})
 
     @pytest.mark.unit_security
     async def test_rate_limiting_integration(self) -> None:
@@ -575,7 +575,7 @@ class TestIngestionOrchestratorComprehensive:
         }
 
         # Act - Make multiple rapid requests
-        tasks = [orchestrator.create_ingestion_plan(topic, context) for _ in range(5)]
+        tasks = [self.orchestrator.create_ingestion_plan(topic, context) for _ in range(5)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Assert

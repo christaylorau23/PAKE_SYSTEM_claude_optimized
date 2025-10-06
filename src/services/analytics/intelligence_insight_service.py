@@ -13,18 +13,13 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
-import logging
-import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+import logging
 from typing import Any
-
-# Graph analysis
-import networkx as nx
-import numpy as np
-import pandas as pd
+import uuid
 
 # Time series analysis
 from gensim.corpora import Dictionary
@@ -32,7 +27,12 @@ from gensim.corpora import Dictionary
 # Topic modeling and NLP
 from gensim.models import LdaModel, LdaMulticore
 from gensim.models.coherencemodel import CoherenceModel
+
+# Graph analysis
+import networkx as nx
 from networkx.algorithms import community
+import numpy as np
+import pandas as pd
 
 # Scientific computing and analysis
 from scipy import stats
@@ -255,7 +255,7 @@ class IntelligenceInsightService:
             logger.info("Intelligence Insight Service initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Intelligence Insight Service: %s", e)
             return False
 
@@ -272,7 +272,7 @@ class IntelligenceInsightService:
 
             logger.info("Knowledge graph constructed for analysis")
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error building knowledge graph: %s", e)
             raise
 
@@ -283,7 +283,7 @@ class IntelligenceInsightService:
             # This would query the intelligence core for document history
             logger.info("Topic tracking initialized")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error initializing topic tracking: %s", e)
             raise
 
@@ -294,7 +294,7 @@ class IntelligenceInsightService:
             # For now, just logging the setup
             logger.info("Periodic analysis tasks configured")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error setting up periodic analysis: %s", e)
             raise
 
@@ -430,7 +430,7 @@ class IntelligenceInsightService:
             )
             return topic_evolutions
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting emerging topics: %s", e)
             return []
 
@@ -449,109 +449,218 @@ class IntelligenceInsightService:
             List[CorrelationInsight]: Discovered correlations
         """
         try:
-            if len(metric_pairs) < 2:
-                logger.warning("Need at least 2 metrics for correlation analysis")
+            # Early validation with guard clauses
+            if not self._validate_correlation_inputs(metric_pairs):
                 return []
 
             start_time = datetime.now(UTC)
-            max_lag = max_lag or self.config["correlation_analysis"]["max_lag_periods"]
-            min_corr = self.config["correlation_analysis"]["min_correlation"]
-            alpha = self.config["correlation_analysis"]["significance_level"]
-            min_samples = self.config["correlation_analysis"]["min_sample_size"]
-
+            config = self._get_correlation_config(max_lag)
             correlations = []
 
-            # Analyze all pairs
-            for i, (name1, series1) in enumerate(metric_pairs):
-                for j, (name2, series2) in enumerate(metric_pairs[i + 1 :], i + 1):
-                    if len(series1) < min_samples or len(series2) < min_samples:
-                        continue
+            # Analyze all pairs using extracted method
+            correlations = self._analyze_metric_pairs(metric_pairs, config)
 
-                    # Align series by index (assuming datetime index)
-                    aligned = pd.concat([series1, series2], axis=1, join="inner")
-                    if aligned.shape[0] < min_samples:
-                        continue
-
-                    s1_aligned = aligned.iloc[:, 0].dropna()
-                    s2_aligned = aligned.iloc[:, 1].dropna()
-
-                    # Calculate cross-correlation with different lags
-                    best_correlation = 0
-                    best_lag = 0
-                    best_p_value = 1.0
-                    best_type = "pearson"
-
-                    for lag in range(-max_lag, max_lag + 1):
-                        if lag == 0:
-                            x, y = s1_aligned, s2_aligned
-                        elif lag > 0:
-                            x, y = s1_aligned[:-lag], s2_aligned[lag:]
-                        else:
-                            x, y = s1_aligned[-lag:], s2_aligned[:lag]
-
-                        if len(x) < min_samples or len(y) < min_samples:
-                            continue
-
-                        # Try different correlation methods
-                        for corr_type in ["pearson", "spearman"]:
-                            if corr_type == "pearson":
-                                corr, p_val = stats.pearsonr(x, y)
-                            else:
-                                corr, p_val = stats.spearmanr(x, y)
-
-                            if (
-                                abs(corr) > abs(best_correlation)
-                                and abs(corr) >= min_corr
-                            ):
-                                best_correlation = corr
-                                best_lag = lag
-                                best_p_value = p_val
-                                best_type = corr_type
-
-                    # If significant correlation found
-                    if abs(best_correlation) >= min_corr and best_p_value < alpha:
-                        # Calculate confidence interval
-                        n = len(s1_aligned)
-                        z_score = stats.norm.ppf(1 - alpha / 2)
-                        se = 1 / np.sqrt(n - 3)
-                        z_corr = np.arctanh(best_correlation)
-                        z_lower = z_corr - z_score * se
-                        z_upper = z_corr + z_score * se
-                        ci_lower = np.tanh(z_lower)
-                        ci_upper = np.tanh(z_upper)
-
-                        # Determine temporal pattern
-                        if best_lag > 0:
-                            temporal_pattern = "leading"  # series1 leads series2
-                        elif best_lag < 0:
-                            temporal_pattern = "lagging"  # series1 lags series2
-                        else:
-                            temporal_pattern = "concurrent"
-
-                        correlation_insight = CorrelationInsight(
-                            metric1_name=name1,
-                            metric2_name=name2,
-                            correlation_coefficient=best_correlation,
-                            p_value=best_p_value,
-                            lag_periods=best_lag,
-                            confidence_interval=(ci_lower, ci_upper),
-                            sample_size=n,
-                            correlation_type=best_type,
-                            temporal_pattern=temporal_pattern,
-                        )
-
-                        correlations.append(correlation_insight)
-
-            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
-            self._stats["correlations_discovered"] += len(correlations)
-            self._stats["processing_time_total_ms"] += processing_time
-
+            # Update statistics
+            self._update_correlation_stats(correlations, start_time)
+            
             logger.info("Discovered %s significant correlations", len(correlations))
             return correlations
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing correlations: %s", e)
             return []
+
+    def _validate_correlation_inputs(self, metric_pairs: list[tuple[str, pd.Series]]) -> bool:
+        """Validate inputs for correlation analysis."""
+        if len(metric_pairs) < 2:
+            logger.warning("Need at least 2 metrics for correlation analysis")
+            return False
+        return True
+
+    def _get_correlation_config(self, max_lag: int | None) -> dict:
+        """Get correlation analysis configuration."""
+        return {
+            "max_lag": max_lag or self.config["correlation_analysis"]["max_lag_periods"],
+            "min_corr": self.config["correlation_analysis"]["min_correlation"],
+            "alpha": self.config["correlation_analysis"]["significance_level"],
+            "min_samples": self.config["correlation_analysis"]["min_sample_size"],
+        }
+
+    def _analyze_metric_pairs(
+        self, 
+        metric_pairs: list[tuple[str, pd.Series]], 
+        config: dict
+    ) -> list[CorrelationInsight]:
+        """Analyze all pairs of metrics for correlations."""
+        correlations = []
+        
+        for i, (name1, series1) in enumerate(metric_pairs):
+            for j, (name2, series2) in enumerate(metric_pairs[i + 1 :], i + 1):
+                correlation = self._analyze_single_pair(name1, series1, name2, series2, config)
+                if correlation:
+                    correlations.append(correlation)
+        
+        return correlations
+
+    def _analyze_single_pair(
+        self, 
+        name1: str, 
+        series1: pd.Series, 
+        name2: str, 
+        series2: pd.Series, 
+        config: dict
+    ) -> CorrelationInsight | None:
+        """Analyze correlation between a single pair of metrics."""
+        # Early validation
+        if not self._validate_series_pair(series1, series2, config["min_samples"]):
+            return None
+
+        # Align series
+        s1_aligned, s2_aligned = self._align_series(series1, series2, config["min_samples"])
+        if s1_aligned is None or s2_aligned is None:
+            return None
+
+        # Find best correlation
+        best_result = self._find_best_correlation(s1_aligned, s2_aligned, config)
+        if not best_result:
+            return None
+
+        # Create correlation insight
+        return self._create_correlation_insight(name1, name2, best_result, len(s1_aligned))
+
+    def _validate_series_pair(self, series1: pd.Series, series2: pd.Series, min_samples: int) -> bool:
+        """Validate that series pair meets minimum requirements."""
+        return len(series1) >= min_samples and len(series2) >= min_samples
+
+    def _align_series(
+        self, 
+        series1: pd.Series, 
+        series2: pd.Series, 
+        min_samples: int
+    ) -> tuple[pd.Series | None, pd.Series | None]:
+        """Align two series by index and validate alignment."""
+        aligned = pd.concat([series1, series2], axis=1, join="inner")
+        if aligned.shape[0] < min_samples:
+            return None, None
+        
+        s1_aligned = aligned.iloc[:, 0].dropna()
+        s2_aligned = aligned.iloc[:, 1].dropna()
+        
+        return s1_aligned, s2_aligned
+
+    def _find_best_correlation(
+        self, 
+        s1_aligned: pd.Series, 
+        s2_aligned: pd.Series, 
+        config: dict
+    ) -> dict | None:
+        """Find the best correlation across all lags and methods."""
+        best_correlation = 0
+        best_lag = 0
+        best_p_value = 1.0
+        best_type = "pearson"
+
+        for lag in range(-config["max_lag"], config["max_lag"] + 1):
+            x, y = self._apply_lag(s1_aligned, s2_aligned, lag)
+            if len(x) < config["min_samples"] or len(y) < config["min_samples"]:
+                continue
+
+            result = self._test_correlation_methods(x, y, config["min_corr"])
+            if result and abs(result["correlation"]) > abs(best_correlation):
+                best_correlation = result["correlation"]
+                best_lag = lag
+                best_p_value = result["p_value"]
+                best_type = result["type"]
+
+        if abs(best_correlation) >= config["min_corr"] and best_p_value < config["alpha"]:
+            return {
+                "correlation": best_correlation,
+                "lag": best_lag,
+                "p_value": best_p_value,
+                "type": best_type,
+            }
+        return None
+
+    def _apply_lag(self, s1: pd.Series, s2: pd.Series, lag: int) -> tuple[pd.Series, pd.Series]:
+        """Apply lag to series pair."""
+        if lag == 0:
+            return s1, s2
+        elif lag > 0:
+            return s1[:-lag], s2[lag:]
+        else:
+            return s1[-lag:], s2[:lag]
+
+    def _test_correlation_methods(self, x: pd.Series, y: pd.Series, min_corr: float) -> dict | None:
+        """Test different correlation methods and return best result."""
+        best_result = None
+        
+        for corr_type in ["pearson", "spearman"]:
+            if corr_type == "pearson":
+                corr, p_val = stats.pearsonr(x, y)
+            else:
+                corr, p_val = stats.spearmanr(x, y)
+
+            if abs(corr) >= min_corr:
+                if not best_result or abs(corr) > abs(best_result["correlation"]):
+                    best_result = {
+                        "correlation": corr,
+                        "p_value": p_val,
+                        "type": corr_type,
+                    }
+        
+        return best_result
+
+    def _create_correlation_insight(
+        self, 
+        name1: str, 
+        name2: str, 
+        best_result: dict, 
+        sample_size: int
+    ) -> CorrelationInsight:
+        """Create CorrelationInsight object from analysis results."""
+        # Calculate confidence interval
+        ci_lower, ci_upper = self._calculate_confidence_interval(
+            best_result["correlation"], sample_size, self.config["correlation_analysis"]["significance_level"]
+        )
+
+        # Determine temporal pattern
+        temporal_pattern = self._determine_temporal_pattern(best_result["lag"])
+
+        return CorrelationInsight(
+            metric1_name=name1,
+            metric2_name=name2,
+            correlation_coefficient=best_result["correlation"],
+            p_value=best_result["p_value"],
+            lag_periods=best_result["lag"],
+            confidence_interval=(ci_lower, ci_upper),
+            sample_size=sample_size,
+            correlation_type=best_result["type"],
+            temporal_pattern=temporal_pattern,
+        )
+
+    def _calculate_confidence_interval(self, correlation: float, sample_size: int, alpha: float) -> tuple[float, float]:
+        """Calculate confidence interval for correlation coefficient."""
+        z_score = stats.norm.ppf(1 - alpha / 2)
+        se = 1 / np.sqrt(sample_size - 3)
+        z_corr = np.arctanh(correlation)
+        z_lower = z_corr - z_score * se
+        z_upper = z_corr + z_score * se
+        return np.tanh(z_lower), np.tanh(z_upper)
+
+    def _determine_temporal_pattern(self, lag: int) -> str:
+        """Determine temporal pattern based on lag."""
+        if lag > 0:
+            return "leading"  # series1 leads series2
+        elif lag < 0:
+            return "lagging"  # series1 lags series2
+        else:
+            return "concurrent"
+
+    def _update_correlation_stats(self, correlations: list[CorrelationInsight], start_time: datetime) -> None:
+        """Update statistics with correlation analysis results."""
+        processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
+        self._stats["correlations_discovered"] += len(correlations)
+        self._stats["processing_time_total_ms"] += processing_time
 
     async def detect_communities(
         self,
@@ -656,7 +765,7 @@ class IntelligenceInsightService:
             )
             return community_insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error detecting communities: %s", e)
             return []
 
@@ -875,7 +984,7 @@ class IntelligenceInsightService:
             logger.info("Generated %s synthesis insights", len(synthesis_insights))
             return synthesis_insights
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating synthesis insights: %s", e)
             return []
 
@@ -956,7 +1065,7 @@ class IntelligenceInsightService:
             logger.info("Created %s insight alerts", len(alerts))
             return alerts
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error creating alerts: %s", e)
             return []
 
@@ -974,101 +1083,131 @@ class IntelligenceInsightService:
         Returns:
             Dict[str, Any]: Comprehensive analysis results
         """
+        start_time = datetime.now(UTC)
         try:
-            start_time = datetime.now(UTC)
-            results = {
-                "analysis_timestamp": start_time.isoformat(),
-                "topic_evolutions": [],
-                "correlations": [],
-                "communities": [],
-                "synthesis_insights": [],
-                "alerts": [],
-                "processing_time_ms": 0,
-            }
-
-            # Run analyses in parallel where possible
-            tasks = []
-
-            # Topic evolution analysis
-            if documents:
-                tasks.append(self.detect_emerging_topics(documents))
-
-            # Community detection
-            if self.knowledge_graph:
-                tasks.append(self.detect_communities())
-
-            # Correlation analysis
-            if time_series_data and len(time_series_data) >= 2:
-                metric_pairs = list(time_series_data.items())
-                tasks.append(self.analyze_correlations(metric_pairs))
-
-            # Execute parallel analyses
+            results = self._initialize_analysis_results(start_time)
+            tasks = self._prepare_analysis_tasks(documents, time_series_data)
+            
             if tasks:
                 analysis_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-                # Process results
-                if (
-                    documents
-                    and len(analysis_results) > 0
-                    and not isinstance(analysis_results[0], Exception)
-                ):
-                    results["topic_evolutions"] = analysis_results[0]
-
-                community_idx = 1 if documents else 0
-                if (
-                    self.knowledge_graph
-                    and len(analysis_results) > community_idx
-                    and not isinstance(analysis_results[community_idx], Exception)
-                ):
-                    results["communities"] = analysis_results[community_idx]
-
-                corr_idx = (
-                    2
-                    if documents and self.knowledge_graph
-                    else (1 if documents or self.knowledge_graph else 0)
-                )
-                if (
-                    time_series_data
-                    and len(analysis_results) > corr_idx
-                    and not isinstance(analysis_results[corr_idx], Exception)
-                ):
-                    results["correlations"] = analysis_results[corr_idx]
-
-                # Generate synthesis insights
-                synthesis_insights = await self.generate_synthesis_insights(
-                    results["topic_evolutions"],
-                    results["correlations"],
-                    results["communities"],
-                )
-                results["synthesis_insights"] = synthesis_insights
-
-                # Create alerts
-                alerts = await self.create_alerts(synthesis_insights)
-                results["alerts"] = alerts
-
-            processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
-            results["processing_time_ms"] = processing_time
-
-            logger.info("Comprehensive analysis completed in %.2f%%ms", processing_time)
-            logger.info(
-                "Results: %s topics, %s correlations, %s communities, %s insights, %s alerts",
-                len(results["topic_evolutions"]),
-                len(results["correlations"]),
-                len(results["communities"]),
-                len(results["synthesis_insights"]),
-                len(results["alerts"]),
-            )
-
+                self._process_analysis_results(results, analysis_results, documents, time_series_data)
+                await self._generate_insights_and_alerts(results)
+            
+            self._finalize_results(results, start_time)
             return results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in comprehensive analysis: %s", e)
-            return {
-                "error": str(e),
-                "analysis_timestamp": datetime.now(UTC).isoformat(),
-                "processing_time_ms": (datetime.now(UTC) - start_time).total_seconds()
-                * 1000,
-            }
+            return self._create_error_result(e, start_time)
+
+    def _initialize_analysis_results(self, start_time: datetime) -> dict[str, Any]:
+        """Initialize the analysis results structure."""
+        return {
+            "analysis_timestamp": start_time.isoformat(),
+            "topic_evolutions": [],
+            "correlations": [],
+            "communities": [],
+            "synthesis_insights": [],
+            "alerts": [],
+            "processing_time_ms": 0,
+        }
+
+    def _prepare_analysis_tasks(
+        self, 
+        documents: list[str] | None, 
+        time_series_data: dict[str, pd.Series] | None
+    ) -> list:
+        """Prepare analysis tasks for parallel execution."""
+        tasks = []
+        
+        if documents:
+            tasks.append(self.detect_emerging_topics(documents))
+        
+        if self.knowledge_graph:
+            tasks.append(self.detect_communities())
+        
+        if time_series_data and len(time_series_data) >= 2:
+            metric_pairs = list(time_series_data.items())
+            tasks.append(self.analyze_correlations(metric_pairs))
+        
+        return tasks
+
+    def _process_analysis_results(
+        self, 
+        results: dict[str, Any], 
+        analysis_results: list, 
+        documents: list[str] | None, 
+        time_series_data: dict[str, pd.Series] | None
+    ) -> None:
+        """Process the results from parallel analysis tasks."""
+        if not analysis_results:
+            return
+            
+        # Process topic evolutions
+        if documents and self._is_valid_result(analysis_results[0]):
+            results["topic_evolutions"] = analysis_results[0]
+
+        # Process communities
+        community_idx = 1 if documents else 0
+        if (self.knowledge_graph and 
+            len(analysis_results) > community_idx and 
+            self._is_valid_result(analysis_results[community_idx])):
+            results["communities"] = analysis_results[community_idx]
+
+        # Process correlations
+        corr_idx = self._calculate_correlation_index(documents)
+        if (time_series_data and 
+            len(analysis_results) > corr_idx and 
+            self._is_valid_result(analysis_results[corr_idx])):
+            results["correlations"] = analysis_results[corr_idx]
+
+    def _is_valid_result(self, result: Any) -> bool:
+        """Check if analysis result is valid (not an exception)."""
+        return not isinstance(result, Exception)
+
+    def _calculate_correlation_index(self, documents: list[str] | None) -> int:
+        """Calculate the index for correlation results in analysis_results."""
+        if documents and self.knowledge_graph:
+            return 2
+        elif documents or self.knowledge_graph:
+            return 1
+        else:
+            return 0
+
+    async def _generate_insights_and_alerts(self, results: dict[str, Any]) -> None:
+        """Generate synthesis insights and alerts from analysis results."""
+        synthesis_insights = await self.generate_synthesis_insights(
+            results["topic_evolutions"],
+            results["correlations"],
+            results["communities"],
+        )
+        results["synthesis_insights"] = synthesis_insights
+
+        alerts = await self.create_alerts(synthesis_insights)
+        results["alerts"] = alerts
+
+    def _finalize_results(self, results: dict[str, Any], start_time: datetime) -> None:
+        """Finalize results with processing time and logging."""
+        processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
+        results["processing_time_ms"] = processing_time
+
+        logger.info("Comprehensive analysis completed in %.2f%%ms", processing_time)
+        logger.info(
+            "Results: %s topics, %s correlations, %s communities, %s insights, %s alerts",
+            len(results["topic_evolutions"]),
+            len(results["correlations"]),
+            len(results["communities"]),
+            len(results["synthesis_insights"]),
+            len(results["alerts"]),
+        )
+
+    def _create_error_result(self, error: Exception, start_time: datetime) -> dict[str, Any]:
+        """Create error result structure."""
+        return {
+            "error": str(error),
+            "analysis_timestamp": datetime.now(UTC).isoformat(),
+            "processing_time_ms": (datetime.now(UTC) - start_time).total_seconds() * 1000,
+        }
 
     async def get_service_stats(self) -> dict[str, Any]:
         """Get comprehensive service statistics."""
@@ -1128,7 +1267,7 @@ class IntelligenceInsightService:
                 "performance_stats": self._stats,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

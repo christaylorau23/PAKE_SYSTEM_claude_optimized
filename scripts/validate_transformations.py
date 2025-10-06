@@ -10,11 +10,11 @@ principle.
 
 import ast
 import difflib
+from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import libcst as cst
@@ -249,7 +249,7 @@ class Service:
                 "changes_count": format_validation["changes_count"],
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             result["errors"].append(f"Transformation failed: {str(e)}")
 
         return result
@@ -275,7 +275,7 @@ class Service:
 
             return {"errors": errors, "error_count": len(errors)}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"errors": [f"Ruff validation failed: {str(e)}"], "error_count": 1}
         finally:
             temp_file.unlink()

@@ -6,17 +6,17 @@ with the PAKE system's existing AI capabilities.
 """
 
 import asyncio
-import logging
-import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import re
+from typing import Any, Dict, List
 
 import nltk
-import numpy as np
 from nltk.corpus import stopwords
 from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.tokenize import sent_tokenize, word_tokenize
+import numpy as np
 from sentence_transformers import SentenceTransformer
 from textstat import flesch_kincaid_grade, flesch_reading_ease
 
@@ -136,7 +136,7 @@ class ContentAnalysisService:
     topic extraction, sentiment analysis, and embedding generation.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, embedding_model_name: str = "all-MiniLM-L6-v2", enable_gpu: bool = False) -> None:
         """Initialize the content analysis service.
 
         Args:
@@ -243,7 +243,7 @@ class ContentAnalysisService:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing content %s: %s", content_item.id, str(e))
             processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return self._create_error_result(str(content_item.id), processing_time)
@@ -301,7 +301,7 @@ class ContentAnalysisService:
                     overall_quality=overall_quality,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in quality analysis: %s", str(e))
                 return QualityMetrics()
 
@@ -538,7 +538,7 @@ class ContentAnalysisService:
                     confidence=confidence,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in sentiment analysis: %s", str(e))
                 return SentimentAnalysis()
 
@@ -609,7 +609,7 @@ class ContentAnalysisService:
                     confidence_scores=confidence_scores,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error in topic extraction: %s", str(e))
                 return TopicExtraction()
 
@@ -630,7 +630,7 @@ class ContentAnalysisService:
                     model_name=self.embedding_model_name,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error generating embedding: %s", str(e))
                 return None
 
@@ -713,12 +713,12 @@ class ContentAnalysisService:
     ) -> list[ContentAnalysisResult]:
         """Analyze multiple content items concurrently."""
 
-        async def analyze_with_semaphore(self) -> None:
+        async def analyze_with_semaphore(content_item: ContentItem) -> ContentAnalysisResult:
             async with semaphore:
                 return await self.analyze_content(content_item)
 
         semaphore = asyncio.Semaphore(max_concurrent)
-        tasks = [analyze_with_semaphore(semaphore, item) for item in content_items]
+        tasks = [analyze_with_semaphore(item) for item in content_items]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

@@ -27,7 +27,7 @@ def test_import(package: str, optional: bool = False) -> tuple[bool, str | None]
         if not optional:
             return False, str(e)
         return True, f"Optional package not installed: {e}"
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         return False, f"Unexpected error: {e}"
 
 
@@ -121,7 +121,7 @@ def print_results(self) -> None:
     print("-" * 40)
 
     success_count = 0
-    for package, (success, info) in results.items():
+    for package, (success, info) in self.results.items():
         if success:
             status = "✅"
             success_count += 1
@@ -147,7 +147,7 @@ def print_results(self) -> None:
     return success_count == len(
         [
             r
-            for r in results.values()
+            for r in self.results.values()
             if "Optional package not installed" not in str(r[1])
         ]
     )
@@ -164,7 +164,7 @@ def test_basic_functionality(self) -> None:
 
         app = FastAPI()
         print("  ✅ FastAPI: Can create app instance")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ❌ FastAPI: {e}")
 
     # Test SQLAlchemy basic functionality
@@ -179,7 +179,7 @@ def test_basic_functionality(self) -> None:
         result = session.execute(text("SELECT 1"))
         assert result.scalar() == 1
         print("  ✅ SQLAlchemy: Basic database operations work")
-    except Exception as e:
+    except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
         print(f"  ❌ SQLAlchemy: {e}")
 
     # Test Redis connection (mock)
@@ -189,13 +189,13 @@ def test_basic_functionality(self) -> None:
         # Don't actually connect, just test import and basic setup
         r = redis.Redis(host="localhost", port=6379, decode_responses=True)
         print("  ✅ Redis: Client can be created")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"  ❌ Redis: {e}")
 
     # Test pytest functionality
     try:
         print("  ✅ Pytest: Available for testing")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"  ❌ Pytest: {e}")
 
 

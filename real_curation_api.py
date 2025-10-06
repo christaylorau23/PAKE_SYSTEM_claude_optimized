@@ -3,21 +3,21 @@
 This connects the curation system to real databases and services.
 """
 
+from datetime import UTC, datetime
 import logging
 import os
 
 # Activate virtual environment first
 import sys
-import uuid
-from datetime import UTC, datetime
 from typing import Any
+import uuid
 
 sys.path.insert(0, "/root/projects/PAKE_SYSTEM_claude_optimized/src")
 
-import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import uvicorn
 
 # Database imports
 try:
@@ -124,7 +124,7 @@ class RealDataManager:
             # Load real data from database
             await self._load_database_content()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.warning("Database connection failed: %s, using mock data", e)
             await self._load_mock_data()
 
@@ -168,7 +168,7 @@ class RealDataManager:
                     len(self.content_cache),
                 )
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error loading database content: %s", e)
             await self._load_mock_data()
 
@@ -274,7 +274,7 @@ class RealDataManager:
             ]
             self.content_vectors = self.ml_vectorizer.fit_transform(content_texts)
             logger.info("ML features initialized for content similarity")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error initializing ML features: %s", e)
 
     def _extract_tags_from_query(self, query: str) -> list[str]:
@@ -381,8 +381,11 @@ class RealDataManager:
             ).days
             if days_old < 30:
                 reasons.append("Recently published content")
-        except:
-            pass
+        except (ValueError, RuntimeError) as e as e:
+
+            logger.debug(f"Exception in real_curation_api.py: {e}")
+
+            # Continue gracefully
 
         if not reasons:
             reasons.append("Relevant to your general preferences")
@@ -475,7 +478,7 @@ async def get_content_item(self) -> None:
 async def get_recommendations(self) -> None:
     """Get personalized recommendations for user."""
     user_interests = (
-        [i.strip() for i in interests.split(",")]
+        [i.strip() for i in self.interests.split(",")]
         if interests
         else ["machine-learning", "ai"]
     )
@@ -518,18 +521,18 @@ async def submit_feedback(self) -> None:
 
     processed_feedback = {
         "feedback_id": feedback_id,
-        "user_id": feedback.get("user_id"),
-        "content_id": feedback.get("content_id"),
-        "feedback_type": feedback.get("feedback_type"),
-        "rating": feedback.get("rating"),
+        "user_id": self.feedback.get("user_id"),
+        "content_id": self.feedback.get("content_id"),
+        "feedback_type": self.feedback.get("feedback_type"),
+        "rating": self.feedback.get("rating"),
         "processed_at": datetime.now(UTC).isoformat(),
         "status": "processed",
     }
 
     # Update content quality based on feedback (simple approach)
-    content_id = feedback.get("content_id")
+    content_id = self.feedback.get("content_id")
     if content_id in data_manager.content_cache:
-        rating = feedback.get("rating", 3)
+        rating = self.feedback.get("rating", 3)
         if rating >= 4:
             # Boost quality slightly for positive feedback
             current_quality = data_manager.content_cache[content_id].quality_score

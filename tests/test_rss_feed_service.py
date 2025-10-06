@@ -134,7 +134,7 @@ class TestRSSFeedService:
             mock_get.return_value.__aenter__.return_value = mock_response
 
             # Test RSS feed parsing
-            result = await rss_feed_service.fetch_feed(feed_url)
+            result = await self.rss_feed_service.fetch_feed(feed_url)
 
             # Verify result structure
             assert isinstance(result, RSSFeedResult)
@@ -170,7 +170,7 @@ class TestRSSFeedService:
             mock_get.return_value.__aenter__.return_value = mock_response
 
             # Test Atom feed parsing
-            result = await rss_feed_service.fetch_feed(feed_url)
+            result = await self.rss_feed_service.fetch_feed(feed_url)
 
             # Verify result structure
             assert isinstance(result, RSSFeedResult)
@@ -232,7 +232,7 @@ class TestRSSFeedService:
             ]
 
             # Execute concurrent fetching
-            result = await rss_feed_service.fetch_multiple_feeds(query)
+            result = await self.rss_feed_service.fetch_multiple_feeds(query)
 
             # Verify concurrent execution
             assert isinstance(result, RSSFeedResult)
@@ -262,7 +262,7 @@ class TestRSSFeedService:
             mock_response.status = 200
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_feed_service.fetch_with_query(query)
+            result = await self.rss_feed_service.fetch_with_query(query)
 
             # Should only return items from Jan 2, 2025
             assert result.success
@@ -291,7 +291,7 @@ class TestRSSFeedService:
             mock_response.status = 200
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_feed_service.fetch_with_query(query)
+            result = await self.rss_feed_service.fetch_with_query(query)
 
             # Should only return items containing "neural" or "networks"
             assert result.success
@@ -349,7 +349,7 @@ class TestRSSFeedService:
                 "Full article content with detailed information..."
             )
 
-            result = await rss_feed_service.fetch_with_query(query)
+            result = await self.rss_feed_service.fetch_with_query(query)
 
             # Verify full content was fetched
             assert result.success
@@ -383,7 +383,7 @@ class TestRSSFeedService:
         )
 
         # Convert to content items
-        content_items = await rss_feed_service.to_content_items(
+        content_items = await self.rss_feed_service.to_content_items(
             rss_result,
             "rss_ingestion_test",
         )
@@ -433,7 +433,7 @@ class TestRSSFeedService:
                 ],
             )
 
-            result = await rss_feed_service.fetch_with_cognitive_assessment(
+            result = await self.rss_feed_service.fetch_with_cognitive_assessment(
                 query,
                 mock_cognitive_engine,
             )
@@ -467,7 +467,7 @@ class TestRSSFeedService:
         ]
 
         for url in invalid_urls:
-            result = await rss_feed_service.fetch_feed(url)
+            result = await self.rss_feed_service.fetch_feed(url)
 
             # Should fail gracefully
             assert isinstance(result, RSSFeedResult)
@@ -501,7 +501,7 @@ class TestRSSFeedService:
             mock_response.status = 200
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await rss_feed_service.fetch_feed(feed_url)
+            result = await self.rss_feed_service.fetch_feed(feed_url)
 
             # Should handle parsing errors gracefully
             assert isinstance(result, RSSFeedResult)
@@ -542,7 +542,7 @@ class TestRSSFeedService:
             return MockFailingResponse(call_count)
 
         with patch("aiohttp.ClientSession.get", side_effect=mock_failing_request):
-            result = await rss_feed_service.fetch_feed(feed_url, max_retries=3)
+            result = await self.rss_feed_service.fetch_feed(feed_url, max_retries=3)
 
             # Should succeed after retries
             assert call_count == 3  # 2 failures + 1 success
@@ -570,7 +570,7 @@ class TestRSSFeedService:
             results = []
             for url in feed_urls:
                 # 100ms delay
-                result = await rss_feed_service.fetch_feed(url, rate_limit_delay=0.1)
+                result = await self.rss_feed_service.fetch_feed(url, rate_limit_delay=0.1)
                 results.append(result)
 
         end_time = asyncio.get_event_loop().time()
@@ -600,12 +600,12 @@ class TestRSSFeedService:
             mock_get.return_value.__aenter__.return_value = mock_response
 
             # First request - should make HTTP call
-            result1 = await rss_feed_service.fetch_feed(feed_url, enable_caching=True)
+            result1 = await self.rss_feed_service.fetch_feed(feed_url, enable_caching=True)
             assert result1.success
             assert mock_get.call_count == 1
 
             # Second request - should use cache
-            result2 = await rss_feed_service.fetch_feed(feed_url, enable_caching=True)
+            result2 = await self.rss_feed_service.fetch_feed(feed_url, enable_caching=True)
             assert result2.success
             assert result2.from_cache
             assert mock_get.call_count == 1  # No additional HTTP calls
@@ -627,7 +627,7 @@ class TestRSSFeedService:
 
             # Execute concurrent requests
             start_time = asyncio.get_event_loop().time()
-            tasks = [rss_feed_service.fetch_feed(url) for url in feed_urls]
+            tasks = [self.rss_feed_service.fetch_feed(url) for url in feed_urls]
             results = await asyncio.gather(*tasks)
             end_time = asyncio.get_event_loop().time()
 
@@ -671,7 +671,7 @@ class TestRSSFeedService:
             )
 
             # Test orchestrator-compatible execution
-            result = await rss_feed_service.execute_ingestion_query(
+            result = await self.rss_feed_service.execute_ingestion_query(
                 query,
                 "rss_orchestrator_test",
             )

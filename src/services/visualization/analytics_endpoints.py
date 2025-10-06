@@ -2,12 +2,12 @@
 Provides rich data for the enhanced analytics dashboard.
 """
 
-import logging
-import random
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import logging
+import random
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class VisualizationAnalyticsService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating enhanced dashboard data: %s", e)
             return self._get_error_response(str(e))
 
@@ -188,7 +188,7 @@ class VisualizationAnalyticsService:
 
             return points
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating time series for %s: %s", metric_name, e)
             return []
 
@@ -256,7 +256,7 @@ class VisualizationAnalyticsService:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating correlation matrix: %s", e)
             return {"error": str(e)}
 
@@ -300,7 +300,7 @@ class VisualizationAnalyticsService:
 
             return activities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting real-time stream: %s", e)
             return []
 

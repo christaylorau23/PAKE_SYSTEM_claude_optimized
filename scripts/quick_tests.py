@@ -4,9 +4,9 @@ Quick Tests Script for Pre-commit Hooks
 Runs a subset of fast unit tests for immediate feedback
 """
 
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def main(self) -> None:
@@ -33,7 +33,7 @@ def main(self) -> None:
     except subprocess.TimeoutExpired:
         print("Quick tests timed out after 60 seconds")
         sys.exit(1)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error running quick tests: {e}")
         sys.exit(1)
 

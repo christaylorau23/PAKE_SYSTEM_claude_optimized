@@ -9,9 +9,9 @@ Handles:
 - Medical content structuring
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from ..ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 from ..messaging.message_bus import MessageBus
@@ -28,7 +28,7 @@ class PubMedWorker(BaseWorkerAgent):
     for comprehensive medical literature retrieval with NCBI compliance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, worker_id: str | None = None, message_bus: MessageBus | None = None, email: str = "pake-system@example.com") -> None:
         """Initialize PubMed worker."""
         # Define worker capabilities
         capabilities = [
@@ -224,7 +224,7 @@ class PubMedWorker(BaseWorkerAgent):
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("PubMed worker task processing error: %s", e)
             return {
                 "success": False,
@@ -264,7 +264,7 @@ class PubMedWorker(BaseWorkerAgent):
 
         return valid_types
 
-    def _enhance_content_metadata(self) -> None:
+    def _enhance_content_metadata(self, content_item: Any, plan_context: Dict[str, Any], source_data: Dict[str, Any], cognitive_applied: bool = False) -> None:
         """Enhance content item with PubMed-specific metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
@@ -354,7 +354,7 @@ class PubMedWorker(BaseWorkerAgent):
                     test_result.error,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("PubMedWorker %s service test failed: %s", self.worker_id, e)
 
     async def _on_stop(self) -> None:
@@ -392,7 +392,7 @@ class PubMedWorker(BaseWorkerAgent):
                 pubmed_health["pubmed_service_status"] = "degraded"
                 pubmed_health["pubmed_service_error"] = test_result.error
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             pubmed_health["pubmed_service_status"] = "unhealthy"
             pubmed_health["pubmed_service_error"] = str(e)
 

@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Advanced Social Media Scheduling System
@@ -5,23 +6,23 @@ Intelligent scheduling with optimal timing and content queue management
 """
 
 import asyncio
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import json
 import logging
 import sqlite3
 import uuid
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
-from enum import Enum
 
 import pytz
 
 # Job scheduling
 try:
-    import croniter
-    import schedule
     from apscheduler.executors.pool import ThreadPoolExecutor
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    import croniter
+    import schedule
 except ImportError:
     print(
         "Scheduler dependencies not installed. Run: pip install schedule croniter apscheduler",
@@ -267,7 +268,7 @@ class SocialSchedulerSystem:
             self.logger.info("Post %s scheduled for %s", post.id, post.scheduled_time)
             return post.id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to schedule post: %s", e)
             raise
 
@@ -367,7 +368,7 @@ class SocialSchedulerSystem:
 
             return {"valid": True}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"valid": False, "error": str(e)}
 
     async def _check_rate_limits(self, platform: str, scheduled_time: datetime) -> bool:
@@ -436,26 +437,26 @@ class SocialSchedulerSystem:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
-                post.id,
-                post.content,
-                json.dumps(post.platforms),
-                post.scheduled_time,
-                post.status.value,
-                json.dumps(post.media_files) if post.media_files else None,
-                json.dumps(post.hashtags) if post.hashtags else None,
-                json.dumps(post.mentions) if post.mentions else None,
-                post.timezone,
-                post.recurring,
-                post.frequency.value if post.frequency else None,
-                post.cron_expression,
-                post.max_retries,
-                post.retry_count,
-                post.priority,
-                post.campaign_id,
-                post.created_at,
-                post.updated_at,
-                post.error_message,
-                post.engagement_tracking,
+                self.post.id,
+                self.post.content,
+                json.dumps(self.post.platforms),
+                self.post.scheduled_time,
+                self.self.post.status.value,
+                json.dumps(self.self.post.media_files) if self.self.post.media_files else None,
+                json.dumps(self.self.post.hashtags) if self.self.post.hashtags else None,
+                json.dumps(self.post.mentions) if self.post.mentions else None,
+                self.post.timezone,
+                self.self.post.recurring,
+                self.post.frequency.value if self.post.frequency else None,
+                self.post.cron_expression,
+                self.post.max_retries,
+                self.post.retry_count,
+                self.post.priority,
+                self.post.campaign_id,
+                self.post.created_at,
+                self.post.updated_at,
+                self.post.error_message,
+                self.post.engagement_tracking,
                 json.dumps(asdict(post)),
             ),
         )
@@ -468,8 +469,8 @@ class SocialSchedulerSystem:
         self.scheduler.add_job(
             func=self._execute_post,
             trigger="date",
-            run_date=post.scheduled_time,
-            args=[post.id],
+            run_date=self.post.scheduled_time,
+            args=[self.post.id],
             id=post.id,
             replace_existing=True,
             misfire_grace_time=300,  # 5 minutes grace period
@@ -482,8 +483,8 @@ class SocialSchedulerSystem:
                 func=self._execute_post,
                 trigger="interval",
                 days=1,
-                start_date=post.scheduled_time,
-                args=[post.id],
+                start_date=self.post.scheduled_time,
+                args=[self.post.id],
                 id=post.id,
                 replace_existing=True,
             )
@@ -492,8 +493,8 @@ class SocialSchedulerSystem:
                 func=self._execute_post,
                 trigger="interval",
                 weeks=1,
-                start_date=post.scheduled_time,
-                args=[post.id],
+                start_date=self.post.scheduled_time,
+                args=[self.post.id],
                 id=post.id,
                 replace_existing=True,
             )
@@ -502,8 +503,8 @@ class SocialSchedulerSystem:
                 func=self._execute_post,
                 trigger="interval",
                 days=30,
-                start_date=post.scheduled_time,
-                args=[post.id],
+                start_date=self.post.scheduled_time,
+                args=[self.post.id],
                 id=post.id,
                 replace_existing=True,
             )
@@ -511,8 +512,8 @@ class SocialSchedulerSystem:
             self.scheduler.add_job(
                 func=self._execute_post,
                 trigger="cron",
-                **self._parse_cron_expression(post.cron_expression),
-                args=[post.id],
+                **self._parse_cron_expression(self.post.cron_expression),
+                args=[self.post.id],
                 id=post.id,
                 replace_existing=True,
             )
@@ -597,7 +598,7 @@ class SocialSchedulerSystem:
 
             self.logger.info("Post %s executed successfully", post_id)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to execute post %s: %s", post_id, e)
 
             # Update post as failed and schedule retry if possible
@@ -625,7 +626,7 @@ class SocialSchedulerSystem:
 
         self.logger.info(
             "Scheduled retry %s for post %s at %s",
-            post.retry_count,
+            self.post.retry_count,
             post.id,
             retry_time,
         )
@@ -693,11 +694,11 @@ class SocialSchedulerSystem:
             WHERE id = ?
         """,
             (
-                post.status.value,
-                post.updated_at,
-                post.posted_at,
-                post.error_message,
-                post.retry_count,
+                self.post.status.value,
+                self.post.updated_at,
+                self.post.posted_at,
+                self.post.error_message,
+                self.post.retry_count,
                 post.id,
             ),
         )
@@ -810,7 +811,7 @@ class SocialSchedulerSystem:
                 error_message=row[19],
                 engagement_tracking=bool(row[20]) if row[20] is not None else True,
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error converting row to ScheduledPost: %s", e)
             return None
 
@@ -820,8 +821,11 @@ class SocialSchedulerSystem:
             # Remove from scheduler
             try:
                 self.scheduler.remove_job(post_id)
-            except BaseException:
-                pass  # Job might not exist in scheduler
+            except BaseException as e:
+
+                logger.debug(f"Exception in social_scheduler_system.py: {e}")
+
+                # Continue gracefully  # Job might not exist in scheduler
 
             # Update status in database
             conn = sqlite3.connect(self.db_path)
@@ -845,7 +849,7 @@ class SocialSchedulerSystem:
 
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to cancel post %s: %s", post_id, e)
             return False
 

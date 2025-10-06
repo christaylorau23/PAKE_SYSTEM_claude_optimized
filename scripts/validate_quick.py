@@ -5,9 +5,9 @@ Provides easy access to common validation commands
 """
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_command(command: list, description: str) -> bool:
@@ -18,7 +18,7 @@ def run_command(command: list, description: str) -> bool:
     try:
         result = subprocess.run(command, cwd=Path(__file__).parent.parent)
         return result.returncode == 0
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error: {e}")
         return False
 

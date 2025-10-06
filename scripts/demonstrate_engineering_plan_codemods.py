@@ -13,8 +13,8 @@ The demonstration validates the engineering plan's principles:
 This supports Phase 1 of the engineering plan for immediate stabilization.
 """
 
-import sys
 from pathlib import Path
+import sys
 from typing import List
 
 # Add src to path for imports
@@ -354,7 +354,7 @@ def main():
         print("✓ Engineering plan principles validated")
         print("\nThe PAKE system is ready for Phase 1 automated remediation!")
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"\n❌ Demonstration failed: {e}")
         import traceback
 

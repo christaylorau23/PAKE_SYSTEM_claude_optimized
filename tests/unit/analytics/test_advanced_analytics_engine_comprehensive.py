@@ -119,7 +119,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report(
+        report = await self.analytics_engine.generate_comprehensive_report(
             time_range=time_range,
             include_predictions=True,
             include_recommendations=True,
@@ -172,7 +172,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        health_report = await analytics_engine.analyze_system_health()
+        health_report = await self.analytics_engine.analyze_system_health()
 
         # Assert
         assert health_report is not None
@@ -202,7 +202,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        anomaly_report = await analytics_engine.detect_anomalies()
+        anomaly_report = await self.analytics_engine.detect_anomalies()
 
         # Assert
         assert anomaly_report is not None
@@ -245,7 +245,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        predictive_report = await analytics_engine.generate_predictive_insights()
+        predictive_report = await self.analytics_engine.generate_predictive_insights()
 
         # Assert
         assert predictive_report is not None
@@ -264,10 +264,10 @@ class TestAdvancedAnalyticsEngineComprehensive:
             "insights": [{"type": "cached", "description": "Cached insight"}],
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        analytics_engine._insight_cache[cache_key] = cached_data
+        self.analytics_engine._insight_cache[cache_key] = cached_data
 
         # Act
-        insights = await analytics_engine.get_cached_insights(cache_key)
+        insights = await self.analytics_engine.get_cached_insights(cache_key)
 
         # Assert
         assert insights is not None
@@ -302,7 +302,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report()
+        report = await self.analytics_engine.generate_comprehensive_report()
 
         # Assert
         assert report is not None
@@ -331,7 +331,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report(
+        report = await self.analytics_engine.generate_comprehensive_report(
             include_predictions=False, include_recommendations=False
         )
 
@@ -351,10 +351,10 @@ class TestAdvancedAnalyticsEngineComprehensive:
             "insights": [{"type": "expired", "description": "Expired insight"}],
             "timestamp": expired_time.isoformat(),
         }
-        analytics_engine._insight_cache[cache_key] = expired_data
+        self.analytics_engine._insight_cache[cache_key] = expired_data
 
         # Act
-        insights = await analytics_engine.get_cached_insights(cache_key)
+        insights = await self.analytics_engine.get_cached_insights(cache_key)
 
         # Assert
         assert insights is None  # Should return None for expired cache
@@ -385,9 +385,9 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act - Generate multiple reports concurrently
         tasks = [
-            analytics_engine.generate_comprehensive_report(),
-            analytics_engine.generate_comprehensive_report(),
-            analytics_engine.generate_comprehensive_report(),
+            self.analytics_engine.generate_comprehensive_report(),
+            self.analytics_engine.generate_comprehensive_report(),
+            self.analytics_engine.generate_comprehensive_report(),
         ]
         results = await asyncio.gather(*tasks)
 
@@ -409,7 +409,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Trend service unavailable"):
-            await analytics_engine.generate_comprehensive_report()
+            await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
     async def test_correlation_engine_failure(self) -> None:
@@ -426,7 +426,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Correlation engine failed"):
-            await analytics_engine.generate_comprehensive_report()
+            await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
     async def test_predictive_service_failure(self) -> None:
@@ -448,7 +448,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Predictive service failed"):
-            await analytics_engine.generate_comprehensive_report(
+            await self.analytics_engine.generate_comprehensive_report(
                 include_predictions=True
             )
 
@@ -472,14 +472,14 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Insight service failed"):
-            await analytics_engine.generate_comprehensive_report()
+            await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
     async def test_ml_services_unavailable(self) -> None:
         """Test handling when ML services are unavailable"""
         # Arrange - Simulate ML services being None
-        analytics_engine.ml_aggregation = None
-        analytics_engine.semantic_search = None
+        self.analytics_engine.ml_aggregation = None
+        self.analytics_engine.semantic_search = None
 
         mock_dependencies["trend_service"].analyze_trends.return_value = {
             "trends": [],
@@ -502,7 +502,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report()
+        report = await self.analytics_engine.generate_comprehensive_report()
 
         # Assert
         assert report is not None
@@ -516,7 +516,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid time range"):
-            await analytics_engine.generate_comprehensive_report(
+            await self.analytics_engine.generate_comprehensive_report(
                 time_range=invalid_time_range
             )
 
@@ -552,7 +552,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act
         start_time = time.time()
-        report = await analytics_engine.generate_comprehensive_report()
+        report = await self.analytics_engine.generate_comprehensive_report()
         end_time = time.time()
 
         # Assert
@@ -571,11 +571,11 @@ class TestAdvancedAnalyticsEngineComprehensive:
             "insights": [{"type": "cached", "description": "Cached insight"}],
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        analytics_engine._insight_cache[cache_key] = cached_data
+        self.analytics_engine._insight_cache[cache_key] = cached_data
 
         # Act
         start_time = time.time()
-        insights = await analytics_engine.get_cached_insights(cache_key)
+        insights = await self.analytics_engine.get_cached_insights(cache_key)
         end_time = time.time()
 
         # Assert
@@ -609,7 +609,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report()
+        report = await self.analytics_engine.generate_comprehensive_report()
 
         # Assert
         assert report is not None
@@ -647,7 +647,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError):
-            await analytics_engine.generate_comprehensive_report(
+            await self.analytics_engine.generate_comprehensive_report(
                 time_range=malicious_time_range
             )
 
@@ -659,7 +659,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError):
-            await analytics_engine.get_cached_insights(malicious_cache_key)
+            await self.analytics_engine.get_cached_insights(malicious_cache_key)
 
     @pytest.mark.unit_security
     async def test_data_privacy_protection(self) -> None:
@@ -686,7 +686,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
         # Act
-        report = await analytics_engine.generate_comprehensive_report()
+        report = await self.analytics_engine.generate_comprehensive_report()
 
         # Assert
         assert report is not None

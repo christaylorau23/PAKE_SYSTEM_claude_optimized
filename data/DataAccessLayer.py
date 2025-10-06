@@ -1,11 +1,13 @@
 import asyncio
+from collections.abc import Callable
+from datetime import UTC, datetime
 import os
 import sys
 import threading
-from collections.abc import Callable
-from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
+import logging
+logger = logging.getLogger(__name__)
 
 # Add utils to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -54,7 +56,7 @@ class DataAccessLayer:
             self.is_initialized = True
             self.logger.info("Data Access Layer initialized successfully")
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Failed to initialize Data Access Layer", error=str(error)
             )
@@ -114,7 +116,7 @@ class DataAccessLayer:
                     return await operation()
                 return operation()
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 last_error = error
                 if attempt < max_retries - 1:
                     self.logger.warning(
@@ -211,7 +213,7 @@ class DataAccessLayer:
                         "message": "No health check method available",
                     }
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 health["repositories"][name] = {
                     "status": "unhealthy",
                     "error": str(error),
@@ -239,7 +241,7 @@ class DataAccessLayer:
                     stats["repositories"][name] = repo_stats
                 else:
                     stats["repositories"][name] = {"status": "no_stats_method"}
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 stats["repositories"][name] = {"status": "error", "error": str(error)}
 
         return stats
@@ -257,7 +259,7 @@ class DataAccessLayer:
                             await repository.cleanup()
                         else:
                             repository.cleanup()
-                except Exception as error:
+                except (ValueError, RuntimeError) as error:
                     self.logger.error(
                         "Error cleaning up repository %s", name, error=str(error)
                     )
@@ -267,7 +269,7 @@ class DataAccessLayer:
 
             self.logger.info("DAL cleanup completed")
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Error during DAL cleanup", error=str(error))
             raise
 
@@ -290,7 +292,7 @@ class DataAccessLayer:
 
                 results.append(result)
 
-            except Exception as error:
+            except (ValueError, RuntimeError) as error:
                 self.logger.error("Batch operation %s failed", i, error=str(error))
                 errors.append({"index": i, "error": str(error)})
                 results.append(None)
@@ -341,7 +343,7 @@ class DataAccessLayer:
                     "ChromaDB not available - vector memory features disabled"
                 )
 
-        except Exception as error:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
             self.logger.warning(
                 "Failed to initialize vector memory integration", error=str(error)
             )
@@ -373,7 +375,7 @@ class DataAccessLayer:
                 metadata=metadata,
             )
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Failed to store memory", error=str(error))
             return None
 
@@ -400,7 +402,7 @@ class DataAccessLayer:
                 limit=limit,
             )
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Memory recall failed", error=str(error))
             return {"query": query, "results": [], "error": str(error)}
 
@@ -424,7 +426,7 @@ class DataAccessLayer:
             )
             return result.get("success", False)
 
-        except Exception as error:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as error:
             self.logger.error("Failed to learn from feedback", error=str(error))
             return False
 
@@ -441,7 +443,7 @@ class DataAccessLayer:
             )
             return result.get("knowledge_ids", [])
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error("Knowledge extraction failed", error=str(error))
             return []
 
@@ -492,7 +494,7 @@ class TransactionContext:
                 "operations_executed": executed_count,
             }
 
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             self.logger.error(
                 "Transaction failed, starting rollback",
                 executed_count=executed_count,
@@ -514,7 +516,7 @@ class TransactionContext:
 
                     rollback_count += 1
 
-                except Exception as rollback_error:
+                except (ValueError, RuntimeError) as rollback_error:
                     rollback_errors.append({"index": i, "error": str(rollback_error)})
 
             self.logger.info(

@@ -3,13 +3,13 @@ Implements personalization and recommendation capabilities with machine learning
 """
 
 import asyncio
-import logging
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import time
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -138,12 +138,12 @@ class AdaptiveLearningConfig:
 class CollaborativeFilter:
     """Collaborative filtering for user similarity and recommendations."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: AdaptiveLearningConfig | None = None) -> None:
+        self.config = config or AdaptiveLearningConfig()
         self.user_similarities: dict[str, dict[str, float]] = {}
         self.content_user_matrix: dict[str, set[str]] = defaultdict(set)
 
-    def update_user_interactions(self) -> None:
+    def update_user_interactions(self, interactions: List[UserInteraction]) -> None:
         """Update the collaborative filtering model with new interactions."""
         for interaction in interactions:
             if interaction.content_id:
@@ -206,8 +206,8 @@ class CollaborativeFilter:
 class ContentBasedFilter:
     """Content-based filtering using content features and user preferences."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: AdaptiveLearningConfig | None = None) -> None:
+        self.config = config or AdaptiveLearningConfig()
         self.content_features: dict[str, dict[str, float]] = {}
         self.feature_weights: dict[str, float] = {
             "topic_match": 0.4,
@@ -216,7 +216,7 @@ class ContentBasedFilter:
             "quality_score": 0.2,
         }
 
-    def update_content_features(self) -> None:
+    def update_content_features(self, content_id: str, features: Dict[str, Any]) -> None:
         """Update content feature representation."""
         self.content_features[content_id] = {}
 
@@ -279,7 +279,7 @@ class AdaptiveLearningEngine:
     Combines collaborative filtering, content-based filtering, and reinforcement learning.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: AdaptiveLearningConfig | None = None) -> None:
         self.config = config or AdaptiveLearningConfig()
         self.user_profiles: dict[str, UserProfile] = {}
         self.user_interactions: dict[str, deque] = defaultdict(
@@ -322,11 +322,11 @@ class AdaptiveLearningEngine:
                 )
                 return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to record interaction: %s", e)
             return False
 
-    async def _update_user_profile(self) -> None:
+    async def _update_user_profile(self, user_id: str) -> None:
         """Update user profile based on recent interactions."""
         interactions = list(self.user_interactions[user_id])
         if not interactions:
@@ -477,7 +477,7 @@ class AdaptiveLearningEngine:
             self.metrics["recommendations_generated"] += 1
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to generate recommendations: %s", e)
             processing_time = max((time.time() - start_time) * 1000, 0.1)
             return RecommendationResult(

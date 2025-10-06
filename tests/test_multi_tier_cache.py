@@ -8,10 +8,10 @@ eviction policies, and performance optimization.
 """
 
 import asyncio
-import shutil
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+import shutil
+import tempfile
 
 import pytest
 import pytest_asyncio
@@ -119,11 +119,11 @@ class TestMultiTierCacheManager:
         data integrity and metadata preservation.
         """
         # Set data in cache
-        success = await cache_manager.set(sample_cache_key, sample_data, ttl=3600)
+        success = await self.cache_manager.set(sample_cache_key, sample_data, ttl=3600)
         assert success
 
         # Get data from cache
-        retrieved_data = await cache_manager.get(sample_cache_key)
+        retrieved_data = await self.cache_manager.get(sample_cache_key)
 
         assert retrieved_data is not None
         assert retrieved_data == sample_data
@@ -144,7 +144,7 @@ class TestMultiTierCacheManager:
         )
 
         # Should return None for cache miss
-        result = await cache_manager.get(nonexistent_key)
+        result = await self.cache_manager.get(nonexistent_key)
         assert result is None
 
     @pytest.mark.asyncio
@@ -154,18 +154,18 @@ class TestMultiTierCacheManager:
         and confirm successful removal.
         """
         # Set data in cache
-        await cache_manager.set(sample_cache_key, sample_data)
+        await self.cache_manager.set(sample_cache_key, sample_data)
 
         # Confirm data exists
-        retrieved_data = await cache_manager.get(sample_cache_key)
+        retrieved_data = await self.cache_manager.get(sample_cache_key)
         assert retrieved_data is not None
 
         # Delete data
-        deleted = await cache_manager.delete(sample_cache_key)
+        deleted = await self.cache_manager.delete(sample_cache_key)
         assert deleted
 
         # Confirm data is gone
-        result = await cache_manager.get(sample_cache_key)
+        result = await self.cache_manager.get(sample_cache_key)
         assert result is None
 
     @pytest.mark.asyncio
@@ -175,17 +175,17 @@ class TestMultiTierCacheManager:
         expire cache entries after specified duration.
         """
         # Set data with short TTL
-        await cache_manager.set(sample_cache_key, sample_data, ttl=1)
+        await self.cache_manager.set(sample_cache_key, sample_data, ttl=1)
 
         # Should be available immediately
-        result = await cache_manager.get(sample_cache_key)
+        result = await self.cache_manager.get(sample_cache_key)
         assert result is not None
 
         # Wait for expiration
         await asyncio.sleep(1.1)
 
         # Should be expired now
-        result = await cache_manager.get(sample_cache_key)
+        result = await self.cache_manager.get(sample_cache_key)
         assert result is None
 
     # ========================================================================
@@ -199,15 +199,15 @@ class TestMultiTierCacheManager:
         tier for improved performance.
         """
         # Set data in cache
-        await cache_manager.set(sample_cache_key, sample_data)
+        await self.cache_manager.set(sample_cache_key, sample_data)
 
         # Access multiple times to trigger promotion
         for _ in range(5):
-            result = await cache_manager.get(sample_cache_key)
+            result = await self.cache_manager.get(sample_cache_key)
             assert result is not None
 
         # Check stats to verify promotion behavior
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
         assert stats.hits[CacheTier.MEMORY] > 0
 
     @pytest.mark.asyncio
@@ -221,7 +221,7 @@ class TestMultiTierCacheManager:
         disk_key = CacheKey(namespace="test", key="disk_item")
 
         # Set data in different tiers by manipulating internal state
-        await cache_manager.memory_tier.set(
+        await self.cache_manager.memory_tier.set(
             CacheEntry(
                 key=memory_key,
                 value="memory_data",
@@ -231,11 +231,11 @@ class TestMultiTierCacheManager:
         )
 
         # Get from memory (should be fastest)
-        result = await cache_manager.get(memory_key)
+        result = await self.cache_manager.get(memory_key)
         assert result == "memory_data"
 
         # Verify stats reflect memory hit
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
         assert stats.hits[CacheTier.MEMORY] > 0
 
     @pytest.mark.asyncio
@@ -258,12 +258,12 @@ class TestMultiTierCacheManager:
 
         # Set all items
         for key, data in large_data_items:
-            success = await cache_manager.set(key, data)
+            success = await self.cache_manager.set(key, data)
             assert success
 
         # Retrieve and verify all items
         for key, original_data in large_data_items:
-            retrieved_data = await cache_manager.get(key)
+            retrieved_data = await self.cache_manager.get(key)
             assert retrieved_data is not None
             assert retrieved_data["id"] == original_data["id"]
             assert len(retrieved_data["content"]) == 10000
@@ -423,14 +423,14 @@ class TestMultiTierCacheManager:
         hits, misses, hit rates, and performance metrics.
         """
         # Perform various cache operations
-        await cache_manager.set(sample_cache_key, sample_data)
-        await cache_manager.get(sample_cache_key)  # Hit
+        await self.cache_manager.set(sample_cache_key, sample_data)
+        await self.cache_manager.get(sample_cache_key)  # Hit
 
         miss_key = CacheKey(namespace="test", key="nonexistent")
-        await cache_manager.get(miss_key)  # Miss
+        await self.cache_manager.get(miss_key)  # Miss
 
         # Get statistics
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
 
         # Verify statistics structure
         assert isinstance(stats, CacheStats)
@@ -460,7 +460,7 @@ class TestMultiTierCacheManager:
         # Create 5 items that will be hits
         for i in range(5):
             key = CacheKey(namespace="test", key=f"hit_item_{i}")
-            await cache_manager.set(key, sample_data)
+            await self.cache_manager.set(key, sample_data)
             hit_keys.append(key)
 
         # Create 5 items that will be misses
@@ -469,18 +469,18 @@ class TestMultiTierCacheManager:
             miss_keys.append(key)
 
         # Reset stats to start fresh
-        cache_manager.stats = CacheStats()
+        self.cache_manager.stats = CacheStats()
 
         # Perform hits
         for key in hit_keys:
-            await cache_manager.get(key)
+            await self.cache_manager.get(key)
 
         # Perform misses
         for key in miss_keys:
-            await cache_manager.get(key)
+            await self.cache_manager.get(key)
 
         # Check hit rate
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
         expected_hit_rate = 5 / 10  # 5 hits out of 10 requests
         assert abs(stats.hit_rate - expected_hit_rate) < 0.1  # Allow for some variance
 
@@ -505,7 +505,7 @@ class TestMultiTierCacheManager:
                 key=f"user_data_{i}",
                 tags=["user", "profile"],
             )
-            await cache_manager.set(user_key, sample_data)
+            await self.cache_manager.set(user_key, sample_data)
             user_keys.append(user_key)
 
             # Admin data
@@ -514,11 +514,11 @@ class TestMultiTierCacheManager:
                 key=f"admin_data_{i}",
                 tags=["admin", "system"],
             )
-            await cache_manager.set(admin_key, sample_data)
+            await self.cache_manager.set(admin_key, sample_data)
             admin_keys.append(admin_key)
 
         # Invalidate by tag
-        invalidated = await cache_manager.invalidate_by_tags(["user"])
+        invalidated = await self.cache_manager.invalidate_by_tags(["user"])
 
         # Mock implementation returns 0, but in production would invalidate tagged items
         assert invalidated >= 0
@@ -541,12 +541,12 @@ class TestMultiTierCacheManager:
         product_data = {"type": "product", "name": "Widget"}
 
         # Set data in different namespaces
-        await cache_manager.set(user_key, user_data)
-        await cache_manager.set(product_key, product_data)
+        await self.cache_manager.set(user_key, user_data)
+        await self.cache_manager.set(product_key, product_data)
 
         # Retrieve data
-        retrieved_user = await cache_manager.get(user_key)
-        retrieved_product = await cache_manager.get(product_key)
+        retrieved_user = await self.cache_manager.get(user_key)
+        retrieved_product = await self.cache_manager.get(product_key)
 
         # Verify namespace isolation
         assert retrieved_user["type"] == "user"
@@ -567,8 +567,8 @@ class TestMultiTierCacheManager:
         async def concurrent_cache_operations(self) -> None:
             for i in range(5):
                 key = CacheKey(namespace="concurrent", key=f"item_{base_id}_{i}")
-                await cache_manager.set(key, {**sample_data, "id": f"{base_id}_{i}"})
-                result = await cache_manager.get(key)
+                await self.cache_manager.set(key, {**sample_data, "id": f"{base_id}_{i}"})
+                result = await self.cache_manager.get(key)
                 assert result is not None
                 assert result["id"] == f"{base_id}_{i}"
 
@@ -577,7 +577,7 @@ class TestMultiTierCacheManager:
         await asyncio.gather(*tasks)
 
         # Verify no data corruption occurred
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
         assert sum(stats.hits.values()) > 0
         assert sum(stats.sets.values()) > 0
 
@@ -595,8 +595,8 @@ class TestMultiTierCacheManager:
         for i in range(100):
             key = CacheKey(namespace="performance", key=f"item_{i}")
             data = {"id": i, "data": f"performance_test_{i}"}
-            await cache_manager.set(key, data)
-            retrieved = await cache_manager.get(key)
+            await self.cache_manager.set(key, data)
+            retrieved = await self.cache_manager.get(key)
             assert retrieved is not None
 
         end_time = time.time()
@@ -606,7 +606,7 @@ class TestMultiTierCacheManager:
         assert execution_time < 5.0  # Should complete within 5 seconds
 
         # Verify operations were tracked
-        stats = await cache_manager.get_stats()
+        stats = await self.cache_manager.get_stats()
         assert sum(stats.hits.values()) >= 100
         assert sum(stats.sets.values()) >= 100
 
@@ -621,10 +621,10 @@ class TestMultiTierCacheManager:
         including tier status, statistics, and configuration.
         """
         # Add some data first
-        await cache_manager.set(sample_cache_key, sample_data)
-        await cache_manager.get(sample_cache_key)
+        await self.cache_manager.set(sample_cache_key, sample_data)
+        await self.cache_manager.get(sample_cache_key)
 
-        health_status = await cache_manager.health_check()
+        health_status = await self.cache_manager.health_check()
 
         # Verify health check structure
         assert "status" in health_status

@@ -1,15 +1,17 @@
+import logging
+logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Phase 3 Frontend Integration Components
 Backend services and API endpoints for Phase 3 UI/UX integration.
 """
 
 import asyncio
-import os
-import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import os
+import time
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -157,7 +159,7 @@ class Phase3IntegrationService:
 
             self.logger.info("Phase 3 integration service initialized successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize Phase 3 integration: %s", e)
             raise
 
@@ -231,7 +233,7 @@ class Phase3IntegrationService:
                 },
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get system health: %s", e)
             return SystemHealthData(
                 overall_status=SystemStatus.UNHEALTHY,
@@ -269,7 +271,7 @@ class Phase3IntegrationService:
                 ],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get task queue status: %s", e)
             return TaskQueueStatus(
                 total_active=0,
@@ -326,7 +328,7 @@ class Phase3IntegrationService:
                 authentication_failures=2,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get security status: %s", e)
             return SecurityStatus(
                 threats_blocked=0,
@@ -361,7 +363,7 @@ class Phase3IntegrationService:
             },
         ]
 
-    def track_component_performance(self) -> None:
+    def track_component_performance(self, component_name: str, component_type: UIComponentType, load_time_ms: float, render_time_ms: float) -> None:
         """Track frontend component performance."""
         if component_name not in self.component_metrics:
             self.component_metrics[component_name] = ComponentMetrics(
@@ -376,7 +378,7 @@ class Phase3IntegrationService:
             metric.interaction_count += 1
             metric.last_updated = datetime.now(UTC)
 
-    async def handle_websocket_connection(self) -> None:
+    async def handle_websocket_connection(self, websocket: WebSocket) -> None:
         """Handle WebSocket connections for real-time updates."""
         await websocket.accept()
         self.websocket_connections.append(websocket)
@@ -396,12 +398,12 @@ class Phase3IntegrationService:
 
         except WebSocketDisconnect:
             self.websocket_connections.remove(websocket)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("WebSocket error: %s", e)
             if websocket in self.websocket_connections:
                 self.websocket_connections.remove(websocket)
 
-    async def broadcast_update(self) -> None:
+    async def broadcast_update(self, message: Dict[str, Any]) -> None:
         """Broadcast update to all connected WebSocket clients."""
         if not self.websocket_connections:
             return
@@ -438,7 +440,7 @@ class Phase3IntegrationService:
 
             return task_id
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to process frontend task: %s", e)
             raise
 
@@ -487,7 +489,7 @@ async def create_phase3_integration_app() -> FastAPI:
 
     # Dashboard endpoints
     @app.get("/api/v3/dashboard", response_model=APIResponse, tags=["Frontend"])
-    async def get_dashboard(self) -> None:
+    async def get_dashboard(timeRange: str = "24h", refresh: bool = False) -> APIResponse:
         """Get dashboard data for frontend."""
         request = DashboardRequest(timeRange=timeRange, refresh=refresh)
         data = await service.get_dashboard_data(request)
@@ -503,7 +505,7 @@ async def create_phase3_integration_app() -> FastAPI:
         response_model=APIResponse,
         tags=["Frontend"],
     )
-    async def get_metrics(self) -> None:
+    async def get_metrics(time_range: str) -> APIResponse:
         """Get time-series metrics for charts."""
         metrics_data = await service._get_metrics_data(time_range)
 
@@ -514,7 +516,7 @@ async def create_phase3_integration_app() -> FastAPI:
         )
 
     @app.post("/api/v3/tasks", response_model=APIResponse, tags=["Frontend"])
-    async def submit_frontend_task(self) -> None:
+    async def submit_frontend_task(task_data: Dict[str, Any]) -> APIResponse:
         """Submit a task from the frontend."""
         task_id = await service.process_frontend_task(task_data)
 
@@ -529,7 +531,7 @@ async def create_phase3_integration_app() -> FastAPI:
         response_model=APIResponse,
         tags=["Frontend"],
     )
-    async def get_component_performance(self) -> None:
+    async def get_component_performance() -> APIResponse:
         """Get UI component performance metrics."""
         performance_data = service._get_component_performance()
 
@@ -541,7 +543,7 @@ async def create_phase3_integration_app() -> FastAPI:
 
     # WebSocket endpoint for real-time updates
     @app.websocket("/ws/dashboard")
-    async def websocket_dashboard(self) -> None:
+    async def websocket_dashboard(websocket: WebSocket) -> None:
         """WebSocket endpoint for real-time dashboard updates."""
         await service.handle_websocket_connection(websocket)
 
@@ -551,7 +553,7 @@ async def create_phase3_integration_app() -> FastAPI:
 # Testing function
 if __name__ == "__main__":
 
-    async def test_phase3_integration(self) -> None:
+    async def test_phase3_integration() -> None:
         """Test Phase 3 integration components."""
         print("Testing Phase 3 Frontend Integration...")
 
@@ -587,7 +589,7 @@ if __name__ == "__main__":
 
             print("SUCCESS: Phase 3 integration validation complete")
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"ERROR: Phase 3 integration test failed: {e}")
             import traceback
 

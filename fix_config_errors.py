@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fix undefined config/app errors in __init__ methods - CRITICAL runtime bugs."""
 
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
 
 
 def analyze_init_method(content: str, file_path: Path) -> dict:
@@ -154,7 +154,7 @@ def fix_file(file_path: Path) -> tuple[bool, int]:
 
         return False, 0
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error processing {file_path}: {e}")
         return False, 0
 

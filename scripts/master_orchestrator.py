@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE+ Master Orchestrator
@@ -6,16 +7,16 @@ Addresses all critical issues identified in system analysis
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import Enum
 import logging
 import os
+from pathlib import Path
 import shutil
 import signal
 import subprocess
 import sys
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from enum import Enum
-from pathlib import Path
 
 
 class ServiceStatus(Enum):
@@ -214,8 +215,11 @@ class PAKEMasterOrchestrator:
             subprocess.CalledProcessError,
             FileNotFoundError,
             subprocess.TimeoutExpired,
-        ):
-            pass
+        ) as e:
+
+            logger.debug(f"Exception in master_orchestrator.py: {e}")
+
+            # Continue gracefully
 
         self.logger.warning("❌ Docker not found or not running")
         return False
@@ -255,8 +259,11 @@ class PAKEMasterOrchestrator:
             subprocess.CalledProcessError,
             FileNotFoundError,
             subprocess.TimeoutExpired,
-        ):
-            pass
+        ) as e:
+
+            logger.debug(f"Exception in master_orchestrator.py: {e}")
+
+            # Continue gracefully
 
         self.logger.warning("❌ Python not found")
         return False
@@ -277,8 +284,11 @@ class PAKEMasterOrchestrator:
             subprocess.CalledProcessError,
             FileNotFoundError,
             subprocess.TimeoutExpired,
-        ):
-            pass
+        ) as e:
+
+            logger.debug(f"Exception in master_orchestrator.py: {e}")
+
+            # Continue gracefully
 
         self.logger.warning("❌ Node.js not found")
         return False
@@ -299,8 +309,11 @@ class PAKEMasterOrchestrator:
             subprocess.CalledProcessError,
             FileNotFoundError,
             subprocess.TimeoutExpired,
-        ):
-            pass
+        ) as e:
+
+            logger.debug(f"Exception in master_orchestrator.py: {e}")
+
+            # Continue gracefully
 
         self.logger.warning("❌ npm not found")
         return False
@@ -321,8 +334,11 @@ class PAKEMasterOrchestrator:
             subprocess.CalledProcessError,
             FileNotFoundError,
             subprocess.TimeoutExpired,
-        ):
-            pass
+        ) as e:
+
+            logger.debug(f"Exception in master_orchestrator.py: {e}")
+
+            # Continue gracefully
 
         self.logger.warning("❌ Git not found")
         return False
@@ -374,7 +390,7 @@ class PAKEMasterOrchestrator:
             self.logger.info("✅ Environment setup completed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Environment setup failed: %s", e)
             return False
 
@@ -450,7 +466,7 @@ class PAKEMasterOrchestrator:
             self.logger.info("✅ Python dependencies installed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Python dependency installation failed: %s", e)
             return False
 
@@ -473,7 +489,7 @@ class PAKEMasterOrchestrator:
             self.logger.info("✅ Node.js dependencies installed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Node.js dependency installation failed: %s", e)
             return False
 
@@ -556,7 +572,7 @@ class PAKEMasterOrchestrator:
             finally:
                 os.chdir(original_dir)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Infrastructure deployment failed: %s", e)
             return False
 
@@ -600,7 +616,7 @@ class PAKEMasterOrchestrator:
                 return await self._check_http_health(config.health_endpoint)
             return await self._check_tcp_health(config.host, config.port)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.logger.debug("Health check failed for %s: %s", service_name, e)
             return False
 
@@ -745,7 +761,7 @@ class PAKEMasterOrchestrator:
             self.logger.error("❌ %s failed to become healthy", config.name)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Failed to start %s: %s", config.name, e)
             return False
 
@@ -766,7 +782,7 @@ class PAKEMasterOrchestrator:
             except TimeoutError:
                 process.kill()
                 self.logger.info("🔥 Force killed %s", service_name)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("❌ Error stopping %s: %s", service_name, e)
 
         # Stop Docker services
@@ -779,7 +795,7 @@ class PAKEMasterOrchestrator:
 
             os.chdir(original_dir)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("❌ Error stopping Docker services: %s", e)
 
     async def full_deployment(self) -> bool:
@@ -809,7 +825,7 @@ class PAKEMasterOrchestrator:
                     self.logger.error("❌ %s failed", step_name)
                     failed_steps.append(step_name)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("❌ %s failed with exception: %s", step_name, e)
                 failed_steps.append(step_name)
 
@@ -945,6 +961,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"💥 Fatal error: {e}")
         sys.exit(1)

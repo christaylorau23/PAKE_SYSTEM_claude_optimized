@@ -7,15 +7,15 @@ through evolutionary algorithms, A/B testing, and success/failure pattern analys
 """
 
 import asyncio
-import hashlib
-import json
-import logging
-import random
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import hashlib
+import json
+import logging
 from pathlib import Path
-from typing import Any
+import random
+from typing import Any, Dict, List
 
 
 class EvolutionStage(Enum):
@@ -94,21 +94,21 @@ class PromptEvolutionSystem:
     - Multi-model validation of improvements
     """
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.evolution_stage = EvolutionStage.OBSERVATION
 
         # Evolution parameters
-        self.population_size = config.get("population_size", 20)
-        self.mutation_rate = config.get("mutation_rate", 0.15)
-        self.crossover_rate = config.get("crossover_rate", 0.8)
-        self.selection_pressure = config.get("selection_pressure", 0.3)
-        self.generation_size = config.get("generation_size", 10)
+        self.population_size = self.config.get("population_size", 20)
+        self.mutation_rate = self.config.get("mutation_rate", 0.15)
+        self.crossover_rate = self.config.get("crossover_rate", 0.8)
+        self.selection_pressure = self.config.get("selection_pressure", 0.3)
+        self.generation_size = self.config.get("generation_size", 10)
 
         # Testing parameters
-        self.min_test_samples = config.get("min_test_samples", 50)
-        self.confidence_threshold = config.get("confidence_threshold", 0.95)
-        self.improvement_threshold = config.get("improvement_threshold", 0.05)
+        self.min_test_samples = self.config.get("min_test_samples", 50)
+        self.confidence_threshold = self.config.get("confidence_threshold", 0.95)
+        self.improvement_threshold = self.config.get("improvement_threshold", 0.05)
 
         # Evolution storage
         self.prompt_populations: dict[PromptCategory, list[PromptOrganism]] = {}
@@ -463,7 +463,7 @@ class PromptEvolutionSystem:
             self.logger.info("Prompt Evolution System fully initialized")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to initialize prompt evolution system: %s", e)
             return False
 
@@ -600,7 +600,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
 
                 self.evolution_stage = EvolutionStage.OBSERVATION
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in evolution loop: %s", e)
 
     async def _evolve_population(
@@ -690,7 +690,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
 
         return child1, child2
 
-    async def _mutate_organism(self) -> None:
+    async def _mutate_organism(self, organism: PromptOrganism, category: PromptCategory) -> None:
         """Mutate an organism by modifying its genes."""
         mutation_type = random.choice(["add", "remove", "modify"])
 

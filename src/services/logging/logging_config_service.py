@@ -10,16 +10,16 @@ This service provides:
 - Integration with external configuration sources
 """
 
-import json
-import os
-
-# Add project root to path for imports
-import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import os
 from pathlib import Path
-from typing import Any
+
+# Add project root to path for imports
+import sys
+from typing import Any, Dict
 
 import yaml
 
@@ -284,7 +284,7 @@ class LoggingConfigService:
     - Integration with external configuration sources.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config_file: str | None = None) -> None:
         self.config_file = config_file or "logging_config.yaml"
         self.logging_config: LoggingServiceConfig | None = None
         self.monitoring_config: MonitoringServiceConfig | None = None
@@ -311,7 +311,7 @@ class LoggingConfigService:
             # Validate configurations
             self._validate_configurations()
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to load configuration: {e}")
             # Use default configurations
             self.logging_config = LoggingServiceConfig()
@@ -343,7 +343,7 @@ class LoggingConfigService:
                 Path(self.config_file).stat().st_mtime, tz=UTC
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to load configuration from file: {e}")
 
     def _validate_configurations(self) -> None:
@@ -373,7 +373,7 @@ class LoggingConfigService:
         if self.logging_config is None:
             self.logging_config = LoggingServiceConfig()
 
-        for key, value in kwargs.items():
+        for key, value in self.kwargs.items():
             if hasattr(self.logging_config, key):
                 setattr(self.logging_config, key, value)
 
@@ -385,7 +385,7 @@ class LoggingConfigService:
         if self.monitoring_config is None:
             self.monitoring_config = MonitoringServiceConfig()
 
-        for key, value in kwargs.items():
+        for key, value in self.kwargs.items():
             if hasattr(self.monitoring_config, key):
                 setattr(self.monitoring_config, key, value)
 
@@ -411,7 +411,7 @@ class LoggingConfigService:
 
         return False
 
-    def save_configuration(self) -> None:
+    def save_configuration(self, file_path: str | None = None) -> None:
         """Save current configuration to file."""
         save_path = file_path or self.config_file
 
@@ -470,7 +470,7 @@ class LoggingConfigService:
                 Path(save_path).stat().st_mtime, tz=UTC
             )
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to save configuration: {e}")
 
     def get_configuration_summary(self) -> Dict[str, Any]:
@@ -532,7 +532,7 @@ class LoggingConfigService:
                     validation_results["validations"].append(
                         "Log directory created successfully"
                     )
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     validation_results["errors"].append(
                         f"Failed to create log directory: {e}"
                     )

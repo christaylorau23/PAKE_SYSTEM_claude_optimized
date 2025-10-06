@@ -161,7 +161,7 @@ class TestContentAnalysisService:
     @pytest.mark.asyncio
     async def test_content_analysis(self) -> None:
         """Test content analysis functionality"""
-        result = await analysis_service.analyze_content(sample_content)
+        result = await self.analysis_service.analyze_content(sample_content)
 
         assert result is not None
         assert result.quality_score is not None
@@ -188,7 +188,7 @@ class TestContentAnalysisService:
             for i in range(5)
         ]
 
-        results = await analysis_service.analyze_content_batch(contents)
+        results = await self.analysis_service.analyze_content_batch(contents)
 
         assert len(results) == 5
         for result in results:
@@ -235,7 +235,7 @@ class TestRecommendationService:
     @pytest.mark.asyncio
     async def test_generate_recommendation(self) -> None:
         """Test recommendation generation"""
-        recommendation = await recommendation_service.generate_recommendation(
+        recommendation = await self.recommendation_service.generate_recommendation(
             content=sample_content,
             user_profile=sample_user_profile,
             relevance_score=0.85,
@@ -244,8 +244,8 @@ class TestRecommendationService:
         )
 
         assert recommendation is not None
-        assert recommendation.content_id == sample_content.id
-        assert recommendation.user_id == sample_user_profile.user_id
+        assert recommendation.content_id == self.sample_content.id
+        assert recommendation.user_id == self.sample_user_profile.user_id
         assert recommendation.relevance_score == 0.85
         assert recommendation.confidence_score == 0.9
         assert (
@@ -267,7 +267,7 @@ class TestRecommendationService:
             for i in range(5)
         ]
 
-        recommendations = await recommendation_service.generate_batch_recommendations(
+        recommendations = await self.recommendation_service.generate_batch_recommendations(
             contents=contents,
             user_profile=sample_user_profile,
             max_recommendations=3,
@@ -275,7 +275,7 @@ class TestRecommendationService:
 
         assert len(recommendations) <= 3
         for rec in recommendations:
-            assert rec.user_id == sample_user_profile.user_id
+            assert rec.user_id == self.sample_user_profile.user_id
             assert rec.relevance_score is not None
             assert rec.confidence_score is not None
 
@@ -293,7 +293,7 @@ class TestUserPreferenceService:
     @pytest.mark.asyncio
     async def test_create_user_profile(self) -> None:
         """Test user profile creation"""
-        profile = await preference_service.create_user_profile(
+        profile = await self.preference_service.create_user_profile(
             user_id="test-user",
             interests=["AI", "ML"],
             preference_weights={"academic": 0.5, "news": 0.5},
@@ -310,7 +310,7 @@ class TestUserPreferenceService:
     async def test_update_user_preferences(self) -> None:
         """Test user preference updates"""
         # Create initial profile
-        profile = await preference_service.create_user_profile(
+        profile = await self.preference_service.create_user_profile(
             user_id="test-user-2",
             interests=["AI"],
             preference_weights={"academic": 0.5},
@@ -326,7 +326,7 @@ class TestUserPreferenceService:
         )
 
         # Update preferences
-        updated_profile = await preference_service.update_user_preferences(
+        updated_profile = await self.preference_service.update_user_preferences(
             "test-user-2",
             interaction,
         )
@@ -403,10 +403,10 @@ class TestFeatureExtractor:
     @pytest.mark.asyncio
     async def test_extract_content_features(self) -> None:
         """Test content feature extraction"""
-        features = await feature_extractor.extract_content_features(sample_content)
+        features = await self.feature_extractor.extract_content_features(sample_content)
 
         assert features is not None
-        assert features.content_id == sample_content.id
+        assert features.content_id == self.sample_content.id
         assert features.text_features is not None
         assert features.metadata_features is not None
         assert features.semantic_features is not None
@@ -422,13 +422,13 @@ class TestFeatureExtractor:
     @pytest.mark.asyncio
     async def test_extract_user_features(self) -> None:
         """Test user feature extraction"""
-        features = await feature_extractor.extract_user_features(
+        features = await self.feature_extractor.extract_user_features(
             sample_user_profile,
             sample_interactions,
         )
 
         assert features is not None
-        assert features.user_id == sample_user_profile.user_id
+        assert features.user_id == self.sample_user_profile.user_id
         assert features.preference_features is not None
         assert features.behavioral_features is not None
         assert features.temporal_features is not None
@@ -443,15 +443,15 @@ class TestFeatureExtractor:
     @pytest.mark.asyncio
     async def test_get_feature_vector(self) -> None:
         """Test feature vector generation"""
-        content_features = await feature_extractor.extract_content_features(
+        content_features = await self.feature_extractor.extract_content_features(
             sample_content,
         )
-        user_features = await feature_extractor.extract_user_features(
+        user_features = await self.feature_extractor.extract_user_features(
             sample_user_profile,
             sample_interactions,
         )
 
-        feature_vector = await feature_extractor.get_feature_vector(
+        feature_vector = await self.feature_extractor.get_feature_vector(
             content_features,
             user_features,
         )
@@ -525,7 +525,7 @@ class TestModelTrainer:
     @pytest.mark.asyncio
     async def test_train_content_quality_model(self) -> None:
         """Test content quality model training"""
-        metrics = await model_trainer.train_content_quality_model(
+        metrics = await self.model_trainer.train_content_quality_model(
             sample_contents,
             sample_interactions,
         )
@@ -538,7 +538,7 @@ class TestModelTrainer:
     @pytest.mark.asyncio
     async def test_train_user_preference_model(self) -> None:
         """Test user preference model training"""
-        metrics = await model_trainer.train_user_preference_model(
+        metrics = await self.model_trainer.train_user_preference_model(
             sample_users,
             sample_interactions,
         )
@@ -552,11 +552,11 @@ class TestModelTrainer:
     async def test_predict_content_quality(self) -> None:
         """Test content quality prediction"""
         # Train model first
-        await model_trainer.train_content_quality_model(sample_contents, [])
+        await self.model_trainer.train_content_quality_model(sample_contents, [])
 
         # Test prediction
         content = sample_contents[0]
-        prediction = await model_trainer.predict_content_quality(content)
+        prediction = await self.model_trainer.predict_content_quality(content)
 
         assert prediction is not None
         assert 0.0 <= prediction <= 1.0
@@ -608,10 +608,10 @@ class TestPredictionEngine:
     @pytest.mark.asyncio
     async def test_predict_content_quality(self) -> None:
         """Test content quality prediction"""
-        result = await prediction_engine.predict_content_quality(sample_content)
+        result = await self.prediction_engine.predict_content_quality(sample_content)
 
         assert result is not None
-        assert result.content_id == sample_content.id
+        assert result.content_id == self.sample_content.id
         assert result.prediction_type == "quality"
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.confidence <= 1.0
@@ -620,13 +620,13 @@ class TestPredictionEngine:
     @pytest.mark.asyncio
     async def test_predict_user_preference(self) -> None:
         """Test user preference prediction"""
-        result = await prediction_engine.predict_user_preference(
+        result = await self.prediction_engine.predict_user_preference(
             sample_user_profile,
             sample_interactions,
         )
 
         assert result is not None
-        assert result.user_id == sample_user_profile.user_id
+        assert result.user_id == self.sample_user_profile.user_id
         assert result.prediction_type == "preference"
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.confidence <= 1.0
@@ -634,15 +634,15 @@ class TestPredictionEngine:
     @pytest.mark.asyncio
     async def test_predict_recommendation_score(self) -> None:
         """Test recommendation score prediction"""
-        result = await prediction_engine.predict_recommendation_score(
+        result = await self.prediction_engine.predict_recommendation_score(
             sample_content,
             sample_user_profile,
             sample_interactions,
         )
 
         assert result is not None
-        assert result.content_id == sample_content.id
-        assert result.user_id == sample_user_profile.user_id
+        assert result.content_id == self.sample_content.id
+        assert result.user_id == self.sample_user_profile.user_id
         assert result.prediction_type == "recommendation"
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.confidence <= 1.0
@@ -651,17 +651,17 @@ class TestPredictionEngine:
     async def test_prediction_caching(self) -> None:
         """Test prediction caching functionality"""
         # First prediction (not cached)
-        result1 = await prediction_engine.predict_content_quality(sample_content)
+        result1 = await self.prediction_engine.predict_content_quality(sample_content)
         assert not result1.cached
 
         # Second prediction (should be cached)
-        result2 = await prediction_engine.predict_content_quality(sample_content)
+        result2 = await self.prediction_engine.predict_content_quality(sample_content)
         assert result2.cached
         assert result2.score == result1.score
 
     def test_performance_stats(self) -> None:
         """Test performance statistics"""
-        stats = prediction_engine.get_performance_stats()
+        stats = self.prediction_engine.get_performance_stats()
 
         assert "total_predictions" in stats
         assert "cached_predictions" in stats
@@ -694,11 +694,11 @@ class TestCurationOrchestrator:
     @pytest.mark.asyncio
     async def test_curation_request(self) -> None:
         """Test curation request processing"""
-        response = await orchestrator.curate_content(sample_request)
+        response = await self.orchestrator.curate_content(sample_request)
 
         assert response is not None
         assert response.request_id is not None
-        assert response.user_id == sample_request.user_id
+        assert response.user_id == self.sample_request.user_id
         assert response.recommendations is not None
         assert response.processing_time_ms >= 0
         assert response.cache_hit_rate >= 0
@@ -707,7 +707,7 @@ class TestCurationOrchestrator:
     @pytest.mark.asyncio
     async def test_process_user_feedback(self) -> None:
         """Test user feedback processing"""
-        success = await orchestrator.process_user_feedback(
+        success = await self.orchestrator.process_user_feedback(
             user_id="test-user",
             content_id="test-content",
             feedback_type="like",
@@ -719,7 +719,7 @@ class TestCurationOrchestrator:
     @pytest.mark.asyncio
     async def test_system_health(self) -> None:
         """Test system health check"""
-        health = await orchestrator.get_system_health()
+        health = await self.orchestrator.get_system_health()
 
         assert health is not None
         assert "services_healthy" in health.__dict__

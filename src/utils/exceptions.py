@@ -3,10 +3,12 @@
 Provides consistent error handling patterns across the entire system.
 """
 
-import logging
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorSeverity(Enum):
@@ -42,7 +44,7 @@ class PAKEException(Exception):
     Provides structured error information for consistent handling
     """
 
-    def __init__(self) -> None:
+    def __init__(self, message: str, category: ErrorCategory | None = None, context: dict[str, Any] | None = None, error_code: str | None = None, severity: ErrorSeverity | None = None, original_exception: Exception | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.error_code = error_code or self._generate_error_code()
@@ -111,7 +113,7 @@ class PAKEException(Exception):
 class ConfigurationException(PAKEException):
     """Configuration-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_key: Any = None, expected: Any = None, kwargs: Any = None, message: Any = None, value: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.CONFIGURATION,
@@ -123,7 +125,7 @@ class ConfigurationException(PAKEException):
 class MissingConfigurationException(ConfigurationException):
     """Missing required configuration."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_key: Any = None, expected: Any = None, kwargs: Any = None, message: Any = None, value: Any = None) -> None:
         message = f"Missing required configuration: {config_key}"
         super().__init__(message, context={"config_key": config_key}, **kwargs)
 
@@ -131,7 +133,7 @@ class MissingConfigurationException(ConfigurationException):
 class InvalidConfigurationException(ConfigurationException):
     """Invalid configuration value."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_key: Any = None, expected: Any = None, kwargs: Any = None, message: Any = None, value: Any = None) -> None:
         message = f"Invalid configuration value for {config_key}: {value} (expected {expected})"
         super().__init__(
             message,
@@ -144,7 +146,7 @@ class InvalidConfigurationException(ConfigurationException):
 class AuthenticationException(PAKEException):
     """Authentication-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, kwargs: Any = None, message: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHENTICATION,
@@ -156,7 +158,7 @@ class AuthenticationException(PAKEException):
 class AuthorizationException(PAKEException):
     """Authorization-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, field: Any = None, kwargs: Any = None, message: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHORIZATION,
@@ -180,7 +182,7 @@ class InsufficientPermissionsException(AuthorizationException):
 class SecurityException(PAKEException):
     """Security-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, expected_format: Any = None, field: Any = None, kwargs: Any = None, message: Any = None, value: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.AUTHENTICATION,
@@ -193,7 +195,7 @@ class SecurityException(PAKEException):
 class ValidationException(PAKEException):
     """Data validation errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, expected_format: Any = None, field: Any = None, kwargs: Any = None, message: Any = None, value: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.VALIDATION,
@@ -206,7 +208,7 @@ class ValidationException(PAKEException):
 class RequiredFieldException(ValidationException):
     """Required field is missing."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, expected_format: Any = None, field: Any = None, kwargs: Any = None, message: Any = None, retry_after: Any = None, status_code: Any = None, value: Any = None) -> None:
         message = f"Required field is missing: {field}"
         super().__init__(message, field=field, **kwargs)
 
@@ -214,7 +216,7 @@ class RequiredFieldException(ValidationException):
 class InvalidFormatException(ValidationException):
     """Invalid data format."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, expected_format: Any = None, field: Any = None, kwargs: Any = None, message: Any = None, retry_after: Any = None, status_code: Any = None, value: Any = None) -> None:
         message = f"Invalid format for {field}: {value} (expected {expected_format})"
         super().__init__(
             message,
@@ -228,7 +230,7 @@ class InvalidFormatException(ValidationException):
 class NetworkException(PAKEException):
     """Network-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, kwargs: Any = None, message: Any = None, retry_after: Any = None, status_code: Any = None, timeout: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.NETWORK,
@@ -240,7 +242,7 @@ class NetworkException(PAKEException):
 class ExternalAPIException(PAKEException):
     """External API errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, kwargs: Any = None, message: Any = None, retry_after: Any = None, status_code: Any = None, timeout: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.EXTERNAL_API,
@@ -253,7 +255,7 @@ class ExternalAPIException(PAKEException):
 class APIRateLimitException(ExternalAPIException):
     """API rate limit exceeded."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, database: Any = None, error: Any = None, kwargs: Any = None, message: Any = None, retry_after: Any = None, timeout: Any = None) -> None:
         message = f"Rate limit exceeded for {api_name}"
         if retry_after:
             message += f" (retry after {retry_after} seconds)"
@@ -268,7 +270,7 @@ class APIRateLimitException(ExternalAPIException):
 class APITimeoutException(ExternalAPIException):
     """API request timeout."""
 
-    def __init__(self) -> None:
+    def __init__(self, api_name: Any = None, database: Any = None, error: Any = None, kwargs: Any = None, message: Any = None, query: Any = None, timeout: Any = None) -> None:
         message = f"Timeout after {timeout}s calling {api_name}"
         super().__init__(
             message,
@@ -282,7 +284,7 @@ class APITimeoutException(ExternalAPIException):
 class DatabaseException(PAKEException):
     """Database-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, database: Any = None, error: Any = None, kwargs: Any = None, message: Any = None, query: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.DATABASE,
@@ -294,7 +296,7 @@ class DatabaseException(PAKEException):
 class DatabaseConnectionException(DatabaseException):
     """Database connection error."""
 
-    def __init__(self) -> None:
+    def __init__(self, database: Any = None, error: Any = None, kwargs: Any = None, message: Any = None, query: Any = None, service_name: Any = None) -> None:
         message = f"Failed to connect to database: {database}"
         super().__init__(message, context={"database": database}, **kwargs)
 
@@ -302,7 +304,7 @@ class DatabaseConnectionException(DatabaseException):
 class DatabaseQueryException(DatabaseException):
     """Database query error."""
 
-    def __init__(self) -> None:
+    def __init__(self, error: Any = None, kwargs: Any = None, message: Any = None, query: Any = None, service_name: Any = None) -> None:
         message = f"Database query failed: {error}"
         super().__init__(message, context={"query": query, "error": error}, **kwargs)
 
@@ -311,7 +313,7 @@ class DatabaseQueryException(DatabaseException):
 class CacheException(PAKEException):
     """Cache-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, kwargs: Any = None, message: Any = None, reason: Any = None, service_name: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.CACHE,
@@ -332,7 +334,7 @@ class CacheKeyException(CacheException):
 class ServiceException(PAKEException):
     """Service-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, kwargs: Any = None, message: Any = None, reason: Any = None, service_name: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.SERVICE,
@@ -345,7 +347,7 @@ class ServiceException(PAKEException):
 class ServiceUnavailableException(ServiceException):
     """Service is temporarily unavailable."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Any = None, kwargs: Any = None, message: Any = None, reason: Any = None, service_name: Any = None) -> None:
         message = f"Service unavailable: {service_name}"
         super().__init__(message, service_name=service_name, **kwargs)
 
@@ -353,7 +355,7 @@ class ServiceUnavailableException(ServiceException):
 class ServiceInitializationException(ServiceException):
     """Service initialization failed."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Any = None, kwargs: Any = None, message: Any = None, reason: Any = None, service_name: Any = None) -> None:
         message = f"Failed to initialize service {service_name}: {reason}"
         super().__init__(
             message,
@@ -367,7 +369,7 @@ class ServiceInitializationException(ServiceException):
 class ProcessingException(PAKEException):
     """Data processing errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Any = None, kwargs: Any = None, message: Any = None, operation: bool = False) -> None:
         super().__init__(
             message,
             category=ErrorCategory.PROCESSING,
@@ -388,7 +390,7 @@ class ModelProcessingException(ProcessingException):
 class FilesystemException(PAKEException):
     """Filesystem-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Any = None, kwargs: Any = None, message: Any = None, module_name: Any = None, operation: bool = False) -> None:
         super().__init__(
             message,
             category=ErrorCategory.FILESYSTEM,
@@ -401,7 +403,7 @@ class FilesystemException(PAKEException):
 class FileNotFoundException(FilesystemException):
     """File not found."""
 
-    def __init__(self) -> None:
+    def __init__(self, dependency: Any = None, file_path: Any = None, install_command: Any = None, kwargs: Any = None, message: Any = None, module_name: Any = None, operation: bool = False) -> None:
         message = f"File not found: {file_path}"
         super().__init__(message, file_path=file_path, **kwargs)
 
@@ -409,7 +411,7 @@ class FileNotFoundException(FilesystemException):
 class FilePermissionException(FilesystemException):
     """File permission denied."""
 
-    def __init__(self) -> None:
+    def __init__(self, Dict: Any = None, dependency: Any = None, file_path: Any = None, install_command: Any = None, kwargs: Any = None, message: Any = None, module_name: Any = None, operation: bool = False) -> None:
         message = f"Permission denied for {operation} on {file_path}"
         super().__init__(
             message,
@@ -423,7 +425,7 @@ class FilePermissionException(FilesystemException):
 class ImportException(PAKEException):
     """Import-related errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, Dict: Any = None, dependency: Any = None, install_command: Any = None, kwargs: Any = None, message: Any = None, module_name: Any = None) -> None:
         super().__init__(
             message,
             category=ErrorCategory.IMPORT,
@@ -436,7 +438,7 @@ class ImportException(PAKEException):
 class ModuleNotFoundError(ImportException):
     """Module could not be imported."""
 
-    def __init__(self) -> None:
+    def __init__(self, Dict: Any = None, dependency: Any = None, install_command: Any = None, kwargs: Any = None, module_name: Any = None) -> None:
         message = f"Module not found: {module_name}"
         super().__init__(message, module_name=module_name, **kwargs)
 
@@ -444,7 +446,7 @@ class ModuleNotFoundError(ImportException):
 class DependencyException(ImportException):
     """Missing dependency."""
 
-    def __init__(self) -> None:
+    def __init__(self, Dict: Any = None, dependency: Any = None, install_command: Any = None, kwargs: Any = None) -> None:
         message = f"Missing dependency: {dependency}"
         if install_command:
             message += f" (install with: {install_command})"
@@ -486,7 +488,7 @@ def handle_exception(
     Example:
         >>> try:
         ...     risky_operation()
-        ... except Exception as e:
+        ... except (ValueError, RuntimeError) as e:
         ...     handle_exception(e, logger, context={"operation": "risky_operation"})
         ...     # Exception is logged and re-raised as PAKEException
     """

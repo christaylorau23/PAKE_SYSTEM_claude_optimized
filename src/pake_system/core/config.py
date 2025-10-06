@@ -8,6 +8,7 @@ Security Features:
 """
 
 from functools import lru_cache
+from typing import List
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
@@ -216,7 +217,7 @@ class Settings(BaseSettings):
 
     @field_validator("ALLOWED_HOSTS", mode="before")
     @classmethod
-    def parse_allowed_hosts(cls) -> None:
+    def parse_allowed_hosts(cls, v) -> List[str]:
         """Parse ALLOWED_HOSTS from string or list."""
         if isinstance(v, str):
             return [host.strip() for host in v.split(",")]
@@ -224,7 +225,7 @@ class Settings(BaseSettings):
 
     @field_validator("ENVIRONMENT")
     @classmethod
-    def validate_environment(cls) -> None:
+    def validate_environment(cls, v) -> str:
         """Validate environment setting."""
         allowed_envs = ["development", "staging", "production", "test"]
         if v not in allowed_envs:
@@ -234,7 +235,7 @@ class Settings(BaseSettings):
 
     @field_validator("LOG_LEVEL")
     @classmethod
-    def validate_log_level(cls) -> None:
+    def validate_log_level(cls, v) -> str:
         """Validate log level setting."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in allowed_levels:
@@ -244,7 +245,7 @@ class Settings(BaseSettings):
 
     @field_validator("SQL_LOG_LEVEL")
     @classmethod
-    def validate_sql_log_level(cls) -> None:
+    def validate_sql_log_level(cls, v) -> str:
         """Validate SQL log level setting."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in allowed_levels:

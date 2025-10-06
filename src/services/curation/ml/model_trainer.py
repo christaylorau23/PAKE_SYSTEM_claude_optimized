@@ -3,11 +3,11 @@ Advanced machine learning model training pipeline for content curation and recom
 Supports multiple algorithms, hyperparameter optimization, and model evaluation.
 """
 
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import joblib
 import numpy as np
@@ -71,7 +71,7 @@ class ModelConfig:
 class ModelTrainer:
     """Advanced ML model training pipeline for curation systems."""
 
-    def __init__(self) -> None:
+    def __init__(self, models_dir: str = "models") -> None:
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(exist_ok=True)
         self.feature_extractor = FeatureExtractor()
@@ -251,7 +251,7 @@ class ModelTrainer:
                 )
                 return best_metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error training content quality model: %s", e)
             raise
 
@@ -368,7 +368,7 @@ class ModelTrainer:
                 )
                 return best_metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error training user preference model: %s", e)
             raise
 
@@ -484,7 +484,7 @@ class ModelTrainer:
                 )
                 return best_metrics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error training recommendation model: %s", e)
             raise
 
@@ -528,7 +528,7 @@ class ModelTrainer:
                 X_list.append(feature_vector)
                 y_list.append(quality_score)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Error processing content %s: %s", content.id, e)
                 continue
 
@@ -573,7 +573,7 @@ class ModelTrainer:
                 X_list.append(feature_vector)
                 y_list.append(preference_category)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error processing user %s: %s", user_profile.user_id, e)
                 continue
 
@@ -635,7 +635,7 @@ class ModelTrainer:
                     X_list.append(feature_vector)
                     y_list.append(target_score)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.warning(
                         "Error processing content %s for user %s: %s",
                         content.id,
@@ -735,7 +735,7 @@ class ModelTrainer:
                     self.trained_models[model_name] = model
                     loaded_models[model_name] = True
                     logger.info("Loaded %s model", model_name)
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error loading %s model: %s", model_name, e)
                     loaded_models[model_name] = False
             else:
@@ -753,7 +753,7 @@ class ModelTrainer:
                 joblib.dump(model, model_path)
                 saved_models[model_name] = True
                 logger.info("Saved %s model", model_name)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Error saving %s model: %s", model_name, e)
                 saved_models[model_name] = False
 
@@ -784,7 +784,7 @@ class ModelTrainer:
             )[0]
             return max(0.0, min(1.0, prediction))  # Clamp to [0, 1]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error predicting content quality: %s", e)
             return 0.0
 
@@ -818,7 +818,7 @@ class ModelTrainer:
             )[0]
             return int(prediction)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error predicting user preference: %s", e)
             return 0
 
@@ -856,7 +856,7 @@ class ModelTrainer:
             )[0]
             return max(0.0, min(1.0, prediction))  # Clamp to [0, 1]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error predicting recommendation score: %s", e)
             return 0.0
 
@@ -881,7 +881,7 @@ class ModelTrainer:
                 contents,
                 interactions,
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error retraining content quality model: %s", e)
 
         # Train user preference model
@@ -890,7 +890,7 @@ class ModelTrainer:
                 user_profiles,
                 interactions,
             )
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error retraining user preference model: %s", e)
 
         # Train recommendation model
@@ -900,7 +900,7 @@ class ModelTrainer:
                 user_profiles,
                 interactions,
             )
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error retraining recommendation model: %s", e)
 
         # Save models

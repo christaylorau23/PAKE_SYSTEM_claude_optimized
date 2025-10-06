@@ -60,7 +60,7 @@ class TestEnhancedObsidianBridge:
             await bridge.start_file_watching()
 
             assert bridge.file_watcher is not None
-            mock_file_watcher.watch.assert_called_once()
+            self.mock_file_watcher.watch.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_file_change_detection(self) -> None:
@@ -99,7 +99,7 @@ class TestEnhancedObsidianBridge:
         assert isinstance(tags, list)
         assert len(tags) <= 5
         assert all(isinstance(tag, str) for tag in tags)
-        mock_mcp_server.auto_tag.assert_called_once()
+        self.mock_mcp_server.auto_tag.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_metadata_extraction(self) -> None:
@@ -114,7 +114,7 @@ class TestEnhancedObsidianBridge:
 
         assert "basic_stats" in metadata
         assert metadata["basic_stats"]["word_count"] > 0
-        mock_mcp_server.extract_metadata.assert_called_once()
+        self.mock_mcp_server.extract_metadata.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_knowledge_graph_update(self) -> None:
@@ -165,7 +165,7 @@ This is a synchronization test."""
 
         assert sync_result.success
         assert sync_result.pake_id == "sync-test-123"
-        mock_mcp_server.ingest.assert_called_once()
+        self.mock_mcp_server.ingest.assert_called_once()
 
     def test_enhanced_frontmatter_creation(self) -> None:
         """Test enhanced frontmatter generation."""
@@ -236,7 +236,7 @@ This is a synchronization test."""
         assert "results" in results
         assert "metrics" in results
         assert results["metrics"]["semanticEnabled"]
-        mock_mcp_server.search.assert_called_once()
+        self.mock_mcp_server.search.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_real_time_sync_monitoring(self) -> None:

@@ -1,3 +1,4 @@
+data
 #!/usr/bin/env python3
 """Personal Intelligence Engine Demo.
 
@@ -15,11 +16,11 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
-import time
-from datetime import UTC, datetime
 from pathlib import Path
+import time
 
 import numpy as np
 import pandas as pd
@@ -341,7 +342,7 @@ created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
             print(f"⏱️  NLP Pipeline completed in {processing_time:.2f} seconds")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error in NLP pipeline demo: {e}")
             logger.error("NLP pipeline demo failed: %s", e)
 
@@ -432,7 +433,7 @@ created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
             print(f"⏱️  Vector Database demo completed in {processing_time:.2f} seconds")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             print(f"❌ Error in vector database demo: {e}")
             logger.error("Vector database demo failed: %s", e)
 
@@ -497,7 +498,7 @@ created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
                 f"\n⏱️  Knowledge Core demo completed in {processing_time:.2f} seconds"
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error in knowledge core demo: {e}")
             logger.error("Knowledge core demo failed: %s", e)
 
@@ -660,7 +661,7 @@ created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
                 f"⏱️  Insight Generation demo completed in {processing_time:.2f} seconds"
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error in insight generation demo: {e}")
             logger.error("Insight generation demo failed: %s", e)
 
@@ -801,7 +802,7 @@ created: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
 
             print(f"⏱️  GraphQL API demo completed in {processing_time:.2f} seconds")
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"❌ Error in GraphQL API demo: {e}")
             logger.error("GraphQL API demo failed: %s", e)
 
@@ -920,7 +921,7 @@ async def main(self) -> None:
 
     except KeyboardInterrupt:
         print("\n🛑 Demo interrupted by user")
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"\n❌ Demo failed with error: {e}")
         logger.error("Demo failed: %s", e)
     finally:

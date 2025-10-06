@@ -4,12 +4,12 @@ Provides fast, cached predictions with model ensemble and fallback strategies.
 """
 
 import asyncio
-import logging
-import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+import time
+from typing import Any, Dict
 
 import numpy as np
 
@@ -54,7 +54,7 @@ class EnsemblePrediction:
 class PredictionEngine:
     """Advanced prediction engine for real-time content curation."""
 
-    def __init__(self) -> None:
+    def __init__(self, cache_size: int = 10000, cache_ttl_hours: int = 24) -> None:
         self.cache_size = cache_size
         self.cache_ttl_hours = cache_ttl_hours
         self.prediction_cache: dict[str, PredictionResult] = {}
@@ -186,7 +186,7 @@ class PredictionEngine:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error predicting content quality for %s: %s", content.id, e)
             # Use fallback strategy
             return await self._fallback_content_quality(content)
@@ -276,7 +276,7 @@ class PredictionEngine:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error predicting user preference for %s: %s",
                 user_profile.user_id,
@@ -379,7 +379,7 @@ class PredictionEngine:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "Error predicting recommendation for %s:%s: %s",
                 content.id,
@@ -710,7 +710,7 @@ class PredictionEngine:
         self.prediction_cache.clear()
         logger.info("Prediction cache cleared")
 
-    async def warm_cache(self) -> None:
+    async def warm_cache(self, contents: list[ContentItem], user_profiles: list[UserProfile], interactions: list[UserInteraction]) -> None:
         """Warm up prediction cache with common predictions."""
         logger.info("Warming up prediction cache")
 

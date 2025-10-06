@@ -5,14 +5,14 @@ Enterprise-grade test execution with multiple modes and comprehensive reporting
 """
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 
@@ -176,7 +176,7 @@ class PAKETestRunner:
             self.log("Dependencies installed successfully", "INFO")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.log(f"Error installing dependencies: {e}", "ERROR")
             return False
 
@@ -253,7 +253,7 @@ class PAKETestRunner:
                 tests_skipped=0,
                 error_message="Unit tests timed out",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             return TestExecutionResult(
                 mode=TestMode.UNIT,
@@ -339,7 +339,7 @@ class PAKETestRunner:
                 tests_skipped=0,
                 error_message="Integration tests timed out",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             return TestExecutionResult(
                 mode=TestMode.INTEGRATION,
@@ -425,7 +425,7 @@ class PAKETestRunner:
                 tests_skipped=0,
                 error_message="E2E tests timed out",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             return TestExecutionResult(
                 mode=TestMode.E2E,
@@ -501,7 +501,7 @@ class PAKETestRunner:
                 tests_skipped=0,
                 error_message="Security tests timed out",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             return TestExecutionResult(
                 mode=TestMode.SECURITY,
@@ -581,7 +581,7 @@ class PAKETestRunner:
                 tests_skipped=0,
                 error_message="Performance tests timed out",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             duration = time.time() - start_time
             return TestExecutionResult(
                 mode=TestMode.PERFORMANCE,

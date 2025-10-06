@@ -6,10 +6,10 @@ Building on Phase 2A success (94% test success rate) with production enhancement
 """
 
 import asyncio
-import json
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import json
+import logging
 from typing import Any, Dict, List
 
 import aiohttp
@@ -223,7 +223,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
                     optimization_result.optimization_confidence,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to optimize %s query: %s", source.source_type, e)
                 optimized_sources.append(source)  # Use original if optimization fails
 
@@ -502,7 +502,7 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
                         response_time,
                     )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Health check failed for %s: %s", service_name, e)
             self.api_health_status[service_name] = APIHealthStatus(
                 service_name=service_name,
@@ -571,10 +571,10 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         """Update long-term performance metrics for learning."""
         # Store performance data for cognitive optimization
         performance_data = {
-            "plan_id": result.plan_id,
-            "execution_time": result.execution_time,
-            "success_rate": result.sources_completed / max(result.sources_attempted, 1),
-            "quality_score": result.average_quality_score,
+            "plan_id": self.result.plan_id,
+            "execution_time": self.result.execution_time,
+            "success_rate": self.self.result.sources_completed / max(self.self.result.sources_attempted, 1),
+            "quality_score": self.result.average_quality_score,
             "timestamp": datetime.now(UTC).isoformat(),
         }
 

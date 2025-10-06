@@ -101,24 +101,24 @@ class TestProductionOrchestrator:
         and proper authentication.
         """
         # Verify production configuration is applied
-        assert production_orchestrator.production_config == production_config
+        assert self.production_orchestrator.production_config == production_config
         assert (
-            production_orchestrator.production_config.firecrawl_api_key
+            self.production_orchestrator.production_config.firecrawl_api_key
             == "test-firecrawl-key"
         )
         assert (
-            production_orchestrator.production_config.ncbi_email == "test@example.com"
+            self.production_orchestrator.production_config.ncbi_email == "test@example.com"
         )
 
         # Verify API health status is initialized
-        assert "firecrawl" in production_orchestrator.api_health_status
-        assert "arxiv" in production_orchestrator.api_health_status
-        assert "ncbi" in production_orchestrator.api_health_status
+        assert "firecrawl" in self.production_orchestrator.api_health_status
+        assert "arxiv" in self.production_orchestrator.api_health_status
+        assert "ncbi" in self.production_orchestrator.api_health_status
 
         # Verify services are properly initialized
-        assert production_orchestrator.firecrawl_service is not None
-        assert production_orchestrator.arxiv_service is not None
-        assert production_orchestrator.pubmed_service is not None
+        assert self.production_orchestrator.firecrawl_service is not None
+        assert self.production_orchestrator.arxiv_service is not None
+        assert self.production_orchestrator.pubmed_service is not None
 
     @pytest.mark.asyncio
     async def test_should_setup_api_health_monitoring(self) -> None:
@@ -126,7 +126,7 @@ class TestProductionOrchestrator:
         Test: Should initialize API health monitoring for all services
         with proper status tracking.
         """
-        health_status = production_orchestrator.api_health_status
+        health_status = self.production_orchestrator.api_health_status
 
         # Verify all services have health status
         assert len(health_status) == 3
@@ -172,7 +172,7 @@ class TestProductionOrchestrator:
 
         # Optimize queries
         optimized_plan = (
-            await production_orchestrator.optimize_queries_with_cognitive_feedback(
+            await self.production_orchestrator.optimize_queries_with_cognitive_feedback(
                 original_plan,
                 mock_historical_results,
             )
@@ -184,7 +184,7 @@ class TestProductionOrchestrator:
         assert optimized_plan.context.get("query_optimization_applied") is True
 
         # Verify cognitive engine was called
-        assert mock_cognitive_engine.optimize_search_query.call_count > 0
+        assert self.mock_cognitive_engine.optimize_search_query.call_count > 0
 
     @pytest.mark.asyncio
     async def test_should_handle_optimization_failures_gracefully(self) -> None:
@@ -236,7 +236,7 @@ class TestProductionOrchestrator:
         cognitive optimization is unavailable or fails.
         """
         # Mock cognitive engine to fail
-        production_orchestrator.cognitive_engine = None
+        self.production_orchestrator.cognitive_engine = None
 
         # Test ArXiv optimization
         arxiv_source = IngestionSource(
@@ -249,7 +249,7 @@ class TestProductionOrchestrator:
 
         # Apply fallback optimization
         context = {"average_quality": 0.7, "success_rate": 0.9}
-        optimization = production_orchestrator._fallback_optimization(
+        optimization = self.production_orchestrator._fallback_optimization(
             arxiv_source,
             context,
         )
@@ -293,7 +293,7 @@ class TestProductionOrchestrator:
         )
 
         # Execute with adaptive scaling
-        result = await production_orchestrator.execute_with_adaptive_scaling(
+        result = await self.production_orchestrator.execute_with_adaptive_scaling(
             plan,
             enable_optimization=True,
         )
@@ -315,7 +315,7 @@ class TestProductionOrchestrator:
         real-time API health and performance metrics.
         """
         # Simulate unhealthy APIs
-        production_orchestrator.api_health_status["firecrawl"] = APIHealthStatus(
+        self.production_orchestrator.api_health_status["firecrawl"] = APIHealthStatus(
             service_name="firecrawl",
             is_healthy=False,
             response_time_ms=5000.0,
@@ -323,17 +323,17 @@ class TestProductionOrchestrator:
         )
 
         # Calculate optimal concurrency with unhealthy API
-        optimal_concurrency = production_orchestrator._calculate_optimal_concurrency()
+        optimal_concurrency = self.production_orchestrator._calculate_optimal_concurrency()
 
         # Should reduce concurrency due to unhealthy API
         assert (
-            optimal_concurrency < production_orchestrator.config.max_concurrent_sources
+            optimal_concurrency < self.production_orchestrator.config.max_concurrent_sources
         )
         assert optimal_concurrency >= 1  # Should never go below 1
 
         # Simulate all healthy APIs with fast response times
-        for service_name in production_orchestrator.api_health_status:
-            production_orchestrator.api_health_status[service_name] = APIHealthStatus(
+        for service_name in self.production_orchestrator.api_health_status:
+            self.production_orchestrator.api_health_status[service_name] = APIHealthStatus(
                 service_name=service_name,
                 is_healthy=True,
                 response_time_ms=50.0,  # Very fast
@@ -342,13 +342,13 @@ class TestProductionOrchestrator:
 
         # Recalculate with healthy APIs
         optimal_concurrency_healthy = (
-            production_orchestrator._calculate_optimal_concurrency()
+            self.production_orchestrator._calculate_optimal_concurrency()
         )
 
         # Should potentially increase concurrency for excellent performance
         assert (
             optimal_concurrency_healthy
-            >= production_orchestrator.config.max_concurrent_sources
+            >= self.production_orchestrator.config.max_concurrent_sources
         )
 
     # ========================================================================
@@ -368,11 +368,11 @@ class TestProductionOrchestrator:
             mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = mock_response
 
             # Perform health checks
-            await production_orchestrator._check_api_health()
+            await self.production_orchestrator._check_api_health()
 
             # Verify health status was updated
             for service_name in ["firecrawl", "arxiv", "ncbi"]:
-                status = production_orchestrator.api_health_status[service_name]
+                status = self.production_orchestrator.api_health_status[service_name]
                 assert isinstance(status.last_check, datetime)
                 # Health status should be updated (either healthy or unhealthy)
                 assert isinstance(status.is_healthy, bool)
@@ -388,11 +388,11 @@ class TestProductionOrchestrator:
             mock_session.side_effect = Exception("Connection failed")
 
             # Health checks should not crash
-            await production_orchestrator._check_api_health()
+            await self.production_orchestrator._check_api_health()
 
             # Services should be marked as unhealthy
             for service_name in ["firecrawl", "arxiv", "ncbi"]:
-                status = production_orchestrator.api_health_status[service_name]
+                status = self.production_orchestrator.api_health_status[service_name]
                 # Status should still be updated even with failures
                 assert isinstance(status.last_check, datetime)
 
@@ -407,7 +407,7 @@ class TestProductionOrchestrator:
         performance metrics, and configuration details.
         """
         # Get production status
-        status = await production_orchestrator.get_production_status()
+        status = await self.production_orchestrator.get_production_status()
 
         # Verify status structure
         assert "orchestrator_version" in status
@@ -459,7 +459,7 @@ class TestProductionOrchestrator:
         )
 
         # Update performance metrics (should not crash)
-        await production_orchestrator._update_performance_metrics(mock_result)
+        await self.production_orchestrator._update_performance_metrics(mock_result)
 
         # Performance tracking should be logged (in production, would be stored)
         # This test verifies the method executes without errors
@@ -476,16 +476,16 @@ class TestProductionOrchestrator:
         and clean up resources on shutdown.
         """
         # Get session
-        session1 = await production_orchestrator.get_session()
+        session1 = await self.production_orchestrator.get_session()
         assert isinstance(session1, aiohttp.ClientSession)
         assert not session1.closed
 
         # Getting session again should return same instance
-        session2 = await production_orchestrator.get_session()
+        session2 = await self.production_orchestrator.get_session()
         assert session1 is session2
 
         # Close orchestrator
-        await production_orchestrator.close()
+        await self.production_orchestrator.close()
 
         # Session should be closed
         assert session1.closed
@@ -546,8 +546,8 @@ class TestProductionOrchestrator:
         assert hasattr(production_orchestrator, "get_production_status")
 
         # Verify production configuration is properly set
-        assert production_orchestrator.production_config is not None
-        assert production_orchestrator.api_health_status is not None
+        assert self.production_orchestrator.production_config is not None
+        assert self.production_orchestrator.api_health_status is not None
 
     @pytest.mark.asyncio
     async def test_should_maintain_backward_compatibility(self) -> None:
@@ -556,7 +556,7 @@ class TestProductionOrchestrator:
         orchestrator API while adding production enhancements.
         """
         # Create simple plan using base orchestrator API
-        plan = await production_orchestrator.create_ingestion_plan(
+        plan = await self.production_orchestrator.create_ingestion_plan(
             topic="compatibility test",
             context={"test": True},
         )
@@ -567,7 +567,7 @@ class TestProductionOrchestrator:
         assert plan.total_sources >= 1
 
         # Execute using base API
-        result = await production_orchestrator.execute_ingestion_plan(plan)
+        result = await self.production_orchestrator.execute_ingestion_plan(plan)
 
         # Verify execution works
         assert result is not None

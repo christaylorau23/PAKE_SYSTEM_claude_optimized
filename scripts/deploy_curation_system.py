@@ -6,12 +6,12 @@ Handles model training, system initialization, and production deployment.
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
 import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
+import sys
 
 import uvicorn
 
@@ -53,7 +53,7 @@ class CurationDeployment:
                 with open(self.config_path) as f:
                     user_config = json.load(f)
                 default_config.update(user_config)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Error loading config file: %s", e)
 
         return default_config
@@ -72,7 +72,7 @@ class CurationDeployment:
             logger.error("❌ Failed to initialize curation system")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error initializing system: %s", e)
             return False
 
@@ -122,7 +122,7 @@ class CurationDeployment:
             )
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Error training models: %s", e)
             return False
 
@@ -187,7 +187,7 @@ class CurationDeployment:
             logger.warning("⚠️ System health check failed")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Health check failed: %s", e)
             return False
 
@@ -233,7 +233,7 @@ class CurationDeployment:
             )
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Performance test failed: %s", e)
             return False
 
@@ -356,7 +356,7 @@ async def main(self) -> None:
     except KeyboardInterrupt:
         logger.info("Deployment interrupted by user")
         return 0
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Deployment failed: %s", e)
         return 1
     finally:

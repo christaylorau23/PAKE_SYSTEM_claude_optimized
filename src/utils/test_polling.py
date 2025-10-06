@@ -149,7 +149,7 @@ class RobustPoller:
                         config.max_interval_seconds,
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "Polling attempt %s failed for %s: %s", attempts, operation_name, e
                 )

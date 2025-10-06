@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System Security Manager
@@ -6,12 +7,12 @@ Automated security maintenance and vulnerability remediation
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import json
 import logging
+from pathlib import Path
 import subprocess
 import sys
-from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 # Setup logging
@@ -218,7 +219,7 @@ class SecurityManager:
                         "error": "Hadolint scan timed out",
                         "status": "error",
                     }
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     results[service_name] = {
                         "dockerfile_path": str(dockerfile_path),
                         "error": str(e),

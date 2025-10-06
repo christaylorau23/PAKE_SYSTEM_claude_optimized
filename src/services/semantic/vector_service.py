@@ -4,9 +4,9 @@ Provides vector storage and similarity search capabilities using PostgreSQL with
 This service is designed for future integration when pgvector extension is available.
 """
 
-import logging
 from dataclasses import dataclass
-from typing import Any
+import logging
+from typing import Any, Dict
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class VectorService:
     extended when PostgreSQL with pgvector is available.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, dimension: int = 384) -> None:
         """Initialize vector service.
 
         Args:
@@ -71,7 +71,7 @@ class VectorService:
             logger.debug("Stored vector %s with dimension %s", id, len(vector))
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing vector %s: %s", id, e)
             return False
 
@@ -145,7 +145,7 @@ class VectorService:
 
             return matches
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in similarity search: %s", e)
             return []
 

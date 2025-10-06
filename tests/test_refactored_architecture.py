@@ -111,7 +111,7 @@ class TestRepositoryPattern:
         """Test getting user by email"""
         # Mock session and query result
         mock_session = AsyncMock()
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
+        self.mock_session_maker.return_value.__aenter__.return_value = mock_session
 
         mock_user_orm = MagicMock()
         mock_user_orm.id = "user-123"
@@ -132,7 +132,7 @@ class TestRepositoryPattern:
         mock_session.execute.return_value = mock_result
 
         # Test the method
-        user = await user_repository.get_by_email("test@example.com")
+        user = await self.user_repository.get_by_email("test@example.com")
 
         assert user is not None
         assert user.email == "test@example.com"
@@ -144,14 +144,14 @@ class TestRepositoryPattern:
         """Test getting user by email when not found"""
         # Mock session and query result
         mock_session = AsyncMock()
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
+        self.mock_session_maker.return_value.__aenter__.return_value = mock_session
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = mock_result
 
         # Test the method
-        user = await user_repository.get_by_email("nonexistent@example.com")
+        user = await self.user_repository.get_by_email("nonexistent@example.com")
 
         assert user is None
 
@@ -166,37 +166,37 @@ class TestDependencyInjection:
 
     def test_service_registration(self) -> None:
         """Test service registration"""
-        container.register_singleton(AbstractUserRepository, UserRepository)
+        self.container.register_singleton(AbstractUserRepository, UserRepository)
 
-        assert container.is_registered(AbstractUserRepository)
+        assert self.container.is_registered(AbstractUserRepository)
 
-        services = container.get_registered_services()
+        services = self.container.get_registered_services()
         assert "AbstractUserRepository" in services
         assert "UserRepository (singleton)" in services["AbstractUserRepository"]
 
     def test_service_resolution(self) -> None:
         """Test service resolution"""
-        container.register_singleton(AbstractUserRepository, UserRepository)
+        self.container.register_singleton(AbstractUserRepository, UserRepository)
 
-        service = container.get(AbstractUserRepository)
+        service = self.container.get(AbstractUserRepository)
         assert service is not None
         assert isinstance(service, UserRepository)
 
     def test_singleton_lifetime(self) -> None:
         """Test singleton service lifetime"""
-        container.register_singleton(AbstractUserRepository, UserRepository)
+        self.container.register_singleton(AbstractUserRepository, UserRepository)
 
-        service1 = container.get(AbstractUserRepository)
-        service2 = container.get(AbstractUserRepository)
+        service1 = self.container.get(AbstractUserRepository)
+        service2 = self.container.get(AbstractUserRepository)
 
         assert service1 is service2  # Same instance
 
     def test_transient_lifetime(self) -> None:
         """Test transient service lifetime"""
-        container.register_transient(AbstractUserRepository, UserRepository)
+        self.container.register_transient(AbstractUserRepository, UserRepository)
 
-        service1 = container.get(AbstractUserRepository)
-        service2 = container.get(AbstractUserRepository)
+        service1 = self.container.get(AbstractUserRepository)
+        service2 = self.container.get(AbstractUserRepository)
 
         assert service1 is not service2  # Different instances
 
@@ -206,9 +206,9 @@ class TestDependencyInjection:
         def create_mock_repo(self) -> None:
             return MagicMock(spec=AbstractUserRepository)
 
-        container.register_factory(AbstractUserRepository, create_mock_repo)
+        self.container.register_factory(AbstractUserRepository, create_mock_repo)
 
-        service = container.get(AbstractUserRepository)
+        service = self.container.get(AbstractUserRepository)
         assert service is not None
 
 
@@ -243,7 +243,7 @@ class TestUserService:
     async def test_create_user_success(self) -> None:
         """Test successful user creation"""
         # Setup mocks
-        mock_auth_service.create_user.return_value = ServiceResult(
+        self.mock_auth_service.create_user.return_value = ServiceResult(
             status=ServiceStatus.SUCCESS, data={"hashed_password": "hashed_password"}
         )
 
@@ -252,14 +252,14 @@ class TestUserService:
             hashed_password="hashed_password",
             tenant_id="tenant-123",
         )
-        mock_user_repository.create.return_value = mock_user
+        self.mock_user_repository.create.return_value = mock_user
 
-        mock_notification_service.send_welcome_email.return_value = ServiceResult(
+        self.mock_notification_service.send_welcome_email.return_value = ServiceResult(
             status=ServiceStatus.SUCCESS, data=True
         )
 
         # Test user creation
-        result = await user_service.create_user(
+        result = await self.user_service.create_user(
             email="test@example.com",
             password="password123",
             user_data={"tenant_id": "tenant-123"},
@@ -271,14 +271,14 @@ class TestUserService:
         assert result.data["user_id"] == mock_user.id
 
         # Verify service calls
-        mock_auth_service.create_user.assert_called_once()
-        mock_user_repository.create.assert_called_once()
-        mock_notification_service.send_welcome_email.assert_called_once()
+        self.mock_auth_service.create_user.assert_called_once()
+        self.mock_user_repository.create.assert_called_once()
+        self.mock_notification_service.send_welcome_email.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_create_user_validation_failure(self) -> None:
         """Test user creation with validation failure"""
-        result = await user_service.create_user(
+        result = await self.user_service.create_user(
             email="invalid-email", password="short", user_data={}
         )
 
@@ -295,9 +295,9 @@ class TestUserService:
             first_name="John",
             last_name="Doe",
         )
-        mock_user_repository.get_by_id.return_value = mock_user
+        self.mock_user_repository.get_by_id.return_value = mock_user
 
-        result = await user_service.get_user_profile("user-123")
+        result = await self.user_service.get_user_profile("user-123")
 
         assert result.status == ServiceStatus.SUCCESS
         assert result.data["email"] == "test@example.com"
@@ -307,9 +307,9 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_get_user_profile_not_found(self) -> None:
         """Test user profile retrieval when user not found"""
-        mock_user_repository.get_by_id.return_value = None
+        self.mock_user_repository.get_by_id.return_value = None
 
-        result = await user_service.get_user_profile("nonexistent-user")
+        result = await self.user_service.get_user_profile("nonexistent-user")
 
         assert result.status == ServiceStatus.FAILED
         assert "not found" in result.error
@@ -329,9 +329,9 @@ class TestUserService:
                 tenant_id="tenant-123",
             ),
         ]
-        mock_user_repository.get_by_tenant.return_value = mock_users
+        self.mock_user_repository.get_by_tenant.return_value = mock_users
 
-        result = await user_service.get_users_by_tenant("tenant-123")
+        result = await self.user_service.get_users_by_tenant("tenant-123")
 
         assert result.status == ServiceStatus.SUCCESS
         assert len(result.data) == 2

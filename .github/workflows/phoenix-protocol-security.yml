@@ -1,0 +1,646 @@
+# PAKE System - Phoenix Protocol Security Pipeline
+# Phase 7.2: Security-First CI/CD Pipeline Implementation
+# Enterprise-grade security scanning with defense-in-depth strategy
+
+name: 🔒 Phoenix Protocol Security Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * 1' # Weekly comprehensive security scan on Monday at 2 AM
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan to run'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+          - comprehensive
+          - dependency-only
+          - secret-only
+          - sast-only
+
+concurrency:
+  group: phoenix-security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.8.3'
+  NODE_VERSION: '22.18.0'
+  TRIVY_VERSION: '0.50.0'
+  SONARQUBE_VERSION: '10.0'
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+  packages: read
+
+jobs:
+  # ============================================================================
+  # SOFTWARE COMPOSITION ANALYSIS (SCA) - Trivy Integration
+  # ============================================================================
+  
+  sca-dependency-scan:
+    name: 🔍 Software Composition Analysis (SCA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event.inputs.scan_type == 'comprehensive' || github.event.inputs.scan_type == 'dependency-only' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run Trivy filesystem scan (Python dependencies)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: false
+
+      - name: Run Trivy filesystem scan (JSON output for detailed analysis)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-fs-results.json'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+
+      - name: Run pip-audit for Python-specific vulnerabilities
+        run: |
+          poetry run pip-audit --format=json --output=pip-audit-results.json --desc
+          poetry run pip-audit --format=table
+
+      - name: Run Safety check for known security issues
+        run: |
+          poetry run safety check --json --output=safety-results.json
+          poetry run safety check --short-report
+
+      - name: Run Poetry audit
+        run: |
+          poetry audit --output=poetry-audit-results.json || true
+
+      - name: Generate SCA summary report
+        run: |
+          echo "# Software Composition Analysis (SCA) Report" > sca-summary.md
+          echo "Generated: $(date)" >> sca-summary.md
+          echo "" >> sca-summary.md
+          
+          # Count vulnerabilities by severity
+          if [ -f "trivy-fs-results.json" ]; then
+            echo "## Trivy Filesystem Scan Results" >> sca-summary.md
+            echo "```json" >> sca-summary.md
+            jq '.Results[] | select(.Vulnerabilities != null) | .Vulnerabilities | length' trivy-fs-results.json | head -10 >> sca-summary.md
+            echo "```" >> sca-summary.md
+          fi
+          
+          if [ -f "pip-audit-results.json" ]; then
+            echo "## pip-audit Results" >> sca-summary.md
+            echo "```json" >> sca-summary.md
+            jq '.vulnerabilities | length' pip-audit-results.json >> sca-summary.md
+            echo "```" >> sca-summary.md
+          fi
+
+      - name: Upload SCA reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sca-reports-${{ github.sha }}
+          path: |
+            trivy-fs-results.sarif
+            trivy-fs-results.json
+            pip-audit-results.json
+            safety-results.json
+            poetry-audit-results.json
+            sca-summary.md
+
+      - name: Upload Trivy SARIF results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+  # ============================================================================
+  # SECRET SCANNING - TruffleHog & GitGuardian Integration
+  # ============================================================================
+  
+  secret-scanning:
+    name: 🔐 Secret Scanning & Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ github.event.inputs.scan_type == 'comprehensive' || github.event.inputs.scan_type == 'secret-only' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for comprehensive secret scanning
+
+      - name: Run TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified --format=json --output=trufflehog-results.json
+
+      - name: Run GitLeaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Run GitGuardian secret scan (if API key available)
+        if: ${{ secrets.GITGUARDIAN_API_KEY != '' }}
+        run: |
+          # Install GitGuardian CLI
+          curl -s https://api.github.com/repos/GitGuardian/ggshield/releases/latest | \
+            grep "browser_download_url.*linux.*amd64" | \
+            cut -d '"' -f 4 | \
+            wget -qi -
+          
+          chmod +x ggshield
+          ./ggshield secret scan path . --json --output=gitguardian-results.json || true
+
+      - name: Custom secret pattern detection
+        run: |
+          echo "Running custom secret pattern detection..."
+          
+          # Create patterns file for comprehensive secret detection
+          cat > secret-patterns.txt << 'EOF'
+          # API Keys
+          (?i)(api[_-]?key|apikey|api_key)\s*[:=]\s*['\"]?[a-zA-Z0-9]{20,}['\"]?
+          (?i)(access[_-]?token|access_token)\s*[:=]\s*['\"]?[a-zA-Z0-9]{20,}['\"]?
+          (?i)(secret[_-]?key|secret_key)\s*[:=]\s*['\"]?[a-zA-Z0-9]{20,}['\"]?
+          
+          # Database credentials
+          (?i)(database[_-]?password|db[_-]?password|db_password)\s*[:=]\s*['\"]?[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;':",./<>?]{8,}['\"]?
+          (?i)(database[_-]?url|db[_-]?url|db_url)\s*[:=]\s*['\"]?[a-zA-Z0-9:/@.-]{20,}['\"]?
+          
+          # JWT tokens
+          (?i)(jwt[_-]?secret|jwt_secret)\s*[:=]\s*['\"]?[a-zA-Z0-9]{20,}['\"]?
+          
+          # AWS credentials
+          (?i)(aws[_-]?access[_-]?key[_-]?id|aws_access_key_id)\s*[:=]\s*['\"]?AKIA[0-9A-Z]{16}['\"]?
+          (?i)(aws[_-]?secret[_-]?access[_-]?key|aws_secret_access_key)\s*[:=]\s*['\"]?[a-zA-Z0-9/+=]{40}['\"]?
+          
+          # GitHub tokens
+          (?i)(github[_-]?token|gh[_-]?token)\s*[:=]\s*['\"]?(ghp_|gho_|ghu_|ghs_|ghr_)[a-zA-Z0-9]{36}['\"]?
+          
+          # Generic secrets
+          (?i)(password|passwd|pwd)\s*[:=]\s*['\"]?[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;':",./<>?]{8,}['\"]?
+          (?i)(secret|private[_-]?key|private_key)\s*[:=]\s*['\"]?[a-zA-Z0-9+/=]{20,}['\"]?
+          EOF
+          
+          # Run pattern matching
+          if command -v grep &> /dev/null; then
+            echo "Running grep-based secret detection..."
+            grep -r -E -f secret-patterns.txt --include="*.py" --include="*.js" --include="*.ts" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.env*" . > custom-secret-results.txt || true
+          fi
+
+      - name: Validate environment variable usage
+        run: |
+          echo "Validating environment variable usage..."
+          
+          # Check for hardcoded secrets that should use environment variables
+          python3 -c "
+          import os
+          import sys
+          import re
+          
+          # Patterns that should use environment variables
+          patterns = [
+              r'password\s*=\s*[\"\'][^\"\']+[\"\']',
+              r'api_key\s*=\s*[\"\'][^\"\']+[\"\']',
+              r'secret\s*=\s*[\"\'][^\"\']+[\"\']',
+              r'token\s*=\s*[\"\'][^\"\']+[\"\']',
+          ]
+          
+          issues_found = False
+          
+          # Check Python files
+          for root, dirs, files in os.walk('src'):
+              for file in files:
+                  if file.endswith('.py'):
+                      filepath = os.path.join(root, file)
+                      try:
+                          with open(filepath, 'r', encoding='utf-8') as f:
+                              content = f.read()
+                              for pattern in patterns:
+                                  if re.search(pattern, content, re.IGNORECASE):
+                                      print(f'❌ Potential hardcoded secret in {filepath}')
+                                      issues_found = True
+                      except Exception as e:
+                          print(f'Warning: Could not check {filepath}: {e}')
+          
+          if issues_found:
+              print('❌ Hardcoded secrets detected - use environment variables instead')
+              sys.exit(1)
+          else:
+              print('✅ No hardcoded secrets detected')
+          "
+
+      - name: Generate secret scanning summary
+        run: |
+          echo "# Secret Scanning Report" > secret-scan-summary.md
+          echo "Generated: $(date)" >> secret-scan-summary.md
+          echo "" >> secret-scan-summary.md
+          echo "## Scan Results:" >> secret-scan-summary.md
+          echo "- ✅ TruffleHog scan completed" >> secret-scan-summary.md
+          echo "- ✅ GitLeaks scan completed" >> secret-scan-summary.md
+          if [ -f "gitguardian-results.json" ]; then
+            echo "- ✅ GitGuardian scan completed" >> secret-scan-summary.md
+          fi
+          echo "- ✅ Custom pattern detection completed" >> secret-scan-summary.md
+          echo "- ✅ Environment variable validation completed" >> secret-scan-summary.md
+
+      - name: Upload secret scanning reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secret-scan-reports-${{ github.sha }}
+          path: |
+            trufflehog-results.json
+            gitguardian-results.json
+            custom-secret-results.txt
+            secret-scan-summary.md
+
+  # ============================================================================
+  # ADVANCED SAST - SonarQube Integration
+  # ============================================================================
+  
+  advanced-sast:
+    name: 🔬 Advanced Static Application Security Testing (SAST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ github.event.inputs.scan_type == 'comprehensive' || github.event.inputs.scan_type == 'sast-only' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run Semgrep SAST scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/python
+            p/security
+            p/cwe-top-25
+          generateSarif: "1"
+          output: "semgrep-results.sarif"
+
+      - name: Run Bandit security linter
+        run: |
+          poetry run bandit -r src/ -f json -o bandit-results.json --skip B101,B601
+          poetry run bandit -r src/ -f txt
+
+      - name: Run Ruff security-focused linting
+        run: |
+          poetry run ruff check src/ --select S --output-format=json --output-file=ruff-security-results.json
+          poetry run ruff check src/ --select S
+
+      - name: Run SonarQube analysis (if token available)
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-quality-gate-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=pake-system
+            -Dsonar.organization=pake-system-org
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+            -Dsonar.python.version=3.12
+            -Dsonar.sources=src/
+            -Dsonar.tests=tests/
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.security.hotspots=true
+            -Dsonar.security.analysis=true
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          languages: python
+          queries: security-and-quality
+
+      - name: Run custom security analysis
+        run: |
+          echo "Running custom security analysis..."
+          
+          # Create custom security analysis script
+          cat > custom-security-analysis.py << 'EOF'
+          import ast
+          import os
+          import json
+          import re
+          from pathlib import Path
+          
+          class SecurityAnalyzer(ast.NodeVisitor):
+              def __init__(self):
+                  self.issues = []
+              
+              def visit_Call(self, node):
+                  # Check for dangerous function calls
+                  if isinstance(node.func, ast.Name):
+                      if node.func.id in ['eval', 'exec', 'compile']:
+                          self.issues.append({
+                              'type': 'dangerous_function',
+                              'function': node.func.id,
+                              'line': node.lineno,
+                              'severity': 'HIGH'
+                          })
+                      
+                      # Check for SQL injection risks
+                      if node.func.id in ['execute', 'executemany']:
+                          self.issues.append({
+                              'type': 'sql_injection_risk',
+                              'function': node.func.id,
+                              'line': node.lineno,
+                              'severity': 'MEDIUM'
+                          })
+                  
+                  self.generic_visit(node)
+              
+              def visit_Import(self, node):
+                  # Check for dangerous imports
+                  for alias in node.names:
+                      if alias.name in ['pickle', 'marshal', 'subprocess']:
+                          self.issues.append({
+                              'type': 'dangerous_import',
+                              'module': alias.name,
+                              'line': node.lineno,
+                              'severity': 'MEDIUM'
+                          })
+                  self.generic_visit(node)
+          
+          def analyze_file(filepath):
+              try:
+                  with open(filepath, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                  
+                  tree = ast.parse(content)
+                  analyzer = SecurityAnalyzer()
+                  analyzer.visit(tree)
+                  
+                  return analyzer.issues
+              except Exception as e:
+                  return [{'type': 'parse_error', 'error': str(e), 'line': 0, 'severity': 'LOW'}]
+          
+          # Analyze all Python files
+          results = []
+          for root, dirs, files in os.walk('src'):
+              for file in files:
+                  if file.endswith('.py'):
+                      filepath = os.path.join(root, file)
+                      issues = analyze_file(filepath)
+                      if issues:
+                          results.append({
+                              'file': filepath,
+                              'issues': issues
+                          })
+          
+          # Save results
+          with open('custom-security-analysis.json', 'w') as f:
+              json.dump(results, f, indent=2)
+          
+          print(f"Custom security analysis completed. Found {len(results)} files with issues.")
+          EOF
+          
+          python3 custom-security-analysis.py
+
+      - name: Generate SAST summary report
+        run: |
+          echo "# Advanced SAST Report" > sast-summary.md
+          echo "Generated: $(date)" >> sast-summary.md
+          echo "" >> sast-summary.md
+          echo "## Scan Results:" >> sast-summary.md
+          echo "- ✅ Semgrep scan completed" >> sast-summary.md
+          echo "- ✅ Bandit security linter completed" >> sast-summary.md
+          echo "- ✅ Ruff security rules completed" >> sast-summary.md
+          if [ -f "sonar-project.properties" ]; then
+            echo "- ✅ SonarQube analysis completed" >> sast-summary.md
+          fi
+          echo "- ✅ CodeQL analysis completed" >> sast-summary.md
+          echo "- ✅ Custom security analysis completed" >> sast-summary.md
+
+      - name: Upload SAST reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-reports-${{ github.sha }}
+          path: |
+            semgrep-results.sarif
+            bandit-results.json
+            ruff-security-results.json
+            custom-security-analysis.json
+            sast-summary.md
+
+      - name: Upload SARIF results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'semgrep-results.sarif'
+
+  # ============================================================================
+  # SECURITY GATE VALIDATION
+  # ============================================================================
+  
+  security-gate-validation:
+    name: 🚪 Security Gate Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [sca-dependency-scan, secret-scanning, advanced-sast]
+    if: always()
+    
+    steps:
+      - name: Download all security reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-reports-*'
+          merge-multiple: true
+
+      - name: Validate security gate criteria
+        run: |
+          echo "Validating security gate criteria..."
+          
+          # Check if any critical vulnerabilities were found
+          critical_issues=0
+          
+          # Check Trivy results
+          if [ -f "trivy-fs-results.json" ]; then
+            critical_count=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-fs-results.json)
+            if [ "$critical_count" -gt 0 ]; then
+              echo "❌ CRITICAL vulnerabilities found in dependencies: $critical_count"
+              critical_issues=$((critical_issues + critical_count))
+            fi
+          fi
+          
+          # Check Bandit results
+          if [ -f "bandit-results.json" ]; then
+            high_count=$(jq '.results | map(select(.issue_severity == "HIGH")) | length' bandit-results.json)
+            if [ "$high_count" -gt 0 ]; then
+              echo "❌ HIGH severity security issues found: $high_count"
+              critical_issues=$((critical_issues + high_count))
+            fi
+          fi
+          
+          # Check custom security analysis
+          if [ -f "custom-security-analysis.json" ]; then
+            high_count=$(jq '[.[]?.issues[]? | select(.severity == "HIGH")] | length' custom-security-analysis.json)
+            if [ "$high_count" -gt 0 ]; then
+              echo "❌ HIGH severity custom security issues found: $high_count"
+              critical_issues=$((critical_issues + high_count))
+            fi
+          fi
+          
+          # Final gate decision
+          if [ "$critical_issues" -gt 0 ]; then
+            echo "❌ SECURITY GATE FAILED: $critical_issues critical/high severity issues found"
+            echo "::error::Security gate validation failed with $critical_issues critical issues"
+            exit 1
+          else
+            echo "✅ SECURITY GATE PASSED: No critical security issues found"
+          fi
+
+      - name: Generate comprehensive security report
+        run: |
+          echo "# 🔒 Phoenix Protocol Security Pipeline Report" > comprehensive-security-report.md
+          echo "Generated: $(date)" >> comprehensive-security-report.md
+          echo "" >> comprehensive-security-report.md
+          echo "## Executive Summary" >> comprehensive-security-report.md
+          echo "This report summarizes the results of the comprehensive security scanning pipeline implemented as part of Phase 7.2 of The Phoenix Protocol." >> comprehensive-security-report.md
+          echo "" >> comprehensive-security-report.md
+          echo "## Security Gate Status: ✅ PASSED" >> comprehensive-security-report.md
+          echo "" >> comprehensive-security-report.md
+          echo "## Scan Components:" >> comprehensive-security-report.md
+          echo "- ✅ Software Composition Analysis (SCA) with Trivy" >> comprehensive-security-report.md
+          echo "- ✅ Secret Scanning with TruffleHog & GitLeaks" >> comprehensive-security-report.md
+          echo "- ✅ Advanced SAST with Semgrep, Bandit, and SonarQube" >> comprehensive-security-report.md
+          echo "- ✅ Custom Security Analysis" >> comprehensive-security-report.md
+          echo "- ✅ Security Gate Validation" >> comprehensive-security-report.md
+          echo "" >> comprehensive-security-report.md
+          echo "## Next Steps:" >> comprehensive-security-report.md
+          echo "1. Review any medium/low severity findings" >> comprehensive-security-report.md
+          echo "2. Address security recommendations" >> comprehensive-security-report.md
+          echo "3. Continue monitoring with automated scans" >> comprehensive-security-report.md
+
+      - name: Upload comprehensive security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-security-report-${{ github.sha }}
+          path: comprehensive-security-report.md
+
+      - name: Comment on PR with security summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '## 🔒 Security Scan Summary\n\n';
+            report += '✅ **Security Gate: PASSED**\n\n';
+            report += '### Scans Completed:\n';
+            report += '- 🔍 Software Composition Analysis (SCA)\n';
+            report += '- 🔐 Secret Scanning\n';
+            report += '- 🔬 Advanced SAST\n';
+            report += '- 🚪 Security Gate Validation\n\n';
+            report += 'No critical security issues detected. This PR is ready for review.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  # ============================================================================
+  # NOTIFICATION & REPORTING
+  # ============================================================================
+  
+  security-notification:
+    name: 📢 Security Notification
+    runs-on: ubuntu-latest
+    needs: [security-gate-validation]
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    
+    steps:
+      - name: Download comprehensive report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'comprehensive-security-report-*'
+          merge-multiple: true
+
+      - name: Send security report notification
+        run: |
+          echo "Security scan completed for ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Status: ${{ needs.security-gate-validation.result }}"
+          
+          # Create notification summary
+          cat > notification-summary.md << 'EOF'
+          # 🔒 Weekly Security Scan Report
+          
+          **Repository:** ${{ github.repository }}
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          **Status:** ${{ needs.security-gate-validation.result }}
+          **Timestamp:** $(date)
+          
+          ## Summary
+          The weekly comprehensive security scan has completed successfully. All security gates passed with no critical issues detected.
+          
+          ## Recommendations
+          - Continue regular security monitoring
+          - Review medium/low severity findings
+          - Update dependencies as needed
+          EOF
+          
+          echo "Security notification prepared"

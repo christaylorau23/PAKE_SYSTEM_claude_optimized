@@ -4,11 +4,11 @@ Implements intelligent rate limiting, cost optimization, and graceful degradatio
 """
 
 import asyncio
-import logging
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any
+import logging
+import time
+from typing import Any, Dict
 
 
 @dataclass
@@ -379,7 +379,7 @@ class RateLimitController:
             return 0.5
         return 0.2
 
-    async def set_budget(self) -> None:
+    async def set_budget(self, hourly_budget: float, daily_budget: float) -> None:
         """Update budget constraints."""
         self.hourly_budget = hourly_budget
         self.daily_budget = daily_budget
@@ -389,7 +389,7 @@ class RateLimitController:
             daily_budget,
         )
 
-    async def emergency_throttle(self) -> None:
+    async def emergency_throttle(self, api_name: str, reduction_factor: float = 0.5) -> None:
         """Emergency throttle for specific API."""
         if api_name in self.rate_limits:
             rate_limit = self.rate_limits[api_name]

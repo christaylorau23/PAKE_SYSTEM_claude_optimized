@@ -1,3 +1,5 @@
+config
+import base64
 #!/usr/bin/env python3
 """PAKE System - Enterprise Security Hardening Framework
 Comprehensive security implementation following OWASP Top 10 and enterprise best practices.
@@ -11,15 +13,15 @@ This module provides:
 """
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 import json
 import logging
+from pathlib import Path
 import re
 import secrets
 import subprocess
 import time
-from datetime import UTC, datetime, timedelta
-from enum import Enum
-from pathlib import Path
 from typing import Any
 
 import bcrypt
@@ -245,7 +247,7 @@ class SecurityHardeningFramework:
 
             return scan_results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Dependency scan failed: %s", str(e))
             await self._create_security_event(
                 event_type="dependency_scan_failed",
@@ -286,7 +288,7 @@ class SecurityHardeningFramework:
                 }
                 vulnerabilities.append(vulnerability)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Python dependency scan failed: %s", str(e))
 
         return vulnerabilities
@@ -318,7 +320,7 @@ class SecurityHardeningFramework:
                     }
                     vulnerabilities.append(vulnerability)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Node.js dependency scan failed: %s", str(e))
 
         return vulnerabilities
@@ -348,7 +350,7 @@ class SecurityHardeningFramework:
                 image_vulns = await self._scan_docker_image(image)
                 vulnerabilities.extend(image_vulns)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Docker image scan failed: %s", str(e))
 
         return vulnerabilities
@@ -361,7 +363,7 @@ class SecurityHardeningFramework:
             # This would use Trivy or similar vulnerability scanner
             # For now, return empty list
             pass
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Docker image scan failed for %s: %s", image_name, str(e))
 
         return vulnerabilities
@@ -419,7 +421,7 @@ class SecurityHardeningFramework:
 
             return base64.urlsafe_b64encode(encrypted_data).decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Data encryption failed: %s", str(e))
             raise
 
@@ -451,7 +453,7 @@ class SecurityHardeningFramework:
 
             return decrypted_data.decode()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Data decryption failed: %s", str(e))
             raise
 
@@ -482,7 +484,7 @@ class SecurityHardeningFramework:
                 return await self._sanitize_email_input(input_data)
             return await self._sanitize_generic_input(input_data)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Input sanitization failed: %s", str(e))
             return False, ""
 
@@ -601,12 +603,12 @@ class SecurityHardeningFramework:
         """Send security alert for critical events."""
         try:
             alert_data = {
-                "event_id": event.event_id,
-                "event_type": event.event_type,
-                "severity": event.severity.value,
-                "timestamp": event.timestamp.isoformat(),
-                "description": event.description,
-                "source_ip": event.source_ip,
+                "event_id": self.event.event_id,
+                "event_type": self.event.event_type,
+                "severity": self.event.severity.value,
+                "timestamp": self.event.timestamp.isoformat(),
+                "description": self.event.description,
+                "source_ip": self.event.source_ip,
                 "user_id": event.user_id,
                 "resource": event.resource,
             }
@@ -614,7 +616,7 @@ class SecurityHardeningFramework:
             # In production, send to monitoring system (e.g., PagerDuty, Slack)
             self.logger.critical("SECURITY ALERT: %s", json.dumps(alert_data))
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             self.logger.error("Failed to send security alert: %s", str(e))
 
     async def monitor_failed_login_attempts(self, user_id: str, source_ip: str) -> bool:

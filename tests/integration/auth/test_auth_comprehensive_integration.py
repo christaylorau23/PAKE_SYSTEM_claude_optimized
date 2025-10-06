@@ -140,7 +140,7 @@ class TestAPIIntegration:
         )
 
         # Act
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
 
@@ -170,7 +170,7 @@ class TestAPIIntegration:
         )
 
         # Act
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/token", data={"username": username, "password": wrong_password}
         )
 
@@ -193,13 +193,13 @@ class TestAPIIntegration:
             full_name="Test User",
         )
 
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
         token = login_response.json()["access_token"]
 
         # Act
-        response = test_client.get(
+        response = self.test_client.get(
             "/auth/me", headers={"Authorization": f"Bearer {token}"}
         )
 
@@ -212,7 +212,7 @@ class TestAPIIntegration:
     async def test_protected_endpoint_no_auth(self) -> None:
         """Test protected endpoint without authentication"""
         # Act
-        response = test_client.get("/auth/me")
+        response = self.test_client.get("/auth/me")
 
         # Assert
         assert response.status_code == 401
@@ -221,7 +221,7 @@ class TestAPIIntegration:
     async def test_protected_endpoint_invalid_token(self) -> None:
         """Test protected endpoint with invalid token"""
         # Act
-        response = test_client.get(
+        response = self.test_client.get(
             "/auth/me", headers={"Authorization": "Bearer invalid.token.here"}
         )
 
@@ -240,7 +240,7 @@ class TestAPIIntegration:
         }
 
         # Act
-        response = test_client.post("/auth/register", json=user_data)
+        response = self.test_client.post("/auth/register", json=user_data)
 
         # Assert
         assert response.status_code == 200
@@ -261,7 +261,7 @@ class TestAPIIntegration:
         }
 
         # Act
-        response = test_client.post("/auth/register", json=user_data)
+        response = self.test_client.post("/auth/register", json=user_data)
 
         # Assert
         assert response.status_code == 400
@@ -271,7 +271,7 @@ class TestAPIIntegration:
     async def test_password_generation_endpoint(self) -> None:
         """Test password generation endpoint"""
         # Act
-        response = test_client.get("/auth/generate-password")
+        response = self.test_client.get("/auth/generate-password")
 
         # Assert
         assert response.status_code == 200
@@ -286,7 +286,7 @@ class TestAPIIntegration:
         password_data = {"password": "SecurePassword123!"}
 
         # Act
-        response = test_client.post("/auth/validate-password", json=password_data)
+        response = self.test_client.post("/auth/validate-password", json=password_data)
 
         # Assert
         assert response.status_code == 200
@@ -301,7 +301,7 @@ class TestAPIIntegration:
         password_data = {"password": "weak"}
 
         # Act
-        response = test_client.post("/auth/validate-password", json=password_data)
+        response = self.test_client.post("/auth/validate-password", json=password_data)
 
         # Assert
         assert response.status_code == 200
@@ -325,13 +325,13 @@ class TestAPIIntegration:
             full_name="Test User",
         )
 
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
         refresh_token = login_response.json()["refresh_token"]
 
         # Act
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/refresh", json={"refresh_token": refresh_token}
         )
 
@@ -358,13 +358,13 @@ class TestAPIIntegration:
             full_name="Test User",
         )
 
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
         token = login_response.json()["access_token"]
 
         # Act
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/logout", headers={"Authorization": f"Bearer {token}"}
         )
 
@@ -462,13 +462,13 @@ class TestExternalServiceIntegration:
     async def test_external_api_mock_integration(self) -> None:
         """Test integration with external API services"""
         # Arrange
-        mock_external_api.get.return_value = {
+        self.mock_external_api.get.return_value = {
             "status": "ok",
             "data": [{"id": 1, "name": "test"}],
         }
 
         # Act
-        response = await mock_external_api.get("/test-endpoint")
+        response = await self.mock_external_api.get("/test-endpoint")
 
         # Assert
         assert response["status"] == "ok"
@@ -479,12 +479,12 @@ class TestExternalServiceIntegration:
     async def test_redis_integration(self) -> None:
         """Test integration with Redis caching"""
         # Arrange
-        mock_redis.set.return_value = True
-        mock_redis.get.return_value = '{"cached_data": "test"}'
+        self.mock_redis.set.return_value = True
+        self.mock_redis.get.return_value = '{"cached_data": "test"}'
 
         # Act
-        set_result = await mock_redis.set("test_key", "test_value")
-        get_result = await mock_redis.get("test_key")
+        set_result = await self.mock_redis.set("test_key", "test_value")
+        get_result = await self.mock_redis.get("test_key")
 
         # Assert
         assert set_result is True
@@ -494,13 +494,13 @@ class TestExternalServiceIntegration:
     async def test_email_service_integration(self) -> None:
         """Test integration with email service"""
         # Arrange
-        mock_email_service.send_email.return_value = {
+        self.mock_email_service.send_email.return_value = {
             "status": "sent",
             "message_id": "12345",
         }
 
         # Act
-        result = await mock_email_service.send_email(
+        result = await self.mock_email_service.send_email(
             to="test@example.com", subject="Test Email", body="This is a test email"
         )
 
@@ -531,7 +531,7 @@ class TestErrorHandlingIntegration:
     async def test_api_error_handling(self) -> None:
         """Test API error handling"""
         # Act
-        response = test_client.post("/auth/token", data={})  # Empty data
+        response = self.test_client.post("/auth/token", data={})  # Empty data
 
         # Assert
         assert response.status_code == 422  # Validation error
@@ -540,7 +540,7 @@ class TestErrorHandlingIntegration:
     async def test_authentication_error_handling(self) -> None:
         """Test authentication error handling"""
         # Act
-        response = test_client.get("/auth/me")  # No authentication
+        response = self.test_client.get("/auth/me")  # No authentication
 
         # Assert
         assert response.status_code == 401  # Unauthorized
@@ -564,7 +564,7 @@ class TestErrorHandlingIntegration:
         # Act - Send multiple requests rapidly
         responses = []
         for _ in range(10):
-            response = test_client.post(
+            response = self.test_client.post(
                 "/auth/token", data={"username": username, "password": "wrongpassword"}
             )
             responses.append(response)
@@ -623,7 +623,7 @@ class TestPerformanceIntegration:
 
         # Act
         start_time = time.time()
-        response = test_client.post(
+        response = self.test_client.post(
             "/auth/token", data={"username": username, "password": password}
         )
         end_time = time.time()

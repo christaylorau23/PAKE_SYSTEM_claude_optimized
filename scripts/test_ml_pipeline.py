@@ -8,8 +8,8 @@ Comprehensive test script for validating ML pipeline functionality.
 
 import asyncio
 import logging
-import sys
 from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
@@ -60,7 +60,7 @@ class MLPipelineTester:
             # Print test summary
             self.print_test_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ML pipeline tests failed: %s", e)
             raise
 
@@ -97,7 +97,7 @@ class MLPipelineTester:
 
             logger.info("Model Serving tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Model serving test failed: %s", e)
             self.test_results["model_serving"] = f"FAIL: {e}"
 
@@ -138,7 +138,7 @@ class MLPipelineTester:
 
             logger.info("Training Pipeline tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Training pipeline test failed: %s", e)
             self.test_results["training_pipeline"] = f"FAIL: {e}"
 
@@ -188,7 +188,7 @@ class MLPipelineTester:
 
             logger.info("Feature Engineering tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Feature engineering test failed: %s", e)
             self.test_results["feature_engineering"] = f"FAIL: {e}"
 
@@ -235,7 +235,7 @@ class MLPipelineTester:
 
             logger.info("Prediction Service tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Prediction service test failed: %s", e)
             self.test_results["prediction_service"] = f"FAIL: {e}"
 
@@ -280,7 +280,7 @@ class MLPipelineTester:
 
             logger.info("ML Monitoring tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("ML monitoring test failed: %s", e)
             self.test_results["ml_monitoring"] = f"FAIL: {e}"
 
@@ -314,7 +314,7 @@ class MLPipelineTester:
 
             logger.info("Integration Workflow tests completed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Integration workflow test failed: %s", e)
             self.test_results["integration_workflow"] = f"FAIL: {e}"
 
@@ -357,7 +357,7 @@ class MLPipelineTester:
 
             logger.info("=" * 60)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to print test summary: %s", e)
 
 

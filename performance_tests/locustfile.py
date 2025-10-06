@@ -1,3 +1,4 @@
+from fastapi import Response
 """PAKE System Performance Testing with Locust.
 ==========================================
 
@@ -21,7 +22,7 @@ Personas:
 - AdminUser: Administrative user managing system
 """
 
-import random
+import secrets
 import time
 
 from locust import HttpUser, between, task
@@ -56,7 +57,7 @@ class BaseUserBehavior:
             print(f"Login failed: {response.status_code} - {response.text}")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Login error: {e}")
             return False
 
@@ -193,7 +194,7 @@ class ResearcherUserBehavior(BaseUserBehavior):
             return
 
         # Mix of different authenticated operations
-        operation = random.choice(self.test_operations)
+        operation = secrets.choice(self.test_operations)
 
         if operation == "user_profile":
             self.make_authenticated_request("GET", "/auth/me")

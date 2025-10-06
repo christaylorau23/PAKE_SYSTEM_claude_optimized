@@ -7,10 +7,10 @@ mandatory documentation of flaky tests as per enterprise policy.
 """
 
 import asyncio
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import logging
 from typing import Any
 
 import aiohttp
@@ -116,8 +116,8 @@ class IssueTrackerConfig:
 class IssueTrackerClient:
     """Base class for issue tracker clients."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: IssueTrackerConfig | None = None) -> None:
+        self.config = config or IssueTrackerConfig()
         self.session: aiohttp.ClientSession | None = None
 
     async def __aenter__(self) -> None:
@@ -167,7 +167,7 @@ class IssueTrackerClient:
 class GitHubIssueTracker(IssueTrackerClient):
     """GitHub Issues integration."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: IssueTrackerConfig | None = None) -> None:
         super().__init__(config)
         if not config.repository:
             msg = "GitHub tracker requires repository configuration"
@@ -268,7 +268,7 @@ class GitHubIssueTracker(IssueTrackerClient):
 class JiraIssueTracker(IssueTrackerClient):
     """Jira integration."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: IssueTrackerConfig | None = None) -> None:
         super().__init__(config)
         if not config.project_id:
             msg = "Jira tracker requires project_id configuration"
@@ -438,8 +438,8 @@ class IssueTrackerFactory:
 class FlakyTestIssueManager:
     """Manager for creating and tracking flaky test issues."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: IssueTrackerConfig | None = None, template: IssueTemplate | None = None) -> None:
+        self.config = config or IssueTrackerConfig()
         self.template = template or IssueTemplate()
         self.tracker_factory = IssueTrackerFactory()
         self.created_issues: dict[str, str] = {}  # test_id -> issue_id mapping
@@ -470,7 +470,7 @@ class FlakyTestIssueManager:
                 self.created_issues[test_id] = issue_id
                 logger.info("Created issue %s for flaky test %s", issue_id, test_id)
                 return issue_id
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to create issue for test %s: %s", test_id, e)
                 raise
 
@@ -490,7 +490,7 @@ class FlakyTestIssueManager:
                 if success:
                     logger.info("Updated issue %s for test %s", issue_id, test_id)
                 return success
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to update issue for test %s: %s", test_id, e)
                 return False
 
@@ -510,7 +510,7 @@ class FlakyTestIssueManager:
                 if success:
                     logger.info("Resolved issue %s for test %s", issue_id, test_id)
                 return success
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Failed to resolve issue for test %s: %s", test_id, e)
                 return False
 
@@ -623,7 +623,7 @@ def get_issue_manager() -> FlakyTestIssueManager | None:
     return _issue_manager
 
 
-def configure_issue_tracker(self) -> None:
+def configure_issue_tracker(config: IssueTrackerConfig, template: IssueTemplate | None = None) -> None:
     """Configure the global issue tracker."""
     global _issue_manager
     _issue_manager = FlakyTestIssueManager(config, template)
@@ -640,7 +640,7 @@ async def create_flaky_test_issue(test_data: dict[str, Any]) -> str | None:
 
     try:
         return await manager.create_flaky_test_issue(test_data)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Failed to create flaky test issue: %s", e)
         return None
 

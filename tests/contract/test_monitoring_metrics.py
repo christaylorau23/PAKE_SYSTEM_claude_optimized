@@ -38,7 +38,7 @@ class TestMonitoringMetricsContract:
         Expected: 200 status with Prometheus-formatted metrics
         """
         # This test WILL FAIL until monitoring infrastructure is implemented
-        response = await http_client.get(f"{monitoring_base_url}/metrics")
+        response = await self.http_client.get(f"{monitoring_base_url}/metrics")
 
         # Metrics endpoint must exist
         assert (
@@ -61,7 +61,7 @@ class TestMonitoringMetricsContract:
         Expected: Specific metric names for requests, performance, cache, etc.
         """
         # This test WILL FAIL until metrics collection is implemented
-        response = await http_client.get(f"{monitoring_base_url}/metrics")
+        response = await self.http_client.get(f"{monitoring_base_url}/metrics")
         assert response.status_code == 200
 
         metrics_text = response.text
@@ -89,7 +89,7 @@ class TestMonitoringMetricsContract:
         Expected: HELP and TYPE comments, proper metric syntax
         """
         # This test WILL FAIL until proper metrics formatting is implemented
-        response = await http_client.get(f"{monitoring_base_url}/metrics")
+        response = await self.http_client.get(f"{monitoring_base_url}/metrics")
         assert response.status_code == 200
 
         metrics_text = response.text
@@ -124,7 +124,7 @@ class TestMonitoringMetricsContract:
         Expected: JSON response with business-specific metrics
         """
         # This test WILL FAIL until custom metrics API is implemented
-        response = await http_client.get(f"{monitoring_base_url}/metrics/custom")
+        response = await self.http_client.get(f"{monitoring_base_url}/metrics/custom")
 
         assert (
             response.status_code == 200
@@ -161,7 +161,7 @@ class TestMonitoringMetricsContract:
         test_services = ["orchestrator", "api_gateway", "caching"]
 
         for service in test_services:
-            response = await http_client.get(
+            response = await self.http_client.get(
                 f"{monitoring_base_url}/metrics/custom?service={service}"
             )
 
@@ -194,7 +194,7 @@ class TestMonitoringMetricsContract:
         timeframes = ["1h", "6h", "24h"]
 
         for timeframe in timeframes:
-            response = await http_client.get(
+            response = await self.http_client.get(
                 f"{monitoring_base_url}/metrics/custom?timeframe={timeframe}"
             )
 
@@ -225,7 +225,7 @@ class TestMonitoringMetricsContract:
         for _ in range(5):
             start_time = time.time()
 
-            response = await http_client.get(f"{monitoring_base_url}/metrics")
+            response = await self.http_client.get(f"{monitoring_base_url}/metrics")
 
             response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
             response_times.append(response_time)
@@ -261,7 +261,7 @@ class TestHealthCheckEndpoints:
         Expected: Health status with service dependencies
         """
         # This test WILL FAIL until health monitoring is implemented
-        response = await http_client.get(f"{monitoring_base_url}/health")
+        response = await self.http_client.get(f"{monitoring_base_url}/health")
 
         assert response.status_code in [
             200,
@@ -296,7 +296,7 @@ class TestHealthCheckEndpoints:
         test_services = ["orchestrator", "api-gateway", "cache-service"]
 
         for service in test_services:
-            response = await http_client.get(f"{monitoring_base_url}/health/{service}")
+            response = await self.http_client.get(f"{monitoring_base_url}/health/{service}")
 
             assert response.status_code in [
                 200,
@@ -326,7 +326,7 @@ class TestHealthCheckEndpoints:
         Expected: Health response with optional metrics data
         """
         # This test WILL FAIL until metrics integration is implemented
-        response = await http_client.get(
+        response = await self.http_client.get(
             f"{monitoring_base_url}/health/orchestrator?include_metrics=true"
         )
 
@@ -367,7 +367,7 @@ class TestAlertingEndpoints:
         Expected: List of active alerts with severity and status
         """
         # This test WILL FAIL until alerting system is implemented
-        response = await http_client.get(f"{monitoring_base_url}/alerts")
+        response = await self.http_client.get(f"{monitoring_base_url}/alerts")
 
         assert (
             response.status_code == 200
@@ -415,7 +415,7 @@ class TestAlertingEndpoints:
             "description": "Alert when response time exceeds 500ms",
         }
 
-        response = await http_client.post(
+        response = await self.http_client.post(
             f"{monitoring_base_url}/alerts", json=test_alert_rule
         )
 

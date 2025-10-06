@@ -7,9 +7,9 @@ Tests that builds produce identical outputs across different environments.
 import hashlib
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import Dict, List
 
 # Configure logging
@@ -55,7 +55,7 @@ class BuildReproducibilityValidator:
             logger.error("❌ Builds are not reproducible!")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Build reproducibility validation failed: %s", e)
             return False
 
@@ -100,7 +100,7 @@ class BuildReproducibilityValidator:
 
             logger.info("✅ Scenario '%s' completed", scenario["name"])
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Scenario '%s' failed: %s", scenario["name"], e)
             raise
 
@@ -257,7 +257,7 @@ class BuildReproducibilityValidator:
             logger.info("✅ CI pipeline compatibility test passed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ CI pipeline compatibility test failed: %s", e)
             return False
 
@@ -339,7 +339,7 @@ async def main(self) -> None:
         logger.error("💥 Some validation checks failed!")
         return 1
 
-    except Exception as e:
+    except (pydantic.ValidationError, ValueError) as e:
         logger.error("Unexpected error: %s", e)
         return 1
 

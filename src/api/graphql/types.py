@@ -1,3 +1,4 @@
+from typing import List
 """GraphQL Types.
 
 Defines the GraphQL schema types for the PAKE System including entities,

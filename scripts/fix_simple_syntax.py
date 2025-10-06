@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Simple, targeted syntax fixes for remaining errors."""
 
-import subprocess
 from pathlib import Path
+import subprocess
 
 
 def get_parse_errors():
@@ -56,7 +56,7 @@ def fix_bare_except_pass(file_path: Path, line_num: int) -> bool:
 
         return False
 
-    except Exception as e:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error fixing {file_path}:{line_num} - {e}")
         return False
 
@@ -82,7 +82,7 @@ def main():
                     if fix_bare_except_pass(path, line_num):
                         fixed += 1
                         print(f"✓ Fixed {file_path}:{line_num}")
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"Failed to parse error line: {error[:100]} - {e}")
 
     print(f"\n✅ Fixed {fixed} errors")

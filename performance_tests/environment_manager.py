@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+config
 """PAKE System Performance Testing Environment Configuration.
 ========================================================
 
@@ -14,12 +17,12 @@ Key Features:
 
 import builtins
 import contextlib
+from dataclasses import dataclass
 import json
 import os
+from pathlib import Path
 import subprocess
 import time
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import docker
@@ -130,7 +133,7 @@ class PerformanceEnvironmentManager:
             print(f"Environment '{env_name}' provisioned successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Failed to provision environment '{env_name}': {e}")
             return False
 
@@ -175,7 +178,7 @@ class PerformanceEnvironmentManager:
         if config.name == "local":
             # Set environment variables
             env_vars = {
-                "DATABASE_URL": config.database_url,
+                "DATABASE_URL": self.config.database_url,
                 "REDIS_URL": config.redis_url,
                 "SECRET_KEY": "perf-test-secret-key",
                 "USE_VAULT": "false",
@@ -197,7 +200,7 @@ class PerformanceEnvironmentManager:
                     env={**os.environ, **env_vars},
                 )
                 print("Application started")
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f"Failed to start application: {e}")
 
     def _wait_for_services(self) -> None:
@@ -213,8 +216,11 @@ class PerformanceEnvironmentManager:
                 if response.status_code == 200:
                     print("Services are ready")
                     return True
-            except:
-                pass
+            except (ConnectionError, TimeoutError, aiohttp.ClientError) as e as e:
+
+                logger.debug(f"Exception in environment_manager.py: {e}")
+
+                # Continue gracefully
 
             time.sleep(2)
 
@@ -248,7 +254,7 @@ class PerformanceEnvironmentManager:
             print("All health checks passed")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"Health check error: {e}")
             return False
 
@@ -270,9 +276,12 @@ class PerformanceEnvironmentManager:
                         container = self.docker_client.containers.get(container_name)
                         container.stop()
                         print(f"Stopped container: {container_name}")
-                    except docker.errors.NotFound:
-                        pass
-            except Exception as e:
+                    except docker.errors.NotFound as e:
+
+                        logger.debug(f"Exception in environment_manager.py: {e}")
+
+                        # Continue gracefully
+            except (ValueError, RuntimeError) as e:
                 print(f"Cleanup error: {e}")
 
 
@@ -328,7 +337,7 @@ class PerformanceTestRunner:
 
             return results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": str(e)}
 
         finally:
@@ -389,7 +398,7 @@ class PerformanceTestRunner:
 
             return results
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"success": False, "error": str(e)}
 
         finally:

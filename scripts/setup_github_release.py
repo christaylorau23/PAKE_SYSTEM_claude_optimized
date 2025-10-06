@@ -4,10 +4,10 @@ GitHub Release Setup Script
 Creates a comprehensive GitHub release for Phase 9B completion
 """
 
+from datetime import UTC, datetime
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime
 
 
 def run_command(self) -> None:

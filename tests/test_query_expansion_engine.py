@@ -70,14 +70,14 @@ class TestQueryExpansionEngine:
         configuration and component setup.
         """
         # Check engine initialization
-        assert expansion_engine.config is not None
-        assert expansion_engine.query_analyzer is not None
-        assert len(expansion_engine.expanders) > 0
+        assert self.expansion_engine.config is not None
+        assert self.expansion_engine.query_analyzer is not None
+        assert len(self.expansion_engine.expanders) > 0
 
         # Check initial state
-        assert len(expansion_engine.expansion_cache) == 0
-        assert expansion_engine.stats["total_expansions"] == 0
-        assert expansion_engine.stats["cache_hits"] == 0
+        assert len(self.expansion_engine.expansion_cache) == 0
+        assert self.expansion_engine.stats["total_expansions"] == 0
+        assert self.expansion_engine.stats["cache_hits"] == 0
 
     async def test_should_expand_simple_query_with_relevant_terms(self) -> None:
         """
@@ -86,7 +86,7 @@ class TestQueryExpansionEngine:
         """
         query = "machine learning algorithms"
 
-        expanded = await expansion_engine.expand_query(query)
+        expanded = await self.expansion_engine.expand_query(query)
 
         # Verify expansion structure
         assert isinstance(expanded, ExpandedQuery)
@@ -124,8 +124,8 @@ class TestQueryExpansionEngine:
         """
         results_by_type = {}
 
-        for query_type, query in sample_queries.items():
-            expanded = await expansion_engine.expand_query(query)
+        for query_type, query in self.sample_queries.items():
+            expanded = await self.expansion_engine.expand_query(query)
             results_by_type[query_type] = expanded
 
             # Basic validation for all query types
@@ -185,7 +185,7 @@ class TestQueryExpansionEngine:
         results_by_strategy = {}
 
         for strategy in strategies:
-            expanded = await expansion_engine.expand_query(
+            expanded = await self.expansion_engine.expand_query(
                 query,
                 expansion_strategy=strategy,
             )
@@ -221,7 +221,7 @@ class TestQueryExpansionEngine:
         results_by_scope = {}
 
         for scope in scopes:
-            expanded = await expansion_engine.expand_query(query, expansion_scope=scope)
+            expanded = await self.expansion_engine.expand_query(query, expansion_scope=scope)
             results_by_scope[scope] = expanded
 
             # Verify expansion quality
@@ -260,12 +260,12 @@ class TestQueryExpansionEngine:
 
         # First expansion (cache miss)
         start_time = time.time()
-        result1 = await expansion_engine.expand_query(query)
+        result1 = await self.expansion_engine.expand_query(query)
         first_time = time.time() - start_time
 
         # Second expansion (should be cached)
         start_time = time.time()
-        result2 = await expansion_engine.expand_query(query)
+        result2 = await self.expansion_engine.expand_query(query)
         second_time = time.time() - start_time
 
         # Verify results are consistent
@@ -274,8 +274,8 @@ class TestQueryExpansionEngine:
         assert len(result1.expanded_terms) == len(result2.expanded_terms)
 
         # Verify cache utilization
-        stats = expansion_engine.get_expansion_statistics()
-        if expansion_engine.config.enable_expansion_caching:
+        stats = self.expansion_engine.get_expansion_statistics()
+        if self.expansion_engine.config.enable_expansion_caching:
             assert stats["cache_hits"] > 0
             assert stats["cache_hit_rate"] > 0
             # Note: Timing comparison removed due to precision issues with very fast
@@ -300,7 +300,7 @@ class TestQueryExpansionEngine:
         results = []
 
         for query in test_queries:
-            expanded = await expansion_engine.expand_query(query)
+            expanded = await self.expansion_engine.expand_query(query)
             results.append(expanded)
 
         total_time = time.time() - start_time
@@ -315,7 +315,7 @@ class TestQueryExpansionEngine:
         assert total_time < 30.0
 
         # Check statistics
-        stats = expansion_engine.get_expansion_statistics()
+        stats = self.expansion_engine.get_expansion_statistics()
         assert stats["total_expansions"] >= len(test_queries)
 
     async def test_should_handle_empty_and_invalid_queries_gracefully(self) -> None:
@@ -324,22 +324,22 @@ class TestQueryExpansionEngine:
         without errors and with appropriate fallback behavior.
         """
         # Test empty query
-        empty_result = await expansion_engine.expand_query("")
+        empty_result = await self.expansion_engine.expand_query("")
         assert isinstance(empty_result, ExpandedQuery)
         assert empty_result.original_query == ""
         assert empty_result.final_query == ""
 
         # Test whitespace-only query
-        whitespace_result = await expansion_engine.expand_query("   ")
+        whitespace_result = await self.expansion_engine.expand_query("   ")
         assert isinstance(whitespace_result, ExpandedQuery)
 
         # Test very short query
-        short_result = await expansion_engine.expand_query("AI")
+        short_result = await self.expansion_engine.expand_query("AI")
         assert isinstance(short_result, ExpandedQuery)
         assert short_result.original_query == "AI"
 
         # Test special characters
-        special_result = await expansion_engine.expand_query("@#$%^&*()")
+        special_result = await self.expansion_engine.expand_query("@#$%^&*()")
         assert isinstance(special_result, ExpandedQuery)
 
         # All should have valid timestamps and minimal processing time
@@ -363,7 +363,7 @@ class TestQueryExpansionEngine:
 
         # Define concurrent expansion operations
         async def expand_operation(self) -> None:
-            return await expansion_engine.expand_query(query)
+            return await self.expansion_engine.expand_query(query)
 
         # Run concurrent operations
         tasks = [
@@ -379,7 +379,7 @@ class TestQueryExpansionEngine:
             assert isinstance(result, ExpandedQuery)
 
         # Verify data integrity
-        stats = expansion_engine.get_expansion_statistics()
+        stats = self.expansion_engine.get_expansion_statistics()
         assert stats["total_expansions"] >= len(concurrent_queries)
 
     async def test_should_clear_cache_and_reset_statistics_properly(self) -> None:
@@ -390,19 +390,19 @@ class TestQueryExpansionEngine:
         # Perform some expansions
         queries = ["machine learning", "artificial intelligence", "data science"]
         for query in queries:
-            await expansion_engine.expand_query(query)
+            await self.expansion_engine.expand_query(query)
 
         # Verify cache and stats have data
-        stats_before = expansion_engine.get_expansion_statistics()
+        stats_before = self.expansion_engine.get_expansion_statistics()
         assert stats_before["total_expansions"] > 0
 
         # Clear cache
-        await expansion_engine.clear_cache()
+        await self.expansion_engine.clear_cache()
 
         # Verify cache is cleared but stats remain
-        assert len(expansion_engine.expansion_cache) == 0
+        assert len(self.expansion_engine.expansion_cache) == 0
 
-        stats_after = expansion_engine.get_expansion_statistics()
+        stats_after = self.expansion_engine.get_expansion_statistics()
         # Stats should remain
         assert stats_after["total_expansions"] == stats_before["total_expansions"]
         assert stats_after["cached_expansions"] == 0
@@ -451,7 +451,7 @@ class TestExpansionComponents:
         ]
 
         for query, expected_type in test_cases:
-            analysis = await query_analyzer.analyze_query(query)
+            analysis = await self.query_analyzer.analyze_query(query)
 
             assert isinstance(analysis, QueryAnalysis)
             assert analysis.original_query == query
@@ -471,9 +471,9 @@ class TestExpansionComponents:
         with appropriate confidence scores.
         """
         query = "machine learning algorithms"
-        analysis = await query_analyzer.analyze_query(query)
+        analysis = await self.query_analyzer.analyze_query(query)
 
-        expansions = await synonym_expander.generate_expansions(query, analysis)
+        expansions = await self.synonym_expander.generate_expansions(query, analysis)
 
         # Verify expansion structure
         assert isinstance(expansions, list)
@@ -500,9 +500,9 @@ class TestExpansionComponents:
         with cluster-based confidence scoring.
         """
         query = "neural networks deep learning"
-        analysis = await query_analyzer.analyze_query(query)
+        analysis = await self.query_analyzer.analyze_query(query)
 
-        expansions = await semantic_expander.generate_expansions(query, analysis)
+        expansions = await self.semantic_expander.generate_expansions(query, analysis)
 
         # Verify expansion structure
         assert isinstance(expansions, list)
@@ -548,7 +548,7 @@ class TestExpansionComponents:
                 complexity_score=0.6,
             )
 
-            expansions = await contextual_expander.generate_expansions(query, analysis)
+            expansions = await self.contextual_expander.generate_expansions(query, analysis)
 
             # Verify expansion structure
             assert isinstance(expansions, list)

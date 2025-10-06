@@ -4,8 +4,8 @@ Simple Security Tests for PAKE System
 Tests that don't require external dependencies
 """
 
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -115,8 +115,6 @@ class TestServiceConfigSecurity:
         try:
             from configs.service_config import (
                 Environment as ConfigEnvironment,
-            )
-            from configs.service_config import (
                 SecurityConfig,
                 ServiceConfig,
             )

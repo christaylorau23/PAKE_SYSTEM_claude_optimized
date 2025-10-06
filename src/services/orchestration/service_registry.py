@@ -6,9 +6,9 @@ Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
 import asyncio
-import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
+import uuid
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -36,6 +36,12 @@ class ServiceUpdate(BaseModel):
     resource_requirements: Dict[str, Any] | None = None
 
 
+class HealthConfig(BaseModel):
+    """Health check configuration."""
+    health_check_interval_seconds: int | None = None
+    health_timeout_seconds: int | None = None
+
+
 # In-memory storage for TDD (will be replaced with database)
 registered_services: dict[str, Dict[str, Any]] = {}
 service_health_status: dict[str, Dict[str, Any]] = {}
@@ -49,7 +55,7 @@ app = FastAPI(
 
 
 @app.post("/api/v1/services/register", status_code=201)
-async def register_service(self) -> None:
+async def register_service(service_config: ServiceConfig) -> None:
     """Minimal service registration to satisfy test_service_registry_integration.py.
 
     This implements just enough to pass the integration tests:
@@ -120,7 +126,7 @@ async def list_services(
 
 
 @app.get("/api/v1/services/{service_id}")
-async def get_service(self) -> None:
+async def get_service(service_id: str) -> None:
     """Get individual service configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -129,7 +135,7 @@ async def get_service(self) -> None:
 
 
 @app.put("/api/v1/services/{service_id}")
-async def update_service(self) -> None:
+async def update_service(service_id: str, update: ServiceUpdate) -> None:
     """Update service configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -154,7 +160,7 @@ async def update_service(self) -> None:
 
 
 @app.delete("/api/v1/services/{service_id}")
-async def deregister_service(self) -> None:
+async def deregister_service(service_id: str) -> None:
     """Remove service from registry."""
     if service_id in registered_services:
         del registered_services[service_id]
@@ -203,7 +209,7 @@ async def get_service_health(
 
 
 @app.get("/api/v1/services/{service_id}/dependencies")
-async def get_service_dependencies(self) -> None:
+async def get_service_dependencies(service_id: str) -> None:
     """Get service dependencies."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -221,7 +227,7 @@ async def get_service_dependencies(self) -> None:
 
 
 @app.put("/api/v1/services/{service_id}/health-config")
-async def update_health_config(self) -> None:
+async def update_health_config(service_id: str, config: HealthConfig) -> None:
     """Update health check configuration."""
     if service_id not in registered_services:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -242,7 +248,7 @@ async def update_health_config(self) -> None:
     return {"status": "updated", "service_id": service_id}
 
 
-async def mock_health_monitoring(self) -> None:
+async def mock_health_monitoring(service_id: str) -> None:
     """Mock health monitoring background task."""
     while service_id in service_health_status:
         # Update health status

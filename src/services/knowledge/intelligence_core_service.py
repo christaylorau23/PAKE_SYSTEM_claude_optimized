@@ -223,7 +223,7 @@ class IntelligenceCoreService:
             logger.info("Intelligence Core Service initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Intelligence Core Service: %s", e)
             return False
 
@@ -243,7 +243,7 @@ class IntelligenceCoreService:
             notes = list(self.vault.md_notes)
             logger.info("Connected to Obsidian vault with %s notes", len(notes))
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Obsidian vault: %s", e)
             raise
 
@@ -266,7 +266,7 @@ class IntelligenceCoreService:
 
             logger.info("Connected to Neo4j successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize Neo4j: %s", e)
             raise
 
@@ -275,7 +275,7 @@ class IntelligenceCoreService:
         try:
             health = await self.vector_db.health_check()
             return health.get("status") == "healthy"
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Vector database verification failed: %s", e)
             return False
 
@@ -284,7 +284,7 @@ class IntelligenceCoreService:
         try:
             health = await self.nlp_service.health_check()
             return health.get("status") == "healthy"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("NLP service verification failed: %s", e)
             return False
 
@@ -311,13 +311,13 @@ class IntelligenceCoreService:
                 for query in schema_queries:
                     try:
                         await session.run(query)
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError, OSError) as e:
                         if "already exists" not in str(e).lower():
                             logger.warning("Schema setup warning: %s", e)
 
                 logger.info("Knowledge graph schema setup complete")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error setting up knowledge graph schema: %s", e)
             raise
 
@@ -335,7 +335,7 @@ class IntelligenceCoreService:
 
             logger.info("Initial knowledge synchronization complete")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error during initial sync: %s", e)
             raise
 
@@ -408,7 +408,7 @@ class IntelligenceCoreService:
             )
             return knowledge_item
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error adding knowledge item: %s", e)
             raise
 
@@ -465,7 +465,7 @@ class IntelligenceCoreService:
             # Store in Neo4j knowledge graph
             await self._store_in_knowledge_graph(item, analysis)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing knowledge item: %s", e)
             raise
 
@@ -562,7 +562,7 @@ class IntelligenceCoreService:
                     "Stored knowledge item %s in Neo4j with %s entities", item.id, len(analysis.entities),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error storing in knowledge graph: %s", e)
             raise
 
@@ -640,7 +640,7 @@ class IntelligenceCoreService:
             )
             return query_result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error querying knowledge: %s", e)
             raise
 
@@ -670,7 +670,7 @@ class IntelligenceCoreService:
 
             return items
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in semantic search: %s", e)
             return []
 
@@ -699,7 +699,7 @@ class IntelligenceCoreService:
 
                 return items
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in graph search: %s", e)
             return []
 
@@ -745,7 +745,7 @@ class IntelligenceCoreService:
 
             return merged_results[: query.limit]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in hybrid search: %s", e)
             return []
 
@@ -789,7 +789,7 @@ class IntelligenceCoreService:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error loading knowledge item %s: %s", item_id, e)
             return None
 
@@ -827,7 +827,7 @@ class IntelligenceCoreService:
 
                     sync_stats["synced"] += 1
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     sync_stats["failed"] += 1
                     sync_stats["errors"].append(f"Error processing {note.path}: {e}")
                     logger.warning("Failed to sync note %s: %s", note.path, e)
@@ -842,7 +842,7 @@ class IntelligenceCoreService:
                 errors=sync_stats["errors"],
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error syncing Obsidian vault: %s", e)
             processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return SyncResult(
@@ -924,7 +924,7 @@ class IntelligenceCoreService:
                     neo4j_stats["relationships"] = (
                         record["relationships"] if record else 0
                     )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 neo4j_stats = {"error": str(e)}
 
             return {
@@ -939,7 +939,7 @@ class IntelligenceCoreService:
                 "knowledge_graph": neo4j_stats,
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error getting service stats: %s", e)
             return {"error": str(e)}
 
@@ -961,8 +961,11 @@ class IntelligenceCoreService:
                     result = await session.run("RETURN 1 as test")
                     test_record = await result.single()
                     checks["neo4j_connection"] = test_record["test"] == 1
-            except Exception:
-                pass
+            except Exception as e:
+
+                logger.debug(f"Exception in intelligence_core_service.py: {e}")
+
+                # Continue gracefully
 
             # Test vector database
             vector_health = await self.vector_db.health_check()
@@ -982,7 +985,7 @@ class IntelligenceCoreService:
                 "vault_notes": len(list(self.vault.md_notes)) if self.vault else 0,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
@@ -1005,7 +1008,7 @@ class IntelligenceCoreService:
                 await self.vector_db.close()
                 logger.info("Vector database connection closed")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error closing intelligence core: %s", e)
 
 

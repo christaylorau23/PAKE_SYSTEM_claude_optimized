@@ -32,14 +32,14 @@ class TestEnhancedLoggingExample:
         logger.error("Error message")
 
         # Verify logs were captured
-        assert capture_logs.has_info("Info message")
-        assert capture_logs.has_warning("Warning message")
-        assert capture_logs.has_error("Error message")
+        assert self.capture_logs.has_info("Info message")
+        assert self.capture_logs.has_warning("Warning message")
+        assert self.capture_logs.has_error("Error message")
 
     def test_structured_logging_with_context(self) -> None:
         """Test structured logging with context and metadata"""
         # Log with structured data
-        structured_logger.info(
+        self.structured_logger.info(
             "User action performed",
             user_id="12345",
             action="login",
@@ -48,7 +48,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Log database operation
-        structured_logger.log_database(
+        self.structured_logger.log_database(
             "User query executed",
             operation="SELECT",
             table="users",
@@ -57,7 +57,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Log API call
-        structured_logger.log_api_call(
+        self.structured_logger.log_api_call(
             "API request processed",
             method="POST",
             url="/api/v1/users",
@@ -72,15 +72,15 @@ class TestEnhancedLoggingExample:
 
         # Simulate database operation
         time.sleep(0.01)  # 10ms
-        test_logger.log_performance("database_query", time.time() - start_time)
+        self.test_logger.log_performance("database_query", time.time() - start_time)
 
         # Simulate API call
         start_time = time.time()
         time.sleep(0.02)  # 20ms
-        test_logger.log_performance("api_call", time.time() - start_time)
+        self.test_logger.log_performance("api_call", time.time() - start_time)
 
         # Log memory usage (simulated)
-        test_logger.info(
+        self.test_logger.info(
             "Memory usage tracked", memory_mb=128.5, operation="test_operation"
         )
 
@@ -91,7 +91,7 @@ class TestEnhancedLoggingExample:
             msg = "Test error for logging demonstration"
             raise ValueError(msg)
         except ValueError as e:
-            structured_logger.error(
+            self.structured_logger.error(
                 "Test error occurred",
                 error=e,
                 context="test_error_logging",
@@ -102,7 +102,7 @@ class TestEnhancedLoggingExample:
     @pytest.mark.asyncio
     async def test_async_operation_logging(self) -> None:
         """Test logging in async operations"""
-        structured_logger.info("Starting async operation")
+        self.structured_logger.info("Starting async operation")
 
         # Simulate async database operation
         async def mock_db_operation(self) -> None:
@@ -113,7 +113,7 @@ class TestEnhancedLoggingExample:
         result = await mock_db_operation()
         duration = time.time() - start_time
 
-        structured_logger.log_database(
+        self.structured_logger.log_database(
             "Async database operation completed",
             operation="SELECT",
             table="test_table",
@@ -126,7 +126,7 @@ class TestEnhancedLoggingExample:
     def test_business_event_logging(self) -> None:
         """Test business event logging"""
         # Log user registration
-        structured_logger.business(
+        self.structured_logger.business(
             "User registered successfully",
             event="user_registration",
             user_id="new_user_123",
@@ -141,7 +141,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Log order creation
-        structured_logger.business(
+        self.structured_logger.business(
             "Order created",
             event="order_creation",
             user_id="user_123",
@@ -154,7 +154,7 @@ class TestEnhancedLoggingExample:
     def test_security_event_logging(self) -> None:
         """Test security event logging"""
         # Log successful login
-        structured_logger.security(
+        self.structured_logger.security(
             "User login successful",
             event="login",
             user_id="user_123",
@@ -164,7 +164,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Log failed login attempt
-        structured_logger.security(
+        self.structured_logger.security(
             "Failed login attempt",
             event="login",
             user_id="unknown_user",
@@ -176,7 +176,7 @@ class TestEnhancedLoggingExample:
 
     def test_timer_context_manager(self) -> None:
         """Test timer context manager for automatic timing"""
-        with structured_logger.timer("expensive_operation"):
+        with self.structured_logger.timer("expensive_operation"):
             # Simulate expensive operation
             time.sleep(0.05)
 
@@ -189,7 +189,7 @@ class TestEnhancedLoggingExample:
     def test_correlation_id_tracking(self) -> None:
         """Test correlation ID for request tracking"""
         # Create logger with correlation ID
-        request_logger = structured_logger.with_correlation_id("req_12345")
+        request_logger = self.structured_logger.with_correlation_id("req_12345")
 
         request_logger.info("Request started")
 
@@ -211,7 +211,7 @@ class TestEnhancedLoggingExample:
     def test_user_context_logging(self) -> None:
         """Test user context logging for audit trails"""
         # Create logger with user context
-        user_logger = structured_logger.with_user("user_123", "john_doe")
+        user_logger = self.structured_logger.with_user("user_123", "john_doe")
 
         user_logger.info("User action performed", action="view_profile")
         user_logger.business(
@@ -225,7 +225,7 @@ class TestEnhancedLoggingExample:
     def test_request_context_logging(self) -> None:
         """Test request context logging for API requests"""
         # Create logger with request context
-        request_logger = structured_logger.with_request(
+        request_logger = self.structured_logger.with_request(
             request_id="req_67890",
             method="POST",
             path="/api/v1/tasks",
@@ -242,10 +242,10 @@ class TestEnhancedLoggingExample:
     def test_comprehensive_workflow_logging(self) -> None:
         """Test comprehensive workflow with all logging types"""
         # Start workflow
-        structured_logger.info("Starting comprehensive workflow")
+        self.structured_logger.info("Starting comprehensive workflow")
 
         # User authentication
-        structured_logger.security(
+        self.structured_logger.security(
             "User authenticated",
             event="authentication",
             user_id="user_456",
@@ -253,11 +253,11 @@ class TestEnhancedLoggingExample:
         )
 
         # Database operations
-        structured_logger.log_database(
+        self.structured_logger.log_database(
             "User data retrieved", operation="SELECT", table="users", duration=0.01
         )
 
-        structured_logger.log_database(
+        self.structured_logger.log_database(
             "User preferences updated",
             operation="UPDATE",
             table="user_preferences",
@@ -265,7 +265,7 @@ class TestEnhancedLoggingExample:
         )
 
         # External API calls
-        structured_logger.log_api_call(
+        self.structured_logger.log_api_call(
             "External service called",
             method="GET",
             url="/api/external/user-data",
@@ -274,7 +274,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Business events
-        structured_logger.business(
+        self.structured_logger.business(
             "User session started",
             event="session_start",
             user_id="user_456",
@@ -283,7 +283,7 @@ class TestEnhancedLoggingExample:
         )
 
         # Performance metrics
-        structured_logger.performance(
+        self.structured_logger.performance(
             "Workflow completed",
             operation="comprehensive_workflow",
             duration=0.18,
@@ -291,7 +291,7 @@ class TestEnhancedLoggingExample:
             cpu_percent=15.5,
         )
 
-        structured_logger.info("Comprehensive workflow completed successfully")
+        self.structured_logger.info("Comprehensive workflow completed successfully")
 
     def test_error_handling_with_logging(self) -> None:
         """Test error handling with comprehensive logging"""
@@ -299,7 +299,7 @@ class TestEnhancedLoggingExample:
             # Simulate an operation that might fail
             result = 10 / 0
         except ZeroDivisionError as e:
-            structured_logger.error(
+            self.structured_logger.error(
                 "Division by zero error",
                 error=e,
                 context="mathematical_operation",
@@ -308,7 +308,7 @@ class TestEnhancedLoggingExample:
             )
 
             # Log recovery action
-            structured_logger.info(
+            self.structured_logger.info(
                 "Error recovery attempted",
                 recovery_action="use_default_value",
                 default_value=0,
@@ -321,12 +321,12 @@ class TestEnhancedLoggingExample:
         mock_service.get_data.return_value = {"status": "success", "data": "test"}
 
         # Log service call
-        structured_logger.info("Calling external service")
+        self.structured_logger.info("Calling external service")
 
         # Simulate service call
         result = mock_service.get_data()
 
-        structured_logger.log_api_call(
+        self.structured_logger.log_api_call(
             "External service response",
             method="GET",
             url="/api/external",
@@ -339,20 +339,20 @@ class TestEnhancedLoggingExample:
     @pytest.mark.slow
     def test_slow_operation_logging(self) -> None:
         """Test logging for slow operations (marked as slow test)"""
-        structured_logger.info("Starting slow operation")
+        self.structured_logger.info("Starting slow operation")
 
         # Simulate slow operation
         start_time = time.time()
         time.sleep(0.1)  # 100ms - should trigger slow test warning
         duration = time.time() - start_time
 
-        structured_logger.performance(
+        self.structured_logger.performance(
             "Slow operation completed",
             operation="slow_test_operation",
             duration=duration,
         )
 
-        structured_logger.info("Slow operation completed")
+        self.structured_logger.info("Slow operation completed")
 
 
 class TestLoggingIntegration:
@@ -366,7 +366,7 @@ class TestLoggingIntegration:
         logger.info("Integration test message")
 
         # Verify message was captured
-        assert "Integration test message" in caplog.text
+        assert "Integration test message" in self.caplog.text
 
     def test_structured_and_standard_logging_mix(self) -> None:
         """Test mixing structured and standard logging"""
@@ -377,18 +377,18 @@ class TestLoggingIntegration:
         std_logger.info("Standard log message")
 
         # Structured logging
-        structured_logger.info(
+        self.structured_logger.info(
             "Structured log message", test_type="mixed_logging", standard_logged=True
         )
 
     def test_logging_levels_and_filtering(self) -> None:
         """Test different logging levels and filtering"""
         # Test all log levels
-        structured_logger.debug("Debug message", level="debug")
-        structured_logger.info("Info message", level="info")
-        structured_logger.warning("Warning message", level="warning")
-        structured_logger.error("Error message", level="error")
-        structured_logger.critical("Critical message", level="critical")
+        self.structured_logger.debug("Debug message", level="debug")
+        self.structured_logger.info("Info message", level="info")
+        self.structured_logger.warning("Warning message", level="warning")
+        self.structured_logger.error("Error message", level="error")
+        self.structured_logger.critical("Critical message", level="critical")
 
 
 if __name__ == "__main__":

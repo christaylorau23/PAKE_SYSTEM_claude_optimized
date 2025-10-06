@@ -104,16 +104,16 @@ class TestAnomalyToActionEngine:
 
     def test_engine_initialization(self) -> None:
         """Test that the engine initializes correctly"""
-        assert engine.task_manager is not None
-        assert engine.workflow_rules is not None
-        assert engine.incident_counter >= 0
-        assert engine.active_incidents is not None
+        assert self.engine.task_manager is not None
+        assert self.engine.workflow_rules is not None
+        assert self.engine.incident_counter >= 0
+        assert self.engine.active_incidents is not None
 
     def test_process_security_alert_creates_incident_task(self) -> None:
         """Test that security alerts automatically create incident tasks"""
         alert = sample_security_alerts[0]  # HIGH severity failed login
 
-        result = asyncio.run(engine.process_security_alert(alert))
+        result = asyncio.run(self.engine.process_security_alert(alert))
 
         # Should create an incident task
         assert result.task_created is True
@@ -126,7 +126,7 @@ class TestAnomalyToActionEngine:
         """Test that CRITICAL alerts create immediate high-priority tasks"""
         alert = sample_security_alerts[1]  # CRITICAL SQL injection
 
-        result = asyncio.run(engine.process_security_alert(alert))
+        result = asyncio.run(self.engine.process_security_alert(alert))
 
         assert result.task_created is True
         assert result.priority == IncidentPriority.CRITICAL
@@ -138,7 +138,7 @@ class TestAnomalyToActionEngine:
         """Test that LOW severity alerts may be filtered or batched"""
         alert = sample_security_alerts[3]  # LOW severity rate limiting
 
-        result = asyncio.run(engine.process_security_alert(alert))
+        result = asyncio.run(self.engine.process_security_alert(alert))
 
         # Depending on configuration, low severity might be batched
         if result.task_created:
@@ -151,7 +151,7 @@ class TestAnomalyToActionEngine:
         """Test that created tasks include all relevant context and data"""
         alert = sample_security_alerts[0]
 
-        result = asyncio.run(engine.process_security_alert(alert))
+        result = asyncio.run(self.engine.process_security_alert(alert))
 
         assert result.task_created is True
         # Verify task includes comprehensive context
@@ -167,8 +167,8 @@ class TestAnomalyToActionEngine:
         alert = sample_security_alerts[0]
 
         # Process same alert twice
-        result1 = asyncio.run(engine.process_security_alert(alert))
-        result2 = asyncio.run(engine.process_security_alert(alert))
+        result1 = asyncio.run(self.engine.process_security_alert(alert))
+        result2 = asyncio.run(self.engine.process_security_alert(alert))
 
         # Second alert should be deduplicated
         assert result1.task_created is True
@@ -191,7 +191,7 @@ class TestAnomalyToActionEngine:
 
         results = []
         for alert in alerts:
-            result = asyncio.run(engine.process_security_alert(alert))
+            result = asyncio.run(self.engine.process_security_alert(alert))
             results.append(result)
 
         # First alert creates task, subsequent ones should be correlated
@@ -331,7 +331,7 @@ class TestIncidentResponseWorkflow:
             message="Potential data exfiltration detected",
         )
 
-        response = asyncio.run(workflow.initiate_response(alert))
+        response = asyncio.run(self.workflow.initiate_response(alert))
 
         assert response.incident_declared is True
         assert response.response_team_notified is True
@@ -354,8 +354,8 @@ class TestIncidentResponseWorkflow:
             "Medium",
         )
 
-        critical_response = asyncio.run(workflow.initiate_response(critical_alert))
-        medium_response = asyncio.run(workflow.initiate_response(medium_alert))
+        critical_response = asyncio.run(self.workflow.initiate_response(critical_alert))
+        medium_response = asyncio.run(self.workflow.initiate_response(medium_alert))
 
         # Critical should have more aggressive response
         assert critical_response.escalation_level > medium_response.escalation_level
@@ -383,8 +383,8 @@ class TestTaskManagementIntegration:
         result = asyncio.run(engine.process_security_alert(alert))
 
         # Verify task manager was called
-        task_manager.create_task.assert_called_once()
-        call_args = task_manager.create_task.call_args[0]
+        self.task_manager.create_task.assert_called_once()
+        call_args = self.task_manager.create_task.call_args[0]
         created_task = call_args[0]
 
         assert created_task.title is not None
@@ -410,10 +410,10 @@ class TestTaskManagementIntegration:
             result = asyncio.run(engine.process_security_alert(alert))
 
         # Verify assignments are appropriate for alert types
-        assert task_manager.create_task.call_count == 3
+        assert self.task_manager.create_task.call_count == 3
 
         # Check that different alert types get assigned to appropriate teams/individuals
-        calls = task_manager.create_task.call_args_list
+        calls = self.task_manager.create_task.call_args_list
         sql_injection_task = calls[0][0][0]
         failed_login_task = calls[1][0][0]
         suspicious_access_task = calls[2][0][0]

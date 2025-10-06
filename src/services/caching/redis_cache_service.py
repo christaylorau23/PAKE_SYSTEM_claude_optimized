@@ -4,15 +4,21 @@ Provides multi-level caching for search results, API responses, and user data.
 """
 
 import asyncio
-import logging
 
 # import pickle  # SECURITY: Replaced with secure serialization
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import Any, Dict, List, TYPE_CHECKING
 
 import redis.asyncio as redis
+
+import sqlalchemy
+import sqlalchemy.exc
+import pydantic
+import psycopg2
+import asyncpg
 
 from src.utils.secure_serialization import deserialize, serialize
 
@@ -62,7 +68,7 @@ class CacheMetadata:
 class CacheEntry:
     """Wrapper for cached data with metadata."""
 
-    def __init__(self) -> None:
+    def __init__(self, data: Any, metadata: CacheMetadata) -> None:
         self.data = data
         self.metadata = metadata
 
@@ -103,7 +109,7 @@ class RedisCacheService:
     - Automatic cleanup.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: CacheConfig | None = None, redis_url: str = "redis://localhost:6379/0", default_ttl: int = 3600, max_memory_cache_size: int = 1000) -> None:
         if config:
             self.redis_url = config.redis_url
             self.default_ttl = config.default_ttl
@@ -145,7 +151,7 @@ class RedisCacheService:
             self._cleanup_task = asyncio.create_task(self._cleanup_expired())
             self._metrics_task = asyncio.create_task(self._report_metrics())
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("⚠️ Redis not available, using memory-only cache: %s", e)
             self._redis = None
 
@@ -215,7 +221,7 @@ class RedisCacheService:
                         return entry.data
                     # Remove expired entry
                     await self._redis.delete(cache_key)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Redis get error for %s: %s", cache_key, e)
 
         # Cache miss
@@ -257,7 +263,7 @@ class RedisCacheService:
                     # Tag expires later
                     await self._redis.expire(f"tag:{tag}", ttl + 3600)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Redis set error for %s: %s", cache_key, e)
 
         self.stats["sets"] += 1
@@ -274,7 +280,7 @@ class RedisCacheService:
         if self._redis:
             try:
                 await self._redis.delete(cache_key)
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError) as e:
                 logger.warning("Redis delete error for %s: %s", cache_key, e)
 
         self.stats["deletes"] += 1
@@ -302,7 +308,7 @@ class RedisCacheService:
             logger.info("Invalidated %s cache entries with tag: %s", count, tag)
             return count
 
-        except Exception as e:
+        except (pydantic.ValidationError, ValueError) as e:
             logger.error("Tag invalidation error for %s: %s", tag, e)
             return 0
 
@@ -317,7 +323,7 @@ class RedisCacheService:
             try:
                 await self._redis.flushdb()
                 logger.info("All cache data cleared")
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.error("Redis clear error: %s", e)
 
     def get_stats(self) -> Dict[str, Any]:
@@ -398,7 +404,7 @@ class RedisCacheService:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Cache cleanup error: %s", e)
 
     async def _report_metrics(self) -> None:
@@ -410,7 +416,7 @@ class RedisCacheService:
                 logger.info("Cache metrics: %s", stats)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metrics reporting error: %s", e)
 
 
@@ -453,11 +459,11 @@ async def create_redis_cache_service(config: CacheConfig) -> RedisCacheService:
 # Decorators for caching
 
 
-def cached(self) -> None:
+def cached(ttl: int = 3600, tags: List[str] | None = None) -> Any:
     """Decorator for caching function results."""
 
-    def decorator(self) -> None:
-        async def wrapper(self) -> None:
+    def decorator(func: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             cache = await get_cache()
 
             # Generate cache key from function name and args
@@ -482,7 +488,7 @@ def cached(self) -> None:
 
 if __name__ == "__main__":
     # Example usage and testing
-    async def main(self) -> None:
+    async def main() -> None:
         async with get_cache_service() as cache:
             # Test basic operations
             await cache.set("test:key", {"data": "test"}, ttl=60)

@@ -5,12 +5,12 @@ learns from interactions, and maintains personalized preference profiles with
 sophisticated preference evolution and interest discovery capabilities.
 """
 
-import logging
-import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+import math
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -73,7 +73,7 @@ class UserPreferenceService:
     and provides sophisticated personalization capabilities.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, learning_rate: float = 0.1, interest_decay_rate: float = 0.05, min_interactions_for_learning: int = 10) -> None:
         """Initialize user preference service.
 
         Args:
@@ -174,7 +174,7 @@ class UserPreferenceService:
             )
             return updated_profile
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error learning from interaction: %s", str(e))
             return user_profile
 
@@ -258,7 +258,7 @@ class UserPreferenceService:
             )
             return updated_profile
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error learning from feedback: %s", str(e))
             return user_profile
 
@@ -303,7 +303,7 @@ class UserPreferenceService:
             )
             return updated_profile
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error in batch learning: %s", str(e))
             return user_profile
 
@@ -398,7 +398,7 @@ class UserPreferenceService:
             )
             return evolutions
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error analyzing interest evolution: %s", str(e))
             return []
 
@@ -481,7 +481,7 @@ class UserPreferenceService:
             )
             return insight
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error generating personalization insights: %s", str(e))
             return PersonalizationInsight(
                 user_id=str(user_profile.user_id),
@@ -552,7 +552,7 @@ class UserPreferenceService:
             )
             return suggested_categories
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error suggesting exploration content: %s", str(e))
             return []
 
@@ -608,7 +608,7 @@ class UserPreferenceService:
             )
             return new_rate
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error optimizing learning rate: %s", str(e))
             return user_profile.learning_rate
 

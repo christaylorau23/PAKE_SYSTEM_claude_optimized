@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Tenant Provisioning Automation
@@ -7,6 +8,8 @@ Automated tenant provisioning with Kubernetes namespace creation and configurati
 import argparse
 import asyncio
 import base64
+from dataclasses import dataclass
+from datetime import UTC, datetime
 import json
 import logging
 import os
@@ -14,8 +17,6 @@ import secrets
 import string
 import subprocess
 import sys
-from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 
 from src.services.database.multi_tenant_schema import (
@@ -147,7 +148,7 @@ class TenantProvisioner:
             self.db_service = MultiTenantPostgreSQLService(self.db_config)
             await self.db_service.initialize()
             logger.info("✅ Database service initialized")
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Failed to initialize database service: %s", e)
             raise
 
@@ -229,7 +230,7 @@ class TenantProvisioner:
 
             return {"tenant": tenant, "admin_user": admin_user}
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             error_msg = f"Failed to create database tenant: {e}"
             logger.error(error_msg)
             self.provisioning_stats["errors"].append(error_msg)
@@ -368,7 +369,7 @@ class TenantProvisioner:
             logger.error(error_msg)
             self.provisioning_stats["errors"].append(error_msg)
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             error_msg = f"Kubernetes namespace creation error: {e}"
             logger.error(error_msg)
             self.provisioning_stats["errors"].append(error_msg)
@@ -405,7 +406,7 @@ class TenantProvisioner:
                 "resources_created": result.stdout,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "failed", "error": str(e)}
 
     async def provision_tenant(
@@ -469,7 +470,7 @@ class TenantProvisioner:
             logger.info("🎉 Tenant provisioning completed: %s", tenant_name)
             return report
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Tenant provisioning failed: %s", e)
             return {
                 "status": "failed",
@@ -504,7 +505,7 @@ class TenantProvisioner:
 
             return tenant_list
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to list tenants: %s", e)
             return []
 
@@ -543,7 +544,7 @@ class TenantProvisioner:
                 "k8s_deletion": result.stdout,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Tenant deletion failed: %s", e)
             return {"status": "failed", "error": str(e)}
 

@@ -6,8 +6,8 @@ Tests all authentication components in complete isolation using mocks
 from datetime import timedelta
 from unittest.mock import patch
 
-import pytest
 from jose import JWTError
+import pytest
 
 from src.pake_system.auth.database import authenticate_user, create_user, get_user
 from src.pake_system.auth.dependencies import get_current_active_user, get_current_user
@@ -232,9 +232,9 @@ class TestJWTTokenSecurity:
     def test_create_access_token_success(self) -> None:
         """Test successful access token creation"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
 
         # Act
@@ -249,8 +249,8 @@ class TestJWTTokenSecurity:
     def test_create_access_token_with_expiration(self) -> None:
         """Test access token creation with custom expiration"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
         expires_delta = timedelta(minutes=60)
 
@@ -265,7 +265,7 @@ class TestJWTTokenSecurity:
     def test_create_access_token_no_secret_key_raises_error(self) -> None:
         """Test that missing secret key raises error"""
         # Arrange
-        mock_settings.SECRET_KEY = None
+        self.mock_settings.SECRET_KEY = None
         data = {"sub": "testuser"}
 
         # Act & Assert
@@ -276,9 +276,9 @@ class TestJWTTokenSecurity:
     def test_create_refresh_token_success(self) -> None:
         """Test successful refresh token creation"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.REFRESH_TOKEN_EXPIRE_DAYS = 7
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.REFRESH_TOKEN_EXPIRE_DAYS = 7
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
 
         # Act
@@ -292,8 +292,8 @@ class TestJWTTokenSecurity:
     def test_decode_token_success(self) -> None:
         """Test successful token decoding"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
         token = create_access_token(data)
 
@@ -309,8 +309,8 @@ class TestJWTTokenSecurity:
     def test_decode_token_invalid_token_raises_error(self) -> None:
         """Test that invalid token raises JWTError"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
         invalid_token = "invalid.token.here"
 
         # Act & Assert
@@ -321,7 +321,7 @@ class TestJWTTokenSecurity:
     def test_decode_token_no_secret_key_raises_error(self) -> None:
         """Test that missing secret key raises error"""
         # Arrange
-        mock_settings.SECRET_KEY = None
+        self.mock_settings.SECRET_KEY = None
         token = "some.token.here"
 
         # Act & Assert
@@ -332,8 +332,8 @@ class TestJWTTokenSecurity:
     def test_verify_token_type_access_token(self) -> None:
         """Test token type verification for access token"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
         token = create_access_token(data)
 
@@ -349,8 +349,8 @@ class TestJWTTokenSecurity:
     def test_verify_token_type_refresh_token(self) -> None:
         """Test token type verification for refresh token"""
         # Arrange
-        mock_settings.SECRET_KEY = "test-secret-key"
-        mock_settings.ALGORITHM = "HS256"
+        self.mock_settings.SECRET_KEY = "test-secret-key"
+        self.mock_settings.ALGORITHM = "HS256"
         data = {"sub": "testuser"}
         token = create_refresh_token(data)
 
@@ -439,10 +439,10 @@ class TestAuthenticationDependencies:
     async def test_get_current_user_valid_token(self) -> None:
         """Test get_current_user with valid token"""
         # Arrange
-        mock_decode_token = mocker.patch(
+        mock_decode_token = self.mocker.patch(
             "src.pake_system.auth.dependencies.decode_token"
         )
-        mock_get_user = mocker.patch("src.pake_system.auth.dependencies.get_user")
+        mock_get_user = self.mocker.patch("src.pake_system.auth.dependencies.get_user")
 
         mock_decode_token.return_value = {"sub": "testuser"}
         mock_get_user.return_value = User(username="testuser", email="test@example.com")
@@ -459,7 +459,7 @@ class TestAuthenticationDependencies:
     async def test_get_current_user_invalid_token_raises_exception(self) -> None:
         """Test get_current_user with invalid token raises HTTPException"""
         # Arrange
-        mock_decode_token = mocker.patch(
+        mock_decode_token = self.mocker.patch(
             "src.pake_system.auth.dependencies.decode_token"
         )
         mock_decode_token.side_effect = JWTError("Invalid token")
@@ -476,7 +476,7 @@ class TestAuthenticationDependencies:
     async def test_get_current_user_no_subject_raises_exception(self) -> None:
         """Test get_current_user with token missing subject raises HTTPException"""
         # Arrange
-        mock_decode_token = mocker.patch(
+        mock_decode_token = self.mocker.patch(
             "src.pake_system.auth.dependencies.decode_token"
         )
         mock_decode_token.return_value = {}  # No 'sub' key
@@ -493,10 +493,10 @@ class TestAuthenticationDependencies:
     async def test_get_current_user_not_found_raises_exception(self) -> None:
         """Test get_current_user with user not found raises HTTPException"""
         # Arrange
-        mock_decode_token = mocker.patch(
+        mock_decode_token = self.mocker.patch(
             "src.pake_system.auth.dependencies.decode_token"
         )
-        mock_get_user = mocker.patch("src.pake_system.auth.dependencies.get_user")
+        mock_get_user = self.mocker.patch("src.pake_system.auth.dependencies.get_user")
 
         mock_decode_token.return_value = {"sub": "nonexistent"}
         mock_get_user.return_value = None
@@ -516,7 +516,7 @@ class TestAuthenticationDependencies:
         active_user = User(
             username="testuser", email="test@example.com", disabled=False
         )
-        mock_get_current_user = mocker.patch(
+        mock_get_current_user = self.mocker.patch(
             "src.pake_system.auth.dependencies.get_current_user"
         )
         mock_get_current_user.return_value = active_user
@@ -552,7 +552,7 @@ class TestDatabaseOperations:
     async def test_get_user_existing_user(self) -> None:
         """Test get_user with existing user"""
         # Arrange
-        mock_fake_users_db = mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
         mock_fake_users_db.__contains__.return_value = True
         mock_fake_users_db.__getitem__.return_value = {
             "username": "testuser",
@@ -573,7 +573,7 @@ class TestDatabaseOperations:
     async def test_get_user_nonexistent_user(self) -> None:
         """Test get_user with nonexistent user"""
         # Arrange
-        mock_fake_users_db = mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
         mock_fake_users_db.__contains__.return_value = False
 
         # Act
@@ -586,8 +586,8 @@ class TestDatabaseOperations:
     async def test_authenticate_user_valid_credentials(self) -> None:
         """Test authenticate_user with valid credentials"""
         # Arrange
-        mock_get_user = mocker.patch("src.pake_system.auth.database.get_user")
-        mock_verify_password = mocker.patch(
+        mock_get_user = self.mocker.patch("src.pake_system.auth.database.get_user")
+        mock_verify_password = self.mocker.patch(
             "src.pake_system.auth.database.verify_password"
         )
 
@@ -612,8 +612,8 @@ class TestDatabaseOperations:
     async def test_authenticate_user_invalid_password(self) -> None:
         """Test authenticate_user with invalid password"""
         # Arrange
-        mock_get_user = mocker.patch("src.pake_system.auth.database.get_user")
-        mock_verify_password = mocker.patch(
+        mock_get_user = self.mocker.patch("src.pake_system.auth.database.get_user")
+        mock_verify_password = self.mocker.patch(
             "src.pake_system.auth.database.verify_password"
         )
 
@@ -636,7 +636,7 @@ class TestDatabaseOperations:
     async def test_authenticate_user_nonexistent_user(self) -> None:
         """Test authenticate_user with nonexistent user"""
         # Arrange
-        mock_get_user = mocker.patch("src.pake_system.auth.database.get_user")
+        mock_get_user = self.mocker.patch("src.pake_system.auth.database.get_user")
         mock_get_user.return_value = None
 
         # Act
@@ -649,7 +649,7 @@ class TestDatabaseOperations:
     async def test_create_user_success(self) -> None:
         """Test create_user with valid data"""
         # Arrange
-        mock_fake_users_db = mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
 
         # Act
         user = await create_user(

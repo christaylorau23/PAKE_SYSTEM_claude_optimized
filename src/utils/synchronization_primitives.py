@@ -7,14 +7,14 @@ shared mutable state in concurrent environments, following enterprise patterns.
 """
 
 import asyncio
-import logging
-import threading
-import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from enum import Enum
+import logging
+import threading
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class LockMetrics:
 class AsyncLockManager:
     """Advanced async lock manager with deadlock detection and metrics."""
 
-    def __init__(self) -> None:
+    def __init__(self, enable_deadlock_detection: bool = True) -> None:
         self._locks: dict[str, asyncio.Lock] = {}
         self._lock_holders: dict[str, set[str]] = defaultdict(
             set
@@ -68,8 +68,11 @@ class AsyncLockManager:
             task = asyncio.current_task()
             if task:
                 return f"task_{id(task)}"
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+
+            logger.debug(f"Exception in synchronization_primitives.py: {e}")
+
+            # Continue gracefully
         return f"thread_{threading.get_ident()}"
 
     async def acquire_lock(self, lock_name: str, timeout: float | None = None) -> bool:
@@ -199,7 +202,7 @@ class AsyncLockManager:
 class ThreadSafeCounter:
     """Thread-safe counter with atomic operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, initial_value: int = 0) -> None:
         self._value = initial_value
         self._lock = threading.RLock()
         self._metrics = LockMetrics()
@@ -258,7 +261,7 @@ class ThreadSafeCounter:
 class AsyncSafeDict:
     """Async-safe dictionary with comprehensive synchronization."""
 
-    def __init__(self) -> None:
+    def __init__(self, initial_data: dict[str, Any] | None = None) -> None:
         self._data = initial_data or {}
         self._lock = asyncio.Lock()
         self._metrics = LockMetrics()
@@ -342,7 +345,7 @@ class AsyncSafeDict:
         async with self._lock:
             return len(self._data)
 
-    def _update_metrics(self) -> None:
+    def _update_metrics(self, wait_time: float) -> None:
         """Update internal metrics."""
         self._metrics.total_acquisitions += 1
         self._metrics.total_wait_time += wait_time
@@ -366,7 +369,7 @@ class AsyncSafeDict:
 class AsyncSafeQueue:
     """Async-safe queue with priority support and metrics."""
 
-    def __init__(self) -> None:
+    def __init__(self, maxsize: int = 0) -> None:
         self._queue = asyncio.Queue(maxsize=maxsize)
         self._priority_queue = asyncio.PriorityQueue(maxsize=maxsize)
         self._metrics = LockMetrics()
@@ -403,7 +406,7 @@ class AsyncSafeQueue:
         """Get current queue size."""
         return self._queue.qsize() + self._priority_queue.qsize()
 
-    def _update_metrics(self) -> None:
+    def _update_metrics(self, wait_time: float) -> None:
         """Update internal metrics."""
         self._metrics.total_acquisitions += 1
         self._metrics.total_wait_time += wait_time
@@ -421,7 +424,7 @@ class AsyncSafeQueue:
 
 
 @asynccontextmanager
-async def async_lock_context(self) -> None:
+async def async_lock_context(lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None) -> None:
     """Context manager for async lock acquisition/release."""
     acquired = await lock_manager.acquire_lock(lock_name, timeout)
     if not acquired:
@@ -435,7 +438,7 @@ async def async_lock_context(self) -> None:
 
 
 @contextmanager
-def thread_lock_context(self) -> None:
+def thread_lock_context(lock: threading.Lock, timeout: float | None = None) -> None:
     """Context manager for thread lock acquisition/release."""
     acquired = lock.acquire(timeout=timeout)
     if not acquired:
@@ -458,19 +461,19 @@ class SynchronizationMonitor:
         self._queues: dict[str, AsyncSafeQueue] = {}
         self._global_metrics = LockMetrics()
 
-    def register_lock_manager(self) -> None:
+    def register_lock_manager(self, name: str, manager: AsyncLockManager) -> None:
         """Register a lock manager for monitoring."""
         self._lock_managers[name] = manager
 
-    def register_counter(self) -> None:
+    def register_counter(self, name: str, counter: ThreadSafeCounter) -> None:
         """Register a counter for monitoring."""
         self._counters[name] = counter
 
-    def register_async_dict(self) -> None:
+    def register_async_dict(self, name: str, async_dict: AsyncSafeDict) -> None:
         """Register an async dict for monitoring."""
         self._async_dicts[name] = async_dict
 
-    def register_queue(self) -> None:
+    def register_queue(self, name: str, queue: AsyncSafeQueue) -> None:
         """Register a queue for monitoring."""
         self._queues[name] = queue
 
@@ -534,12 +537,12 @@ def get_sync_monitor() -> SynchronizationMonitor:
 
 
 # Convenience functions for common synchronization patterns
-async def with_async_lock(self) -> None:
+async def with_async_lock(lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None) -> None:
     """Convenience function for async lock context."""
     return async_lock_context(lock_manager, lock_name, timeout)
 
 
-def with_thread_lock(self) -> None:
+def with_thread_lock(lock: threading.Lock, timeout: float | None = None) -> None:
     """Convenience function for thread lock context."""
     return thread_lock_context(lock, timeout)
 
@@ -561,7 +564,7 @@ class SynchronizationTestHelper:
                 for _ in range(iterations):
                     result = await operation()
                     results.append(result)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 errors.append(str(e))
 
         # Run concurrent operations
@@ -628,7 +631,7 @@ if __name__ == "__main__":
         # Test async-safe dict
         safe_dict = AsyncSafeDict()
 
-        async def dict_operation(self) -> None:
+        async def dict_operation(key: str, value: str) -> None:
             await safe_dict.set(key, value)
             return await safe_dict.get(key)
 

@@ -6,15 +6,15 @@ Provides real-time performance monitoring, health checks, and operational insigh
 for the PAKE ingestion pipeline and caching systems.
 """
 
-import asyncio
-import json
-import logging
-import time
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+import json
+import logging
+import time
+from typing import Any, Dict, List
 
 import aiofiles
 
@@ -111,7 +111,7 @@ class MetricCollector(ABC):
 class IngestionMetrics(MetricCollector):
     """Collects ingestion pipeline metrics."""
 
-    def __init__(self) -> None:
+    def __init__(self, orchestrator_manager: Any | None = None, cache_manager: Any | None = None) -> None:
         self.orchestrator_manager = orchestrator_manager
         self.cache_manager = cache_manager
         self._start_time = time.time()
@@ -165,8 +165,8 @@ class IngestionMetrics(MetricCollector):
 class SystemHealthChecker:
     """Monitors system health and generates alerts."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: DashboardConfig | None = None, metric_collector: Any | None = None) -> None:
+        self.config = config or DashboardConfig()
         self.metric_collector = metric_collector
         self._alerts = []
 
@@ -197,7 +197,7 @@ class SystemHealthChecker:
             )
             health.alerts = self._get_active_alerts()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Health check failed: %s", e)
             health.overall_status = HealthStatus.CRITICAL
             health.component_health["system"] = HealthStatus.CRITICAL
@@ -292,7 +292,7 @@ class SystemHealthChecker:
             return HealthStatus.HEALTHY
         return HealthStatus.UNKNOWN
 
-    def _add_alert(self) -> None:
+    def _add_alert(self, message: str) -> None:
         """Add alert to the active alerts list."""
         if message not in self._alerts:
             self._alerts.append(message)
@@ -307,7 +307,7 @@ class RealTimeMonitoringDashboard:
     Provides live metrics, health monitoring, and alerting.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: DashboardConfig | None = None) -> None:
         self.config = config or DashboardConfig()
         self.metrics_history: dict[str, list[MetricPoint]] = {}
         self.is_running = False
@@ -336,7 +336,7 @@ class RealTimeMonitoringDashboard:
 
         try:
             await asyncio.gather(*tasks)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Dashboard error: %s", e)
             await self.stop()
 
@@ -364,7 +364,7 @@ class RealTimeMonitoringDashboard:
 
                 self.current_metrics = new_metrics
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Metric collection error: %s", e)
 
             await asyncio.sleep(self.config.metric_update_interval)
@@ -384,7 +384,7 @@ class RealTimeMonitoringDashboard:
                 elif self.current_health.alerts:
                     logger.warning("System alerts: %s", self.current_health.alerts)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Health check error: %s", e)
 
             await asyncio.sleep(self.config.health_check_interval)
@@ -400,12 +400,12 @@ class RealTimeMonitoringDashboard:
                 # or write to a shared data store for the web dashboard
                 logger.debug("Dashboard updated: %s metrics", len(dashboard_data))
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Dashboard update error: %s", e)
 
             await asyncio.sleep(self.config.dashboard_refresh_interval)
 
-    def _trim_metric_history(self) -> None:
+    def _trim_metric_history(self, metric_name: str) -> None:
         """Remove old metric data points."""
         if metric_name not in self.metrics_history:
             return
@@ -497,7 +497,7 @@ class RealTimeMonitoringDashboard:
             logger.info("Metrics exported to %s", filepath)
             return True
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to export metrics: %s", e)
             return False
 

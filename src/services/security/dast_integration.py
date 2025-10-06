@@ -11,15 +11,15 @@ This module provides:
 """
 
 import asyncio
-import json
-import logging
-import os
-import subprocess
-import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
+import os
 from pathlib import Path
+import subprocess
+import time
 from typing import Any
 
 import requests
@@ -126,7 +126,7 @@ class ScanResult:
 class OWASPZAPClient:
     """OWASP ZAP API client for DAST scanning."""
 
-    def __init__(self) -> None:
+    def __init__(self, zap_host: str = "localhost", zap_port: int = 8080, api_key: str | None = None) -> None:
         self.zap_host = zap_host
         self.zap_port = zap_port
         self.api_key = api_key
@@ -175,7 +175,7 @@ class OWASPZAPClient:
             logger.error("Failed to start OWASP ZAP within timeout")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error starting OWASP ZAP: %s", e)
             return False
 
@@ -184,7 +184,7 @@ class OWASPZAPClient:
         try:
             response = self.session.get(f"{self.base_url}/JSON/core/view/version/")
             return response.status_code == 200
-        except:
+        except (json.JSONDecodeError, ValueError) as e:
             return False
 
     async def stop_zap(self) -> bool:
@@ -192,7 +192,7 @@ class OWASPZAPClient:
         try:
             response = self.session.get(f"{self.base_url}/JSON/core/action/shutdown/")
             return response.status_code == 200
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error stopping OWASP ZAP: %s", e)
             return False
 
@@ -224,7 +224,7 @@ class OWASPZAPClient:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error creating context: %s", e)
             return None
 
@@ -248,7 +248,7 @@ class OWASPZAPClient:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error starting spider scan: %s", e)
             return None
 
@@ -272,7 +272,7 @@ class OWASPZAPClient:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error starting active scan: %s", e)
             return None
 
@@ -292,7 +292,7 @@ class OWASPZAPClient:
 
             return {}
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error getting scan status: %s", e)
             return {}
 
@@ -312,7 +312,7 @@ class OWASPZAPClient:
 
             return []
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error getting alerts: %s", e)
             return []
 
@@ -336,7 +336,7 @@ class OWASPZAPClient:
 
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating report: %s", e)
             return None
 
@@ -344,7 +344,7 @@ class OWASPZAPClient:
 class PAKEDASTRunner:
     """PAKE System DAST testing runner."""
 
-    def __init__(self) -> None:
+    def __init__(self, config_file: str = "dast_config.yaml") -> None:
         self.config_file = config_file
         self.zap_client: OWASPZAPClient | None = None
         self.scan_results: list[ScanResult] = []
@@ -382,7 +382,7 @@ class PAKEDASTRunner:
                 with open(self.config_file) as f:
                     user_config = yaml.safe_load(f)
                     default_config.update(user_config)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not load config file %s: %s", self.config_file, e)
 
         return default_config
@@ -407,7 +407,7 @@ class PAKEDASTRunner:
             logger.info("DAST runner initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error initializing DAST runner: %s", e)
             return False
 
@@ -479,7 +479,7 @@ class PAKEDASTRunner:
             logger.info("DAST scan completed: %s", scan_result.scan_name)
             logger.info("Found %s vulnerabilities", scan_result.total_alerts)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error running DAST scan: %s", e)
             scan_result.status = ScanStatus.FAILED
             scan_result.error_message = str(e)
@@ -545,7 +545,7 @@ class PAKEDASTRunner:
 
                 vulnerabilities.append(vulnerability)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Error parsing alert: %s", e)
 
         return vulnerabilities
@@ -577,7 +577,7 @@ class PAKEDASTRunner:
                     reports[format_type] = str(filepath)
                     logger.info("Generated %s report: %s", format_type, filepath)
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error generating %s report: %s", format_type, e)
 
         return reports
@@ -591,7 +591,7 @@ class PAKEDASTRunner:
 class VulnerabilityTriageSystem:
     """System for triaging and tracking vulnerability remediation."""
 
-    def __init__(self) -> None:
+    def __init__(self, triage_file: str = "vulnerability_triage.yaml") -> None:
         self.triage_file = triage_file
         self.vulnerabilities: list[Vulnerability] = []
         self._load_triage_data()
@@ -605,7 +605,7 @@ class VulnerabilityTriageSystem:
                     for vuln_data in data.get("vulnerabilities", []):
                         vuln = Vulnerability(**vuln_data)
                         self.vulnerabilities.append(vuln)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not load triage data: %s", e)
 
     def _save_triage_data(self) -> None:
@@ -640,7 +640,7 @@ class VulnerabilityTriageSystem:
             with open(self.triage_file, "w") as f:
                 json.dump(data, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error saving triage data: %s", e)
 
     def add_vulnerabilities(self, vulnerabilities: list[Vulnerability]) -> None:
@@ -724,7 +724,7 @@ async def initialize_dast_system(config_file: str | None = None) -> bool:
         logger.error("Failed to initialize DAST system")
         return False
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error initializing DAST system: %s", e)
         return False
 
@@ -754,7 +754,7 @@ async def run_dast_scan(
 
         return scan_result
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Error running DAST scan: %s", e)
         return None
 

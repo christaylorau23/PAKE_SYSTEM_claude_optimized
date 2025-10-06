@@ -5,9 +5,9 @@ Ensures fault injection tests are included in CI pipeline validation
 """
 
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 from typing import List, Optional
 
 import pytest
@@ -94,7 +94,7 @@ class FaultInjectionCIRunner:
         except subprocess.TimeoutExpired:
             print("❌ Fault injection tests timed out")
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Error running fault injection tests: {e}")
             return False
 

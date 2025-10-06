@@ -4,12 +4,12 @@ Analyzes trend patterns, predicts lifecycle stages, and generates investment ins
 """
 
 import asyncio
-import logging
-import statistics
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+import logging
+import statistics
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -443,7 +443,7 @@ class TrendAnalyzer:
         """Get latest analysis for a specific trend keyword."""
         return self.analysis_cache.get(keyword)
 
-    async def clear_cache(self) -> None:
+    async def clear_cache(self, older_than_hours: int = 24) -> None:
         """Clear old cached analysis results."""
         cutoff_time = datetime.now(UTC) - timedelta(hours=older_than_hours)
 

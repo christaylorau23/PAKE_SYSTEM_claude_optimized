@@ -4,12 +4,12 @@ Enhanced orchestrator with Redis caching integration for enterprise-grade perfor
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime
 import hashlib
 import logging
 import time
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
 
 from scripts.ingestion_pipeline import ContentItem
 
@@ -86,7 +86,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
                 if self.cache_config.warm_cache_enabled:
                     await self._warm_cache()
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(
                     "⚠️ Failed to initialize Redis cache, using memory-only: %s",
                     e,
@@ -329,7 +329,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
 
             return items
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error executing %s source: %s", source.source_type, e)
             return []
 
@@ -399,7 +399,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
             # Don't execute the full plan during warming, just cache the plan
             logger.debug("Warmed plan cache for query: %s", query)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.debug("Cache warming failed for query '%s': %s", query, e)
 
     async def _complete_cache_warming(self, warming_tasks: list[asyncio.Task]) -> None:
@@ -407,7 +407,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         try:
             await asyncio.gather(*warming_tasks, return_exceptions=True)
             logger.info("🔥 Cache warming completed")
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning("Cache warming partially failed: %s", e)
 
 

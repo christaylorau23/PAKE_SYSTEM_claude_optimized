@@ -14,9 +14,9 @@ Run with: pytest tests/test_auth_system.py -v --cov=src/pake_system/auth
 
 from datetime import timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
+import pytest
 
 from src.pake_system.auth.database import authenticate_user, get_user
 from src.pake_system.auth.example_app import app

@@ -6,12 +6,12 @@ Supports multiple recommendation strategies and real-time personalization.
 """
 
 import asyncio
-import logging
-import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+import logging
+import math
+from typing import Any, Dict, List
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -85,7 +85,7 @@ class RecommendationService:
     collaborative filtering, and hybrid approaches with real-time learning.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, enable_collaborative: bool = True, enable_diversity: bool = True, min_interactions_for_cf: int = 5) -> None:
         """Initialize recommendation service.
 
         Args:
@@ -224,7 +224,7 @@ class RecommendationService:
             )
             return result
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error generating recommendations: %s", str(e))
             processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             return self._create_error_result(request, processing_time)

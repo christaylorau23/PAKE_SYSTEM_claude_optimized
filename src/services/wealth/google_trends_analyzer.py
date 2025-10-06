@@ -22,21 +22,25 @@ Performance Target: <2s trend analysis, 95% accuracy in trend prediction
 """
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import Enum
 import hashlib
 import json
 import logging
 import time
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
+import aiohttp
 import aiosqlite
 import numpy as np
 import pandas as pd
-import yfinance as yf
+import sqlalchemy
+import psycopg2
+import asyncpg
 from pytrends.request import TrendReq
 from scipy import stats
+import yfinance as yf
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -150,8 +154,8 @@ class InvestmentOpportunity:
 class GoogleTrendsClient:
     """High-performance Google Trends client with caching."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
         self.pytrends = TrendReq(
             hl="en-US",
             tz=360,
@@ -162,13 +166,13 @@ class GoogleTrendsClient:
 
         # Rate limiting
         self.last_request_time = 0
-        self.min_request_interval = config.get(
+        self.min_request_interval = self.config.get(
             "min_request_interval",
             2,
         )  # 2 seconds between requests
 
         # Cache settings
-        self.cache_duration = config.get("cache_duration", 3600)  # 1 hour
+        self.cache_duration = self.config.get("cache_duration", 3600)  # 1 hour
         self.trend_cache = {}
 
         logger.info("Google Trends client initialized")
@@ -232,7 +236,7 @@ class GoogleTrendsClient:
             logger.warning("No data returned for keywords: %s", keywords)
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting interest over time for %s: %s", keywords, e)
             return None
 
@@ -270,7 +274,7 @@ class GoogleTrendsClient:
             logger.info("Retrieved related queries for: %s", keywords)
             return processed_queries
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting related queries for %s: %s", keywords, e)
             return {}
 
@@ -303,7 +307,7 @@ class GoogleTrendsClient:
             logger.info("Retrieved regional interest for: %s", keywords)
             return regional_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting regional interest for %s: %s", keywords, e)
             return {}
 
@@ -320,14 +324,14 @@ class GoogleTrendsClient:
 class GoogleTrendsAnalyzer:
     """Advanced Google Trends analysis engine."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.trends_client = GoogleTrendsClient(config.get("trends_client", {}))
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.trends_client = GoogleTrendsClient(self.config.get("trends_client", {}))
 
         # Analysis parameters
-        self.momentum_window = config.get("momentum_window", 4)  # weeks
-        self.volatility_window = config.get("volatility_window", 8)  # weeks
-        self.trend_threshold = config.get(
+        self.momentum_window = self.config.get("momentum_window", 4)  # weeks
+        self.volatility_window = self.config.get("volatility_window", 8)  # weeks
+        self.trend_threshold = self.config.get(
             "trend_threshold",
             50,
         )  # minimum interest level
@@ -438,7 +442,7 @@ class GoogleTrendsAnalyzer:
 
             return trend_data
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing trend for '%s': %s", keyword, e)
             return None
 
@@ -514,7 +518,7 @@ class GoogleTrendsAnalyzer:
                 "mean": float(mean_interest),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing interest data: %s", e)
             return {
                 "strength": TrendStrength.WEAK,
@@ -542,7 +546,7 @@ class GoogleTrendsAnalyzer:
                     },
                 )
             return result
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error converting time series: %s", e)
             return []
 
@@ -602,7 +606,7 @@ class GoogleTrendsAnalyzer:
                         )
                         opportunities.append(opportunity)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error analyzing correlation for %s: %s", symbol, e)
                     continue
 
@@ -616,7 +620,7 @@ class GoogleTrendsAnalyzer:
             )
             return opportunities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error finding investment opportunities: %s", e)
             return []
 
@@ -738,7 +742,7 @@ class GoogleTrendsAnalyzer:
                 "correlation": float(correlation_coeff),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in trend-stock correlation analysis: %s", e)
             return {
                 "confidence": 0.0,
@@ -962,15 +966,15 @@ class GoogleTrendsAnalyzer:
 class GoogleTrendsIntegrationService:
     """Main service for Google Trends integration with wealth platform."""
 
-    def __init__(self) -> None:
-        self.config = config
-        self.analyzer = GoogleTrendsAnalyzer(config.get("analyzer", {}))
+    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+        self.config = config or {}
+        self.analyzer = GoogleTrendsAnalyzer(self.config.get("analyzer", {}))
 
         # Database for storing trend analysis
-        self.db_path = config.get("db_path", "data/google_trends.db")
+        self.db_path = self.config.get("db_path", "data/google_trends.db")
 
         # Monitoring keywords for wealth generation
-        self.wealth_keywords = config.get(
+        self.wealth_keywords = self.config.get(
             "wealth_keywords",
             [
                 "artificial intelligence",
@@ -1063,7 +1067,7 @@ class GoogleTrendsIntegrationService:
 
             logger.info("Google Trends database initialized")
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error initializing database: %s", e)
 
     async def analyze_wealth_keywords(
@@ -1100,7 +1104,7 @@ class GoogleTrendsIntegrationService:
                     # Rate limiting between requests
                     await asyncio.sleep(2)
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
                     logger.error("Error analyzing keyword '%s': %s", keyword, e)
                     continue
 
@@ -1113,11 +1117,11 @@ class GoogleTrendsIntegrationService:
             )
             return all_opportunities
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error analyzing wealth keywords: %s", e)
             return []
 
-    async def _store_trend_analysis(self) -> None:
+    async def _store_trend_analysis(self, trend_data: TrendData) -> None:
         """Store trend analysis in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1143,10 +1147,10 @@ class GoogleTrendsIntegrationService:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing trend analysis: %s", e)
 
-    async def _store_investment_opportunity(self) -> None:
+    async def _store_investment_opportunity(self, opportunity: InvestmentOpportunity) -> None:
         """Store investment opportunity in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1171,7 +1175,7 @@ class GoogleTrendsIntegrationService:
                 )
                 await db.commit()
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing investment opportunity: %s", e)
 
     async def get_top_opportunities(self, limit: int = 10) -> list[Dict[str, Any]]:
@@ -1212,7 +1216,7 @@ class GoogleTrendsIntegrationService:
 
                 return opportunities
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting top opportunities: %s", e)
             return []
 
@@ -1276,13 +1280,13 @@ class GoogleTrendsIntegrationService:
                     "last_updated": datetime.now(UTC).isoformat(),
                 }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error getting trend dashboard: %s", e)
             return {}
 
 
 # Demo and testing
-async def demo_google_trends_integration(self) -> None:
+async def demo_google_trends_integration() -> None:
     """Demonstrate Google Trends integration capabilities."""
     print("📈 Google Trends Integration Demo - Personal Wealth Generation")
     print("=" * 80)

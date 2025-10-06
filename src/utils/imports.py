@@ -3,13 +3,13 @@
 Provides safe, consistent import patterns to replace sys.path.append() usage.
 """
 
+from contextlib import contextmanager
 import importlib
 import importlib.util
 import logging
-import sys
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+import sys
+from typing import Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -175,12 +175,12 @@ class SafeImporter:
             logger.debug("Successfully imported %s from %s", module_name, file_path)
             return module
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Failed to import %s: %s", file_path, e)
             return None
 
     @contextmanager
-    def temporary_path(self) -> None:
+    def temporary_path(self, path: str | Path) -> None:
         """Temporarily add a path to sys.path (context manager).
 
         Args:
@@ -294,7 +294,7 @@ def require_import(module_name: str, package: str | None = None) -> Any:
 
 
 # Legacy compatibility functions (to replace existing patterns)
-def add_to_path_temporarily(self) -> None:
+def add_to_path_temporarily(path: str | Path) -> None:
     """Context manager to temporarily add path (replaces sys.path.append patterns).
 
     Args:

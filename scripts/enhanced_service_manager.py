@@ -1,3 +1,6 @@
+config
+from typing import Dict
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE+ Enhanced Service Manager
@@ -6,16 +9,16 @@ Implements all patterns from the provided code snippets
 """
 
 import asyncio
-import json
-import logging
-import os
-import signal
-import sys
-import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
+import os
 from pathlib import Path
+import signal
+import sys
+import time
 from typing import TYPE_CHECKING, Any
 
 import psutil
@@ -336,7 +339,7 @@ class PAKEServiceManager:
                     len(custom_config.get("services", {})),
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to load custom config: %s", e)
 
         return default_services
@@ -440,7 +443,7 @@ class PAKEServiceManager:
             self.logger.error("❌ Service %s failed to start", config.display_name)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.service_states[service_name] = ServiceState.FAILED
             self.logger.error("❌ Exception starting %s: %s", config.display_name, e)
             return False
@@ -537,7 +540,7 @@ class PAKEServiceManager:
                 config.startup_timeout,
             )
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error executing start command: %s", e)
             return False
 
@@ -568,8 +571,11 @@ class PAKEServiceManager:
                     async with session.get(config.health_endpoint) as response:
                         if response.status < 400:
                             return True
-            except BaseException:
-                pass
+            except BaseException as e:
+
+                logger.debug(f"Exception in enhanced_service_manager.py: {e}")
+
+                # Continue gracefully
 
             await asyncio.sleep(2)
 
@@ -588,8 +594,11 @@ class PAKEServiceManager:
                 writer.close()
                 await writer.wait_closed()
                 return True
-            except BaseException:
-                pass
+            except BaseException as e:
+
+                logger.debug(f"Exception in enhanced_service_manager.py: {e}")
+
+                # Continue gracefully
 
             await asyncio.sleep(2)
 
@@ -651,7 +660,7 @@ class PAKEServiceManager:
             self.save_service_state()
             return success
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.service_states[service_name] = ServiceState.FAILED
             self.logger.error("❌ Exception stopping %s: %s", config.display_name, e)
             return False
@@ -685,7 +694,7 @@ class PAKEServiceManager:
                     "Graceful shutdown timed out for %s",
                     config.display_name,
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.warning(
                     "Graceful shutdown failed for %s: %s",
                     config.display_name,
@@ -703,15 +712,18 @@ class PAKEServiceManager:
                     try:
                         await asyncio.wait_for(process.wait(), timeout=10)
                         return True
-                    except TimeoutError:
-                        pass
+                    except TimeoutError as e:
+
+                        logger.debug(f"Exception in enhanced_service_manager.py: {e}")
+
+                        # Continue gracefully
 
                 # Force kill
                 process.kill()
                 await process.wait()
                 return True
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to kill process: %s", e)
                 return False
 
@@ -741,7 +753,7 @@ class PAKEServiceManager:
                     self.restart_attempts[service_name] = 0
                     return True
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Restart command failed: %s", e)
 
         # Fallback to stop + start
@@ -1041,7 +1053,7 @@ class PAKEServiceManager:
             with open(self.state_file, "w") as f:
                 json.dump(state_data, f, indent=2)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to save service state: %s", e)
 
     def load_service_state(self) -> None:
@@ -1058,8 +1070,11 @@ class PAKEServiceManager:
                 ).items():
                     try:
                         self.service_states[service_name] = ServiceState(state_str)
-                    except ValueError:
-                        pass
+                    except ValueError as e:
+
+                        logger.debug(f"Exception in enhanced_service_manager.py: {e}")
+
+                        # Continue gracefully
 
                 # Load restart attempts
                 self.restart_attempts.update(state_data.get("restart_attempts", {}))
@@ -1073,12 +1088,15 @@ class PAKEServiceManager:
                         self.last_restart_time[service_name] = datetime.fromisoformat(
                             time_str,
                         )
-                    except ValueError:
-                        pass
+                    except ValueError as e:
+
+                        logger.debug(f"Exception in enhanced_service_manager.py: {e}")
+
+                        # Continue gracefully
 
                 self.logger.info("Service state loaded from disk")
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             self.logger.warning("Failed to load service state: %s", e)
 
     def handle_shutdown_signal(self) -> None:
@@ -1105,7 +1123,7 @@ class PAKEServiceManager:
                         break
                     await asyncio.sleep(1)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in service monitoring loop: %s", e)
                 await asyncio.sleep(10)
 
@@ -1129,7 +1147,7 @@ class PAKEServiceManager:
         """Handle service failure with restart logic"""
         attempts = self.restart_attempts.get(service_name, 0)
 
-        if attempts >= config.max_restart_attempts:
+        if attempts >= self.config.max_restart_attempts:
             self.logger.critical(
                 "Service %s has exceeded max restart attempts (%s)",
                 config.display_name,
@@ -1269,7 +1287,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"💥 Fatal error: {e}")
         import traceback
 

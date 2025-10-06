@@ -5,8 +5,8 @@ PAKE System - Phase 4 Implementation.
 This script fixes case-sensitivity issues in file paths, imports, and resource lookups.
 """
 
-import re
 from pathlib import Path
+import re
 
 
 def find_case_sensitivity_issues(root_path: Path) -> list[tuple[str, str, str]]:
@@ -67,7 +67,7 @@ def find_case_sensitivity_issues(root_path: Path) -> list[tuple[str, str, str]]:
                                                 f"Mixed case in import: {module_name}",
                                             )
                                         )
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 print(f"Error processing {py_file}: {e}")
 
             # Limit total files processed to prevent timeout

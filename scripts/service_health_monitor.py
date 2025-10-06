@@ -1,3 +1,5 @@
+from typing import Dict
+from typing import List
 #!/usr/bin/env python3
 """
 PAKE+ Service Health Monitoring System
@@ -5,14 +7,14 @@ Comprehensive monitoring, recovery, and alerting for all system components
 """
 
 import asyncio
-import json
-import logging
-import sqlite3
-import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
+import json
+import logging
 from pathlib import Path
+import sqlite3
+import time
 from typing import Any
 
 import aiohttp
@@ -214,7 +216,7 @@ class PAKEServiceMonitor:
                         # Add new service
                         default_services[service_name] = ServiceConfig(**config_data)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.warning("Failed to load custom config: %s", e)
 
         return default_services
@@ -306,7 +308,7 @@ class PAKEServiceMonitor:
                     f"Unknown service type: {service.type}",
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             result = HealthResult(
                 service_name,
                 HealthStatus.CRITICAL,
@@ -353,7 +355,7 @@ class PAKEServiceMonitor:
                 "Connection timeout",
                 details={"url": url, "timeout": service.timeout},
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return HealthResult(
                 service.name,
                 HealthStatus.CRITICAL,
@@ -388,7 +390,7 @@ class PAKEServiceMonitor:
                 0.0,
                 "Connection timeout",
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return HealthResult(service.name, HealthStatus.CRITICAL, 0.0, str(e))
 
     async def _check_process_health(self, service: ServiceConfig) -> HealthResult:
@@ -419,8 +421,11 @@ class PAKEServiceMonitor:
                     # Check if process is running and responsive
                     if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
                         healthy_processes += 1
-                except BaseException:
-                    pass
+                except BaseException as e:
+
+                    logger.debug(f"Exception in service_health_monitor.py: {e}")
+
+                    # Continue gracefully
 
             if healthy_processes == 0:
                 return HealthResult(
@@ -443,7 +448,7 @@ class PAKEServiceMonitor:
                 details={"process_count": total_processes},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return HealthResult(service.name, HealthStatus.UNKNOWN, 0.0, str(e))
 
     async def _check_docker_health(self, service: ServiceConfig) -> HealthResult:
@@ -500,7 +505,7 @@ class PAKEServiceMonitor:
                 details={"container_id": container_info.get("Id", "")[:12]},
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return HealthResult(service.name, HealthStatus.UNKNOWN, 0.0, str(e))
 
     def _store_health_result(self) -> None:
@@ -516,9 +521,9 @@ class PAKEServiceMonitor:
                 VALUES (?, ?, ?, ?, ?)
             """,
                 (
-                    result.service_name,
-                    result.status.value,
-                    result.response_time_ms,
+                    self.result.service_name,
+                    self.result.status.value,
+                    self.self.result.response_time_ms,
                     result.error_message,
                     json.dumps(result.details) if result.details else None,
                 ),
@@ -527,7 +532,7 @@ class PAKEServiceMonitor:
             conn.commit()
             conn.close()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to store health result: %s", e)
 
     async def check_all_services(self) -> dict[str, HealthResult]:
@@ -563,7 +568,7 @@ class PAKEServiceMonitor:
                 if result.error_message:
                     self.logger.warning("  Error: %s", result.error_message)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Health check failed for %s: %s", service_name, e)
                 results[service_name] = HealthResult(
                     service_name,
@@ -706,7 +711,7 @@ class PAKEServiceMonitor:
         except TimeoutError:
             self.logger.error("Restart command timed out for %s", service_name)
             return False
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Error executing restart command: %s", e)
             return False
 
@@ -721,9 +726,9 @@ class PAKEServiceMonitor:
             if previous_status:
                 message = f"Service {service_name} status changed from {
                     previous_status.value
-                } to {result.status.value}"
+                } to {self.result.status.value}"
             else:
-                message = f"Service {service_name} is {result.status.value}"
+                message = f"Service {service_name} is {self.result.status.value}"
 
         if result.error_message:
             message += f" - {result.error_message}"
@@ -779,7 +784,7 @@ class PAKEServiceMonitor:
             except KeyboardInterrupt:
                 self.logger.info("Monitoring interrupted by user")
                 break
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in monitoring loop: %s", e)
                 await asyncio.sleep(check_interval)
 
@@ -1014,7 +1019,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\n🛑 Interrupted by user")
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError) as e:
         print(f"💥 Fatal error: {e}")
         import traceback
 

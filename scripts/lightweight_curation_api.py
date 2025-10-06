@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 """
 Lightweight Curation API Demo
 
@@ -6,13 +8,13 @@ without heavy ML dependencies, showcasing the core functionality.
 """
 
 import asyncio
+from datetime import UTC, datetime
 import os
 
 # Import our core models
 import sys
-import uuid
-from datetime import UTC, datetime
 from typing import Any
+import uuid
 
 from src.services.curation.models.content_item import ContentItem, ContentType
 from src.services.curation.models.user_feedback import FeedbackType, UserFeedback
@@ -188,7 +190,7 @@ class LightweightCurationAPI:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -222,7 +224,7 @@ class LightweightCurationAPI:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

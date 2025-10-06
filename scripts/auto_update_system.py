@@ -15,17 +15,17 @@ Features:
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta, timezone
 import hashlib
 import json
 import logging
+from pathlib import Path
 import shutil
 import subprocess
 import sys
 import threading
 import time
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Dict, List
 
 import psutil
@@ -111,7 +111,7 @@ class AutoUpdateSystem:
                 with open(self.config_file) as f:
                     user_config = json.load(f)
                 default_config.update(user_config)
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not load config, using defaults: %s", e)
 
         # Save config back to ensure all defaults are present
@@ -123,7 +123,7 @@ class AutoUpdateSystem:
         try:
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2, default=str)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Could not save config: %s", e)
 
     def get_current_version(self) -> str:
@@ -132,7 +132,7 @@ class AutoUpdateSystem:
         if version_file.exists():
             try:
                 return version_file.read_text().strip()
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.warning("Could not read version file: %s", e)
 
         # Generate version based on last modification time
@@ -151,7 +151,7 @@ class AutoUpdateSystem:
             version_file.write_text(version)
             return version
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Could not determine version: %s", e)
             return "unknown"
 
@@ -163,7 +163,7 @@ class AutoUpdateSystem:
                 for byte_block in iter(lambda: f.read(4096), b""):
                     sha256_hash.update(byte_block)
             return sha256_hash.hexdigest()
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Could not calculate checksum for %s: %s", file_path, e)
             return ""
 
@@ -213,7 +213,7 @@ class AutoUpdateSystem:
                         )
                         components.append(component)
 
-                    except Exception as e:
+                    except (FileNotFoundError, PermissionError, OSError) as e:
                         logger.error("Error scanning component %s: %s", file_path, e)
 
         return components
@@ -259,7 +259,7 @@ class AutoUpdateSystem:
             logger.info("No updates available")
             return None
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error checking for updates: %s", e)
             return None
 
@@ -305,7 +305,7 @@ class AutoUpdateSystem:
             logger.info("Backup created successfully: %s", backup_dir)
             return True
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.error("Error creating backup: %s", e)
             return False
 
@@ -347,7 +347,7 @@ class AutoUpdateSystem:
                         success_count += 1
                         logger.info("Component %s updated successfully", component.name)
 
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, OSError) as e:
                     logger.error("Error updating component %s: %s", component.name, e)
 
             # Update version file
@@ -383,7 +383,7 @@ class AutoUpdateSystem:
             self.rollback_update(backup_name)
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error applying update: %s", e)
             return False
 
@@ -415,7 +415,7 @@ class AutoUpdateSystem:
             logger.info("Update verification successful")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error verifying update: %s", e)
             return False
 
@@ -458,7 +458,7 @@ class AutoUpdateSystem:
             logger.error("Rollback verification failed")
             return False
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error during rollback: %s", e)
             return False
 
@@ -489,7 +489,7 @@ class AutoUpdateSystem:
                 except BaseException:
                     continue
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error stopping services: %s", e)
 
     def start_services(self) -> None:
@@ -502,7 +502,7 @@ class AutoUpdateSystem:
                     creationflags=subprocess.CREATE_NEW_CONSOLE,
                 )
                 time.sleep(10)  # Give services time to start
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error starting services: %s", e)
 
     def health_check(self) -> bool:
@@ -543,7 +543,7 @@ class AutoUpdateSystem:
             logger.warning("Services not running, but files are intact")
             return True  # Files are there, services might need manual start
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Health check failed: %s", e)
             return False
 
@@ -563,7 +563,7 @@ class AutoUpdateSystem:
             )
             notification_file.write_text(f"{datetime.now(UTC).isoformat()}: {message}")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error sending notification: %s", e)
 
     def cleanup_old_backups(self) -> None:
@@ -587,12 +587,12 @@ class AutoUpdateSystem:
                                 shutil.rmtree(backup_dir)
                                 logger.info("Removed old backup: %s", backup_dir.name)
 
-                        except Exception as e:
+                        except (ValueError, RuntimeError) as e:
                             logger.error(
                                 "Error processing backup %s: %s", backup_dir, e
                             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error cleaning up backups: %s", e)
 
     def schedule_update_check(self) -> None:
@@ -654,7 +654,7 @@ class AutoUpdateSystem:
                     interval_hours = self.config.get("update_check_interval_hours", 24)
                     time.sleep(interval_hours * 3600)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Error in update checker: %s", e)
                     time.sleep(3600)  # Wait 1 hour before retrying
 
@@ -699,7 +699,7 @@ class AutoUpdateSystem:
             print("⏭️  Update skipped by user")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error in manual update: %s", e)
             print(f"❌ Update error: {e}")
             return False
@@ -728,7 +728,7 @@ async def main(self) -> None:
             success = updater.run_manual_update()
             sys.exit(0 if success else 1)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error("Fatal error in auto-update system: %s", e)
         print(f"❌ Fatal error: {e}")
         sys.exit(1)

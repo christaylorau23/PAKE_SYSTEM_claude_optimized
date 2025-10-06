@@ -1,0 +1,205 @@
+name: Documentation Build and Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with docs
+    
+    - name: Install dependencies (cached)
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry install --with docs --no-dev
+    
+    - name: Build documentation
+      run: |
+        cd docs/sphinx
+        poetry run make build-docs
+    
+    - name: Test documentation build
+      run: |
+        cd docs/sphinx
+        poetry run make test-docs
+    
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: docs/sphinx/_build/html/
+        retention-days: 30
+
+  deploy-documentation:
+    needs: build-documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download documentation artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: documentation
+        path: docs/sphinx/_build/html/
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docs/sphinx/_build/html/
+        cname: docs.pake-system.com
+    
+    - name: Deploy to S3 (if configured)
+      if: env.AWS_ACCESS_KEY_ID != ''
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        aws s3 sync docs/sphinx/_build/html/ s3://pake-system-docs/ --delete
+        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+
+  validate-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Install dependencies
+      run: poetry install --with docs
+    
+    - name: Validate documentation structure
+      run: |
+        cd docs/sphinx
+        poetry run python -c "
+        import os
+        import sys
+        
+        # Check if required files exist
+        required_files = ['index.rst', 'conf.py', 'api/index.rst']
+        for file in required_files:
+            if not os.path.exists(file):
+                print(f'ERROR: Required file {file} not found')
+                sys.exit(1)
+        
+        # Check if architecture directory exists
+        if not os.path.exists('../../architecture'):
+            print('ERROR: Architecture directory not found')
+            sys.exit(1)
+        
+        print('Documentation structure validation passed')
+        "
+    
+    - name: Check for broken links
+      run: |
+        cd docs/sphinx
+        poetry run sphinx-build -b linkcheck . _build/linkcheck
+    
+    - name: Validate RST syntax
+      run: |
+        cd docs/sphinx
+        poetry run python -c "
+        import docutils.core
+        import os
+        
+        for root, dirs, files in os.walk('.'):
+            for file in files:
+                if file.endswith('.rst'):
+                    filepath = os.path.join(root, file)
+                    try:
+                        docutils.core.publish_doctree(open(filepath).read())
+                        print(f'✓ {filepath}')
+                    except Exception as e:
+                        print(f'✗ {filepath}: {e}')
+                        exit(1)
+        print('All RST files validated successfully')
+        "
+
+  security-scan-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Install dependencies
+      run: poetry install --with docs
+    
+    - name: Scan for secrets in documentation
+      run: |
+        # Check for potential secrets in documentation
+        if grep -r -i "password\|secret\|key\|token" docs/ --exclude-dir=_build; then
+          echo "WARNING: Potential secrets found in documentation"
+          echo "Please review and remove any sensitive information"
+        else
+          echo "No potential secrets found in documentation"
+        fi
+    
+    - name: Validate external links
+      run: |
+        cd docs/sphinx
+        poetry run sphinx-build -b linkcheck . _build/linkcheck
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Broken external links found"
+          exit 1
+        fi

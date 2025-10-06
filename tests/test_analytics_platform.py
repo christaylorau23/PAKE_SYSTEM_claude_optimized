@@ -4,8 +4,8 @@ Tests enterprise-grade monitoring, alerting, and performance analytics.
 """
 
 import asyncio
-import statistics
 from datetime import UTC, datetime, timedelta
+import statistics
 
 import pytest
 import pytest_asyncio

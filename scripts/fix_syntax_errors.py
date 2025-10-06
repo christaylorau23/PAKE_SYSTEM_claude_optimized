@@ -4,9 +4,9 @@ Automated syntax error fix script for PAKE System.
 Fixes parse errors identified by ruff check.
 """
 
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 

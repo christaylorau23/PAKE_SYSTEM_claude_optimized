@@ -53,7 +53,7 @@ class TestTrendAnalysisService:
                     {"timestamp": "2025-09-14T06:00:00Z", "value": 125},
                 ],
             }
-            result = await trend_service.analyze_trend(
+            result = await self.trend_service.analyze_trend(
                 metric_name=metric_name,
                 time_range=time_range,
             )
@@ -85,7 +85,7 @@ class TestTrendAnalysisService:
                     "historical_data": [],
                     "predicted_values": [],
                 }
-                result = await trend_service.analyze_trend(
+                result = await self.trend_service.analyze_trend(
                     metric_name=metric,
                     time_range=time_range,
                 )
@@ -98,7 +98,7 @@ class TestTrendAnalysisService:
         with patch.object(trend_service, "analyze_trend") as mock_analyze:
             mock_analyze.side_effect = Exception("Database connection failed")
             with pytest.raises(Exception):
-                await trend_service.analyze_trend(
+                await self.trend_service.analyze_trend(
                     metric_name="response_time",
                     time_range="24h",
                 )
@@ -144,7 +144,7 @@ class TestCorrelationEngine:
                     "strong_correlations": 1,
                 },
             }
-            result = await correlation_engine.analyze_correlations(
+            result = await self.correlation_engine.analyze_correlations(
                 metrics=metrics,
                 time_range=time_range,
             )
@@ -189,7 +189,7 @@ class TestCorrelationEngine:
                         "strong_correlations": 0,
                     },
                 }
-                result = await correlation_engine.analyze_correlations(
+                result = await self.correlation_engine.analyze_correlations(
                     metrics=metrics,
                     time_range=time_range,
                 )
@@ -203,7 +203,7 @@ class TestCorrelationEngine:
         with patch.object(correlation_engine, "analyze_correlations") as mock_analyze:
             mock_analyze.side_effect = Exception("Data processing failed")
             with pytest.raises(Exception):
-                await correlation_engine.analyze_correlations(
+                await self.correlation_engine.analyze_correlations(
                     metrics=["response_time"],
                     time_range="24h",
                 )
@@ -281,7 +281,7 @@ class TestPredictiveAnalyticsService:
                     "generated_at": datetime.now(UTC).isoformat(),
                 },
             }
-            result = await predictive_service.generate_forecast(
+            result = await self.predictive_service.generate_forecast(
                 metrics=metrics,
                 forecast_horizon=forecast_horizon,
             )
@@ -345,7 +345,7 @@ class TestPredictiveAnalyticsService:
                     "model_accuracy": {"response_time": 0.8},
                     "forecast_metadata": {"forecast_horizon": horizon},
                 }
-                result = await predictive_service.generate_forecast(
+                result = await self.predictive_service.generate_forecast(
                     metrics=metrics,
                     forecast_horizon=horizon,
                 )
@@ -359,7 +359,7 @@ class TestPredictiveAnalyticsService:
         with patch.object(predictive_service, "generate_forecast") as mock_forecast:
             mock_forecast.side_effect = Exception("Model training failed")
             with pytest.raises(Exception):
-                await predictive_service.generate_forecast(
+                await self.predictive_service.generate_forecast(
                     metrics=["response_time"],
                     forecast_horizon="7d",
                 )
@@ -378,7 +378,7 @@ class TestPredictiveAnalyticsService:
                     "available_data_points": 50,
                 },
             }
-            result = await predictive_service.generate_forecast(
+            result = await self.predictive_service.generate_forecast(
                 metrics=["response_time"],
                 forecast_horizon="7d",
             )

@@ -14,15 +14,15 @@ Features:
 """
 
 import asyncio
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import json
 import logging
 import time
+from typing import Any, Dict, List
 import weakref
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any
 
 try:
     import aioredis
@@ -31,8 +31,8 @@ try:
 except Exception:
     aioredis = None
     REDIS_AVAILABLE = False
-import gc
 from collections import defaultdict
+import gc
 
 import psutil
 
@@ -110,8 +110,8 @@ class OptimizationConfig:
 class IntelligentCache:
     """Advanced caching system with TTL, compression, and LRU eviction."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig()
         self._cache: dict[str, Dict[str, Any]] = {}
         self._access_times: dict[str, float] = {}
         self._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
@@ -220,8 +220,8 @@ class IntelligentCache:
 class ConnectionPool:
     """Advanced connection pool with health monitoring."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig()
         self._pools: dict[str, list[Any]] = defaultdict(list)
         self._pool_stats: dict[str, dict[str, int]] = defaultdict(
             lambda: {"created": 0, "reused": 0, "closed": 0},
@@ -279,8 +279,8 @@ class ConnectionPool:
 class BatchProcessor:
     """Intelligent batch processing with adaptive sizing."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig()
         self._batch_stats = defaultdict(
             lambda: {
                 "batches_processed": 0,
@@ -335,7 +335,7 @@ class BatchProcessor:
                     try:
                         item_result = await processor([item])
                         results.extend(item_result)
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.error("Failed to process individual item: %s", e)
 
         return results
@@ -360,8 +360,8 @@ class BatchProcessor:
 class AdaptiveRateLimiter:
     """Adaptive rate limiting with burst handling."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig()
         self._rate_windows: dict[str, list[float]] = defaultdict(list)
         self._error_rates: dict[str, float] = defaultdict(float)
         self._lock = asyncio.Lock()
@@ -421,8 +421,8 @@ class AdaptiveRateLimiter:
 class MemoryManager:
     """Advanced memory management and monitoring."""
 
-    def __init__(self) -> None:
-        self.config = config
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig()
         self._weak_refs: set[weakref.ref] = set()
         self._last_gc_time = time.time()
         self._memory_stats = {"peak_usage_mb": 0.0, "gc_collections": 0}
@@ -501,8 +501,8 @@ class MemoryManager:
 class PerformanceOptimizationService:
     """Advanced performance optimization service for PAKE system."""
 
-    def __init__(self) -> None:
-        self.config = config or OptimizationConfig()
+    def __init__(self, config: OptimizationConfig | None = None) -> None:
+        self.config = config or OptimizationConfig() or OptimizationConfig()
         self.cache = IntelligentCache(self.config)
         self.connection_pool = ConnectionPool(self.config)
         self.batch_processor = BatchProcessor(self.config)
@@ -533,7 +533,7 @@ class PerformanceOptimizationService:
         max_concurrent = self._calculate_optimal_concurrency(len(tasks))
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def execute_task_with_optimization(self) -> None:
+        async def execute_task_with_optimization(task_name: str, task: Callable) -> None:
             async with semaphore:
                 await self.rate_limiter.acquire(task_name)
 
@@ -549,7 +549,7 @@ class PerformanceOptimizationService:
                     self.rate_limiter.record_success(task_name)
                     return result
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     self.rate_limiter.record_error(task_name)
                     logger.error("Task %s failed: %s", task_name, e)
                     raise

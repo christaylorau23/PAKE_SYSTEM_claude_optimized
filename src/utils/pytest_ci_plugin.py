@@ -2,9 +2,9 @@
 Provides CI environment simulation and resource constraint testing.
 """
 
+from dataclasses import dataclass
 import os
 import time
-from dataclasses import dataclass
 from typing import Any
 
 import psutil
@@ -64,7 +64,7 @@ class CIResourceMonitor:
 class CIEnvironmentPlugin:
     """pytest plugin for CI environment simulation."""
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         self.config = config
         self.resource_monitor = None
         self.ci_limits = CIResourceLimits()
@@ -101,7 +101,7 @@ class CIEnvironmentPlugin:
         print(f"   Workers: {self.ci_limits.max_workers}")
         print(f"   Timeout: {self.ci_limits.timeout_seconds}s")
 
-    def pytest_configure(self) -> None:
+    def pytest_configure(self, config) -> None:
         """Configure pytest with CI-specific settings."""
         self._apply_ci_constraints()
 
@@ -151,7 +151,7 @@ class CIEnvironmentPlugin:
         if self.resource_monitor:
             self.resource_monitor.update_peaks()
 
-    def pytest_collection_modifyitems(self) -> None:
+    def pytest_collection_modifyitems(self, config, items) -> None:
         """Modify test collection based on CI environment."""
         if self.is_ci_env:
             # Skip local-only tests in CI
@@ -175,7 +175,7 @@ class CIEnvironmentPlugin:
                         )
 
 
-def pytest_addoption(self) -> None:
+def pytest_addoption(parser) -> None:
     """Add CI-specific command line options."""
     parser.addoption(
         "--ci-only",
@@ -203,7 +203,7 @@ def pytest_addoption(self) -> None:
     )
 
 
-def pytest_configure(self) -> None:
+def pytest_configure(config) -> None:
     """Configure pytest with CI plugin."""
     if config.getoption("--ci-simulation") or os.getenv("CI"):
         config.pluginmanager.register(CIEnvironmentPlugin(config))
@@ -215,21 +215,21 @@ def is_ci_environment() -> bool:
     return bool(os.getenv("CI") or os.getenv("GITHUB_ACTIONS"))
 
 
-def skip_if_not_ci(self) -> None:
+def skip_if_not_ci(reason: str = "Not running in CI environment") -> Any:
     """Skip test if not running in CI environment."""
     return pytest.mark.skipif(not is_ci_environment(), reason=reason)
 
 
-def skip_if_ci(self) -> None:
+def skip_if_ci(reason: str = "Running in CI environment") -> Any:
     """Skip test if running in CI environment."""
     return pytest.mark.skipif(is_ci_environment(), reason=reason)
 
 
-def ci_sensitive(self) -> None:
+def ci_sensitive(reason: str = "Test is sensitive to CI environment conditions") -> Any:
     """Mark test as CI-sensitive."""
     return pytest.mark.ci_sensitive(reason=reason)
 
 
-def resource_intensive(self) -> None:
+def resource_intensive(reason: str = "Test consumes significant resources") -> Any:
     """Mark test as resource-intensive."""
     return pytest.mark.resource_intensive(reason=reason)

@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 """
 Integration Test: Interest-Based Content Discovery
 
@@ -11,9 +13,9 @@ to content ingestion, analysis, and personalized recommendations.
 IMPORTANT: This test MUST fail initially (TDD requirement).
 """
 
-import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
+import uuid
 
 import pytest
 

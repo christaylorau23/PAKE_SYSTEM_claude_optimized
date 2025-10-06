@@ -9,10 +9,10 @@ Following TDD methodology:
 """
 
 import asyncio
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import aiohttp
@@ -80,7 +80,7 @@ class FirecrawlService:
     Supports both real API integration and mock testing mode.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, api_key: str = "fc-test-key-development-only", base_url: str = "https://api.firecrawl.dev", test_mode: bool | None = None) -> None:
         """Initialize FirecrawlService with API credentials."""
         self.api_key = api_key
         self.base_url = base_url
@@ -218,7 +218,7 @@ class FirecrawlService:
                 "success": False,
                 "error": f"Network error connecting to Firecrawl: {str(e)}",
             }
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             return {
                 "success": False,
                 "error": f"Unexpected error during API request: {str(e)}",
@@ -395,7 +395,7 @@ class FirecrawlService:
                     url=url,
                 ),
             )
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return FirecrawlResult(
                 success=False,
                 url=url,
@@ -406,7 +406,7 @@ class FirecrawlService:
                 ),
             )
 
-    async def to_content_item(self) -> None:
+    async def to_content_item(self, result: FirecrawlResult, source_name: str) -> Any:
         """Convert FirecrawlResult to ContentItem for pipeline integration.
         REFACTOR PHASE: Enhanced implementation.
         """
@@ -503,7 +503,7 @@ class FirecrawlService:
                     quality_score=quality_score,
                     cognitive_assessment={"assessed": True, "score": quality_score},
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Cognitive assessment failed for %s: %s", url, e)
                 # Return result without cognitive assessment on error
 
@@ -551,7 +551,7 @@ class FirecrawlService:
                     optimization_applied=True,
                     scraping_attempts=2,
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Metacognitive optimization failed for %s: %s", url, e)
 
         return result
@@ -577,7 +577,7 @@ class FirecrawlService:
                         "quality_score": result.quality_score,
                     },
                 )
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error(
                     "Failed to trigger workflow %s for %s: %s",
                     workflow_type,

@@ -78,7 +78,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["rbacService"].initialize.return_value = None
 
         # Act
-        await auth_service.initialize()
+        await self.auth_service.initialize()
 
         # Assert
         mock_services["redis"].connect.assert_called_once()
@@ -100,7 +100,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].createUser.return_value = created_user
 
         # Act
-        result = await auth_service.registerUser(**registration_data)
+        result = await self.auth_service.registerUser(**registration_data)
 
         # Assert
         assert result is not None
@@ -125,7 +125,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(
+        result = await self.auth_service.loginUser(
             login_data["username"], login_data["password"]
         )
 
@@ -150,7 +150,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["tokenService"].refreshToken.return_value = new_tokens
 
         # Act
-        result = await auth_service.refreshToken(refresh_token)
+        result = await self.auth_service.refreshToken(refresh_token)
 
         # Assert
         assert result["accessToken"] == "new_access_token"
@@ -168,7 +168,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["tokenService"].revokeToken.return_value = True
 
         # Act
-        result = await auth_service.logoutUser(session_id)
+        result = await self.auth_service.logoutUser(session_id)
 
         # Assert
         assert result is True
@@ -191,7 +191,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["emailService"].sendPasswordResetEmail.return_value = True
 
         # Act
-        result = await auth_service.requestPasswordReset(email)
+        result = await self.auth_service.requestPasswordReset(email)
 
         # Assert
         assert result is True
@@ -210,7 +210,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["passwordService"].resetPassword.return_value = True
 
         # Act
-        result = await auth_service.confirmPasswordReset(reset_token, new_password)
+        result = await self.auth_service.confirmPasswordReset(reset_token, new_password)
 
         # Assert
         assert result is True
@@ -241,7 +241,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].createUser.return_value = created_user
 
         # Act
-        result = await auth_service.registerUser(**minimal_data)
+        result = await self.auth_service.registerUser(**minimal_data)
 
         # Assert
         assert result is not None
@@ -265,7 +265,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -281,7 +281,7 @@ class TestAuthenticationServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(jwt.ExpiredSignatureError):
-            await auth_service.refreshToken(expired_token)
+            await self.auth_service.refreshToken(expired_token)
 
     @pytest.mark.unit_edge_case
     async def test_password_reset_with_nonexistent_email(self) -> None:
@@ -291,7 +291,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].getUserByEmail.return_value = None
 
         # Act
-        result = await auth_service.requestPasswordReset(email)
+        result = await self.auth_service.requestPasswordReset(email)
 
         # Assert
         assert result is False
@@ -317,7 +317,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         async def login(self) -> None:
-            return await auth_service.loginUser(username, password)
+            return await self.auth_service.loginUser(username, password)
 
         # Act
         tasks = [login() for _ in range(5)]
@@ -349,7 +349,7 @@ class TestAuthenticationServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid email format"):
-            await auth_service.registerUser(**invalid_data)
+            await self.auth_service.registerUser(**invalid_data)
 
     @pytest.mark.unit_error_handling
     async def test_registration_with_weak_password(self) -> None:
@@ -371,7 +371,7 @@ class TestAuthenticationServiceComprehensive:
         with pytest.raises(
             ValueError, match="Password does not meet security requirements"
         ):
-            await auth_service.registerUser(**weak_password_data)
+            await self.auth_service.registerUser(**weak_password_data)
 
     @pytest.mark.unit_error_handling
     async def test_login_with_wrong_password(self) -> None:
@@ -385,7 +385,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, wrong_password)
+        result = await self.auth_service.loginUser(username, wrong_password)
 
         # Assert
         assert result["success"] is False
@@ -403,7 +403,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is False
@@ -421,7 +421,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is False
@@ -437,7 +437,7 @@ class TestAuthenticationServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Redis connection failed"):
-            await auth_service.initialize()
+            await self.auth_service.initialize()
 
     @pytest.mark.unit_error_handling
     async def test_email_service_failure(self) -> None:
@@ -456,7 +456,7 @@ class TestAuthenticationServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(Exception, match="Email service unavailable"):
-            await auth_service.requestPasswordReset(email)
+            await self.auth_service.requestPasswordReset(email)
 
     @pytest.mark.unit_error_handling
     async def test_invalid_reset_token(self) -> None:
@@ -469,7 +469,7 @@ class TestAuthenticationServiceComprehensive:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid reset token"):
-            await auth_service.confirmPasswordReset(invalid_token, new_password)
+            await self.auth_service.confirmPasswordReset(invalid_token, new_password)
 
     # ============================================================================
     # PERFORMANCE TESTS - Algorithm Efficiency and Performance
@@ -497,7 +497,7 @@ class TestAuthenticationServiceComprehensive:
         # Act
         start_time = time.time()
         for _ in range(100):
-            await auth_service.loginUser(username, password)
+            await self.auth_service.loginUser(username, password)
         end_time = time.time()
 
         # Assert
@@ -523,7 +523,7 @@ class TestAuthenticationServiceComprehensive:
         # Act
         start_time = time.time()
         for _ in range(100):
-            await auth_service.refreshToken(refresh_token)
+            await self.auth_service.refreshToken(refresh_token)
         end_time = time.time()
 
         # Assert
@@ -541,7 +541,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].createUser.return_value = created_user
 
         async def register_user(self) -> None:
-            return await auth_service.registerUser(
+            return await self.auth_service.registerUser(
                 email=f"user{user_num}@example.com",
                 username=f"user{user_num}",
                 password="SecurePassword123!",
@@ -583,7 +583,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -609,7 +609,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is True
@@ -626,7 +626,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["tokenService"].revokeToken.return_value = True
 
         # Act
-        result = await auth_service.logoutUser(session_id)
+        result = await self.auth_service.logoutUser(session_id)
 
         # Assert
         assert result is True
@@ -647,7 +647,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password)
+        result = await self.auth_service.loginUser(username, password)
 
         # Assert
         assert result["success"] is False
@@ -674,7 +674,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        result = await auth_service.loginUser(username, password, mfa_token)
+        result = await self.auth_service.loginUser(username, password, mfa_token)
 
         # Assert
         assert result["success"] is True

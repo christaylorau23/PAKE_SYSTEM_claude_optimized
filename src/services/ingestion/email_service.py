@@ -7,14 +7,14 @@ intelligent content filtering, and cognitive quality assessment.
 """
 
 import asyncio
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 import hashlib
 import imaplib
 import logging
 import re
 import ssl
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict, List
 
 from scripts.ingestion_pipeline import ContentItem
 
@@ -100,7 +100,7 @@ class EmailIngestionService:
     - Advanced search and filtering capabilities
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: EmailConnectionConfig, cognitive_engine: Any | None = None) -> None:
         """Initialize email service with connection configuration."""
         self.config = config
         self.cognitive_engine = cognitive_engine
@@ -110,7 +110,7 @@ class EmailIngestionService:
 
         logger.info(
             "Initialized EmailIngestionService for %s://%s",
-            config.server_type,
+            self.config.server_type,
             config.hostname,
         )
 
@@ -205,7 +205,7 @@ class EmailIngestionService:
             )
             return result
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             execution_time = asyncio.get_event_loop().time() - start_time
             if execution_time <= 0:
                 execution_time = 0.001  # Ensure non-zero execution time
@@ -247,7 +247,7 @@ class EmailIngestionService:
                     self.config.server_type,
                 )
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error(
                     "Failed to connect to %s server: %s",
                     self.config.server_type,
@@ -294,7 +294,7 @@ class EmailIngestionService:
                 "mock": False,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("IMAP connection failed: %s", e)
             msg = f"Failed to connect to IMAP server: {e}"
             raise ConnectionError(msg)
@@ -538,7 +538,7 @@ Send us your bank details to receive your winnings.""",
 
                 assessed_messages.append(assessed_message)
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to assess message %s: %s", message.message_id, e)
                 assessed_messages.append(message)  # Keep original
 
@@ -634,7 +634,7 @@ Send us your bank details to receive your winnings.""",
                 "cache_size": len(self._message_cache),
                 "filter_patterns_loaded": len(self._filter_patterns),
             }
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {"status": "unhealthy", "error": str(e)}
 
     async def close(self) -> None:

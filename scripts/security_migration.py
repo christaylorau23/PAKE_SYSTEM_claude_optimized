@@ -5,9 +5,9 @@ Automates the migration from insecure to secure implementations
 """
 
 import logging
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -36,7 +36,7 @@ class SecurityMigrator:
 
             self._print_summary()
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Migration failed: %s", e)
             sys.exit(1)
 
@@ -75,7 +75,7 @@ class SecurityMigrator:
                 self.migrations_failed.append(("dependencies", result.stderr))
                 logger.error("❌ Dependency update failed: %s", result.stderr)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.migrations_failed.append(("dependencies", str(e)))
             logger.error("❌ Dependency migration failed: %s", e)
 
@@ -105,7 +105,7 @@ class SecurityMigrator:
                 self.migrations_completed.append("hash_algorithms")
                 logger.info("✅ Hash algorithms migrated successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.migrations_failed.append(("hash_algorithms", str(e)))
             logger.error("❌ Hash algorithm migration failed: %s", e)
 
@@ -133,7 +133,7 @@ class SecurityMigrator:
                 )
                 logger.error("❌ Secure serialization test failed")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.migrations_failed.append(("serialization", str(e)))
             logger.error("❌ Serialization migration failed: %s", e)
 
@@ -159,7 +159,7 @@ class SecurityMigrator:
             self.migrations_completed.append("network_config")
             logger.info("✅ Network configuration migrated successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.migrations_failed.append(("network_config", str(e)))
             logger.error("❌ Network configuration migration failed: %s", e)
 
@@ -266,7 +266,7 @@ For security-related questions or to report vulnerabilities:
             self.migrations_completed.append("security_docs")
             logger.info("✅ Security documentation created")
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.migrations_failed.append(("security_docs", str(e)))
             logger.error("❌ Security documentation creation failed: %s", e)
 

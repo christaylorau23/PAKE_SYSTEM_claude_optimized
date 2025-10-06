@@ -1,3 +1,4 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Test script for dependency updates and package management
@@ -5,8 +6,8 @@ Tests package version checking, update validation, and compatibility
 """
 
 import asyncio
-import re
 from pathlib import Path
+import re
 
 
 class DependencyUpdateTester:
@@ -148,7 +149,7 @@ class DependencyUpdateTester:
 
             return outdated
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"   Error checking outdated packages: {e}")
             return []
 
@@ -166,7 +167,7 @@ class DependencyUpdateTester:
                 },
             ]
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             print(f"   Error checking security vulnerabilities: {e}")
             return []
 
@@ -189,7 +190,7 @@ class DependencyUpdateTester:
                 },
             ]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"   Error checking npm outdated: {e}")
             return []
 
@@ -210,7 +211,7 @@ class DependencyUpdateTester:
                 "audit_found": True,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"   Error running npm audit: {e}")
             return {"error": str(e)}
 
@@ -224,7 +225,7 @@ class DependencyUpdateTester:
             from_pattern = r"FROM\s+([^\s]+)"
             return re.findall(from_pattern, content, re.IGNORECASE)
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             print(f"   Error extracting Docker base images: {e}")
             return []
 
@@ -368,7 +369,7 @@ async def _test_dependency_updates_async(self) -> None:
         print("\nDependency update tests completed successfully!")
         return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"ERROR: Dependency update tests failed: {e}")
         return False
 

@@ -3,13 +3,13 @@
 Prometheus-compatible metrics for observability.
 """
 
-import os
-import threading
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import os
+import threading
+import time
+from typing import Any, Dict
 
 import psutil
 
@@ -35,7 +35,7 @@ class MetricValue:
 class MetricsStore:
     """Thread-safe metrics storage with Prometheus export capability."""
 
-    def __init__(self) -> None:
+    def __init__(self, service_name: str = "pake-system") -> None:
         self.service_name = service_name
         self.start_time = time.time()
         self._lock = threading.RLock()
@@ -71,7 +71,7 @@ class MetricsStore:
             return ""
         return "|".join(f"{k}={v}" for k, v in sorted(labels.items()))
 
-    def increment_counter(self) -> None:
+    def increment_counter(self, name: str, value: int = 1, labels: dict[str, str] | None = None) -> None:
         """Increment a counter metric."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -82,7 +82,7 @@ class MetricsStore:
 
         logger.debug("Counter incremented", metric=name, value=value, labels=labels)
 
-    def set_gauge(self) -> None:
+    def set_gauge(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
         """Set a gauge metric value."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -93,7 +93,7 @@ class MetricsStore:
 
         logger.debug("Gauge set", metric=name, value=value, labels=labels)
 
-    def record_histogram(self) -> None:
+    def record_histogram(self, name: str, value: float, labels: dict[str, str] | None = None, buckets: list[float] | None = None) -> None:
         """Record a histogram value."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -120,7 +120,7 @@ class MetricsStore:
 
         logger.debug("Histogram recorded", metric=name, value=value, labels=labels)
 
-    def record_http_request(self) -> None:
+    def record_http_request(self, method: str, path: str, status_code: int, duration: float) -> None:
         """Record HTTP request metrics."""
         normalized_path = self._normalize_path(path)
         key = f"{method}:{normalized_path}:{status_code}"
@@ -205,7 +205,7 @@ class MetricsStore:
             for metric_name, value in self._system_metrics.items():
                 self.set_gauge(f"system_{metric_name}", value)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update system metrics", error=e)
 
     def get_prometheus_metrics(self) -> str:
@@ -381,22 +381,22 @@ def get_metrics_store(service_name: str = "pake-system") -> MetricsStore:
 # Convenience functions
 
 
-def increment_counter(self) -> None:
+def increment_counter(name: str, value: int = 1, labels: dict[str, str] | None = None) -> None:
     """Increment a counter metric."""
     get_metrics_store().increment_counter(name, value, labels)
 
 
-def set_gauge(self) -> None:
+def set_gauge(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Set a gauge metric."""
     get_metrics_store().set_gauge(name, value, labels)
 
 
-def record_histogram(self) -> None:
+def record_histogram(name: str, value: float, labels: dict[str, str] | None = None) -> None:
     """Record a histogram value."""
     get_metrics_store().record_histogram(name, value, labels=labels)
 
 
-def record_http_request(self) -> None:
+def record_http_request(method: str, path: str, status_code: int, duration: float) -> None:
     """Record HTTP request metrics."""
     get_metrics_store().record_http_request(method, path, status_code, duration)
 
@@ -407,7 +407,7 @@ def record_http_request(self) -> None:
 class timer:
     """Context manager for timing operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, metric_name: str, labels: dict[str, str] | None = None) -> None:
         self.metric_name = metric_name
         self.labels = labels or {}
         self.start_time = None
@@ -416,17 +416,17 @@ class timer:
         self.start_time = time.time()
         return self
 
-    def __exit__(self) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if self.start_time:
             duration = time.time() - self.start_time
             record_histogram(self.metric_name, duration, self.labels)
 
 
-def timed(self) -> None:
+def timed(metric_name: str, labels: dict[str, str] | None = None) -> Any:
     """Decorator to time function execution."""
 
-    def decorator(self) -> None:
-        def wrapper(self) -> None:
+    def decorator(func: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with timer(metric_name, labels):
                 return func(*args, **kwargs)
 
@@ -438,7 +438,7 @@ def timed(self) -> None:
 # FastAPI/Starlette middleware
 
 
-def create_metrics_middleware(self) -> None:
+def create_metrics_middleware(app: Any, metrics_store: MetricsStore | None = None) -> Any:
     """Create metrics middleware for FastAPI/Starlette."""
     try:
         import time
@@ -448,11 +448,11 @@ def create_metrics_middleware(self) -> None:
         from starlette.responses import Response
 
         class MetricsMiddleware(BaseHTTPMiddleware):
-            def __init__(self) -> None:
+            def __init__(self, app: Any) -> None:
                 super().__init__(app)
                 self.metrics_store = metrics_store or get_metrics_store()
 
-            async def dispatch(self) -> None:
+            async def dispatch(self, request: Request, call_next: Any) -> Response:
                 start_time = time.time()
 
                 try:
@@ -484,7 +484,7 @@ def create_metrics_middleware(self) -> None:
     except ImportError:
         # Return no-op middleware if starlette is not available
         class NoOpMetricsMiddleware:
-            def __init__(self) -> None:
+            def __init__(self, app: Any) -> None:
                 pass
 
         return NoOpMetricsMiddleware

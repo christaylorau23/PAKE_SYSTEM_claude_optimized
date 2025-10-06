@@ -3,14 +3,17 @@
 Enterprise-grade tenant management with automated provisioning and lifecycle management.
 """
 
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import logging
 import secrets
 import string
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict
 
 import bcrypt
+import sqlalchemy
+import psycopg2
+import asyncpg
 
 from src.middleware.tenant_context import (
     create_tenant_jwt,
@@ -138,7 +141,7 @@ class TenantManagementService:
     - Integration with Kubernetes provisioning
     """
 
-    def __init__(self) -> None:
+    def __init__(self, db_service: MultiTenantPostgreSQLService) -> None:
         self.db_service = db_service
         self.dal = TenantAwareDataAccessLayer(db_service)
 
@@ -281,7 +284,7 @@ class TenantManagementService:
                 ],
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create tenant: %s", e)
             raise
 
@@ -307,7 +310,7 @@ class TenantManagementService:
                 "recent_activity": recent_activity,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get tenant %s: %s", tenant_id, e)
             raise
 
@@ -382,7 +385,7 @@ class TenantManagementService:
 
             return {"status": "success", "tenant": updated_tenant}
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to update tenant %s: %s", tenant_id, e)
             raise
 
@@ -431,7 +434,7 @@ class TenantManagementService:
                 "message": f"Tenant {tenant['name']} has been deleted",
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to delete tenant %s: %s", tenant_id, e)
             raise
 
@@ -466,7 +469,7 @@ class TenantManagementService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to list tenants: %s", e)
             raise
 
@@ -548,7 +551,7 @@ class TenantManagementService:
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to create user in tenant %s: %s", tenant_id, e)
             raise
 
@@ -564,7 +567,7 @@ class TenantManagementService:
 
             return {"users": users, "pagination": {"limit": limit, "offset": offset}}
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Failed to get users for tenant %s: %s", tenant_id, e)
             raise
 
@@ -611,7 +614,7 @@ class TenantManagementService:
                 "plan_limits": plan_limits,
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get analytics for tenant %s: %s", tenant_id, e)
             raise
 
@@ -655,7 +658,7 @@ class TenantManagementService:
                 resource_utilization=resource_utilization,
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to get stats for tenant %s: %s", tenant_id, e)
             # Return empty stats on error
             return TenantStats(
@@ -697,7 +700,7 @@ class TenantManagementService:
                 "service": "tenant_management",
             }
 
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

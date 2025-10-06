@@ -5,11 +5,12 @@ This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
+from datetime import UTC, datetime
 import time
 import uuid
-from datetime import UTC, datetime
+from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 # Minimal API Gateway to satisfy contract tests
@@ -21,7 +22,7 @@ app = FastAPI(
 
 
 @app.get("/v1/health")
-async def get_gateway_health(self) -> None:
+async def get_gateway_health() -> dict[str, Any]:
     """Minimal health endpoint to satisfy test_api_gateway_health.py.
 
     This implements just enough to pass the contract tests:
@@ -75,7 +76,7 @@ async def get_gateway_health(self) -> None:
 
 
 @app.get("/v1/status")
-async def get_system_status(self) -> None:
+async def get_system_status() -> dict[str, Any]:
     """System status endpoint."""
     return {
         "status": "operational",
@@ -89,7 +90,7 @@ async def get_system_status(self) -> None:
 @app.api_route(
     "/v1/services/{service_path:path}", methods=["GET", "POST", "PUT", "DELETE"]
 )
-async def route_service_request(self) -> None:
+async def route_service_request(request: Request, service_path: str) -> dict[str, Any]:
     """Minimal service routing to pass routing tests.
 
     This is just enough to satisfy the contract tests:
@@ -182,7 +183,7 @@ async def route_service_request(self) -> None:
 
 
 @app.get("/v1/services")
-async def list_services(self) -> None:
+async def list_services() -> list[dict[str, Any]]:
     """Service discovery endpoint to pass routing tests."""
     return [
         {
@@ -201,7 +202,7 @@ async def list_services(self) -> None:
 
 # Middleware to add response headers for all requests
 @app.middleware("http")
-async def add_gateway_headers(self) -> None:
+async def add_gateway_headers(request: Request, call_next: Callable) -> Any:
     """Add gateway metadata to all responses."""
     start_time = time.time()
 

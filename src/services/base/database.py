@@ -5,13 +5,16 @@ Production-grade database configuration with async SQLAlchemy,
 connection pooling, and enterprise patterns.
 """
 
+from collections.abc import AsyncGenerator
 import logging
 import os
-from collections.abc import AsyncGenerator
 
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+import sqlalchemy.exc
+import psycopg2
+import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Database session error: %s", e)
             await session.rollback()
             raise

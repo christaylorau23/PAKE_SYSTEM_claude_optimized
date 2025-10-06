@@ -12,25 +12,25 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
-import numpy as np
-
-# Scientific computing
-# Core NLP frameworks
-import spacy
 from gensim.corpora import Dictionary
 
 # Topic modeling
 from gensim.models import CoherenceModel, LdaModel
+import numpy as np
 
 # Sentence transformers for embeddings
 from sentence_transformers import SentenceTransformer
+
+# Scientific computing
+# Core NLP frameworks
+import spacy
 from spacy.matcher import Matcher
 
 # Hugging Face transformers for sentiment
@@ -163,7 +163,7 @@ class IntelligenceNLPService:
     - Async processing with caching
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str = "en_core_web_sm", embedding_model: str = "all-MiniLM-L6-v2", sentiment_model: str = "cardiffnlp/twitter-roberta-base-sentiment-latest", cache_service: CacheService | None = None) -> None:
         """Initialize the Intelligence NLP Service.
 
         Args:
@@ -224,7 +224,7 @@ class IntelligenceNLPService:
             logger.info("Intelligence NLP Service initialized successfully")
             return True
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize NLP service: %s", e)
             return False
 
@@ -244,7 +244,7 @@ class IntelligenceNLPService:
 
             logger.info("spaCy model '%s' loaded successfully", self.model_name)
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize spaCy: %s", e)
             raise
 
@@ -270,7 +270,7 @@ class IntelligenceNLPService:
 
             logger.info("Sentence transformer model loaded successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize embeddings: %s", e)
             raise
 
@@ -288,7 +288,7 @@ class IntelligenceNLPService:
 
             logger.info("Sentiment analysis pipeline loaded successfully")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Failed to initialize sentiment analysis: %s", e)
             raise
 
@@ -490,7 +490,7 @@ class IntelligenceNLPService:
 
             return analysis
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing document: %s", e)
             raise
 
@@ -544,7 +544,7 @@ class IntelligenceNLPService:
                             [ent.text],
                         )
                         semantic_embedding = embedding[0]
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         logger.warning(
                             "Failed to generate embedding for entity '%s': %s",
                             ent.text,
@@ -571,7 +571,7 @@ class IntelligenceNLPService:
             logger.debug("Extracted %s entities from text", len(entities))
             return entities
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error extracting entities: %s", e)
             return []
 
@@ -619,7 +619,7 @@ class IntelligenceNLPService:
             logger.debug("Extracted %s relationships from text", len(relationships))
             return relationships
 
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
             logger.error("Error extracting relationships: %s", e)
             return []
 
@@ -681,7 +681,7 @@ class IntelligenceNLPService:
             # Fallback neutral result
             return SentimentResult(0.0, 0.0, 0.0, "NEUTRAL")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error analyzing sentiment: %s", e)
             return SentimentResult(0.0, 0.0, 0.0, "NEUTRAL")
 
@@ -705,7 +705,7 @@ class IntelligenceNLPService:
             logger.debug("Generated embeddings for %s texts", len(texts))
             return embeddings
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error generating embeddings: %s", e)
             return np.array([])
 
@@ -794,7 +794,7 @@ class IntelligenceNLPService:
             )
             return topics
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error extracting topics: %s", e)
             return []
 
@@ -844,7 +844,7 @@ class IntelligenceNLPService:
             scored_phrases.sort(key=lambda x: x[1], reverse=True)
             return scored_phrases[:max_phrases]
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Error extracting key phrases: %s", e)
             return []
 
@@ -883,7 +883,7 @@ class IntelligenceNLPService:
 
             return stats
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error computing text statistics: %s", e)
             return {}
 
@@ -929,7 +929,7 @@ class IntelligenceNLPService:
                 "performance_stats": await self.get_service_stats(),
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),

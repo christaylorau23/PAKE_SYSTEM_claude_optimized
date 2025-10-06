@@ -5,8 +5,8 @@ Simple script to validate fault injection tests work correctly
 """
 
 import asyncio
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path for imports
 project_root = Path(__file__).parent.parent
@@ -51,7 +51,7 @@ async def test_firecrawl_fault_injection(self) -> None:
             print("✅ FirecrawlService handles 503 errors gracefully")
             return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ FirecrawlService fault injection test failed: {e}")
         return False
 
@@ -105,7 +105,7 @@ async def test_arxiv_fault_injection(self) -> None:
             print("✅ ArxivEnhancedService handles 503 errors gracefully")
             return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ ArxivEnhancedService fault injection test failed: {e}")
         return False
 
@@ -160,7 +160,7 @@ async def test_pubmed_fault_injection(self) -> None:
             print("✅ PubMedService handles 503 errors gracefully")
             return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ PubMedService fault injection test failed: {e}")
         return False
 
@@ -201,7 +201,7 @@ async def test_rate_limit_handling(self) -> None:
             print("✅ Rate limit handling works correctly")
             return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Rate limit handling test failed: {e}")
         return False
 
@@ -223,7 +223,7 @@ async def main(self) -> None:
         try:
             result = await test()
             results.append(result)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             print(f"❌ Test {test.__name__} failed with exception: {e}")
             results.append(False)
         print()

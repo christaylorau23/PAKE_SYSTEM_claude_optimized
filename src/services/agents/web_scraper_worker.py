@@ -9,9 +9,9 @@ Handles:
 - Performance optimization
 """
 
-import logging
 from datetime import UTC, datetime
-from typing import Any
+import logging
+from typing import Any, Dict, List
 
 from ..ingestion.firecrawl_service import FirecrawlService, ScrapingOptions
 from ..messaging.message_bus import MessageBus
@@ -28,7 +28,7 @@ class WebScraperWorker(BaseWorkerAgent):
     for JavaScript-heavy content extraction.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, worker_id: str | None = None, message_bus: MessageBus | None = None, firecrawl_api_key: str | None = None) -> None:
         """Initialize web scraper worker."""
         # Define worker capabilities
         capabilities = [
@@ -135,7 +135,7 @@ class WebScraperWorker(BaseWorkerAgent):
                         errors.append(error_msg)
                         logger.warning(error_msg)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     error_msg = f"Error scraping {url}: {str(e)}"
                     errors.append(error_msg)
                     logger.error(error_msg)
@@ -158,7 +158,7 @@ class WebScraperWorker(BaseWorkerAgent):
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("Web scraper task processing error: %s", e)
             return {
                 "success": False,
@@ -187,7 +187,7 @@ class WebScraperWorker(BaseWorkerAgent):
             ),
         )
 
-    def _enhance_content_metadata(self) -> None:
+    def _enhance_content_metadata(self, content_item: Any, plan_context: Dict[str, Any], source_data: Dict[str, Any]) -> None:
         """Enhance content item with additional metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
@@ -247,7 +247,7 @@ class WebScraperWorker(BaseWorkerAgent):
                     test_result.error,
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(
                 "WebScraperWorker %s Firecrawl service test failed: %s",
                 self.worker_id,
@@ -282,7 +282,7 @@ class WebScraperWorker(BaseWorkerAgent):
                 web_scraper_health["firecrawl_service_status"] = "degraded"
                 web_scraper_health["firecrawl_service_error"] = test_result.error
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             web_scraper_health["firecrawl_service_status"] = "unhealthy"
             web_scraper_health["firecrawl_service_error"] = str(e)
 

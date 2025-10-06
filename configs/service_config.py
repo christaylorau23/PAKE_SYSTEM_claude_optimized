@@ -3,11 +3,11 @@
 Enterprise-grade configuration management with hierarchical loading and validation.
 """
 
+from dataclasses import dataclass, field
+from enum import Enum
 import json
 import logging
 import os
-from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -291,7 +291,7 @@ class ServiceConfig:
     - Singleton pattern
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config_file: str | None = None, environment: str | None = None) -> None:
         """Initialize service configuration.
 
         Args:
@@ -360,7 +360,7 @@ class ServiceConfig:
 
             logger.info("Configuration loaded from file: %s", config_file)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error(
                 "Failed to load configuration from file %s: %s", config_file, e
             )

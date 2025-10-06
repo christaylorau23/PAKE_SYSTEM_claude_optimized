@@ -1,24 +1,25 @@
+from typing import List
 #!/usr/bin/env python3
 """
 Social Media Analytics Dashboard
 Comprehensive analytics and insights across all social platforms
 """
 
-import json
-import logging
-import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
+import json
+import logging
 from pathlib import Path
+import sqlite3
 
 # Data visualization and analytics
 try:
     import matplotlib.pyplot as plt
     import pandas as pd
-    import plotly.express as px
-    import seaborn as sns
     from plotly import graph_objects as go
+    import plotly.express as px
     from plotly.subplots import make_subplots
+    import seaborn as sns
 except ImportError:
     print(
         "Analytics dependencies not installed. Run: pip install pandas matplotlib seaborn plotly",
@@ -169,7 +170,7 @@ class SocialAnalyticsDashboard:
                     # Store metrics in database
                     await self._store_metrics(metrics)
 
-                except Exception as e:
+                except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                     self.logger.error(
                         "Failed to collect metrics for %s: %s",
                         platform_name,
@@ -232,7 +233,7 @@ class SocialAnalyticsDashboard:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Twitter metrics collection failed: %s", e)
 
         return metrics
@@ -246,7 +247,7 @@ class SocialAnalyticsDashboard:
             # Implementation depends on your Instagram client setup
             pass
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Instagram metrics collection failed: %s", e)
 
         return metrics
@@ -289,7 +290,7 @@ class SocialAnalyticsDashboard:
                             ),
                         )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("TikTok metrics collection failed: %s", e)
 
         return metrics
@@ -318,7 +319,7 @@ class SocialAnalyticsDashboard:
                     ),
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("Reddit metrics collection failed: %s", e)
 
         return metrics
@@ -331,7 +332,7 @@ class SocialAnalyticsDashboard:
             # LinkedIn API implementation would go here
             pass
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error("LinkedIn metrics collection failed: %s", e)
 
         return metrics
@@ -616,7 +617,7 @@ class SocialAnalyticsDashboard:
                 fig.write_html(str(path))
                 viz_paths["content_performance"] = str(path)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Visualization creation failed: %s", e)
             viz_paths["error"] = str(e)
 
@@ -739,7 +740,7 @@ class SocialAnalyticsDashboard:
             # Convert datetime objects to strings for JSON serialization
             def serialize_datetime(self) -> None:
                 if isinstance(obj, datetime):
-                    return obj.isoformat()
+                    return self.obj.isoformat()
                 msg = f"Object {obj} is not JSON serializable"
                 raise TypeError(msg)
 

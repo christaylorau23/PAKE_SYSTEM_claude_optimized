@@ -10,9 +10,9 @@ Following Testing Pyramid: E2E Tests (10%) - Complete workflows, user journeys
 import asyncio
 import time
 
+from fastapi.testclient import TestClient
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 from src.pake_system.auth.example_app import app
 from tests.factories import UserFactory
@@ -51,7 +51,7 @@ class TestCriticalUserJourneysE2E:
         6. User provides feedback
         """
         # Step 1: Visit homepage
-        home_response = test_client.get("/")
+        home_response = self.test_client.get("/")
         assert home_response.status_code == 200
         assert "PAKE System" in home_response.text
 
@@ -62,7 +62,7 @@ class TestCriticalUserJourneysE2E:
             password="SecurePassword123!",
         )
 
-        registration_response = test_client.post(
+        registration_response = self.test_client.post(
             "/auth/register",
             json={
                 "email": user_data["email"],
@@ -77,7 +77,7 @@ class TestCriticalUserJourneysE2E:
         assert registered_user["username"] == user_data["username"]
 
         # Step 3: User login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token",
             data={"username": user_data["username"], "password": user_data["password"]},
         )
@@ -90,13 +90,13 @@ class TestCriticalUserJourneysE2E:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # Step 4: Access user profile
-        profile_response = test_client.get("/auth/me", headers=headers)
+        profile_response = self.test_client.get("/auth/me", headers=headers)
         assert profile_response.status_code == 200
         profile_data = profile_response.json()
         assert profile_data["username"] == user_data["username"]
 
         # Step 5: Complete profile setup
-        profile_update_response = test_client.put(
+        profile_update_response = self.test_client.put(
             "/auth/me",
             json={
                 "full_name": "Onboarding User Updated",
@@ -108,7 +108,7 @@ class TestCriticalUserJourneysE2E:
         assert profile_update_response.status_code == 200
 
         # Step 6: Perform first search
-        search_response = test_client.post(
+        search_response = self.test_client.post(
             "/search",
             json={
                 "query": "artificial intelligence trends 2024",
@@ -144,7 +144,7 @@ class TestCriticalUserJourneysE2E:
         6. User generates research summary
         """
         # Step 1: User login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -153,7 +153,7 @@ class TestCriticalUserJourneysE2E:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # Step 2: Create research project
-        project_response = test_client.post(
+        project_response = self.test_client.post(
             "/research/projects",
             json={
                 "title": "AI Research Project 2024",
@@ -175,7 +175,7 @@ class TestCriticalUserJourneysE2E:
 
         search_results = []
         for query in search_queries:
-            search_response = test_client.post(
+            search_response = self.test_client.post(
                 "/search",
                 json={
                     "query": query,
@@ -193,7 +193,7 @@ class TestCriticalUserJourneysE2E:
         saved_results = []
         for search_data in search_results:
             for result in search_data["results"][:2]:  # Save first 2 results
-                save_response = test_client.post(
+                save_response = self.test_client.post(
                     "/research/save-result",
                     json={
                         "project_id": project_id,
@@ -206,7 +206,7 @@ class TestCriticalUserJourneysE2E:
                 saved_results.append(save_response.json())
 
         # Step 5: Create research notes
-        notes_response = test_client.post(
+        notes_response = self.test_client.post(
             "/research/notes",
             json={
                 "project_id": project_id,
@@ -219,7 +219,7 @@ class TestCriticalUserJourneysE2E:
         assert notes_response.status_code == 200
 
         # Step 6: Generate research summary
-        summary_response = test_client.post(
+        summary_response = self.test_client.post(
             "/research/generate-summary",
             json={
                 "project_id": project_id,
@@ -247,7 +247,7 @@ class TestCriticalUserJourneysE2E:
     async def test_system_performance_under_load(self) -> None:
         """Test system performance under concurrent load"""
         # Arrange
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -288,7 +288,7 @@ class TestCriticalUserJourneysE2E:
     async def test_response_time_consistency(self) -> None:
         """Test response time consistency across multiple requests"""
         # Arrange
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -300,7 +300,7 @@ class TestCriticalUserJourneysE2E:
         for _i in range(10):
             start_time = time.time()
 
-            response = test_client.get("/auth/me", headers=headers)
+            response = self.test_client.get("/auth/me", headers=headers)
             assert response.status_code == 200
 
             end_time = time.time()
@@ -326,7 +326,7 @@ class TestCriticalUserJourneysE2E:
     async def test_system_reliability_under_failure_conditions(self) -> None:
         """Test system reliability under failure conditions"""
         # Arrange
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -342,9 +342,9 @@ class TestCriticalUserJourneysE2E:
 
         for endpoint, data in invalid_requests:
             if endpoint == "/auth/me":
-                response = test_client.get(endpoint)
+                response = self.test_client.get(endpoint)
             else:
-                response = test_client.post(endpoint, json=data)
+                response = self.test_client.post(endpoint, json=data)
 
             # Assert: System handles invalid requests gracefully
             assert response.status_code in [
@@ -359,7 +359,7 @@ class TestCriticalUserJourneysE2E:
     async def test_data_consistency_across_requests(self) -> None:
         """Test data consistency across multiple requests"""
         # Arrange
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token", data={"username": "admin", "password": "secret"}
         )
         assert login_response.status_code == 200
@@ -369,7 +369,7 @@ class TestCriticalUserJourneysE2E:
         # Act: Multiple profile requests
         profile_data_list = []
         for _ in range(5):
-            response = test_client.get("/auth/me", headers=headers)
+            response = self.test_client.get("/auth/me", headers=headers)
             assert response.status_code == 200
             profile_data_list.append(response.json())
 
@@ -394,7 +394,7 @@ class TestCriticalUserJourneysE2E:
 
         # Act: Complete user journey with UX focus
         # 1. Registration
-        registration_response = test_client.post(
+        registration_response = self.test_client.post(
             "/auth/register",
             json={
                 "email": user_data["email"],
@@ -406,7 +406,7 @@ class TestCriticalUserJourneysE2E:
         assert registration_response.status_code == 200
 
         # 2. Login
-        login_response = test_client.post(
+        login_response = self.test_client.post(
             "/auth/token",
             data={"username": user_data["username"], "password": user_data["password"]},
         )
@@ -415,11 +415,11 @@ class TestCriticalUserJourneysE2E:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # 3. Profile access
-        profile_response = test_client.get("/auth/me", headers=headers)
+        profile_response = self.test_client.get("/auth/me", headers=headers)
         assert profile_response.status_code == 200
 
         # 4. Search
-        search_response = test_client.post(
+        search_response = self.test_client.post(
             "/search",
             json={
                 "query": "user experience design",
@@ -445,7 +445,7 @@ class TestCriticalUserJourneysE2E:
         ]
 
         for endpoint, data, expected_status in error_scenarios:
-            response = test_client.post(endpoint, json=data)
+            response = self.test_client.post(endpoint, json=data)
             assert response.status_code == expected_status
 
             # Assert: Error messages are user-friendly

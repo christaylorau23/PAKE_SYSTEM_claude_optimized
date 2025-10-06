@@ -46,7 +46,7 @@ class TestTestIsolation:
         test_name = isolated_test_environment["test_name"]
 
         # Validate that test isolation is working
-        isolation_valid = await test_isolation_validator.validate_test_isolation(
+        isolation_valid = await self.test_isolation_validator.validate_test_isolation(
             test_session, test_name
         )
 
@@ -453,7 +453,7 @@ class TestProactiveTestDataManagementIntegration:
 
         # Principle 1: Test Isolation
         # Verify that this test has complete isolation
-        isolation_valid = await test_isolation_validator.validate_test_isolation(
+        isolation_valid = await self.test_isolation_validator.validate_test_isolation(
             test_session, test_name
         )
         assert isolation_valid, "Test isolation should be working"
@@ -482,7 +482,7 @@ class TestProactiveTestDataManagementIntegration:
         assert isinstance(test_data, dict), "Test data should be a dictionary"
 
         # Verify that fixtures are working correctly
-        assert len(fixture_registry._fixtures) > 0, "Fixtures should be registered"
+        assert len(self.fixture_registry._fixtures) > 0, "Fixtures should be registered"
 
         # This test demonstrates that all three principles work together
         # to provide a robust, reliable testing environment

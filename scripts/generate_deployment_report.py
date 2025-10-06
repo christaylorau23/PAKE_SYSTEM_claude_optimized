@@ -1,3 +1,4 @@
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE System - Deployment Report Generator
@@ -5,9 +6,9 @@ Generate comprehensive deployment reports for CI/CD pipeline
 """
 
 import argparse
+from datetime import UTC, datetime
 import json
 import time
-from datetime import UTC, datetime
 from typing import Any
 
 
@@ -37,12 +38,12 @@ class DeploymentReportGenerator:
     def add_quality_gates(self) -> None:
         """Add CI quality gate results"""
         self.report["quality_gates"] = {
-            "lint_and_format": ci_results.get("lint_and_format", {}),
-            "static_analysis": ci_results.get("static_analysis", {}),
-            "security_scan": ci_results.get("security_scan", {}),
-            "unit_tests": ci_results.get("unit_tests", {}),
-            "integration_tests": ci_results.get("integration_tests", {}),
-            "e2e_tests": ci_results.get("e2e_tests", {}),
+            "lint_and_format": self.ci_results.get("lint_and_format", {}),
+            "static_analysis": self.ci_results.get("static_analysis", {}),
+            "security_scan": self.ci_results.get("security_scan", {}),
+            "unit_tests": self.ci_results.get("unit_tests", {}),
+            "integration_tests": self.ci_results.get("integration_tests", {}),
+            "e2e_tests": self.ci_results.get("e2e_tests", {}),
             "test_coverage": ci_results.get("test_coverage", {}),
             "overall_status": "passed"
             if all(gate.get("status") == "passed" for gate in ci_results.values())
@@ -52,9 +53,9 @@ class DeploymentReportGenerator:
     def add_performance_metrics(self) -> None:
         """Add performance metrics"""
         self.report["performance_metrics"] = {
-            "response_times": performance_data.get("response_times", {}),
-            "throughput": performance_data.get("throughput", {}),
-            "resource_usage": performance_data.get("resource_usage", {}),
+            "response_times": self.performance_data.get("response_times", {}),
+            "throughput": self.performance_data.get("throughput", {}),
+            "resource_usage": self.performance_data.get("resource_usage", {}),
             "database_performance": performance_data.get("database_performance", {}),
             "overall_performance_score": self._calculate_performance_score(
                 performance_data
@@ -64,9 +65,9 @@ class DeploymentReportGenerator:
     def add_security_status(self) -> None:
         """Add security status"""
         self.report["security_status"] = {
-            "vulnerability_scan": security_data.get("vulnerability_scan", {}),
-            "security_tests": security_data.get("security_tests", {}),
-            "compliance_check": security_data.get("compliance_check", {}),
+            "vulnerability_scan": self.security_data.get("vulnerability_scan", {}),
+            "security_tests": self.security_data.get("security_tests", {}),
+            "compliance_check": self.security_data.get("compliance_check", {}),
             "overall_security_score": self._calculate_security_score(security_data),
         }
 
@@ -243,7 +244,7 @@ def main(self) -> None:
             with open(args.ci_results) as f:
                 ci_results = json.load(f)
             generator.add_quality_gates(ci_results)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Warning: Could not load CI results: {e}")
 
     # Load and add performance data if provided
@@ -252,7 +253,7 @@ def main(self) -> None:
             with open(args.performance_data) as f:
                 performance_data = json.load(f)
             generator.add_performance_metrics(performance_data)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Warning: Could not load performance data: {e}")
 
     # Load and add security data if provided
@@ -261,7 +262,7 @@ def main(self) -> None:
             with open(args.security_data) as f:
                 security_data = json.load(f)
             generator.add_security_status(security_data)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Warning: Could not load security data: {e}")
 
     # Generate recommendations and save report

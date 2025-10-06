@@ -9,6 +9,7 @@ in tests, ensuring they work correctly in various scenarios.
 
 import asyncio
 import time
+from typing import Any, Callable, Dict, List, Optional
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -64,12 +65,12 @@ class TestRobustPoller:
     """Test cases for RobustPoller class"""
 
     @pytest.fixture
-    def poller(self) -> None:
+    def poller(self) -> RobustPoller:
         """Create a RobustPoller instance for testing"""
         return RobustPoller()
 
     @pytest.fixture
-    def fast_poller(self) -> None:
+    def fast_poller(self) -> RobustPoller:
         """Create a fast-polling RobustPoller for testing"""
         config = PollingConfig(
             timeout_seconds=2.0, interval_seconds=0.01, max_interval_seconds=0.1
@@ -77,12 +78,12 @@ class TestRobustPoller:
         return RobustPoller(config)
 
     @pytest.fixture
-    def robust_poller(self) -> None:
+    def robust_poller(self) -> RobustPoller:
         """Create a robust_poller fixture (alias for poller)"""
         return RobustPoller()
 
     @pytest.fixture
-    def slow_poller(self) -> None:
+    def slow_poller(self) -> RobustPoller:
         """Create a slow-polling RobustPoller for testing"""
         config = PollingConfig(
             timeout_seconds=60.0, interval_seconds=1.0, max_interval_seconds=5.0
@@ -90,11 +91,11 @@ class TestRobustPoller:
         return RobustPoller(config)
 
     @pytest.mark.asyncio
-    async def test_poll_condition_success(self, fast_poller) -> None:
+    async def test_poll_condition_success(self, fast_poller: RobustPoller) -> None:
         """Test successful condition polling"""
         counter = 0
 
-        async def condition() -> None:
+        async def condition() -> bool:
             nonlocal counter
             counter += 1
             return counter >= 3
@@ -110,10 +111,10 @@ class TestRobustPoller:
         assert result.error is None
 
     @pytest.mark.asyncio
-    async def test_poll_condition_timeout(self, fast_poller) -> None:
+    async def test_poll_condition_timeout(self, fast_poller: RobustPoller) -> None:
         """Test condition polling timeout"""
 
-        async def never_true() -> None:
+        async def never_true() -> bool:
             return False
 
         result = await fast_poller.poll_condition(
@@ -127,13 +128,13 @@ class TestRobustPoller:
         assert "Timeout" in result.error
 
     @pytest.mark.asyncio
-    async def test_poll_condition_max_retries(self, fast_poller) -> None:
+    async def test_poll_condition_max_retries(self, fast_poller: RobustPoller) -> None:
         """Test condition polling with max retries"""
         config = PollingConfig(
             timeout_seconds=10.0, interval_seconds=0.01, max_retries=3
         )
 
-        async def never_true() -> None:
+        async def never_true() -> bool:
             return False
 
         result = await fast_poller.poll_condition(
@@ -145,10 +146,10 @@ class TestRobustPoller:
         assert "Max retries" in result.error
 
     @pytest.mark.asyncio
-    async def test_poll_condition_exception(self, fast_poller) -> None:
+    async def test_poll_condition_exception(self, fast_poller: RobustPoller) -> None:
         """Test condition polling with exceptions"""
 
-        async def failing_condition() -> None:
+        async def failing_condition() -> bool:
             msg = "Test exception"
             raise ValueError(msg)
 

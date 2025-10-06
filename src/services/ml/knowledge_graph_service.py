@@ -7,13 +7,13 @@ and research sessions to show relationships between topics and concepts.
 """
 
 import asyncio
-import hashlib
-import json
-import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+import hashlib
+import json
+import logging
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

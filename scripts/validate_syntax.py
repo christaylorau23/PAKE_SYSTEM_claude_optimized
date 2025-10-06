@@ -1,3 +1,5 @@
+from typing import List
+from typing import Dict
 #!/usr/bin/env python3
 """
 PAKE+ Syntax Validation Script
@@ -6,9 +8,9 @@ Based on learnings from monorepo recovery
 """
 
 import logging
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from typing import Any
 
 logging.basicConfig(
@@ -110,7 +112,7 @@ class SyntaxValidator:
                     }
                     file_errors.append(error)
 
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Error reading file %s: %s", file_path, e)
 
         return file_errors
@@ -244,7 +246,7 @@ class SyntaxValidator:
                         )
                     fixes_applied += 1
 
-            except Exception as e:
+            except (FileNotFoundError, PermissionError, OSError) as e:
                 logger.error("Error fixing file %s: %s", file_path, e)
 
         return fixes_applied

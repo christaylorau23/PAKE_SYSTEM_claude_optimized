@@ -84,7 +84,7 @@ class MultiTenantPerformanceTester:
             self.db_service = MultiTenantPostgreSQLService(self.db_config)
             await self.db_service.initialize()
             logger.info("✅ Database service initialized")
-        except Exception as e:
+        except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Failed to initialize database service: %s", e)
             raise
 
@@ -143,7 +143,7 @@ class MultiTenantPerformanceTester:
         for tenant in self.test_tenants:
             try:
                 await self.db_service.update_tenant_status(tenant["id"], "deleted")
-            except Exception as e:
+            except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.warning("Failed to cleanup tenant %s: %s", tenant["id"], e)
 
         logger.info("✅ Test data cleanup completed")
@@ -189,7 +189,7 @@ class MultiTenantPerformanceTester:
                     ) * 1000  # Convert to milliseconds
                     tenant_response_times.append(response_time)
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error("Tenant operation failed: %s", e)
                     failed_ops += 1
 
@@ -298,7 +298,7 @@ class MultiTenantPerformanceTester:
                 successful_ops += 1
                 return response_time
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Concurrent operation %s failed: %s", operation_id, e)
                 failed_ops += 1
                 return None
@@ -376,7 +376,7 @@ class MultiTenantPerformanceTester:
                 response_times.append(response_time)
                 successful_ops += 1
 
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.error("Context switch %s failed: %s", i, e)
                 failed_ops += 1
 
@@ -453,7 +453,7 @@ class MultiTenantPerformanceTester:
                     response_time = (op_end - op_start) * 1000
                     return response_time
 
-                except Exception as e:
+                except (ValueError, RuntimeError) as e:
                     logger.error(
                         "Scalability operation failed for tenant %s: %s", tenant['id'], e,
                     )
@@ -560,7 +560,7 @@ class MultiTenantPerformanceTester:
             logger.info("🎉 Comprehensive performance test completed")
             return report
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error("❌ Performance test failed: %s", e)
             return {"status": "failed", "error": str(e)}
         finally:

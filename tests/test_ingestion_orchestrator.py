@@ -115,7 +115,7 @@ class TestIngestionOrchestrator:
         }
 
         # Create ingestion plan
-        plan = await ingestion_orchestrator.create_ingestion_plan(
+        plan = await self.ingestion_orchestrator.create_ingestion_plan(
             topic=research_topic,
             context=research_context,
         )
@@ -197,7 +197,7 @@ class TestIngestionOrchestrator:
         )
 
         # Execute ingestion plan
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify execution results
         assert isinstance(result, IngestionResult)
@@ -250,7 +250,7 @@ class TestIngestionOrchestrator:
         )
 
         start_time = datetime.now(UTC)
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
         execution_time = (datetime.now(UTC) - start_time).total_seconds()
 
         # Verify concurrency behavior
@@ -296,14 +296,14 @@ class TestIngestionOrchestrator:
             estimated_duration=60,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify cognitive assessment was applied
         assert result.success
         assert result.cognitive_assessment_applied
 
         # Check that cognitive engine methods were called
-        assert mock_cognitive_engine.assess_research_quality.call_count > 0
+        assert self.mock_cognitive_engine.assess_research_quality.call_count > 0
 
         # Verify content has quality scores
         high_quality_content = [
@@ -321,7 +321,7 @@ class TestIngestionOrchestrator:
         and improve result quality through iterative refinement.
         """
         # Mock cognitive engine to provide query optimization suggestions
-        mock_cognitive_engine.optimize_search_query = AsyncMock(
+        self.mock_cognitive_engine.optimize_search_query = AsyncMock(
             return_value={
                 "optimized_terms": [
                     "machine learning",
@@ -336,17 +336,17 @@ class TestIngestionOrchestrator:
         research_topic = "AI in medicine"
 
         # Create plan with query optimization enabled
-        plan = await ingestion_orchestrator.create_ingestion_plan(
+        plan = await self.ingestion_orchestrator.create_ingestion_plan(
             topic=research_topic,
             context={"enable_query_optimization": True},
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify query optimization was applied
         assert result.success
         assert result.query_optimizations_applied > 0
-        assert mock_cognitive_engine.optimize_search_query.call_count > 0
+        assert self.mock_cognitive_engine.optimize_search_query.call_count > 0
 
     # ========================================================================
     # WORKFLOW AUTOMATION TESTS
@@ -380,15 +380,15 @@ class TestIngestionOrchestrator:
             estimated_duration=60,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify workflow automation
         assert result.success
         assert result.workflows_triggered > 0
-        assert mock_n8n_manager.trigger_workflow.call_count > 0
+        assert self.mock_n8n_manager.trigger_workflow.call_count > 0
 
         # Verify appropriate workflow types were triggered
-        workflow_calls = mock_n8n_manager.trigger_workflow.call_args_list
+        workflow_calls = self.mock_n8n_manager.trigger_workflow.call_args_list
         workflow_types = [
             call.kwargs.get("workflow_type", "") for call in workflow_calls
         ]
@@ -401,7 +401,7 @@ class TestIngestionOrchestrator:
         multiple sources (e.g., cross-reference validation).
         """
         # Mock workflow that requires multi-source coordination
-        mock_n8n_manager.trigger_cross_source_workflow = AsyncMock(
+        self.mock_n8n_manager.trigger_cross_source_workflow = AsyncMock(
             return_value={
                 "workflow_id": "cross_ref_001",
                 "dependencies_resolved": True,
@@ -436,7 +436,7 @@ class TestIngestionOrchestrator:
             enable_cross_source_workflows=True,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify cross-source coordination
         assert result.success
@@ -476,7 +476,7 @@ class TestIngestionOrchestrator:
             estimated_duration=90,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Should succeed partially
         assert result.sources_attempted == 2
@@ -539,7 +539,7 @@ class TestIngestionOrchestrator:
             "_execute_test_source",
             side_effect=mock_failing_source,
         ):
-            result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+            result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
             # Verify retry behavior
             assert retry_count == orchestrator_config["max_retries"] + 1
@@ -583,7 +583,7 @@ class TestIngestionOrchestrator:
             enable_deduplication=True,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify deduplication was applied
         assert result.success
@@ -623,7 +623,7 @@ class TestIngestionOrchestrator:
         )
 
         # Execute first time
-        result1 = await ingestion_orchestrator.execute_ingestion_plan(plan1)
+        result1 = await self.ingestion_orchestrator.execute_ingestion_plan(plan1)
         first_execution_time = result1.execution_time
 
         # Execute similar query
@@ -643,7 +643,7 @@ class TestIngestionOrchestrator:
             estimated_duration=60,
         )
 
-        result2 = await ingestion_orchestrator.execute_ingestion_plan(plan2)
+        result2 = await self.ingestion_orchestrator.execute_ingestion_plan(plan2)
 
         # Second execution should be faster due to caching
         assert result1.success
@@ -677,7 +677,7 @@ class TestIngestionOrchestrator:
             estimated_duration=60,
         )
 
-        result = await ingestion_orchestrator.execute_ingestion_plan(plan)
+        result = await self.ingestion_orchestrator.execute_ingestion_plan(plan)
 
         # Verify comprehensive metrics
         assert result.success

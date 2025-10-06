@@ -4,9 +4,9 @@ Install Git hooks for PAKE+ system
 """
 
 import os
+from pathlib import Path
 import shutil
 import stat
-from pathlib import Path
 
 
 def install_git_hooks(self) -> None:
@@ -42,7 +42,7 @@ def install_git_hooks(self) -> None:
         print("Pre-commit hook installed successfully")
         return True
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Error installing hooks: {str(e)}")
         return False
 
